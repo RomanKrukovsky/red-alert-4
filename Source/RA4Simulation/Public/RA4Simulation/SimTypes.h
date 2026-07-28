@@ -15,6 +15,7 @@
 #include "RA4Core/Fixed.h"
 #include "RA4Core/Ids.h"
 #include "RA4Core/Vector.h"
+#include "RA4Navigation/MNavRouter.h"
 
 namespace RA4
 {
@@ -170,6 +171,20 @@ struct MovementComp
     // Ticks spent unable to make progress; the navigation system uses this to give
     // up rather than grind against an obstacle forever.
     int32_t BlockedTicks = 0;
+    // --- navigation milestone ---
+    Nav::MacroPath CurrentMacroPath;
+    int32_t NextWaypointIndex = 0;
+    TileCoord CurrentSubGoal;
+    ContentId FormationId;          // ContentId() == no formation
+    int32_t FormationSlot = -1;     // -1 == leader or unassigned
+    TickIndex LastRepathTick = 0;
+};
+
+struct MovementStats
+{
+    uint32_t FlowFieldBuilds = 0;
+    uint32_t MacroPathBuilds = 0;
+    uint32_t ReservationContests = 0;
 };
 
 struct CombatComp

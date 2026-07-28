@@ -8,16 +8,28 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <vector>
+
+#if __has_include("HAL/Platform.h")
+#include "HAL/Platform.h"
+#endif
 
 #include "RA4Content/ContentDatabase.h"
 #include "RA4Core/Command.h"
 #include "RA4Core/Ids.h"
 #include "RA4Core/Random.h"
+#include "RA4Navigation/FlowField.h"
+#include "RA4Navigation/MNavRouter.h"
+#include "RA4Navigation/ReservationGrid.h"
 #include "RA4Simulation/SimTypes.h"
 
 namespace RA4
 {
+
+#ifndef RA4SIMULATION_API
+#define RA4SIMULATION_API
+#endif
 
 struct MatchSetup
 {
@@ -46,7 +58,7 @@ struct CommandResult
     bool IsAccepted() const { return Reason == CommandReject::Accepted; }
 };
 
-class SimWorld
+class RA4SIMULATION_API SimWorld
 {
 public:
     SimWorld() = default;
@@ -112,6 +124,10 @@ public:
 
     Random& GetRandom() { return Rng; }
 
+    // --- Navigation milestone diagnostics -----------------------------------
+    const MovementStats& GetMovementStats() const { return Stats; }
+    void ResetMovementStats() { Stats = MovementStats{}; }
+
 private:
     // --- Systems, executed in this order every tick ------------------------
     void SystemApplyCommands(const CommandFrame* Frame);
@@ -134,6 +150,11 @@ private:
                            int32_t FalloffPercent, EntityId Source, PlayerId SourcePlayer);
 
     void OccupyTiles(const BuildingComp& B, bool bOccupy);
+    void BuildNavigationGrid();
+    uint8_t GetNavigationPassability(const TileCoord& Tile) const;
+    Nav::NavQuery MakeNavigationQuery(const EntityDef& Def) const;
+    TileCoord ResolveNavigationTarget(const TileCoord& Desired, const Nav::NavQuery& Query) const;
+    const Nav::FlowField* GetFlowField(const TileCoord& Target, const Nav::NavQuery& Query);
     void RefreshPlayerTech(PlayerId Owner);
     EntityId FindNearestResourceNode(const Vec2& From, PlayerId Owner) const;
     EntityId FindNearestRefinery(const Vec2& From, PlayerId Owner) const;
@@ -146,6 +167,24 @@ private:
     // --- State -------------------------------------------------------------
     const ContentDatabase* Content = nullptr;
     MapDescription Map;
+    std::unique_ptr<Nav::NavGrid> NavigationGrid;
+
+    struct FlowFieldCacheEntry
+    {
+        TileCoord Target;
+        Nav::NavQuery Query;
+        uint32_t TopologyRevision = 0;
+        TickIndex LastUsedTick = 0;
+        std::unique_ptr<Nav::FlowField> Field;
+    };
+    std::vector<FlowFieldCacheEntry> FlowFieldCache;
+
+    std::unique_ptr<Nav::ReservationGrid> Reservations;
+    std::unique_ptr<Nav::MNavRouter> Router;
+    MovementStats Stats;
+    int32_t FlowFieldBuildsThisTick = 0;
+    int32_t MacroPathBuildsThisTick = 0;
+
     Random Rng;
     TickIndex CurrentTick = 0;
     MatchPhase Phase = MatchPhase::NotStarted;

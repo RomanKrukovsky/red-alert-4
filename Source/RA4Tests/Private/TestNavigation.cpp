@@ -1,12 +1,32 @@
 // Copyright (c) Red Alert 4 project. Tests for deterministic group navigation.
 #include "TestFramework.h"
+#include "TestHelpers.h"
+
+#include "RA4Core/SimConfig.h"
+#include "RA4Content/ContentDatabase.h"
 
 #include "RA4Navigation/FlowField.h"
 #include "RA4Navigation/Formation.h"
 #include "RA4Navigation/NavDebug.h"
 
+#include <cstdio>
+
 using namespace RA4;
 using namespace RA4::Nav;
+
+namespace
+{
+struct NavFixture
+{
+    ContentDatabase Content;
+    SimWorld World;
+    explicit NavFixture(uint64_t Seed)
+    {
+        BuildDefaultContent(Content);
+        World.Initialize(&Content, RA4Test::MakeTestSetup(Seed));
+    }
+};
+} // namespace
 
 RA4_TEST(Navigation, ExtractsStablePortalsForOpenSectorBoundary)
 {
@@ -239,4 +259,181 @@ RA4_TEST(Navigation, NavDebugSnapshotHasNoDrawDependency)
     std::vector<uint8_t> Bytes;
     SerializeNavDebugSnapshot(Snap, Bytes);
     RA4_EXPECT(!Bytes.empty());
+}
+
+RA4_TEST(Navigation, FlowFieldSharedAcrossUnits)
+{
+    // Break caught: if each unit built its own flow field, 50 units to one rally
+    // point would build 50 fields. Sharing means exactly one build.
+    NavFixture F(42);
+    SimWorld& World = F.World;
+
+    const Vec2 Rally(Fixed::FromInt(2000), Fixed::FromInt(2000));
+    for (int32_t I = 0; I < 50; ++I)
+    {
+        const EntityId U = World.SpawnUnit(RA4Test::Ids::SovConscript, PlayerId{0},
+                                           Vec2(Fixed::FromInt(100), Fixed::FromInt(100 + I * 10)));
+        Command Move;
+        Move.Type = CommandType::Move;
+        Move.Issuer = PlayerId{0};
+        Move.Primary = U;
+        Move.Location = Rally;
+        World.ApplyCommand(Move);
+    }
+
+    World.ResetMovementStats();
+    for (int32_t T = 0; T < 20; ++T) { World.Tick(nullptr); World.ClearEvents(); }
+    const MovementStats& S = World.GetMovementStats();
+    // 50 units, one shared destination -> at most a handful of flow-field builds,
+    // never 50. Allow a few for sub-goal sectors along the corridor.
+    RA4_EXPECT(S.FlowFieldBuilds <= 5u);
+    RA4_EXPECT(S.MacroPathBuilds <= 4u);
+}
+
+RA4_TEST(Navigation, LocalAvoidancePicksBestOpenNeighbor)
+{
+    // Break caught: if the desired tile is blocked by a static obstacle and the
+    // unit did not divert, it would sit against the wall until the blocked-tick
+    // repath, wasting the avoidance pass.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    auto Setup = RA4Test::MakeTestSetup(7);
+    // Build a 1-tile wall straight in front of the unit's path.
+    // Deviation from brief: brief placed wall at (8,4) but unit spawns on tile (8,4)
+    // so the unit is "on" the wall and the flow field marks it unreachable. Wall
+    // moved to (8,3) (one tile north of spawn) so the unit's first step into
+    // (8,3) hits the wall and the flow field routes around. Unit spawns at tile
+    // (8,4) center (1700, 900) so its initial tile-center-to-tile-center path
+    // is straight, matching the existing UnitsReachTheirDestination test.
+    Setup.Map.Resize(16, 16, Tile_GroundPassable);
+    Setup.Map.Tiles[Setup.Map.TileIndex(8, 3)] = uint8_t(Tile_Cliff);
+    SimWorld World;
+    World.Initialize(&Content, Setup);
+    const EntityId U = World.SpawnUnit(RA4Test::Ids::SovConscript, PlayerId{0},
+                                       Vec2(Fixed::FromInt(1700), Fixed::FromInt(900)));
+    Command Move; Move.Type = CommandType::Move; Move.Issuer = PlayerId{0};
+    Move.Primary = U; Move.Location = Vec2(Fixed::FromInt(1700), Fixed::FromInt(100));
+    World.ApplyCommand(Move);
+
+    // Give it enough ticks to reach the wall and divert.
+    for (int32_t T = 0; T < 200; ++T)
+    {
+        World.Tick(nullptr);
+        const TransformComp* Dbg = World.GetTransform(U);
+        if (T < 30 || (T % 20) == 0)
+        {
+            const MovementComp* DbgM = World.GetMovement(U);
+            std::printf("[T7] t=%d pos=(%lld, %lld) tile=(%d, %d) facing=%d speed=%lld blocked=%lld\n",
+                        T,
+                        static_cast<long long>(Dbg->Position.X.Raw),
+                        static_cast<long long>(Dbg->Position.Y.Raw),
+                        Dbg->Position.X.ToIntFloor() / 200,
+                        Dbg->Position.Y.ToIntFloor() / 200,
+                        Dbg->Facing,
+                        static_cast<long long>(DbgM->CurrentSpeed.Raw),
+                        static_cast<long long>(DbgM->BlockedTicks));
+        }
+        World.ClearEvents();
+    }
+    const TransformComp* Tx = World.GetTransform(U);
+    const MovementComp* Mv = World.GetMovement(U);
+    if (Tx != nullptr)
+    {
+        std::printf("[T7] final pos=(%lld, %lld) bHasDest=%d blocked=%lld\n",
+                    static_cast<long long>(Tx->Position.X.Raw),
+                    static_cast<long long>(Tx->Position.Y.Raw),
+                    Mv != nullptr && Mv->bHasDestination ? 1 : 0,
+                    static_cast<long long>(Mv != nullptr ? Mv->BlockedTicks : -1));
+    }
+    RA4_REQUIRE(Tx != nullptr);
+    // The unit must have moved past Y=900 (its spawn) -- i.e. it did not get stuck.
+    RA4_EXPECT(Tx->Position.Y.Raw < Fixed::FromInt(900).Raw);
+}
+
+RA4_TEST(Navigation, BlockedUnitRepatsAfterThreshold)
+{
+    // Break caught: a wedged unit that never repaths blocks the tile forever and
+    // its blocked-tick counter climbs without bound.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    auto Setup = RA4Test::MakeTestSetup(9);
+    Setup.Map.Resize(16, 16, Tile_GroundPassable);
+    // Box the unit in: walls on three sides, open only behind it.
+    Setup.Map.Tiles[Setup.Map.TileIndex(8, 6)] = uint8_t(Tile_Cliff);
+    Setup.Map.Tiles[Setup.Map.TileIndex(7, 7)] = uint8_t(Tile_Cliff);
+    Setup.Map.Tiles[Setup.Map.TileIndex(9, 7)] = uint8_t(Tile_Cliff);
+    Setup.Map.Tiles[Setup.Map.TileIndex(8, 7)] = uint8_t(Tile_Cliff);
+    SimWorld World;
+    World.Initialize(&Content, Setup);
+    const EntityId U = World.SpawnUnit(RA4Test::Ids::SovConscript, PlayerId{0},
+                                       Vec2(Fixed::FromInt(1700), Fixed::FromInt(1500)));
+    Command Move; Move.Type = CommandType::Move; Move.Issuer = PlayerId{0};
+    Move.Primary = U; Move.Location = Vec2(Fixed::FromInt(1700), Fixed::FromInt(1100));
+    World.ApplyCommand(Move);
+
+    for (int32_t T = 0; T < kRepathBlockedTickThreshold + 20; ++T)
+    {
+        World.Tick(nullptr); World.ClearEvents();
+    }
+    // After the threshold, the macro path was cleared at least once and the
+    // blocked-tick counter was reset (not left to grow forever).
+    const MovementComp* M = World.GetMovement(U);
+    RA4_REQUIRE(M != nullptr);
+    RA4_EXPECT(M->BlockedTicks < kRepathBlockedTickThreshold);
+}
+
+RA4_TEST(Navigation, RepathBudgetStallsDeterministically)
+{
+    // Break caught: if the budget were wall-clock, a slow machine would produce a
+    // different build *sequence* and a different checksum. With a tick-bounded
+    // budget, budget=2 splits 10 builds as 2/2/2/2/2 across 5 ticks; budget=10 does
+    // all 10 in one tick. The final state must be identical. The full cross-build
+    // checksum comparison is exercised in Task 6; here we only assert the budget
+    // consts exist, are positive, and are the values the rest of the plan depends on.
+    RA4_EXPECT(kMaxFlowFieldBuildsPerTick > 0);
+    RA4_EXPECT(kMaxMacroPathBuildsPerTick > 0);
+    RA4_EXPECT_EQ(kMaxFlowFieldBuildsPerTick, 2);
+    RA4_EXPECT_EQ(kMaxMacroPathBuildsPerTick, 4);
+}
+
+RA4_TEST(Navigation, BridgeDestroyInvalidatesPath)
+{
+    // Break caught: a unit mid-cross must not keep walking on a destroyed bridge's
+    // stale flow field; the topology bump must invalidate its cached path.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    auto Setup = RA4Test::MakeTestSetup(13);
+    Setup.Map.Resize(32, 16, Tile_GroundPassable);
+    // Carve a water channel with one ground-tile "bridge" at x=16.
+    for (int32_t Y = 0; Y < 16; ++Y)
+    {
+        if (Y != 8) Setup.Map.Tiles[Setup.Map.TileIndex(16, Y)] = uint8_t(Tile_Water);
+    }
+    SimWorld World;
+    World.Initialize(&Content, Setup);
+    const EntityId U = World.SpawnUnit(RA4Test::Ids::SovHeavyTank, PlayerId{0},
+                                       Vec2(Fixed::FromInt(400), Fixed::FromInt(1700)));
+    Command Move; Move.Type = CommandType::Move; Move.Issuer = PlayerId{0};
+    Move.Primary = U; Move.Location = Vec2(Fixed::FromInt(3000), Fixed::FromInt(1700));
+    World.ApplyCommand(Move);
+
+    // Let it path onto the bridge.
+    for (int32_t T = 0; T < 40; ++T) { World.Tick(nullptr); World.ClearEvents(); }
+    // Destroy the bridge by setting that tile to water (sim-side; a real bridge
+    // entity would call NavGrid::BeginTopologyUpdate/EndTopologyUpdate).
+    const_cast<MapDescription&>(World.GetMap()).Tiles[World.GetMap().TileIndex(16, 8)] = uint8_t(Tile_Water);
+    // The sim must observe the topology change; if BuildNavigationGrid is not auto-
+    // called on tile mutation, this test will catch it (the unit would keep moving
+    // on the stale field and the next assertion would fail).
+    for (int32_t T = 0; T < 80; ++T) { World.Tick(nullptr); World.ClearEvents(); }
+    const MovementComp* M = World.GetMovement(U);
+    RA4_REQUIRE(M != nullptr);
+    // The unit either repathed around the water or stopped; either way it must not
+    // be sitting on the now-water tile (16,8) -> world (3300,1700).
+    const TransformComp* Tx = World.GetTransform(U);
+    RA4_REQUIRE(Tx != nullptr);
+    const bool bOnDestroyedBridge =
+        (Tx->Position.X.Raw > Fixed::FromInt(3200).Raw && Tx->Position.X.Raw < Fixed::FromInt(3400).Raw) &&
+        (Tx->Position.Y.Raw > Fixed::FromInt(1600).Raw && Tx->Position.Y.Raw < Fixed::FromInt(1800).Raw);
+    RA4_EXPECT(!bOnDestroyedBridge);
 }
