@@ -46,11 +46,19 @@ add_library(RA4Content STATIC
 target_include_directories(RA4Content PUBLIC ${RA4_SOURCE_ROOT}/RA4Content/Public)
 target_link_libraries(RA4Content PUBLIC RA4Core)
 
+add_library(RA4Navigation STATIC
+    ${RA4_SOURCE_ROOT}/RA4Navigation/Private/NavGrid.cpp
+    ${RA4_SOURCE_ROOT}/RA4Navigation/Private/FlowField.cpp
+    ${RA4_SOURCE_ROOT}/RA4Navigation/Private/ReservationGrid.cpp
+)
+target_include_directories(RA4Navigation PUBLIC ${RA4_SOURCE_ROOT}/RA4Navigation/Public)
+target_link_libraries(RA4Navigation PUBLIC RA4Core)
+
 add_library(RA4Simulation STATIC
     ${RA4_SOURCE_ROOT}/RA4Simulation/Private/SimWorld.cpp
 )
 target_include_directories(RA4Simulation PUBLIC ${RA4_SOURCE_ROOT}/RA4Simulation/Public)
-target_link_libraries(RA4Simulation PUBLIC RA4Content)
+target_link_libraries(RA4Simulation PUBLIC RA4Content RA4Navigation)
 
 add_library(RA4Replay STATIC
     ${RA4_SOURCE_ROOT}/RA4Replay/Private/Replay.cpp
@@ -58,13 +66,22 @@ add_library(RA4Replay STATIC
 target_include_directories(RA4Replay PUBLIC ${RA4_SOURCE_ROOT}/RA4Replay/Public)
 target_link_libraries(RA4Replay PUBLIC RA4Simulation)
 
+add_library(RA4Campaign STATIC
+    ${RA4_SOURCE_ROOT}/RA4Campaign/Private/CampaignManager.cpp
+)
+target_include_directories(RA4Campaign PUBLIC ${RA4_SOURCE_ROOT}/RA4Campaign/Public)
+target_link_libraries(RA4Campaign PUBLIC RA4Core)
+
 add_executable(RA4Tests
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestMain.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestCore.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestSimulation.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestVerticalSlice.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestNavigation.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestCampaign.cpp
 )
-target_link_libraries(RA4Tests PRIVATE RA4Replay)
+target_link_libraries(RA4Tests PRIVATE RA4Replay RA4Campaign)
+target_include_directories(RA4Tests PRIVATE ${RA4_SOURCE_ROOT}/RA4UI/Public)
 
 enable_testing()
 add_test(NAME core COMMAND RA4Tests)
