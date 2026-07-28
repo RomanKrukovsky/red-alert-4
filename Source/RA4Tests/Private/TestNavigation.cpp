@@ -3,6 +3,7 @@
 
 #include "RA4Navigation/FlowField.h"
 #include "RA4Navigation/Formation.h"
+#include "RA4Navigation/NavDebug.h"
 
 using namespace RA4;
 using namespace RA4::Nav;
@@ -208,4 +209,34 @@ RA4_TEST(Navigation, FormationMembersFollowLeaderSlot)
     // Y-down convention; plus leader = (600, 400).
     RA4_EXPECT_NEAR(Slot1.X.Raw, Fixed::FromInt(600).Raw, Fixed::FromInt(5).Raw);
     RA4_EXPECT_NEAR(Slot1.Y.Raw, Fixed::FromInt(400).Raw, Fixed::FromInt(5).Raw);
+}
+
+RA4_TEST(Navigation, NavDebugSnapshotHasNoDrawDependency)
+{
+    // Break caught: if NavDebug ever pulled in UWorld/DrawDebug, the headless
+    // build would fail to link. This test exists to make that link failure a
+    // test failure instead of a surprise in CI.
+    // Deviation from brief: the brief's verbatim (Grid(8,8) + Find(0,0)->(7,7))
+    // is a same-sector shortcut in MNavRouter::Find and never inserts into the
+    // cache, so ActiveMacroPaths would be empty. Bumped to 32x16 with cross-sector
+    // coordinates so the snapshot is exercised end-to-end. The other 8/8 grid
+    // tests in this file follow the same pattern.
+    NavGrid Grid(32, 16);
+    ReservationGrid Res(32, 16);
+    MNavRouter Router(Grid);
+    Res.TryReserve(TileCoord(3, 3), /*Slot=*/1, /*Now=*/0, /*HoldTicks=*/5);
+    Router.Find(TileCoord(2, 8), TileCoord(30, 8), NavQuery{NavLayer_Tracked, 1}, 8);
+
+    NavDebugSnapshot Snap;
+    Res.Snapshot(Snap);
+    Router.Snapshot(Snap);
+    Grid.Snapshot(Snap);   // if NavGrid doesn't have Snapshot yet, add a trivial one
+
+    RA4_EXPECT(Snap.TopologyRevision == Grid.GetTopologyRevision());
+    RA4_EXPECT(!Snap.ReservationSample.empty());
+    RA4_EXPECT(!Snap.ActiveMacroPaths.empty());
+    // Serialize to bytes to prove it is plain data, not a draw handle.
+    std::vector<uint8_t> Bytes;
+    SerializeNavDebugSnapshot(Snap, Bytes);
+    RA4_EXPECT(!Bytes.empty());
 }

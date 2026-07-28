@@ -21,6 +21,8 @@ namespace RA4
 namespace Nav
 {
 
+struct NavDebugSnapshot;   // defined in RA4Navigation/NavDebug.h
+
 using ::RA4::TickIndex;
 
 constexpr uint32_t kInvalidReservationSlot = 0xFFFFFFFFu;
@@ -56,6 +58,10 @@ public:
     // Single deterministic sweep at the start of a tick. Marks expired cells free.
     // O(tiles) and called once per tick, not per unit.
     void Expire(TickIndex Now);
+
+    // Pure-data snapshot for the presentation bridge and the headless tests.
+    // No dependency on DrawDebug*; the test that exercises this is the canary.
+    void Snapshot(NavDebugSnapshot& Out) const;
 
 private:
     int32_t ToIndex(const TileCoord& Tile) const;

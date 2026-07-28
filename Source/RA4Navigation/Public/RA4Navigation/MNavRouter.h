@@ -21,6 +21,8 @@ namespace RA4
 namespace Nav
 {
 
+struct NavDebugSnapshot;   // defined in RA4Navigation/NavDebug.h
+
 struct MacroPath
 {
     std::vector<TileCoord> Waypoints;     // sector-center sub-goals; final = destination tile
@@ -45,6 +47,10 @@ public:
     uint32_t GetCacheHits() const { return CacheHits; }
     uint32_t GetCacheMisses() const { return CacheMisses; }
     void ResetCounters() { CacheHits = 0; CacheMisses = 0; }
+
+    // Pure-data snapshot for the presentation bridge and the headless tests.
+    // Capped at 16 cached paths so the snapshot stays cheap to serialize.
+    void Snapshot(NavDebugSnapshot& Out) const;
 
 private:
     struct CacheEntry

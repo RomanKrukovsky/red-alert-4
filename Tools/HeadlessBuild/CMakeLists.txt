@@ -52,6 +52,7 @@ add_library(RA4Navigation STATIC
     ${RA4_SOURCE_ROOT}/RA4Navigation/Private/ReservationGrid.cpp
     ${RA4_SOURCE_ROOT}/RA4Navigation/Private/MNavRouter.cpp
     ${RA4_SOURCE_ROOT}/RA4Navigation/Private/Formation.cpp
+    ${RA4_SOURCE_ROOT}/RA4Navigation/Private/NavDebug.cpp
 )
 target_include_directories(RA4Navigation PUBLIC ${RA4_SOURCE_ROOT}/RA4Navigation/Public)
 target_link_libraries(RA4Navigation PUBLIC RA4Core)
