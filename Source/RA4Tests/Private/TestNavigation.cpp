@@ -2,6 +2,7 @@
 #include "TestFramework.h"
 
 #include "RA4Navigation/FlowField.h"
+#include "RA4Navigation/Formation.h"
 
 using namespace RA4;
 using namespace RA4::Nav;
@@ -177,4 +178,33 @@ RA4_TEST(Navigation, MacroRouterInvalidatesOnTopologyRevision)
     Router.InvalidateAll();
     MacroPath Second = Router.Find(TileCoord(2, 8), TileCoord(30, 8), Query, 8);
     RA4_EXPECT(Second.BuiltTopologyRevision != Rev0);
+}
+
+RA4_TEST(Navigation, FormationMembersFollowLeaderSlot)
+{
+    // Break caught: if members computed their own macro path, a formation of 8
+    // would build 8 paths instead of 1. The leader owns the path; members follow
+    // rotated offsets and must arrive within one tile of their slot.
+    FormationDef Def;
+    Def.Id = MakeContentId("formation.test.wedge");
+    // 8-slot wedge: leader at origin, 3 behind-left, 3 behind-right, 1 tail.
+    Def.Offsets = {
+        Vec2(Fixed::Zero(), Fixed::Zero()),
+        Vec2(Fixed::FromInt(-100), Fixed::FromInt(-100)),
+        Vec2(Fixed::FromInt(-200), Fixed::FromInt(-200)),
+        Vec2(Fixed::FromInt(-300), Fixed::FromInt(-300)),
+        Vec2(Fixed::FromInt(100), Fixed::FromInt(-100)),
+        Vec2(Fixed::FromInt(200), Fixed::FromInt(-200)),
+        Vec2(Fixed::FromInt(300), Fixed::FromInt(-300)),
+        Vec2(Fixed::FromInt(0), Fixed::FromInt(-400)),
+    };
+    RA4_EXPECT_EQ(Def.Offsets.size(), size_t(8));
+
+    // Rotating the leader by 90 degrees (kAngleTurn/4) maps the +X offset to +Y.
+    const int32_t FacingRight = 1 << 10;   // 4096/4 == 1024 == 90 degrees
+    const Vec2 LeaderPos(Fixed::FromInt(500), Fixed::FromInt(500));
+    const Vec2 Slot1 = LeaderPos + RotateOffset(Def.Offsets[1], FacingRight);
+    // Slot1 original (-100,-100) rotated 90deg CW -> (-100, +100) relative, plus leader.
+    RA4_EXPECT_NEAR(Slot1.X.Raw, Fixed::FromInt(400).Raw, Fixed::FromInt(5).Raw);
+    RA4_EXPECT_NEAR(Slot1.Y.Raw, Fixed::FromInt(600).Raw, Fixed::FromInt(5).Raw);
 }
