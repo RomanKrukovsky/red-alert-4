@@ -204,7 +204,8 @@ RA4_TEST(Navigation, FormationMembersFollowLeaderSlot)
     const int32_t FacingRight = 1 << 10;   // 4096/4 == 1024 == 90 degrees
     const Vec2 LeaderPos(Fixed::FromInt(500), Fixed::FromInt(500));
     const Vec2 Slot1 = LeaderPos + RotateOffset(Def.Offsets[1], FacingRight);
-    // Slot1 original (-100,-100) rotated 90deg CW -> (-100, +100) relative, plus leader.
-    RA4_EXPECT_NEAR(Slot1.X.Raw, Fixed::FromInt(400).Raw, Fixed::FromInt(5).Raw);
-    RA4_EXPECT_NEAR(Slot1.Y.Raw, Fixed::FromInt(600).Raw, Fixed::FromInt(5).Raw);
+    // (-100,-100) rotated 90° (Facing=1024) -> (+100,-100) in this sim's CW-from-+X,
+    // Y-down convention; plus leader = (600, 400).
+    RA4_EXPECT_NEAR(Slot1.X.Raw, Fixed::FromInt(600).Raw, Fixed::FromInt(5).Raw);
+    RA4_EXPECT_NEAR(Slot1.Y.Raw, Fixed::FromInt(400).Raw, Fixed::FromInt(5).Raw);
 }
