@@ -110,3 +110,71 @@ RA4_TEST(Navigation, ReservationExpiresAndFreesTile)
     RA4_EXPECT(!Grid.IsFree(TileCoord(1, 1), /*Now=*/102));
     RA4_EXPECT(Grid.IsFree(TileCoord(1, 1), /*Now=*/103));
 }
+
+#include "RA4Navigation/MNavRouter.h"
+
+RA4_TEST(Navigation, MacroRouterFindsShortestCorridor)
+{
+    // Two sectors, one open portal column between them. The macro path must cross
+    // the portal exactly once and the result must be identical on a second call.
+    NavGrid Grid(32, 16);
+    MNavRouter Router(Grid);
+    const NavQuery Query{NavLayer_Tracked, 1};
+
+    MacroPath Path = Router.Find(TileCoord(2, 8), TileCoord(30, 8), Query, /*MaxWaypoints=*/8);
+    RA4_REQUIRE(!Path.Waypoints.empty());
+    RA4_EXPECT_EQ(Path.Waypoints.size(), size_t(2));
+    RA4_EXPECT_EQ(Path.BuiltTopologyRevision, Grid.GetTopologyRevision());
+
+    MacroPath Again = Router.Find(TileCoord(2, 8), TileCoord(30, 8), Query, /*MaxWaypoints=*/8);
+    RA4_EXPECT_EQ(Again.Waypoints.size(), Path.Waypoints.size());
+    RA4_EXPECT(Again.Waypoints[0] == Path.Waypoints[0]);
+}
+
+RA4_TEST(Navigation, MacroRouterRespectsLayerAndClearance)
+{
+    // If every portal cell is masked to infantry-only, a tracked query must get an
+    // empty path while an infantry query still routes through.
+    NavGrid Grid(32, 16);
+    // Force the whole portal column (x=15..16) to infantry-only.
+    Grid.BeginTopologyUpdate();
+    for (int32_t Y = 0; Y < 16; ++Y)
+    {
+        Grid.SetPassability(TileCoord(15, Y), NavLayer_Infantry);
+        Grid.SetPassability(TileCoord(16, Y), NavLayer_Infantry);
+    }
+    Grid.EndTopologyUpdate();
+
+    MNavRouter Router(Grid);
+    const NavQuery Tracked{NavLayer_Tracked, 1};
+    MacroPath TankPath = Router.Find(TileCoord(2, 8), TileCoord(30, 8), Tracked, 8);
+    RA4_EXPECT(TankPath.Waypoints.empty());
+
+    const NavQuery Inf{NavLayer_Infantry, 1};
+    MacroPath InfPath = Router.Find(TileCoord(2, 8), TileCoord(30, 8), Inf, 8);
+    RA4_EXPECT(!InfPath.Waypoints.empty());
+}
+
+RA4_TEST(Navigation, MacroRouterInvalidatesOnTopologyRevision)
+{
+    // A cached path built against revision N must be rejected after the grid's
+    // topology changes to revision N+1 -- otherwise units walk through a wall that
+    // was just placed across their corridor.
+    NavGrid Grid(32, 16);
+    MNavRouter Router(Grid);
+    const NavQuery Query{NavLayer_Tracked, 1};
+
+    MacroPath First = Router.Find(TileCoord(2, 8), TileCoord(30, 8), Query, 8);
+    RA4_REQUIRE(!First.Waypoints.empty());
+    const uint32_t Rev0 = First.BuiltTopologyRevision;
+
+    Grid.BeginTopologyUpdate();
+    Grid.SetPassability(TileCoord(15, 8), NavLayer_None);
+    Grid.SetPassability(TileCoord(16, 8), NavLayer_None);
+    Grid.EndTopologyUpdate();
+    RA4_EXPECT(Grid.GetTopologyRevision() != Rev0);
+
+    Router.InvalidateAll();
+    MacroPath Second = Router.Find(TileCoord(2, 8), TileCoord(30, 8), Query, 8);
+    RA4_EXPECT(Second.BuiltTopologyRevision != Rev0);
+}
