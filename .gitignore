@@ -1,0 +1,26 @@
+# Unreal
+Binaries/
+Build/
+DerivedDataCache/
+Intermediate/
+Saved/
+*.VC.db
+*.opensdf
+*.sdf
+*.sln
+*.suo
+*.xcodeproj/
+*.xcworkspace/
+
+# Headless core build
+build/
+*.rep
+
+# Python leftovers from an unrelated project in this directory
+.venv/
+__pycache__/
+*.pyc
+.env
+
+# OS
+.DS_Store

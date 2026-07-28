@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "1.0.0",
+  "generated": "2026-07-28",
+  "note": "Registry of every third-party asset in the project. An asset referenced by the game but absent from this file fails the licence validation step in CI. Empty because no asset has been acquired yet.",
+  "requiredFields": [
+    "id",
+    "category",
+    "source",
+    "sourceUrl",
+    "author",
+    "license",
+    "licenseUrl",
+    "price",
+    "licenseVerifiedOn",
+    "acquisitionStatus",
+    "permittedUses",
+    "distributionRestrictions",
+    "version",
+    "sha256",
+    "importPath",
+    "relatedGameObjects",
+    "attributionRequired",
+    "attributionText"
+  ],
+  "acceptedLicenses": [
+    "CC0-1.0",
+    "CC-BY-4.0",
+    "CC-BY-3.0",
+    "Fab Standard License",
+    "Fab Professional License",
+    "Unreal Engine EULA content",
+    "Sonniss GDC Bundle License",
+    "Kenney CC0"
+  ],
+  "rejectedLicenses": [
+    "CC-BY-NC-*",
+    "CC-BY-ND-*",
+    "GPL-*",
+    "editorial use only",
+    "unknown",
+    "unspecified",
+    "ripped from a shipped game"
+  ],
+  "assets": [],
+  "exampleRow": {
+    "id": "ENV-005-rock-kit",
+    "category": "environment",
+    "source": "Poly Haven",
+    "sourceUrl": "https://polyhaven.com/",
+    "author": "<per-asset author from the asset page>",
+    "license": "CC0-1.0",
+    "licenseUrl": "<per-asset licence link>",
+    "price": "0.00 USD",
+    "licenseVerifiedOn": "<YYYY-MM-DD the asset page was actually read>",
+    "acquisitionStatus": "not acquired",
+    "permittedUses": [
+      "commercial",
+      "modification",
+      "redistribution in packaged game"
+    ],
+    "distributionRestrictions": [],
+    "version": "1.0",
+    "sha256": "",
+    "importPath": "Content/ThirdParty/PolyHaven/Rocks/",
+    "relatedGameObjects": [
+      "map decoration"
+    ],
+    "attributionRequired": false,
+    "attributionText": ""
+  }
+}\n

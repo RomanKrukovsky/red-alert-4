@@ -1,0 +1,69 @@
+// Copyright (c) Red Alert 4 project.
+#pragma once
+
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#include "RA4Content/ContentTypes.h"
+
+namespace RA4
+{
+
+// Immutable-after-load registry of every definition in a match.
+//
+// Lookup is a hash map, but iteration is always over the insertion-ordered vectors:
+// unordered_map iteration order differs between libstdc++ and libc++, and anything
+// that feeds simulation state must not depend on standard library internals.
+class ContentDatabase
+{
+public:
+    void Clear();
+
+    ContentId AddEntity(const EntityDef& Def);
+    ContentId AddWeapon(const WeaponDef& Def);
+    ContentId AddResourceNode(const ResourceNodeDef& Def);
+    void AddFaction(const FactionDef& Def);
+
+    const EntityDef* FindEntity(ContentId Id) const;
+    const WeaponDef* FindWeapon(ContentId Id) const;
+    const ResourceNodeDef* FindResourceNode(ContentId Id) const;
+    const FactionDef* FindFaction(FactionId Id) const;
+
+    const std::vector<EntityDef>& GetEntities() const { return Entities; }
+    const std::vector<WeaponDef>& GetWeapons() const { return Weapons; }
+
+    // Damage multiplier in percent for a warhead against an armor class.
+    int32_t GetDamageMultiplier(WarheadClass Warhead, ArmorClass Armor) const;
+    void SetDamageMultiplier(WarheadClass Warhead, ArmorClass Armor, int32_t Percent);
+    void ResetDamageTableToDefaults();
+
+    // Content hash covers every value that can change simulation outcomes. Clients
+    // and server compare it during the lobby handshake; a mismatch means someone is
+    // running different data and would desync within seconds.
+    uint64_t ComputeContentHash() const;
+
+    // Fails loudly on unresolvable prerequisites, unknown weapon references,
+    // negative costs and other authoring mistakes that would otherwise surface as a
+    // mid-match crash or an unbuildable tech tree.
+    bool Validate(std::vector<std::string>& OutErrors) const;
+
+private:
+    std::vector<EntityDef> Entities;
+    std::vector<WeaponDef> Weapons;
+    std::vector<ResourceNodeDef> ResourceNodes;
+    std::vector<FactionDef> Factions;
+
+    std::unordered_map<uint32_t, size_t> EntityIndex;
+    std::unordered_map<uint32_t, size_t> WeaponIndex;
+    std::unordered_map<uint32_t, size_t> ResourceIndex;
+
+    int32_t DamageTable[size_t(WarheadClass::Count)][size_t(ArmorClass::Count)] = {};
+};
+
+// Builds the shipping content set for the current milestone. This is the temporary
+// home for definitions until the Data Asset pipeline lands; the same structs are
+// produced either way, so nothing downstream changes when it does.
+void BuildDefaultContent(ContentDatabase& Db);
+
+} // namespace RA4

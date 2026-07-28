@@ -1,0 +1,52 @@
+# Fast gate on every push: the engine-free simulation core.
+#
+# The Unreal editor, packaging and Gauntlet suites are far slower and run on merge
+# (not yet configured -- see Docs/Roadmap.md). This job is what keeps determinism
+# regressions from landing.
+name: core
+
+on: [push, pull_request]
+
+jobs:
+  headless:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S Tools/HeadlessBuild -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release -j
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      # The slice test prints the final state checksum. Collecting it from all three
+      # runners is the cross-platform determinism check: the values must be identical.
+      - name: Determinism checksum
+        shell: bash
+        run: |
+          BIN=$(find build -name "RA4Tests*" -type f -perm -u+x | head -1)
+          "$BIN" --filter=VerticalSlice.FullMatch | tee checksum-${{ matrix.os }}.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: checksum-${{ matrix.os }}
+          path: checksum-${{ matrix.os }}.txt
+
+  sanitizers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure with ASan and UBSan
+        run: >
+          cmake -S Tools/HeadlessBuild -B build-san -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=all"
+          -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+      - run: cmake --build build-san -j
+      - run: ./build-san/RA4Tests
