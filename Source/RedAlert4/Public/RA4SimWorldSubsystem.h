@@ -35,6 +35,14 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Simulation")
     void UnregisterEntityActor(int32 EntityIndex);
 
+    // Map of ContentId / UnitType ID to Unreal StaticMesh asset
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visuals")
+    TMap<int32, UStaticMesh*> ContentMeshRegistry;
+
+    // Base Actor class to spawn for visual representations
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visuals")
+    TSubclassOf<ARA4EntityActor> EntityActorClass;
+
 private:
     void TickSimulation();
     void SyncPresentation();

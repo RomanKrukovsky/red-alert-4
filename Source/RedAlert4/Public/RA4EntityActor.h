@@ -27,9 +27,20 @@ public:
     UFUNCTION(BlueprintPure, Category = "Simulation")
     int32 GetEntityIndex() const { return static_cast<int32>(EntityIndex); }
 
+    // Sets the static mesh representation for this entity actor.
+    UFUNCTION(BlueprintCallable, Category = "Visuals")
+    void SetEntityMesh(UStaticMesh* InMesh);
+
+    // Sets the team/faction color for dynamic material instances.
+    UFUNCTION(BlueprintCallable, Category = "Visuals")
+    void SetTeamColor(const FLinearColor& TeamColor);
+
 protected:
     virtual void BeginPlay() override;
     
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    TObjectPtr<UStaticMeshComponent> MeshComponent;
+
     // Smooth interpolation targets
     FVector TargetPosition;
     float TargetRotationZ;

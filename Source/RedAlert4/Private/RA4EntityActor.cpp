@@ -7,8 +7,32 @@ ARA4EntityActor::ARA4EntityActor()
     PrimaryActorTick.bCanEverTick = true;
     PrimaryActorTick.bStartWithTickEnabled = true;
     
+    MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComponent"));
+    SetRootComponent(MeshComponent);
+    MeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision); // Collision is handled by simulation core
+
     TargetPosition = FVector::ZeroVector;
     TargetRotationZ = 0.0f;
+}
+
+void ARA4EntityActor::SetEntityMesh(UStaticMesh* InMesh)
+{
+    if (MeshComponent)
+    {
+        MeshComponent->SetStaticMesh(InMesh);
+    }
+}
+
+void ARA4EntityActor::SetTeamColor(const FLinearColor& TeamColor)
+{
+    if (MeshComponent)
+    {
+        UMaterialInstanceDynamic* DynMat = MeshComponent->CreateAndSetMaterialInstanceDynamic(0);
+        if (DynMat)
+        {
+            DynMat->SetVectorParameterValue(TEXT("TeamColor"), TeamColor);
+        }
+    }
 }
 
 void ARA4EntityActor::BeginPlay()

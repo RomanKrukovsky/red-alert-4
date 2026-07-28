@@ -80,34 +80,69 @@ void URA4SimWorldSubsystem::TickSimulation()
 
 void URA4SimWorldSubsystem::SyncPresentation()
 {
+    if (!SimWorld) return;
+
     // Iterate all cores and update their bound actors
     const auto& Cores = SimWorld->GetAllCores();
     const auto& Transforms = SimWorld->GetAllTransforms();
+    UWorld* World = GetWorld();
 
     for (uint32 Index = 0; Index < Cores.size(); ++Index)
     {
         if (Cores[Index].bAlive)
         {
+            ARA4EntityActor* Actor = nullptr;
             if (ARA4EntityActor** ActorPtr = EntityActors.Find(Index))
             {
-                ARA4EntityActor* Actor = *ActorPtr;
+                Actor = *ActorPtr;
+            }
+            else if (World)
+            {
+                // Auto-spawn presentation actor if registered class is set
+                FActorSpawnParameters SpawnParams;
+                SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+                
+                UClass* ClassToSpawn = EntityActorClass ? EntityActorClass.Get() : ARA4EntityActor::StaticClass();
+                Actor = World->SpawnActor<ARA4EntityActor>(ClassToSpawn, FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+                
                 if (Actor)
                 {
-                    const RA4::TransformComp& SimTransform = Transforms[Index];
-                    
-                    // Convert Fixed-point to Float (48.16 implies a specific division, but ToDoubleUnsafe is available)
-                    // Let's assume SimTransform.Position has ToDoubleUnsafe() and Rotation Z.
-                    // X/Y conversion mapped to Unreal's coordinate system (cm).
-                    FVector UnrealPos(
-                        static_cast<float>(SimTransform.Position.X.ToDoubleUnsafe()),
-                        static_cast<float>(SimTransform.Position.Y.ToDoubleUnsafe()),
-                        0.0f
-                    );
-                    
-                    float UnrealRotZ = static_cast<float>(SimTransform.Facing) * (360.0f / 255.0f); // Assuming 8-bit facing
-                    
-                    Actor->UpdateFromSimulation(UnrealPos, UnrealRotZ, false);
+                    Actor->BindToEntity(Index, Cores[Index].Id.Generation);
+                    RegisterEntityActor(Index, Actor);
+
+                    // Assign 3D mesh if ContentId exists in registry
+                    uint32 ContentIdValue = Cores[Index].Content.Value;
+                    if (UStaticMesh** MeshPtr = ContentMeshRegistry.Find(ContentIdValue))
+                    {
+                        Actor->SetEntityMesh(*MeshPtr);
+                    }
                 }
+            }
+
+            if (Actor)
+            {
+                const RA4::TransformComp& SimTransform = Transforms[Index];
+                
+                FVector UnrealPos(
+                    static_cast<float>(SimTransform.Position.X.ToDoubleUnsafe()),
+                    static_cast<float>(SimTransform.Position.Y.ToDoubleUnsafe()),
+                    0.0f
+                );
+                
+                float UnrealRotZ = static_cast<float>(SimTransform.Facing) * (360.0f / 255.0f);
+                Actor->UpdateFromSimulation(UnrealPos, UnrealRotZ, false);
+            }
+        }
+        else
+        {
+            // Clean up destroyed entity actors
+            if (ARA4EntityActor** ActorPtr = EntityActors.Find(Index))
+            {
+                if (ARA4EntityActor* Actor = *ActorPtr)
+                {
+                    Actor->Destroy();
+                }
+                EntityActors.Remove(Index);
             }
         }
     }
