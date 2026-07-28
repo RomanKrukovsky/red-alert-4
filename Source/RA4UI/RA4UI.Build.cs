@@ -16,7 +16,13 @@ public class RA4UI : ModuleRules
 			
 		PrivateDependencyModuleNames.AddRange(new string[] {
 			"CoreUObject",
-			"Engine"
+			"Engine",
+            "UMG",
+            "Slate",
+            "SlateCore",
+            "CommonUI",
+            "ModelViewViewModel",
+            "EnhancedInput"
 		});
 	}
 }

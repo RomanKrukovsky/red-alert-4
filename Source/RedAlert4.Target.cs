@@ -9,9 +9,6 @@ public class RedAlert4Target : TargetRules
 		DefaultBuildSettings = BuildSettingsVersion.V5;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_6;
 		ExtraModuleNames.AddRange(new string[] { "RedAlert4" });
-	}
-}
-
 		ExtraModuleNames.Add("RA4Units");
 		ExtraModuleNames.Add("RA4Buildings");
 		ExtraModuleNames.Add("RA4Economy");
@@ -27,3 +24,5 @@ public class RedAlert4Target : TargetRules
 		ExtraModuleNames.Add("RA4Editor");
 		ExtraModuleNames.Add("RA4Modding");
 		ExtraModuleNames.Add("RA4Diagnostics");
+	}
+}
