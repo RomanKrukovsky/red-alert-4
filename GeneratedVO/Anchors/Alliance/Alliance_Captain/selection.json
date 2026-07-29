@@ -1,0 +1,44 @@
+{
+  "voice_id": "Alliance_Captain",
+  "candidates": [
+    {
+      "anchor_num": 3,
+      "file": "Anchors/Alliance/Alliance_Captain/anchor_03.wav",
+      "absolute_path": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Alliance/Alliance_Captain/anchor_03.wav",
+      "consistency": 0.6772,
+      "clarity": 5.0,
+      "duration": 2.88,
+      "duration_score": 1.0,
+      "peak_db": -1.47,
+      "sample_rate": 48000,
+      "total_score": 0.8386
+    },
+    {
+      "anchor_num": 2,
+      "file": "Anchors/Alliance/Alliance_Captain/anchor_02.wav",
+      "absolute_path": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Alliance/Alliance_Captain/anchor_02.wav",
+      "consistency": 0.5778,
+      "clarity": 5.0,
+      "duration": 3.68,
+      "duration_score": 0.94,
+      "peak_db": -7.11,
+      "sample_rate": 48000,
+      "total_score": 0.7769
+    },
+    {
+      "anchor_num": 1,
+      "file": "Anchors/Alliance/Alliance_Captain/anchor_01.wav",
+      "absolute_path": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Alliance/Alliance_Captain/anchor_01.wav",
+      "consistency": 0.5281,
+      "clarity": 5.0,
+      "duration": 3.2,
+      "duration_score": 1.0,
+      "peak_db": -0.24,
+      "sample_rate": 48000,
+      "total_score": 0.764
+    }
+  ],
+  "selected_anchor_num": 3,
+  "selected_file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Alliance/Alliance_Captain/anchor_03.wav",
+  "selection_reason": "best_overall_score"
+}

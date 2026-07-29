@@ -75,7 +75,8 @@ MacroPath MNavRouter::Find(const TileCoord& From, const TileCoord& To,
             // the brief never defined. Recover the iterator from the reference's
             // address instead -- identity comparison, no new operator==.
             const size_t HitIndex = static_cast<size_t>(&E - Cache.data());
-            std::rotate(Cache.begin(), Cache.begin() + ptrdiff_t(HitIndex), Cache.begin() + 1);
+            const auto Hit = Cache.begin() + static_cast<std::ptrdiff_t>(HitIndex);
+            std::rotate(Hit, Hit + 1, Cache.end());
             return Out;
         }
     }

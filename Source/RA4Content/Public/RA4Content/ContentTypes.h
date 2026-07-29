@@ -1,10 +1,4 @@
 // Copyright (c) Red Alert 4 project. Data-driven definitions for every game object.
-//
-// These are plain structs with no engine dependency. In the editor build they are
-// populated from Primary Data Assets; in tests and on the dedicated server they are
-// populated from the same serialized content pack. The simulation only ever sees
-// these structs, which is what allows a full rebrand (Licensed vs Clean-Room
-// profile) without touching a line of C++.
 #pragma once
 
 #include <cstdint>
@@ -22,33 +16,45 @@ namespace RA4
 
 enum class ArmorClass : uint8_t
 {
-    None = 0,
-    Infantry,
+    LightInfantry = 0,
+    HeavyInfantry,
     LightVehicle,
     HeavyVehicle,
-    Building,
-    Defense,
-    Aircraft,
+    SiegeVehicle,
+    Air,
     Naval,
+    Building,
+    Shielded,
     Count,
+    // Backwards compatibility aliases
+    None = LightInfantry,
+    Infantry = LightInfantry,
+    Defense = Building,
+    Aircraft = Air
 };
 
 enum class WarheadClass : uint8_t
 {
-    SmallArms = 0,
+    Ballistic = 0,
+    Fragmentation,
     ArmorPiercing,
-    HighExplosive,
-    Rocket,
-    Beam,
-    Flame,
-    EMP,
-    Crush,
+    Siege,
+    Electric,
+    Plasma,
+    Cryogenic,
+    Temporal,
+    AntiAir,
     Count,
+    // Backwards compatibility aliases
+    SmallArms = Ballistic,
+    HighExplosive = Fragmentation,
+    Rocket = ArmorPiercing,
+    Beam = Plasma,
+    Flame = Fragmentation,
+    EMP = Electric,
+    Crush = Siege
 };
 
-// Which navigation layer an entity occupies. Separate layers let a submarine and a
-// tank share a tile without interacting, and let bridges be passable only to the
-// ground layers.
 enum class MovementLayer : uint8_t
 {
     None = 0,     // buildings, resource nodes
@@ -70,7 +76,6 @@ enum class EntityKind : uint8_t
     Count,
 };
 
-// Right-hand production tabs, in display order.
 enum class ProductionCategory : uint8_t
 {
     Structure = 0,
@@ -93,6 +98,15 @@ enum class FactionId : uint8_t
     Count,
 };
 
+enum class VeterancyRank : uint8_t
+{
+    Recruit = 0,
+    Veteran,
+    Elite,
+    Heroic,
+    Count
+};
+
 // --- Weapons --------------------------------------------------------------
 
 struct WeaponDef
@@ -101,7 +115,7 @@ struct WeaponDef
     std::string Name;
 
     int32_t Damage = 0;
-    WarheadClass Warhead = WarheadClass::SmallArms;
+    WarheadClass Warhead = WarheadClass::Ballistic;
 
     Fixed MinRange = Fixed::Zero();     // artillery cannot fire inside this
     Fixed MaxRange = Fixed::FromInt(500);
@@ -109,8 +123,6 @@ struct WeaponDef
     int32_t BurstCount = 1;
     int32_t BurstDelayTicks = 0;
 
-    // Zero speed means hitscan: damage is applied in the same tick the shot is
-    // resolved. Non-zero spawns a simulated projectile entity.
     Fixed ProjectileSpeed = Fixed::Zero();
     Fixed SplashRadius = Fixed::Zero();
     int32_t SplashFalloffPercent = 50;  // damage at the splash edge
@@ -118,8 +130,6 @@ struct WeaponDef
     bool bCanTargetGround = true;
     bool bCanTargetAir = false;
     bool bRequiresTurretAligned = true;
-    // Accuracy is expressed as a scatter radius at max range rather than a hit
-    // roll, so that misses land somewhere and can still splash.
     Fixed ScatterAtMaxRange = Fixed::Zero();
 };
 
@@ -129,12 +139,10 @@ struct ProductionInfo
 {
     int32_t Cost = 0;
     int32_t BuildTimeTicks = 0;
+    int32_t CommandLimit = 1;
     ProductionCategory Category = ProductionCategory::Infantry;
-    // Producer building types that can queue this item. Empty means "placed
-    // directly by the player" (used by structures).
     std::vector<ContentId> ProducedBy;
     std::vector<ContentId> Prerequisites;
-    // Refund fraction when a queued item is cancelled, in percent.
     int32_t CancelRefundPercent = 100;
 };
 
@@ -144,6 +152,7 @@ struct BuildingInfo
     int32_t FootprintY = 1;
     int32_t PowerProduced = 0;
     int32_t PowerConsumed = 0;
+    int32_t CommandLimitProvided = 0;
 
     bool bIsConstructionYard = false;
     bool bIsRefinery = false;        // harvesters unload here
@@ -152,10 +161,7 @@ struct BuildingInfo
     bool bProvidesBuildRadius = false;
     Fixed BuildRadius = Fixed::Zero();
 
-    // Unit that spawns with the building on completion (refinery -> free harvester,
-    // matching the C&C convention).
     ContentId BundledUnit;
-
     int32_t SellRefundPercent = 50;
 };
 
@@ -170,9 +176,9 @@ struct UnitInfo
     Fixed CollisionRadius = Fixed::FromInt(20);
 
     bool bIsHarvester = false;
-    int32_t CargoCapacity = 0;
-    int32_t HarvestPerTick = 0;
-    int32_t UnloadPerTick = 0;
+    int32_t CargoCapacity = 1200;
+    int32_t HarvestPerTick = 20;
+    int32_t UnloadPerTick = 50;
 
     bool bCanCrushInfantry = false;
     bool bIsBuilder = false;                // deployable MCV
@@ -188,7 +194,8 @@ struct EntityDef
     FactionId Faction = FactionId::None;
 
     int32_t MaxHealth = 100;
-    ArmorClass Armor = ArmorClass::Infantry;
+    int32_t MaxShield = 0;
+    ArmorClass Armor = ArmorClass::LightInfantry;
     Fixed VisionRange = Fixed::FromInt(600);
 
     ContentId Weapon;                 // primary weapon; invalid means unarmed
@@ -197,6 +204,8 @@ struct EntityDef
     ProductionInfo Production;
     BuildingInfo Building;
     UnitInfo Unit;
+    
+    std::vector<std::string> Abilities;
 };
 
 // --- Resources ------------------------------------------------------------
@@ -205,11 +214,12 @@ struct ResourceNodeDef
 {
     ContentId Id;
     std::string Name;
-    int32_t InitialAmount = 5000;
+    int32_t InitialAmount = 45000;  // Standard ore field: 45000, Rich: 75000
     int32_t ValuePerUnit = 1;       // credits per harvested unit
+    bool bIsRichOre = false;
     bool bRegrows = false;
     int32_t RegrowPerTick = 0;
-    int32_t MaxAmount = 5000;
+    int32_t MaxAmount = 45000;
 };
 
 // --- Faction --------------------------------------------------------------
@@ -221,6 +231,9 @@ struct FactionDef
     std::string DisplayNameKey;
     ContentId StartingUnit;         // typically the MCV
     int32_t StartingCredits = 10000;
+    int32_t StartingCommandLimit = 50;
+    int32_t MaxCommandLimit = 200;
+    std::string UniqueResourceName;
 };
 
 } // namespace RA4

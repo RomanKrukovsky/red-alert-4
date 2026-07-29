@@ -82,9 +82,9 @@ RA4_TEST(Content, DamageTableEncodesRockPaperScissors)
     // Anti-tank rounds do the reverse.
     RA4_EXPECT(Db.GetDamageMultiplier(WarheadClass::ArmorPiercing, ArmorClass::HeavyVehicle) >
                Db.GetDamageMultiplier(WarheadClass::ArmorPiercing, ArmorClass::Infantry));
-    // Tank shells cannot touch aircraft at all.
-    RA4_EXPECT_EQ(Db.GetDamageMultiplier(WarheadClass::ArmorPiercing, ArmorClass::Aircraft), 0);
-    RA4_EXPECT(Db.GetDamageMultiplier(WarheadClass::Rocket, ArmorClass::Aircraft) > 0);
+    // Anti-Air warhead cannot touch buildings, but shreds aircraft.
+    RA4_EXPECT_EQ(Db.GetDamageMultiplier(WarheadClass::AntiAir, ArmorClass::Building), 0);
+    RA4_EXPECT_EQ(Db.GetDamageMultiplier(WarheadClass::AntiAir, ArmorClass::Air), 200);
 }
 
 // ---------------------------------------------------------------------------
@@ -643,6 +643,40 @@ RA4_TEST(Movement, ImpassableTerrainBlocksGroundUnits)
     RunTicks(World, SecondsToTicks(30));
     // It must be stopped west of the water, not swimming through it.
     RA4_EXPECT(World.GetTransform(Unit)->Position.X < Fixed::FromInt(20 * 200));
+}
+
+RA4_TEST(Movement, RoutesAroundTerrainWallThroughItsOnlyGap)
+{
+    // Break caught: replacing path-guided steering with direct steering leaves a
+    // unit stuck at the first cliff instead of reaching a legal route around it.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    MatchSetup Setup = MakeTestSetup();
+    for (int32_t Y = 0; Y < 32; ++Y)
+    {
+        if (Y != 25)
+        {
+            Setup.Map.SetTileFlag(20, Y, Tile_Cliff, true);
+        }
+    }
+
+    SimWorld World;
+    World.Initialize(&Content, Setup);
+    SpawnEnemyOutpost(World);
+    const EntityId Tank = World.SpawnUnit(Ids::SovHeavyTank, 0, Setup.Map.TileCenterToWorld(TileCoord(10, 10)));
+    RA4_REQUIRE(Tank.IsValid());
+
+    Command Move = MakeCommand(CommandType::Move, 0);
+    Move.Primary = Tank;
+    Move.Location = Setup.Map.TileCenterToWorld(TileCoord(30, 10));
+    RA4_REQUIRE(World.ApplyCommand(Move).IsAccepted());
+
+    const int32_t Ticks = RunUntil(World, SecondsToTicks(60), [&]
+    {
+        return World.GetOrders(Tank)->IsEmpty() &&
+               World.GetTransform(Tank)->Position.X > Fixed::FromInt(5000);
+    });
+    RA4_EXPECT(Ticks >= 0);
 }
 
 // ---------------------------------------------------------------------------

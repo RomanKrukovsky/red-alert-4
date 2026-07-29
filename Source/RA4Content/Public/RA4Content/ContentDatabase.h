@@ -5,7 +5,15 @@
 #include <unordered_map>
 #include <vector>
 
+#if __has_include("HAL/Platform.h")
+#include "HAL/Platform.h"
+#endif
+
 #include "RA4Content/ContentTypes.h"
+
+#ifndef RA4CONTENT_API
+#define RA4CONTENT_API
+#endif
 
 namespace RA4
 {
@@ -15,7 +23,7 @@ namespace RA4
 // Lookup is a hash map, but iteration is always over the insertion-ordered vectors:
 // unordered_map iteration order differs between libstdc++ and libc++, and anything
 // that feeds simulation state must not depend on standard library internals.
-class ContentDatabase
+class RA4CONTENT_API ContentDatabase
 {
 public:
     void Clear();
@@ -26,6 +34,7 @@ public:
     void AddFaction(const FactionDef& Def);
 
     const EntityDef* FindEntity(ContentId Id) const;
+    const EntityDef* FindEntityByName(const std::string& Name) const;
     const WeaponDef* FindWeapon(ContentId Id) const;
     const ResourceNodeDef* FindResourceNode(ContentId Id) const;
     const FactionDef* FindFaction(FactionId Id) const;
@@ -64,6 +73,6 @@ private:
 // Builds the shipping content set for the current milestone. This is the temporary
 // home for definitions until the Data Asset pipeline lands; the same structs are
 // produced either way, so nothing downstream changes when it does.
-void BuildDefaultContent(ContentDatabase& Db);
+RA4CONTENT_API void BuildDefaultContent(ContentDatabase& Db);
 
 } // namespace RA4

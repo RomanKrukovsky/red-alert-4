@@ -272,6 +272,10 @@ struct PlayerState
     int32_t PowerProduced = 0;
     int32_t PowerConsumed = 0;
 
+    int32_t CommandLimitMax = 50;
+    int32_t CommandLimitUsed = 0;
+    int32_t FactionResource = 0;
+
     // Running totals for the post-match screen and for AI self-evaluation.
     int32_t TotalHarvested = 0;
     int32_t UnitsBuilt = 0;

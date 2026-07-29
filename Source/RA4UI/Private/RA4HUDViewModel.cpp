@@ -13,7 +13,7 @@ void URA4HUDViewModel::SetCredits(int32 InCredits)
     if (Credits != InCredits)
     {
         Credits = InCredits;
-        UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetCredits);
+        UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(Credits);
     }
 }
 
@@ -33,7 +33,7 @@ void URA4HUDViewModel::SetPower(int32 InPowerProvided, int32 InPowerDrained)
     if (PowerRatio != NewRatio)
     {
         PowerRatio = NewRatio;
-        UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetPowerRatio);
+        UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(PowerRatio);
     }
 }
 

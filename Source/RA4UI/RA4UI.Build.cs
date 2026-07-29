@@ -10,14 +10,14 @@ public class RA4UI : ModuleRules
 		
 		PublicDependencyModuleNames.AddRange(new string[] {
 			"Core",
-			"RA4Core",
-			"RA4Simulation"
+			"CoreUObject",
+			"Engine",
+			"UMG",
+			"CommonUI",
+			"ModelViewViewModel"
 		});
 			
 		PrivateDependencyModuleNames.AddRange(new string[] {
-			"CoreUObject",
-			"Engine",
-            "UMG",
             "Slate",
             "SlateCore",
             "CommonUI",

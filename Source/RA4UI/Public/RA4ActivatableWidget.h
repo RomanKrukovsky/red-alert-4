@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "CommonActivatableWidget.h"
+#include "RA4UIScreenViewModel.h"
 #include "RA4ActivatableWidget.generated.h"
 
 /**
@@ -20,4 +21,16 @@ public:
 
     // Determines if this widget consumes input entirely or allows pass-through
     virtual TOptional<FUIInputConfig> GetDesiredInputConfig() const override;
+
+    UFUNCTION(BlueprintPure, Category = "RA4 UI|State")
+    URA4UIScreenViewModel* GetScreenViewModel() const;
+
+    UFUNCTION(BlueprintCallable, Category = "RA4 UI|Navigation")
+    void NavigateToScreen(ERA4UIScreenId TargetScreen);
+
+    UFUNCTION(BlueprintCallable, Category = "RA4 UI|Navigation")
+    bool NavigateBack();
+
+    UFUNCTION(BlueprintCallable, Category = "RA4 UI|Modal")
+    void CloseActiveModal();
 };

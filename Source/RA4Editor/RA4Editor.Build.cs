@@ -11,12 +11,18 @@ public class RA4Editor : ModuleRules
 		PublicDependencyModuleNames.AddRange(new string[] {
 			"Core",
 			"RA4Core",
+			"RA4Content",
 			"RA4Simulation"
 		});
 			
 		PrivateDependencyModuleNames.AddRange(new string[] {
 			"CoreUObject",
-			"Engine"
+			"Engine",
+			"UnrealEd",
+			"RedAlert4",
+			"Json",
+			"JsonUtilities",
+			"GameplayTags"
 		});
 	}
 }

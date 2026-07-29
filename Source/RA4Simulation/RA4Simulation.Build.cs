@@ -10,12 +10,13 @@ public class RA4Simulation : ModuleRules
 	public RA4Simulation(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
-		CppStandard = CppStandardVersion.Cpp17;
+		CppStandard = CppStandardVersion.Cpp20;
 
 		PublicIncludePaths.Add(ModuleDirectory + "/Public");
 		PrivateIncludePaths.Add(ModuleDirectory + "/Private");
 
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "RA4Core", "RA4Content" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "RA4Core", "RA4Content", "RA4Navigation", "RA4FogOfWar" });
+
 
 		// No exceptions and no RTTI in the simulation: both add non-determinism
 		// risk through allocation order and are not needed by any of this code.

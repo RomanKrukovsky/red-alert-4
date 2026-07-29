@@ -9,8 +9,6 @@
 #include "RA4Navigation/Formation.h"
 #include "RA4Navigation/NavDebug.h"
 
-#include <cstdio>
-
 using namespace RA4;
 using namespace RA4::Nav;
 
@@ -201,6 +199,24 @@ RA4_TEST(Navigation, MacroRouterInvalidatesOnTopologyRevision)
     RA4_EXPECT(Second.BuiltTopologyRevision != Rev0);
 }
 
+RA4_TEST(Navigation, MacroRouterCacheHitMovesNewestEntrySafely)
+{
+    NavGrid Grid(64, 64);
+    MNavRouter Router(Grid);
+    const NavQuery Query;
+
+    Router.Find(TileCoord(1, 1), TileCoord(62, 62), Query, 8);
+    Router.Find(TileCoord(1, 1), TileCoord(62, 1), Query, 8);
+    const MacroPath Expected = Router.Find(TileCoord(1, 1), TileCoord(1, 62), Query, 8);
+
+    // This is a hit at cache index 2. The old LRU rotation supplied a reversed
+    // range to std::rotate here and read one entry beyond the vector.
+    const MacroPath Cached = Router.Find(TileCoord(1, 1), TileCoord(1, 62), Query, 8);
+
+    RA4_EXPECT(Cached.Waypoints == Expected.Waypoints);
+    RA4_EXPECT_EQ(Router.GetCacheHits(), uint32_t(1));
+}
+
 RA4_TEST(Navigation, FormationMembersFollowLeaderSlot)
 {
     // Break caught: if members computed their own macro path, a formation of 8
@@ -311,6 +327,10 @@ RA4_TEST(Navigation, LocalAvoidancePicksBestOpenNeighbor)
     World.Initialize(&Content, Setup);
     const EntityId U = World.SpawnUnit(RA4Test::Ids::SovConscript, PlayerId{0},
                                        Vec2(Fixed::FromInt(1700), Fixed::FromInt(900)));
+    // Keep the second active player alive so SystemVictory does not finish the
+    // match after the first tick and silently turn the remaining 199 ticks into no-ops.
+    World.SpawnUnit(RA4Test::Ids::AllRifleman, PlayerId{1},
+                    Vec2(Fixed::FromInt(100), Fixed::FromInt(3100)));
     Command Move; Move.Type = CommandType::Move; Move.Issuer = PlayerId{0};
     Move.Primary = U; Move.Location = Vec2(Fixed::FromInt(1700), Fixed::FromInt(100));
     World.ApplyCommand(Move);
@@ -319,32 +339,9 @@ RA4_TEST(Navigation, LocalAvoidancePicksBestOpenNeighbor)
     for (int32_t T = 0; T < 200; ++T)
     {
         World.Tick(nullptr);
-        const TransformComp* Dbg = World.GetTransform(U);
-        if (T < 30 || (T % 20) == 0)
-        {
-            const MovementComp* DbgM = World.GetMovement(U);
-            std::printf("[T7] t=%d pos=(%lld, %lld) tile=(%d, %d) facing=%d speed=%lld blocked=%lld\n",
-                        T,
-                        static_cast<long long>(Dbg->Position.X.Raw),
-                        static_cast<long long>(Dbg->Position.Y.Raw),
-                        Dbg->Position.X.ToIntFloor() / 200,
-                        Dbg->Position.Y.ToIntFloor() / 200,
-                        Dbg->Facing,
-                        static_cast<long long>(DbgM->CurrentSpeed.Raw),
-                        static_cast<long long>(DbgM->BlockedTicks));
-        }
         World.ClearEvents();
     }
     const TransformComp* Tx = World.GetTransform(U);
-    const MovementComp* Mv = World.GetMovement(U);
-    if (Tx != nullptr)
-    {
-        std::printf("[T7] final pos=(%lld, %lld) bHasDest=%d blocked=%lld\n",
-                    static_cast<long long>(Tx->Position.X.Raw),
-                    static_cast<long long>(Tx->Position.Y.Raw),
-                    Mv != nullptr && Mv->bHasDestination ? 1 : 0,
-                    static_cast<long long>(Mv != nullptr ? Mv->BlockedTicks : -1));
-    }
     RA4_REQUIRE(Tx != nullptr);
     // The unit must have moved past Y=900 (its spawn) -- i.e. it did not get stuck.
     RA4_EXPECT(Tx->Position.Y.Raw < Fixed::FromInt(900).Raw);

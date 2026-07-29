@@ -24,12 +24,18 @@
 #include "RA4Navigation/ReservationGrid.h"
 #include "RA4Simulation/SimTypes.h"
 
+#include "FogOfWarGrid.h"
+
 namespace RA4
 {
+
+
+
 
 #ifndef RA4SIMULATION_API
 #define RA4SIMULATION_API
 #endif
+
 
 struct MatchSetup
 {
@@ -98,11 +104,14 @@ public:
     const PlayerState& GetPlayer(PlayerId Id) const;
     const MapDescription& GetMap() const { return Map; }
     const ContentDatabase* GetContent() const { return Content; }
+    const FFogOfWarGrid* GetFogGrid() const { return FogGrid.get(); }
+
 
     // --- Spawning (server / mission scripts only) --------------------------
     EntityId SpawnUnit(ContentId Def, PlayerId Owner, const Vec2& Position, int32_t Facing = 0);
     EntityId SpawnBuilding(ContentId Def, PlayerId Owner, const TileCoord& OriginTile, bool bInstantComplete);
     EntityId SpawnResourceNode(ContentId Def, const TileCoord& Tile, int32_t Amount);
+    void DebugDamage(EntityId TargetId, int32_t DamageAmount);
 
     // --- Commands ----------------------------------------------------------
     // Validation is total: ownership, liveness, affordability, tech, placement and
@@ -139,8 +148,10 @@ private:
     void SystemMovement();
     void SystemCombat();
     void SystemProjectiles();
+    void SystemFogOfWar();
     void SystemDeaths();
     void SystemVictory();
+
 
     // --- Internals ---------------------------------------------------------
     EntityId AllocateEntity();
@@ -168,6 +179,8 @@ private:
     const ContentDatabase* Content = nullptr;
     MapDescription Map;
     std::unique_ptr<Nav::NavGrid> NavigationGrid;
+    std::unique_ptr<FFogOfWarGrid> FogGrid;
+
 
     struct FlowFieldCacheEntry
     {

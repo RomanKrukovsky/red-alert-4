@@ -30,6 +30,6 @@ private:
     UPROPERTY(FieldNotify, Setter, Getter)
     int32 Credits;
 
-    UPROPERTY(FieldNotify, Setter, Getter)
+    UPROPERTY(FieldNotify, Getter = GetPowerRatio)
     float PowerRatio;
 };

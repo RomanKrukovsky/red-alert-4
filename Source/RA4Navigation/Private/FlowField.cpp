@@ -1,133 +1,172 @@
 // Copyright (c) Red Alert 4 project.
+#include "RA4Navigation/FlowField.h"
 
-#include "FlowField.h"
+#include <limits>
 #include <queue>
-#include <cmath>
 
 namespace RA4
 {
 namespace Nav
 {
+namespace
+{
+struct QueueEntry
+{
+    uint32_t Cost = 0;
+    int32_t Index = 0;
+};
 
-FFlowField::FFlowField(const FNavGrid* InGrid, const FGridCoord& TargetLocation)
+struct QueueEntryGreater
+{
+    bool operator()(const QueueEntry& A, const QueueEntry& B) const
+    {
+        return A.Cost != B.Cost ? A.Cost > B.Cost : A.Index > B.Index;
+    }
+};
+
+constexpr int8_t GDirections[8][2] = {
+    {0, -1}, {1, 0}, {0, 1}, {-1, 0}, {1, -1}, {1, 1}, {-1, 1}, {-1, -1},
+};
+constexpr uint32_t GStepCosts[8] = {10u, 10u, 10u, 10u, 14u, 14u, 14u, 14u};
+} // namespace
+
+FlowField::FlowField(const NavGrid& InGrid, const NavQuery& InQuery, const TileCoord& InTarget)
     : Grid(InGrid)
-    , Target(TargetLocation)
+    , Query(InQuery)
+    , Target(InTarget)
+    , IntegrationCosts(size_t(InGrid.GetWidth()) * size_t(InGrid.GetHeight()), kUnreachableCost)
+    , Directions(size_t(InGrid.GetWidth()) * size_t(InGrid.GetHeight()))
 {
-    if (Grid)
-    {
-        Field.resize(Grid->GetWidth() * Grid->GetHeight());
-    }
 }
 
-void FFlowField::CalculateField()
+void FlowField::Rebuild()
 {
-    if (!Grid || !Grid->IsValid(Target.X, Target.Y)) return;
+    std::fill(IntegrationCosts.begin(), IntegrationCosts.end(), kUnreachableCost);
+    std::fill(Directions.begin(), Directions.end(), FlowDirection{});
+    BuiltTopologyRevision = Grid.GetTopologyRevision();
 
-    int32_t W = Grid->GetWidth();
-    int32_t H = Grid->GetHeight();
-
-    // 1. Reset field
-    for (auto& Cell : Field)
+    if (!Grid.IsTraversable(Target, Query))
     {
-        Cell.IntegrationCost = 0xFFFF;
-        Cell.DirX = 0.0f;
-        Cell.DirY = 0.0f;
+        return;
     }
 
-    // 2. Integration field (Dijkstra)
-    std::queue<FGridCoord> Frontier;
-    
-    // Setup target
-    int32_t TargetIdx = Target.Y * W + Target.X;
-    Field[TargetIdx].IntegrationCost = 0;
-    Frontier.push(Target);
+    const int32_t TargetIndex = ToIndex(Target);
+    IntegrationCosts[size_t(TargetIndex)] = 0;
+    std::priority_queue<QueueEntry, std::vector<QueueEntry>, QueueEntryGreater> Open;
+    Open.push(QueueEntry{0, TargetIndex});
 
-    const int32_t DX[] = { 0, 1, 0, -1, 1, 1, -1, -1 };
-    const int32_t DY[] = { -1, 0, 1, 0, -1, 1, 1, -1 };
-    const uint16_t Dist[] = { 10, 10, 10, 10, 14, 14, 14, 14 }; // 10 * cost
-
-    while (!Frontier.empty())
+    while (!Open.empty())
     {
-        FGridCoord Current = Frontier.front();
-        Frontier.pop();
-
-        int32_t CurrIdx = Current.Y * W + Current.X;
-        uint16_t CurrCost = Field[CurrIdx].IntegrationCost;
-
-        for (int i = 0; i < 8; ++i)
+        const QueueEntry Current = Open.top();
+        Open.pop();
+        if (Current.Cost != IntegrationCosts[size_t(Current.Index)])
         {
-            FGridCoord Neighbor = { Current.X + DX[i], Current.Y + DY[i] };
-            if (Grid->IsValid(Neighbor.X, Neighbor.Y))
+            continue;
+        }
+
+        const TileCoord CurrentTile(Current.Index % Grid.GetWidth(), Current.Index / Grid.GetWidth());
+        const uint32_t TerrainCost = static_cast<uint32_t>(Grid.GetCell(CurrentTile).MovementCost);
+        for (int32_t DirectionIndex = 0; DirectionIndex < 8; ++DirectionIndex)
+        {
+            const TileCoord Previous(CurrentTile.X + GDirections[DirectionIndex][0],
+                                     CurrentTile.Y + GDirections[DirectionIndex][1]);
+            if (!CanStep(Previous, CurrentTile))
             {
-                const FNavCell& NavCell = Grid->GetCell(Neighbor.X, Neighbor.Y);
-                if (NavCell.CostMultiplier == 255) continue; // Impassable
+                continue;
+            }
 
-                uint16_t NewCost = CurrCost + Dist[i] * NavCell.CostMultiplier;
-                int32_t NeighborIdx = Neighbor.Y * W + Neighbor.X;
+            const uint32_t StepCost = GStepCosts[DirectionIndex] * TerrainCost;
+            if (Current.Cost > std::numeric_limits<uint32_t>::max() - StepCost)
+            {
+                continue;
+            }
 
-                if (NewCost < Field[NeighborIdx].IntegrationCost)
-                {
-                    Field[NeighborIdx].IntegrationCost = NewCost;
-                    Frontier.push(Neighbor);
-                }
+            const uint32_t NewCost = Current.Cost + StepCost;
+            const int32_t PreviousIndex = ToIndex(Previous);
+            if (NewCost < IntegrationCosts[size_t(PreviousIndex)])
+            {
+                IntegrationCosts[size_t(PreviousIndex)] = NewCost;
+                Open.push(QueueEntry{NewCost, PreviousIndex});
             }
         }
     }
 
-    // 3. Flow Field Generation
-    for (int32_t Y = 0; Y < H; ++Y)
+    for (int32_t Y = 0; Y < Grid.GetHeight(); ++Y)
     {
-        for (int32_t X = 0; X < W; ++X)
+        for (int32_t X = 0; X < Grid.GetWidth(); ++X)
         {
-            int32_t Idx = Y * W + X;
-            if (Field[Idx].IntegrationCost == 0xFFFF || Field[Idx].IntegrationCost == 0) continue;
-
-            uint16_t MinCost = Field[Idx].IntegrationCost;
-            int32_t BestDX = 0;
-            int32_t BestDY = 0;
-
-            // Find lowest cost neighbor
-            for (int i = 0; i < 8; ++i)
+            const TileCoord Tile(X, Y);
+            const int32_t Index = ToIndex(Tile);
+            if (IntegrationCosts[size_t(Index)] == kUnreachableCost || Tile == Target)
             {
-                int32_t NX = X + DX[i];
-                int32_t NY = Y + DY[i];
-                
-                if (Grid->IsValid(NX, NY))
+                continue;
+            }
+
+            uint32_t BestCost = IntegrationCosts[size_t(Index)];
+            int32_t BestIndex = std::numeric_limits<int32_t>::max();
+            FlowDirection BestDirection;
+            for (int32_t DirectionIndex = 0; DirectionIndex < 8; ++DirectionIndex)
+            {
+                const TileCoord Next(Tile.X + GDirections[DirectionIndex][0], Tile.Y + GDirections[DirectionIndex][1]);
+                if (!CanStep(Tile, Next))
                 {
-                    int32_t NIdx = NY * W + NX;
-                    if (Field[NIdx].IntegrationCost < MinCost)
-                    {
-                        MinCost = Field[NIdx].IntegrationCost;
-                        BestDX = DX[i];
-                        BestDY = DY[i];
-                    }
+                    continue;
+                }
+
+                const int32_t NextIndex = ToIndex(Next);
+                const uint32_t NextCost = IntegrationCosts[size_t(NextIndex)];
+                if (NextCost < BestCost || (NextCost == BestCost && NextIndex < BestIndex))
+                {
+                    BestCost = NextCost;
+                    BestIndex = NextIndex;
+                    BestDirection = FlowDirection{GDirections[DirectionIndex][0], GDirections[DirectionIndex][1]};
                 }
             }
-
-            // Normalize vector
-            if (BestDX != 0 || BestDY != 0)
-            {
-                float Length = std::sqrt(BestDX * BestDX + BestDY * BestDY);
-                Field[Idx].DirX = static_cast<float>(BestDX) / Length;
-                Field[Idx].DirY = static_cast<float>(BestDY) / Length;
-            }
+            Directions[size_t(Index)] = BestDirection;
         }
     }
 }
 
-void FFlowField::GetDirection(int32_t X, int32_t Y, float& OutDirX, float& OutDirY) const
+bool FlowField::IsReachable(const TileCoord& Tile) const
 {
-    if (Grid && Grid->IsValid(X, Y))
+    return GetIntegrationCost(Tile) != kUnreachableCost;
+}
+
+uint32_t FlowField::GetIntegrationCost(const TileCoord& Tile) const
+{
+    return Grid.IsInBounds(Tile) ? IntegrationCosts[size_t(ToIndex(Tile))] : kUnreachableCost;
+}
+
+FlowDirection FlowField::GetDirection(const TileCoord& Tile) const
+{
+    return Grid.IsInBounds(Tile) ? Directions[size_t(ToIndex(Tile))] : FlowDirection{};
+}
+
+bool FlowField::CanStep(const TileCoord& From, const TileCoord& To) const
+{
+    if (!Grid.IsTraversable(From, Query) || !Grid.IsTraversable(To, Query))
     {
-        int32_t Idx = Y * Grid->GetWidth() + X;
-        OutDirX = Field[Idx].DirX;
-        OutDirY = Field[Idx].DirY;
+        return false;
     }
-    else
+
+    const int32_t DeltaX = To.X - From.X;
+    const int32_t DeltaY = To.Y - From.Y;
+    if ((DeltaX == 0 && DeltaY == 0) || DeltaX < -1 || DeltaX > 1 || DeltaY < -1 || DeltaY > 1)
     {
-        OutDirX = 0.0f;
-        OutDirY = 0.0f;
+        return false;
     }
+
+    if (DeltaX != 0 && DeltaY != 0)
+    {
+        return Grid.IsTraversable(TileCoord(From.X + DeltaX, From.Y), Query) &&
+               Grid.IsTraversable(TileCoord(From.X, From.Y + DeltaY), Query);
+    }
+    return true;
+}
+
+int32_t FlowField::ToIndex(const TileCoord& Tile) const
+{
+    return Tile.Y * Grid.GetWidth() + Tile.X;
 }
 
 } // namespace Nav

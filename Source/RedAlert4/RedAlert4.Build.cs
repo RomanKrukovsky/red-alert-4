@@ -9,7 +9,7 @@ public class RedAlert4 : ModuleRules
 	public RedAlert4(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
-		CppStandard = CppStandardVersion.Cpp17;
+		CppStandard = CppStandardVersion.Cpp20;
 
 		PublicDependencyModuleNames.AddRange(new string[]
 		{
@@ -20,15 +20,19 @@ public class RedAlert4 : ModuleRules
 			"EnhancedInput",
 			"RA4Core",
 			"RA4Content",
+			"RA4Input",
 			"RA4Simulation",
 			"RA4Replay",
+			"RA4FogOfWar",
 		});
+
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
 			"Slate",
 			"SlateCore",
 			"UMG",
+			"RA4UI",
 			"CommonUI",
 			"ModelViewViewModel",
 			"GameplayAbilities",
