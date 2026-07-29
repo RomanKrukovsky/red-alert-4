@@ -122,10 +122,13 @@ public:
     bool IsPlacementValid(ContentId BuildingDef, PlayerId Owner, const TileCoord& OriginTile) const;
     bool HasPrerequisites(PlayerId Owner, const EntityDef& Def) const;
 
-    // --- Determinism -------------------------------------------------------
+    // --- Determinism & Save/Restore -----------------------------------------
     // Hashes every value that can influence future state. Deliberately excludes
     // event lists and caches, which are outputs rather than state.
     uint64_t ComputeStateChecksum() const;
+
+    void Serialize(ByteWriter& W) const;
+    bool Deserialize(ByteReader& R, const ContentDatabase* InContent);
 
     // --- Events ------------------------------------------------------------
     const std::vector<SimEvent>& GetEvents() const { return Events; }

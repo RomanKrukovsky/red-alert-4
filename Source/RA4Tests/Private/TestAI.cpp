@@ -584,8 +584,8 @@ RA4_TEST(AI, WoundedUnitRetreatsToBase)
     AIMatch M;
     M.Enable(0, AIProfile::Aggressive);
 
-    // Spawn an armed unit for Player 0 and damage its health below 25%
-    const EntityId TankId = M.World.SpawnUnit(Ids::SovConscript, 0, Vec2(Fixed::FromInt(2000), Fixed::FromInt(2000)));
+    // Spawn an armed unit for Player 0 away from base and damage its health below 25%
+    const EntityId TankId = M.World.SpawnUnit(Ids::SovConscript, 0, Vec2(Fixed::FromInt(5000), Fixed::FromInt(5000)));
     RA4_REQUIRE(TankId.IsValid());
 
     // Apply damage to bring health below 25%

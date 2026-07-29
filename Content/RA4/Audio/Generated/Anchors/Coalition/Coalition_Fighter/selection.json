@@ -1,0 +1,44 @@
+{
+  "voice_id": "Coalition_Fighter",
+  "candidates": [
+    {
+      "anchor_num": 2,
+      "file": "Anchors/Coalition/Coalition_Fighter/anchor_02.wav",
+      "absolute_path": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Coalition/Coalition_Fighter/anchor_02.wav",
+      "consistency": 0.5938,
+      "clarity": 5.0,
+      "duration": 2.72,
+      "duration_score": 1.0,
+      "peak_db": -6.04,
+      "sample_rate": 48000,
+      "total_score": 0.7969
+    },
+    {
+      "anchor_num": 3,
+      "file": "Anchors/Coalition/Coalition_Fighter/anchor_03.wav",
+      "absolute_path": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Coalition/Coalition_Fighter/anchor_03.wav",
+      "consistency": 0.5455,
+      "clarity": 5.0,
+      "duration": 2.56,
+      "duration_score": 1.0,
+      "peak_db": -5.32,
+      "sample_rate": 48000,
+      "total_score": 0.7728
+    },
+    {
+      "anchor_num": 1,
+      "file": "Anchors/Coalition/Coalition_Fighter/anchor_01.wav",
+      "absolute_path": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Coalition/Coalition_Fighter/anchor_01.wav",
+      "consistency": 0.4547,
+      "clarity": 5.0,
+      "duration": 2.56,
+      "duration_score": 1.0,
+      "peak_db": -1.74,
+      "sample_rate": 48000,
+      "total_score": 0.7273
+    }
+  ],
+  "selected_anchor_num": 2,
+  "selected_file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Coalition/Coalition_Fighter/anchor_02.wav",
+  "selection_reason": "tie_within_5pct_preferring_anchor_02"
+}

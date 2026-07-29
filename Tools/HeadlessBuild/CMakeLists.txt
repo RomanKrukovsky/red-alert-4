@@ -99,6 +99,12 @@ add_library(RA4Replay STATIC
 target_include_directories(RA4Replay PUBLIC ${RA4_SOURCE_ROOT}/RA4Replay/Public)
 target_link_libraries(RA4Replay PUBLIC RA4Simulation)
 
+add_library(RA4Campaign STATIC
+    ${RA4_SOURCE_ROOT}/RA4Campaign/Private/CampaignDatabase.cpp
+)
+target_include_directories(RA4Campaign PUBLIC ${RA4_SOURCE_ROOT}/RA4Campaign/Public)
+target_link_libraries(RA4Campaign PUBLIC RA4Content)
+
 add_executable(RA4Tests
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestMain.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestCore.cpp
@@ -110,8 +116,10 @@ add_executable(RA4Tests
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestPresentation.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestAI.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestBibleContent.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestSaveSystem.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestCampaign.cpp
 )
-target_link_libraries(RA4Tests PRIVATE RA4Replay RA4Input RA4Presentation RA4AI RA4FogOfWar)
+target_link_libraries(RA4Tests PRIVATE RA4Replay RA4Campaign RA4Input RA4Presentation RA4AI RA4FogOfWar)
 target_include_directories(RA4Tests PRIVATE ${RA4_SOURCE_ROOT}/RA4UI/Public)
 
 enable_testing()

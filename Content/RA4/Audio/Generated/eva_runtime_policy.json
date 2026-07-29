@@ -1,0 +1,178 @@
+{
+  "$schema": "https://raw.githubusercontent.com/RedAlert4/schemas/main/eva_runtime_policy.schema.json",
+  "version": "1.0.0",
+  "description": "Runtime playback, priority, interrupt, and concurrency policy configuration for Red Alert 4 EVA Voiceover System.",
+  "priority_levels": {
+    "100": {
+      "name": "CRITICAL_STRATEGIC",
+      "description": "Game-ending or catastrophic battlefield events (Superweapon launch, nuclear strike, base destruction imminent, defeat/victory conditions).",
+      "events": [
+        "NUCLEAR_LAUNCH_DETECTED",
+        "CHRONO_STORM_IMMINENT",
+        "VACUUM_IMPLODER_ARMED",
+        "BASE_DESTRUCTION_IMMINENT",
+        "MISSION_ACCOMPLISHED",
+        "MISSION_FAILED"
+      ]
+    },
+    "85": {
+      "name": "COMBAT_HIGH",
+      "description": "Direct active combat threats to critical assets (Base under attack, commander hero unit under attack, superweapon ready for launch).",
+      "events": [
+        "BASE_UNDER_ATTACK",
+        "SUPERWEAPON_READY",
+        "COMMANDER_UNDER_ATTACK",
+        "MCV_UNDER_ATTACK",
+        "SUPERWEAPON_COUNTDOWN_30"
+      ]
+    },
+    "75": {
+      "name": "TACTICAL_MEDIUM",
+      "description": "Tactical combat events impacting logistics or allied positions (Harvester under attack, ally under attack, superweapon detected).",
+      "events": [
+        "HARVESTER_UNDER_ATTACK",
+        "ALLY_UNDER_ATTACK",
+        "SUPERWEAPON_DETECTED",
+        "BRIDGE_DESTROYED",
+        "OUTPOST_CAPTURED",
+        "CONVOY_AMBUSHED"
+      ]
+    },
+    "65": {
+      "name": "ECONOMY_ALERT",
+      "description": "Critical resource or power shortages requiring immediate player command action.",
+      "events": [
+        "INSUFFICIENT_FUNDS",
+        "POWER_LOW",
+        "SILOS_NEEDED",
+        "ORE_FIELD_EXHAUSTED"
+      ]
+    },
+    "55": {
+      "name": "RESOURCE_UPDATE",
+      "description": "General economic and reinforcement status updates.",
+      "events": [
+        "REINFORCEMENTS_HAVE_ARRIVED",
+        "RESOURCE_NODE_SECURED",
+        "SILOS_FULL"
+      ]
+    },
+    "50": {
+      "name": "PRODUCTION_COMPLETED",
+      "description": "Successful completion of construction, unit training, or technological research.",
+      "events": [
+        "BUILDING_COMPLETE",
+        "UNIT_READY",
+        "TECHNOLOGY_RESEARCHED",
+        "UPGRADE_COMPLETE"
+      ]
+    },
+    "35": {
+      "name": "PRODUCTION_STATUS",
+      "description": "Routine status changes, cancellations, and waypoint markers.",
+      "events": [
+        "CONSTRUCTION_CANCELLED",
+        "TRAINING_CANCELLED",
+        "PRIMARY_BUILDING_SET",
+        "RALLY_POINT_SET",
+        "UNIT_PROMOTED"
+      ]
+    }
+  },
+  "cooldowns": {
+    "BASE_UNDER_ATTACK": 12.0,
+    "HARVESTER_UNDER_ATTACK": 15.0,
+    "INSUFFICIENT_FUNDS": 4.0,
+    "UNIT_READY": 1.5,
+    "POWER_LOW": 20.0,
+    "SUPERWEAPON_DETECTED": 30.0,
+    "SUPERWEAPON_READY": 10.0,
+    "SILOS_NEEDED": 15.0,
+    "BUILDING_COMPLETE": 1.0,
+    "TECHNOLOGY_RESEARCHED": 2.0,
+    "PRIMARY_BUILDING_SET": 1.0,
+    "UNIT_PROMOTED": 3.0,
+    "ALLY_UNDER_ATTACK": 15.0,
+    "REINFORCEMENTS_HAVE_ARRIVED": 10.0,
+    "CONSTRUCTION_CANCELLED": 1.0
+  },
+  "concurrency_groups": {
+    "EVA.Strategic": {
+      "max_active": 1,
+      "max_queue": 3,
+      "priority_threshold": 100,
+      "interruptible": false,
+      "ducking_preset": "StrategicFocus"
+    },
+    "EVA.Combat": {
+      "max_active": 1,
+      "max_queue": 2,
+      "priority_threshold": 75,
+      "interruptible": true,
+      "interrupt_by": ["EVA.Strategic"],
+      "ducking_preset": "CombatAlert"
+    },
+    "EVA.Economy": {
+      "max_active": 1,
+      "max_queue": 1,
+      "priority_threshold": 55,
+      "interruptible": true,
+      "interrupt_by": ["EVA.Strategic", "EVA.Combat"],
+      "ducking_preset": "StandardAlert"
+    },
+    "EVA.Production": {
+      "max_active": 1,
+      "max_queue": 2,
+      "priority_threshold": 35,
+      "interruptible": true,
+      "interrupt_by": ["EVA.Strategic", "EVA.Combat", "EVA.Economy"],
+      "ducking_preset": "RoutineNotice"
+    },
+    "EVA.FactionResource": {
+      "max_active": 1,
+      "max_queue": 1,
+      "priority_threshold": 55,
+      "interruptible": true,
+      "interrupt_by": ["EVA.Strategic", "EVA.Combat"],
+      "ducking_preset": "StandardAlert"
+    }
+  },
+  "interrupt_policies": {
+    "preemption_mode": "STRICT_PRIORITY_PREEMPTION",
+    "preemption_fade_out_ms": 50,
+    "preemption_fade_in_ms": 20,
+    "rules": {
+      "higher_priority_interrupts_lower": true,
+      "equal_priority_behavior": "DROP_INCOMING_IF_PLAYING",
+      "drop_on_queue_overflow": true,
+      "stale_event_expiration_seconds": 3.0
+    }
+  },
+  "aggregation_rules": {
+    "unit_ready_batching": {
+      "enabled": true,
+      "window_seconds": 1.5,
+      "max_individual": 3,
+      "fallback_event": "UNITS_READY_MULTIPLE",
+      "fallback_text": "Подразделения готовы."
+    },
+    "repeated_combat_warning": {
+      "enabled": true,
+      "window_seconds": 12.0,
+      "suppress_duplicate": true,
+      "location_cluster_radius_meters": 50.0
+    },
+    "building_constructed_batching": {
+      "enabled": true,
+      "window_seconds": 1.0,
+      "max_individual": 2,
+      "fallback_event": "BUILDINGS_COMPLETE_MULTIPLE",
+      "fallback_text": "Строительство завершено."
+    },
+    "insufficient_funds_throttling": {
+      "enabled": true,
+      "window_seconds": 4.0,
+      "max_triggers_per_window": 1
+    }
+  }
+}

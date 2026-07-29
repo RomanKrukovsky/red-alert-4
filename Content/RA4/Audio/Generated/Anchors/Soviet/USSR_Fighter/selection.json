@@ -1,0 +1,44 @@
+{
+  "voice_id": "USSR_Fighter",
+  "candidates": [
+    {
+      "anchor_num": 3,
+      "file": "Anchors/Soviet/USSR_Fighter/anchor_03.wav",
+      "absolute_path": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_Fighter/anchor_03.wav",
+      "consistency": 0.6127,
+      "clarity": 5.0,
+      "duration": 2.56,
+      "duration_score": 1.0,
+      "peak_db": -5.17,
+      "sample_rate": 48000,
+      "total_score": 0.8063
+    },
+    {
+      "anchor_num": 1,
+      "file": "Anchors/Soviet/USSR_Fighter/anchor_01.wav",
+      "absolute_path": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_Fighter/anchor_01.wav",
+      "consistency": 0.5691,
+      "clarity": 5.0,
+      "duration": 2.24,
+      "duration_score": 1.0,
+      "peak_db": -5.25,
+      "sample_rate": 48000,
+      "total_score": 0.7846
+    },
+    {
+      "anchor_num": 2,
+      "file": "Anchors/Soviet/USSR_Fighter/anchor_02.wav",
+      "absolute_path": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_Fighter/anchor_02.wav",
+      "consistency": 0.4919,
+      "clarity": 5.0,
+      "duration": 2.24,
+      "duration_score": 1.0,
+      "peak_db": -7.77,
+      "sample_rate": 48000,
+      "total_score": 0.7459
+    }
+  ],
+  "selected_anchor_num": 2,
+  "selected_file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_Fighter/anchor_02.wav",
+  "selection_reason": "tie_within_5pct_preferring_anchor_02"
+}

@@ -1841,8 +1841,18 @@ void SimWorld::SystemMovement()
         if (FromTile.X == ToTile.X && FromTile.Y == ToTile.Y)
         {
             if (Reservations) Reservations->Release(I);
-            SteerToward(I, *D, M.Destination, Query);
-            if (M.BlockedTicks > kRepathBlockedTickThreshold)
+            const Vec2 TargetPos = NavigationGrid->IsTraversable(Map.WorldToTile(M.Destination), Query)
+                                       ? M.Destination
+                                       : Map.TileCenterToWorld(ToTile);
+            SteerToward(I, *D, TargetPos, Query);
+            const Vec2 Delta = TargetPos - T.Position;
+            if (Delta.LengthSquared() <= M.ArriveRadius * M.ArriveRadius)
+            {
+                M.bHasDestination = false;
+                M.CurrentSpeed = Fixed::Zero();
+                M.BlockedTicks = 0;
+            }
+            else if (M.BlockedTicks > kRepathBlockedTickThreshold)
             {
                 M.CurrentMacroPath = Nav::MacroPath{};
                 M.BlockedTicks = 0;
@@ -1963,6 +1973,12 @@ void SimWorld::SystemMovement()
             for (int32_t N = 0; N < 8; ++N)
             {
                 const TileCoord C(DesiredTile.X + Deltas[N][0], DesiredTile.Y + Deltas[N][1]);
+                // Never "avoid" into the tile we already occupy. The neighbours of
+                // the desired tile include our own, and a unit standing on that
+                // tile's centre would then steer at a point zero units away, take a
+                // zero-length step and freeze there permanently -- with no blocked
+                // ticks to trigger a repath, because the reservation succeeded.
+                if (C.X == FromTile.X && C.Y == FromTile.Y) continue;
                 if (!NavigationGrid->IsTraversable(C, Query)) continue;
                 if (Reservations && !Reservations->IsFree(C, CurrentTick)) continue;
                 // Score = dot of flow dir with (C - FromTile) direction.
@@ -2498,8 +2514,319 @@ uint64_t SimWorld::ComputeStateChecksum() const
             H.FeedInt32(ResourceNodes[I].Amount);
         }
     }
-
     return H.Get();
+}
+
+// ---------------------------------------------------------------------------
+// Serialization & Restoration
+// ---------------------------------------------------------------------------
+
+constexpr uint32_t kSimSaveMagic = 0x52413453u; // "RA4S"
+constexpr uint32_t kSimSaveVersion = 1;
+
+void SimWorld::Serialize(ByteWriter& W) const
+{
+    W.WriteUInt32(kSimSaveMagic);
+    W.WriteUInt32(kSimSaveVersion);
+    W.WriteUInt32(CurrentTick);
+    W.WriteUInt8(static_cast<uint8_t>(Phase));
+    W.WriteUInt8(Winner);
+    W.WriteUInt64(Rng.GetState());
+    W.WriteUInt64(Rng.GetIncrement());
+
+    // Map description
+    W.WriteString(Map.Name);
+    W.WriteInt32(Map.Width);
+    W.WriteInt32(Map.Height);
+    W.WriteUInt32(static_cast<uint32_t>(Map.Tiles.size()));
+    for (uint8_t Tile : Map.Tiles)
+    {
+        W.WriteUInt8(Tile);
+    }
+
+    // Players
+    for (int32_t P = 0; P < kMaxPlayers; ++P)
+    {
+        const PlayerState& S = Players[P];
+        W.WriteBool(S.bActive);
+        W.WriteBool(S.bDefeated);
+        W.WriteUInt8(static_cast<uint8_t>(S.Faction));
+        W.WriteInt32(S.Credits);
+        W.WriteInt32(S.PowerProduced);
+        W.WriteInt32(S.PowerConsumed);
+        W.WriteInt32(S.UnitsBuilt);
+        W.WriteInt32(S.BuildingsBuilt);
+        W.WriteInt32(S.UnitsLost);
+        W.WriteInt32(S.BuildingsLost);
+        W.WriteInt32(S.TotalHarvested);
+        W.WriteUInt32(static_cast<uint32_t>(S.CompletedBuildingTypes.size()));
+        for (const ContentId& C : S.CompletedBuildingTypes)
+        {
+            W.WriteUInt32(C.Value);
+        }
+    }
+
+    // Free slots & High water mark
+    W.WriteUInt32(HighWaterMark);
+    W.WriteUInt32(static_cast<uint32_t>(FreeSlots.size()));
+    for (uint32_t Slot : FreeSlots)
+    {
+        W.WriteUInt32(Slot);
+    }
+
+    // Entity arrays
+    for (uint32_t I = 0; I < HighWaterMark; ++I)
+    {
+        const EntityCore& C = Core[I];
+        W.WriteBool(C.bAlive);
+        W.WriteUInt32(C.Generation);
+        W.WriteUInt32(C.Def.Value);
+        W.WriteUInt8(static_cast<uint8_t>(C.Kind));
+        W.WriteUInt8(C.Owner);
+
+        const TransformComp& T = Transforms[I];
+        W.WriteInt64(T.Position.X.Raw);
+        W.WriteInt64(T.Position.Y.Raw);
+        W.WriteInt32(T.Facing);
+        W.WriteInt32(T.TurretFacing);
+
+        const HealthComp& H = Healths[I];
+        W.WriteInt32(H.Current);
+        W.WriteInt32(H.Max);
+        W.WriteBool(H.bInvulnerable);
+
+        const MovementComp& M = Movements[I];
+        W.WriteInt64(M.Destination.X.Raw);
+        W.WriteInt64(M.Destination.Y.Raw);
+        W.WriteBool(M.bHasDestination);
+        W.WriteInt64(M.CurrentSpeed.Raw);
+        W.WriteInt64(M.ArriveRadius.Raw);
+        W.WriteInt32(M.BlockedTicks);
+
+        const CombatComp& Cm = Combats[I];
+        W.WriteUInt32(Cm.Target.Index);
+        W.WriteUInt32(Cm.Target.Generation);
+        W.WriteInt32(Cm.CooldownTicks);
+        W.WriteBool(Cm.bTargetIsForced);
+
+        const BuildingComp& B = Buildings[I];
+        W.WriteInt32(B.OriginTile.X);
+        W.WriteInt32(B.OriginTile.Y);
+        W.WriteInt32(B.FootprintX);
+        W.WriteInt32(B.FootprintY);
+        W.WriteUInt8(static_cast<uint8_t>(B.State));
+        W.WriteInt32(B.ConstructionProgressTicks);
+        W.WriteInt32(B.ConstructionTotalTicks);
+        W.WriteInt64(B.RallyPoint.X.Raw);
+        W.WriteInt64(B.RallyPoint.Y.Raw);
+        W.WriteBool(B.bHasRallyPoint);
+        W.WriteBool(B.bSelling);
+        W.WriteUInt32(static_cast<uint32_t>(B.Queue.size()));
+        for (const ProductionItem& Item : B.Queue)
+        {
+            W.WriteUInt32(Item.Content.Value);
+            W.WriteInt32(Item.ProgressTicks);
+            W.WriteInt32(Item.TotalTicks);
+            W.WriteInt32(Item.PaidCredits);
+            W.WriteBool(Item.bPaused);
+        }
+
+        const HarvesterComp& Hv = Harvesters[I];
+        W.WriteUInt8(static_cast<uint8_t>(Hv.State));
+        W.WriteInt32(Hv.Cargo);
+        W.WriteUInt32(Hv.AssignedNode.Index);
+        W.WriteUInt32(Hv.AssignedNode.Generation);
+        W.WriteUInt32(Hv.AssignedRefinery.Index);
+        W.WriteUInt32(Hv.AssignedRefinery.Generation);
+
+        const ResourceNodeComp& Rn = ResourceNodes[I];
+        W.WriteInt32(Rn.Amount);
+        W.WriteUInt32(Rn.Def.Value);
+
+        const OrderQueue& Oq = Orders[I];
+        W.WriteInt32(Oq.Count);
+        for (int32_t K = 0; K < Oq.Count; ++K)
+        {
+            const Order& Ord = Oq.Orders[K];
+            W.WriteUInt8(static_cast<uint8_t>(Ord.Type));
+            W.WriteInt64(Ord.Location.X.Raw);
+            W.WriteInt64(Ord.Location.Y.Raw);
+            W.WriteUInt32(Ord.Target.Index);
+            W.WriteUInt32(Ord.Target.Generation);
+        }
+    }
+}
+
+bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
+{
+    if (R.ReadUInt32() != kSimSaveMagic)
+    {
+        return false;
+    }
+    const uint32_t Version = R.ReadUInt32();
+    if (Version != kSimSaveVersion)
+    {
+        return false;
+    }
+
+    Reset();
+    Content = InContent;
+
+    CurrentTick = R.ReadUInt32();
+    Phase = static_cast<MatchPhase>(R.ReadUInt8());
+    Winner = R.ReadUInt8();
+    const uint64_t RState = R.ReadUInt64();
+    const uint64_t RInc = R.ReadUInt64();
+    Rng.SetState(RState, RInc);
+
+    Map.Name = R.ReadString();
+    Map.Width = R.ReadInt32();
+    Map.Height = R.ReadInt32();
+    const uint32_t TileCount = R.ReadUInt32();
+    Map.Tiles.resize(TileCount);
+    for (uint32_t I = 0; I < TileCount; ++I)
+    {
+        Map.Tiles[I] = R.ReadUInt8();
+    }
+
+    for (int32_t P = 0; P < kMaxPlayers; ++P)
+    {
+        PlayerState& S = Players[P];
+        S.bActive = R.ReadBool();
+        S.bDefeated = R.ReadBool();
+        S.Faction = static_cast<FactionId>(R.ReadUInt8());
+        S.Credits = R.ReadInt32();
+        S.PowerProduced = R.ReadInt32();
+        S.PowerConsumed = R.ReadInt32();
+        S.UnitsBuilt = R.ReadInt32();
+        S.BuildingsBuilt = R.ReadInt32();
+        S.UnitsLost = R.ReadInt32();
+        S.BuildingsLost = R.ReadInt32();
+        S.TotalHarvested = R.ReadInt32();
+        const uint32_t TechCount = R.ReadUInt32();
+        S.CompletedBuildingTypes.resize(TechCount);
+        for (uint32_t T = 0; T < TechCount; ++T)
+        {
+            S.CompletedBuildingTypes[T].Value = R.ReadUInt32();
+        }
+    }
+
+    HighWaterMark = R.ReadUInt32();
+    const uint32_t FreeCount = R.ReadUInt32();
+    FreeSlots.resize(FreeCount);
+    for (uint32_t I = 0; I < FreeCount; ++I)
+    {
+        FreeSlots[I] = R.ReadUInt32();
+    }
+
+    Core.resize(HighWaterMark);
+    Transforms.resize(HighWaterMark);
+    Healths.resize(HighWaterMark);
+    Movements.resize(HighWaterMark);
+    Combats.resize(HighWaterMark);
+    Buildings.resize(HighWaterMark);
+    Harvesters.resize(HighWaterMark);
+    ResourceNodes.resize(HighWaterMark);
+    Projectiles.resize(HighWaterMark);
+    Orders.resize(HighWaterMark);
+
+    for (uint32_t I = 0; I < HighWaterMark; ++I)
+    {
+        EntityCore& C = Core[I];
+        C.bAlive = R.ReadBool();
+        C.Generation = R.ReadUInt32();
+        C.Def.Value = R.ReadUInt32();
+        C.Kind = static_cast<EntityKind>(R.ReadUInt8());
+        C.Owner = R.ReadUInt8();
+
+        TransformComp& T = Transforms[I];
+        T.Position.X.Raw = R.ReadInt64();
+        T.Position.Y.Raw = R.ReadInt64();
+        T.Facing = R.ReadInt32();
+        T.TurretFacing = R.ReadInt32();
+
+        HealthComp& H = Healths[I];
+        H.Current = R.ReadInt32();
+        H.Max = R.ReadInt32();
+        H.bInvulnerable = R.ReadBool();
+
+        MovementComp& M = Movements[I];
+        M.Destination.X.Raw = R.ReadInt64();
+        M.Destination.Y.Raw = R.ReadInt64();
+        M.bHasDestination = R.ReadBool();
+        M.CurrentSpeed.Raw = R.ReadInt64();
+        M.ArriveRadius.Raw = R.ReadInt64();
+        M.BlockedTicks = R.ReadInt32();
+
+        CombatComp& Cm = Combats[I];
+        Cm.Target.Index = R.ReadUInt32();
+        Cm.Target.Generation = R.ReadUInt32();
+        Cm.CooldownTicks = R.ReadInt32();
+        Cm.bTargetIsForced = R.ReadBool();
+
+        BuildingComp& B = Buildings[I];
+        B.OriginTile.X = R.ReadInt32();
+        B.OriginTile.Y = R.ReadInt32();
+        B.FootprintX = R.ReadInt32();
+        B.FootprintY = R.ReadInt32();
+        B.State = static_cast<ConstructionState>(R.ReadUInt8());
+        B.ConstructionProgressTicks = R.ReadInt32();
+        B.ConstructionTotalTicks = R.ReadInt32();
+        B.RallyPoint.X.Raw = R.ReadInt64();
+        B.RallyPoint.Y.Raw = R.ReadInt64();
+        B.bHasRallyPoint = R.ReadBool();
+        B.bSelling = R.ReadBool();
+        const uint32_t QueueCount = R.ReadUInt32();
+        B.Queue.resize(QueueCount);
+        for (uint32_t Q = 0; Q < QueueCount; ++Q)
+        {
+            ProductionItem& Item = B.Queue[Q];
+            Item.Content.Value = R.ReadUInt32();
+            Item.ProgressTicks = R.ReadInt32();
+            Item.TotalTicks = R.ReadInt32();
+            Item.PaidCredits = R.ReadInt32();
+            Item.bPaused = R.ReadBool();
+        }
+
+        HarvesterComp& Hv = Harvesters[I];
+        Hv.State = static_cast<HarvesterState>(R.ReadUInt8());
+        Hv.Cargo = R.ReadInt32();
+        Hv.AssignedNode.Index = R.ReadUInt32();
+        Hv.AssignedNode.Generation = R.ReadUInt32();
+        Hv.AssignedRefinery.Index = R.ReadUInt32();
+        Hv.AssignedRefinery.Generation = R.ReadUInt32();
+
+        ResourceNodeComp& Rn = ResourceNodes[I];
+        Rn.Amount = R.ReadInt32();
+        Rn.Def.Value = R.ReadUInt32();
+
+        OrderQueue& Oq = Orders[I];
+        Oq.Count = R.ReadInt32();
+        for (int32_t K = 0; K < Oq.Count; ++K)
+        {
+            Order& Ord = Oq.Orders[K];
+            Ord.Type = static_cast<OrderType>(R.ReadUInt8());
+            Ord.Location.X.Raw = R.ReadInt64();
+            Ord.Location.Y.Raw = R.ReadInt64();
+            Ord.Target.Index = R.ReadUInt32();
+            Ord.Target.Generation = R.ReadUInt32();
+        }
+    }
+
+    BuildNavigationGrid();
+    Reservations = std::make_unique<Nav::ReservationGrid>(Map.Width, Map.Height);
+    Router = std::make_unique<Nav::MNavRouter>(*NavigationGrid);
+    FogGrid = std::make_unique<FFogOfWarGrid>(Map.Width, Map.Height, kMaxPlayers);
+
+    for (PlayerId P = 0; P < kMaxPlayers; ++P)
+    {
+        if (Players[P].bActive)
+        {
+            RefreshPlayerTech(P);
+        }
+    }
+
+    return !R.HasError();
 }
 
 } // namespace RA4

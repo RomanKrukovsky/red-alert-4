@@ -1,0 +1,44 @@
+{
+  "voice_id": "USSR_Captain",
+  "candidates": [
+    {
+      "anchor_num": 1,
+      "file": "Anchors/Soviet/USSR_Captain/anchor_01.wav",
+      "absolute_path": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_Captain/anchor_01.wav",
+      "consistency": 0.5944,
+      "clarity": 5.0,
+      "duration": 3.04,
+      "duration_score": 1.0,
+      "peak_db": -5.06,
+      "sample_rate": 48000,
+      "total_score": 0.7972
+    },
+    {
+      "anchor_num": 2,
+      "file": "Anchors/Soviet/USSR_Captain/anchor_02.wav",
+      "absolute_path": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_Captain/anchor_02.wav",
+      "consistency": 0.5617,
+      "clarity": 5.0,
+      "duration": 4.16,
+      "duration_score": 0.78,
+      "peak_db": -2.68,
+      "sample_rate": 48000,
+      "total_score": 0.7369
+    },
+    {
+      "anchor_num": 3,
+      "file": "Anchors/Soviet/USSR_Captain/anchor_03.wav",
+      "absolute_path": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_Captain/anchor_03.wav",
+      "consistency": 0.4901,
+      "clarity": 5.0,
+      "duration": 3.84,
+      "duration_score": 0.8867,
+      "peak_db": -7.0,
+      "sample_rate": 48000,
+      "total_score": 0.7224
+    }
+  ],
+  "selected_anchor_num": 1,
+  "selected_file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_Captain/anchor_01.wav",
+  "selection_reason": "best_overall_score"
+}
