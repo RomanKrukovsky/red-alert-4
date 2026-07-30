@@ -204,10 +204,14 @@ void CameraController::Update(float DeltaSeconds)
         const float Radians = YawDegrees * 3.14159265358979323846f / 180.0f;
         const float SinYaw = std::sin(Radians);
         const float CosYaw = std::cos(Radians);
-        // At yaw 0 the camera looks down +Y (see ARA4CameraPawn), so screen-up is +Y
-        // and screen-right is +X; this rotation reduces to the identity there.
-        const Vec2f WorldPan(Pan.X * CosYaw + Pan.Y * SinYaw,
-                             Pan.Y * CosYaw - Pan.X * SinYaw);
+        // At yaw 0 the camera (ARA4CameraPawn's SpringArm, base yaw 90) looks down
+        // +Y, so screen-up is +Y here -- but screen-RIGHT is world -X, not +X: a yaw
+        // of 90 gives the arm a Right vector of (-sin90, cos90, 0) = (-1, 0, 0). A
+        // previous fix assumed +X and had D pan the view left, A right; Pan.X is
+        // negated below to correct that before the same rotation is applied for
+        // further camera yaw.
+        const Vec2f WorldPan(-Pan.X * CosYaw + Pan.Y * SinYaw,
+                             Pan.Y * CosYaw + Pan.X * SinYaw);
 
         const float Speed = CurrentPanSpeed();
         TargetFocus = ClampToBounds(Vec2f(TargetFocus.X + WorldPan.X * Speed * Dt,
