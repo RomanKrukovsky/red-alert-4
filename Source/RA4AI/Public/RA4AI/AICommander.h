@@ -9,6 +9,7 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -83,7 +84,26 @@ private:
     int32_t CountOwnedUnits(const SimWorld& World, bool bCombatOnly) const;
     int32_t CountQueued(const SimWorld& World, ContentId Content) const;
     EntityId FindOwnConstructionYard(const SimWorld& World) const;
-    EntityId FindEnemyTarget(const SimWorld& World) const;
+
+    // What the commander believes about the enemy, drawn only from its fog-limited
+    // memory. Returns false when nothing is currently believed to exist.
+    struct KnownTarget
+    {
+        EntityId Entity;
+        TileCoord Tile;          // last observed position, not the live one
+        EntityKind Kind = EntityKind::Unit;
+    };
+    bool FindKnownEnemyTarget(KnownTarget& Out) const;
+
+    // Sends a single unit to look for the enemy. Without this a fog-limited commander
+    // never discovers anything and therefore never attacks -- scouting is what makes
+    // the honest knowledge model playable rather than passive.
+    bool TryScout(const SimWorld& World, std::vector<Command>& Out);
+    TileCoord NextScoutWaypoint(const SimWorld& World) const;
+
+    // Re-observes the world through the fog-limited view. Must be called before any
+    // decision that depends on enemy information.
+    void UpdateKnowledge(const SimWorld& World);
     bool IsUnderAttack(const SimWorld& World) const;
     AIWorldAssessment BuildAssessment(const SimWorld& World) const;
 
@@ -109,6 +129,18 @@ private:
     bool bHasSeenAttack = false;
 
     TacticalOperation ActiveOperation;
+
+    // The commander's ONLY legitimate source of enemy information. Held across ticks
+    // because memory of what was seen is the whole point; rebuilt if the world object
+    // itself changes (a new match reusing the same commander).
+    std::unique_ptr<SimWorldView> Knowledge;
+    const SimWorld* KnowledgeWorld = nullptr;
+    int32_t TicksSinceMemoryUpdate = 0;
+
+    EntityId ScoutUnit;
+    int32_t ScoutWaypointIndex = 0;
+    TickIndex LastScoutOrderTick = 0;
+    bool bHasScoutOrder = false;
 
     std::vector<AIDecision> DecisionLog;
     size_t DecisionLogLimit = 64;

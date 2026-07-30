@@ -55,9 +55,12 @@ void SimWorldView::UpdateMemory(TickIndex MemoryRetentionTicks)
             continue;
         }
 
-        const TileCoord Tile(static_cast<int32_t>(Transform->Position.X.ToIntFloor()),
-                             static_cast<int32_t>(Transform->Position.Y.ToIntFloor()));
-        
+        // Tile indices, not world units. FFogOfWarGrid is sized Map.Width x Map.Height
+        // (tiles), so feeding it raw world coordinates put every lookup out of bounds,
+        // where GetVisibility answers NeverSeen -- with fog active the AI then observed
+        // nothing whatsoever, including enemies standing next to its own base.
+        const TileCoord Tile = World.GetMap().WorldToTile(Transform->Position);
+
         // If fog grid is active, only update/reveal entities currently visible or detected on radar
         if (Fog != nullptr)
         {

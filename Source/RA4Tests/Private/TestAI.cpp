@@ -462,6 +462,48 @@ RA4_TEST(AI, TwoCommandersPlayAMatchToCompletion)
                0);
 }
 
+RA4_TEST(AI, FiveSkirmishScenariosFinishWithAWinner)
+{
+    struct Scenario
+    {
+        uint64_t MatchSeed;
+        uint64_t PlayerZeroSeed;
+        uint64_t PlayerOneSeed;
+        AIProfile PlayerZeroProfile;
+        AIProfile PlayerOneProfile;
+    };
+
+    const Scenario Scenarios[] = {
+        {20260730, 101, 201, AIProfile::Aggressive, AIProfile::Balanced},
+        {20260731, 102, 202, AIProfile::Balanced, AIProfile::Aggressive},
+        {20260732, 103, 203, AIProfile::Defensive, AIProfile::Aggressive},
+        {20260733, 104, 204, AIProfile::Aggressive, AIProfile::Defensive},
+        {20260734, 105, 205, AIProfile::Adaptive, AIProfile::Economic},
+    };
+
+    for (int32_t Index = 0; Index < int32_t(sizeof(Scenarios) / sizeof(Scenarios[0])); ++Index)
+    {
+        const Scenario& S = Scenarios[Index];
+        AIMatch M(S.MatchSeed);
+        M.Enable(0, S.PlayerZeroProfile, S.PlayerZeroSeed);
+        M.Enable(1, S.PlayerOneProfile, S.PlayerOneSeed);
+        M.Run(SecondsToTicks(900));
+
+        std::printf("         scenario %d: tick=%u phase=%d winner=%d losses=%d\n",
+                    Index + 1, M.World.GetTick(), int32_t(M.World.GetPhase()),
+                    int32_t(M.World.GetWinner()),
+                    M.World.GetPlayer(0).UnitsLost + M.World.GetPlayer(1).UnitsLost +
+                        M.World.GetPlayer(0).BuildingsLost + M.World.GetPlayer(1).BuildingsLost);
+
+        RA4_EXPECT(M.World.GetPhase() == MatchPhase::Finished);
+        RA4_EXPECT(M.World.GetWinner() == 0 || M.World.GetWinner() == 1);
+        RA4_EXPECT(M.PeakBuildings[0] > 1);
+        RA4_EXPECT(M.PeakBuildings[1] > 1);
+        RA4_EXPECT(M.World.GetPlayer(0).TotalHarvested > 0);
+        RA4_EXPECT(M.World.GetPlayer(1).TotalHarvested > 0);
+    }
+}
+
 RA4_TEST(AI, IsDeterministic)
 {
     // Same seed, same commanders, same result -- otherwise replays and lockstep
@@ -606,4 +648,61 @@ RA4_TEST(AI, WoundedUnitRetreatsToBase)
         }
     }
     RA4_EXPECT(bSawRetreat);
+}
+
+// ---------------------------------------------------------------------------
+// Fog-limited knowledge model
+// ---------------------------------------------------------------------------
+
+RA4_TEST(AIKnowledge, MemoryIndexesTheFogGridInTilesNotWorldUnits)
+{
+    // Regression guard for a real defect: UpdateMemory used to pass raw world
+    // coordinates (e.g. 2300) straight into FFogOfWarGrid::GetVisibility, which is
+    // indexed in TILES and bounded by the map's 64x64 grid. Every lookup fell out of
+    // bounds and returned NeverSeen, so with fog active the AI remembered nothing at
+    // all -- including enemies standing in plain sight.
+    AIMatch M;
+    // One simulation tick so SystemFogOfWar stamps visibility for the starting bases.
+    M.Run(1);
+
+    RA4_REQUIRE(M.World.GetFogGrid() != nullptr);
+
+    // Player 0's construction yard sits at tile (10,10) and sees around itself, so
+    // an enemy parked next to it must be observed.
+    const EntityId CloseEnemy =
+        M.World.SpawnUnit(Ids::AllRifleman, 1, M.World.GetMap().TileCenterToWorld(TileCoord(11, 11)));
+    RA4_REQUIRE(CloseEnemy.IsValid());
+    M.Run(1);
+
+    SimWorldView View(M.World, 0);
+    View.UpdateMemory(/*MemoryRetentionTicks*/ 600);
+
+    bool bRemembered = false;
+    for (const EnemyMemory& Mem : View.GetKnownEnemies())
+    {
+        if (Mem.Entity == CloseEnemy)
+        {
+            bRemembered = true;
+        }
+    }
+    RA4_EXPECT(bRemembered);
+}
+
+RA4_TEST(AIKnowledge, EnemiesOutsideVisionAreNotObserved)
+{
+    // The other half of the contract: seeing something nearby must not imply seeing
+    // the whole map. The enemy base at (48,48) is far outside player 0's vision.
+    AIMatch M;
+    M.Run(1);
+    RA4_REQUIRE(M.World.GetFogGrid() != nullptr);
+
+    SimWorldView View(M.World, 0);
+    View.UpdateMemory(/*MemoryRetentionTicks*/ 600);
+
+    for (const EnemyMemory& Mem : View.GetKnownEnemies())
+    {
+        const TileCoord Tile = Mem.Position;
+        // Nothing from the far corner of the map may appear in memory.
+        RA4_EXPECT(!(Tile.X > 40 && Tile.Y > 40));
+    }
 }

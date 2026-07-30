@@ -56,6 +56,14 @@ void AICommander::Reset()
     bHasActiveStrategy = false;
     LastUnderAttackTick = 0;
     bHasSeenAttack = false;
+    // Everything the commander thought it knew about the enemy is forgotten with it.
+    Knowledge.reset();
+    KnowledgeWorld = nullptr;
+    TicksSinceMemoryUpdate = 0;
+    ScoutUnit = EntityId::Invalid();
+    ScoutWaypointIndex = 0;
+    LastScoutOrderTick = 0;
+    bHasScoutOrder = false;
     DecisionLog.clear();
 }
 
@@ -294,31 +302,167 @@ EntityId AICommander::FindOwnConstructionYard(const SimWorld& World) const
     return EntityId::Invalid();
 }
 
-EntityId AICommander::FindEnemyTarget(const SimWorld& World) const
+void AICommander::UpdateKnowledge(const SimWorld& World)
 {
-    // Production buildings first, then anything else: razing a war factory ends the
-    // match faster than chasing the scout that happened to be nearest.
-    EntityId BestBuilding = EntityId::Invalid();
-    EntityId BestOther = EntityId::Invalid();
-
-    const std::vector<EntityCore>& Cores = World.GetAllCores();
-    for (uint32_t I = 0; I < uint32_t(Cores.size()); ++I)
+    // A commander reused for a second match must not carry the first one's sightings.
+    if (Knowledge == nullptr || KnowledgeWorld != &World)
     {
-        const EntityCore& Core = Cores[I];
-        if (!Core.bAlive || Core.Owner == Player || Core.Owner >= kMaxPlayers)
+        Knowledge.reset(new SimWorldView(World, Player));
+        KnowledgeWorld = &World;
+        TicksSinceMemoryUpdate = Config.MemoryUpdateIntervalTicks;   // observe at once
+    }
+
+    if (++TicksSinceMemoryUpdate < Config.MemoryUpdateIntervalTicks)
+    {
+        return;
+    }
+    TicksSinceMemoryUpdate = 0;
+    Knowledge->UpdateMemory(TickIndex(std::max(0, Config.MemoryRetentionTicks)));
+}
+
+TileCoord AICommander::NextScoutWaypoint(const SimWorld& World) const
+{
+    // A fixed ring of candidate locations derived from the map size: the far corner
+    // first, because in a symmetric skirmish that is where the opponent starts, then
+    // the remaining quadrants. Deterministic by construction -- index driven, no RNG,
+    // so two replays of the same seed scout in the same order.
+    const MapDescription& Map = World.GetMap();
+    const int32_t W = Map.Width;
+    const int32_t H = Map.Height;
+    const TileCoord Candidates[6] = {
+        TileCoord(W - W / 8, H - H / 8),     // opposite corner: the likely enemy base
+        TileCoord(W / 2, H / 2),             // centre
+        TileCoord(W - W / 8, H / 8),
+        TileCoord(W / 8, H - H / 8),
+        TileCoord(W / 2, H - H / 8),
+        TileCoord(W - W / 8, H / 2),
+    };
+    const int32_t Count = int32_t(sizeof(Candidates) / sizeof(Candidates[0]));
+    return Candidates[((ScoutWaypointIndex % Count) + Count) % Count];
+}
+
+bool AICommander::TryScout(const SimWorld& World, std::vector<Command>& Out)
+{
+    // Nothing to look for once something is known.
+    KnownTarget Known;
+    if (FindKnownEnemyTarget(Known))
+    {
+        return false;
+    }
+
+    const ContentDatabase* Content = World.GetContent();
+    if (Content == nullptr)
+    {
+        return false;
+    }
+
+    // Is the current scout still alive and still busy walking to its waypoint?
+    if (ScoutUnit.IsValid())
+    {
+        const EntityCore* Core = World.GetCore(ScoutUnit);
+        const bool bAlive = Core != nullptr && Core->bAlive && Core->Owner == Player;
+        if (bAlive)
         {
-            continue;
+            const OrderQueue* Orders = World.GetOrders(ScoutUnit);
+            if (Orders != nullptr && Orders->Count > 0)
+            {
+                return false;   // still en route; do not re-issue and reset its path
+            }
+            // Arrived (or was interrupted) and still found nothing: try the next spot.
+            if (bHasScoutOrder)
+            {
+                ++ScoutWaypointIndex;
+            }
         }
-        if (Core.Kind == EntityKind::Building && !BestBuilding.IsValid())
+        else
         {
-            BestBuilding = World.MakeId(I);
-        }
-        else if (Core.Kind == EntityKind::Unit && !BestOther.IsValid())
-        {
-            BestOther = World.MakeId(I);
+            // The scout died. That is information in itself, but a replacement is
+            // still needed, so fall through and pick one.
+            ScoutUnit = EntityId::Invalid();
+            bHasScoutOrder = false;
         }
     }
-    return BestBuilding.IsValid() ? BestBuilding : BestOther;
+
+    if (!ScoutUnit.IsValid())
+    {
+        // Cheapest armed unit available, so scouting does not consume the assault
+        // force. Chosen in entity-index order for determinism.
+        const std::vector<EntityCore>& Cores = World.GetAllCores();
+        for (uint32_t I = 0; I < uint32_t(Cores.size()); ++I)
+        {
+            if (!Cores[I].bAlive || Cores[I].Owner != Player || Cores[I].Kind != EntityKind::Unit)
+            {
+                continue;
+            }
+            const EntityDef* Def = Content->FindEntity(Cores[I].Def);
+            if (Def == nullptr || Def->Unit.bIsHarvester || Def->Unit.bIsBuilder ||
+                Def->Unit.MaxSpeed <= Fixed::Zero())
+            {
+                continue;
+            }
+            ScoutUnit = World.MakeId(I);
+            break;
+        }
+    }
+
+    if (!ScoutUnit.IsValid())
+    {
+        return false;
+    }
+
+    const TileCoord Waypoint = NextScoutWaypoint(World);
+    Command C;
+    C.Type = CommandType::Move;
+    C.Issuer = Player;
+    C.Primary = ScoutUnit;
+    C.Location = World.GetMap().TileCenterToWorld(Waypoint);
+    Out.push_back(C);
+    bHasScoutOrder = true;
+    LastScoutOrderTick = World.GetTick();
+    Log(World.GetTick(), CommandType::Move, ContentId(), "scouting for the enemy");
+    return true;
+}
+
+bool AICommander::FindKnownEnemyTarget(KnownTarget& Out) const
+{
+    // Reads memory only. There is deliberately no path here into SimWorld: an enemy
+    // the commander has never observed does not exist as far as this function is
+    // concerned, which is what stops the AI attacking through fog.
+    if (Knowledge == nullptr)
+    {
+        return false;
+    }
+
+    // Production buildings first, then anything else: razing a war factory ends the
+    // match faster than chasing the scout that happened to be nearest. Iterated in
+    // memory order, which is insertion order, so the choice is deterministic.
+    const EnemyMemory* BestBuilding = nullptr;
+    const EnemyMemory* BestOther = nullptr;
+    for (const EnemyMemory& Mem : Knowledge->GetKnownEnemies())
+    {
+        if (Mem.Kind == EntityKind::Building)
+        {
+            if (BestBuilding == nullptr)
+            {
+                BestBuilding = &Mem;
+            }
+        }
+        else if (Mem.Kind == EntityKind::Unit && BestOther == nullptr)
+        {
+            BestOther = &Mem;
+        }
+    }
+
+    const EnemyMemory* Chosen = BestBuilding != nullptr ? BestBuilding : BestOther;
+    if (Chosen == nullptr)
+    {
+        return false;
+    }
+
+    Out.Entity = Chosen->Entity;
+    Out.Tile = Chosen->Position;
+    Out.Kind = Chosen->Kind;
+    return true;
 }
 
 bool AICommander::IsUnderAttack(const SimWorld& World) const
@@ -367,12 +511,8 @@ AIWorldAssessment AICommander::BuildAssessment(const SimWorld& World) const
 
         if (Core.Owner != Player)
         {
-            if (Core.Owner < kMaxPlayers &&
-                (Core.Kind == EntityKind::Building ||
-                 Core.Kind == EntityKind::Unit))
-            {
-                Assessment.bHasEnemyTarget = true;
-            }
+            // Deliberately nothing here. Whether an enemy target exists is answered
+            // from fog-limited memory below, not by scanning the live world.
             continue;
         }
 
@@ -439,6 +579,10 @@ AIWorldAssessment AICommander::BuildAssessment(const SimWorld& World) const
         bHasSeenAttack && World.GetTick() >= LastUnderAttackTick &&
         World.GetTick() - LastUnderAttackTick <=
             TickIndex(Config.UnderAttackMemoryTicks);
+
+    // Only what has actually been observed counts as a target worth planning against.
+    KnownTarget Known;
+    Assessment.bHasEnemyTarget = FindKnownEnemyTarget(Known);
     return Assessment;
 }
 
@@ -796,8 +940,8 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
         return;
     }
 
-    const EntityId Target = FindEnemyTarget(World);
-    if (!Target.IsValid())
+    KnownTarget Target;
+    if (!FindKnownEnemyTarget(Target))
     {
         if (bAttacking && ActiveOperation.State == OperationState::Engaging)
         {
@@ -805,15 +949,11 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
         }
         return;
     }
-    const TransformComp* TargetTransform = World.GetTransform(Target);
-    if (TargetTransform == nullptr)
-    {
-        return;
-    }
 
-    // Update target location in operation state
-    ActiveOperation.TargetLocation = TileCoord(static_cast<int32_t>(TargetTransform->Position.X.ToIntFloor()),
-                                               static_cast<int32_t>(TargetTransform->Position.Y.ToIntFloor()));
+    // The army is sent to where the enemy was last SEEN, not to where it actually is.
+    // Tracking a live transform through fog would be the same cheat in a subtler form.
+    const Vec2 TargetPosition = World.GetMap().TileCenterToWorld(Target.Tile);
+    ActiveOperation.TargetLocation = Target.Tile;
 
     // Only idle units are ordered, so a unit already advancing is not reset every
     // decision tick -- that would keep clearing its order queue and stall the push.
@@ -849,7 +989,7 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
         C.Type = CommandType::AttackMove;
         C.Issuer = Player;
         C.Primary = Id;
-        C.Location = TargetTransform->Position;
+        C.Location = TargetPosition;
         Out.push_back(C);
         ++Ordered;
     }
@@ -924,6 +1064,11 @@ void AICommander::Tick(const SimWorld& World, std::vector<Command>& OutCommands)
         bHasSeenAttack = true;
     }
 
+    // Observation runs on its own cadence, before and independently of the decision
+    // gate below: a unit that crosses a vision cone between two decisions must still
+    // be remembered.
+    UpdateKnowledge(World);
+
     ++TicksSinceDecision;
     if (TicksSinceDecision < Config.DecisionIntervalTicks)
     {
@@ -948,6 +1093,11 @@ void AICommander::Tick(const SimWorld& World, std::vector<Command>& OutCommands)
     ActiveStrategyScore = FindStrategyScore(Scores, ActiveStrategy);
 
     const size_t CommandCountBefore = OutCommands.size();
+
+    // Scouting runs before army command: with nothing known there is nothing to
+    // attack, and this is what turns an unknown map into a known one.
+    TryScout(World, OutCommands);
+
     CommandArmy(World, OutCommands);
 
     if (!TryPlaceFinishedStructure(World, OutCommands))

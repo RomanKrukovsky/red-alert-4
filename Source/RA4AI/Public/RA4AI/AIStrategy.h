@@ -26,6 +26,13 @@ struct AIConfig
 {
     int32_t DecisionIntervalTicks = 10;
 
+    // How often the commander re-observes the world through its fog-limited view, and
+    // how long an unrefreshed sighting survives. Sampling is decoupled from decision
+    // making on purpose: observation must be frequent enough not to miss a unit
+    // crossing a vision cone, while full strategy scoring stays comparatively rare.
+    int32_t MemoryUpdateIntervalTicks = 5;
+    int32_t MemoryRetentionTicks = 600;   // 30 s at 20 Hz
+
     int32_t TargetHarvesters = 3;
     int32_t AttackArmySize = 6;
     int32_t MinimumAttackSize = 3;
