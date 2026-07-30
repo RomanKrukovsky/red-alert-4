@@ -98,6 +98,11 @@ private:
     // Drained into a CommandFrame once per simulation tick.
     std::vector<RA4::Command> PendingCommands;
 
+    // One commander per active player the local human is not driving. The AI is the
+    // same code the headless match dump plays with, ticked on the same schedule, so
+    // a skirmish in the editor behaves like the one the tests cover.
+    std::vector<RA4::AI::AICommander*> AICommanders;
+
     // Accumulator for fixed-step simulation ticking
     float TimeSinceLastSimTick;
     static constexpr float SimTickRate = 20.0f;

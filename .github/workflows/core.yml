@@ -8,8 +8,21 @@ on:
     branches: [ main, feature/* ]
 
 jobs:
+  compliance-scan:
+    name: Compliance Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Compliance Unit Tests
+        run: python3 -m unittest discover -s Build/Compliance/tests -p "test_*.py" -v
+
+      - name: Run Blocking Compliance Scanner
+        run: python3 Build/Compliance/compliance_scan.py --scope both
+
   headless:
     name: Headless Simulation (${{ matrix.os }})
+    needs: [compliance-scan]
     strategy:
       fail-fast: false
       matrix:
@@ -30,14 +43,18 @@ jobs:
       - name: Extract Determinism Checksum (Bash)
         if: runner.os != 'Windows'
         run: |
-          ./build/RA4Tests --gtest_filter=VerticalSlice.FullMatch | grep "checksum=" | tail -n 1 > checksum-${{ matrix.os }}.txt || echo "checksum=match_completed" > checksum-${{ matrix.os }}.txt
+          ./build/RA4Tests --filter=VerticalSlice.FullMatch | tee raw_out.txt
+          grep -Eo 'final checksum [0-9A-Fa-f]+' raw_out.txt | tail -n 1 | awk '{print $3}' > checksum-${{ matrix.os }}.txt
+          test -s checksum-${{ matrix.os }}.txt
 
       - name: Extract Determinism Checksum (Windows)
         if: runner.os == 'Windows'
-        shell: cmd
+        shell: powershell
         run: |
-          build\Release\RA4Tests.exe --gtest_filter=VerticalSlice.FullMatch > raw_out.txt
-          findstr /C:"checksum=" raw_out.txt > checksum-${{ matrix.os }}.txt || echo checksum=match_completed > checksum-${{ matrix.os }}.txt
+          build\Release\RA4Tests.exe --filter=VerticalSlice.FullMatch | Tee-Object -FilePath raw_out.txt
+          $match = Select-String -Path raw_out.txt -Pattern 'final checksum ([0-9A-Fa-f]+)' | Select-Object -Last 1
+          if (-not $match) { throw 'Missing final checksum in VerticalSlice.FullMatch output.' }
+          $match.Matches[0].Groups[1].Value | Out-File -FilePath checksum-${{ matrix.os }}.txt -Encoding ascii -NoNewline
 
       - name: Upload Checksum Artifact
         uses: actions/upload-artifact@v4
@@ -84,6 +101,7 @@ jobs:
 
   sanitizers:
     name: ASan & UBSan Check (Linux)
+    needs: [compliance-scan]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

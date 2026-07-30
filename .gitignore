@@ -1,6 +1,10 @@
 # Unreal
 Binaries/
 Build/
+!Build/
+Build/*
+!Build/Compliance/
+!Build/Compliance/**
 DerivedDataCache/
 Intermediate/
 Saved/

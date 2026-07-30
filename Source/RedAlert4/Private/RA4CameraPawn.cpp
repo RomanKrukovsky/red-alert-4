@@ -58,7 +58,12 @@ void ARA4CameraPawn::Tick(float DeltaSeconds)
     if (SpringArm != nullptr)
     {
         SpringArm->TargetArmLength = CameraController.GetHeight();
-        SpringArm->SetWorldRotation(FRotator(PitchDegrees, CameraController.GetYawDegrees(), 0.0f));
+        // The +90 is the whole reason panning used to come out rotated a quarter turn.
+        // CameraController works in a basis where screen-up is +Y and screen-right is
+        // +X, which is what every pan, edge scroll and drag it produces assumes. An
+        // Unreal yaw of 0 points the camera down +X, making screen-up +X instead, so
+        // W walked the focus sideways. Yaw 90 looks down +Y and lines the two up.
+        SpringArm->SetWorldRotation(FRotator(PitchDegrees, 90.0f + CameraController.GetYawDegrees(), 0.0f));
     }
 
     if (!bReportedInitialCameraState && GetWorld() != nullptr &&

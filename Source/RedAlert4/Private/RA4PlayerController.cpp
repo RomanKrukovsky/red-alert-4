@@ -142,11 +142,11 @@ void ARA4PlayerController::SetupInputComponent()
     InputComponent->BindKey(EKeys::MouseScrollUp, IE_Pressed, this, &ARA4PlayerController::OnZoomIn);
     InputComponent->BindKey(EKeys::MouseScrollDown, IE_Pressed, this, &ARA4PlayerController::OnZoomOut);
 
-    // Letter keys are orders, not camera movement -- the originals scroll with the
-    // arrows, the screen edge and the minimap, which leaves the whole keyboard free
-    // for the command hotkeys players already have in their fingers.
-    InputComponent->BindKey(EKeys::A, IE_Pressed, this, &ARA4PlayerController::ArmAttackMove);
-    InputComponent->BindKey(EKeys::S, IE_Pressed, this, &ARA4PlayerController::OnStopPressed);
+    // WASD pans the camera, so the order hotkeys sit on keys it does not use. A and S
+    // are deliberately not bound here: sharing them with panning meant every step to
+    // the left also armed an attack-move.
+    InputComponent->BindKey(EKeys::F, IE_Pressed, this, &ARA4PlayerController::ArmAttackMove);
+    InputComponent->BindKey(EKeys::X, IE_Pressed, this, &ARA4PlayerController::OnStopPressed);
     InputComponent->BindKey(EKeys::G, IE_Pressed, this, &ARA4PlayerController::OnGuardPressed);
     InputComponent->BindKey(EKeys::Escape, IE_Pressed, this, &ARA4PlayerController::CancelPendingAction);
 
@@ -242,13 +242,12 @@ void ARA4PlayerController::UpdateCameraInput(float DeltaTime)
     }
     CameraController& Camera = CameraPawn->GetCameraController();
 
-    // Arrow keys only. The originals scroll with the screen edge, the arrows and the
-    // minimap, and the letter keys are all order hotkeys -- binding WASD to panning
-    // meant A both armed an attack-move and slid the camera sideways.
-    const float Right = (IsInputKeyDown(EKeys::Right) ? 1.0f : 0.0f) -
-                        (IsInputKeyDown(EKeys::Left) ? 1.0f : 0.0f);
-    const float Up = (IsInputKeyDown(EKeys::Up) ? 1.0f : 0.0f) -
-                     (IsInputKeyDown(EKeys::Down) ? 1.0f : 0.0f);
+    // WASD and the arrows both pan, alongside edge scrolling. The order hotkeys were
+    // moved off A and S in SetupInputComponent so no key does two jobs.
+    const float Right = (IsInputKeyDown(EKeys::D) || IsInputKeyDown(EKeys::Right) ? 1.0f : 0.0f) -
+                        (IsInputKeyDown(EKeys::A) || IsInputKeyDown(EKeys::Left) ? 1.0f : 0.0f);
+    const float Up = (IsInputKeyDown(EKeys::W) || IsInputKeyDown(EKeys::Up) ? 1.0f : 0.0f) -
+                     (IsInputKeyDown(EKeys::S) || IsInputKeyDown(EKeys::Down) ? 1.0f : 0.0f);
 
     Camera.SetKeyboardPan(Right, Up);
     Camera.SetFastPan(IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift));

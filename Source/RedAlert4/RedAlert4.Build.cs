@@ -20,6 +20,7 @@ public class RedAlert4 : ModuleRules
 			"EnhancedInput",
 			"RA4Core",
 			"RA4Content",
+			"RA4AI",
 			"RA4Input",
 			"RA4Simulation",
 			"RA4Replay",
