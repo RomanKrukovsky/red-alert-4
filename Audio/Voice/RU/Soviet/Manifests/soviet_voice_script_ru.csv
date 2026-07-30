@@ -1,0 +1,153 @@
+stable_id,voice_id,unit_name_ru,event,text_ru,source_status,word_count,character_count,recommended_filename
+SU_RubezhRifleman,SU_RubezhRifleman,Мотострелок МС-12 «Рубеж»,Selected,Мотострелок МС-12 «Рубеж» на связи.,canonical,5,35,VO_RU_SU_RubezhRifleman_Selected_01.wav
+SU_RubezhRifleman,SU_RubezhRifleman,Мотострелок МС-12 «Рубеж»,Move,"Бежим, пока дорога свободна.",canonical,4,28,VO_RU_SU_RubezhRifleman_Move_01.wav
+SU_RubezhRifleman,SU_RubezhRifleman,Мотострелок МС-12 «Рубеж»,Attack,Цель вижу. Открываю огонь.,canonical,4,26,VO_RU_SU_RubezhRifleman_Attack_01.wav
+SU_RubezhRifleman,SU_RubezhRifleman,Мотострелок МС-12 «Рубеж»,Ability,В землю! Держим позицию!,canonical,4,24,VO_RU_SU_RubezhRifleman_Ability_01.wav
+SU_RubezhRifleman,SU_RubezhRifleman,Мотострелок МС-12 «Рубеж»,Damaged,Нас прижали!,canonical,2,12,VO_RU_SU_RubezhRifleman_Damaged_01.wav
+SU_RubezhRifleman,SU_RubezhRifleman,Мотострелок МС-12 «Рубеж»,Elite,Теперь мы не просто пополнение.,canonical,5,31,VO_RU_SU_RubezhRifleman_Elite_01.wav
+SU_RubezhRifleman,SU_RubezhRifleman,Мотострелок МС-12 «Рубеж»,Idle,Обещали форму потеплее.,canonical,3,23,VO_RU_SU_RubezhRifleman_Idle_01.wav
+SU_RubezhRifleman,SU_RubezhRifleman,Мотострелок МС-12 «Рубеж»,Death,Передайте… позицию держали.,canonical,3,27,VO_RU_SU_RubezhRifleman_Death_01.wav
+SU_ZapalGrenadier,SU_ZapalGrenadier,Штурмовик ОШ-4 «Запал»,Selected,Гранаты снаряжены.,canonical,2,18,VO_RU_SU_ZapalGrenadier_Selected_01.wav
+SU_ZapalGrenadier,SU_ZapalGrenadier,Штурмовик ОШ-4 «Запал»,Move,Подойдём на бросок.,canonical,3,19,VO_RU_SU_ZapalGrenadier_Move_01.wav
+SU_ZapalGrenadier,SU_ZapalGrenadier,Штурмовик ОШ-4 «Запал»,Attack,Накрываю сектор!,canonical,2,16,VO_RU_SU_ZapalGrenadier_Attack_01.wav
+SU_ZapalGrenadier,SU_ZapalGrenadier,Штурмовик ОШ-4 «Запал»,Ability,Термобарический — внутрь!,canonical,3,25,VO_RU_SU_ZapalGrenadier_Ability_01.wav
+SU_ZapalGrenadier,SU_ZapalGrenadier,Штурмовик ОШ-4 «Запал»,Damaged,Осколками задело!,canonical,2,17,VO_RU_SU_ZapalGrenadier_Damaged_01.wav
+SU_ZapalGrenadier,SU_ZapalGrenadier,Штурмовик ОШ-4 «Запал»,Elite,Теперь попадаю с первого броска.,canonical,5,32,VO_RU_SU_ZapalGrenadier_Elite_01.wav
+SU_ZapalGrenadier,SU_ZapalGrenadier,Штурмовик ОШ-4 «Запал»,Idle,Главное — не перепутать сумки.,canonical,5,30,VO_RU_SU_ZapalGrenadier_Idle_01.wav
+SU_ZapalGrenadier,SU_ZapalGrenadier,Штурмовик ОШ-4 «Запал»,Death,Чека… уже выдернута…,canonical,3,20,VO_RU_SU_ZapalGrenadier_Death_01.wav
+SU_ZaslonAATeam,SU_ZaslonAATeam,Зенитный расчёт ПЗК-9 «Заслон»,Selected,Небо под контролем.,canonical,3,19,VO_RU_SU_ZaslonAATeam_Selected_01.wav
+SU_ZaslonAATeam,SU_ZaslonAATeam,Зенитный расчёт ПЗК-9 «Заслон»,Move,Ищу чистый сектор.,canonical,3,18,VO_RU_SU_ZaslonAATeam_Move_01.wav
+SU_ZaslonAATeam,SU_ZaslonAATeam,Зенитный расчёт ПЗК-9 «Заслон»,Attack,Высота подтверждена. Огонь!,canonical,3,27,VO_RU_SU_ZaslonAATeam_Attack_01.wav
+SU_ZaslonAATeam,SU_ZaslonAATeam,Зенитный расчёт ПЗК-9 «Заслон»,Ability,Затаились. Пусть подлетят.,canonical,3,26,VO_RU_SU_ZaslonAATeam_Ability_01.wav
+SU_ZaslonAATeam,SU_ZaslonAATeam,Зенитный расчёт ПЗК-9 «Заслон»,Damaged,Расчёт под обстрелом!,canonical,3,21,VO_RU_SU_ZaslonAATeam_Damaged_01.wav
+SU_ZaslonAATeam,SU_ZaslonAATeam,Зенитный расчёт ПЗК-9 «Заслон»,Elite,Ни один борт не уйдёт.,canonical,5,22,VO_RU_SU_ZaslonAATeam_Elite_01.wav
+SU_ZaslonAATeam,SU_ZaslonAATeam,Зенитный расчёт ПЗК-9 «Заслон»,Idle,Летят красиво. Падают лучше.,canonical,4,28,VO_RU_SU_ZaslonAATeam_Idle_01.wav
+SU_ZaslonAATeam,SU_ZaslonAATeam,Зенитный расчёт ПЗК-9 «Заслон»,Death,Небо… ваше…,canonical,2,11,VO_RU_SU_ZaslonAATeam_Death_01.wav
+SU_MasterEngineer,SU_MasterEngineer,Инженер-сапёр ИС-3 «Мастер»,Selected,Инструмент есть. План бы ещё.,canonical,5,29,VO_RU_SU_MasterEngineer_Selected_01.wav
+SU_MasterEngineer,SU_MasterEngineer,Инженер-сапёр ИС-3 «Мастер»,Move,Доберусь и починю.,canonical,3,18,VO_RU_SU_MasterEngineer_Move_01.wav
+SU_MasterEngineer,SU_MasterEngineer,Инженер-сапёр ИС-3 «Мастер»,Attack,Я не стрелок. Покажите объект.,canonical,5,30,VO_RU_SU_MasterEngineer_Attack_01.wav
+SU_MasterEngineer,SU_MasterEngineer,Инженер-сапёр ИС-3 «Мастер»,Ability,Сейчас заведём эту развалину.,canonical,4,29,VO_RU_SU_MasterEngineer_Ability_01.wav
+SU_MasterEngineer,SU_MasterEngineer,Инженер-сапёр ИС-3 «Мастер»,Damaged,Инженера прикройте!,canonical,2,19,VO_RU_SU_MasterEngineer_Damaged_01.wav
+SU_MasterEngineer,SU_MasterEngineer,Инженер-сапёр ИС-3 «Мастер»,Elite,"Я починю даже то, чего ещё не построили.",canonical,8,40,VO_RU_SU_MasterEngineer_Elite_01.wav
+SU_MasterEngineer,SU_MasterEngineer,Инженер-сапёр ИС-3 «Мастер»,Idle,По инструкции это должно было работать.,canonical,6,39,VO_RU_SU_MasterEngineer_Idle_01.wav
+SU_MasterEngineer,SU_MasterEngineer,Инженер-сапёр ИС-3 «Мастер»,Death,Схема… была верной…,canonical,3,19,VO_RU_SU_MasterEngineer_Death_01.wav
+SU_RazryadTrooper,SU_RazryadTrooper,Электроштурмовик ЭШ-8 «Разряд»,Selected,Контур заряжен.,canonical,2,15,VO_RU_SU_RazryadTrooper_Selected_01.wav
+SU_RazryadTrooper,SU_RazryadTrooper,Электроштурмовик ЭШ-8 «Разряд»,Move,Ток пойдёт за нами.,canonical,4,19,VO_RU_SU_RazryadTrooper_Move_01.wav
+SU_RazryadTrooper,SU_RazryadTrooper,Электроштурмовик ЭШ-8 «Разряд»,Attack,Разряд на цель!,canonical,3,15,VO_RU_SU_RazryadTrooper_Attack_01.wav
+SU_RazryadTrooper,SU_RazryadTrooper,Электроштурмовик ЭШ-8 «Разряд»,Ability,Перегрузка сети!,canonical,2,16,VO_RU_SU_RazryadTrooper_Ability_01.wav
+SU_RazryadTrooper,SU_RazryadTrooper,Электроштурмовик ЭШ-8 «Разряд»,Damaged,Изоляция пробита!,canonical,2,17,VO_RU_SU_RazryadTrooper_Damaged_01.wav
+SU_RazryadTrooper,SU_RazryadTrooper,Электроштурмовик ЭШ-8 «Разряд»,Elite,Молния слушается меня.,canonical,3,22,VO_RU_SU_RazryadTrooper_Elite_01.wav
+SU_RazryadTrooper,SU_RazryadTrooper,Электроштурмовик ЭШ-8 «Разряд»,Idle,Не трогайте кабель. Последнее предупреждение.,canonical,5,45,VO_RU_SU_RazryadTrooper_Idle_01.wav
+SU_RazryadTrooper,SU_RazryadTrooper,Электроштурмовик ЭШ-8 «Разряд»,Death,Заземление… не сработало…,canonical,3,25,VO_RU_SU_RazryadTrooper_Death_01.wav
+SU_VektorOfficer,SU_VektorOfficer,Офицер связи КС-6 «Вектор»,Selected,Связь с фронтом установлена.,canonical,4,28,VO_RU_SU_VektorOfficer_Selected_01.wav
+SU_VektorOfficer,SU_VektorOfficer,Офицер связи КС-6 «Вектор»,Move,Передаю новый рубеж.,canonical,3,20,VO_RU_SU_VektorOfficer_Move_01.wav
+SU_VektorOfficer,SU_VektorOfficer,Офицер связи КС-6 «Вектор»,Attack,Приказ утверждён. Уничтожить.,canonical,3,29,VO_RU_SU_VektorOfficer_Attack_01.wav
+SU_VektorOfficer,SU_VektorOfficer,Офицер связи КС-6 «Вектор»,Ability,Первый приказ: ни шага назад!,canonical,5,29,VO_RU_SU_VektorOfficer_Ability_01.wav
+SU_VektorOfficer,SU_VektorOfficer,Офицер связи КС-6 «Вектор»,Damaged,Канал под огнём!,canonical,3,16,VO_RU_SU_VektorOfficer_Damaged_01.wav
+SU_VektorOfficer,SU_VektorOfficer,Офицер связи КС-6 «Вектор»,Elite,Теперь армия слышит меня без помех.,canonical,6,35,VO_RU_SU_VektorOfficer_Elite_01.wav
+SU_VektorOfficer,SU_VektorOfficer,Офицер связи КС-6 «Вектор»,Idle,Молчание в эфире подозрительнее стрельбы.,canonical,5,41,VO_RU_SU_VektorOfficer_Idle_01.wav
+SU_VektorOfficer,SU_VektorOfficer,Офицер связи КС-6 «Вектор»,Death,Командование… продолжайте без меня.,canonical,4,35,VO_RU_SU_VektorOfficer_Death_01.wav
+SU_BogatyrOreCarrier,SU_BogatyrOreCarrier,Горнорудная машина ГРМ-8 «Богатырь»,Selected,Богатырь готов к рейсу.,canonical,4,23,VO_RU_SU_BogatyrOreCarrier_Selected_01.wav
+SU_BogatyrOreCarrier,SU_BogatyrOreCarrier,Горнорудная машина ГРМ-8 «Богатырь»,Move,Тяжёлый груз идёт.,canonical,3,18,VO_RU_SU_BogatyrOreCarrier_Move_01.wav
+SU_BogatyrOreCarrier,SU_BogatyrOreCarrier,Горнорудная машина ГРМ-8 «Богатырь»,Attack,Оружия нет. Могу переехать.,canonical,4,27,VO_RU_SU_BogatyrOreCarrier_Attack_01.wav
+SU_BogatyrOreCarrier,SU_BogatyrOreCarrier,Горнорудная машина ГРМ-8 «Богатырь»,Ability,Закрываю броневые шторки.,canonical,3,25,VO_RU_SU_BogatyrOreCarrier_Ability_01.wav
+SU_BogatyrOreCarrier,SU_BogatyrOreCarrier,Горнорудная машина ГРМ-8 «Богатырь»,Damaged,Обшивка держит!,canonical,2,15,VO_RU_SU_BogatyrOreCarrier_Damaged_01.wav
+SU_BogatyrOreCarrier,SU_BogatyrOreCarrier,Горнорудная машина ГРМ-8 «Богатырь»,Elite,Маршрут знаю лучше генералов.,canonical,4,29,VO_RU_SU_BogatyrOreCarrier_Elite_01.wav
+SU_BogatyrOreCarrier,SU_BogatyrOreCarrier,Горнорудная машина ГРМ-8 «Богатырь»,Idle,Руда сама себя не привезёт.,canonical,5,27,VO_RU_SU_BogatyrOreCarrier_Idle_01.wav
+SU_BogatyrOreCarrier,SU_BogatyrOreCarrier,Горнорудная машина ГРМ-8 «Богатырь»,Death,Груз… не доставлен…,canonical,3,19,VO_RU_SU_BogatyrOreCarrier_Death_01.wav
+SU_RysScout,SU_RysScout,Боевая разведмашина БРМ-27 «Рысь»,Selected,Рысь вышла на маршрут.,canonical,4,22,VO_RU_SU_RysScout_Selected_01.wav
+SU_RysScout,SU_RysScout,Боевая разведмашина БРМ-27 «Рысь»,Move,Уже там.,canonical,2,8,VO_RU_SU_RysScout_Move_01.wav
+SU_RysScout,SU_RysScout,Боевая разведмашина БРМ-27 «Рысь»,Attack,Срезаем хвост колонне!,canonical,3,22,VO_RU_SU_RysScout_Attack_01.wav
+SU_RysScout,SU_RysScout,Боевая разведмашина БРМ-27 «Рысь»,Ability,Перепрыгиваем!,canonical,1,14,VO_RU_SU_RysScout_Ability_01.wav
+SU_RysScout,SU_RysScout,Боевая разведмашина БРМ-27 «Рысь»,Damaged,"Броня тонкая, не стойте!",canonical,4,24,VO_RU_SU_RysScout_Damaged_01.wav
+SU_RysScout,SU_RysScout,Боевая разведмашина БРМ-27 «Рысь»,Elite,Я вижу фланг раньше радара.,canonical,5,27,VO_RU_SU_RysScout_Elite_01.wav
+SU_RysScout,SU_RysScout,Боевая разведмашина БРМ-27 «Рысь»,Idle,Главное — не догнать собственный след.,canonical,6,38,VO_RU_SU_RysScout_Idle_01.wav
+SU_RysScout,SU_RysScout,Боевая разведмашина БРМ-27 «Рысь»,Death,Скорость… не спасла…,canonical,3,20,VO_RU_SU_RysScout_Death_01.wav
+SU_GranitMBT,SU_GranitMBT,Основной танк ОБТ-92 «Гранит»,Selected,Гранит готов.,canonical,2,13,VO_RU_SU_GranitMBT_Selected_01.wav
+SU_GranitMBT,SU_GranitMBT,Основной танк ОБТ-92 «Гранит»,Move,Гусеницы — вперёд.,canonical,3,18,VO_RU_SU_GranitMBT_Move_01.wav
+SU_GranitMBT,SU_GranitMBT,Основной танк ОБТ-92 «Гранит»,Attack,Раздробить цель.,canonical,2,16,VO_RU_SU_GranitMBT_Attack_01.wav
+SU_GranitMBT,SU_GranitMBT,Основной танк ОБТ-92 «Гранит»,Ability,На таран!,canonical,2,9,VO_RU_SU_GranitMBT_Ability_01.wav
+SU_GranitMBT,SU_GranitMBT,Основной танк ОБТ-92 «Гранит»,Damaged,"Лоб держит, борт подставили!",canonical,4,28,VO_RU_SU_GranitMBT_Damaged_01.wav
+SU_GranitMBT,SU_GranitMBT,Основной танк ОБТ-92 «Гранит»,Elite,Сталь научилась побеждать.,canonical,3,26,VO_RU_SU_GranitMBT_Elite_01.wav
+SU_GranitMBT,SU_GranitMBT,Основной танк ОБТ-92 «Гранит»,Idle,Тише едешь — дольше стреляешь.,canonical,5,30,VO_RU_SU_GranitMBT_Idle_01.wav
+SU_GranitMBT,SU_GranitMBT,Основной танк ОБТ-92 «Гранит»,Death,Башня… заклинила…,canonical,2,17,VO_RU_SU_GranitMBT_Death_01.wav
+SU_ZarevoMLRS,SU_ZarevoMLRS,Термобарическая РСЗО ТРС-18 «Зарево»,Selected,Пакет ракет заряжен.,canonical,3,20,VO_RU_SU_ZarevoMLRS_Selected_01.wav
+SU_ZarevoMLRS,SU_ZarevoMLRS,Термобарическая РСЗО ТРС-18 «Зарево»,Move,Держим дистанцию.,canonical,2,17,VO_RU_SU_ZarevoMLRS_Move_01.wav
+SU_ZarevoMLRS,SU_ZarevoMLRS,Термобарическая РСЗО ТРС-18 «Зарево»,Attack,Расчётный квадрат подтверждён.,canonical,3,30,VO_RU_SU_ZarevoMLRS_Attack_01.wav
+SU_ZarevoMLRS,SU_ZarevoMLRS,Термобарическая РСЗО ТРС-18 «Зарево»,Ability,Поджигаем весь сектор.,canonical,3,22,VO_RU_SU_ZarevoMLRS_Ability_01.wav
+SU_ZarevoMLRS,SU_ZarevoMLRS,Термобарическая РСЗО ТРС-18 «Зарево»,Damaged,Пусковая под огнём!,canonical,3,19,VO_RU_SU_ZarevoMLRS_Damaged_01.wav
+SU_ZarevoMLRS,SU_ZarevoMLRS,Термобарическая РСЗО ТРС-18 «Зарево»,Elite,Один залп — один новый горизонт.,canonical,6,32,VO_RU_SU_ZarevoMLRS_Elite_01.wav
+SU_ZarevoMLRS,SU_ZarevoMLRS,Термобарическая РСЗО ТРС-18 «Зарево»,Idle,Красиво горит только чужое.,canonical,4,27,VO_RU_SU_ZarevoMLRS_Idle_01.wav
+SU_ZarevoMLRS,SU_ZarevoMLRS,Термобарическая РСЗО ТРС-18 «Зарево»,Death,Боекомплект… сейчас рванёт…,canonical,3,27,VO_RU_SU_ZarevoMLRS_Death_01.wav
+SU_GromoboyRam,SU_GromoboyRam,Электротаран ЭТМ-7 «Громобой»,Selected,Громобой ждёт команды.,canonical,3,22,VO_RU_SU_GromoboyRam_Selected_01.wav
+SU_GromoboyRam,SU_GromoboyRam,Электротаран ЭТМ-7 «Громобой»,Move,К контакту.,canonical,2,11,VO_RU_SU_GromoboyRam_Move_01.wav
+SU_GromoboyRam,SU_GromoboyRam,Электротаран ЭТМ-7 «Громобой»,Attack,Замыкаю цепь!,canonical,2,13,VO_RU_SU_GromoboyRam_Attack_01.wav
+SU_GromoboyRam,SU_GromoboyRam,Электротаран ЭТМ-7 «Громобой»,Ability,Разряд в грунт!,canonical,3,15,VO_RU_SU_GromoboyRam_Ability_01.wav
+SU_GromoboyRam,SU_GromoboyRam,Электротаран ЭТМ-7 «Громобой»,Damaged,Катушки перегреваются!,canonical,2,22,VO_RU_SU_GromoboyRam_Damaged_01.wav
+SU_GromoboyRam,SU_GromoboyRam,Электротаран ЭТМ-7 «Громобой»,Elite,Гроза теперь идёт по земле.,canonical,5,27,VO_RU_SU_GromoboyRam_Elite_01.wav
+SU_GromoboyRam,SU_GromoboyRam,Электротаран ЭТМ-7 «Громобой»,Idle,Сухая погода — временная проблема.,canonical,5,34,VO_RU_SU_GromoboyRam_Idle_01.wav
+SU_GromoboyRam,SU_GromoboyRam,Электротаран ЭТМ-7 «Громобой»,Death,Контур… разомкнут…,canonical,2,18,VO_RU_SU_GromoboyRam_Death_01.wav
+SU_VoevodaHeavyTank,SU_VoevodaHeavyTank,Тяжёлый танк прорыва ТТП-11 «Воевода»,Selected,Воевода вступает в бой.,canonical,4,23,VO_RU_SU_VoevodaHeavyTank_Selected_01.wav
+SU_VoevodaHeavyTank,SU_VoevodaHeavyTank,Тяжёлый танк прорыва ТТП-11 «Воевода»,Move,Земля выдержит.,canonical,2,15,VO_RU_SU_VoevodaHeavyTank_Move_01.wav
+SU_VoevodaHeavyTank,SU_VoevodaHeavyTank,Тяжёлый танк прорыва ТТП-11 «Воевода»,Attack,Стереть координаты.,canonical,2,19,VO_RU_SU_VoevodaHeavyTank_Attack_01.wav
+SU_VoevodaHeavyTank,SU_VoevodaHeavyTank,Тяжёлый танк прорыва ТТП-11 «Воевода»,Ability,Переходим в осадный режим.,canonical,4,26,VO_RU_SU_VoevodaHeavyTank_Ability_01.wav
+SU_VoevodaHeavyTank,SU_VoevodaHeavyTank,Тяжёлый танк прорыва ТТП-11 «Воевода»,Damaged,Повреждение принято. Продолжаем.,canonical,3,32,VO_RU_SU_VoevodaHeavyTank_Damaged_01.wav
+SU_VoevodaHeavyTank,SU_VoevodaHeavyTank,Тяжёлый танк прорыва ТТП-11 «Воевода»,Elite,Теперь это не танк. Это направление фронта.,canonical,7,43,VO_RU_SU_VoevodaHeavyTank_Elite_01.wav
+SU_VoevodaHeavyTank,SU_VoevodaHeavyTank,Тяжёлый танк прорыва ТТП-11 «Воевода»,Idle,Мы не опаздываем. Нас ждут.,canonical,5,27,VO_RU_SU_VoevodaHeavyTank_Idle_01.wav
+SU_VoevodaHeavyTank,SU_VoevodaHeavyTank,Тяжёлый танк прорыва ТТП-11 «Воевода»,Death,Воевода… оставляет рубеж…,canonical,3,25,VO_RU_SU_VoevodaHeavyTank_Death_01.wav
+SU_KrechetInterceptor,SU_KrechetInterceptor,Истребитель И-47 «Кречет»,Selected,Кречет на полосе.,canonical,3,17,VO_RU_SU_KrechetInterceptor_Selected_01.wav
+SU_KrechetInterceptor,SU_KrechetInterceptor,Истребитель И-47 «Кречет»,Move,Курс принят.,canonical,2,12,VO_RU_SU_KrechetInterceptor_Move_01.wav
+SU_KrechetInterceptor,SU_KrechetInterceptor,Истребитель И-47 «Кречет»,Attack,Ракеты сошли.,canonical,2,13,VO_RU_SU_KrechetInterceptor_Attack_01.wav
+SU_KrechetInterceptor,SU_KrechetInterceptor,Истребитель И-47 «Кречет»,Ability,Форсаж!,canonical,1,7,VO_RU_SU_KrechetInterceptor_Ability_01.wav
+SU_KrechetInterceptor,SU_KrechetInterceptor,Истребитель И-47 «Кречет»,Damaged,Потеря давления!,canonical,2,16,VO_RU_SU_KrechetInterceptor_Damaged_01.wav
+SU_KrechetInterceptor,SU_KrechetInterceptor,Истребитель И-47 «Кречет»,Elite,Небо стало тесным.,canonical,3,18,VO_RU_SU_KrechetInterceptor_Elite_01.wav
+SU_KrechetInterceptor,SU_KrechetInterceptor,Истребитель И-47 «Кречет»,Idle,Топливо любит решительных.,canonical,3,26,VO_RU_SU_KrechetInterceptor_Idle_01.wav
+SU_KrechetInterceptor,SU_KrechetInterceptor,Истребитель И-47 «Кречет»,Death,Катапульта… отказ…,canonical,2,18,VO_RU_SU_KrechetInterceptor_Death_01.wav
+SU_KorshunGunship,SU_KorshunGunship,Штурмовой вертолёт ШВ-38 «Коршун»,Selected,Коршун готов к вылету.,canonical,4,22,VO_RU_SU_KorshunGunship_Selected_01.wav
+SU_KorshunGunship,SU_KorshunGunship,Штурмовой вертолёт ШВ-38 «Коршун»,Move,Идём на малой высоте.,canonical,4,21,VO_RU_SU_KorshunGunship_Move_01.wav
+SU_KorshunGunship,SU_KorshunGunship,Штурмовой вертолёт ШВ-38 «Коршун»,Attack,Работаем по земле!,canonical,3,18,VO_RU_SU_KorshunGunship_Attack_01.wav
+SU_KorshunGunship,SU_KorshunGunship,Штурмовой вертолёт ШВ-38 «Коршун»,Ability,Заходим на круг!,canonical,3,16,VO_RU_SU_KorshunGunship_Ability_01.wav
+SU_KorshunGunship,SU_KorshunGunship,Штурмовой вертолёт ШВ-38 «Коршун»,Damaged,Хвостовой сектор повреждён!,canonical,3,27,VO_RU_SU_KorshunGunship_Damaged_01.wav
+SU_KorshunGunship,SU_KorshunGunship,Штурмовой вертолёт ШВ-38 «Коршун»,Elite,Пехота зовёт — мы отвечаем.,canonical,5,27,VO_RU_SU_KorshunGunship_Elite_01.wav
+SU_KorshunGunship,SU_KorshunGunship,Штурмовой вертолёт ШВ-38 «Коршун»,Idle,В кабине пахнет топливом и победой.,canonical,6,35,VO_RU_SU_KorshunGunship_Idle_01.wav
+SU_KorshunGunship,SU_KorshunGunship,Штурмовой вертолёт ШВ-38 «Коршун»,Death,Борт падает…,canonical,2,12,VO_RU_SU_KorshunGunship_Death_01.wav
+SU_GromadaAirship,SU_GromadaAirship,Тяжёлый дирижабль ТДА-8 «Громада»,Selected,Громада в воздухе.,canonical,3,18,VO_RU_SU_GromadaAirship_Selected_01.wav
+SU_GromadaAirship,SU_GromadaAirship,Тяжёлый дирижабль ТДА-8 «Громада»,Move,Медленно. Неотвратимо.,canonical,2,22,VO_RU_SU_GromadaAirship_Move_01.wav
+SU_GromadaAirship,SU_GromadaAirship,Тяжёлый дирижабль ТДА-8 «Громада»,Attack,Открыть бомболюки.,canonical,2,18,VO_RU_SU_GromadaAirship_Attack_01.wav
+SU_GromadaAirship,SU_GromadaAirship,Тяжёлый дирижабль ТДА-8 «Громада»,Ability,Полный газ. Двигатели на предел.,canonical,5,32,VO_RU_SU_GromadaAirship_Ability_01.wav
+SU_GromadaAirship,SU_GromadaAirship,Тяжёлый дирижабль ТДА-8 «Громада»,Damaged,"Обшивка горит, курс держим.",canonical,4,27,VO_RU_SU_GromadaAirship_Damaged_01.wav
+SU_GromadaAirship,SU_GromadaAirship,Тяжёлый дирижабль ТДА-8 «Громада»,Elite,Города узнают нас по тени.,canonical,5,26,VO_RU_SU_GromadaAirship_Elite_01.wav
+SU_GromadaAirship,SU_GromadaAirship,Тяжёлый дирижабль ТДА-8 «Громада»,Idle,Высота хорошая. Мир кажется тише.,canonical,5,33,VO_RU_SU_GromadaAirship_Idle_01.wav
+SU_GromadaAirship,SU_GromadaAirship,Тяжёлый дирижабль ТДА-8 «Громада»,Death,Балласт… уже не поможет…,canonical,4,24,VO_RU_SU_GromadaAirship_Death_01.wav
+SU_BuranPatrolBoat,SU_BuranPatrolBoat,Боевой катер БК-27 «Буран»,Selected,Буран на воде.,canonical,3,14,VO_RU_SU_BuranPatrolBoat_Selected_01.wav
+SU_BuranPatrolBoat,SU_BuranPatrolBoat,Боевой катер БК-27 «Буран»,Move,Режем волну.,canonical,2,12,VO_RU_SU_BuranPatrolBoat_Move_01.wav
+SU_BuranPatrolBoat,SU_BuranPatrolBoat,Боевой катер БК-27 «Буран»,Attack,Цель по правому борту!,canonical,4,22,VO_RU_SU_BuranPatrolBoat_Attack_01.wav
+SU_BuranPatrolBoat,SU_BuranPatrolBoat,Боевой катер БК-27 «Буран»,Ability,Сеть в воду!,canonical,3,12,VO_RU_SU_BuranPatrolBoat_Ability_01.wav
+SU_BuranPatrolBoat,SU_BuranPatrolBoat,Боевой катер БК-27 «Буран»,Damaged,Корпус принимает воду!,canonical,3,22,VO_RU_SU_BuranPatrolBoat_Damaged_01.wav
+SU_BuranPatrolBoat,SU_BuranPatrolBoat,Боевой катер БК-27 «Буран»,Elite,Море запомнило наш след.,canonical,4,24,VO_RU_SU_BuranPatrolBoat_Elite_01.wav
+SU_BuranPatrolBoat,SU_BuranPatrolBoat,Боевой катер БК-27 «Буран»,Idle,Штиль — это просто пауза.,canonical,5,25,VO_RU_SU_BuranPatrolBoat_Idle_01.wav
+SU_BuranPatrolBoat,SU_BuranPatrolBoat,Боевой катер БК-27 «Буран»,Death,Отсек затоплен…,canonical,2,15,VO_RU_SU_BuranPatrolBoat_Death_01.wav
+SU_MorokSubmarine,SU_MorokSubmarine,Ударная подлодка УПЛ-90 «Морок»,Selected,Морок слушает глубину.,canonical,3,22,VO_RU_SU_MorokSubmarine_Selected_01.wav
+SU_MorokSubmarine,SU_MorokSubmarine,Ударная подлодка УПЛ-90 «Морок»,Move,Погружаемся.,canonical,1,12,VO_RU_SU_MorokSubmarine_Move_01.wav
+SU_MorokSubmarine,SU_MorokSubmarine,Ударная подлодка УПЛ-90 «Морок»,Attack,Торпедный раствор открыт.,canonical,3,25,VO_RU_SU_MorokSubmarine_Attack_01.wav
+SU_MorokSubmarine,SU_MorokSubmarine,Ударная подлодка УПЛ-90 «Морок»,Ability,Беззвучный ход.,canonical,2,15,VO_RU_SU_MorokSubmarine_Ability_01.wav
+SU_MorokSubmarine,SU_MorokSubmarine,Ударная подлодка УПЛ-90 «Морок»,Damaged,Прочный корпус деформирован!,canonical,3,28,VO_RU_SU_MorokSubmarine_Damaged_01.wav
+SU_MorokSubmarine,SU_MorokSubmarine,Ударная подлодка УПЛ-90 «Морок»,Elite,В море нас замечают слишком поздно.,canonical,6,35,VO_RU_SU_MorokSubmarine_Elite_01.wav
+SU_MorokSubmarine,SU_MorokSubmarine,Ударная подлодка УПЛ-90 «Морок»,Idle,Наверху шумят. Здесь думают.,canonical,4,28,VO_RU_SU_MorokSubmarine_Idle_01.wav
+SU_MorokSubmarine,SU_MorokSubmarine,Ударная подлодка УПЛ-90 «Морок»,Death,Глубина… принимает…,canonical,2,19,VO_RU_SU_MorokSubmarine_Death_01.wav
+SU_SvyatogorCruiser,SU_SvyatogorCruiser,Ракетный крейсер РКР-44 «Святогор»,Selected,Святогор ждёт координаты.,canonical,3,25,VO_RU_SU_SvyatogorCruiser_Selected_01.wav
+SU_SvyatogorCruiser,SU_SvyatogorCruiser,Ракетный крейсер РКР-44 «Святогор»,Move,Крейсер меняет позицию.,canonical,3,23,VO_RU_SU_SvyatogorCruiser_Move_01.wav
+SU_SvyatogorCruiser,SU_SvyatogorCruiser,Ракетный крейсер РКР-44 «Святогор»,Attack,Ракетный залп.,canonical,2,14,VO_RU_SU_SvyatogorCruiser_Attack_01.wav
+SU_SvyatogorCruiser,SU_SvyatogorCruiser,Ракетный крейсер РКР-44 «Святогор»,Ability,Заградительный огонь по сектору.,canonical,4,32,VO_RU_SU_SvyatogorCruiser_Ability_01.wav
+SU_SvyatogorCruiser,SU_SvyatogorCruiser,Ракетный крейсер РКР-44 «Святогор»,Damaged,Палуба пробита!,canonical,2,15,VO_RU_SU_SvyatogorCruiser_Damaged_01.wav
+SU_SvyatogorCruiser,SU_SvyatogorCruiser,Ракетный крейсер РКР-44 «Святогор»,Elite,"Берег заканчивается там, где начинаются наши ракеты.",canonical,7,52,VO_RU_SU_SvyatogorCruiser_Elite_01.wav
+SU_SvyatogorCruiser,SU_SvyatogorCruiser,Ракетный крейсер РКР-44 «Святогор»,Idle,Море большое. Дальность больше.,canonical,4,31,VO_RU_SU_SvyatogorCruiser_Idle_01.wav
+SU_SvyatogorCruiser,SU_SvyatogorCruiser,Ракетный крейсер РКР-44 «Святогор»,Death,Погреба… детонируют…,canonical,2,20,VO_RU_SU_SvyatogorCruiser_Death_01.wav
+SU_Hero_Morozova,SU_Hero_Morozova,Майор Елена Морозова,Selected,Майор Морозова. Докладывайте.,canonical,3,29,VO_RU_SU_Hero_Morozova_Selected_01.wav
+SU_Hero_Morozova,SU_Hero_Morozova,Майор Елена Морозова,Move,Я буду на передовой.,canonical,4,20,VO_RU_SU_Hero_Morozova_Move_01.wav
+SU_Hero_Morozova,SU_Hero_Morozova,Майор Елена Морозова,Attack,Этот участок фронта закрываем сейчас.,canonical,5,37,VO_RU_SU_Hero_Morozova_Attack_01.wav
+SU_Hero_Morozova,SU_Hero_Morozova,Майор Елена Морозова,Ability,Подавить их связь и движение.,canonical,5,29,VO_RU_SU_Hero_Morozova_Ability_01.wav
+SU_Hero_Morozova,SU_Hero_Morozova,Майор Елена Морозова,Damaged,Царапина. Приказ не меняется.,canonical,4,29,VO_RU_SU_Hero_Morozova_Damaged_01.wav
+SU_Hero_Morozova,SU_Hero_Morozova,Майор Елена Морозова,Elite,Сегодня фронт движется вместе со мной.,canonical,6,38,VO_RU_SU_Hero_Morozova_Elite_01.wav
+SU_Hero_Morozova,SU_Hero_Morozova,Майор Елена Морозова,Idle,Генералы любят карты. Я предпочитаю местность.,canonical,6,46,VO_RU_SU_Hero_Morozova_Idle_01.wav
+SU_Hero_Morozova,SU_Hero_Morozova,Майор Елена Морозова,Death,Продолжайте… наступление…,canonical,2,25,VO_RU_SU_Hero_Morozova_Death_01.wav

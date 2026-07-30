@@ -86,6 +86,7 @@ private:
     void RefreshResources();
     void RefreshCards();
     void RefreshQueue();
+    void RefreshSelection();
 
     void HandleTabClicked(int32 TabIndex);
     void HandleCardClicked(int32 CardIndex);
@@ -105,6 +106,18 @@ private:
     TObjectPtr<UTextBlock> PowerText;
 
     UPROPERTY(Transient)
+    TObjectPtr<UTextBlock> SelectionNameText;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UTextBlock> SelectionHealthText;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UProgressBar> SelectionHealthBar;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UTextBlock> SelectionDetailsText;
+
+    UPROPERTY(Transient)
     TArray<TObjectPtr<URA4IndexedButton>> TabButtons;
 
     // Parallel to the buttons in CardGrid, so a click can be resolved back to content
@@ -121,4 +134,5 @@ private:
 
     FDelegateHandle ResourceChangeHandle;
     FDelegateHandle ProductionChangeHandle;
+    FDelegateHandle SelectionChangeHandle;
 };

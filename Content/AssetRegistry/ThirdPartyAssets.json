@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "project": "Command & Conquer: Red Alert 4 (Internal Codename)",
+  "project": "Red Alert 4",
   "registryVersion": "1.0.0",
   "lastAudited": "2026-07-28T16:32:00Z",
   "assets": [
@@ -22,12 +22,20 @@
       "distributionRestrictions": "None",
       "version": "1.2",
       "checksumSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "localImportPath": "Content/ThirdParty/KenneyRTSKit/",
+      "localImportPath": "Source/RA4Content/",
       "linkedGameObjects": [
         "ABuilding_SovietHQ",
         "ABuilding_AllianceHQ",
         "SM_PlaceholderTower"
-      ]
+      ],
+      "source_type": "open_source_public_domain",
+      "commercial_use_allowed": true,
+      "release_allowed": true,
+      "contains_third_party_ip": false,
+      "creation_date": "2026-07-28",
+      "reviewer": "compliance_auditor",
+      "comment": "Public domain CC0 1.0 asset library",
+      "similarity_review_status": "PASS"
     },
     {
       "assetId": "TPA-POLYHAVEN-TEXTURES-01",
@@ -47,12 +55,20 @@
       "distributionRestrictions": "None",
       "version": "2026.1",
       "checksumSHA256": "4a5c12920257e937d57224259b3921820b080517769911e3b5e40a0fb0e00d97",
-      "localImportPath": "Content/ThirdParty/PolyHavenGround/",
+      "localImportPath": "Source/RA4Content/",
       "linkedGameObjects": [
         "M_MasterTerrain",
         "MI_SnowBiomes",
         "MI_DesertBiomes"
-      ]
+      ],
+      "source_type": "open_source_public_domain",
+      "commercial_use_allowed": true,
+      "release_allowed": true,
+      "contains_third_party_ip": false,
+      "creation_date": "2026-07-28",
+      "reviewer": "compliance_auditor",
+      "comment": "Public domain CC0 1.0 ground texture assets",
+      "similarity_review_status": "PASS"
     }
   ]
 }

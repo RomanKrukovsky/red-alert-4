@@ -27,6 +27,9 @@ ARA4CameraPawn::ARA4CameraPawn()
     SpringArm->bInheritPitch = false;
     SpringArm->bInheritYaw = false;
     SpringArm->bInheritRoll = false;
+    SpringArm->SetUsingAbsoluteRotation(true);
+    SpringArm->TargetArmLength = CameraController.GetHeight();
+    SpringArm->SetWorldRotation(FRotator(PitchDegrees, 90.0f, 0.0f));
 
     Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
     Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);

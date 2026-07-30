@@ -1,2 +1,0 @@
-/usr/bin/ar qc libRA4Combat.a "CMakeFiles/RA4Combat.dir/Users/romanmolodyko/Documents/red-alert-4/Source/RA4Combat/Private/ArmorMatrix.cpp.o"
-/usr/bin/ranlib libRA4Combat.a

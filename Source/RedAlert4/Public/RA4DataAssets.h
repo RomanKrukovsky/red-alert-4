@@ -214,3 +214,23 @@ class REDALERT4_API URA4StartingArmyDefinition : public UPrimaryDataAsset
 {
     GENERATED_BODY()
 };
+
+UCLASS(BlueprintType)
+class REDALERT4_API URA4MusicTrackDefinition : public UPrimaryDataAsset
+{
+    GENERATED_BODY()
+
+public:
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Music")
+    FText TrackTitle;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Music")
+    FGameplayTag MusicCategoryTag;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Music")
+    float TrackDurationSeconds = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Music")
+    FString RelativeFilePath;
+};
+

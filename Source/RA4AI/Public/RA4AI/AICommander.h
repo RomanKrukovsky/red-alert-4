@@ -71,6 +71,20 @@ private:
     bool TryBuildDefence(const SimWorld& World, std::vector<Command>& Out);
     bool TryTrainArmy(const SimWorld& World, std::vector<Command>& Out);
     void CommandArmy(const SimWorld& World, std::vector<Command>& Out);
+
+    // Squad-level operation lifecycle: assigns idle combat units in deterministic
+    // order, stages them near base, then issues a coordinated AttackMove on the
+    // last known enemy position.  All state is serialisable and driven by the
+    // same per-unit CommandType commands a human issues.
+    void ReconcileSquad(const SimWorld& World);
+    void ComputeStagingPoint(const SimWorld& World);
+    bool AllSquadAtStaging(const SimWorld& World) const;
+    bool AnySquadNearTarget(const SimWorld& World, const TileCoord& TargetTile) const;
+    void IssueSquadAttackMove(const SimWorld& World, const Vec2& Destination,
+                              std::vector<Command>& Out);
+    void IssueSquadRetreat(const SimWorld& World, std::vector<Command>& Out);
+    void PruneRetreatedUnits(const SimWorld& World);
+
     bool ExecuteStrategy(AIStrategy Strategy, const SimWorld& World,
                          std::vector<Command>& Out);
 
@@ -82,6 +96,7 @@ private:
 
     int32_t CountOwned(const SimWorld& World, bool (*Predicate)(const EntityDef&)) const;
     int32_t CountOwnedUnits(const SimWorld& World, bool bCombatOnly) const;
+    int32_t CountIdleCombatUnits(const SimWorld& World) const;
     int32_t CountQueued(const SimWorld& World, ContentId Content) const;
     EntityId FindOwnConstructionYard(const SimWorld& World) const;
 
@@ -100,6 +115,7 @@ private:
     // the honest knowledge model playable rather than passive.
     bool TryScout(const SimWorld& World, std::vector<Command>& Out);
     TileCoord NextScoutWaypoint(const SimWorld& World) const;
+    TileCoord GetAndAdvanceScoutWaypoint(const SimWorld& World);
 
     // Re-observes the world through the fog-limited view. Must be called before any
     // decision that depends on enemy information.
@@ -120,7 +136,6 @@ private:
     Random Rng;
 
     int32_t TicksSinceDecision = 0;
-    bool bAttacking = false;
     AIStrategy ActiveStrategy = AIStrategy::ExpandEconomy;
     AIStrategy PreviousStrategyForDecision = AIStrategy::ExpandEconomy;
     int32_t ActiveStrategyScore = 0;

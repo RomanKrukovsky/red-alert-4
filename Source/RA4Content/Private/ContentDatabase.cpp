@@ -23,12 +23,101 @@ void ContentDatabase::Clear()
     ResetDamageTableToDefaults();
 }
 
+EntityRole ContentDatabase::DeriveEntityRoles(const EntityDef& Def) const
+{
+    EntityRole Roles = EntityRole::None;
+
+    if (Def.Kind == EntityKind::Building)
+    {
+        Roles |= EntityRole::BaseBuilding;
+        if (Def.Building.bIsPowerPlant)
+        {
+            Roles |= EntityRole::Power;
+        }
+        if (Def.Building.bIsRefinery)
+        {
+            Roles |= EntityRole::Refinery;
+        }
+        if (Def.Building.bIsConstructionYard || Def.Production.Category == ProductionCategory::Structure)
+        {
+            Roles |= EntityRole::Production;
+        }
+        if (Def.Production.Category == ProductionCategory::Defense || Def.Weapon.IsValid())
+        {
+            Roles |= EntityRole::Defense;
+        }
+    }
+    else if (Def.Kind == EntityKind::Unit)
+    {
+        if (Def.Unit.bIsHarvester)
+        {
+            Roles |= EntityRole::Harvester;
+        }
+        if (Def.Unit.bIsBuilder)
+        {
+            Roles |= EntityRole::Builder;
+        }
+        if (Def.Name.find("engineer") != std::string::npos)
+        {
+            Roles |= EntityRole::Engineer;
+        }
+
+        const bool bIsArmed = Def.Weapon.IsValid() || Def.SecondaryWeapon.IsValid();
+        if (bIsArmed && !Def.Unit.bIsHarvester && !Def.Unit.bIsBuilder)
+        {
+            Roles |= EntityRole::Combat;
+        }
+
+        if (!Def.Unit.bIsHarvester && !Def.Unit.bIsBuilder && Def.Unit.MaxSpeed > Fixed::Zero())
+        {
+            if (Def.Production.Cost <= 300 || Def.Unit.MaxSpeed >= Fixed::FromInt(90) || Def.VisionRange >= Fixed::FromInt(500) ||
+                Def.Name.find("scout") != std::string::npos || Def.Name.find("dog") != std::string::npos ||
+                Def.Name.find("rifle") != std::string::npos || Def.Name.find("conscript") != std::string::npos)
+            {
+                Roles |= EntityRole::Scout;
+            }
+        }
+
+        const WeaponDef* Primary = FindWeapon(Def.Weapon);
+        const WeaponDef* Secondary = FindWeapon(Def.SecondaryWeapon);
+        const WeaponDef* WeaponsToTest[2] = {Primary, Secondary};
+
+        for (const WeaponDef* Wpn : WeaponsToTest)
+        {
+            if (Wpn == nullptr)
+            {
+                continue;
+            }
+            if (Wpn->bCanTargetAir)
+            {
+                Roles |= EntityRole::AntiAir;
+            }
+            if (Wpn->Warhead == WarheadClass::ArmorPiercing || Wpn->Warhead == WarheadClass::Siege ||
+                Wpn->Warhead == WarheadClass::Plasma || Wpn->Warhead == WarheadClass::Rocket)
+            {
+                Roles |= EntityRole::AntiArmor;
+            }
+            if (Wpn->MinRange > Fixed::Zero() || Wpn->MaxRange >= Fixed::FromInt(700) ||
+                Wpn->Warhead == WarheadClass::Siege)
+            {
+                Roles |= EntityRole::Artillery;
+            }
+        }
+    }
+
+    return Roles;
+}
+
 ContentId ContentDatabase::AddEntity(const EntityDef& Def)
 {
     EntityDef Copy = Def;
     if (!Copy.Id.IsValid())
     {
         Copy.Id = MakeContentId(Copy.Name.c_str());
+    }
+    if (Copy.Roles == EntityRole::None)
+    {
+        Copy.Roles = DeriveEntityRoles(Copy);
     }
     const auto Existing = EntityIndex.find(Copy.Id.Value);
     if (Existing != EntityIndex.end())
@@ -271,6 +360,7 @@ uint64_t ContentDatabase::ComputeContentHash() const
         H.FeedUInt32(E.Id.Value);
         H.FeedUInt8(uint8_t(E.Kind));
         H.FeedUInt8(uint8_t(E.Faction));
+        H.FeedUInt32(static_cast<uint32_t>(E.Roles));
         H.FeedInt32(E.MaxHealth);
         H.FeedUInt8(uint8_t(E.Armor));
         H.FeedInt64(E.VisionRange.Raw);

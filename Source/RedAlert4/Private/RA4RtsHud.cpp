@@ -20,6 +20,11 @@ void ARA4RtsHud::DrawHUD()
     }
     DrawSelectionBrackets(Controller);
     DrawMarquee(Controller);
+
+    if (Controller->IsPlacementArmed())
+    {
+        DrawPlacementFootprint(Controller);
+    }
 }
 
 void ARA4RtsHud::DrawMarquee(const ARA4PlayerController* Controller)
@@ -148,5 +153,104 @@ void ARA4RtsHud::DrawSelectionBrackets(const ARA4PlayerController* Controller)
 
         DrawRect(FLinearColor(0.02f, 0.02f, 0.03f, 0.75f), L, BarY, BarWidth, 3.0f);
         DrawRect(BarColour, L, BarY, BarWidth * Fraction, 3.0f);
+    }
+}
+
+void ARA4RtsHud::DrawPlacementFootprint(const ARA4PlayerController* Controller)
+{
+    UWorld* World = GetWorld();
+    const URA4SimWorldSubsystem* Subsystem = World != nullptr ? World->GetSubsystem<URA4SimWorldSubsystem>() : nullptr;
+    const RA4::SimWorld* Sim = Subsystem != nullptr ? Subsystem->GetSimWorld() : nullptr;
+    if (Sim == nullptr || Controller == nullptr)
+    {
+        return;
+    }
+
+    RA4::ContentId ContentId = Controller->GetPlacementContent();
+    if (!ContentId.IsValid() || Sim->GetContent() == nullptr)
+    {
+        return;
+    }
+
+    const RA4::EntityDef* Def = Sim->GetContent()->FindEntity(ContentId);
+    if (Def == nullptr || Def->Kind != RA4::EntityKind::Building)
+    {
+        return;
+    }
+
+    RA4::Vec2 CursorGround;
+    if (!Controller->GetCursorGroundPosition(CursorGround))
+    {
+        return;
+    }
+
+    // Footprint is centered on CursorGround
+    const RA4::TileCoord OriginTile = Sim->GetMap().WorldToTile(CursorGround);
+    
+    const RA4::PlayerId LocalPlayer = Controller->GetSelection().GetLocalPlayer();
+    const bool bValid = Sim->IsPlacementValid(ContentId, LocalPlayer, OriginTile);
+
+    const FLinearColor Color = bValid ? PlacementValidColor : PlacementInvalidColor;
+
+    // The grid occupies OriginTile to OriginTile + (FootprintX, FootprintY)
+    for (int32_t Y = 0; Y < Def->Building.FootprintY; ++Y)
+    {
+        for (int32_t X = 0; X < Def->Building.FootprintX; ++X)
+        {
+            RA4::TileCoord Tile = OriginTile;
+            Tile.X += X;
+            Tile.Y += Y;
+            
+            // Draw a rect for each tile
+            const RA4::Vec2 TileWorldCenter = Sim->GetMap().TileCenterToWorld(Tile);
+            const FVector CenterUnreal = RA4Coords::ToUnreal(TileWorldCenter);
+            
+            // Tile half-size
+            const double HalfSize = double(RA4::kTileSizeUnits) * 0.5;
+            const FVector Offsets[4] = {
+                FVector(-HalfSize, -HalfSize, 0.0), FVector(HalfSize, -HalfSize, 0.0),
+                FVector(HalfSize, HalfSize, 0.0), FVector(-HalfSize, HalfSize, 0.0)
+            };
+
+            double MinX = 0.0;
+            double MaxX = 0.0;
+            double MinY = 0.0;
+            double MaxY = 0.0;
+            bool bHaveBox = false;
+
+            for (const FVector& Offset : Offsets)
+            {
+                FVector2D Screen;
+                if (!Controller->ProjectWorldLocationToScreen(CenterUnreal + Offset, Screen))
+                {
+                    continue;
+                }
+                if (!bHaveBox)
+                {
+                    MinX = MaxX = Screen.X;
+                    MinY = MaxY = Screen.Y;
+                    bHaveBox = true;
+                    continue;
+                }
+                MinX = FMath::Min(MinX, Screen.X);
+                MaxX = FMath::Max(MaxX, Screen.X);
+                MinY = FMath::Min(MinY, Screen.Y);
+                MaxY = FMath::Max(MaxY, Screen.Y);
+            }
+
+            if (bHaveBox)
+            {
+                // Draw tile fill
+                DrawRect(Color, float(MinX), float(MinY), float(MaxX - MinX), float(MaxY - MinY));
+                
+                // Draw tile border (slightly darker)
+                FLinearColor BorderColor = Color;
+                BorderColor.A = 1.0f;
+                DrawLine(float(MinX), float(MinY), float(MaxX), float(MinY), BorderColor, 1.0f);
+                DrawLine(float(MaxX), float(MinY), float(MaxX), float(MaxY), BorderColor, 1.0f);
+                DrawLine(float(MaxX), float(MaxY), float(MinX), float(MaxY), BorderColor, 1.0f);
+                DrawLine(float(MinX), float(MaxY), float(MinX), float(MinY), BorderColor, 1.0f);
+            }
+        }
     }
 }

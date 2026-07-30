@@ -36,7 +36,14 @@ protected:
     UPROPERTY(EditAnywhere, Category = "RA4|HUD")
     FLinearColor HealthLowColor = FLinearColor(0.90f, 0.25f, 0.20f, 1.0f);
 
+    UPROPERTY(EditAnywhere, Category = "RA4|HUD")
+    FLinearColor PlacementValidColor = FLinearColor(0.2f, 0.9f, 0.2f, 0.5f);
+
+    UPROPERTY(EditAnywhere, Category = "RA4|HUD")
+    FLinearColor PlacementInvalidColor = FLinearColor(0.9f, 0.1f, 0.1f, 0.5f);
+
 private:
     void DrawMarquee(const class ARA4PlayerController* Controller);
     void DrawSelectionBrackets(const class ARA4PlayerController* Controller);
+    void DrawPlacementFootprint(const class ARA4PlayerController* Controller);
 };

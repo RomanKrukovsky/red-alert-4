@@ -882,3 +882,43 @@ RA4_TEST(Orders, ForceMoveOutranksForceAttackAndAttackMove)
     RA4_EXPECT(CountOfType(Commands, CommandType::AttackMove) == 0);
     RA4_EXPECT(CountOfType(Commands, CommandType::Attack) == 0);
 }
+
+RA4_TEST(Selection, SelectIdleUnitsSelectsOnlyIdleUnits)
+{
+    InputFixture F;
+    const EntityId IdleTank = F.World.SpawnUnit(Ids::SovHeavyTank, 0, Vec2::FromInts(2000, 2000));
+    const EntityId BusyTank = F.World.SpawnUnit(Ids::SovHeavyTank, 0, Vec2::FromInts(3000, 3000));
+    
+    // Direct push into OrderQueue for test setup
+    const OrderQueue* OrdersConst = F.World.GetOrders(BusyTank);
+    if (OrdersConst != nullptr)
+    {
+        OrderQueue* Orders = const_cast<OrderQueue*>(OrdersConst);
+        Order O;
+        O.Type = OrderType::Move;
+        Orders->Push(O);
+    }
+
+    F.Selection.SelectIdleUnits(F.World, SelectionMode::Replace);
+    RA4_EXPECT(F.Selection.Num() == 1);
+    RA4_EXPECT(F.Selection.IsSelected(IdleTank));
+    RA4_EXPECT(!F.Selection.IsSelected(BusyTank));
+}
+
+
+
+RA4_TEST(Selection, SelectWoundedUnitsSelectsDamagedUnits)
+{
+    InputFixture F;
+    const EntityId HealthyTank = F.World.SpawnUnit(Ids::SovHeavyTank, 0, Vec2::FromInts(2000, 2000));
+    const EntityId WoundedTank = F.World.SpawnUnit(Ids::SovHeavyTank, 0, Vec2::FromInts(3000, 3000));
+
+    F.World.DebugDamage(WoundedTank, 300); // Damage WoundedTank
+
+    F.Selection.SelectWoundedUnits(F.World, 80, SelectionMode::Replace);
+    RA4_EXPECT(F.Selection.Num() == 1);
+    RA4_EXPECT(F.Selection.IsSelected(WoundedTank));
+    RA4_EXPECT(!F.Selection.IsSelected(HealthyTank));
+}
+
+

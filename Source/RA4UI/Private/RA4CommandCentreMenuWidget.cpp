@@ -607,7 +607,13 @@ void URA4CommandCentreMenuWidget::OpenCampaign()
     }
 }
 void URA4CommandCentreMenuWidget::OpenMultiplayer() { NavigateToScreen(3); }
-void URA4CommandCentreMenuWidget::OpenSkirmish() { NavigateToScreen(1); }
+void URA4CommandCentreMenuWidget::OpenSkirmish()
+{
+    if (UWorld* World = GetWorld())
+    {
+        UGameplayStatics::OpenLevel(World, TEXT("/Game/Maps/RA4_Skirmish"), true, TEXT("?PlayerFaction=0?EnemyFaction=1"));
+    }
+}
 void URA4CommandCentreMenuWidget::OpenEditor() { NavigateToScreen(20); }
 void URA4CommandCentreMenuWidget::OpenEncyclopedia() { NavigateToScreen(19); }
 void URA4CommandCentreMenuWidget::OpenModifications() { NavigateToScreen(21); }

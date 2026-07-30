@@ -66,6 +66,51 @@ FText KeyToText(const std::string& Key)
     {
         return FText::GetEmpty();
     }
+
+    // Russian Localization dictionary for unit & structure IDs
+    static const std::unordered_map<std::string, FText> LocMap = {
+        {"unit.sov.headquarters", NSLOCTEXT("RA4", "headquarters_su", "Штаб-квартира СССР")},
+        {"unit.sov.power_plant", NSLOCTEXT("RA4", "power_plant_su", "Электростанция")},
+        {"unit.sov.refinery", NSLOCTEXT("RA4", "refinery_su", "Переработчик руды")},
+        {"unit.sov.barracks", NSLOCTEXT("RA4", "barracks_su", "Казармы СССР")},
+        {"unit.sov.war_factory", NSLOCTEXT("RA4", "war_factory_su", "Завод техники СССР")},
+        {"unit.sov.radar", NSLOCTEXT("RA4", "radar_su", "Радарный комплекс")},
+        {"unit.sov.turret_ai", NSLOCTEXT("RA4", "turret_ai_su", "Пулеметная турель")},
+        {"unit.sov.turret_aa", NSLOCTEXT("RA4", "turret_aa_su", "ПВО турель")},
+        {"unit.sov.rubezh_rifleman", NSLOCTEXT("RA4", "rubezh_rifleman", "Стрелок «Рубеж»")},
+        {"unit.sov.zaslon_aa_team", NSLOCTEXT("RA4", "zaslon_aa", "ПВО команда «Заслон»")},
+        {"unit.sov.master_engineer", NSLOCTEXT("RA4", "master_engineer", "Мастер-инженер")},
+        {"unit.sov.rys_scout", NSLOCTEXT("RA4", "rys_scout", "Разведчик «Рысь»")},
+        {"unit.sov.granit_mbt", NSLOCTEXT("RA4", "granit_mbt", "Основной танк «Гранит»")},
+        {"unit.sov.zarevo_mlrs", NSLOCTEXT("RA4", "zarevo_mlrs", "РСЗО «Зарево»")},
+
+        {"unit.al.headquarters", NSLOCTEXT("RA4", "headquarters_al", "Штаб-квартира Альянса")},
+        {"unit.al.power_plant", NSLOCTEXT("RA4", "power_plant_al", "Электростанция Альянса")},
+        {"unit.al.refinery", NSLOCTEXT("RA4", "refinery_al", "Переработчик руды")},
+        {"unit.al.barracks", NSLOCTEXT("RA4", "barracks_al", "Казармы Альянса")},
+        {"unit.al.war_factory", NSLOCTEXT("RA4", "war_factory_al", "Завод техники Альянса")},
+        {"unit.al.radar", NSLOCTEXT("RA4", "radar_al", "Радарный комплекс")},
+        {"unit.al.sentinel_rifleman", NSLOCTEXT("RA4", "sentinel_rifleman", "Пехотинец «Страж»")},
+        {"unit.al.lancer_team", NSLOCTEXT("RA4", "lancer_team", "Ракетчик «Лансер»")},
+        {"unit.al.field_engineer", NSLOCTEXT("RA4", "field_engineer", "Полевой инженер")},
+        {"unit.al.kestrel_scout", NSLOCTEXT("RA4", "kestrel_scout", "Разведчик «Пустельга»")},
+        {"unit.al.bulwark_mbt", NSLOCTEXT("RA4", "bulwark_mbt", "Танк «Оплот»")},
+        {"unit.al.oracle_artillery", NSLOCTEXT("RA4", "oracle_artillery", "Артиллерия «Оракул»")},
+        
+        {"headquarters", NSLOCTEXT("RA4", "headquarters_generic", "Штаб-квартира")},
+        {"power_plant", NSLOCTEXT("RA4", "power_generic", "Электростанция")},
+        {"refinery", NSLOCTEXT("RA4", "refinery_generic", "Переработчик руды")},
+        {"barracks", NSLOCTEXT("RA4", "barracks_generic", "Казармы")},
+        {"war_factory", NSLOCTEXT("RA4", "factory_generic", "Завод техники")},
+        {"radar", NSLOCTEXT("RA4", "radar_generic", "Радарный комплекс")}
+    };
+
+    auto It = LocMap.find(Key);
+    if (It != LocMap.end())
+    {
+        return It->second;
+    }
+
     const FString AsString(UTF8_TO_TCHAR(Key.c_str()));
     return FText::AsCultureInvariant(AsString);
 }
@@ -197,6 +242,7 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
     HUDViewModel->SetSelectionState(Snapshot.Selection.TotalCount, PrimaryHealthRatio,
                                     UTF8_TO_TCHAR(Snapshot.Selection.PrimaryDisplayNameKey.c_str()),
                                     Snapshot.Selection.bPrimaryIsOwned);
+    OnSelectionChanged.Broadcast();
 
     SelectionKind = ToBlueprint(Snapshot.Selection.Kind);
 

@@ -20,6 +20,21 @@
 namespace RA4
 {
 
+// The named shapes an Army Group can hold. Column for travel, line to bring fire to
+// bear, wedge to punch through a weak point, Spread to reduce area-damage exposure,
+// ShieldScreen to keep armour between the enemy and artillery/support, Circular for
+// all-round defence when surrounded, Transport for loading onto/escorting vehicles.
+enum class EFormationShape : uint8_t
+{
+    Column = 0,
+    Line,
+    Wedge,
+    Spread,
+    ShieldScreen,
+    Circular,
+    Transport,
+};
+
 struct FormationDef
 {
     ContentId Id;

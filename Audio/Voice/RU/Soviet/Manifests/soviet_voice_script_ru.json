@@ -1,0 +1,749 @@
+{
+  "schema_version": "1.0",
+  "language": "ru-RU",
+  "faction": "Soviet",
+  "variant_count_per_event": 1,
+  "units": [
+    {
+      "stable_id": "SU_RubezhRifleman",
+      "voice_id": "SU_RubezhRifleman",
+      "unit_name_ru": "Мотострелок МС-12 «Рубеж»",
+      "lines": {
+        "Selected": {
+          "text": "Мотострелок МС-12 «Рубеж» на связи.",
+          "source_status": "canonical"
+        },
+        "Move": {
+          "text": "Бежим, пока дорога свободна.",
+          "source_status": "canonical"
+        },
+        "Attack": {
+          "text": "Цель вижу. Открываю огонь.",
+          "source_status": "canonical"
+        },
+        "Ability": {
+          "text": "В землю! Держим позицию!",
+          "source_status": "canonical"
+        },
+        "Damaged": {
+          "text": "Нас прижали!",
+          "source_status": "canonical"
+        },
+        "Elite": {
+          "text": "Теперь мы не просто пополнение.",
+          "source_status": "canonical"
+        },
+        "Idle": {
+          "text": "Обещали форму потеплее.",
+          "source_status": "canonical"
+        },
+        "Death": {
+          "text": "Передайте… позицию держали.",
+          "source_status": "canonical"
+        }
+      }
+    },
+    {
+      "stable_id": "SU_ZapalGrenadier",
+      "voice_id": "SU_ZapalGrenadier",
+      "unit_name_ru": "Штурмовик ОШ-4 «Запал»",
+      "lines": {
+        "Selected": {
+          "text": "Гранаты снаряжены.",
+          "source_status": "canonical"
+        },
+        "Move": {
+          "text": "Подойдём на бросок.",
+          "source_status": "canonical"
+        },
+        "Attack": {
+          "text": "Накрываю сектор!",
+          "source_status": "canonical"
+        },
+        "Ability": {
+          "text": "Термобарический — внутрь!",
+          "source_status": "canonical"
+        },
+        "Damaged": {
+          "text": "Осколками задело!",
+          "source_status": "canonical"
+        },
+        "Elite": {
+          "text": "Теперь попадаю с первого броска.",
+          "source_status": "canonical"
+        },
+        "Idle": {
+          "text": "Главное — не перепутать сумки.",
+          "source_status": "canonical"
+        },
+        "Death": {
+          "text": "Чека… уже выдернута…",
+          "source_status": "canonical"
+        }
+      }
+    },
+    {
+      "stable_id": "SU_ZaslonAATeam",
+      "voice_id": "SU_ZaslonAATeam",
+      "unit_name_ru": "Зенитный расчёт ПЗК-9 «Заслон»",
+      "lines": {
+        "Selected": {
+          "text": "Небо под контролем.",
+          "source_status": "canonical"
+        },
+        "Move": {
+          "text": "Ищу чистый сектор.",
+          "source_status": "canonical"
+        },
+        "Attack": {
+          "text": "Высота подтверждена. Огонь!",
+          "source_status": "canonical"
+        },
+        "Ability": {
+          "text": "Затаились. Пусть подлетят.",
+          "source_status": "canonical"
+        },
+        "Damaged": {
+          "text": "Расчёт под обстрелом!",
+          "source_status": "canonical"
+        },
+        "Elite": {
+          "text": "Ни один борт не уйдёт.",
+          "source_status": "canonical"
+        },
+        "Idle": {
+          "text": "Летят красиво. Падают лучше.",
+          "source_status": "canonical"
+        },
+        "Death": {
+          "text": "Небо… ваше…",
+          "source_status": "canonical"
+        }
+      }
+    },
+    {
+      "stable_id": "SU_MasterEngineer",
+      "voice_id": "SU_MasterEngineer",
+      "unit_name_ru": "Инженер-сапёр ИС-3 «Мастер»",
+      "lines": {
+        "Selected": {
+          "text": "Инструмент есть. План бы ещё.",
+          "source_status": "canonical"
+        },
+        "Move": {
+          "text": "Доберусь и починю.",
+          "source_status": "canonical"
+        },
+        "Attack": {
+          "text": "Я не стрелок. Покажите объект.",
+          "source_status": "canonical"
+        },
+        "Ability": {
+          "text": "Сейчас заведём эту развалину.",
+          "source_status": "canonical"
+        },
+        "Damaged": {
+          "text": "Инженера прикройте!",
+          "source_status": "canonical"
+        },
+        "Elite": {
+          "text": "Я починю даже то, чего ещё не построили.",
+          "source_status": "canonical"
+        },
+        "Idle": {
+          "text": "По инструкции это должно было работать.",
+          "source_status": "canonical"
+        },
+        "Death": {
+          "text": "Схема… была верной…",
+          "source_status": "canonical"
+        }
+      }
+    },
+    {
+      "stable_id": "SU_RazryadTrooper",
+      "voice_id": "SU_RazryadTrooper",
+      "unit_name_ru": "Электроштурмовик ЭШ-8 «Разряд»",
+      "lines": {
+        "Selected": {
+          "text": "Контур заряжен.",
+          "source_status": "canonical"
+        },
+        "Move": {
+          "text": "Ток пойдёт за нами.",
+          "source_status": "canonical"
+        },
+        "Attack": {
+          "text": "Разряд на цель!",
+          "source_status": "canonical"
+        },
+        "Ability": {
+          "text": "Перегрузка сети!",
+          "source_status": "canonical"
+        },
+        "Damaged": {
+          "text": "Изоляция пробита!",
+          "source_status": "canonical"
+        },
+        "Elite": {
+          "text": "Молния слушается меня.",
+          "source_status": "canonical"
+        },
+        "Idle": {
+          "text": "Не трогайте кабель. Последнее предупреждение.",
+          "source_status": "canonical"
+        },
+        "Death": {
+          "text": "Заземление… не сработало…",
+          "source_status": "canonical"
+        }
+      }
+    },
+    {
+      "stable_id": "SU_VektorOfficer",
+      "voice_id": "SU_VektorOfficer",
+      "unit_name_ru": "Офицер связи КС-6 «Вектор»",
+      "lines": {
+        "Selected": {
+          "text": "Связь с фронтом установлена.",
+          "source_status": "canonical"
+        },
+        "Move": {
+          "text": "Передаю новый рубеж.",
+          "source_status": "canonical"
+        },
+        "Attack": {
+          "text": "Приказ утверждён. Уничтожить.",
+          "source_status": "canonical"
+        },
+        "Ability": {
+          "text": "Первый приказ: ни шага назад!",
+          "source_status": "canonical"
+        },
+        "Damaged": {
+          "text": "Канал под огнём!",
+          "source_status": "canonical"
+        },
+        "Elite": {
+          "text": "Теперь армия слышит меня без помех.",
+          "source_status": "canonical"
+        },
+        "Idle": {
+          "text": "Молчание в эфире подозрительнее стрельбы.",
+          "source_status": "canonical"
+        },
+        "Death": {
+          "text": "Командование… продолжайте без меня.",
+          "source_status": "canonical"
+        }
+      }
+    },
+    {
+      "stable_id": "SU_BogatyrOreCarrier",
+      "voice_id": "SU_BogatyrOreCarrier",
+      "unit_name_ru": "Горнорудная машина ГРМ-8 «Богатырь»",
+      "lines": {
+        "Selected": {
+          "text": "Богатырь готов к рейсу.",
+          "source_status": "canonical"
+        },
+        "Move": {
+          "text": "Тяжёлый груз идёт.",
+          "source_status": "canonical"
+        },
+        "Attack": {
+          "text": "Оружия нет. Могу переехать.",
+          "source_status": "canonical"
+        },
+        "Ability": {
+          "text": "Закрываю броневые шторки.",
+          "source_status": "canonical"
+        },
+        "Damaged": {
+          "text": "Обшивка держит!",
+          "source_status": "canonical"
+        },
+        "Elite": {
+          "text": "Маршрут знаю лучше генералов.",
+          "source_status": "canonical"
+        },
+        "Idle": {
+          "text": "Руда сама себя не привезёт.",
+          "source_status": "canonical"
+        },
+        "Death": {
+          "text": "Груз… не доставлен…",
+          "source_status": "canonical"
+        }
+      }
+    },
+    {
+      "stable_id": "SU_RysScout",
+      "voice_id": "SU_RysScout",
+      "unit_name_ru": "Боевая разведмашина БРМ-27 «Рысь»",
+      "lines": {
+        "Selected": {
+          "text": "Рысь вышла на маршрут.",
+          "source_status": "canonical"
+        },
+        "Move": {
+          "text": "Уже там.",
+          "source_status": "canonical"
+        },
+        "Attack": {
+          "text": "Срезаем хвост колонне!",
+          "source_status": "canonical"
+        },
+        "Ability": {
+          "text": "Перепрыгиваем!",
+          "source_status": "canonical"
+        },
+        "Damaged": {
+          "text": "Броня тонкая, не стойте!",
+          "source_status": "canonical"
+        },
+        "Elite": {
+          "text": "Я вижу фланг раньше радара.",
+          "source_status": "canonical"
+        },
+        "Idle": {
+          "text": "Главное — не догнать собственный след.",
+          "source_status": "canonical"
+        },
+        "Death": {
+          "text": "Скорость… не спасла…",
+          "source_status": "canonical"
+        }
+      }
+    },
+    {
+      "stable_id": "SU_GranitMBT",
+      "voice_id": "SU_GranitMBT",
+      "unit_name_ru": "Основной танк ОБТ-92 «Гранит»",
+      "lines": {
+        "Selected": {
+          "text": "Гранит готов.",
+          "source_status": "canonical"
+        },
+        "Move": {
+          "text": "Гусеницы — вперёд.",
+          "source_status": "canonical"
+        },
+        "Attack": {
+          "text": "Раздробить цель.",
+          "source_status": "canonical"
+        },
+        "Ability": {
+          "text": "На таран!",
+          "source_status": "canonical"
+        },
+        "Damaged": {
+          "text": "Лоб держит, борт подставили!",
+          "source_status": "canonical"
+        },
+        "Elite": {
+          "text": "Сталь научилась побеждать.",
+          "source_status": "canonical"
+        },
+        "Idle": {
+          "text": "Тише едешь — дольше стреляешь.",
+          "source_status": "canonical"
+        },
+        "Death": {
+          "text": "Башня… заклинила…",
+          "source_status": "canonical"
+        }
+      }
+    },
+    {
+      "stable_id": "SU_ZarevoMLRS",
+      "voice_id": "SU_ZarevoMLRS",
+      "unit_name_ru": "Термобарическая РСЗО ТРС-18 «Зарево»",
+      "lines": {
+        "Selected": {
+          "text": "Пакет ракет заряжен.",
+          "source_status": "canonical"
+        },
+        "Move": {
+          "text": "Держим дистанцию.",
+          "source_status": "canonical"
+        },
+        "Attack": {
+          "text": "Расчётный квадрат подтверждён.",
+          "source_status": "canonical"
+        },
+        "Ability": {
+          "text": "Поджигаем весь сектор.",
+          "source_status": "canonical"
+        },
+        "Damaged": {
+          "text": "Пусковая под огнём!",
+          "source_status": "canonical"
+        },
+        "Elite": {
+          "text": "Один залп — один новый горизонт.",
+          "source_status": "canonical"
+        },
+        "Idle": {
+          "text": "Красиво горит только чужое.",
+          "source_status": "canonical"
+        },
+        "Death": {
+          "text": "Боекомплект… сейчас рванёт…",
+          "source_status": "canonical"
+        }
+      }
+    },
+    {
+      "stable_id": "SU_GromoboyRam",
+      "voice_id": "SU_GromoboyRam",
+      "unit_name_ru": "Электротаран ЭТМ-7 «Громобой»",
+      "lines": {
+        "Selected": {
+          "text": "Громобой ждёт команды.",
+          "source_status": "canonical"
+        },
+        "Move": {
+          "text": "К контакту.",
+          "source_status": "canonical"
+        },
+        "Attack": {
+          "text": "Замыкаю цепь!",
+          "source_status": "canonical"
+        },
+        "Ability": {
+          "text": "Разряд в грунт!",
+          "source_status": "canonical"
+        },
+        "Damaged": {
+          "text": "Катушки перегреваются!",
+          "source_status": "canonical"
+        },
+        "Elite": {
+          "text": "Гроза теперь идёт по земле.",
+          "source_status": "canonical"
+        },
+        "Idle": {
+          "text": "Сухая погода — временная проблема.",
+          "source_status": "canonical"
+        },
+        "Death": {
+          "text": "Контур… разомкнут…",
+          "source_status": "canonical"
+        }
+      }
+    },
+    {
+      "stable_id": "SU_VoevodaHeavyTank",
+      "voice_id": "SU_VoevodaHeavyTank",
+      "unit_name_ru": "Тяжёлый танк прорыва ТТП-11 «Воевода»",
+      "lines": {
+        "Selected": {
+          "text": "Воевода вступает в бой.",
+          "source_status": "canonical"
+        },
+        "Move": {
+          "text": "Земля выдержит.",
+          "source_status": "canonical"
+        },
+        "Attack": {
+          "text": "Стереть координаты.",
+          "source_status": "canonical"
+        },
+        "Ability": {
+          "text": "Переходим в осадный режим.",
+          "source_status": "canonical"
+        },
+        "Damaged": {
+          "text": "Повреждение принято. Продолжаем.",
+          "source_status": "canonical"
+        },
+        "Elite": {
+          "text": "Теперь это не танк. Это направление фронта.",
+          "source_status": "canonical"
+        },
+        "Idle": {
+          "text": "Мы не опаздываем. Нас ждут.",
+          "source_status": "canonical"
+        },
+        "Death": {
+          "text": "Воевода… оставляет рубеж…",
+          "source_status": "canonical"
+        }
+      }
+    },
+    {
+      "stable_id": "SU_KrechetInterceptor",
+      "voice_id": "SU_KrechetInterceptor",
+      "unit_name_ru": "Истребитель И-47 «Кречет»",
+      "lines": {
+        "Selected": {
+          "text": "Кречет на полосе.",
+          "source_status": "canonical"
+        },
+        "Move": {
+          "text": "Курс принят.",
+          "source_status": "canonical"
+        },
+        "Attack": {
+          "text": "Ракеты сошли.",
+          "source_status": "canonical"
+        },
+        "Ability": {
+          "text": "Форсаж!",
+          "source_status": "canonical"
+        },
+        "Damaged": {
+          "text": "Потеря давления!",
+          "source_status": "canonical"
+        },
+        "Elite": {
+          "text": "Небо стало тесным.",
+          "source_status": "canonical"
+        },
+        "Idle": {
+          "text": "Топливо любит решительных.",
+          "source_status": "canonical"
+        },
+        "Death": {
+          "text": "Катапульта… отказ…",
+          "source_status": "canonical"
+        }
+      }
+    },
+    {
+      "stable_id": "SU_KorshunGunship",
+      "voice_id": "SU_KorshunGunship",
+      "unit_name_ru": "Штурмовой вертолёт ШВ-38 «Коршун»",
+      "lines": {
+        "Selected": {
+          "text": "Коршун готов к вылету.",
+          "source_status": "canonical"
+        },
+        "Move": {
+          "text": "Идём на малой высоте.",
+          "source_status": "canonical"
+        },
+        "Attack": {
+          "text": "Работаем по земле!",
+          "source_status": "canonical"
+        },
+        "Ability": {
+          "text": "Заходим на круг!",
+          "source_status": "canonical"
+        },
+        "Damaged": {
+          "text": "Хвостовой сектор повреждён!",
+          "source_status": "canonical"
+        },
+        "Elite": {
+          "text": "Пехота зовёт — мы отвечаем.",
+          "source_status": "canonical"
+        },
+        "Idle": {
+          "text": "В кабине пахнет топливом и победой.",
+          "source_status": "canonical"
+        },
+        "Death": {
+          "text": "Борт падает…",
+          "source_status": "canonical"
+        }
+      }
+    },
+    {
+      "stable_id": "SU_GromadaAirship",
+      "voice_id": "SU_GromadaAirship",
+      "unit_name_ru": "Тяжёлый дирижабль ТДА-8 «Громада»",
+      "lines": {
+        "Selected": {
+          "text": "Громада в воздухе.",
+          "source_status": "canonical"
+        },
+        "Move": {
+          "text": "Медленно. Неотвратимо.",
+          "source_status": "canonical"
+        },
+        "Attack": {
+          "text": "Открыть бомболюки.",
+          "source_status": "canonical"
+        },
+        "Ability": {
+          "text": "Полный газ. Двигатели на предел.",
+          "source_status": "canonical"
+        },
+        "Damaged": {
+          "text": "Обшивка горит, курс держим.",
+          "source_status": "canonical"
+        },
+        "Elite": {
+          "text": "Города узнают нас по тени.",
+          "source_status": "canonical"
+        },
+        "Idle": {
+          "text": "Высота хорошая. Мир кажется тише.",
+          "source_status": "canonical"
+        },
+        "Death": {
+          "text": "Балласт… уже не поможет…",
+          "source_status": "canonical"
+        }
+      }
+    },
+    {
+      "stable_id": "SU_BuranPatrolBoat",
+      "voice_id": "SU_BuranPatrolBoat",
+      "unit_name_ru": "Боевой катер БК-27 «Буран»",
+      "lines": {
+        "Selected": {
+          "text": "Буран на воде.",
+          "source_status": "canonical"
+        },
+        "Move": {
+          "text": "Режем волну.",
+          "source_status": "canonical"
+        },
+        "Attack": {
+          "text": "Цель по правому борту!",
+          "source_status": "canonical"
+        },
+        "Ability": {
+          "text": "Сеть в воду!",
+          "source_status": "canonical"
+        },
+        "Damaged": {
+          "text": "Корпус принимает воду!",
+          "source_status": "canonical"
+        },
+        "Elite": {
+          "text": "Море запомнило наш след.",
+          "source_status": "canonical"
+        },
+        "Idle": {
+          "text": "Штиль — это просто пауза.",
+          "source_status": "canonical"
+        },
+        "Death": {
+          "text": "Отсек затоплен…",
+          "source_status": "canonical"
+        }
+      }
+    },
+    {
+      "stable_id": "SU_MorokSubmarine",
+      "voice_id": "SU_MorokSubmarine",
+      "unit_name_ru": "Ударная подлодка УПЛ-90 «Морок»",
+      "lines": {
+        "Selected": {
+          "text": "Морок слушает глубину.",
+          "source_status": "canonical"
+        },
+        "Move": {
+          "text": "Погружаемся.",
+          "source_status": "canonical"
+        },
+        "Attack": {
+          "text": "Торпедный раствор открыт.",
+          "source_status": "canonical"
+        },
+        "Ability": {
+          "text": "Беззвучный ход.",
+          "source_status": "canonical"
+        },
+        "Damaged": {
+          "text": "Прочный корпус деформирован!",
+          "source_status": "canonical"
+        },
+        "Elite": {
+          "text": "В море нас замечают слишком поздно.",
+          "source_status": "canonical"
+        },
+        "Idle": {
+          "text": "Наверху шумят. Здесь думают.",
+          "source_status": "canonical"
+        },
+        "Death": {
+          "text": "Глубина… принимает…",
+          "source_status": "canonical"
+        }
+      }
+    },
+    {
+      "stable_id": "SU_SvyatogorCruiser",
+      "voice_id": "SU_SvyatogorCruiser",
+      "unit_name_ru": "Ракетный крейсер РКР-44 «Святогор»",
+      "lines": {
+        "Selected": {
+          "text": "Святогор ждёт координаты.",
+          "source_status": "canonical"
+        },
+        "Move": {
+          "text": "Крейсер меняет позицию.",
+          "source_status": "canonical"
+        },
+        "Attack": {
+          "text": "Ракетный залп.",
+          "source_status": "canonical"
+        },
+        "Ability": {
+          "text": "Заградительный огонь по сектору.",
+          "source_status": "canonical"
+        },
+        "Damaged": {
+          "text": "Палуба пробита!",
+          "source_status": "canonical"
+        },
+        "Elite": {
+          "text": "Берег заканчивается там, где начинаются наши ракеты.",
+          "source_status": "canonical"
+        },
+        "Idle": {
+          "text": "Море большое. Дальность больше.",
+          "source_status": "canonical"
+        },
+        "Death": {
+          "text": "Погреба… детонируют…",
+          "source_status": "canonical"
+        }
+      }
+    },
+    {
+      "stable_id": "SU_Hero_Morozova",
+      "voice_id": "SU_Hero_Morozova",
+      "unit_name_ru": "Майор Елена Морозова",
+      "lines": {
+        "Selected": {
+          "text": "Майор Морозова. Докладывайте.",
+          "source_status": "canonical"
+        },
+        "Move": {
+          "text": "Я буду на передовой.",
+          "source_status": "canonical"
+        },
+        "Attack": {
+          "text": "Этот участок фронта закрываем сейчас.",
+          "source_status": "canonical"
+        },
+        "Ability": {
+          "text": "Подавить их связь и движение.",
+          "source_status": "canonical"
+        },
+        "Damaged": {
+          "text": "Царапина. Приказ не меняется.",
+          "source_status": "canonical"
+        },
+        "Elite": {
+          "text": "Сегодня фронт движется вместе со мной.",
+          "source_status": "canonical"
+        },
+        "Idle": {
+          "text": "Генералы любят карты. Я предпочитаю местность.",
+          "source_status": "canonical"
+        },
+        "Death": {
+          "text": "Продолжайте… наступление…",
+          "source_status": "canonical"
+        }
+      }
+    }
+  ]
+}

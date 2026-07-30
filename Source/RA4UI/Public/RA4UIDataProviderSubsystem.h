@@ -87,6 +87,10 @@ public:
     DECLARE_MULTICAST_DELEGATE(FOnResourcesChanged);
     FOnResourcesChanged OnResourcesChanged;
 
+    /** Fired when selection changes, so the sidebar updates object info card. */
+    DECLARE_MULTICAST_DELEGATE(FOnSelectionChanged);
+    FOnSelectionChanged OnSelectionChanged;
+
     /**
      * Fired when the build cards or the queue changed in a way the sidebar shows.
      * Queue progress ticks constantly, so this deliberately compares the rounded

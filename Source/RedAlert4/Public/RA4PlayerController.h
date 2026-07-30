@@ -19,6 +19,7 @@
 
 class ARA4CameraPawn;
 class URA4SimWorldSubsystem;
+class URA4MatchResultOverlayWidget;
 
 UCLASS()
 class REDALERT4_API ARA4PlayerController : public APlayerController
@@ -29,6 +30,7 @@ public:
     ARA4PlayerController();
 
     virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void OnPossess(APawn* InPawn) override;
     virtual void SetupInputComponent() override;
     virtual void PlayerTick(float DeltaTime) override;
@@ -43,6 +45,10 @@ public:
     // Armed by pressing A; the next click becomes an attack-move.
     UFUNCTION(BlueprintCallable, Category = "RA4|Input")
     void ArmAttackMove() { bAttackMoveArmed = true; }
+
+    bool IsPlacementArmed() const { return bPlacementArmed; }
+    RA4::ContentId GetPlacementContent() const { return PlacementContent; }
+    bool GetCursorGroundPosition(RA4::Vec2& OutPosition) const;
 
     // Armed by the production sidebar once a structure has finished building.
     UFUNCTION(BlueprintCallable, Category = "RA4|Input")
@@ -81,6 +87,10 @@ private:
     void OnGuardPressed();
     void OnControlGroupKeyByKey(FKey Key);
     void OnControlGroupKey(int32 GroupIndex);
+#if !UE_BUILD_SHIPPING
+    void DebugForceVictory();
+    void DebugForceDefeat();
+#endif
 
     // Shared by both buttons: the scheme decides which one gets here.
     void HandleClick(bool bLeftButton, const FVector2D& EndScreen, bool bWasDrag);
@@ -92,7 +102,6 @@ private:
     ARA4CameraPawn* GetCameraPawn() const;
     bool TryInitializeCamera();
 
-    bool GetCursorGroundPosition(RA4::Vec2& OutPosition) const;
     bool ScreenToGround(const FVector2D& ScreenPosition, RA4::Vec2& OutPosition) const;
 
     // Everything the local player is allowed to click on. The fog of war filter
@@ -118,6 +127,11 @@ private:
     TObjectPtr<class URA4SidebarWidget> Sidebar;
 
     void HandleBuildCardClicked(int64 ContentIdValue);
+    void BindMatchResultEvents();
+    void HandleMatchEnded(bool bLocalPlayerWon, int32 WinningPlayer);
+    void HandleRetryRequested();
+    void HandleExitRequested();
+    bool HasMainMenuMap() const;
 
     // --- state ---------------------------------------------------------------
     RA4::Input::SelectionModel Selection;
@@ -136,5 +150,12 @@ private:
     RA4::EntityId LastClickedEntity;
     bool bCameraInitialized = false;
     bool bInitialCursorPositionSet = false;
+    bool bMatchResultEventsBound = false;
+    bool bMatchResultVisible = false;
     int32 EdgeScrollWarmupFrames = 0;
+
+    UPROPERTY(Transient)
+    TObjectPtr<URA4MatchResultOverlayWidget> MatchResultOverlay;
+
+    FDelegateHandle MatchEndedHandle;
 };

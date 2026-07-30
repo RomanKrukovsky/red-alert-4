@@ -60,6 +60,9 @@ public:
     void SetDamageMultiplier(WarheadClass Warhead, ArmorClass Armor, int32_t Percent);
     void ResetDamageTableToDefaults();
 
+    // Derive role bitmask flags for an entity definition based on taxonomy, capabilities and weapons
+    EntityRole DeriveEntityRoles(const EntityDef& Def) const;
+
     // Content hash covers every value that can change simulation outcomes. Clients
     // and server compare it during the lobby handshake; a mismatch means someone is
     // running different data and would desync within seconds.

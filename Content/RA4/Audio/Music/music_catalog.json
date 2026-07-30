@@ -1,0 +1,36 @@
+{
+  "project": "Red Alert 4",
+  "system": "Mission Background Music Catalog",
+  "tracks": [
+    {
+      "track_id": "MUS_SteelHorizonPact",
+      "title": "Steel Horizon Pact",
+      "category": "Mission_Background_Music",
+      "sub_category": "Combat_Tactical",
+      "mp3_path": "Content/RA4/Audio/Music/Steel_Horizon_Pact.mp3",
+      "wav_path": "Content/RA4/Audio/Music/Steel_Horizon_Pact.wav",
+      "duration_seconds": 277.94,
+      "formatted_duration": "04:37",
+      "sample_rate": 48000,
+      "channels": 2,
+      "bit_depth": 24,
+      "target_lufs": -14.0,
+      "description": "High-energy industrial tactical theme for active gameplay during campaign and skirmish missions."
+    },
+    {
+      "track_id": "MUS_IronParade",
+      "title": "Iron Parade",
+      "category": "Mission_Background_Music",
+      "sub_category": "Base_Assembly_March",
+      "mp3_path": "Content/RA4/Audio/Music/Iron_Parade.mp3",
+      "wav_path": "Content/RA4/Audio/Music/Iron_Parade.wav",
+      "duration_seconds": 165.00,
+      "formatted_duration": "02:45",
+      "sample_rate": 48000,
+      "channels": 2,
+      "bit_depth": 24,
+      "target_lufs": -14.0,
+      "description": "Heavy industrial march theme driving base assembly, unit production, and frontline deployment."
+    }
+  ]
+}

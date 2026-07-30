@@ -42,6 +42,8 @@ public class RedAlert4 : ModuleRules
 			"GameplayTasks",
 			"NetCore",
 			"Projects",
+			"Landscape",
+			"Niagara",
 		});
 	}
 }

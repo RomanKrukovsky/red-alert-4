@@ -39,8 +39,8 @@ const StartingForce AllianceForce{
 
 Vec2 TileCentre(const TileCoord& Tile)
 {
-    return Vec2(Fixed::FromInt(int64(Tile.X) * kTileSizeUnits + kTileSizeUnits / 2),
-                Fixed::FromInt(int64(Tile.Y) * kTileSizeUnits + kTileSizeUnits / 2));
+    return Vec2(RA4::Fixed::FromInt(int64(Tile.X) * kTileSizeUnits + kTileSizeUnits / 2),
+                RA4::Fixed::FromInt(int64(Tile.Y) * kTileSizeUnits + kTileSizeUnits / 2));
 }
 
 // A construction yard on an empty field is not a playable start: with nothing to
@@ -77,7 +77,7 @@ void SeedBase(SimWorld& World, const StartingForce& Force, PlayerId Owner, const
 }
 } // namespace
 
-void FRA4MatchBootstrap::BuildSkirmish(ContentDatabase& Content, SimWorld& World, uint64 Seed)
+void FRA4MatchBootstrap::BuildSkirmish(ContentDatabase& Content, SimWorld& World, uint64 Seed, RA4::FactionId PlayerFaction, RA4::FactionId EnemyFaction)
 {
     BuildDefaultContent(Content);
 
@@ -98,16 +98,19 @@ void FRA4MatchBootstrap::BuildSkirmish(ContentDatabase& Content, SimWorld& World
     Setup.Map.Resize(kMapTiles, kMapTiles, Tile_GroundPassable);
 
     Setup.Players[0].bActive = true;
-    Setup.Players[0].Faction = FactionId::Soviet;
+    Setup.Players[0].Faction = PlayerFaction;
     Setup.Players[0].StartingCredits = 10000;
 
     Setup.Players[1].bActive = true;
-    Setup.Players[1].Faction = FactionId::Alliance;
+    Setup.Players[1].Faction = EnemyFaction;
     Setup.Players[1].StartingCredits = 10000;
 
     World.Initialize(&Content, Setup);
 
-    SeedBase(World, SovietForce, 0, TileCoord(10, 10), TileCoord(6, 15));
-    SeedBase(World, AllianceForce, 1, TileCoord(48, 48), TileCoord(53, 43));
+    const StartingForce& PlayerForce = (PlayerFaction == RA4::FactionId::Soviet) ? SovietForce : AllianceForce;
+    const StartingForce& EnemyForce = (EnemyFaction == RA4::FactionId::Soviet) ? SovietForce : AllianceForce;
+
+    SeedBase(World, PlayerForce, 0, TileCoord(10, 10), TileCoord(6, 15));
+    SeedBase(World, EnemyForce, 1, TileCoord(48, 48), TileCoord(53, 43));
     World.ClearEvents();
 }

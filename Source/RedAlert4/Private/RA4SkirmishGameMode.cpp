@@ -4,6 +4,7 @@
 #include "RA4CameraPawn.h"
 #include "RA4PlayerController.h"
 #include "RA4RtsHud.h"
+#include "RA4SimCoords.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/SkyLightComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -16,6 +17,8 @@
 
 #include "RA4GameState.h"
 #include "RA4PlayerState.h"
+#include "RA4SimWorldSubsystem.h"
+#include "Kismet/GameplayStatics.h"
 
 ARA4SkirmishGameMode::ARA4SkirmishGameMode()
 {
@@ -33,6 +36,24 @@ void ARA4SkirmishGameMode::BeginPlay()
 {
     Super::BeginPlay();
     UE_LOG(LogTemp, Display, TEXT("RA4 skirmish game mode started"));
+
+    // Extract options from the URL (Main Menu passes them here)
+    FString Options = OptionsString;
+    uint8 PlayerFaction = UGameplayStatics::GetIntOption(Options, TEXT("PlayerFaction"), 0);
+    uint8 EnemyFaction = UGameplayStatics::GetIntOption(Options, TEXT("EnemyFaction"), 1);
+    int32 Difficulty = UGameplayStatics::GetIntOption(Options, TEXT("Difficulty"), 1);
+
+    // Start the simulation match
+    if (UWorld* World = GetWorld())
+    {
+        if (URA4SimWorldSubsystem* SimSub = World->GetSubsystem<URA4SimWorldSubsystem>())
+        {
+            SimSub->StartSkirmishMatch(PlayerFaction, EnemyFaction, Difficulty);
+        }
+    }
+
+    AStaticMeshActor* LargestFloorActor = nullptr;
+    double LargestFloorArea = 0.0;
 
     // This project uses the default exposure range rather than the extended
     // physical-luminance range. A physical 75,000-lux value clips this simple
@@ -72,6 +93,15 @@ void ARA4SkirmishGameMode::BeginPlay()
         {
             if (UStaticMeshComponent* Mesh = It->GetStaticMeshComponent())
             {
+                const FVector Extent = Mesh->Bounds.BoxExtent;
+                const double FloorArea = double(Extent.X) * double(Extent.Y);
+                if (Extent.Z > 1.0f && Extent.X > 1000.0f && Extent.Y > 1000.0f &&
+                    FloorArea > LargestFloorArea)
+                {
+                    LargestFloorArea = FloorArea;
+                    LargestFloorActor = *It;
+                }
+
                 if (UMaterialInstanceDynamic* Material =
                         UMaterialInstanceDynamic::Create(GroundMaterial, Mesh))
                 {
@@ -84,4 +114,18 @@ void ARA4SkirmishGameMode::BeginPlay()
         }
     }
 
+    if (LargestFloorActor != nullptr)
+    {
+        if (UStaticMeshComponent* Mesh = LargestFloorActor->GetStaticMeshComponent())
+        {
+            const float HalfThickness = Mesh->Bounds.BoxExtent.Z;
+            Mesh->SetMobility(EComponentMobility::Movable);
+            FVector Location = LargestFloorActor->GetActorLocation();
+            // The simulation and picking treat GroundZ as the walkable surface. Many
+            // placeholder floor meshes are authored around their centre, so align the
+            // mesh top to GroundZ instead of leaving the camera to look through it.
+            Location.Z = float(RA4Coords::GroundZ) - HalfThickness;
+            LargestFloorActor->SetActorLocation(Location);
+        }
+    }
 }

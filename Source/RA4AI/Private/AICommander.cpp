@@ -12,11 +12,63 @@ namespace AI
 
 namespace
 {
-bool IsPowerPlant(const EntityDef& D) { return D.Kind == EntityKind::Building && D.Building.bIsPowerPlant; }
-bool IsRefinery(const EntityDef& D) { return D.Kind == EntityKind::Building && D.Building.bIsRefinery; }
+bool IsPowerPlant(const EntityDef& D) { return D.Kind == EntityKind::Building && (D.Building.bIsPowerPlant || HasRole(D.Roles, EntityRole::Power)); }
+bool IsRefinery(const EntityDef& D) { return D.Kind == EntityKind::Building && (D.Building.bIsRefinery || HasRole(D.Roles, EntityRole::Refinery)); }
 
-// A barracks and a war factory are identified by what they can produce rather than
-// by name, so the commander needs no per-faction table.
+    // Deterministic integer-only staging offset.  A tile step toward the target,
+    // clamped so the staging point stays on the map and never collapses into the yard.
+    TileCoord StagingOffsetTowardTarget(const MapDescription& Map,
+                                        TileCoord YardTile,
+                                        TileCoord TargetTile,
+                                        int32_t MaxOffset)
+    {
+        int32_t DX = TargetTile.X - YardTile.X;
+        int32_t DY = TargetTile.Y - YardTile.Y;
+        if (DX == 0 && DY == 0)
+        {
+            return YardTile;
+        }
+
+        // Scale each axis independently so the staging point is roughly MaxOffset
+        // tiles away along the dominant direction.  Pure integer math, no sqrt,
+        // no trig, no platform-dependent floating point.
+        const int32_t AbsDX = DX >= 0 ? DX : -DX;
+        const int32_t AbsDY = DY >= 0 ? DY : -DY;
+        const int32_t Dominant = AbsDX > AbsDY ? AbsDX : AbsDY;
+        const int32_t Scale = Dominant > MaxOffset ? MaxOffset : Dominant;
+
+        const int32_t StepX = Dominant == 0 ? 0 : (DX * Scale) / Dominant;
+        const int32_t StepY = Dominant == 0 ? 0 : (DY * Scale) / Dominant;
+
+        TileCoord Result(YardTile.X + StepX, YardTile.Y + StepY);
+        Result.X = Result.X < 0 ? 0 : (Result.X >= Map.Width ? Map.Width - 1 : Result.X);
+        Result.Y = Result.Y < 0 ? 0 : (Result.Y >= Map.Height ? Map.Height - 1 : Result.Y);
+        return Result;
+    }
+
+    // A barracks and a war factory are identified by what they can produce rather than
+    // by name, so the commander needs no per-faction table.
+
+bool IsCombatUnitDef(const EntityDef* Def)
+{
+    if (Def == nullptr || Def->Kind != EntityKind::Unit)
+    {
+        return false;
+    }
+    if (HasRole(Def->Roles, EntityRole::Combat))
+    {
+        return true;
+    }
+    return Def->Weapon.IsValid() && !Def->Unit.bIsHarvester && !Def->Unit.bIsBuilder;
+}
+
+bool IsWounded(const SimWorld& World, EntityId Id)
+{
+    const HealthComp* Health = World.GetHealth(Id);
+    return Health != nullptr && Health->Max > 0 &&
+           int64_t(Health->Current) * 4 < int64_t(Health->Max);
+}
+
 bool ProducesCategory(const ContentDatabase& Content, ContentId Building, ProductionCategory Category)
 {
     for (const EntityDef& Def : Content.GetEntities())
@@ -49,7 +101,6 @@ void AICommander::Initialize(PlayerId InPlayer, AIProfile InProfile, uint64_t Se
 void AICommander::Reset()
 {
     TicksSinceDecision = 0;
-    bAttacking = false;
     ActiveStrategy = AIStrategy::ExpandEconomy;
     PreviousStrategyForDecision = AIStrategy::ExpandEconomy;
     ActiveStrategyScore = 0;
@@ -64,6 +115,7 @@ void AICommander::Reset()
     ScoutWaypointIndex = 0;
     LastScoutOrderTick = 0;
     bHasScoutOrder = false;
+    ActiveOperation = TacticalOperation();
     DecisionLog.clear();
 }
 
@@ -253,6 +305,37 @@ int32_t AICommander::CountOwnedUnits(const SimWorld& World, bool bCombatOnly) co
     return Count;
 }
 
+int32_t AICommander::CountIdleCombatUnits(const SimWorld& World) const
+{
+    const ContentDatabase* Content = World.GetContent();
+    if (Content == nullptr)
+    {
+        return 0;
+    }
+
+    int32_t Count = 0;
+    const std::vector<EntityCore>& Cores = World.GetAllCores();
+    for (uint32_t I = 0; I < uint32_t(Cores.size()); ++I)
+    {
+        if (!Cores[I].bAlive || Cores[I].Owner != Player || Cores[I].Kind != EntityKind::Unit)
+        {
+            continue;
+        }
+        const EntityDef* Def = Content->FindEntity(Cores[I].Def);
+        if (!IsCombatUnitDef(Def) || IsWounded(World, World.MakeId(I)))
+        {
+            continue;
+        }
+        const OrderQueue* Orders = World.GetOrders(World.MakeId(I));
+        if (Orders != nullptr && Orders->Count > 0)
+        {
+            continue;
+        }
+        ++Count;
+    }
+    return Count;
+}
+
 int32_t AICommander::CountQueued(const SimWorld& World, ContentId Content) const
 {
     int32_t Count = 0;
@@ -341,6 +424,13 @@ TileCoord AICommander::NextScoutWaypoint(const SimWorld& World) const
     return Candidates[((ScoutWaypointIndex % Count) + Count) % Count];
 }
 
+TileCoord AICommander::GetAndAdvanceScoutWaypoint(const SimWorld& World)
+{
+    const TileCoord Waypoint = NextScoutWaypoint(World);
+    ++ScoutWaypointIndex;
+    return Waypoint;
+}
+
 bool AICommander::TryScout(const SimWorld& World, std::vector<Command>& Out)
 {
     // Nothing to look for once something is known.
@@ -385,8 +475,7 @@ bool AICommander::TryScout(const SimWorld& World, std::vector<Command>& Out)
 
     if (!ScoutUnit.IsValid())
     {
-        // Cheapest armed unit available, so scouting does not consume the assault
-        // force. Chosen in entity-index order for determinism.
+        // First pass: prefer units with EntityRole::Scout
         const std::vector<EntityCore>& Cores = World.GetAllCores();
         for (uint32_t I = 0; I < uint32_t(Cores.size()); ++I)
         {
@@ -395,13 +484,34 @@ bool AICommander::TryScout(const SimWorld& World, std::vector<Command>& Out)
                 continue;
             }
             const EntityDef* Def = Content->FindEntity(Cores[I].Def);
-            if (Def == nullptr || Def->Unit.bIsHarvester || Def->Unit.bIsBuilder ||
-                Def->Unit.MaxSpeed <= Fixed::Zero())
+            if (Def == nullptr || Def->Unit.bIsHarvester || Def->Unit.bIsBuilder || Def->Unit.MaxSpeed <= Fixed::Zero())
             {
                 continue;
             }
-            ScoutUnit = World.MakeId(I);
-            break;
+            if (HasRole(Def->Roles, EntityRole::Scout))
+            {
+                ScoutUnit = World.MakeId(I);
+                break;
+            }
+        }
+
+        // Fallback pass: cheapest available mobile unit
+        if (!ScoutUnit.IsValid())
+        {
+            for (uint32_t I = 0; I < uint32_t(Cores.size()); ++I)
+            {
+                if (!Cores[I].bAlive || Cores[I].Owner != Player || Cores[I].Kind != EntityKind::Unit)
+                {
+                    continue;
+                }
+                const EntityDef* Def = Content->FindEntity(Cores[I].Def);
+                if (Def == nullptr || Def->Unit.bIsHarvester || Def->Unit.bIsBuilder || Def->Unit.MaxSpeed <= Fixed::Zero())
+                {
+                    continue;
+                }
+                ScoutUnit = World.MakeId(I);
+                break;
+            }
         }
     }
 
@@ -425,43 +535,66 @@ bool AICommander::TryScout(const SimWorld& World, std::vector<Command>& Out)
 
 bool AICommander::FindKnownEnemyTarget(KnownTarget& Out) const
 {
-    // Reads memory only. There is deliberately no path here into SimWorld: an enemy
-    // the commander has never observed does not exist as far as this function is
-    // concerned, which is what stops the AI attacking through fog.
+    // Reads memory only from Knowledge (SimWorldView). No path to SimWorld.
     if (Knowledge == nullptr)
     {
         return false;
     }
 
-    // Production buildings first, then anything else: razing a war factory ends the
-    // match faster than chasing the scout that happened to be nearest. Iterated in
-    // memory order, which is insertion order, so the choice is deterministic.
-    const EnemyMemory* BestBuilding = nullptr;
-    const EnemyMemory* BestOther = nullptr;
+    const ContentDatabase* Content = Knowledge->GetContent();
+    const EnemyMemory* BestTarget = nullptr;
+    int32_t BestScore = -1;
+
     for (const EnemyMemory& Mem : Knowledge->GetKnownEnemies())
     {
+        int32_t Score = 0;
         if (Mem.Kind == EntityKind::Building)
         {
-            if (BestBuilding == nullptr)
+            Score += 1000;
+            if (Content != nullptr)
             {
-                BestBuilding = &Mem;
+                const EntityDef* Def = Content->FindEntity(Mem.DefId);
+                if (Def != nullptr)
+                {
+                    if (HasRole(Def->Roles, EntityRole::BaseBuilding) || Def->Building.bIsConstructionYard) Score += 500;
+                    if (HasRole(Def->Roles, EntityRole::Production)) Score += 400;
+                    if (HasRole(Def->Roles, EntityRole::Refinery)) Score += 300;
+                    if (HasRole(Def->Roles, EntityRole::Power)) Score += 200;
+                    if (HasRole(Def->Roles, EntityRole::Defense)) Score += 100;
+                }
             }
         }
-        else if (Mem.Kind == EntityKind::Unit && BestOther == nullptr)
+        else if (Mem.Kind == EntityKind::Unit)
         {
-            BestOther = &Mem;
+            Score += 100;
+            if (Content != nullptr)
+            {
+                const EntityDef* Def = Content->FindEntity(Mem.DefId);
+                if (Def != nullptr)
+                {
+                    if (HasRole(Def->Roles, EntityRole::Combat)) Score += 50;
+                    if (HasRole(Def->Roles, EntityRole::Harvester)) Score += 40;
+                }
+            }
+        }
+
+        if (BestTarget == nullptr || Score > BestScore ||
+            (Score == BestScore && Mem.LastSeenTick > BestTarget->LastSeenTick))
+        {
+            BestScore = Score;
+            BestTarget = &Mem;
         }
     }
 
-    const EnemyMemory* Chosen = BestBuilding != nullptr ? BestBuilding : BestOther;
-    if (Chosen == nullptr)
+    if (BestTarget == nullptr)
     {
         return false;
     }
 
-    Out.Entity = Chosen->Entity;
-    Out.Tile = Chosen->Position;
-    Out.Kind = Chosen->Kind;
+    Out.Entity = BestTarget->Entity;
+    Out.Tile = BestTarget->Position;
+    Out.Kind = BestTarget->Kind;
+    return true;
     return true;
 }
 
@@ -490,7 +623,10 @@ AIWorldAssessment AICommander::BuildAssessment(const SimWorld& World) const
     Assessment.PowerProduced = State.PowerProduced;
     Assessment.PowerConsumed = State.PowerConsumed;
     Assessment.TotalHarvested = State.TotalHarvested;
-    Assessment.bAssaultActive = bAttacking;
+    Assessment.bAssaultActive =
+        (ActiveOperation.State == OperationState::Advancing ||
+         ActiveOperation.State == OperationState::Engaging ||
+         ActiveOperation.State == OperationState::Staging);
 
     const ContentDatabase* Content = World.GetContent();
     if (Content == nullptr)
@@ -863,7 +999,7 @@ bool AICommander::TryTrainArmy(const SimWorld& World, std::vector<Command>& Out)
     return QueueProduction(World, Unit, "growing the army", Out);
 }
 
-void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
+void AICommander::ReconcileSquad(const SimWorld& World)
 {
     const ContentDatabase* Content = World.GetContent();
     if (Content == nullptr)
@@ -871,12 +1007,223 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
         return;
     }
 
-    const auto IsWounded = [&World](EntityId Id)
+    // Drop destroyed, non-combat or wounded units from the assigned squad.  The
+    // order of the remaining units is preserved so that assignment is stable.
+    std::vector<EntityId> Kept;
+    Kept.reserve(ActiveOperation.AssignedUnits.size());
+    for (EntityId Id : ActiveOperation.AssignedUnits)
     {
-        const HealthComp* Health = World.GetHealth(Id);
-        return Health != nullptr && Health->Max > 0 &&
-               int64_t(Health->Current) * 4 < int64_t(Health->Max);
-    };
+        const EntityCore* Core = World.GetCore(Id);
+        if (Core == nullptr || !Core->bAlive || Core->Owner != Player)
+        {
+            continue;
+        }
+        const EntityDef* Def = Content->FindEntity(Core->Def);
+        if (!IsCombatUnitDef(Def) || IsWounded(World, Id))
+        {
+            continue;
+        }
+        Kept.push_back(Id);
+    }
+    ActiveOperation.AssignedUnits.swap(Kept);
+
+    // Recruit every idle, non-wounded combat unit into an active operation.  Once a
+    // push has started, leaving units at base while a small squad attacks alone is the
+    // main cause of slow, inconclusive AI matches; the whole idle army should move
+    // together.  RequiredCombatUnits only governs the minimum size to *start* an
+    // operation, not the cap on how many units may join it.
+    if (ActiveOperation.State != OperationState::Completed &&
+        ActiveOperation.State != OperationState::Aborted)
+    {
+        const std::vector<EntityCore>& Cores = World.GetAllCores();
+        for (uint32_t I = 0; I < uint32_t(Cores.size()); ++I)
+        {
+            const EntityCore& Core = Cores[I];
+            if (!Core.bAlive || Core.Owner != Player || Core.Kind != EntityKind::Unit)
+            {
+                continue;
+            }
+            const EntityDef* Def = Content->FindEntity(Core.Def);
+            if (!IsCombatUnitDef(Def))
+            {
+                continue;
+            }
+            const EntityId Id = World.MakeId(I);
+            if (Id == ScoutUnit)
+            {
+                continue;
+            }
+            if (IsWounded(World, Id))
+            {
+                continue;
+            }
+            if (std::find(ActiveOperation.AssignedUnits.begin(),
+                          ActiveOperation.AssignedUnits.end(), Id) !=
+                ActiveOperation.AssignedUnits.end())
+            {
+                continue;
+            }
+            const OrderQueue* Orders = World.GetOrders(Id);
+            if (Orders == nullptr || Orders->Count > 0)
+            {
+                continue;
+            }
+            ActiveOperation.AssignedUnits.push_back(Id);
+        }
+    }
+}
+
+void AICommander::ComputeStagingPoint(const SimWorld& World)
+{
+    const EntityId Yard = FindOwnConstructionYard(World);
+    const TransformComp* YardTransform =
+        Yard.IsValid() ? World.GetTransform(Yard) : nullptr;
+    if (YardTransform == nullptr)
+    {
+        ActiveOperation.StagingPoint = ActiveOperation.TargetLocation;
+        return;
+    }
+
+    const TileCoord YardTile = World.GetMap().WorldToTile(YardTransform->Position);
+    const TileCoord TargetTile = ActiveOperation.TargetLocation;
+
+    constexpr int32_t kStagingOffset = 4;
+    ActiveOperation.StagingPoint =
+        StagingOffsetTowardTarget(World.GetMap(), YardTile, TargetTile, kStagingOffset);
+}
+
+bool AICommander::AllSquadAtStaging(const SimWorld& World) const
+{
+    if (ActiveOperation.AssignedUnits.empty())
+    {
+        return false;
+    }
+
+    const TickIndex ElapsedStaging = World.GetTick() >= ActiveOperation.LastStateChangeTick ?
+        World.GetTick() - ActiveOperation.LastStateChangeTick : 0;
+    if (ElapsedStaging >= 100)
+    {
+        return true;
+    }
+
+    const Vec2 StagingWorld = World.GetMap().TileCenterToWorld(ActiveOperation.StagingPoint);
+    constexpr int64_t kStagingArriveUnits = 400; // 4 metres
+    const Fixed ArriveSq = Fixed::FromInt(kStagingArriveUnits * kStagingArriveUnits);
+
+    size_t ArrivedCount = 0;
+    for (EntityId Id : ActiveOperation.AssignedUnits)
+    {
+        const TransformComp* Transform = World.GetTransform(Id);
+        if (Transform != nullptr && DistanceSquared(Transform->Position, StagingWorld) <= ArriveSq)
+        {
+            ++ArrivedCount;
+        }
+    }
+
+    return ArrivedCount == ActiveOperation.AssignedUnits.size() ||
+           (ArrivedCount * 4 >= ActiveOperation.AssignedUnits.size() * 3);
+}
+
+bool AICommander::AnySquadNearTarget(const SimWorld& World, const TileCoord& TargetTile) const
+{
+    const Vec2 TargetWorld = World.GetMap().TileCenterToWorld(TargetTile);
+    constexpr int64_t kEngageArriveUnits = 600; // 6 metres
+    const Fixed ArriveSq = Fixed::FromInt(kEngageArriveUnits * kEngageArriveUnits);
+
+    for (EntityId Id : ActiveOperation.AssignedUnits)
+    {
+        const TransformComp* Transform = World.GetTransform(Id);
+        if (Transform != nullptr &&
+            DistanceSquared(Transform->Position, TargetWorld) <= ArriveSq)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+void AICommander::IssueSquadAttackMove(const SimWorld& World, const Vec2& Destination,
+                                       std::vector<Command>& Out)
+{
+    for (EntityId Id : ActiveOperation.AssignedUnits)
+    {
+        const OrderQueue* Orders = World.GetOrders(Id);
+        if (Orders != nullptr && Orders->Count > 0)
+        {
+            continue;
+        }
+
+        Command C;
+        C.Type = CommandType::AttackMove;
+        C.Issuer = Player;
+        C.Primary = Id;
+        C.Location = Destination;
+        Out.push_back(C);
+    }
+}
+
+void AICommander::IssueSquadRetreat(const SimWorld& World, std::vector<Command>& Out)
+{
+    const EntityId Yard = FindOwnConstructionYard(World);
+    const TransformComp* YardTransform =
+        Yard.IsValid() ? World.GetTransform(Yard) : nullptr;
+    if (YardTransform == nullptr)
+    {
+        return;
+    }
+
+    const Vec2 Destination = YardTransform->Position;
+    for (EntityId Id : ActiveOperation.AssignedUnits)
+    {
+        const OrderQueue* Orders = World.GetOrders(Id);
+        if (Orders != nullptr && Orders->Count > 0)
+        {
+            continue;
+        }
+
+        Command C;
+        C.Type = CommandType::Move;
+        C.Issuer = Player;
+        C.Primary = Id;
+        C.Location = Destination;
+        Out.push_back(C);
+    }
+}
+
+void AICommander::PruneRetreatedUnits(const SimWorld& World)
+{
+    const EntityId Yard = FindOwnConstructionYard(World);
+    const TransformComp* YardTransform =
+        Yard.IsValid() ? World.GetTransform(Yard) : nullptr;
+    if (YardTransform == nullptr)
+    {
+        ActiveOperation.AssignedUnits.clear();
+        return;
+    }
+
+    constexpr int64_t kRetreatArriveUnits = 500; // 5 metres
+    const Fixed ArriveSq = Fixed::FromInt(kRetreatArriveUnits * kRetreatArriveUnits);
+
+    std::vector<EntityId> StillRetreating;
+    for (EntityId Id : ActiveOperation.AssignedUnits)
+    {
+        const TransformComp* Transform = World.GetTransform(Id);
+        if (Transform != nullptr &&
+            DistanceSquared(Transform->Position, YardTransform->Position) > ArriveSq)
+        {
+            StillRetreating.push_back(Id);
+        }
+    }
+    ActiveOperation.AssignedUnits.swap(StillRetreating);
+}
+
+void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
+{
+    const ContentDatabase* Content = World.GetContent();
+    if (Content == nullptr)
+    {
+        return;
+    }
 
     // Retreat is an emergency unit action, not an army-level strategy. It must run
     // even while the force is still smaller than the profile's attack threshold.
@@ -894,15 +1241,14 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
                 continue;
             }
             const EntityDef* Def = Content->FindEntity(Cores[I].Def);
-            if (Def == nullptr || !Def->Weapon.IsValid() ||
-                Def->Unit.bIsHarvester || Def->Unit.bIsBuilder)
+            if (!IsCombatUnitDef(Def))
             {
                 continue;
             }
 
             const EntityId Id = World.MakeId(I);
             const OrderQueue* Orders = World.GetOrders(Id);
-            if (!IsWounded(Id) || Orders == nullptr || Orders->Count > 0)
+            if (!IsWounded(World, Id) || Orders == nullptr || Orders->Count > 0)
             {
                 continue;
             }
@@ -918,96 +1264,201 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
         }
     }
 
+    ActiveOperation.RequiredCombatUnits = Config.AttackArmySize;
+    ActiveOperation.MinRetreatUnits = Config.MinimumAttackSize;
+
     const int32_t ArmySize = CountOwnedUnits(World, /*bCombatOnly*/ true);
+    KnownTarget Target;
+    const bool bHasTarget = FindKnownEnemyTarget(Target);
+
+    // If no enemy has been spotted yet and we already have idle combat units, start
+    // gathering toward the most likely enemy base corner.  This prevents economic or
+    // defensive profiles from turtling forever; once they arrive they will sight the
+    // real enemy and the target updates to the observed position.
+    if (!bHasTarget &&
+        (ActiveOperation.State == OperationState::Proposed ||
+         ActiveOperation.State == OperationState::Completed ||
+         ActiveOperation.State == OperationState::Aborted))
+    {
+        const int32_t IdleCombat = CountIdleCombatUnits(World);
+        if (IdleCombat >= ActiveOperation.MinRetreatUnits)
+        {
+            ActiveOperation.TargetLocation = GetAndAdvanceScoutWaypoint(World);
+            ActiveOperation.StartTick = World.GetTick();
+            ActiveOperation.TransitionTo(OperationState::Gathering, World.GetTick());
+        }
+        else
+        {
+            // Not enough force to venture out yet; keep building.
+            return;
+        }
+    }
+
     if (ArmySize == 0)
     {
-        // Wiped out: stop attacking and rebuild before committing again.
-        bAttacking = false;
-        if (ActiveOperation.State != OperationState::Aborted && ActiveOperation.State != OperationState::Completed)
+        // Wiped out: abort the operation and rebuild before committing again.
+        if (ActiveOperation.State != OperationState::Aborted &&
+            ActiveOperation.State != OperationState::Completed)
         {
             ActiveOperation.TransitionTo(OperationState::Aborted, World.GetTick());
         }
-        return;
-    }
-    if (!bAttacking && ArmySize < Config.AttackArmySize)
-    {
-        return;
-    }
-    if (bAttacking && ArmySize < Config.MinimumAttackSize)
-    {
-        bAttacking = false;
-        ActiveOperation.TransitionTo(OperationState::Retreating, World.GetTick());
+        ActiveOperation.AssignedUnits.clear();
         return;
     }
 
-    KnownTarget Target;
-    if (!FindKnownEnemyTarget(Target))
+    // If the operation is retreating, keep moving surviving units home until they
+    // arrive; then reset to Proposed so a new operation can form.
+    if (ActiveOperation.State == OperationState::Retreating)
     {
-        if (bAttacking && ActiveOperation.State == OperationState::Engaging)
+        PruneRetreatedUnits(World);
+        if (ActiveOperation.AssignedUnits.empty())
         {
             ActiveOperation.TransitionTo(OperationState::Completed, World.GetTick());
+            ActiveOperation.State = OperationState::Proposed;
+        }
+        else
+        {
+            IssueSquadRetreat(World, Out);
         }
         return;
     }
 
-    // The army is sent to where the enemy was last SEEN, not to where it actually is.
-    // Tracking a live transform through fog would be the same cheat in a subtler form.
-    const Vec2 TargetPosition = World.GetMap().TileCenterToWorld(Target.Tile);
-    ActiveOperation.TargetLocation = Target.Tile;
-
-    // Only idle units are ordered, so a unit already advancing is not reset every
-    // decision tick -- that would keep clearing its order queue and stall the push.
-    const std::vector<EntityCore>& Cores = World.GetAllCores();
-    int32_t Ordered = 0;
-    for (uint32_t I = 0; I < uint32_t(Cores.size()); ++I)
+    // If we have a fresh target, update the objective.  Otherwise, keep driving
+    // toward the last known location so a squad that has committed does not stop
+    // dead the moment fog rolls in.
+    if (bHasTarget)
     {
-        if (!Cores[I].bAlive || Cores[I].Owner != Player || Cores[I].Kind != EntityKind::Unit)
-        {
-            continue;
-        }
-        const EntityDef* Def = Content->FindEntity(Cores[I].Def);
-        if (Def == nullptr || !Def->Weapon.IsValid() || Def->Unit.bIsHarvester || Def->Unit.bIsBuilder)
-        {
-            continue;
-        }
-        const EntityId Id = World.MakeId(I);
-
-        // A retreat command may already have been emitted above. Do not append a
-        // contradictory attack order in the same command frame.
-        if (IsWounded(Id))
-        {
-            continue;
-        }
-
-        const OrderQueue* Orders = World.GetOrders(Id);
-        if (Orders == nullptr || Orders->Count > 0)
-        {
-            continue;
-        }
-
-        Command C;
-        C.Type = CommandType::AttackMove;
-        C.Issuer = Player;
-        C.Primary = Id;
-        C.Location = TargetPosition;
-        Out.push_back(C);
-        ++Ordered;
+        ActiveOperation.TargetLocation = Target.Tile;
+    }
+    else if (ActiveOperation.State == OperationState::Proposed ||
+             ActiveOperation.State == OperationState::Completed ||
+             ActiveOperation.State == OperationState::Aborted)
+    {
+        // Nothing to attack and no active operation to finish.
+        return;
     }
 
-    if (Ordered > 0)
+    ReconcileSquad(World);
+    ComputeStagingPoint(World);
+
+    const size_t CommandsBefore = Out.size();
+
+    switch (ActiveOperation.State)
     {
-        if (!bAttacking)
+        case OperationState::Proposed:
+        case OperationState::Completed:
+        case OperationState::Aborted:
         {
-            Log(World.GetTick(), CommandType::AttackMove, ContentId(), "army at strength, attacking");
-            ActiveOperation.OperationId++;
+            // Start gathering whenever we know where the enemy is.
             ActiveOperation.StartTick = World.GetTick();
-            ActiveOperation.TransitionTo(OperationState::Advancing, World.GetTick());
+            ActiveOperation.TransitionTo(OperationState::Gathering, World.GetTick());
+            // Fall through to gather/stage logic on the same decision tick.
         }
-        else if (ActiveOperation.State == OperationState::Advancing)
+        [[fallthrough]];
+        case OperationState::Gathering:
         {
-            ActiveOperation.TransitionTo(OperationState::Engaging, World.GetTick());
+            // Commit once the squad reaches the minimum attack size.  Waiting for the
+            // full attack size made the AI too passive in skirmishes where vision was
+            // limited or the opponent turtled.
+            if (ActiveOperation.AssignedUnits.size() >=
+                size_t(ActiveOperation.MinRetreatUnits))
+            {
+                ActiveOperation.TransitionTo(OperationState::Staging, World.GetTick());
+            }
+            else
+            {
+                // Units are still being recruited into the squad; issue no orders so
+                // they wait near the base and do not wander toward the target alone.
+                break;
+            }
         }
-        bAttacking = true;
+        [[fallthrough]];
+        case OperationState::Staging:
+        {
+            const Vec2 StagingWorld =
+                World.GetMap().TileCenterToWorld(ActiveOperation.StagingPoint);
+            IssueSquadAttackMove(World, StagingWorld, Out);
+            if (AllSquadAtStaging(World))
+            {
+                ActiveOperation.TransitionTo(OperationState::Advancing, World.GetTick());
+            }
+            break;
+        }
+        case OperationState::Advancing:
+        {
+            const Vec2 TargetWorld =
+                World.GetMap().TileCenterToWorld(ActiveOperation.TargetLocation);
+            IssueSquadAttackMove(World, TargetWorld, Out);
+            if (AnySquadNearTarget(World, ActiveOperation.TargetLocation))
+            {
+                ActiveOperation.TransitionTo(OperationState::Engaging, World.GetTick());
+            }
+            break;
+        }
+        case OperationState::Engaging:
+        {
+            // Re-issue AttackMove to keep idle stragglers moving toward the target.
+            const Vec2 TargetWorld =
+                World.GetMap().TileCenterToWorld(ActiveOperation.TargetLocation);
+            IssueSquadAttackMove(World, TargetWorld, Out);
+
+            if (ActiveOperation.AssignedUnits.size() < size_t(ActiveOperation.MinRetreatUnits))
+            {
+                ActiveOperation.TransitionTo(OperationState::Retreating, World.GetTick());
+                IssueSquadRetreat(World, Out);
+            }
+            else
+            {
+                // The push has committed and still has combat strength.  Keep refreshing
+                // the target from memory so the army pivots to newly sighted enemy
+                // buildings or units rather than attacking a ghost position forever.
+                if (bHasTarget)
+                {
+                    ActiveOperation.TargetLocation = Target.Tile;
+                }
+                else if (AnySquadNearTarget(World, ActiveOperation.TargetLocation))
+                {
+                    ActiveOperation.TransitionTo(OperationState::Completed, World.GetTick());
+                    ActiveOperation.State = OperationState::Proposed;
+                }
+            }
+            break;
+        }
+        case OperationState::Retreating:
+        {
+            // Handled above; kept here to silence exhaustiveness warnings.
+            IssueSquadRetreat(World, Out);
+            break;
+        }
+    }
+
+    if (Out.size() > CommandsBefore)
+    {
+        const char* Reason = nullptr;
+        switch (ActiveOperation.State)
+        {
+            case OperationState::Staging:
+                Reason = "squad staging before assault";
+                break;
+            case OperationState::Advancing:
+                Reason = "squad advancing on last known enemy position";
+                break;
+            case OperationState::Engaging:
+                Reason = "squad engaging target area";
+                break;
+            case OperationState::Retreating:
+                Reason = "squad retreating after losses";
+                break;
+            default:
+                Reason = "squad regrouping";
+                break;
+        }
+        Log(World.GetTick(), CommandType::AttackMove, ContentId(), Reason);
+        // The first time the squad actually moves, allocate a real operation id.
+        if (ActiveOperation.OperationId == 0)
+        {
+            ActiveOperation.OperationId = 1;
+        }
     }
 }
 
@@ -1079,7 +1530,6 @@ void AICommander::Tick(const SimWorld& World, std::vector<Command>& OutCommands)
     AIWorldAssessment Assessment = BuildAssessment(World);
     if (Assessment.ArmedUnits == 0)
     {
-        bAttacking = false;
         Assessment.bAssaultActive = false;
     }
 

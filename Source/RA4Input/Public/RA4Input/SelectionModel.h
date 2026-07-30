@@ -54,7 +54,12 @@ public:
     void SelectSameType(const SimWorld& World, EntityId Prototype, const std::vector<EntityId>& Visible,
                         SelectionMode Mode);
 
+    // Modern selection filters
+    void SelectIdleUnits(const SimWorld& World, SelectionMode Mode);
+    void SelectWoundedUnits(const SimWorld& World, int32_t HealthPercentThreshold, SelectionMode Mode);
+
     // --- control groups ------------------------------------------------------
+
     bool AssignControlGroup(int32_t GroupIndex);
     bool AddToControlGroup(int32_t GroupIndex);
     // Returns false when the group is empty or everything in it has died.

@@ -169,6 +169,42 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
         AddRow(Frame, 6.0f);
     }
 
+    // --- selected object info card ("СПРАВКА ОБ ОБЪЕКТЕ") -------------------
+    {
+        UBorder* Frame = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("SelectionFrame"));
+        Frame->SetBrushColor(kPanelDeep);
+        Frame->SetPadding(FMargin(8.0f, 6.0f));
+
+        UVerticalBox* Stack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("SelStack"));
+
+        UTextBlock* Header = MakeLabel(WidgetTree, TEXT("SelHeader"), kTextDim, 9, true);
+        Header->SetText(NSLOCTEXT("RA4", "Sidebar_SelHeader", "СПРАВКА ОБ ОБЪЕКТЕ"));
+        Stack->AddChildToVerticalBox(Header);
+
+        SelectionNameText = MakeLabel(WidgetTree, TEXT("SelName"), kTextNormal, 12, true);
+        SelectionNameText->SetText(NSLOCTEXT("RA4", "Sidebar_NoSelection", "ОБЪЕКТ НЕ ВЫБРАН"));
+        Stack->AddChildToVerticalBox(SelectionNameText);
+
+        SelectionHealthBar = WidgetTree->ConstructWidget<UProgressBar>(UProgressBar::StaticClass(), TEXT("SelHealthBar"));
+        SelectionHealthBar->SetPercent(1.0f);
+        SelectionHealthBar->SetFillColorAndOpacity(kPowerOk);
+        if (UVerticalBoxSlot* Slot = Stack->AddChildToVerticalBox(SelectionHealthBar))
+        {
+            Slot->SetPadding(FMargin(0.0f, 2.0f, 0.0f, 2.0f));
+        }
+
+        SelectionHealthText = MakeLabel(WidgetTree, TEXT("SelHealthText"), kTextDim, 10, false);
+        SelectionHealthText->SetText(FText::GetEmpty());
+        Stack->AddChildToVerticalBox(SelectionHealthText);
+
+        SelectionDetailsText = MakeLabel(WidgetTree, TEXT("SelDetails"), kTextDim, 9, false);
+        SelectionDetailsText->SetText(NSLOCTEXT("RA4", "Sidebar_SelectionHint", "Кликните по юниту или зданию"));
+        Stack->AddChildToVerticalBox(SelectionDetailsText);
+
+        Frame->AddChild(Stack);
+        AddRow(Frame, 6.0f);
+    }
+
     // --- category tabs ------------------------------------------------------
     {
         UHorizontalBox* TabRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(),
@@ -244,8 +280,10 @@ void URA4SidebarWidget::NativeConstruct()
     {
         ResourceChangeHandle = Provider->OnResourcesChanged.AddUObject(this, &URA4SidebarWidget::RefreshResources);
         ProductionChangeHandle = Provider->OnProductionChanged.AddUObject(this, &URA4SidebarWidget::RefreshCards);
+        SelectionChangeHandle = Provider->OnSelectionChanged.AddUObject(this, &URA4SidebarWidget::RefreshSelection);
         RefreshResources();
         RefreshCards();
+        RefreshSelection();
     }
 }
 
@@ -255,10 +293,57 @@ void URA4SidebarWidget::NativeDestruct()
     {
         Provider->OnResourcesChanged.Remove(ResourceChangeHandle);
         Provider->OnProductionChanged.Remove(ProductionChangeHandle);
+        Provider->OnSelectionChanged.Remove(SelectionChangeHandle);
     }
     ResourceChangeHandle.Reset();
     ProductionChangeHandle.Reset();
+    SelectionChangeHandle.Reset();
     Super::NativeDestruct();
+}
+
+#include "RA4HUDViewModel.h"
+
+void URA4SidebarWidget::RefreshSelection()
+{
+    const URA4UIDataProviderSubsystem* Provider = GetProvider();
+    if (Provider == nullptr || SelectionNameText == nullptr)
+    {
+        return;
+    }
+
+    const URA4HUDViewModel* VM = Provider->GetHUDViewModel();
+    if (VM == nullptr || VM->GetSelectionCount() == 0)
+    {
+        SelectionNameText->SetText(NSLOCTEXT("RA4", "Sidebar_NoSelection", "ОБЪЕКТ НЕ ВЫБРАН"));
+        if (SelectionHealthText) SelectionHealthText->SetText(FText::GetEmpty());
+        if (SelectionHealthBar) SelectionHealthBar->SetPercent(0.0f);
+        if (SelectionDetailsText) SelectionDetailsText->SetText(NSLOCTEXT("RA4", "Sidebar_SelectionHint", "Кликните по юниту или зданию"));
+    }
+    else
+    {
+        SelectionNameText->SetText(FText::FromString(VM->GetPrimaryEntityName()));
+        float HP = VM->GetSelectionHealthRatio();
+        if (SelectionHealthBar)
+        {
+            SelectionHealthBar->SetPercent(HP);
+            SelectionHealthBar->SetFillColorAndOpacity(HP > 0.5f ? kPowerOk : (HP > 0.2f ? kCredits : kPowerLow));
+        }
+        if (SelectionHealthText)
+        {
+            SelectionHealthText->SetText(FText::Format(NSLOCTEXT("RA4", "Sidebar_HPFormat", "ЗДОРОВЬЕ: {0}%"), FText::AsNumber(int32(HP * 100.0f))));
+        }
+        if (SelectionDetailsText)
+        {
+            if (VM->GetSelectionCount() > 1)
+            {
+                SelectionDetailsText->SetText(FText::Format(NSLOCTEXT("RA4", "Sidebar_MultiSelFormat", "Выбрано объектов: {0}"), FText::AsNumber(VM->GetSelectionCount())));
+            }
+            else
+            {
+                SelectionDetailsText->SetText(VM->IsPrimaryOwned() ? NSLOCTEXT("RA4", "Sidebar_Owned", "Союзный объект") : NSLOCTEXT("RA4", "Sidebar_Enemy", "Вражеский объект"));
+            }
+        }
+    }
 }
 
 URA4UIDataProviderSubsystem* URA4SidebarWidget::GetProvider() const

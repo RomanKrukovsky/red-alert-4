@@ -35,10 +35,14 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Visuals")
     void SetTeamColor(const FLinearColor& TeamColor);
 
-    // Sizes the placeholder primitive to the entity's real footprint, so a 3x3
-    // factory does not render the same size as a rifleman.
+    // Sizes either the placeholder or an authored mesh to the entity's real world
+    // footprint, independent of the source asset's import scale.
     UFUNCTION(BlueprintCallable, Category = "Visuals")
     void SetVisualScale(const FVector& Scale);
+
+    // Procedurally compose primitives for phase 0 blockout presentation.
+    UFUNCTION(BlueprintCallable, Category = "Visuals")
+    void ApplyPrimitiveComposition(const FString& EntityId);
 
     // Diagnostic dump of what this actor is actually rendering. Used to answer
     // "the match runs but I see nothing" with data instead of guesses.
@@ -50,6 +54,12 @@ protected:
     
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     TObjectPtr<UStaticMeshComponent> MeshComponent;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    TObjectPtr<USkeletalMeshComponent> SkeletalMeshComponent;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    TObjectPtr<class UNiagaraComponent> VFXComponent;
 
     // Smooth interpolation targets
     FVector TargetPosition;

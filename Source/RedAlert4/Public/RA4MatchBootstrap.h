@@ -6,6 +6,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "RA4Content/ContentTypes.h"
 
 namespace RA4
 {
@@ -18,5 +19,5 @@ struct REDALERT4_API FRA4MatchBootstrap
     // Fills Content, initialises World, and seeds two opposing bases plus an ore
     // field for each. Content must outlive World: the simulation holds a raw
     // pointer to it for the whole match.
-    static void BuildSkirmish(RA4::ContentDatabase& Content, RA4::SimWorld& World, uint64 Seed);
+    static void BuildSkirmish(RA4::ContentDatabase& Content, RA4::SimWorld& World, uint64 Seed, RA4::FactionId PlayerFaction = RA4::FactionId::Soviet, RA4::FactionId EnemyFaction = RA4::FactionId::Alliance);
 };

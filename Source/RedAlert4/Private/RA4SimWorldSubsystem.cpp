@@ -1,16 +1,23 @@
 // Copyright (c) Red Alert 4 project.
 
 #include "RA4SimWorldSubsystem.h"
+#include "RA4AI/AICommander.h"
 #include "RA4Simulation/SimWorld.h"
 #include "RA4Content/ContentDatabase.h"
 #include "RA4Presentation/HudSnapshot.h"
 #include "RA4Core/Command.h"
+#include "RA4Core/SimConfig.h"
 #include "RA4MatchBootstrap.h"
 #include "RA4SimCoords.h"
 #include "RA4UIDataProviderSubsystem.h"
 #include "Engine/World.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+#include "EngineUtils.h"
+#include "Engine/StaticMesh.h"
+#include "Engine/StaticMeshActor.h"
+#include "Components/StaticMeshComponent.h"
+#include "LandscapeProxy.h"
 
 URA4SimWorldSubsystem::URA4SimWorldSubsystem()
     : SimWorld(nullptr)
@@ -28,7 +35,11 @@ URA4SimWorldSubsystem::~URA4SimWorldSubsystem()
 
 bool URA4SimWorldSubsystem::ShouldCreateSubsystem(UObject* Outer) const
 {
-    return !FParse::Param(FCommandLine::Get(), TEXT("RA4UIOnly"))
+    const UWorld* World = Cast<UWorld>(Outer);
+    const FString PackageName = World != nullptr ? World->GetOutermost()->GetName() : FString();
+    const bool bMenuWorld = PackageName.EndsWith(TEXT("/Entry"));
+    return !bMenuWorld
+        && !FParse::Param(FCommandLine::Get(), TEXT("RA4UIOnly"))
         && Super::ShouldCreateSubsystem(Outer);
 }
 
@@ -44,13 +55,20 @@ void URA4SimWorldSubsystem::Initialize(FSubsystemCollectionBase& Collection)
     SnapshotBuilder->Initialize(/*LocalPlayer*/ 0);
     LatestSnapshot = new RA4::Presentation::HudSnapshot();
 
-    // Temporary: the lobby will supply the match setup. Until then a fixed skirmish
-    // is seeded so the map is actually playable rather than an empty world.
-    FRA4MatchBootstrap::BuildSkirmish(*Content, *SimWorld, /*Seed*/ 20260728);
+    // Simulation startup deferred until StartSkirmishMatch is called by GameMode.
+    RegisterDefaultBlockoutMeshes();
+    // Not called here: at this point in world startup the persistent level's own
+    // baked actors (a landscape included) are not registered yet, so the check for
+    // "does the map already have real terrain" would always miss and add a
+    // redundant flat plane on top of it. Deferred to the first Tick instead.
+}
 
-    // Every active player other than the local one gets a commander. Without this the
-    // opponent's base sat inert: the AI existed and was tested, but nothing in the
-    // engine module ever ticked it.
+void URA4SimWorldSubsystem::StartSkirmishMatch(uint8 PlayerFaction, uint8 EnemyFaction, int32 Difficulty)
+{
+    // The lobby or GameMode supplies the match setup.
+    FRA4MatchBootstrap::BuildSkirmish(*Content, *SimWorld, /*Seed*/ 20260728, static_cast<RA4::FactionId>(PlayerFaction), static_cast<RA4::FactionId>(EnemyFaction));
+
+    // Every active player other than the local one gets a commander.
     constexpr RA4::PlayerId kLocalPlayer = 0;
     for (RA4::PlayerId Player = 0; Player < RA4::kMaxPlayers; ++Player)
     {
@@ -64,9 +82,104 @@ void URA4SimWorldSubsystem::Initialize(FSubsystemCollectionBase& Collection)
         UE_LOG(LogTemp, Display, TEXT("RA4 AI commander attached to player %d"), int32(Player));
     }
 
-    RegisterDefaultBlockoutMeshes();
     UE_LOG(LogTemp, Display, TEXT("RA4 skirmish initialized with %llu simulation entities"),
            static_cast<uint64>(SimWorld->GetAllCores().size()));
+}
+
+// The map ships one ground plate, and it was sized for a smaller world than the one
+// the bootstrap builds: a 5000-unit slab in the middle of a 12800-unit map, which
+// left both starting bases standing over open space. Sizing it from MapDescription
+// here means the floor always matches the match, whatever map is loaded.
+void URA4SimWorldSubsystem::FitGroundPlaneToMap()
+{
+    UWorld* World = GetWorld();
+    if (World == nullptr || SimWorld == nullptr)
+    {
+        return;
+    }
+
+    // A real sculpted Landscape (see RA4LandscapeCommandlet) takes over as the map's
+    // ground once one has been baked into the level; the flat cube plane is only a
+    // stand-in for maps that have neither, and must not be added on top of a
+    // landscape that already covers the same area.
+    for (TActorIterator<ALandscapeProxy> It(World); It; ++It)
+    {
+        return;
+    }
+
+    const RA4::MapDescription& Map = SimWorld->GetMap();
+    const double SpanX = double(Map.Width) * double(RA4::kTileSizeUnits);
+    const double SpanY = double(Map.Height) * double(RA4::kTileSizeUnits);
+    if (SpanX <= 0.0 || SpanY <= 0.0)
+    {
+        return;
+    }
+
+    // The engine's basic cube is 100 units across and centred on its origin, so a
+    // scale of Span/100 covers the map exactly and a thin Z keeps it a floor rather
+    // than a block units would have to climb.
+    constexpr double CubeSize = 100.0;
+    constexpr double Thickness = 0.5;
+    const FVector Scale(SpanX / CubeSize, SpanY / CubeSize, Thickness);
+    const FVector Location(SpanX * 0.5, SpanY * 0.5, RA4Coords::GroundZ - CubeSize * Thickness * 0.5);
+
+    // Matched by mesh, not by name: the level's floor is labelled RA4_Ground in the
+    // editor but its object name at runtime is StaticMeshActor_1, so a name match
+    // silently missed it and spawned a second floor on top of the first.
+    AStaticMeshActor* ExistingGround = nullptr;
+    for (TActorIterator<AStaticMeshActor> It(World); It; ++It)
+    {
+        AStaticMeshActor* Actor = *It;
+        const UStaticMeshComponent* MeshComp = Actor != nullptr ? Actor->GetStaticMeshComponent() : nullptr;
+        const UStaticMesh* Asset = MeshComp != nullptr ? MeshComp->GetStaticMesh() : nullptr;
+        if (Asset == nullptr)
+        {
+            continue;
+        }
+        if (ExistingGround == nullptr && Asset->GetPathName().Contains(TEXT("BasicShapes/Cube")))
+        {
+            ExistingGround = Actor;
+        }
+    }
+
+    if (ExistingGround != nullptr)
+    {
+        ExistingGround->SetMobility(EComponentMobility::Movable);
+        ExistingGround->SetActorLocation(Location);
+        ExistingGround->SetActorScale3D(Scale);
+        UE_LOG(LogTemp, Display, TEXT("RA4 ground plane resized to %.0f x %.0f units"), SpanX, SpanY);
+        return;
+    }
+
+    // No floor in the map at all: spawn one, so a bare map is still playable.
+    FActorSpawnParameters Params;
+    Params.Name = TEXT("RA4_GroundGenerated");
+    AStaticMeshActor* Ground = World->SpawnActor<AStaticMeshActor>(Location, FRotator::ZeroRotator, Params);
+    if (Ground == nullptr)
+    {
+        UE_LOG(LogTemp, Error, TEXT("RA4 ground plane: spawn failed, the map will render as empty space"));
+        return;
+    }
+    Ground->SetMobility(EComponentMobility::Movable);
+    Ground->SetActorScale3D(Scale);
+    if (UStaticMeshComponent* MeshComp = Ground->GetStaticMeshComponent())
+    {
+        if (UStaticMesh* Cube = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube")))
+        {
+            MeshComp->SetStaticMesh(Cube);
+        }
+        
+        // Phase 0: Dark industrial ground
+        if (UMaterialInterface* ShapeMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial")))
+        {
+            MeshComp->SetMaterial(0, ShapeMat);
+            if (UMaterialInstanceDynamic* DynMat = MeshComp->CreateAndSetMaterialInstanceDynamic(0))
+            {
+                DynMat->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.08f, 0.08f, 0.09f, 1.0f));
+            }
+        }
+    }
+    UE_LOG(LogTemp, Display, TEXT("RA4 ground plane spawned at %.0f x %.0f units"), SpanX, SpanY);
 }
 
 void URA4SimWorldSubsystem::Deinitialize()
@@ -107,6 +220,12 @@ void URA4SimWorldSubsystem::Deinitialize()
 void URA4SimWorldSubsystem::Tick(float DeltaTime)
 {
     if (!SimWorld) return;
+
+    if (!bGroundPlaneFitted)
+    {
+        bGroundPlaneFitted = true;
+        FitGroundPlaneToMap();
+    }
 
     TimeSinceLastSimTick += DeltaTime;
 
@@ -173,6 +292,31 @@ void URA4SimWorldSubsystem::TickSimulation()
     }
 }
 
+float URA4SimWorldSubsystem::SampleGroundHeight(double WorldX, double WorldY)
+{
+    if (!bLandscapeSearched)
+    {
+        bLandscapeSearched = true;
+        if (UWorld* World = GetWorld())
+        {
+            for (TActorIterator<ALandscapeProxy> It(World); It; ++It)
+            {
+                CachedLandscape = *It;
+                break;
+            }
+        }
+    }
+
+    ALandscapeProxy* Landscape = CachedLandscape.Get();
+    if (Landscape == nullptr)
+    {
+        return float(RA4Coords::GroundZ);
+    }
+
+    const TOptional<float> Height = Landscape->GetHeightAtLocation(FVector(WorldX, WorldY, 0.0));
+    return Height.IsSet() ? Height.GetValue() : float(RA4Coords::GroundZ);
+}
+
 void URA4SimWorldSubsystem::SyncPresentation()
 {
     if (!SimWorld) return;
@@ -230,6 +374,17 @@ void URA4SimWorldSubsystem::SyncPresentation()
                     {
                         Actor->SetEntityMesh(*MeshPtr);
                     }
+                    else if (Cores[Index].Kind == RA4::EntityKind::ResourceNode)
+                    {
+                        // Ore fields have no bespoke mesh in the blockout set (it only
+                        // covers buildings and units) -- a cone reads as a heap of ore
+                        // at a glance, which a flat cube never will.
+                        if (UStaticMesh* OreMesh =
+                                LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cone.Cone")))
+                        {
+                            Actor->SetEntityMesh(OreMesh);
+                        }
+                    }
 
                     // Size and colour the placeholder from real definition data, so a
                     // 3x3 war factory reads as a building and a rifleman does not.
@@ -256,6 +411,30 @@ void URA4SimWorldSubsystem::SyncPresentation()
                         }
                     }
                     Actor->SetVisualScale(Scale);
+                    FString EntityIdString = TEXT("unknown");
+                    if (Content != nullptr)
+                    {
+                        if (const RA4::EntityDef* Def = Content->FindEntity(Cores[Index].Def))
+                        {
+                            EntityIdString = FString(Def->Name.c_str());
+                        }
+                    }
+                    if (EntityIdString == TEXT("unknown"))
+                    {
+                        if (Cores[Index].Kind == RA4::EntityKind::ResourceNode)
+                        {
+                            EntityIdString = TEXT("ore_resource_node");
+                        }
+                        else if (Cores[Index].Kind == RA4::EntityKind::Building)
+                        {
+                            EntityIdString = TEXT("building_structure");
+                        }
+                        else if (Cores[Index].Kind == RA4::EntityKind::Unit)
+                        {
+                            EntityIdString = TEXT("unit_rifleman_infantry");
+                        }
+                    }
+                    Actor->ApplyPrimitiveComposition(EntityIdString);
 
                     // Player colours until faction themes drive this.
                     static const FLinearColor PlayerColours[3] = {
@@ -276,8 +455,11 @@ void URA4SimWorldSubsystem::SyncPresentation()
             {
                 const RA4::TransformComp& SimTransform = Transforms[Index];
                 
-                const FVector UnrealPos = RA4Coords::ToUnreal(SimTransform.Position);
-                
+                FVector UnrealPos = RA4Coords::ToUnreal(SimTransform.Position);
+                // The simulation itself is flat -- this only lifts the visual actor to
+                // sit on whatever terrain relief the level happens to have.
+                UnrealPos.Z = SampleGroundHeight(UnrealPos.X, UnrealPos.Y);
+
                 // The simulation stores angles in 4096 units per full turn. Using
                 // 255 here rotated every unit by roughly a factor of sixteen.
                 const float UnrealRotZ = static_cast<float>(RA4Coords::FacingToYawDegrees(SimTransform.Facing));
@@ -305,6 +487,37 @@ void URA4SimWorldSubsystem::SyncPresentation()
                     Actor->Destroy();
                 }
                 EntityActors.Remove(Index);
+            }
+        }
+    }
+    
+    // Simple visual feedback for combat events
+    if (World)
+    {
+        for (const RA4::SimEvent& Event : SimWorld->GetEvents())
+        {
+            if (Event.Type == RA4::SimEventType::WeaponFired)
+            {
+                FVector Start = RA4Coords::ToUnreal(Event.Location);
+                Start.Z = SampleGroundHeight(Start.X, Start.Y) + 20.0f;
+                
+                FVector End = Start;
+                if (Event.Other.IsValid() && SimWorld->IsAlive(Event.Other))
+                {
+                    End = RA4Coords::ToUnreal(Transforms[Event.Other.Index].Position);
+                    End.Z = SampleGroundHeight(End.X, End.Y) + 20.0f;
+                    DrawDebugLine(World, Start, End, FColor::Yellow, false, 0.2f, 0, 3.0f);
+                }
+                else
+                {
+                    DrawDebugPoint(World, Start, 15.0f, FColor::Yellow, false, 0.2f);
+                }
+            }
+            else if (Event.Type == RA4::SimEventType::DamageApplied || Event.Type == RA4::SimEventType::ProjectileImpact)
+            {
+                FVector ImpactPoint = RA4Coords::ToUnreal(Event.Location);
+                ImpactPoint.Z = SampleGroundHeight(ImpactPoint.X, ImpactPoint.Y) + 30.0f;
+                DrawDebugPoint(World, ImpactPoint, 25.0f, FColor::Orange, false, 0.3f);
             }
         }
     }
@@ -352,7 +565,7 @@ void URA4SimWorldSubsystem::RegisterDefaultBlockoutMeshes()
     LoadBlockoutMesh(RA4::MakeContentId("unit.sov.mcv").Value, TEXT("/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_MCV_MobileYard_Blockout.SM_Soviet_SU_MCV_MobileYard_Blockout"));
     LoadBlockoutMesh(RA4::MakeContentId("unit.sov.ore_harvester").Value, TEXT("/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_BogatyrOreCarrier_Blockout.SM_Soviet_SU_BogatyrOreCarrier_Blockout"));
     LoadBlockoutMesh(RA4::MakeContentId("unit.sov.conscript").Value, TEXT("/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_RubezhRifleman_Blockout.SM_Soviet_SU_RubezhRifleman_Blockout"));
-    LoadBlockoutMesh(RA4::MakeContentId("unit.sov.rocketeer").Value, TEXT("/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_ZaslonAATeam_Blockout.SM_Soviet_SU_ZaslonAATeam_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("unit.sov.rocket_trooper").Value, TEXT("/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_ZaslonAATeam_Blockout.SM_Soviet_SU_ZaslonAATeam_Blockout"));
     LoadBlockoutMesh(RA4::MakeContentId("unit.sov.heavy_tank").Value, TEXT("/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_GranitMBT_Blockout.SM_Soviet_SU_GranitMBT_Blockout"));
 
     // Alliance
@@ -361,30 +574,10 @@ void URA4SimWorldSubsystem::RegisterDefaultBlockoutMeshes()
     LoadBlockoutMesh(RA4::MakeContentId("building.all.ore_refinery").Value, TEXT("/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_Refinery_Blockout.SM_Alliance_AL_Refinery_Blockout"));
     LoadBlockoutMesh(RA4::MakeContentId("building.all.barracks").Value, TEXT("/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_Barracks_Blockout.SM_Alliance_AL_Barracks_Blockout"));
     LoadBlockoutMesh(RA4::MakeContentId("building.all.war_factory").Value, TEXT("/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_WarFactory_Blockout.SM_Alliance_AL_WarFactory_Blockout"));
-    LoadBlockoutMesh(RA4::MakeContentId("building.all.gun_turret").Value, TEXT("/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_GunTurret_Blockout.SM_Alliance_AL_GunTurret_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("building.all.pillbox").Value, TEXT("/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_GunTurret_Blockout.SM_Alliance_AL_GunTurret_Blockout"));
     LoadBlockoutMesh(RA4::MakeContentId("unit.all.mcv").Value, TEXT("/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_MCV_MobileNode_Blockout.SM_Alliance_AL_MCV_MobileNode_Blockout"));
     LoadBlockoutMesh(RA4::MakeContentId("unit.all.ore_harvester").Value, TEXT("/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_PioneerHarvester_Blockout.SM_Alliance_AL_PioneerHarvester_Blockout"));
     LoadBlockoutMesh(RA4::MakeContentId("unit.all.rifleman").Value, TEXT("/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_SentinelRifleman_Blockout.SM_Alliance_AL_SentinelRifleman_Blockout"));
-    LoadBlockoutMesh(RA4::MakeContentId("unit.all.lancer").Value, TEXT("/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_LancerTeam_Blockout.SM_Alliance_AL_LancerTeam_Blockout"));
-    // Eastern Coalition
-    LoadBlockoutMesh(RA4::MakeContentId("building.eco.construction_yard").Value, TEXT("/Game/RA4/Art/Blockout/EasternCoalition/SM_EasternCoalition_CO_ConYard_Blockout.SM_EasternCoalition_CO_ConYard_Blockout"));
-    LoadBlockoutMesh(RA4::MakeContentId("building.eco.power_plant").Value, TEXT("/Game/RA4/Art/Blockout/EasternCoalition/SM_EasternCoalition_CO_PowerPlant_Blockout.SM_EasternCoalition_CO_PowerPlant_Blockout"));
-    LoadBlockoutMesh(RA4::MakeContentId("building.eco.ore_refinery").Value, TEXT("/Game/RA4/Art/Blockout/EasternCoalition/SM_EasternCoalition_CO_Refinery_Blockout.SM_EasternCoalition_CO_Refinery_Blockout"));
-    LoadBlockoutMesh(RA4::MakeContentId("building.eco.barracks").Value, TEXT("/Game/RA4/Art/Blockout/EasternCoalition/SM_EasternCoalition_CO_Barracks_Blockout.SM_EasternCoalition_CO_Barracks_Blockout"));
-    LoadBlockoutMesh(RA4::MakeContentId("building.eco.war_factory").Value, TEXT("/Game/RA4/Art/Blockout/EasternCoalition/SM_EasternCoalition_CO_WarFactory_Blockout.SM_EasternCoalition_CO_WarFactory_Blockout"));
-    LoadBlockoutMesh(RA4::MakeContentId("building.eco.gun_turret").Value, TEXT("/Game/RA4/Art/Blockout/EasternCoalition/SM_EasternCoalition_CO_GunTurret_Blockout.SM_EasternCoalition_CO_GunTurret_Blockout"));
-    LoadBlockoutMesh(RA4::MakeContentId("unit.eco.mcv").Value, TEXT("/Game/RA4/Art/Blockout/EasternCoalition/SM_EasternCoalition_CO_MCV_MobileDepot_Blockout.SM_EasternCoalition_CO_MCV_MobileDepot_Blockout"));
-    LoadBlockoutMesh(RA4::MakeContentId("unit.eco.ore_harvester").Value, TEXT("/Game/RA4/Art/Blockout/EasternCoalition/SM_EasternCoalition_CO_BishanHarvester_Blockout.SM_EasternCoalition_CO_BishanHarvester_Blockout"));
-    LoadBlockoutMesh(RA4::MakeContentId("unit.eco.rifleman").Value, TEXT("/Game/RA4/Art/Blockout/EasternCoalition/SM_EasternCoalition_CO_VolunteerRifleman_Blockout.SM_EasternCoalition_CO_VolunteerRifleman_Blockout"));
-    LoadBlockoutMesh(RA4::MakeContentId("unit.eco.heavy_tank").Value, TEXT("/Game/RA4/Art/Blockout/EasternCoalition/SM_EasternCoalition_CO_Type99Zheng_Blockout.SM_EasternCoalition_CO_Type99Zheng_Blockout"));
-
-    // Chrono Legion
-    LoadBlockoutMesh(RA4::MakeContentId("building.chr.construction_yard").Value, TEXT("/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_ConYard_Blockout.SM_Chronolegion_CH_ConYard_Blockout"));
-    LoadBlockoutMesh(RA4::MakeContentId("building.chr.power_plant").Value, TEXT("/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_EraEngine_Blockout.SM_Chronolegion_CH_EraEngine_Blockout"));
-    LoadBlockoutMesh(RA4::MakeContentId("building.chr.ore_refinery").Value, TEXT("/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_CausalityAnchor_Blockout.SM_Chronolegion_CH_CausalityAnchor_Blockout"));
-    LoadBlockoutMesh(RA4::MakeContentId("building.chr.barracks").Value, TEXT("/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_Barracks_Blockout.SM_Chronolegion_CH_Barracks_Blockout"));
-    LoadBlockoutMesh(RA4::MakeContentId("building.chr.war_factory").Value, TEXT("/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_Airfield_Blockout.SM_Chronolegion_CH_Airfield_Blockout"));
-    LoadBlockoutMesh(RA4::MakeContentId("building.chr.gun_turret").Value, TEXT("/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_EchoTurret_Blockout.SM_Chronolegion_CH_EchoTurret_Blockout"));
-    LoadBlockoutMesh(RA4::MakeContentId("unit.chr.ore_harvester").Value, TEXT("/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_ParadoxSiphon_Blockout.SM_Chronolegion_CH_ParadoxSiphon_Blockout"));
-    LoadBlockoutMesh(RA4::MakeContentId("unit.chr.rifleman").Value, TEXT("/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_TemporalInfantry_Blockout.SM_Chronolegion_CH_TemporalInfantry_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("unit.all.missile_infantry").Value, TEXT("/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_LancerTeam_Blockout.SM_Alliance_AL_LancerTeam_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("unit.all.light_tank").Value, TEXT("/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_CitadelTank_Blockout.SM_Alliance_AL_CitadelTank_Blockout"));
 }

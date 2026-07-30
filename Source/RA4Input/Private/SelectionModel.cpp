@@ -352,5 +352,53 @@ bool SelectionModel::ContainsAnyUnit(const SimWorld& World) const
     return false;
 }
 
+void SelectionModel::SelectIdleUnits(const SimWorld& World, SelectionMode Mode)
+{
+    std::vector<EntityId> IdleUnits;
+    for (uint32_t i = 0; i < World.GetEntityCapacity(); ++i)
+    {
+        EntityId Id = World.MakeId(i);
+        if (!World.IsAlive(Id)) continue;
+        const EntityCore* Core = World.GetCore(Id);
+        if (Core && Core->Owner == LocalPlayer && Core->Kind == EntityKind::Unit)
+        {
+            const OrderQueue* Orders = World.GetOrders(Id);
+            if (Orders && Orders->Count == 0)
+            {
+                IdleUnits.push_back(Id);
+            }
+        }
+    }
+    ApplyMode(IdleUnits, Mode);
+    SortAndCap(World);
+}
+
+void SelectionModel::SelectWoundedUnits(const SimWorld& World, int32_t HealthPercentThreshold, SelectionMode Mode)
+{
+    std::vector<EntityId> WoundedUnits;
+    for (uint32_t i = 0; i < World.GetEntityCapacity(); ++i)
+    {
+        EntityId Id = World.MakeId(i);
+        if (!World.IsAlive(Id)) continue;
+        const EntityCore* Core = World.GetCore(Id);
+        if (Core && Core->Owner == LocalPlayer && Core->Kind == EntityKind::Unit)
+        {
+            const HealthComp* Health = World.GetHealth(Id);
+            if (Health && Health->Max > 0)
+            {
+                int32_t Percent = (Health->Current * 100) / Health->Max;
+                if (Percent < HealthPercentThreshold)
+                {
+                    WoundedUnits.push_back(Id);
+                }
+            }
+        }
+    }
+    ApplyMode(WoundedUnits, Mode);
+    SortAndCap(World);
+}
+
+
 } // namespace Input
 } // namespace RA4
+

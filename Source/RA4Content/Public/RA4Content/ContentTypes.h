@@ -107,6 +107,56 @@ enum class VeterancyRank : uint8_t
     Count
 };
 
+enum class EntityRole : uint32_t
+{
+    None         = 0,
+    Harvester    = 1u << 0,
+    Builder      = 1u << 1,
+    Scout        = 1u << 2,
+    Combat       = 1u << 3,
+    AntiAir      = 1u << 4,
+    AntiArmor    = 1u << 5,
+    Artillery    = 1u << 6,
+    Engineer     = 1u << 7,
+    BaseBuilding = 1u << 8,
+    Power        = 1u << 9,
+    Refinery     = 1u << 10,
+    Defense      = 1u << 11,
+    Production   = 1u << 12,
+};
+
+inline constexpr EntityRole operator|(EntityRole A, EntityRole B)
+{
+    return static_cast<EntityRole>(static_cast<uint32_t>(A) | static_cast<uint32_t>(B));
+}
+
+inline constexpr EntityRole operator&(EntityRole A, EntityRole B)
+{
+    return static_cast<EntityRole>(static_cast<uint32_t>(A) & static_cast<uint32_t>(B));
+}
+
+inline constexpr EntityRole operator~(EntityRole A)
+{
+    return static_cast<EntityRole>(~static_cast<uint32_t>(A));
+}
+
+inline EntityRole& operator|=(EntityRole& A, EntityRole B)
+{
+    A = A | B;
+    return A;
+}
+
+inline EntityRole& operator&=(EntityRole& A, EntityRole B)
+{
+    A = A & B;
+    return A;
+}
+
+inline bool HasRole(EntityRole Roles, EntityRole Target)
+{
+    return (static_cast<uint32_t>(Roles) & static_cast<uint32_t>(Target)) != 0;
+}
+
 // --- Weapons --------------------------------------------------------------
 
 struct WeaponDef
@@ -192,6 +242,7 @@ struct EntityDef
     std::string DisplayNameKey;       // localization key -- never a literal
     EntityKind Kind = EntityKind::Unit;
     FactionId Faction = FactionId::None;
+    EntityRole Roles = EntityRole::None;
 
     int32_t MaxHealth = 100;
     int32_t MaxShield = 0;

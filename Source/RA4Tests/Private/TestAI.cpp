@@ -3,9 +3,13 @@
 #include "TestHelpers.h"
 
 #include "RA4AI/AICommander.h"
+#include "RA4AI/AIDebugOverlay.h"
+#include "RA4AI/AIDoctrine.h"
 #include "RA4AI/AIWorldView.h"
+#include "RA4AI/ArmyGroup.h"
 #include "RA4AI/TacticalOperation.h"
 #include "RA4Core/SimConfig.h"
+
 
 #include <algorithm>
 #include <cstdio>
@@ -495,6 +499,20 @@ RA4_TEST(AI, FiveSkirmishScenariosFinishWithAWinner)
                     M.World.GetPlayer(0).UnitsLost + M.World.GetPlayer(1).UnitsLost +
                         M.World.GetPlayer(0).BuildingsLost + M.World.GetPlayer(1).BuildingsLost);
 
+        if (Index == 4)
+        {
+            const TacticalOperation& Op = M.Commanders[0].GetActiveOperation();
+            std::printf("         scenario 5 P0 op: id=%u state=%s assigned=%zu target=(%d,%d)\n",
+                        Op.OperationId, ToString(Op.State),
+                        Op.AssignedUnits.size(), Op.TargetLocation.X, Op.TargetLocation.Y);
+            std::printf("         scenario 5 P0 final: armed=%d buildings=%d bActive=%d bDefeated=%d\n",
+                        M.CountArmed(0), M.CountBuildings(0),
+                        int32_t(M.World.GetPlayer(0).bActive), int32_t(M.World.GetPlayer(0).bDefeated));
+            std::printf("         scenario 5 P1 final: armed=%d buildings=%d bActive=%d bDefeated=%d\n",
+                        M.CountArmed(1), M.CountBuildings(1),
+                        int32_t(M.World.GetPlayer(1).bActive), int32_t(M.World.GetPlayer(1).bDefeated));
+        }
+
         RA4_EXPECT(M.World.GetPhase() == MatchPhase::Finished);
         RA4_EXPECT(M.World.GetWinner() == 0 || M.World.GetWinner() == 1);
         RA4_EXPECT(M.PeakBuildings[0] > 1);
@@ -618,7 +636,49 @@ RA4_TEST(AI, CommanderTracksActiveOperationLifecycleInMatch)
     const TacticalOperation& Op = M.Commanders[0].GetActiveOperation();
     // Aggressive commander built an army and pushed: operation must have been created and advanced
     RA4_EXPECT(Op.OperationId > 0);
-    RA4_EXPECT(Op.State == OperationState::Advancing || Op.State == OperationState::Engaging || Op.State == OperationState::Completed);
+    RA4_EXPECT(Op.State == OperationState::Staging || Op.State == OperationState::Advancing || Op.State == OperationState::Engaging || Op.State == OperationState::Completed);
+}
+
+RA4_TEST(AI, SquadsGatherBeforeAdvancing)
+{
+    AIMatch M;
+    M.Enable(0, AIProfile::Balanced);
+    M.Run(SecondsToTicks(300));
+
+    const TacticalOperation& Op = M.Commanders[0].GetActiveOperation();
+    const AIConfig Config = M.Commanders[0].GetConfig();
+
+    // If the commander committed an assault, it must have formed a squad at least
+    // as large as its configured minimum attack size.  Committing with only one unit
+    // is streaming, but every profile has a non-trivial minimum commit threshold.
+    if (Op.OperationId > 0)
+    {
+        RA4_EXPECT(int32_t(Op.AssignedUnits.size()) >= Config.MinimumAttackSize);
+    }
+}
+
+RA4_TEST(AI, SquadAssignmentIsDeterministic)
+{
+    // Two identical matches must assign exactly the same entities to the active
+    // operation in the same order.
+    AIMatch A(123456);
+    A.Enable(0, AIProfile::Balanced);
+    A.Run(SecondsToTicks(240));
+
+    AIMatch B(123456);
+    B.Enable(0, AIProfile::Balanced);
+    B.Run(SecondsToTicks(240));
+
+    const TacticalOperation& OpA = A.Commanders[0].GetActiveOperation();
+    const TacticalOperation& OpB = B.Commanders[0].GetActiveOperation();
+
+    RA4_EXPECT(OpA.OperationId == OpB.OperationId);
+    RA4_EXPECT(OpA.State == OpB.State);
+    RA4_REQUIRE(OpA.AssignedUnits.size() == OpB.AssignedUnits.size());
+    for (size_t I = 0; I < OpA.AssignedUnits.size(); ++I)
+    {
+        RA4_EXPECT(OpA.AssignedUnits[I] == OpB.AssignedUnits[I]);
+    }
 }
 
 RA4_TEST(AI, WoundedUnitRetreatsToBase)
@@ -706,3 +766,127 @@ RA4_TEST(AIKnowledge, EnemiesOutsideVisionAreNotObserved)
         RA4_EXPECT(!(Tile.X > 40 && Tile.Y > 40));
     }
 }
+
+RA4_TEST(AI, EntityRoleDerivationWorksForUnitsAndBuildings)
+{
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+
+    const EntityDef* Conscript = Content.FindEntity(Ids::SovConscript);
+    RA4_REQUIRE(Conscript != nullptr);
+    RA4_EXPECT(HasRole(Conscript->Roles, EntityRole::Combat));
+    RA4_EXPECT(HasRole(Conscript->Roles, EntityRole::Scout));
+
+    const EntityDef* HeavyTank = Content.FindEntity(Ids::SovHeavyTank);
+    RA4_REQUIRE(HeavyTank != nullptr);
+    RA4_EXPECT(HasRole(HeavyTank->Roles, EntityRole::Combat));
+    RA4_EXPECT(HasRole(HeavyTank->Roles, EntityRole::AntiArmor));
+
+    const EntityDef* Rifleman = Content.FindEntity(Ids::AllRifleman);
+    RA4_REQUIRE(Rifleman != nullptr);
+    RA4_EXPECT(HasRole(Rifleman->Roles, EntityRole::Combat));
+
+    const EntityDef* PowerPlant = Content.FindEntity(Ids::SovPower);
+    RA4_REQUIRE(PowerPlant != nullptr);
+    RA4_EXPECT(HasRole(PowerPlant->Roles, EntityRole::Power));
+    RA4_EXPECT(HasRole(PowerPlant->Roles, EntityRole::BaseBuilding));
+
+    const EntityDef* Refinery = Content.FindEntity(Ids::SovRefinery);
+    RA4_REQUIRE(Refinery != nullptr);
+    RA4_EXPECT(HasRole(Refinery->Roles, EntityRole::Refinery));
+    RA4_EXPECT(HasRole(Refinery->Roles, EntityRole::BaseBuilding));
+
+    const EntityDef* Harvester = Content.FindEntity(Ids::SovHarvester);
+    RA4_REQUIRE(Harvester != nullptr);
+    RA4_EXPECT(HasRole(Harvester->Roles, EntityRole::Harvester));
+}
+
+RA4_TEST(AI, DispatchesScoutWhenNoTargetsAreKnown)
+{
+    AIMatch M;
+    M.Enable(0, AIProfile::Balanced);
+    M.Commanders[0].SetDecisionLogLimit(512);
+
+    // Run until AI trains a combat unit and dispatches it on a scouting move order
+    M.Run(SecondsToTicks(240));
+
+    bool bSawScoutMove = false;
+    for (const AIDecision& D : M.Commanders[0].GetDecisionLog())
+    {
+        if (D.Command == CommandType::Move && D.Reason.find("scouting") != std::string::npos)
+        {
+            bSawScoutMove = true;
+            break;
+        }
+    }
+    RA4_EXPECT(bSawScoutMove);
+}
+
+RA4_TEST(AI, ArmyGroupManagerLifecycle)
+{
+    ArmyGroupManager Mgr;
+    uint32_t G1 = Mgr.AllocateGroupId();
+    ArmyGroup* Group = Mgr.CreateGroup(G1, GroupRole::MainAssault, "Alpha Vanguard");
+    RA4_REQUIRE(Group != nullptr);
+    RA4_EXPECT_EQ(Group->GroupId, G1);
+    RA4_EXPECT_EQ(static_cast<uint8_t>(Group->Role), static_cast<uint8_t>(GroupRole::MainAssault));
+
+
+    Group->Members.push_back(EntityId(1, 1));
+    Group->Members.push_back(EntityId(2, 1));
+    Group->Stance = GroupStance::Aggressive;
+    Group->FormationShape = GroupFormationShape::Wedge;
+
+    const ArmyGroup* Found = Mgr.FindGroup(G1);
+    RA4_REQUIRE(Found != nullptr);
+    RA4_EXPECT_EQ(Found->Members.size(), 2);
+    RA4_EXPECT_EQ(static_cast<uint8_t>(Found->Stance), static_cast<uint8_t>(GroupStance::Aggressive));
+    RA4_EXPECT_EQ(static_cast<uint8_t>(Found->FormationShape), static_cast<uint8_t>(GroupFormationShape::Wedge));
+
+    Mgr.RemoveGroup(G1);
+    RA4_EXPECT(Mgr.FindGroup(G1) == nullptr);
+}
+
+RA4_TEST(AI, FactionDoctrinesSovietAndAlliance)
+{
+    FactionDoctrineDef Soviet = AIDoctrineRegistry::GetDoctrineForFaction(FactionId::Soviet, AIProfile::Balanced);
+    FactionDoctrineDef Alliance = AIDoctrineRegistry::GetDoctrineForFaction(FactionId::Alliance, AIProfile::Balanced);
+
+    RA4_EXPECT_EQ(static_cast<uint8_t>(Soviet.Faction), static_cast<uint8_t>(FactionId::Soviet));
+    RA4_EXPECT_EQ(static_cast<uint8_t>(Soviet.Type), static_cast<uint8_t>(AIDoctrineType::SovietArmoredPush));
+    RA4_EXPECT_EQ(static_cast<uint8_t>(Alliance.Faction), static_cast<uint8_t>(FactionId::Alliance));
+    RA4_EXPECT_EQ(static_cast<uint8_t>(Alliance.Type), static_cast<uint8_t>(AIDoctrineType::AllianceMobilePrecision));
+
+
+    // Soviet values armored push & heavier losses tolerance
+    RA4_EXPECT(Soviet.Personality.AcceptableLossesPercent > Alliance.Personality.AcceptableLossesPercent);
+    // Alliance values scouting and caution
+    RA4_EXPECT(Alliance.Personality.ScoutPriority > Soviet.Personality.ScoutPriority);
+}
+
+RA4_TEST(AI, AIDebugOverlaySnapshotCreation)
+{
+    std::vector<ArmyGroup> Groups;
+    ArmyGroup G;
+    G.GroupId = 1;
+    G.Name = "Iron Column";
+    G.Role = GroupRole::MainAssault;
+    G.Members.push_back(EntityId(10, 1));
+    Groups.push_back(G);
+
+    std::vector<std::string> Logs = {"Built Power Plant", "Dispatched Scout"};
+
+    AIDebugOverlaySnapshot Snap = AIDebugLogger::CreateSnapshot(
+        0, "General Sokolov", "Soviet Armored Push", AIStrategy::Assault, 85,
+        "Pushing enemy HQ", 5000, 100, 40, 3, 90, Groups, Logs
+    );
+
+    RA4_EXPECT(Snap.Player == 0);
+    RA4_EXPECT(Snap.CommanderName == "General Sokolov");
+    RA4_EXPECT(Snap.ActiveGroups.size() == 1);
+    RA4_EXPECT(Snap.ActiveGroups[0].Name == "Iron Column");
+    RA4_EXPECT(Snap.RecentDecisions.size() == 2);
+}
+
+
+

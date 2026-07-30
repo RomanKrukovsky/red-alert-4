@@ -61,6 +61,9 @@ public:
     // Returns the latest computed snapshot of the match for UI presentation
     const RA4::Presentation::HudSnapshot* GetLatestHudSnapshot() const { return LatestSnapshot; }
 
+    // Initializes the simulation state for a skirmish match. Should be called by the GameMode.
+    void StartSkirmishMatch(uint8 PlayerFaction, uint8 EnemyFaction, int32 Difficulty);
+
     // Sets the local player's selection for HUD projection
     void SetSelectedEntitiesForHUD(const std::vector<RA4::EntityId>& Selection);
 
@@ -81,8 +84,20 @@ public:
 private:
     void LoadBlockoutMesh(uint32 ContentIdValue, const TCHAR* AssetPath);
     void RegisterDefaultBlockoutMeshes();
+    void FitGroundPlaneToMap();
     void TickSimulation();
     void SyncPresentation();
+    // Height of the terrain surface at a world XY, or the flat sim ground level if
+    // there is no landscape in this map. Visual-only: the simulation stays 2D.
+    float SampleGroundHeight(double WorldX, double WorldY);
+
+    // Cached rather than re-found every actor every frame; a level either has one
+    // landscape or none; there is no reason to search for it 20 times a second.
+    TWeakObjectPtr<class ALandscapeProxy> CachedLandscape;
+    bool bLandscapeSearched = false;
+    // FitGroundPlaneToMap runs once, on the first Tick rather than in Initialize --
+    // see the call site for why.
+    bool bGroundPlaneFitted = false;
 
     // Pointer to the deterministic C++ simulation core
     RA4::SimWorld* SimWorld;

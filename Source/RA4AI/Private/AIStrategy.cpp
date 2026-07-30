@@ -64,13 +64,13 @@ AIConfig MakeProfileConfig(AIProfile Profile)
             break;
         case AIProfile::Economic:
             Config.TargetHarvesters = 5;
-            Config.AttackArmySize = 8;
-            Config.MinimumAttackSize = 5;
+            Config.AttackArmySize = 6;
+            Config.MinimumAttackSize = 3;
             Config.TargetDefences = 1;
             Config.CreditReserve = 800;
             Config.EconomyWeight = 130;
             Config.TechWeight = 110;
-            Config.AssaultWeight = 80;
+            Config.AssaultWeight = 90;
             Config.RecoveryWeight = 120;
             Config.StrategySwitchMargin = 120;
             break;

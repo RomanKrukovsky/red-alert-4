@@ -1,0 +1,3 @@
+TrackId,Title,Category,SubCategory,Mp3Path,WavPath,DurationSeconds,FormattedDuration,SampleRate,Channels,BitDepth,TargetLUFS,Description
+MUS_SteelHorizonPact,"Steel Horizon Pact",Mission_Background_Music,Combat_Tactical,Content/RA4/Audio/Music/Steel_Horizon_Pact.mp3,Content/RA4/Audio/Music/Steel_Horizon_Pact.wav,277.94,04:37,48000,2,24,-14.0,"High-energy industrial tactical theme for active gameplay during campaign and skirmish missions."
+MUS_IronParade,"Iron Parade",Mission_Background_Music,Base_Assembly_March,Content/RA4/Audio/Music/Iron_Parade.mp3,Content/RA4/Audio/Music/Iron_Parade.wav,165.00,02:45,48000,2,24,-14.0,"Heavy industrial march theme driving base assembly, unit production, and frontline deployment."

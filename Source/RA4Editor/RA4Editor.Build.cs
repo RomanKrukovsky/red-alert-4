@@ -22,7 +22,8 @@ public class RA4Editor : ModuleRules
 			"RedAlert4",
 			"Json",
 			"JsonUtilities",
-			"GameplayTags"
+			"GameplayTags",
+			"Landscape"
 		});
 	}
 }

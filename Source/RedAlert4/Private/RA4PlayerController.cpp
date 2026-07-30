@@ -8,9 +8,12 @@
 #include "RA4SimCoords.h"
 #include "RA4SimWorldSubsystem.h"
 #include "RA4HUDWidget.h"
+#include "RA4MatchResultOverlayWidget.h"
 #include "RA4SidebarWidget.h"
 #include "RA4UIDataProviderSubsystem.h"
 #include "Blueprint/UserWidget.h"
+#include "Kismet/GameplayStatics.h"
+#include "Misc/PackageName.h"
 #include "UnrealClient.h"
 
 #include "RA4Content/ContentDatabase.h"
@@ -41,6 +44,10 @@ void ARA4PlayerController::BeginPlay()
         ResourceBar = CreateWidget<URA4ResourceBarWidget>(this, URA4ResourceBarWidget::StaticClass());
         if (ResourceBar != nullptr)
         {
+            ResourceBar->SetDesiredSizeInViewport(FVector2D(1400.0f, 46.0f));
+            ResourceBar->SetAnchorsInViewport(FAnchors(0.0f, 0.0f, 0.0f, 0.0f));
+            ResourceBar->SetAlignmentInViewport(FVector2D(0.0f, 0.0f));
+            ResourceBar->SetPositionInViewport(FVector2D(16.0f, 16.0f));
             ResourceBar->AddToViewport(/*ZOrder*/ 10);
             UE_LOG(LogTemp, Display, TEXT("RA4 HUD: resource bar added to viewport"));
         }
@@ -52,21 +59,42 @@ void ARA4PlayerController::BeginPlay()
         Sidebar = CreateWidget<URA4SidebarWidget>(this, URA4SidebarWidget::StaticClass());
         if (Sidebar != nullptr)
         {
-            Sidebar->AddToViewport(/*ZOrder*/ 10);
-            // Pinned to the right edge and stretched over the full height: the column
-            // is furniture, not a floating panel, and its cards must not move when the
-            // window is resized.
+            Sidebar->SetDesiredSizeInViewport(FVector2D(250.0f, 1080.0f));
             Sidebar->SetAnchorsInViewport(FAnchors(1.0f, 0.0f, 1.0f, 1.0f));
             Sidebar->SetAlignmentInViewport(FVector2D(1.0f, 0.0f));
             Sidebar->OnBuildCardClicked.AddUObject(this, &ARA4PlayerController::HandleBuildCardClicked);
+            Sidebar->AddToViewport(/*ZOrder*/ 10);
+            UE_LOG(LogTemp, Display, TEXT("RA4 HUD: production sidebar added to viewport"));
         }
         else
         {
             UE_LOG(LogTemp, Error, TEXT("RA4 HUD: failed to create the sidebar"));
         }
     }
+    
+    FInputModeGameAndUI InputMode;
+    InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+    InputMode.SetHideCursorDuringCapture(false);
+    SetInputMode(InputMode);
+    
+    BindMatchResultEvents();
     TryInitializeCamera();
 }
+
+void ARA4PlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    if (URA4UIDataProviderSubsystem* Provider = GetWorld() != nullptr
+                                                    ? GetWorld()->GetSubsystem<URA4UIDataProviderSubsystem>()
+                                                    : nullptr)
+    {
+        Provider->OnMatchEnded.Remove(MatchEndedHandle);
+    }
+    MatchEndedHandle.Reset();
+    MatchResultOverlay = nullptr;
+
+    Super::EndPlay(EndPlayReason);
+}
+
 
 void ARA4PlayerController::OnPossess(APawn* InPawn)
 {
@@ -117,6 +145,25 @@ bool ARA4PlayerController::TryInitializeCamera()
     return false;
 }
 
+
+#if !UE_BUILD_SHIPPING
+void ARA4PlayerController::DebugForceVictory()
+{
+    Command Surrender;
+    Surrender.Type = CommandType::Surrender;
+    Surrender.Issuer = 1;
+    SubmitOrders({Surrender});
+}
+
+void ARA4PlayerController::DebugForceDefeat()
+{
+    Command Surrender;
+    Surrender.Type = CommandType::Surrender;
+    Surrender.Issuer = Selection.GetLocalPlayer();
+    SubmitOrders({Surrender});
+}
+#endif
+
 // ---------------------------------------------------------------------------
 // Input binding
 // ---------------------------------------------------------------------------
@@ -166,6 +213,11 @@ void ARA4PlayerController::SetupInputComponent()
 void ARA4PlayerController::PlayerTick(float DeltaTime)
 {
     Super::PlayerTick(DeltaTime);
+
+    if (!bMatchResultEventsBound)
+    {
+        BindMatchResultEvents();
+    }
 
     if (!bCameraInitialized)
     {
@@ -231,6 +283,88 @@ void ARA4PlayerController::PlayerTick(float DeltaTime)
             Intent == ClickIntent::IssueOrder ? ResolveCursorHint(*World, Selection, Context) : CursorHint::Select;
         ApplyCursorShape();
     }
+}
+
+void ARA4PlayerController::BindMatchResultEvents()
+{
+    if (!IsLocalController() || bMatchResultEventsBound || GetWorld() == nullptr)
+    {
+        return;
+    }
+
+    if (URA4UIDataProviderSubsystem* Provider = GetWorld()->GetSubsystem<URA4UIDataProviderSubsystem>())
+    {
+        MatchEndedHandle = Provider->OnMatchEnded.AddUObject(this, &ARA4PlayerController::HandleMatchEnded);
+        bMatchResultEventsBound = true;
+
+        if (Provider->GetMatchPhase() == ERA4MatchPhase::Finished)
+        {
+            constexpr int32 kLocalPlayer = 0;
+            const bool bWon = Provider->GetWinningPlayer() == kLocalPlayer && !Provider->IsLocalPlayerDefeated();
+            HandleMatchEnded(bWon, Provider->GetWinningPlayer());
+        }
+    }
+}
+
+void ARA4PlayerController::HandleMatchEnded(bool bLocalPlayerWon, int32 WinningPlayer)
+{
+    if (!IsLocalController() || bMatchResultVisible)
+    {
+        return;
+    }
+
+    if (MatchResultOverlay == nullptr)
+    {
+        MatchResultOverlay = CreateWidget<URA4MatchResultOverlayWidget>(
+            this, URA4MatchResultOverlayWidget::StaticClass());
+        if (MatchResultOverlay == nullptr)
+        {
+            UE_LOG(LogTemp, Error, TEXT("RA4 HUD: failed to create the match result overlay"));
+            return;
+        }
+
+        MatchResultOverlay->OnRetryRequested.AddUObject(this, &ARA4PlayerController::HandleRetryRequested);
+        MatchResultOverlay->OnExitRequested.AddUObject(this, &ARA4PlayerController::HandleExitRequested);
+    }
+
+    MatchResultOverlay->Configure(bLocalPlayerWon, HasMainMenuMap());
+    MatchResultOverlay->AddToViewport(/*ZOrder*/ 100);
+    bMatchResultVisible = true;
+
+    FInputModeUIOnly InputMode;
+    InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+    SetInputMode(InputMode);
+    bShowMouseCursor = true;
+
+    UE_LOG(LogTemp, Display, TEXT("RA4 HUD: match result overlay shown (won=%s, winner=%d)"),
+           bLocalPlayerWon ? TEXT("true") : TEXT("false"), WinningPlayer);
+}
+
+void ARA4PlayerController::HandleRetryRequested()
+{
+    if (UWorld* World = GetWorld())
+    {
+        const FString MapPackageName = World->GetOutermost()->GetName();
+        UE_LOG(LogTemp, Display, TEXT("RA4 HUD: restarting level %s"), *MapPackageName);
+        UGameplayStatics::OpenLevel(this, FName(*MapPackageName));
+    }
+}
+
+void ARA4PlayerController::HandleExitRequested()
+{
+    static const TCHAR* MainMenuMap = TEXT("/Engine/Maps/Entry");
+    UE_LOG(LogTemp, Display, TEXT("RA4 HUD: leaving match for %s"), MainMenuMap);
+    UGameplayStatics::OpenLevel(
+        this,
+        FName(MainMenuMap),
+        true,
+        TEXT("game=/Script/RedAlert4.RA4UIShowcaseGameMode"));
+}
+
+bool ARA4PlayerController::HasMainMenuMap() const
+{
+    static const FString MainMenuMap = TEXT("/Engine/Maps/Entry");
+    return FPackageName::DoesPackageExist(MainMenuMap);
 }
 
 void ARA4PlayerController::UpdateCameraInput(float DeltaTime)
@@ -692,6 +826,9 @@ void ARA4PlayerController::ApplyCursorShape()
     CurrentMouseCursor = Shape;
 }
 
+// The cursor is the only feedback the player gets before committing a click, so it
+// has to be driven by the same hint the order resolver produces -- never by a guess
+// about what is under the pointer.
 void ARA4PlayerController::OnControlGroupKeyByKey(const FKey Key)
 {
     static const FKey GroupKeys[10] = {EKeys::One, EKeys::Two,   EKeys::Three, EKeys::Four, EKeys::Five,
@@ -808,12 +945,39 @@ void ARA4PlayerController::SubmitOrders(const std::vector<Command>& Commands)
     {
         return;
     }
-    // Commands go into the subsystem's queue, not straight into the simulation.
-    // That queue is where the network layer will later serialise and send them,
-    // so single player and multiplayer take the identical path.
+
+    bool bHasMoveOrAttack = false;
+    bool bHasBuild = false;
+
     for (const Command& C : Commands)
     {
         Subsystem->EnqueueCommand(C);
+        if (C.Type == CommandType::Move || C.Type == CommandType::Attack || C.Type == CommandType::AttackMove)
+        {
+            bHasMoveOrAttack = true;
+        }
+        else if (C.Type == CommandType::PlaceBuilding || C.Type == CommandType::StartProduction)
+        {
+            bHasBuild = true;
+        }
+    }
+
+    // Play unit voice response or sound feedback
+    if (bHasMoveOrAttack)
+    {
+        static USoundBase* MoveSound = LoadObject<USoundBase>(nullptr, TEXT("/Engine/VREditor/Sounds/UI/VR_Click_01.VR_Click_01"));
+        if (MoveSound)
+        {
+            UGameplayStatics::PlaySound2D(this, MoveSound, 0.7f, 1.2f);
+        }
+    }
+    else if (bHasBuild)
+    {
+        static USoundBase* BuildSound = LoadObject<USoundBase>(nullptr, TEXT("/Engine/VREditor/Sounds/UI/VR_Teleport_Mode_01.VR_Teleport_Mode_01"));
+        if (BuildSound)
+        {
+            UGameplayStatics::PlaySound2D(this, BuildSound, 0.8f, 1.0f);
+        }
     }
 }
 
