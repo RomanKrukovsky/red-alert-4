@@ -1,0 +1,61 @@
+{
+  "version": "1.0",
+  "selected_voices": {
+    "Soviet": {
+      "profile_id": "EVA_SU_KONTUR",
+      "selected_candidate_id": "EVA_SU_KONTUR_C2",
+      "candidate_name": "Контур Бета (Стандартное командное контральто)",
+      "anchor_file_path": "GeneratedVO/Anchors/Soviet/EVA_Soviet/anchor_02.wav",
+      "backup_anchor_paths": [
+        "GeneratedVO/Anchors/Soviet/EVA_Soviet/anchor_01.wav",
+        "GeneratedVO/Anchors/Soviet/EVA_Soviet/anchor_03.wav"
+      ],
+      "selection_rationale": "Superior contralto clarity, optimal military authority, highest signal-to-silence ratio (0.94)",
+      "default_cfg": 2.0,
+      "default_inference_steps": 15,
+      "target_lufs": -18.0
+    },
+    "Alliance": {
+      "profile_id": "EVA_AL_ASTRA",
+      "selected_candidate_id": "EVA_AL_ASTRA_C2",
+      "candidate_name": "Астра 2 (Стандартный тактический интерфейс)",
+      "anchor_file_path": "GeneratedVO/Anchors/Alliance/EVA_Alliance/anchor_02.wav",
+      "backup_anchor_paths": [
+        "GeneratedVO/Anchors/Alliance/EVA_Alliance/anchor_01.wav",
+        "GeneratedVO/Anchors/Alliance/EVA_Alliance/anchor_03.wav"
+      ],
+      "selection_rationale": "High-tech crisp modern timbre, excellent Russian phrasing speed and articulation",
+      "default_cfg": 2.0,
+      "default_inference_steps": 15,
+      "target_lufs": -18.0
+    },
+    "Coalition": {
+      "profile_id": "EVA_CO_HARMONIA",
+      "selected_candidate_id": "EVA_CO_HARMONIA_C2",
+      "candidate_name": "Гармония 2 (Стандартный стратегический ИИ)",
+      "anchor_file_path": "GeneratedVO/Anchors/Coalition/EVA_Coalition/anchor_02.wav",
+      "backup_anchor_paths": [
+        "GeneratedVO/Anchors/Coalition/EVA_Coalition/anchor_01.wav",
+        "GeneratedVO/Anchors/Coalition/EVA_Coalition/anchor_03.wav"
+      ],
+      "selection_rationale": "Serene strategic elegance, perfectly controlled emotional neutrality, zero dialect drift",
+      "default_cfg": 2.0,
+      "default_inference_steps": 15,
+      "target_lufs": -18.0
+    },
+    "Chrono": {
+      "profile_id": "EVA_CH_MOIRA",
+      "selected_candidate_id": "EVA_CH_MOIRA_C2",
+      "candidate_name": "Мойра 2 (Стандартный хроно-интерфейс)",
+      "anchor_file_path": "GeneratedVO/Anchors/Chrono/EVA_Chrono/anchor_02.wav",
+      "backup_anchor_paths": [
+        "GeneratedVO/Anchors/Chrono/EVA_Chrono/anchor_01.wav",
+        "GeneratedVO/Anchors/Chrono/EVA_Chrono/anchor_03.wav"
+      ],
+      "selection_rationale": "Hypnotic androgynous tone, razor precision, ideal dry baseline for temporal double-layer DSP",
+      "default_cfg": 2.0,
+      "default_inference_steps": 15,
+      "target_lufs": -18.0
+    }
+  }
+}

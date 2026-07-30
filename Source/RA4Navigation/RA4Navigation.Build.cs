@@ -17,10 +17,5 @@ public class RA4Navigation : ModuleRules
 			"Core",
 			"RA4Core"
 		});
-			
-		PrivateDependencyModuleNames.AddRange(new string[] {
-			"CoreUObject",
-			"Engine"
-		});
 	}
 }

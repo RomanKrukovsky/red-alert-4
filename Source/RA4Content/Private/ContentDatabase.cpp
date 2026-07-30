@@ -13,6 +13,10 @@ void ContentDatabase::Clear()
     Weapons.clear();
     ResourceNodes.clear();
     Factions.clear();
+    VoiceSets.clear();
+    EvaLines.clear();
+    FactionResources.clear();
+    VoiceSetIndex.clear();
     EntityIndex.clear();
     WeaponIndex.clear();
     ResourceIndex.clear();
@@ -78,6 +82,53 @@ void ContentDatabase::AddFaction(const FactionDef& Def)
     Factions.push_back(Def);
 }
 
+void ContentDatabase::AddVoiceSet(const VoiceSetDef& Def)
+{
+    VoiceSets.push_back(Def);
+    if (Def.UnitId.IsValid())
+    {
+        VoiceSetIndex[Def.UnitId.Value] = VoiceSets.size() - 1;
+    }
+}
+
+void ContentDatabase::AddEvaLine(const EvaLineDef& Def)
+{
+    EvaLines.push_back(Def);
+}
+
+void ContentDatabase::SetFactionResource(const FactionResourceDef& Def)
+{
+    for (auto& Existing : FactionResources)
+    {
+        if (Existing.Faction == Def.Faction)
+        {
+            Existing = Def;
+            return;
+        }
+    }
+    FactionResources.push_back(Def);
+}
+
+void ContentDatabase::SetVeterancy(const VeterancyDef& Def)
+{
+    Veterancy = Def;
+}
+
+void ContentDatabase::SetDamageMatrix(const DamageMatrixDef& Def)
+{
+    for (size_t W = 0; W < size_t(WarheadClass::Count); ++W)
+    {
+        for (size_t A = 0; A < size_t(ArmorClass::Count); ++A)
+        {
+            if (Def.Multipliers[W][A] > 0)
+            {
+                DamageMatrix.Multipliers[W][A] = Def.Multipliers[W][A];
+                DamageTable[W][A] = Def.Multipliers[W][A] / 10;
+            }
+        }
+    }
+}
+
 const EntityDef* ContentDatabase::FindEntity(ContentId Id) const
 {
     const auto It = EntityIndex.find(Id.Value);
@@ -86,7 +137,24 @@ const EntityDef* ContentDatabase::FindEntity(ContentId Id) const
 
 const EntityDef* ContentDatabase::FindEntityByName(const std::string& Name) const
 {
-    return FindEntity(MakeContentId(Name.c_str()));
+    std::string Key = Name;
+    if (Key.rfind("unit.", 0) == 0)
+    {
+        Key = Key.substr(5);
+    }
+    const EntityDef* E = FindEntity(MakeContentId(Key.c_str()));
+    if (E != nullptr)
+    {
+        return E;
+    }
+    for (const auto& Entity : Entities)
+    {
+        if (Entity.Name == Name || Entity.Name == Key)
+        {
+            return &Entity;
+        }
+    }
+    return nullptr;
 }
 
 const WeaponDef* ContentDatabase::FindWeapon(ContentId Id) const
@@ -110,6 +178,35 @@ const FactionDef* ContentDatabase::FindFaction(FactionId Id) const
     return nullptr;
 }
 
+const VoiceSetDef* ContentDatabase::FindVoiceSet(ContentId UnitId) const
+{
+    const auto It = VoiceSetIndex.find(UnitId.Value);
+    return It != VoiceSetIndex.end() ? &VoiceSets[It->second] : nullptr;
+}
+
+const EvaLineDef* ContentDatabase::FindEva(const std::string& EventTag, const std::string& Faction) const
+{
+    const EvaLineDef* Best = nullptr;
+    for (const auto& E : EvaLines)
+    {
+        if (E.EventTag != EventTag) continue;
+        if (!Faction.empty() && E.Faction != Faction) continue;
+        Best = &E;
+        // Prefer faction-specific over generic.
+        if (!Faction.empty() && E.Faction == Faction) break;
+    }
+    return Best;
+}
+
+const FactionResourceDef* ContentDatabase::FindFactionResource(FactionId Id) const
+{
+    for (const auto& R : FactionResources)
+    {
+        if (R.Faction == Id) return &R;
+    }
+    return nullptr;
+}
+
 int32_t ContentDatabase::GetDamageMultiplier(WarheadClass Warhead, ArmorClass Armor) const
 {
     const size_t W = size_t(Warhead);
@@ -128,6 +225,7 @@ void ContentDatabase::SetDamageMultiplier(WarheadClass Warhead, ArmorClass Armor
     if (W < size_t(WarheadClass::Count) && A < size_t(ArmorClass::Count))
     {
         DamageTable[W][A] = Percent;
+        DamageMatrix.Multipliers[W][A] = Percent * 10;
     }
 }
 
@@ -138,7 +236,9 @@ void ContentDatabase::ResetDamageTableToDefaults()
         for (size_t A = 0; A < size_t(ArmorClass::Count); ++A)
         {
             Fixed Mult = DamageMatrix::GetMultiplier(static_cast<WarheadClass>(W), static_cast<ArmorClass>(A));
-            DamageTable[W][A] = static_cast<int32_t>(Mult.Raw * 100 / Fixed::FromInt(1).Raw);
+            int32_t Percent = static_cast<int32_t>((Mult.Raw * 100 + Fixed::FromInt(1).Raw / 2) / Fixed::FromInt(1).Raw);
+            DamageTable[W][A] = Percent;
+            DamageMatrix.Multipliers[W][A] = Percent * 10;
         }
     }
 }

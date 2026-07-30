@@ -236,4 +236,116 @@ struct FactionDef
     std::string UniqueResourceName;
 };
 
+// --- Damage Matrix -------------------------------------------------------
+
+// Multiplier[damageType][armorType] — read verbatim from the bible table.
+// Stored as fixed-point thousandths (e.g. 1.5 → 1500) to avoid float.
+struct DamageMatrixDef
+{
+    // Multipliers[warhead][armor], in per-mille (1000 = 1.0x).
+    int32_t Multipliers[int32_t(WarheadClass::Count)][int32_t(ArmorClass::Count)] = {};
+
+    int32_t GetMultiplier(WarheadClass W, ArmorClass A) const
+    {
+        const int32_t wi = int32_t(W);
+        const int32_t ai = int32_t(A);
+        if (wi < 0 || wi >= int32_t(WarheadClass::Count)) return 0;
+        if (ai < 0 || ai >= int32_t(ArmorClass::Count)) return 0;
+        return Multipliers[wi][ai];
+    }
+
+    void SetMultiplier(WarheadClass W, ArmorClass A, int32_t MultiplierPercent)
+    {
+        const int32_t wi = int32_t(W);
+        const int32_t ai = int32_t(A);
+        if (wi >= 0 && wi < int32_t(WarheadClass::Count) && ai >= 0 && ai < int32_t(ArmorClass::Count))
+        {
+            Multipliers[wi][ai] = MultiplierPercent;
+        }
+    }
+};
+
+// --- Veterancy ------------------------------------------------------------
+
+struct VeterancyLevel
+{
+    int32_t CostThresholdMultiplier = 1;   // x times own cost destroyed
+    int32_t DamageBonusPercent = 0;
+    int32_t HpBonusPercent = 0;
+    int32_t RegenPerTick = 0;
+    bool bImprovedAbility = false;
+    bool bHeroicPassive = false;
+};
+
+struct VeterancyDef
+{
+    VeterancyLevel Levels[int32_t(VeterancyRank::Count)];
+};
+
+// --- Faction Resources ---------------------------------------------------
+
+enum class FactionResourceType : uint8_t
+{
+    None = 0,
+    Mobilization,       // Soviet
+    Intelligence,       // Alliance
+    Synchronization,    // Eastern Coalition
+    TemporalStability, // ChronoLegion
+    Count
+};
+
+struct FactionResourceDef
+{
+    FactionResourceType Type = FactionResourceType::None;
+    std::string Name;
+    FactionId Faction = FactionId::None;
+    int32_t Min = 0;
+    int32_t Max = 100;
+    int32_t NaturalRegenPerTick = 0;
+    int32_t LowThreshold = 0;        // penalties below this
+    int32_t HighThreshold = 0;       // bonuses at/above this
+    std::vector<std::string> AccrualRules;  // textual description from bible
+    std::vector<std::string> SpendRules;
+    std::vector<std::string> ThresholdBonuses;
+};
+
+// --- Tech Tiers -----------------------------------------------------------
+
+enum class TechTier : uint8_t
+{
+    T0 = 0,   // starting buildings
+    T1,
+    T2,
+    T3,
+    Count
+};
+
+// --- Voice ---------------------------------------------------------------
+
+struct VoiceLineDef
+{
+    std::string EventTag;     // Voice.Selected, Voice.Move, etc.
+    std::string TextRu;       // canonical Russian line
+    std::string SoundWaveRef; // soft reference, may be empty
+    int32_t Priority = 0;
+    int32_t CooldownSeconds = 0;
+    int32_t Weight = 1;
+};
+
+struct VoiceSetDef
+{
+    ContentId UnitId;
+    std::string VoiceId;     // same as unit Stable ID
+    std::vector<VoiceLineDef> Lines;
+};
+
+struct EvaLineDef
+{
+    std::string EventTag;
+    std::string TextRu;
+    std::string SoundWaveRef;
+    int32_t Priority = 0;
+    std::string Faction;
+};
+
 } // namespace RA4

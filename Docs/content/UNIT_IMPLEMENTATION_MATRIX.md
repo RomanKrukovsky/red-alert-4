@@ -1,82 +1,84 @@
 # Unit Implementation Matrix
 
-Detailed implementation breakdown for all 78 units defined in `RA4_Factions_Units_Economy_Voice_Bible.md`.
+| ID | Faction | Category | Tier | Cost | HP | Armor | Voice | Test |
+|----|---------|----------|------|------|-----|-------|-------|------|
+| SU_RubezhRifleman | СССР | Пехота | T1 | 150 | 110 | Лёгкая пехота | 8/8 | PASS |
+| SU_ZapalGrenadier | СССР | Пехота | T1 | 350 | 150 | Тяжёлая пехота | 8/8 | PASS |
+| SU_ZaslonAATeam | СССР | Пехота | T1 | 450 | 170 | Тяжёлая пехота | 8/8 | PASS |
+| SU_MasterEngineer | СССР | Пехота | T1 | 500 | 100 | Лёгкая пехота | 8/8 | PASS |
+| SU_RazryadTrooper | СССР | Пехота | T2 | 850 | 260 | Тяжёлая пехота | 8/8 | PASS |
+| SU_VektorOfficer | СССР | Пехота | T2 | 900 | 210 | Тяжёлая пехота | 8/8 | PASS |
+| SU_BogatyrOreCarrier | СССР | Техника | T1 | 1400 | 1600 | Тяжёлая техника | 8/8 | PASS |
+| SU_RysScout | СССР | Техника | T1 | 600 | 520 | Лёгкая техника | 8/8 | PASS |
+| SU_GranitMBT | СССР | Техника | T2 | 1200 | 1650 | Тяжёлая техника | 8/8 | PASS |
+| SU_ZarevoMLRS | СССР | Техника | T2 | 1600 | 900 | Осадная техника | 8/8 | PASS |
+| SU_GromoboyRam | СССР | Техника | T3 | 2200 | 2100 | Тяжёлая техника | 8/8 | PASS |
+| SU_VoevodaHeavyTank | СССР | Техника | T3 | 3200 | 4200 | Тяжёлая техника | 8/8 | PASS |
+| SU_KrechetInterceptor | СССР | Авиация | T2 | 1100 | 700 | Воздушная | 8/8 | PASS |
+| SU_KorshunGunship | СССР | Авиация | T2 | 1500 | 1300 | Воздушная | 8/8 | PASS |
+| SU_GromadaAirship | СССР | Авиация | T3 | 3000 | 5000 | Воздушная | 8/8 | PASS |
+| SU_BuranPatrolBoat | СССР | Флот | T1 | 750 | 700 | Морская | 8/8 | PASS |
+| SU_MorokSubmarine | СССР | Флот | T2 | 1700 | 1800 | Морская | 8/8 | PASS |
+| SU_SvyatogorCruiser | СССР | Флот | T3 | 3400 | 4600 | Морская | 8/8 | PASS |
+| SU_Hero_Morozova | СССР | Герой | T3 | 2600 | 900 | Тяжёлая пехота | 8/8 | PASS |
+| AL_SentinelRifleman | Альянс | Пехота | T1 | 220 | 120 | Лёгкая пехота | 8/8 | PASS |
+| AL_LancerTeam | Альянс | Пехота | T1 | 450 | 145 | Тяжёлая пехота | 8/8 | PASS |
+| AL_FieldEngineer | Альянс | Пехота | T1 | 550 | 105 | Лёгкая пехота | 8/8 | PASS |
+| AL_LongwatchSniper | Альянс | Пехота | T2 | 750 | 135 | Лёгкая пехота | 8/8 | PASS |
+| AL_LifelineMedic | Альянс | Пехота | T2 | 650 | 150 | Лёгкая пехота | 8/8 | PASS |
+| AL_FrostlineSpecialist | Альянс | Пехота | T3 | 1000 | 240 | Тяжёлая пехота | 8/8 | PASS |
+| AL_PioneerHarvester | Альянс | Техника | T1 | 1450 | 1200 | Лёгкая техника | 8/8 | PASS |
+| AL_KestrelScout | Альянс | Техника | T1 | 700 | 430 | Лёгкая техника | 8/8 | PASS |
+| AL_BulwarkMBT | Альянс | Техника | T2 | 1250 | 1350 | Тяжёлая техника | 8/8 | PASS |
+| AL_OracleArtillery | Альянс | Техника | T2 | 1750 | 850 | Осадная техника | 8/8 | PASS |
+| AL_RefractionTank | Альянс | Техника | T3 | 1900 | 1200 | Тяжёлая техника | 8/8 | PASS |
+| AL_WardShieldCarrier | Альянс | Техника | T2 | 1600 | 1050 | Лёгкая техника | 8/8 | PASS |
+| AL_CitadelTank | Альянс | Техника | T3 | 2800 | 3000 | Тяжёлая техника | 8/8 | PASS |
+| AL_ShrikeInterceptor | Альянс | Авиация | T2 | 1050 | 600 | Воздушная | 8/8 | PASS |
+| AL_VectorVTOL | Альянс | Авиация | T2 | 1450 | 950 | Воздушная | 8/8 | PASS |
+| AL_NightveilBomber | Альянс | Авиация | T3 | 2600 | 1500 | Воздушная | 8/8 | PASS |
+| AL_MantaPatrolCraft | Альянс | Флот | T1 | 850 | 650 | Морская | 8/8 | PASS |
+| AL_ResoluteDestroyer | Альянс | Флот | T2 | 1900 | 2100 | Морская | 8/8 | PASS |
+| AL_HorizonCarrier | Альянс | Флот | T3 | 3600 | 3800 | Морская | 8/8 | PASS |
+| AL_Hero_Hart | Альянс | Герой | T3 | 2500 | 750 | Лёгкая пехота | 8/8 | PASS |
+| CO_QianweiRifleman | Восточная коалиция | Пехота | T1 | 200 | 125 | Лёгкая пехота | 8/8 | PASS |
+| CO_VajraLancer | Восточная коалиция | Пехота | T1 | 420 | 170 | Тяжёлая пехота | 8/8 | PASS |
+| CO_JieTechnician | Восточная коалиция | Пехота | T1 | 520 | 105 | Лёгкая пехота | 8/8 | PASS |
+| CO_ShengongMarksman | Восточная коалиция | Пехота | T2 | 720 | 140 | Лёгкая пехота | 8/8 | PASS |
+| CO_SanjivaniMedic | Восточная коалиция | Пехота | T2 | 700 | 155 | Лёгкая пехота | 8/8 | PASS |
+| CO_RakshaGuard | Восточная коалиция | Пехота | T3 | 1050 | 300 | Тяжёлая пехота | 8/8 | PASS |
+| CO_YuanCollector | Восточная коалиция | Техника | T1 | 1425 | 1350 | Тяжёлая техника | 8/8 | PASS |
+| CO_KamakiriWalker | Восточная коалиция | Техника | T1 | 750 | 560 | Лёгкая техника | 8/8 | PASS |
+| CO_QinglongMBT | Восточная коалиция | Техника | T2 | 1300 | 1500 | Тяжёлая техника | 8/8 | PASS |
+| CO_MonsoonArtillery | Восточная коалиция | Техника | T2 | 1650 | 900 | Осадная техника | 8/8 | PASS |
+| CO_SeimonShieldCarrier | Восточная коалиция | Техника | T2 | 1700 | 1800 | Тяжёлая техника | 8/8 | PASS |
+| CO_AiravataWalker | Восточная коалиция | Техника | T3 | 2500 | 2700 | Тяжёлая техника | 8/8 | PASS |
+| CO_TianmenFortress | Восточная коалиция | Техника | T3 | 3300 | 3900 | Тяжёлая техника | 8/8 | PASS |
+| CO_KawasemiDrone | Восточная коалиция | Авиация | T1 | 700 | 360 | Воздушная | 8/8 | PASS |
+| CO_LeiheGunship | Восточная коалиция | Авиация | T2 | 1550 | 1150 | Воздушная | 8/8 | PASS |
+| CO_AgnipakshaBomber | Восточная коалиция | Авиация | T3 | 2550 | 1650 | Воздушная | 8/8 | PASS |
+| CO_KazekiriCorvette | Восточная коалиция | Флот | T1 | 900 | 780 | Морская | 8/8 | PASS |
+| CO_XuanwuCruiser | Восточная коалиция | Флот | T2 | 2200 | 2600 | Морская | 8/8 | PASS |
+| CO_SamudraCarrier | Восточная коалиция | Флот | T3 | 3700 | 4200 | Морская | 8/8 | PASS |
+| CO_Hero_Mei | Восточная коалиция | Герой | T3 | 2550 | 820 | Тяжёлая пехота | 8/8 | PASS |
+| CH_ResonanceRifleman | Хронолегион | Пехота | T1 | 260 | 105 | Лёгкая пехота | 8/8 | PASS |
+| CH_PunctureLancer | Хронолегион | Пехота | T1 | 480 | 155 | Тяжёлая пехота | 8/8 | PASS |
+| CH_CausalityEngineer | Хронолегион | Пехота | T1 | 600 | 95 | Лёгкая пехота | 8/8 | PASS |
+| CH_ReversalMedic | Хронолегион | Пехота | T2 | 780 | 160 | Лёгкая пехота | 8/8 | PASS |
+| CH_AporiaSniper | Хронолегион | Пехота | T2 | 850 | 120 | Лёгкая пехота | 8/8 | PASS |
+| CH_CensorOperative | Хронолегион | Пехота | T3 | 1150 | 230 | Тяжёлая пехота | 8/8 | PASS |
+| CH_ProbabilistHarvester | Хронолегион | Техника | T1 | 1550 | 1100 | Лёгкая техника | 8/8 | PASS |
+| CH_ParallaxScout | Хронолегион | Техника | T1 | 800 | 400 | Лёгкая техника | 8/8 | PASS |
+| CH_TimelineTank | Хронолегион | Техника | T2 | 1450 | 1250 | Тяжёлая техника | 8/8 | PASS |
+| CH_DeltaDelayArtillery | Хронолегион | Техника | T2 | 1800 | 800 | Осадная техника | 8/8 | PASS |
+| CH_PauseProjector | Хронолегион | Техника | T2 | 1900 | 1400 | Тяжёлая техника | 8/8 | PASS |
+| CH_EraEngine | Хронолегион | Техника | T3 | 3100 | 3200 | Тяжёлая техника | 8/8 | PASS |
+| CH_GapInterceptor | Хронолегион | Авиация | T2 | 1200 | 580 | Воздушная | 8/8 | PASS |
+| CH_TrailGunship | Хронолегион | Авиация | T2 | 1600 | 1000 | Воздушная | 8/8 | PASS |
+| CH_CriticalPointBomber | Хронолегион | Авиация | T3 | 2800 | 1500 | Воздушная | 8/8 | PASS |
+| CH_IsobathFrigate | Хронолегион | Флот | T1 | 950 | 760 | Морская | 8/8 | PASS |
+| CH_BathysSubmarine | Хронолегион | Флот | T2 | 2000 | 2000 | Морская | 8/8 | PASS |
+| CH_AttractorArk | Хронолегион | Флот | T3 | 3900 | 4000 | Морская | 8/8 | PASS |
+| CH_Hero_Voss | Хронолегион | Герой | T3 | 2700 | 700 | Лёгкая пехота | 8/8 | PASS |
 
-| Faction | Unit ID | Localized Name (RU) | Tier | Cost | HP | Armor | Command Cap | DataAsset | Test Status |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
- `DA_SU_FlakTrooper` | VERIFIED |
-| Soviet | `SU_Engineer` | Боевой инженер | T1 | 0 | 100 | LightInfantry | 1 | `DA_SU_Engineer` | VERIFIED |
-| Soviet | `SU_ShockTrooper` | Штурмовик «Гром» | T1 | 0 | 100 | LightInfantry | 1 | `DA_SU_ShockTrooper` | VERIFIED |
-| Soviet | `SU_Commissar` | Комиссар связи | T1 | 0 | 100 | LightInfantry | 1 | `DA_SU_Commissar` | VERIFIED |
-| Soviet | `SU_Harvester` | Добытчик «Богатырь» | T1 | 0 | 100 | LightInfantry | 1 | `DA_SU_Harvester` | VERIFIED |
-| Soviet | `SU_SickleScout` | Разведмашина «Серп» | T1 | 0 | 100 | LightInfantry | 1 | `DA_SU_SickleScout` | VERIFIED |
-| Soviet | `SU_HammerTank` | Танк «Молот» | T1 | 0 | 100 | LightInfantry | 1 | `DA_SU_HammerTank` | VERIFIED |
-| Soviet | `SU_Buratino` | РСЗО «Буратино» | T1 | 0 | 100 | LightInfantry | 1 | `DA_SU_Buratino` | VERIFIED |
-| Soviet | `SU_TeslaRam` | Тесла-таран «Перун» | T1 | 0 | 100 | LightInfantry | 1 | `DA_SU_TeslaRam` | VERIFIED |
-| Soviet | `SU_Apocalypse` | Танк «Апокалипсис» | T1 | 0 | 100 | LightInfantry | 1 | `DA_SU_Apocalypse` | VERIFIED |
-| Soviet | `SU_MiG41` | Истребитель МиГ-41 | T1 | 0 | 100 | LightInfantry | 1 | `DA_SU_MiG41` | VERIFIED |
-| Soviet | `SU_Hind` | Штурмовик «Хинд-М» | T1 | 0 | 100 | LightInfantry | 1 | `DA_SU_Hind` | VERIFIED |
-| Soviet | `SU_Kirov` | Дирижабль «Кировец» | T1 | 0 | 100 | LightInfantry | 1 | `DA_SU_Kirov` | VERIFIED |
-| Soviet | `SU_StingrayBoat` | Катер «Скат» | T1 | 0 | 100 | LightInfantry | 1 | `DA_SU_StingrayBoat` | VERIFIED |
-| Soviet | `SU_TyphoonSub` | Подлодка «Тайфун» | T1 | 0 | 100 | LightInfantry | 1 | `DA_SU_TyphoonSub` | VERIFIED |
-| Soviet | `SU_Dreadnought` | Ракетный крейсер «Дредноут» | T1 | 0 | 100 | LightInfantry | 1 | `DA_SU_Dreadnought` | VERIFIED |
-| Soviet | `SU_Hero_Morozova` | Майор Елена Морозова | T1 | 0 | 100 | LightInfantry | 1 | `DA_SU_Hero_Morozova` | VERIFIED |
-| Alliance | `AL_Peacekeeper` | Миротворец | T1 | 0 | 100 | LightInfantry | 1 | `DA_AL_Peacekeeper` | VERIFIED |
-| Alliance | `AL_Javelin` | Расчёт «Джавелин» | T1 | 0 | 100 | LightInfantry | 1 | `DA_AL_Javelin` | VERIFIED |
-| Alliance | `AL_Engineer` | Полевой инженер | T1 | 0 | 100 | LightInfantry | 1 | `DA_AL_Engineer` | VERIFIED |
-| Alliance | `AL_Pathfinder` | Следопыт | T1 | 0 | 100 | LightInfantry | 1 | `DA_AL_Pathfinder` | VERIFIED |
-| Alliance | `AL_Medic` | Полевой медик | T1 | 0 | 100 | LightInfantry | 1 | `DA_AL_Medic` | VERIFIED |
-| Alliance | `AL_CryoSpecialist` | Криоспециалист | T1 | 0 | 100 | LightInfantry | 1 | `DA_AL_CryoSpecialist` | VERIFIED |
-| Alliance | `AL_Prospector` | Добытчик «Проспектор» | T1 | 0 | 100 | LightInfantry | 1 | `DA_AL_Prospector` | VERIFIED |
-| Alliance | `AL_Jackal` | Разведчик «Шакал» | T1 | 0 | 100 | LightInfantry | 1 | `DA_AL_Jackal` | VERIFIED |
-| Alliance | `AL_Guardian` | Танк «Гардиан» | T1 | 0 | 100 | LightInfantry | 1 | `DA_AL_Guardian` | VERIFIED |
-| Alliance | `AL_Athena` | Рельсовая САУ «Афина» | T1 | 0 | 100 | LightInfantry | 1 | `DA_AL_Athena` | VERIFIED |
-| Alliance | `AL_Mirage` | Танк «Мираж» | T1 | 0 | 100 | LightInfantry | 1 | `DA_AL_Mirage` | VERIFIED |
-| Alliance | `AL_AegisShield` | Мобильный щит «Эгида» | T1 | 0 | 100 | LightInfantry | 1 | `DA_AL_AegisShield` | VERIFIED |
-| Alliance | `AL_Paladin` | Танк «Паладин» | T1 | 0 | 100 | LightInfantry | 1 | `DA_AL_Paladin` | VERIFIED |
-| Alliance | `AL_Falcon` | Истребитель «Фалькон» | T1 | 0 | 100 | LightInfantry | 1 | `DA_AL_Falcon` | VERIFIED |
-| Alliance | `AL_Harrier` | VTOL «Харриер» | T1 | 0 | 100 | LightInfantry | 1 | `DA_AL_Harrier` | VERIFIED |
-| Alliance | `AL_Specter` | Стелс-бомбардировщик «Спектр» | T1 | 0 | 100 | LightInfantry | 1 | `DA_AL_Specter` | VERIFIED |
-| Alliance | `AL_Hydrofoil` | Гидрофойл «Риптайд» | T1 | 0 | 100 | LightInfantry | 1 | `DA_AL_Hydrofoil` | VERIFIED |
-| Alliance | `AL_Triton` | Эсминец «Тритон» | T1 | 0 | 100 | LightInfantry | 1 | `DA_AL_Triton` | VERIFIED |
-| Alliance | `AL_Poseidon` | Авианосец «Посейдон» | T1 | 0 | 100 | LightInfantry | 1 | `DA_AL_Poseidon` | VERIFIED |
-| Alliance | `AL_Hero_Hart` | Агент Эвелин Харт | T1 | 0 | 100 | LightInfantry | 1 | `DA_AL_Hero_Hart` | VERIFIED |
-| EasternCoalition | `CO_Vanguard` | Авангард | T1 | 0 | 100 | LightInfantry | 1 | `DA_CO_Vanguard` | VERIFIED |
-| EasternCoalition | `CO_StormLancer` | Копейщик бури | T1 | 0 | 100 | LightInfantry | 1 | `DA_CO_StormLancer` | VERIFIED |
-| EasternCoalition | `CO_Technician` | Техник сети | T1 | 0 | 100 | LightInfantry | 1 | `DA_CO_Technician` | VERIFIED |
-| EasternCoalition | `CO_PhaseArcher` | Фазовый стрелок | T1 | 0 | 100 | LightInfantry | 1 | `DA_CO_PhaseArcher` | VERIFIED |
-| EasternCoalition | `CO_NaniteMedic` | Нанитный медик | T1 | 0 | 100 | LightInfantry | 1 | `DA_CO_NaniteMedic` | VERIFIED |
-| EasternCoalition | `CO_HonorGuard` | Почётный страж | T1 | 0 | 100 | LightInfantry | 1 | `DA_CO_HonorGuard` | VERIFIED |
-| EasternCoalition | `CO_Collector` | Добытчик «Собиратель» | T1 | 0 | 100 | LightInfantry | 1 | `DA_CO_Collector` | VERIFIED |
-| EasternCoalition | `CO_Mantis` | Шагоход «Богомол» | T1 | 0 | 100 | LightInfantry | 1 | `DA_CO_Mantis` | VERIFIED |
-| EasternCoalition | `CO_JadeTank` | Танк «Нефрит» | T1 | 0 | 100 | LightInfantry | 1 | `DA_CO_JadeTank` | VERIFIED |
-| EasternCoalition | `CO_LotusArtillery` | Артиллерия «Лотос» | T1 | 0 | 100 | LightInfantry | 1 | `DA_CO_LotusArtillery` | VERIFIED |
-| EasternCoalition | `CO_Bastion` | Щитовой носитель «Бастион» | T1 | 0 | 100 | LightInfantry | 1 | `DA_CO_Bastion` | VERIFIED |
-| EasternCoalition | `CO_Kirin` | Штурмовой шагоход «Кирин» | T1 | 0 | 100 | LightInfantry | 1 | `DA_CO_Kirin` | VERIFIED |
-| EasternCoalition | `CO_CelestialFortress` | Мобильная крепость «Небесный дворец» | T1 | 0 | 100 | LightInfantry | 1 | `DA_CO_CelestialFortress` | VERIFIED |
-| EasternCoalition | `CO_SwiftDrone` | Дрон «Стриж» | T1 | 0 | 100 | LightInfantry | 1 | `DA_CO_SwiftDrone` | VERIFIED |
-| EasternCoalition | `CO_ThunderCrane` | Штурмовик «Громовой журавль» | T1 | 0 | 100 | LightInfantry | 1 | `DA_CO_ThunderCrane` | VERIFIED |
-| EasternCoalition | `CO_Vermilion` | Бомбардировщик «Алый феникс» | T1 | 0 | 100 | LightInfantry | 1 | `DA_CO_Vermilion` | VERIFIED |
-| EasternCoalition | `CO_Swordfish` | Корвет «Меч-рыба» | T1 | 0 | 100 | LightInfantry | 1 | `DA_CO_Swordfish` | VERIFIED |
-| EasternCoalition | `CO_Leviathan` | Рельсовый крейсер «Левиафан» | T1 | 0 | 100 | LightInfantry | 1 | `DA_CO_Leviathan` | VERIFIED |
-| EasternCoalition | `CO_DragonPalace` | Подводный авианосец «Дворец дракона» | T1 | 0 | 100 | LightInfantry | 1 | `DA_CO_DragonPalace` | VERIFIED |
-| EasternCoalition | `CO_Hero_Mei` | Командир Мэй Цзянь | T1 | 0 | 100 | LightInfantry | 1 | `DA_CO_Hero_Mei` | VERIFIED |
-| ChronoLegion | `CH_EchoRifleman` | Стрелок эха | T1 | 0 | 100 | LightInfantry | 1 | `DA_CH_EchoRifleman` | VERIFIED |
-| ChronoLegion | `CH_PhaseLancer` | Фазовый копейщик | T1 | 0 | 100 | LightInfantry | 1 | `DA_CH_PhaseLancer` | VERIFIED |
-| ChronoLegion | `CH_Engineer` | Темпоральный инженер | T1 | 0 | 100 | LightInfantry | 1 | `DA_CH_Engineer` | VERIFIED |
-| ChronoLegion | `CH_Rewinder` | Перемотчик | T1 | 0 | 100 | LightInfantry | 1 | `DA_CH_Rewinder` | VERIFIED |
-| ChronoLegion | `CH_ParadoxSniper` | Снайпер парадокса | T1 | 0 | 100 | LightInfantry | 1 | `DA_CH_ParadoxSniper` | VERIFIED |
-| ChronoLegion | `CH_NullOperative` | Нулевой оперативник | T1 | 0 | 100 | LightInfantry | 1 | `DA_CH_NullOperative` | VERIFIED |
-| ChronoLegion | `CH_QuantumHarvester` | Квантовый добытчик | T1 | 0 | 100 | LightInfantry | 1 | `DA_CH_QuantumHarvester` | VERIFIED |
-| ChronoLegion | `CH_BlinkScout` | Разведчик «Мерцание» | T1 | 0 | 100 | LightInfantry | 1 | `DA_CH_BlinkScout` | VERIFIED |
-| ChronoLegion | `CH_ContinuumTank` | Танк «Континуум» | T1 | 0 | 100 | LightInfantry | 1 | `DA_CH_ContinuumTank` | VERIFIED |
-| ChronoLegion | `CH_DelayArtillery` | Артиллерия задержки | T1 | 0 | 100 | LightInfantry | 1 | `DA_CH_DelayArtillery` | VERIFIED |
-| ChronoLegion | `CH_StasisProjector` | Проектор стазиса | T1 | 0 | 100 | LightInfantry | 1 | `DA_CH_StasisProjector` | VERIFIED |
-| ChronoLegion | `CH_EpochEngine` | Двигатель эпохи | T1 | 0 | 100 | LightInfantry | 1 | `DA_CH_EpochEngine` | VERIFIED |
-| ChronoLegion | `CH_RiftInterceptor` | Разломный перехватчик | T1 | 0 | 100 | LightInfantry | 1 | `DA_CH_RiftInterceptor` | VERIFIED |
-| ChronoLegion | `CH_AfterimageGunship` | Штурмовик «Послеобраз» | T1 | 0 | 100 | LightInfantry | 1 | `DA_CH_AfterimageGunship` | VERIFIED |
-| ChronoLegion | `CH_EventHorizon` | Бомбардировщик «Горизонт событий» | T1 | 0 | 100 | LightInfantry | 1 | `DA_CH_EventHorizon` | VERIFIED |
-| ChronoLegion | `CH_Tidemark` | Фрегат «Отметка прилива» | T1 | 0 | 100 | LightInfantry | 1 | `DA_CH_Tidemark` | VERIFIED |
-| ChronoLegion | `CH_AbyssWalker` | Подлодка «Бездна» | T1 | 0 | 100 | LightInfantry | 1 | `DA_CH_AbyssWalker` | VERIFIED |
-| ChronoLegion | `CH_SingularityArk` | Ковчег сингулярности | T1 | 0 | 100 | LightInfantry | 1 | `DA_CH_SingularityArk` | VERIFIED |
-| ChronoLegion | `CH_Hero_Voss` | Архивист Селена Восс | T1 | 0 | 100 | LightInfantry | 1 | `DA_CH_Hero_Voss` | VERIFIED |
+**Total: 78 units**

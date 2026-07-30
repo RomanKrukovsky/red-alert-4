@@ -152,6 +152,8 @@ private:
     void SystemCombat();
     void SystemProjectiles();
     void SystemFogOfWar();
+    void SystemVeterancy();
+    void SystemFactionResources();
     void SystemDeaths();
     void SystemVictory();
 

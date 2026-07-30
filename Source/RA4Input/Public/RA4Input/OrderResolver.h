@@ -51,6 +51,10 @@ struct OrderContext
 
     bool bQueueOrder = false;      // shift held
     bool bForceAttack = false;     // ctrl held: attack whatever is there, ally or ground
+    // Alt held: move to the spot and ignore whatever is standing on it. The classic
+    // scheme needs this because left-clicking is how orders are given, so without it
+    // there is no way to walk onto a tile an enemy happens to occupy.
+    bool bForceMove = false;
     bool bAttackMoveMode = false;  // the player armed attack-move and is now clicking
 
     // Set while the player is placing a finished structure from the sidebar.

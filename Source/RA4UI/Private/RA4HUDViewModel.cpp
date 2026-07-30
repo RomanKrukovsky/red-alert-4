@@ -41,3 +41,46 @@ float URA4HUDViewModel::GetPowerRatio() const
 {
     return PowerRatio;
 }
+
+void URA4HUDViewModel::SetPowerShortage(bool bShortage)
+{
+    if (bPowerShortage != bShortage)
+    {
+        bPowerShortage = bShortage;
+        UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(bPowerShortage);
+    }
+}
+
+bool URA4HUDViewModel::IsPowerShortage() const
+{
+    return bPowerShortage;
+}
+
+void URA4HUDViewModel::SetSelectionState(int32 Count, float HealthRatio, const FString& EntityName, bool bOwned)
+{
+    bool bChanged = false;
+    if (SelectionCount != Count)
+    {
+        SelectionCount = Count;
+        bChanged = true;
+        UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(SelectionCount);
+    }
+    if (!FMath::IsNearlyEqual(SelectionHealthRatio, HealthRatio))
+    {
+        SelectionHealthRatio = HealthRatio;
+        bChanged = true;
+        UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(SelectionHealthRatio);
+    }
+    if (PrimaryEntityName != EntityName)
+    {
+        PrimaryEntityName = EntityName;
+        bChanged = true;
+        UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(PrimaryEntityName);
+    }
+    if (bPrimaryOwned != bOwned)
+    {
+        bPrimaryOwned = bOwned;
+        bChanged = true;
+        UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(bPrimaryOwned);
+    }
+}

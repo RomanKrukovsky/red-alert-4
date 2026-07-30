@@ -55,11 +55,38 @@ class RA4UI_API URA4ProductionQueueWidget : public URA4ActivatableWidget
     GENERATED_BODY()
 };
 
-/** Resource counters and power state. Replaceable by an imported RTS kit widget. */
-UCLASS(Abstract, Blueprintable)
+/** Resource counters, power state, unit count and match clock. Built in C++ so the
+ *  layout lives in version control rather than inside a binary asset. */
+UCLASS(Blueprintable)
 class RA4UI_API URA4ResourceBarWidget : public URA4ActivatableWidget
 {
     GENERATED_BODY()
+
+public:
+    virtual TSharedRef<SWidget> RebuildWidget() override;
+    virtual void NativeConstruct() override;
+    virtual void NativeDestruct() override;
+
+protected:
+    /** Rebuilds every field from the provider. Called on change, never on tick. */
+    void Refresh();
+
+    class URA4UIDataProviderSubsystem* GetProvider() const;
+
+    UPROPERTY(Transient)
+    TObjectPtr<class UTextBlock> CreditsValue;
+
+    UPROPERTY(Transient)
+    TObjectPtr<class UTextBlock> PowerValue;
+
+    UPROPERTY(Transient)
+    TObjectPtr<class UTextBlock> SupplyValue;
+
+    UPROPERTY(Transient)
+    TObjectPtr<class UTextBlock> TimerValue;
+
+private:
+    FDelegateHandle ResourceChangeHandle;
 };
 
 /** Category tabs above the unit and structure production grid. */

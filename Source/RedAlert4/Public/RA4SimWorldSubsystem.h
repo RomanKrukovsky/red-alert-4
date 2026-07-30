@@ -13,7 +13,16 @@
 
 #include <vector>
 
-namespace RA4 { class SimWorld; class ContentDatabase; }
+namespace RA4
+{
+    class SimWorld;
+    class ContentDatabase;
+    namespace Presentation
+    {
+        struct HudSnapshot;
+        class HudSnapshotBuilder;
+    }
+}
 
 #include "RA4SimWorldSubsystem.generated.h"
 
@@ -45,6 +54,12 @@ public:
     // Nothing outside the simulation may mutate it directly.
     const RA4::SimWorld* GetSimWorld() const { return SimWorld; }
 
+    // Returns the latest computed snapshot of the match for UI presentation
+    const RA4::Presentation::HudSnapshot* GetLatestHudSnapshot() const { return LatestSnapshot; }
+
+    // Sets the local player's selection for HUD projection
+    void SetSelectedEntitiesForHUD(const std::vector<RA4::EntityId>& Selection);
+
     // The single entry point for player and AI intent. Commands are queued here and
     // applied at the start of the next fixed tick, which is exactly where the
     // network layer will serialise and send them, so single player and multiplayer
@@ -60,6 +75,8 @@ public:
     TSubclassOf<ARA4EntityActor> EntityActorClass;
 
 private:
+    void LoadBlockoutMesh(uint32 ContentIdValue, const TCHAR* AssetPath);
+    void RegisterDefaultBlockoutMeshes();
     void TickSimulation();
     void SyncPresentation();
 
@@ -69,6 +86,11 @@ private:
     // Owned by the subsystem and outlives SimWorld, which holds a raw pointer to it
     // for the whole match.
     RA4::ContentDatabase* Content;
+
+    // Presentation HUD Snapshot builder & latest snapshot
+    RA4::Presentation::HudSnapshotBuilder* SnapshotBuilder = nullptr;
+    RA4::Presentation::HudSnapshot* LatestSnapshot = nullptr;
+    std::vector<RA4::EntityId> LocalSelection;
 
     // How many newly spawned actors still dump their render state to the log.
     int32 DiagnosticDumpsRemaining = 6;

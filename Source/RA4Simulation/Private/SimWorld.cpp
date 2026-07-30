@@ -124,6 +124,14 @@ void SimWorld::Initialize(const ContentDatabase* InContent, const MatchSetup& Se
         P.bDefeated = false;
         P.Faction = Slot.Faction;
         P.Credits = Slot.StartingCredits;
+        switch (P.Faction)
+        {
+        case FactionId::Soviet: P.FactionResourceType = FactionResourceType::Mobilization; break;
+        case FactionId::Alliance: P.FactionResourceType = FactionResourceType::Intelligence; break;
+        case FactionId::EasternCoalition: P.FactionResourceType = FactionResourceType::Synchronization; break;
+        case FactionId::ChronoLegion: P.FactionResourceType = FactionResourceType::TemporalStability; break;
+        default: P.FactionResourceType = FactionResourceType::None; break;
+        }
     }
 
     Phase = MatchPhase::Running;
@@ -1226,6 +1234,10 @@ void SimWorld::SystemPower()
     for (PlayerState& P : Players)
     {
         P.CommandLimitMax = std::min(200, P.CommandLimitMax);
+        if (P.Faction == FactionId::ChronoLegion && (CurrentTick % 40) == 0)
+        {
+            P.FactionResource = std::min(100, P.FactionResource + 1);
+        }
     }
 }
 
@@ -2430,11 +2442,37 @@ void SimWorld::Tick(const CommandFrame* Frame)
     SystemMovement();
     SystemCombat();
     SystemProjectiles();
+    SystemFactionResources();
     SystemFogOfWar();
     SystemDeaths();
     SystemVictory();
 
     CurrentTick += 1;
+}
+
+void SimWorld::SystemFactionResources()
+{
+    for (PlayerId I = 0; I < kMaxPlayers; ++I)
+    {
+        PlayerState& P = Players[I];
+        if (!P.bActive || P.bDefeated) continue;
+
+        if (P.FactionResourceType == FactionResourceType::TemporalStability)
+        {
+            // Regenerate 1 point per 40 ticks (2 seconds at 20Hz)
+            if (CurrentTick > 0 && CurrentTick % 40 == 0)
+            {
+                P.FactionResource = std::min(100, P.FactionResource + 1);
+            }
+        }
+        else if (P.FactionResourceType == FactionResourceType::Synchronization)
+        {
+            if (CurrentTick > 0 && CurrentTick % 60 == 0)
+            {
+                P.FactionResource = std::min(100, P.FactionResource + 1);
+            }
+        }
+    }
 }
 
 

@@ -18,7 +18,7 @@ void ARA4RtsHud::DrawHUD()
     {
         return;
     }
-    DrawSelectionRings(Controller);
+    DrawSelectionBrackets(Controller);
     DrawMarquee(Controller);
 }
 
@@ -44,7 +44,7 @@ void ARA4RtsHud::DrawMarquee(const ARA4PlayerController* Controller)
     DrawLine(MinX, MaxY, MinX, MinY, MarqueeColor, 1.5f);
 }
 
-void ARA4RtsHud::DrawSelectionRings(const ARA4PlayerController* Controller)
+void ARA4RtsHud::DrawSelectionBrackets(const ARA4PlayerController* Controller)
 {
     UWorld* World = GetWorld();
     const URA4SimWorldSubsystem* Subsystem = World != nullptr ? World->GetSubsystem<URA4SimWorldSubsystem>() : nullptr;
@@ -54,7 +54,6 @@ void ARA4RtsHud::DrawSelectionRings(const ARA4PlayerController* Controller)
         return;
     }
 
-    constexpr int32 SegmentCount = 16;
     for (const RA4::EntityId& Id : Controller->GetSelection().Get())
     {
         const RA4::TransformComp* Transform = Sim->GetTransform(Id);
@@ -76,29 +75,78 @@ void ARA4RtsHud::DrawSelectionRings(const ARA4PlayerController* Controller)
             }
         }
 
-        // Projected per segment so the ring sits flat on the ground and reads
-        // correctly under the tilted camera.
-        FVector2D Previous = FVector2D::ZeroVector;
-        bool bHasPrevious = false;
-        for (int32 Segment = 0; Segment <= SegmentCount; ++Segment)
+        // The bracket is a screen-space box around the unit's ground footprint, which
+        // is what the originals drew: four corner ticks, no full outline, so a packed
+        // formation stays readable instead of turning into a mesh of circles.
+        const FVector Centre = RA4Coords::ToUnreal(Transform->Position);
+        const FVector Offsets[4] = {FVector(-RadiusUnits, -RadiusUnits, 0.0), FVector(RadiusUnits, -RadiusUnits, 0.0),
+                                    FVector(RadiusUnits, RadiusUnits, 0.0), FVector(-RadiusUnits, RadiusUnits, 0.0)};
+
+        double MinX = 0.0;
+        double MaxX = 0.0;
+        double MinY = 0.0;
+        double MaxY = 0.0;
+        bool bHaveBox = false;
+        for (const FVector& Offset : Offsets)
         {
-            const double Angle = (double(Segment) / double(SegmentCount)) * 2.0 * PI;
-            const FVector WorldPoint = RA4Coords::ToUnreal(Transform->Position) +
-                                       FVector(FMath::Cos(Angle) * RadiusUnits, FMath::Sin(Angle) * RadiusUnits, 0.0);
             FVector2D Screen;
-            if (Controller->ProjectWorldLocationToScreen(WorldPoint, Screen))
+            if (!Controller->ProjectWorldLocationToScreen(Centre + Offset, Screen))
             {
-                if (bHasPrevious)
-                {
-                    DrawLine(float(Previous.X), float(Previous.Y), float(Screen.X), float(Screen.Y), SelectionColor, 1.2f);
-                }
-                Previous = Screen;
-                bHasPrevious = true;
+                continue;
             }
-            else
+            if (!bHaveBox)
             {
-                bHasPrevious = false;
+                MinX = MaxX = Screen.X;
+                MinY = MaxY = Screen.Y;
+                bHaveBox = true;
+                continue;
             }
+            MinX = FMath::Min(MinX, Screen.X);
+            MaxX = FMath::Max(MaxX, Screen.X);
+            MinY = FMath::Min(MinY, Screen.Y);
+            MaxY = FMath::Max(MaxY, Screen.Y);
         }
+        if (!bHaveBox)
+        {
+            continue;
+        }
+
+        // A quarter of the shorter side, so the ticks stay ticks at every zoom instead
+        // of meeting in the middle on a distant infantryman.
+        const float Tick =
+            float(FMath::Clamp(FMath::Min(MaxX - MinX, MaxY - MinY) * 0.25, 3.0, 14.0));
+        constexpr float Thickness = 1.6f;
+
+        const float L = float(MinX);
+        const float R = float(MaxX);
+        const float T = float(MinY);
+        const float B = float(MaxY);
+
+        DrawLine(L, T, L + Tick, T, SelectionColor, Thickness);
+        DrawLine(L, T, L, T + Tick, SelectionColor, Thickness);
+        DrawLine(R - Tick, T, R, T, SelectionColor, Thickness);
+        DrawLine(R, T, R, T + Tick, SelectionColor, Thickness);
+        DrawLine(L, B - Tick, L, B, SelectionColor, Thickness);
+        DrawLine(L, B, L + Tick, B, SelectionColor, Thickness);
+        DrawLine(R, B - Tick, R, B, SelectionColor, Thickness);
+        DrawLine(R - Tick, B, R, B, SelectionColor, Thickness);
+
+        // Health bar above the bracket, only once the thing has taken a hit -- a wall
+        // of full green bars over an untouched army is noise.
+        const RA4::HealthComp* Health = Sim->GetHealth(Id);
+        if (Health == nullptr || Health->Max <= 0 || Health->Current >= Health->Max)
+        {
+            continue;
+        }
+
+        const float Fraction = FMath::Clamp(float(Health->Current) / float(Health->Max), 0.0f, 1.0f);
+        const float BarWidth = R - L;
+        const float BarY = T - 6.0f;
+        const FLinearColor BarColour = Fraction > 0.66f   ? HealthHighColor
+                                       : Fraction > 0.33f ? HealthMediumColor
+                                                          : HealthLowColor;
+
+        DrawRect(FLinearColor(0.02f, 0.02f, 0.03f, 0.75f), L, BarY, BarWidth, 3.0f);
+        DrawRect(BarColour, L, BarY, BarWidth * Fraction, 3.0f);
     }
 }

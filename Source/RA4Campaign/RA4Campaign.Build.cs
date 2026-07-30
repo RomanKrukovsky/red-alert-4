@@ -13,10 +13,5 @@ public class RA4Campaign : ModuleRules
 			"RA4Core",
 			"RA4Simulation"
 		});
-			
-		PrivateDependencyModuleNames.AddRange(new string[] {
-			"CoreUObject",
-			"Engine"
-		});
 	}
 }

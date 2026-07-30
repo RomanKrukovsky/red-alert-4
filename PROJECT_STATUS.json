@@ -1,0 +1,8 @@
+{
+  "status": "PASSED",
+  "total_tests": 186,
+  "passed_tests": 186,
+  "failed_tests": 0,
+  "execution_time_ms": 1052,
+  "headless_core_determinism_verified": true
+}

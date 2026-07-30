@@ -69,6 +69,10 @@ RA4_TEST(BibleContent, Verify78UniqueUnitsInManifest)
         JsonPath = "../Content/RA4/Data/Generated/ra4_content.normalized.json";
         File.open(JsonPath);
     }
+    if (!File.is_open())
+    {
+        std::printf("[DEBUG] Could not open JSON. Trying CWD-relative paths.\n");
+    }
     RA4_EXPECT(File.is_open());
     std::string Content((std::istreambuf_iterator<char>(File)), std::istreambuf_iterator<char>());
     
@@ -83,7 +87,18 @@ RA4_TEST(BibleContent, Verify78UniqueUnitsInManifest)
     }
     
     // Check that at least 78 units are present in the JSON
-    RA4_EXPECT(Content.find("\"total_units\": 78") != std::string::npos || Content.find("\"total_units\":78") != std::string::npos);
+    bool bHas78 = Content.find("\"unitCount\": 78") != std::string::npos || 
+                  Content.find("\"uniqueUnitIds\": 78") != std::string::npos ||
+                  Content.find("\"total_units\": 78") != std::string::npos || 
+                  Content.find("\"total_units\":78") != std::string::npos;
+    if (!bHas78)
+    {
+        std::printf("[DEBUG] Content size=%zu, unitCount found=%zu, uniqueUnitIds found=%zu\n",
+                     Content.size(),
+                     Content.find("\"unitCount\""),
+                     Content.find("\"uniqueUnitIds\""));
+    }
+    RA4_EXPECT(bHas78);
 }
 
 RA4_TEST(BibleContent, VerifyDamageMatrixMultipliers)

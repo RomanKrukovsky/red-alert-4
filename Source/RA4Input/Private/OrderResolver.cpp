@@ -108,11 +108,28 @@ std::vector<Command> ResolveForBuildings(const SimWorld& World, const SelectionM
     return Out;
 }
 
+// Force move rewrites the gesture before any rule sees it: there is deliberately
+// nothing under the cursor any more, so every downstream branch -- order and cursor
+// hint alike -- naturally collapses to a plain move and the two cannot disagree.
+OrderContext ApplyForceMove(const OrderContext& Context)
+{
+    if (!Context.bForceMove)
+    {
+        return Context;
+    }
+    OrderContext Adjusted = Context;
+    Adjusted.HoveredEntity = EntityId::Invalid();
+    Adjusted.bForceAttack = false;
+    Adjusted.bAttackMoveMode = false;
+    return Adjusted;
+}
+
 } // namespace
 
 std::vector<Command> ResolveOrder(const SimWorld& World, const SelectionModel& Selection,
-                                  const OrderContext& Context)
+                                  const OrderContext& RawContext)
 {
+    const OrderContext Context = ApplyForceMove(RawContext);
     std::vector<Command> Out;
 
     // --- placing a finished structure ---------------------------------------
@@ -224,8 +241,10 @@ std::vector<Command> ResolveOrder(const SimWorld& World, const SelectionModel& S
 }
 
 CursorHint ResolveCursorHint(const SimWorld& World, const SelectionModel& Selection,
-                             const OrderContext& Context)
+                             const OrderContext& RawContext)
 {
+    const OrderContext Context = ApplyForceMove(RawContext);
+
     if (Context.bPlacementMode)
     {
         return Context.PlacementContent.IsValid() &&

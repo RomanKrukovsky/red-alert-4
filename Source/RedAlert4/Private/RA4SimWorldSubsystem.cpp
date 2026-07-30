@@ -3,9 +3,11 @@
 #include "RA4SimWorldSubsystem.h"
 #include "RA4Simulation/SimWorld.h"
 #include "RA4Content/ContentDatabase.h"
+#include "RA4Presentation/HudSnapshot.h"
 #include "RA4Core/Command.h"
 #include "RA4MatchBootstrap.h"
 #include "RA4SimCoords.h"
+#include "RA4UIDataProviderSubsystem.h"
 #include "Engine/World.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
@@ -38,10 +40,14 @@ void URA4SimWorldSubsystem::Initialize(FSubsystemCollectionBase& Collection)
     // pointer to it for the whole match.
     Content = new RA4::ContentDatabase();
     SimWorld = new RA4::SimWorld();
+    SnapshotBuilder = new RA4::Presentation::HudSnapshotBuilder();
+    SnapshotBuilder->Initialize(/*LocalPlayer*/ 0);
+    LatestSnapshot = new RA4::Presentation::HudSnapshot();
 
     // Temporary: the lobby will supply the match setup. Until then a fixed skirmish
     // is seeded so the map is actually playable rather than an empty world.
     FRA4MatchBootstrap::BuildSkirmish(*Content, *SimWorld, /*Seed*/ 20260728);
+    RegisterDefaultBlockoutMeshes();
     UE_LOG(LogTemp, Display, TEXT("RA4 skirmish initialized with %llu simulation entities"),
            static_cast<uint64>(SimWorld->GetAllCores().size()));
 }
@@ -58,6 +64,16 @@ void URA4SimWorldSubsystem::Deinitialize()
     {
         delete Content;
         Content = nullptr;
+    }
+    if (LatestSnapshot)
+    {
+        delete LatestSnapshot;
+        LatestSnapshot = nullptr;
+    }
+    if (SnapshotBuilder)
+    {
+        delete SnapshotBuilder;
+        SnapshotBuilder = nullptr;
     }
     PendingCommands.clear();
 
@@ -91,6 +107,11 @@ void URA4SimWorldSubsystem::EnqueueCommand(const RA4::Command& Command)
     PendingCommands.push_back(Command);
 }
 
+void URA4SimWorldSubsystem::SetSelectedEntitiesForHUD(const std::vector<RA4::EntityId>& Selection)
+{
+    LocalSelection = Selection;
+}
+
 void URA4SimWorldSubsystem::TickSimulation()
 {
     // Everything queued since the previous tick executes in one frame, in the order
@@ -102,6 +123,23 @@ void URA4SimWorldSubsystem::TickSimulation()
     PendingCommands.clear();
 
     SimWorld->Tick(&Frame);
+
+    if (SnapshotBuilder && LatestSnapshot && SimWorld)
+    {
+        SnapshotBuilder->Build(*SimWorld, LocalSelection, *LatestSnapshot);
+
+        // Hand the snapshot to the UI once per simulation tick rather than per
+        // frame. This is the only path game data takes into the HUD: widgets bind
+        // to view models, so nothing in the interface polls the world.
+        if (UWorld* OwningWorld = GetWorld())
+        {
+            if (URA4UIDataProviderSubsystem* UIData =
+                    OwningWorld->GetSubsystem<URA4UIDataProviderSubsystem>())
+            {
+                UIData->ApplySnapshot(*LatestSnapshot);
+            }
+        }
+    }
 }
 
 void URA4SimWorldSubsystem::SyncPresentation()
@@ -261,4 +299,61 @@ void URA4SimWorldSubsystem::RegisterEntityActor(int32 EntityIndex, ARA4EntityAct
 void URA4SimWorldSubsystem::UnregisterEntityActor(int32 EntityIndex)
 {
     EntityActors.Remove(static_cast<uint32>(EntityIndex));
+}
+
+void URA4SimWorldSubsystem::LoadBlockoutMesh(uint32 ContentIdValue, const TCHAR* AssetPath)
+{
+    if (UStaticMesh* Mesh = Cast<UStaticMesh>(StaticLoadObject(UStaticMesh::StaticClass(), nullptr, AssetPath)))
+    {
+        ContentMeshRegistry.Add(ContentIdValue, Mesh);
+    }
+}
+
+void URA4SimWorldSubsystem::RegisterDefaultBlockoutMeshes()
+{
+    // Soviet
+    LoadBlockoutMesh(RA4::MakeContentId("building.sov.construction_yard").Value, TEXT("/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_ConYard_Blockout.SM_Soviet_SU_ConYard_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("building.sov.tesla_reactor").Value, TEXT("/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_PowerPlant_Blockout.SM_Soviet_SU_PowerPlant_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("building.sov.ore_refinery").Value, TEXT("/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Refinery_Blockout.SM_Soviet_SU_Refinery_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("building.sov.barracks").Value, TEXT("/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Barracks_Blockout.SM_Soviet_SU_Barracks_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("building.sov.war_factory").Value, TEXT("/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_WarFactory_Blockout.SM_Soviet_SU_WarFactory_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("building.sov.gun_turret").Value, TEXT("/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_GunTurret_Blockout.SM_Soviet_SU_GunTurret_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("unit.sov.mcv").Value, TEXT("/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_MCV_MobileYard_Blockout.SM_Soviet_SU_MCV_MobileYard_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("unit.sov.ore_harvester").Value, TEXT("/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_BogatyrOreCarrier_Blockout.SM_Soviet_SU_BogatyrOreCarrier_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("unit.sov.conscript").Value, TEXT("/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_RubezhRifleman_Blockout.SM_Soviet_SU_RubezhRifleman_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("unit.sov.rocketeer").Value, TEXT("/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_ZaslonAATeam_Blockout.SM_Soviet_SU_ZaslonAATeam_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("unit.sov.heavy_tank").Value, TEXT("/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_GranitMBT_Blockout.SM_Soviet_SU_GranitMBT_Blockout"));
+
+    // Alliance
+    LoadBlockoutMesh(RA4::MakeContentId("building.all.construction_yard").Value, TEXT("/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_ConYard_Blockout.SM_Alliance_AL_ConYard_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("building.all.power_plant").Value, TEXT("/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_PowerPlant_Blockout.SM_Alliance_AL_PowerPlant_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("building.all.ore_refinery").Value, TEXT("/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_Refinery_Blockout.SM_Alliance_AL_Refinery_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("building.all.barracks").Value, TEXT("/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_Barracks_Blockout.SM_Alliance_AL_Barracks_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("building.all.war_factory").Value, TEXT("/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_WarFactory_Blockout.SM_Alliance_AL_WarFactory_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("building.all.gun_turret").Value, TEXT("/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_GunTurret_Blockout.SM_Alliance_AL_GunTurret_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("unit.all.mcv").Value, TEXT("/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_MCV_MobileNode_Blockout.SM_Alliance_AL_MCV_MobileNode_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("unit.all.ore_harvester").Value, TEXT("/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_PioneerHarvester_Blockout.SM_Alliance_AL_PioneerHarvester_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("unit.all.rifleman").Value, TEXT("/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_SentinelRifleman_Blockout.SM_Alliance_AL_SentinelRifleman_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("unit.all.lancer").Value, TEXT("/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_LancerTeam_Blockout.SM_Alliance_AL_LancerTeam_Blockout"));
+    // Eastern Coalition
+    LoadBlockoutMesh(RA4::MakeContentId("building.eco.construction_yard").Value, TEXT("/Game/RA4/Art/Blockout/EasternCoalition/SM_EasternCoalition_CO_ConYard_Blockout.SM_EasternCoalition_CO_ConYard_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("building.eco.power_plant").Value, TEXT("/Game/RA4/Art/Blockout/EasternCoalition/SM_EasternCoalition_CO_PowerPlant_Blockout.SM_EasternCoalition_CO_PowerPlant_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("building.eco.ore_refinery").Value, TEXT("/Game/RA4/Art/Blockout/EasternCoalition/SM_EasternCoalition_CO_Refinery_Blockout.SM_EasternCoalition_CO_Refinery_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("building.eco.barracks").Value, TEXT("/Game/RA4/Art/Blockout/EasternCoalition/SM_EasternCoalition_CO_Barracks_Blockout.SM_EasternCoalition_CO_Barracks_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("building.eco.war_factory").Value, TEXT("/Game/RA4/Art/Blockout/EasternCoalition/SM_EasternCoalition_CO_WarFactory_Blockout.SM_EasternCoalition_CO_WarFactory_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("building.eco.gun_turret").Value, TEXT("/Game/RA4/Art/Blockout/EasternCoalition/SM_EasternCoalition_CO_GunTurret_Blockout.SM_EasternCoalition_CO_GunTurret_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("unit.eco.mcv").Value, TEXT("/Game/RA4/Art/Blockout/EasternCoalition/SM_EasternCoalition_CO_MCV_MobileDepot_Blockout.SM_EasternCoalition_CO_MCV_MobileDepot_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("unit.eco.ore_harvester").Value, TEXT("/Game/RA4/Art/Blockout/EasternCoalition/SM_EasternCoalition_CO_BishanHarvester_Blockout.SM_EasternCoalition_CO_BishanHarvester_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("unit.eco.rifleman").Value, TEXT("/Game/RA4/Art/Blockout/EasternCoalition/SM_EasternCoalition_CO_VolunteerRifleman_Blockout.SM_EasternCoalition_CO_VolunteerRifleman_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("unit.eco.heavy_tank").Value, TEXT("/Game/RA4/Art/Blockout/EasternCoalition/SM_EasternCoalition_CO_Type99Zheng_Blockout.SM_EasternCoalition_CO_Type99Zheng_Blockout"));
+
+    // Chrono Legion
+    LoadBlockoutMesh(RA4::MakeContentId("building.chr.construction_yard").Value, TEXT("/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_ConYard_Blockout.SM_Chronolegion_CH_ConYard_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("building.chr.power_plant").Value, TEXT("/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_EraEngine_Blockout.SM_Chronolegion_CH_EraEngine_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("building.chr.ore_refinery").Value, TEXT("/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_CausalityAnchor_Blockout.SM_Chronolegion_CH_CausalityAnchor_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("building.chr.barracks").Value, TEXT("/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_Barracks_Blockout.SM_Chronolegion_CH_Barracks_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("building.chr.war_factory").Value, TEXT("/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_Airfield_Blockout.SM_Chronolegion_CH_Airfield_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("building.chr.gun_turret").Value, TEXT("/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_EchoTurret_Blockout.SM_Chronolegion_CH_EchoTurret_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("unit.chr.ore_harvester").Value, TEXT("/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_ParadoxSiphon_Blockout.SM_Chronolegion_CH_ParadoxSiphon_Blockout"));
+    LoadBlockoutMesh(RA4::MakeContentId("unit.chr.rifleman").Value, TEXT("/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_TemporalInfantry_Blockout.SM_Chronolegion_CH_TemporalInfantry_Blockout"));
 }

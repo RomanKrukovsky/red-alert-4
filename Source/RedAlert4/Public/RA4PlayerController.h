@@ -10,6 +10,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 
+#include "RA4Input/ControlScheme.h"
 #include "RA4Input/HitTest.h"
 #include "RA4Input/OrderResolver.h"
 #include "RA4Input/SelectionModel.h"
@@ -63,6 +64,10 @@ protected:
     UPROPERTY(EditAnywhere, Category = "RA4|Input")
     float DoubleClickSeconds = 0.30f;
 
+    // Classic Red Alert by default: left button orders, right button deselects. The
+    // settings screen flips this; the rules themselves live in RA4Input/ControlScheme.
+    RA4::Input::ControlScheme Scheme = RA4::Input::ControlScheme::ClassicRA;
+
 private:
     // --- input handlers ------------------------------------------------------
     void OnPrimaryPressed();
@@ -73,8 +78,14 @@ private:
     void OnZoomIn();
     void OnZoomOut();
     void OnStopPressed();
+    void OnGuardPressed();
     void OnControlGroupKeyByKey(FKey Key);
     void OnControlGroupKey(int32 GroupIndex);
+
+    // Shared by both buttons: the scheme decides which one gets here.
+    void HandleClick(bool bLeftButton, const FVector2D& EndScreen, bool bWasDrag);
+    void PerformSelection(const FVector2D& EndScreen, const RA4::Vec2& EndGround, bool bWasDrag);
+    void ApplyCursorShape();
 
     // --- helpers -------------------------------------------------------------
     URA4SimWorldSubsystem* GetSimSubsystem() const;
@@ -94,6 +105,12 @@ private:
     void SubmitOrders(const std::vector<RA4::Command>& Commands);
 
     void UpdateCameraInput(float DeltaTime);
+
+    // The in-match HUD. Created here because the controller is what knows this is a
+    // local player; the widget itself pulls everything it shows from the UI data
+    // provider and never touches the simulation.
+    UPROPERTY(Transient)
+    TObjectPtr<class URA4ResourceBarWidget> ResourceBar;
 
     // --- state ---------------------------------------------------------------
     RA4::Input::SelectionModel Selection;

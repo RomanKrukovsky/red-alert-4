@@ -4,6 +4,7 @@
 
 #include "RA4Core/SimConfig.h"
 #include "RA4Input/CameraController.h"
+#include "RA4Input/ControlScheme.h"
 #include "RA4Input/HitTest.h"
 #include "RA4Input/OrderResolver.h"
 #include "RA4Input/SelectionModel.h"
@@ -690,4 +691,194 @@ RA4_TEST(HitTest, ShortDragCountsAsAClick)
     RA4_EXPECT(IsDragSignificant(Vec2::FromInts(1000, 1000), Vec2::FromInts(1000, 1400), Threshold));
     // Direction is irrelevant: dragging up-left is as much a marquee as down-right.
     RA4_EXPECT(IsDragSignificant(Vec2::FromInts(1000, 1000), Vec2::FromInts(600, 900), Threshold));
+}
+
+// ---------------------------------------------------------------------------
+// Control schemes
+// ---------------------------------------------------------------------------
+
+namespace
+{
+ClickFacts ClassicFacts(const InputFixture& F, EntityId Hovered)
+{
+    return MakeClickFacts(F.World, F.Selection, Hovered, /*bDragWasMarquee*/ false, /*bShift*/ false,
+                          /*bCtrl*/ false, /*bAlt*/ false, /*bAttackMoveArmed*/ false,
+                          /*bPlacementArmed*/ false);
+}
+} // namespace
+
+RA4_TEST(ClassicScheme, LeftClickOnGroundIssuesTheOrder)
+{
+    InputFixture F;
+    const EntityId Unit = F.World.SpawnUnit(Ids::SovHeavyTank, 0, Vec2::FromInts(2000, 2000));
+    F.Selection.SelectAtCursor(F.World, {Unit}, SelectionMode::Replace);
+
+    const ClickFacts Facts = ClassicFacts(F, EntityId::Invalid());
+    RA4_EXPECT(RouteLeftClick(ControlScheme::ClassicRA, Facts) == ClickIntent::IssueOrder);
+    // The same gesture under the modern scheme is a selection attempt.
+    RA4_EXPECT(RouteLeftClick(ControlScheme::Modern, Facts) == ClickIntent::SelectAtPoint);
+}
+
+RA4_TEST(ClassicScheme, LeftClickOnOwnUnitSelectsRatherThanOrderingIntoIt)
+{
+    InputFixture F;
+    const EntityId Selected = F.World.SpawnUnit(Ids::SovHeavyTank, 0, Vec2::FromInts(2000, 2000));
+    const EntityId Other = F.World.SpawnUnit(Ids::SovConscript, 0, Vec2::FromInts(3000, 3000));
+    F.Selection.SelectAtCursor(F.World, {Selected}, SelectionMode::Replace);
+
+    RA4_EXPECT(RouteLeftClick(ControlScheme::ClassicRA, ClassicFacts(F, Other)) == ClickIntent::SelectAtPoint);
+}
+
+RA4_TEST(ClassicScheme, LeftClickOnAnEnemyIssuesTheOrder)
+{
+    InputFixture F;
+    const EntityId Tank = F.World.SpawnUnit(Ids::SovHeavyTank, 0, Vec2::FromInts(2000, 2000));
+    const EntityId Enemy = F.World.SpawnUnit(Ids::AllRifleman, 1, Vec2::FromInts(3000, 3000));
+    F.Selection.SelectAtCursor(F.World, {Tank}, SelectionMode::Replace);
+
+    RA4_EXPECT(RouteLeftClick(ControlScheme::ClassicRA, ClassicFacts(F, Enemy)) == ClickIntent::IssueOrder);
+}
+
+RA4_TEST(ClassicScheme, DraggingIsAlwaysAMarqueeEvenWithUnitsSelected)
+{
+    InputFixture F;
+    const EntityId Tank = F.World.SpawnUnit(Ids::SovHeavyTank, 0, Vec2::FromInts(2000, 2000));
+    F.Selection.SelectAtCursor(F.World, {Tank}, SelectionMode::Replace);
+
+    ClickFacts Facts = ClassicFacts(F, EntityId::Invalid());
+    Facts.bDragWasMarquee = true;
+    // Without this the army would charge off to wherever the drag happened to end.
+    RA4_EXPECT(RouteLeftClick(ControlScheme::ClassicRA, Facts) == ClickIntent::SelectInMarquee);
+}
+
+RA4_TEST(ClassicScheme, EmptySelectionMakesEveryLeftClickASelection)
+{
+    InputFixture F;
+    const EntityId Enemy = F.World.SpawnUnit(Ids::AllRifleman, 1, Vec2::FromInts(3000, 3000));
+    RA4_EXPECT(RouteLeftClick(ControlScheme::ClassicRA, ClassicFacts(F, Enemy)) == ClickIntent::SelectAtPoint);
+    RA4_EXPECT(RouteLeftClick(ControlScheme::ClassicRA, ClassicFacts(F, EntityId::Invalid())) ==
+               ClickIntent::SelectAtPoint);
+}
+
+RA4_TEST(ClassicScheme, SelectingSomeoneElsesUnitsNeverArmsAnOrder)
+{
+    InputFixture F;
+    const EntityId Enemy = F.World.SpawnUnit(Ids::AllRifleman, 1, Vec2::FromInts(3000, 3000));
+    F.Selection.SelectAtCursor(F.World, {Enemy}, SelectionMode::Replace);
+    RA4_EXPECT(!F.Selection.IsEmpty());
+
+    // Watching an enemy unit must not turn the next ground click into an order.
+    RA4_EXPECT(RouteLeftClick(ControlScheme::ClassicRA, ClassicFacts(F, EntityId::Invalid())) ==
+               ClickIntent::SelectAtPoint);
+}
+
+RA4_TEST(ClassicScheme, CtrlIsForceFireAndAltIsForceMove)
+{
+    InputFixture F;
+    const EntityId Tank = F.World.SpawnUnit(Ids::SovHeavyTank, 0, Vec2::FromInts(2000, 2000));
+    const EntityId Friend = F.World.SpawnUnit(Ids::SovConscript, 0, Vec2::FromInts(3000, 3000));
+    F.Selection.SelectAtCursor(F.World, {Tank}, SelectionMode::Replace);
+
+    ClickFacts Ctrl = ClassicFacts(F, Friend);
+    Ctrl.bCtrl = true;
+    // Ctrl-clicking an ally is force fire, so it must beat the "own unit selects" rule.
+    RA4_EXPECT(RouteLeftClick(ControlScheme::ClassicRA, Ctrl) == ClickIntent::IssueOrder);
+
+    ClickFacts Alt = ClassicFacts(F, Friend);
+    Alt.bAlt = true;
+    RA4_EXPECT(RouteLeftClick(ControlScheme::ClassicRA, Alt) == ClickIntent::IssueOrder);
+}
+
+RA4_TEST(ClassicScheme, ShiftClickingOwnUnitsGrowsTheSelection)
+{
+    InputFixture F;
+    const EntityId A = F.World.SpawnUnit(Ids::SovConscript, 0, Vec2::FromInts(2000, 2000));
+    const EntityId B = F.World.SpawnUnit(Ids::SovConscript, 0, Vec2::FromInts(2100, 2000));
+    F.Selection.SelectAtCursor(F.World, {A}, SelectionMode::Replace);
+
+    ClickFacts Facts = ClassicFacts(F, B);
+    Facts.bShift = true;
+    RA4_EXPECT(RouteLeftClick(ControlScheme::ClassicRA, Facts) == ClickIntent::SelectAtPoint);
+    RA4_EXPECT(ResolveSelectionMode(ControlScheme::ClassicRA, /*bShift*/ true, /*bCtrl*/ false) ==
+               SelectionMode::Add);
+
+    F.Selection.SelectAtCursor(F.World, {B},
+                               ResolveSelectionMode(ControlScheme::ClassicRA, true, false));
+    RA4_EXPECT(F.Selection.Num() == 2);
+}
+
+RA4_TEST(ClassicScheme, CtrlNeverTogglesSelectionTheWayTheModernSchemeDoes)
+{
+    // Ctrl is spoken for by force fire, so it must not also mean toggle-select --
+    // one key doing both is how a force-fire order turns into a lost unit.
+    RA4_EXPECT(ResolveSelectionMode(ControlScheme::ClassicRA, false, true) == SelectionMode::Replace);
+    RA4_EXPECT(ResolveSelectionMode(ControlScheme::Modern, false, true) == SelectionMode::Toggle);
+}
+
+RA4_TEST(ClassicScheme, RightClickClearsTheSelectionInsteadOfOrdering)
+{
+    InputFixture F;
+    const EntityId Tank = F.World.SpawnUnit(Ids::SovHeavyTank, 0, Vec2::FromInts(2000, 2000));
+    F.Selection.SelectAtCursor(F.World, {Tank}, SelectionMode::Replace);
+    const ClickFacts Facts = ClassicFacts(F, EntityId::Invalid());
+
+    RA4_EXPECT(RouteRightClick(ControlScheme::ClassicRA, Facts, /*bSelectionEmpty*/ false) ==
+               ClickIntent::ClearSelection);
+    RA4_EXPECT(RouteRightClick(ControlScheme::Modern, Facts, false) == ClickIntent::IssueOrder);
+    // Nothing selected: the button does nothing rather than firing a stray order.
+    RA4_EXPECT(RouteRightClick(ControlScheme::ClassicRA, Facts, true) == ClickIntent::None);
+}
+
+RA4_TEST(ClassicScheme, ArmedModesOwnTheClickInBothSchemes)
+{
+    InputFixture F;
+    const EntityId Tank = F.World.SpawnUnit(Ids::SovHeavyTank, 0, Vec2::FromInts(2000, 2000));
+    F.Selection.SelectAtCursor(F.World, {Tank}, SelectionMode::Replace);
+
+    ClickFacts Placement = ClassicFacts(F, EntityId::Invalid());
+    Placement.bPlacementArmed = true;
+    Placement.bDragWasMarquee = true;   // even a sloppy drag still places the building
+    RA4_EXPECT(RouteLeftClick(ControlScheme::ClassicRA, Placement) == ClickIntent::IssueOrder);
+    RA4_EXPECT(RouteRightClick(ControlScheme::ClassicRA, Placement, false) == ClickIntent::CancelArmedMode);
+
+    ClickFacts AttackMove = ClassicFacts(F, EntityId::Invalid());
+    AttackMove.bAttackMoveArmed = true;
+    RA4_EXPECT(RouteLeftClick(ControlScheme::Modern, AttackMove) == ClickIntent::IssueOrder);
+    RA4_EXPECT(RouteRightClick(ControlScheme::Modern, AttackMove, false) == ClickIntent::CancelArmedMode);
+}
+
+RA4_TEST(Orders, AltForcesAPlainMoveOntoAnOccupiedSpot)
+{
+    InputFixture F;
+    const EntityId Tank = F.World.SpawnUnit(Ids::SovHeavyTank, 0, Vec2::FromInts(2000, 2000));
+    const EntityId Enemy = F.World.SpawnUnit(Ids::AllRifleman, 1, Vec2::FromInts(9000, 9000));
+    F.Selection.SelectAtCursor(F.World, {Tank}, SelectionMode::Replace);
+
+    OrderContext Context = EntityClick(F.World, Enemy);
+    RA4_EXPECT(CountOfType(ResolveOrder(F.World, F.Selection, Context), CommandType::Attack) == 1);
+
+    Context.bForceMove = true;
+    const std::vector<Command> Forced = ResolveOrder(F.World, F.Selection, Context);
+    RA4_EXPECT(CountOfType(Forced, CommandType::Move) == 1);
+    RA4_EXPECT(CountOfType(Forced, CommandType::Attack) == 0);
+    // The cursor has to promise the same thing the click will do.
+    RA4_EXPECT(ResolveCursorHint(F.World, F.Selection, Context) == CursorHint::Move);
+}
+
+RA4_TEST(Orders, ForceMoveOutranksForceAttackAndAttackMove)
+{
+    InputFixture F;
+    const EntityId Tank = F.World.SpawnUnit(Ids::SovHeavyTank, 0, Vec2::FromInts(2000, 2000));
+    const EntityId Enemy = F.World.SpawnUnit(Ids::AllRifleman, 1, Vec2::FromInts(9000, 9000));
+    F.Selection.SelectAtCursor(F.World, {Tank}, SelectionMode::Replace);
+
+    OrderContext Context = EntityClick(F.World, Enemy);
+    Context.bForceMove = true;
+    Context.bForceAttack = true;
+    Context.bAttackMoveMode = true;
+
+    const std::vector<Command> Commands = ResolveOrder(F.World, F.Selection, Context);
+    RA4_EXPECT(CountOfType(Commands, CommandType::Move) == 1);
+    RA4_EXPECT(CountOfType(Commands, CommandType::AttackMove) == 0);
+    RA4_EXPECT(CountOfType(Commands, CommandType::Attack) == 0);
 }

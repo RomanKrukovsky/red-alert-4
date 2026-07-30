@@ -33,6 +33,7 @@ public class RedAlert4 : ModuleRules
 			"SlateCore",
 			"UMG",
 			"RA4UI",
+			"RA4Presentation",
 			"CommonUI",
 			"ModelViewViewModel",
 			"GameplayAbilities",

@@ -14,11 +14,16 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
 
+#include "RA4GameState.h"
+#include "RA4PlayerState.h"
+
 ARA4SkirmishGameMode::ARA4SkirmishGameMode()
 {
     PlayerControllerClass = ARA4PlayerController::StaticClass();
     DefaultPawnClass = ARA4CameraPawn::StaticClass();
     HUDClass = ARA4RtsHud::StaticClass();
+    GameStateClass = ARA4GameState::StaticClass();
+    PlayerStateClass = ARA4PlayerState::StaticClass();
     // The camera pawn is spawned at the origin and then driven entirely by the
     // camera controller, so no PlayerStart is required to make the map playable.
     bStartPlayersAsSpectators = false;

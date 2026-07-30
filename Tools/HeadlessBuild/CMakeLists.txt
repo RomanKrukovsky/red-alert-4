@@ -42,6 +42,8 @@ target_include_directories(RA4Core PUBLIC ${RA4_SOURCE_ROOT}/RA4Core/Public)
 add_library(RA4Content STATIC
     ${RA4_SOURCE_ROOT}/RA4Content/Private/ContentDatabase.cpp
     ${RA4_SOURCE_ROOT}/RA4Content/Private/DefaultContent.cpp
+    ${RA4_SOURCE_ROOT}/RA4Content/Private/JsonParser.cpp
+    ${RA4_SOURCE_ROOT}/RA4Content/Private/BibleContentLoader.cpp
 )
 target_include_directories(RA4Content PUBLIC ${RA4_SOURCE_ROOT}/RA4Content/Public)
 target_link_libraries(RA4Content PUBLIC RA4Core)
@@ -63,17 +65,25 @@ add_library(RA4Navigation STATIC
 target_include_directories(RA4Navigation PUBLIC ${RA4_SOURCE_ROOT}/RA4Navigation/Public)
 target_link_libraries(RA4Navigation PUBLIC RA4Core)
 
+add_library(RA4Combat STATIC
+    ${RA4_SOURCE_ROOT}/RA4Combat/Private/ArmorMatrix.cpp
+)
+target_include_directories(RA4Combat PUBLIC ${RA4_SOURCE_ROOT}/RA4Combat/Public)
+target_link_libraries(RA4Combat PUBLIC RA4Content)
+
 add_library(RA4Simulation STATIC
     ${RA4_SOURCE_ROOT}/RA4Simulation/Private/SimWorld.cpp
+    ${RA4_SOURCE_ROOT}/RA4Simulation/Private/CommandBus.cpp
 )
 target_include_directories(RA4Simulation PUBLIC ${RA4_SOURCE_ROOT}/RA4Simulation/Public)
-target_link_libraries(RA4Simulation PUBLIC RA4Content RA4Navigation RA4FogOfWar)
+target_link_libraries(RA4Simulation PUBLIC RA4Content RA4Navigation RA4FogOfWar RA4Combat)
 
 add_library(RA4Input STATIC
     ${RA4_SOURCE_ROOT}/RA4Input/Private/CameraController.cpp
     ${RA4_SOURCE_ROOT}/RA4Input/Private/SelectionModel.cpp
     ${RA4_SOURCE_ROOT}/RA4Input/Private/OrderResolver.cpp
     ${RA4_SOURCE_ROOT}/RA4Input/Private/HitTest.cpp
+    ${RA4_SOURCE_ROOT}/RA4Input/Private/ControlScheme.cpp
 )
 target_include_directories(RA4Input PUBLIC ${RA4_SOURCE_ROOT}/RA4Input/Public)
 target_link_libraries(RA4Input PUBLIC RA4Simulation)
@@ -116,9 +126,16 @@ add_executable(RA4Tests
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestPresentation.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestAI.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestBibleContent.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestBibleImport.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestVeterancy.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestFactionResources.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestSaveSystem.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestCampaign.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/Test_RA3PipelineAndCommandBus.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/Test_HUDIntegrationAndGameState.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestProvingGround.cpp
 )
+
 target_link_libraries(RA4Tests PRIVATE RA4Replay RA4Campaign RA4Input RA4Presentation RA4AI RA4FogOfWar)
 target_include_directories(RA4Tests PRIVATE ${RA4_SOURCE_ROOT}/RA4UI/Public)
 

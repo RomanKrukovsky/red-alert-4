@@ -21,10 +21,5 @@ public class RA4Input : ModuleRules
 			"RA4Content",
 			"RA4Simulation"
 		});
-
-		PrivateDependencyModuleNames.AddRange(new string[] {
-			"CoreUObject",
-			"Engine"
-		});
 	}
 }

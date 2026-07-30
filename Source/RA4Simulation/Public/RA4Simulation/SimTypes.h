@@ -158,6 +158,10 @@ struct HealthComp
     int32_t Current = 0;
     int32_t Max = 0;
     bool bInvulnerable = false;
+    // Veterancy
+    VeterancyRank Rank = VeterancyRank::Recruit;
+    int32_t DamageDealt = 0;   // accumulated damage dealt (for veterancy tracking)
+    int32_t KillsValue = 0;    // accumulated value of destroyed targets
 };
 
 struct MovementComp
@@ -275,6 +279,8 @@ struct PlayerState
     int32_t CommandLimitMax = 50;
     int32_t CommandLimitUsed = 0;
     int32_t FactionResource = 0;
+    FactionResourceType FactionResourceType = FactionResourceType::None;
+    int32_t FactionResourceCooldown = 0;  // ticks until active ability is ready
 
     // Running totals for the post-match screen and for AI self-evaluation.
     int32_t TotalHarvested = 0;
@@ -316,6 +322,10 @@ enum class SimEventType : uint8_t
     PlayerDefeated,
     MatchEnded,
     CommandRejected,
+    EntityVeterancyPromoted,
+    PowerShortageStarted,
+    PowerShortageEnded,
+    FactionResourceChanged,
 };
 
 struct SimEvent

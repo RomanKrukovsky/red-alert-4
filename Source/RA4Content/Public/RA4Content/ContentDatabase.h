@@ -32,15 +32,28 @@ public:
     ContentId AddWeapon(const WeaponDef& Def);
     ContentId AddResourceNode(const ResourceNodeDef& Def);
     void AddFaction(const FactionDef& Def);
+    void AddVoiceSet(const VoiceSetDef& Def);
+    void AddEvaLine(const EvaLineDef& Def);
+    void SetFactionResource(const FactionResourceDef& Def);
+    void SetVeterancy(const VeterancyDef& Def);
+    void SetDamageMatrix(const DamageMatrixDef& Def);
 
     const EntityDef* FindEntity(ContentId Id) const;
     const EntityDef* FindEntityByName(const std::string& Name) const;
     const WeaponDef* FindWeapon(ContentId Id) const;
     const ResourceNodeDef* FindResourceNode(ContentId Id) const;
     const FactionDef* FindFaction(FactionId Id) const;
+    const VoiceSetDef* FindVoiceSet(ContentId UnitId) const;
+    const EvaLineDef* FindEva(const std::string& EventTag, const std::string& Faction) const;
+    const FactionResourceDef* FindFactionResource(FactionId Id) const;
+    const VeterancyDef& GetVeterancy() const { return Veterancy; }
+    const DamageMatrixDef& GetDamageMatrix() const { return DamageMatrix; }
 
     const std::vector<EntityDef>& GetEntities() const { return Entities; }
     const std::vector<WeaponDef>& GetWeapons() const { return Weapons; }
+    const std::vector<VoiceSetDef>& GetVoiceSets() const { return VoiceSets; }
+    const std::vector<EvaLineDef>& GetEvaLines() const { return EvaLines; }
+    const std::vector<FactionResourceDef>& GetFactionResources() const { return FactionResources; }
 
     // Damage multiplier in percent for a warhead against an armor class.
     int32_t GetDamageMultiplier(WarheadClass Warhead, ArmorClass Armor) const;
@@ -62,10 +75,16 @@ private:
     std::vector<WeaponDef> Weapons;
     std::vector<ResourceNodeDef> ResourceNodes;
     std::vector<FactionDef> Factions;
+    std::vector<VoiceSetDef> VoiceSets;
+    std::vector<EvaLineDef> EvaLines;
+    std::vector<FactionResourceDef> FactionResources;
+    VeterancyDef Veterancy;
+    DamageMatrixDef DamageMatrix;
 
     std::unordered_map<uint32_t, size_t> EntityIndex;
     std::unordered_map<uint32_t, size_t> WeaponIndex;
     std::unordered_map<uint32_t, size_t> ResourceIndex;
+    std::unordered_map<uint32_t, size_t> VoiceSetIndex;
 
     int32_t DamageTable[size_t(WarheadClass::Count)][size_t(ArmorClass::Count)] = {};
 };

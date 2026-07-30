@@ -7,6 +7,8 @@
 #include "RA4CameraPawn.h"
 #include "RA4SimCoords.h"
 #include "RA4SimWorldSubsystem.h"
+#include "RA4HUDWidget.h"
+#include "Blueprint/UserWidget.h"
 #include "UnrealClient.h"
 
 #include "RA4Content/ContentDatabase.h"
@@ -31,6 +33,20 @@ void ARA4PlayerController::BeginPlay()
 
     // Single player for now; the lobby assigns this once networking lands.
     Selection.SetLocalPlayer(0);
+
+    if (IsLocalController())
+    {
+        ResourceBar = CreateWidget<URA4ResourceBarWidget>(this, URA4ResourceBarWidget::StaticClass());
+        if (ResourceBar != nullptr)
+        {
+            ResourceBar->AddToViewport(/*ZOrder*/ 10);
+            UE_LOG(LogTemp, Display, TEXT("RA4 HUD: resource bar added to viewport"));
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("RA4 HUD: failed to create the resource bar"));
+        }
+    }
     TryInitializeCamera();
 }
 
@@ -108,8 +124,12 @@ void ARA4PlayerController::SetupInputComponent()
     InputComponent->BindKey(EKeys::MouseScrollUp, IE_Pressed, this, &ARA4PlayerController::OnZoomIn);
     InputComponent->BindKey(EKeys::MouseScrollDown, IE_Pressed, this, &ARA4PlayerController::OnZoomOut);
 
+    // Letter keys are orders, not camera movement -- the originals scroll with the
+    // arrows, the screen edge and the minimap, which leaves the whole keyboard free
+    // for the command hotkeys players already have in their fingers.
     InputComponent->BindKey(EKeys::A, IE_Pressed, this, &ARA4PlayerController::ArmAttackMove);
     InputComponent->BindKey(EKeys::S, IE_Pressed, this, &ARA4PlayerController::OnStopPressed);
+    InputComponent->BindKey(EKeys::G, IE_Pressed, this, &ARA4PlayerController::OnGuardPressed);
     InputComponent->BindKey(EKeys::Escape, IE_Pressed, this, &ARA4PlayerController::CancelPendingAction);
 
     // Control groups 1..9 then 0, matching the on-screen numbering.
@@ -177,7 +197,21 @@ void ARA4PlayerController::PlayerTick(float DeltaTime)
     Vec2 Ground;
     if (GetCursorGroundPosition(Ground))
     {
-        CurrentCursorHint = ResolveCursorHint(*World, Selection, MakeOrderContext(Ground));
+        // Under the classic scheme the cursor must show what the LEFT button will do,
+        // and left-clicking our own units picks them rather than ordering the current
+        // selection into them.
+        const OrderContext Context = MakeOrderContext(Ground);
+        const ClickFacts Facts = MakeClickFacts(*World, Selection, Context.HoveredEntity, /*bDragWasMarquee*/ false,
+                                                Context.bQueueOrder, Context.bForceAttack, Context.bForceMove,
+                                                bAttackMoveArmed, bPlacementArmed);
+        // Whichever button carries orders in the active scheme is the one the cursor
+        // previews.
+        const ClickIntent Intent = Scheme == ControlScheme::ClassicRA
+                                       ? RouteLeftClick(Scheme, Facts)
+                                       : RouteRightClick(Scheme, Facts, Selection.IsEmpty());
+        CurrentCursorHint =
+            Intent == ClickIntent::IssueOrder ? ResolveCursorHint(*World, Selection, Context) : CursorHint::Select;
+        ApplyCursorShape();
     }
 }
 
@@ -190,11 +224,12 @@ void ARA4PlayerController::UpdateCameraInput(float DeltaTime)
     }
     CameraController& Camera = CameraPawn->GetCameraController();
 
-    const float Right = (IsInputKeyDown(EKeys::D) || IsInputKeyDown(EKeys::Right) ? 1.0f : 0.0f) -
+    // Arrow keys only. The originals scroll with the screen edge, the arrows and the
+    // minimap, and the letter keys are all order hotkeys -- binding WASD to panning
+    // meant A both armed an attack-move and slid the camera sideways.
+    const float Right = (IsInputKeyDown(EKeys::Right) ? 1.0f : 0.0f) -
                         (IsInputKeyDown(EKeys::Left) ? 1.0f : 0.0f);
-    // W and S are pan-forward and stop respectively, so vertical panning uses the
-    // arrow keys plus W; S is reserved for the stop order as in the originals.
-    const float Up = (IsInputKeyDown(EKeys::W) || IsInputKeyDown(EKeys::Up) ? 1.0f : 0.0f) -
+    const float Up = (IsInputKeyDown(EKeys::Up) ? 1.0f : 0.0f) -
                      (IsInputKeyDown(EKeys::Down) ? 1.0f : 0.0f);
 
     Camera.SetKeyboardPan(Right, Up);
@@ -321,6 +356,7 @@ OrderContext ARA4PlayerController::MakeOrderContext(const Vec2& GroundPosition) 
                              int32(GroundPosition.Y.ToIntFloor() / RA4::kTileSizeUnits));
     Context.bQueueOrder = IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift);
     Context.bForceAttack = IsInputKeyDown(EKeys::LeftControl) || IsInputKeyDown(EKeys::RightControl);
+    Context.bForceMove = IsInputKeyDown(EKeys::LeftAlt) || IsInputKeyDown(EKeys::RightAlt);
     Context.bAttackMoveMode = bAttackMoveArmed;
     Context.bPlacementMode = bPlacementArmed;
     Context.PlacementContent = PlacementContent;
@@ -351,12 +387,9 @@ void ARA4PlayerController::OnPrimaryPressed()
 
 void ARA4PlayerController::OnPrimaryReleased()
 {
-    const bool bWasMarquee = bMarqueeActive;
+    const bool bWasPressed = bMarqueeActive;
     bMarqueeActive = false;
-
-    const URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
-    const SimWorld* World = Subsystem != nullptr ? Subsystem->GetSimWorld() : nullptr;
-    if (World == nullptr || !bWasMarquee)
+    if (!bWasPressed)
     {
         return;
     }
@@ -374,28 +407,86 @@ void ARA4PlayerController::OnPrimaryReleased()
     {
         return;
     }
+    const bool bWasDrag =
+        IsDragSignificant(MarqueeStartGround, EndGround, RA4::Fixed::FromInt(int64(MarqueeMinimumExtentUnits)));
 
-    // Attack-move and placement consume the left click instead of selecting.
-    if (bAttackMoveArmed || bPlacementArmed)
+    HandleClick(/*bLeftButton*/ true, EndScreen, bWasDrag);
+}
+
+// Both buttons land here; ControlScheme decides what the gesture means, so switching
+// between the classic and modern layouts changes one enum and nothing else.
+void ARA4PlayerController::HandleClick(bool bLeftButton, const FVector2D& EndScreen, bool bWasDrag)
+{
+    const URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
+    const SimWorld* World = Subsystem != nullptr ? Subsystem->GetSimWorld() : nullptr;
+    if (World == nullptr)
     {
-        SubmitOrders(ResolveOrder(*World, Selection, MakeOrderContext(EndGround)));
-        bAttackMoveArmed = false;
-        bPlacementArmed = false;
-        PlacementContent = ContentId();
         return;
     }
 
-    const SelectionMode Mode = IsInputKeyDown(EKeys::LeftControl) || IsInputKeyDown(EKeys::RightControl)
-                                   ? SelectionMode::Toggle
-                                   : (IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift)
-                                          ? SelectionMode::Add
-                                          : SelectionMode::Replace);
+    Vec2 EndGround;
+    if (!ScreenToGround(EndScreen, EndGround))
+    {
+        return;
+    }
+
+    const bool bShift = IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift);
+    const bool bCtrl = IsInputKeyDown(EKeys::LeftControl) || IsInputKeyDown(EKeys::RightControl);
+    const bool bAlt = IsInputKeyDown(EKeys::LeftAlt) || IsInputKeyDown(EKeys::RightAlt);
+
+    const ClickFacts Facts = MakeClickFacts(*World, Selection, FindHoveredEntity(EndGround), bWasDrag, bShift,
+                                            bCtrl, bAlt, bAttackMoveArmed, bPlacementArmed);
+    const ClickIntent Intent = bLeftButton ? RouteLeftClick(Scheme, Facts)
+                                           : RouteRightClick(Scheme, Facts, Selection.IsEmpty());
+
+    switch (Intent)
+    {
+    case ClickIntent::IssueOrder:
+        SubmitOrders(ResolveOrder(*World, Selection, MakeOrderContext(EndGround)));
+        // An armed mode is spent by the click that used it, successful or not: the
+        // alternative is a player who keeps placing buildings they thought they had
+        // already placed.
+        bAttackMoveArmed = false;
+        bPlacementArmed = false;
+        PlacementContent = ContentId();
+        break;
+
+    case ClickIntent::SelectAtPoint:
+    case ClickIntent::SelectInMarquee:
+        PerformSelection(EndScreen, EndGround, bWasDrag);
+        break;
+
+    case ClickIntent::ClearSelection:
+        Selection.Clear();
+        break;
+
+    case ClickIntent::CancelArmedMode:
+        CancelPendingAction();
+        break;
+
+    case ClickIntent::None:
+        break;
+    }
+}
+
+void ARA4PlayerController::PerformSelection(const FVector2D& EndScreen, const Vec2& EndGround, bool bWasDrag)
+{
+    const URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
+    const SimWorld* World = Subsystem != nullptr ? Subsystem->GetSimWorld() : nullptr;
+    if (World == nullptr)
+    {
+        return;
+    }
+
+    const SelectionMode Mode =
+        ResolveSelectionMode(Scheme, IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift),
+                             IsInputKeyDown(EKeys::LeftControl) || IsInputKeyDown(EKeys::RightControl));
 
     TArray<PickCandidate> Candidates;
     BuildPickCandidates(Candidates);
     const std::vector<PickCandidate> AsVector(Candidates.GetData(), Candidates.GetData() + Candidates.Num());
 
-    if (IsDragSignificant(MarqueeStartGround, EndGround, RA4::Fixed::FromInt(int64(MarqueeMinimumExtentUnits))))
+    if (bWasDrag)
     {
         // Deproject all four screen corners onto the ground plane rather than
         // building an axis-aligned world rectangle: with a tilted or rotated camera
@@ -448,27 +539,15 @@ void ARA4PlayerController::OnPrimaryReleased()
 
 void ARA4PlayerController::OnSecondaryPressed()
 {
-    const URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
-    const SimWorld* World = Subsystem != nullptr ? Subsystem->GetSimWorld() : nullptr;
-    if (World == nullptr)
+    float MouseX = 0.0f;
+    float MouseY = 0.0f;
+    if (!GetMousePosition(MouseX, MouseY))
     {
         return;
     }
-
-    // Right click always cancels an armed mode first. Committing an attack-move on
-    // a right click when the player meant to cancel is a costly misfire.
-    if (bAttackMoveArmed || bPlacementArmed)
-    {
-        CancelPendingAction();
-        return;
-    }
-
-    Vec2 Ground;
-    if (!GetCursorGroundPosition(Ground))
-    {
-        return;
-    }
-    SubmitOrders(ResolveOrder(*World, Selection, MakeOrderContext(Ground)));
+    // A right click is never a drag: under the classic scheme it deselects, and there
+    // is nothing to rubber-band.
+    HandleClick(/*bLeftButton*/ false, FVector2D(MouseX, MouseY), /*bWasDrag*/ false);
 }
 
 void ARA4PlayerController::OnMiddlePressed()
@@ -532,6 +611,68 @@ void ARA4PlayerController::OnStopPressed()
         Commands.push_back(C);
     }
     SubmitOrders(Commands);
+}
+
+void ARA4PlayerController::OnGuardPressed()
+{
+    const URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
+    const SimWorld* World = Subsystem != nullptr ? Subsystem->GetSimWorld() : nullptr;
+    if (World == nullptr)
+    {
+        return;
+    }
+
+    std::vector<Command> Commands;
+    for (const EntityId& Id : Selection.Get())
+    {
+        const EntityCore* Core = World->GetCore(Id);
+        if (Core == nullptr || Core->Owner != Selection.GetLocalPlayer() || Core->Kind != EntityKind::Unit)
+        {
+            continue;
+        }
+        Command C;
+        C.Type = CommandType::Guard;
+        C.Issuer = Selection.GetLocalPlayer();
+        C.Primary = Id;
+        Commands.push_back(C);
+    }
+    SubmitOrders(Commands);
+}
+
+// The cursor is the only feedback the player gets before committing a click, so it
+// has to be driven by the same hint the order resolver produces -- never by a guess
+// about what is under the pointer.
+void ARA4PlayerController::ApplyCursorShape()
+{
+    EMouseCursor::Type Shape = EMouseCursor::Default;
+    switch (CurrentCursorHint)
+    {
+    case CursorHint::Move:
+        Shape = EMouseCursor::CardinalCross;
+        break;
+    case CursorHint::Attack:
+    case CursorHint::ForceAttack:
+        Shape = EMouseCursor::Crosshairs;
+        break;
+    case CursorHint::NoEntry:
+        Shape = EMouseCursor::SlashedCircle;
+        break;
+    case CursorHint::Harvest:
+    case CursorHint::Deliver:
+        Shape = EMouseCursor::GrabHand;
+        break;
+    case CursorHint::Repair:
+    case CursorHint::Capture:
+    case CursorHint::SetRallyPoint:
+        Shape = EMouseCursor::Hand;
+        break;
+    case CursorHint::Select:
+    case CursorHint::None:
+    default:
+        Shape = EMouseCursor::Default;
+        break;
+    }
+    CurrentMouseCursor = Shape;
 }
 
 void ARA4PlayerController::OnControlGroupKeyByKey(const FKey Key)

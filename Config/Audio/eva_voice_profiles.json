@@ -1,0 +1,278 @@
+{
+  "version": "1.0",
+  "system": "VoxCPM Audio Pipeline - Red Alert 4",
+  "profiles": {
+    "Soviet": {
+      "profile_id": "EVA_SU_KONTUR",
+      "faction": "Soviet",
+      "faction_name_ru": "СССР",
+      "system_name": "КОНТУР",
+      "display_name": "ЕВА КОНТУР (Советский Союз)",
+      "description": "Авторитарный, дисциплинированный командный ИИ Советского Союза. Контральто, твёрдая артикуляция, индустриально-строгая подача.",
+      "archetype": "Low Contralto Female, 35-45, Authoritative Military Command",
+      "pacing_wpm": 135,
+      "control_instruction": "Authoritative mature female military command voice, low contralto, precise Russian diction, restrained emotion, firm concise delivery, calm under pressure.",
+      "prosody_caps": {
+        "pitch_min_hz": 130,
+        "pitch_max_hz": 210,
+        "cadence": "Firm, metronomic, steady stress",
+        "dynamic_range_db": 12
+      },
+      "forbidden_traits": [
+        "hysteria",
+        "parody accent",
+        "theatrical screaming",
+        "emotional breakdown",
+        "casual colloquialisms"
+      ],
+      "candidates": [
+        {
+          "candidate_id": "EVA_SU_KONTUR_C1",
+          "name": "Контур Альфа (Тяжелое контральто)",
+          "control_override": "Authoritative mature female military command voice, deep contralto, heavy resonance, strict military pace.",
+          "pitch_shift_semitones": -1.5,
+          "sample_text": "Внимание. Командный терминал КОНТУР активирован. Ожидаю директив Верховного Командования."
+        },
+        {
+          "candidate_id": "EVA_SU_KONTUR_C2",
+          "name": "Контур Бета (Стандартное командное контральто)",
+          "control_override": "Authoritative mature female military command voice, low contralto, precise Russian diction, restrained emotion, firm concise delivery, calm under pressure.",
+          "pitch_shift_semitones": 0.0,
+          "sample_text": "Внимание. Командный терминал КОНТУР активирован. Ожидаю директив Верховного Командования."
+        },
+        {
+          "candidate_id": "EVA_SU_KONTUR_C3",
+          "name": "Контур Гамма (Строгий тактический диктор)",
+          "control_override": "Mature stern female commander voice, sharp diction, rapid tactical reports, calm Soviet authority.",
+          "pitch_shift_semitones": 0.5,
+          "sample_text": "Внимание. Командный терминал КОНТУР активирован. Ожидаю директив Верховного Командования."
+        },
+        {
+          "candidate_id": "EVA_SU_KONTUR_C4",
+          "name": "Контур Дельта (Низкий индастриал-тембр)",
+          "control_override": "Low resonate female voice, cold industrial authority, steady cadence, military precision.",
+          "pitch_shift_semitones": -2.0,
+          "sample_text": "Внимание. Командный терминал КОНТУР активирован. Ожидаю директив Верховного Командования."
+        },
+        {
+          "candidate_id": "EVA_SU_KONTUR_C5",
+          "name": "Контур Эпсилон (Стальной штабной голос)",
+          "control_override": "Firm metallic female voice, absolute composure, crisp consonant articulation, mid-low register.",
+          "pitch_shift_semitones": -0.5,
+          "sample_text": "Внимание. Командный терминал КОНТУР активирован. Ожидаю директив Верховного Командования."
+        },
+        {
+          "candidate_id": "EVA_SU_KONTUR_C6",
+          "name": "Контур Зета (Монументальный резонанс)",
+          "control_override": "Deep impressive female military voice, grave tone, powerful projection, measured pacing.",
+          "pitch_shift_semitones": -1.0,
+          "sample_text": "Внимание. Командный терминал КОНТУР активирован. Ожидаю директив Верховного Командования."
+        }
+      ]
+    },
+    "Alliance": {
+      "profile_id": "EVA_AL_ASTRA",
+      "faction": "Alliance",
+      "faction_name_ru": "Альянс",
+      "system_name": "АСТРА",
+      "display_name": "EVA ASTRA (Альянс)",
+      "description": "Высокотехнологичный, кристально чистый тактический ИИ Альянса. Меццо-сопрано, современная четкая дикция, информирующий и умный тон.",
+      "archetype": "Clean Intelligent Female AI, 28-35, Tactical Precision",
+      "pacing_wpm": 150,
+      "control_instruction": "Professional female tactical AI voice, clean and intelligent, confident, modern, precise, slightly warm, medium-fast pace, excellent Russian diction.",
+      "prosody_caps": {
+        "pitch_min_hz": 170,
+        "pitch_max_hz": 260,
+        "cadence": "Smooth, fluid, clean inflection",
+        "dynamic_range_db": 10
+      },
+      "forbidden_traits": [
+        "robotic monotone",
+        "valley girl",
+        "hesitation",
+        "breathiness",
+        "slang"
+      ],
+      "candidates": [
+        {
+          "candidate_id": "EVA_AL_ASTRA_C1",
+          "name": "Астра 1 (Ультра-чистый тактический ИИ)",
+          "control_override": "Clean high-tech female AI voice, fast medium pace, flawless Russian diction, warm professional tone.",
+          "pitch_shift_semitones": 1.0,
+          "sample_text": "Тактическая сеть АСТРА в сети. Все системы связи функционируют в штатном режиме."
+        },
+        {
+          "candidate_id": "EVA_AL_ASTRA_C2",
+          "name": "Астра 2 (Стандартный тактический интерфейс)",
+          "control_override": "Professional female tactical AI voice, clean and intelligent, confident, modern, precise, slightly warm, medium-fast pace, excellent Russian diction.",
+          "pitch_shift_semitones": 0.0,
+          "sample_text": "Тактическая сеть АСТРА в сети. Все системы связи функционируют в штатном режиме."
+        },
+        {
+          "candidate_id": "EVA_AL_ASTRA_C3",
+          "name": "Астра 3 (Экспресс-аналитик)",
+          "control_override": "Rapid crisp female intelligence officer, confident, swift delivery, high clarity.",
+          "pitch_shift_semitones": 0.5,
+          "sample_text": "Тактическая сеть АСТРА в сети. Все системы связи функционируют в штатном режиме."
+        },
+        {
+          "candidate_id": "EVA_AL_ASTRA_C4",
+          "name": "Астра 4 (Гармоничный меццо-голос)",
+          "control_override": "Balanced warm female tactical operator, smooth cadence, reassuring authority.",
+          "pitch_shift_semitones": -0.5,
+          "sample_text": "Тактическая сеть АСТРА в сети. Все системы связи функционируют в штатном режиме."
+        },
+        {
+          "candidate_id": "EVA_AL_ASTRA_C5",
+          "name": "Астра 5 (Кристальный сопрано-интерфейс)",
+          "control_override": "Bright clear female AI voice, high clarity, light modern timbre, exact delivery.",
+          "pitch_shift_semitones": 1.5,
+          "sample_text": "Тактическая сеть АСТРА в сети. Все системы связи функционируют в штатном режиме."
+        },
+        {
+          "candidate_id": "EVA_AL_ASTRA_C6",
+          "name": "Астра 6 (Спутниковый оператор)",
+          "control_override": "Slightly low-register precise female AI voice, calm intelligence, stable pacing.",
+          "pitch_shift_semitones": -1.0,
+          "sample_text": "Тактическая сеть АСТРА в сети. Все системы связи функционируют в штатном режиме."
+        }
+      ]
+    },
+    "Coalition": {
+      "profile_id": "EVA_CO_HARMONIA",
+      "faction": "Coalition",
+      "faction_name_ru": "Восточная Коалиция",
+      "system_name": "ГАРМОНИЯ",
+      "display_name": "ЕВА ГАРМОНИЯ (Восточная Коалиция)",
+      "description": "Стратегический командный ИИ Коалиции. Безмятежный, математически точный, дисциплинированный, элегантный, стандартный русский язык без акцента.",
+      "archetype": "Calm Disciplined Female Strategic Command, 30-40, Serene Precision",
+      "pacing_wpm": 140,
+      "control_instruction": "Calm disciplined female strategic command voice, elegant and precise, controlled emotion, measured pace, subtle authority, clear standard Russian.",
+      "prosody_caps": {
+        "pitch_min_hz": 150,
+        "pitch_max_hz": 230,
+        "cadence": "Measured, elegant micro-pauses, smooth rhythm",
+        "dynamic_range_db": 8
+      },
+      "forbidden_traits": [
+        "caricature Asian accent",
+        "broken Russian",
+        "aggression",
+        "panic",
+        "slurred phrasing"
+      ],
+      "candidates": [
+        {
+          "candidate_id": "EVA_CO_HARMONIA_C1",
+          "name": "Гармония 1 (Безмятежный стратегический центр)",
+          "control_override": "Serene disciplined female strategist, elegant and ultra-precise, controlled low pitch.",
+          "pitch_shift_semitones": -0.5,
+          "sample_text": "Система ГАРМОНИЯ приветствует вас, Командующий. Стратегическая база данных синхронизирована."
+        },
+        {
+          "candidate_id": "EVA_CO_HARMONIA_C2",
+          "name": "Гармония 2 (Стандартный стратегический ИИ)",
+          "control_override": "Calm disciplined female strategic command voice, elegant and precise, controlled emotion, measured pace, subtle authority, clear standard Russian.",
+          "pitch_shift_semitones": 0.0,
+          "sample_text": "Система ГАРМОНИЯ приветствует вас, Командующий. Стратегическая база данных синхронизирована."
+        },
+        {
+          "candidate_id": "EVA_CO_HARMONIA_C3",
+          "name": "Гармония 3 (Элегантный контральто)",
+          "control_override": "Velvet smooth female command voice, low register, tranquil composure, measured rhythm.",
+          "pitch_shift_semitones": -1.0,
+          "sample_text": "Система ГАРМОНИЯ приветствует вас, Командующий. Стратегическая база данных синхронизирована."
+        },
+        {
+          "candidate_id": "EVA_CO_HARMONIA_C4",
+          "name": "Гармония 4 (Математический диспетчер)",
+          "control_override": "Ultra-controlled neutral female voice, exact timing, flawless articulation, steady emotion.",
+          "pitch_shift_semitones": 0.5,
+          "sample_text": "Система ГАРМОНИЯ приветствует вас, Командующий. Стратегическая база данных синхронизирована."
+        },
+        {
+          "candidate_id": "EVA_CO_HARMONIA_C5",
+          "name": "Гармония 5 (Гармоничный баритональный альт)",
+          "control_override": "Deep calm female strategic voice, dignified tone, clear resonant presentation.",
+          "pitch_shift_semitones": -1.5,
+          "sample_text": "Система ГАРМОНИЯ приветствует вас, Командующий. Стратегическая база данных синхронизирована."
+        },
+        {
+          "candidate_id": "EVA_CO_HARMONIA_C6",
+          "name": "Гармония 6 (Светлый тактический советник)",
+          "control_override": "Refined clear female voice, diplomatic firmness, poised speech flow.",
+          "pitch_shift_semitones": 1.0,
+          "sample_text": "Система ГАРМОНИЯ приветствует вас, Командующий. Стратегическая база данных синхронизирована."
+        }
+      ]
+    },
+    "Chrono": {
+      "profile_id": "EVA_CH_MOIRA",
+      "faction": "Chrono",
+      "faction_name_ru": "Хронолегион",
+      "system_name": "МОЙРА",
+      "display_name": "EVA MOIRA (Хронолегион)",
+      "description": "Вневременной андрогинный ИИ Хронолегиона. Холодный, завораживающий, хладнокровно-точный, с гипнотическими микропаузами, чистое звучание без встроенных эффектов.",
+      "archetype": "Androgynous Timeless Voice, Ageless, Unsettling Precision",
+      "pacing_wpm": 125,
+      "control_instruction": "Androgynous timeless command voice, calm and unsettling, extremely precise, restrained emotion, deliberate micro-pauses, clear Russian, no baked-in audio effects.",
+      "prosody_caps": {
+        "pitch_min_hz": 140,
+        "pitch_max_hz": 220,
+        "cadence": "Hypnotic, deliberate micro-pauses, icy precision",
+        "dynamic_range_db": 6
+      },
+      "forbidden_traits": [
+        "digital glitch artifacts in raw audio",
+        "robotic monotone",
+        "screaming",
+        "warmth",
+        "emotional excitement"
+      ],
+      "candidates": [
+        {
+          "candidate_id": "EVA_CH_MOIRA_C1",
+          "name": "Мойра 1 (Вневременной резонанс)",
+          "control_override": "Cold timeless androgynous voice, slight spatial resonance, icy composure, micro-pauses.",
+          "pitch_shift_semitones": -0.5,
+          "sample_text": "Временное поточное ядро МОЙРА в фазе. Линия времени под контролем Хронолегиона."
+        },
+        {
+          "candidate_id": "EVA_CH_MOIRA_C2",
+          "name": "Мойра 2 (Стандартный хроно-интерфейс)",
+          "control_override": "Androgynous timeless command voice, calm and unsettling, extremely precise, restrained emotion, deliberate micro-pauses, clear Russian, no baked-in audio effects.",
+          "pitch_shift_semitones": 0.0,
+          "sample_text": "Временное поточное ядро МОЙРА в фазе. Линия времени под контролем Хронолегиона."
+        },
+        {
+          "candidate_id": "EVA_CH_MOIRA_C3",
+          "name": "Мойра 3 (Низкая временная аномалия)",
+          "control_override": "Deep unsettling neutral voice, prolonged pauses between clauses, deliberate mechanical-like speech.",
+          "pitch_shift_semitones": -1.5,
+          "sample_text": "Временное поточное ядро МОЙРА в фазе. Линия времени под контролем Хронолегиона."
+        },
+        {
+          "candidate_id": "EVA_CH_MOIRA_C4",
+          "name": "Мойра 4 (Эфирный андрогин)",
+          "control_override": "Light detached androgynous voice, ghostly calm, razor-sharp Russian diction.",
+          "pitch_shift_semitones": 1.0,
+          "sample_text": "Временное поточное ядро МОЙРА в фазе. Линия времени под контролем Хронолегиона."
+        },
+        {
+          "candidate_id": "EVA_CH_MOIRA_C5",
+          "name": "Мойра 5 (Квантовый наблюдатель)",
+          "control_override": "Emotionless precise voice, zero pitch variance, intense calculated delivery.",
+          "pitch_shift_semitones": -0.2,
+          "sample_text": "Временное поточное ядро МОЙРА в фазе. Линия времени под контролем Хронолегиона."
+        },
+        {
+          "candidate_id": "EVA_CH_MOIRA_C6",
+          "name": "Мойра 6 (Тахионный вектор)",
+          "control_override": "Hypnotic low-register neutral voice, strictly paced breath control, mysterious presence.",
+          "pitch_shift_semitones": -1.0,
+          "sample_text": "Временное поточное ядро МОЙРА в фазе. Линия времени под контролем Хронолегиона."
+        }
+      ]
+    }
+  }
+}

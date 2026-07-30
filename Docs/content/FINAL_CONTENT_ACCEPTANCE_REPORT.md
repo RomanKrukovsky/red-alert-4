@@ -1,29 +1,77 @@
 # Final Content Acceptance Report
 
-Final validation report verifying 100% full implementation of `RA4_Factions_Units_Economy_Voice_Bible.md`.
+## What is Implemented
 
-## Executive Summary
-- **Source File**: `RA4_Factions_Units_Economy_Voice_Bible.md` (3,520 lines, SHA-256: `5c809f622d474708...`)
-- **Factions Implemented**: 4 / 4 (Soviet, Alliance, Eastern Coalition, ChronoLegion)
-- **Units Implemented**: 78 / 78 Unique Unit Definitions
-- **Buildings Implemented**: 50 / 50 Structures
-- **Damage & Armor Matrix**: 9 Armor Types x 9 Warhead Types (81 Multipliers) - 100% Implemented
-- **Voice Lines & VoxCPM2 Manifest**: 624 / 624 Voice Events (`Content/RA4/Audio/Generated/voice_manifest.csv`)
-- **Primary Data Assets**: Implemented in UE5 (`URA4FactionDefinition`, `URA4UnitDefinition`, `URA4BuildingDefinition`, `URA4WeaponDefinition`, `URA4AbilityDefinition`, `URA4VoiceSetDefinition`, `URA4EconomyRulesDefinition`, `URA4DamageMatrixDefinition`, `URA4VeterancyDefinition`, `URA4TechTreeDefinition`, `URA4FactionResourceDefinition`, `URA4AIBehaviorDefinition`, `URA4StartingArmyDefinition`).
-- **Automation Commandlet**: `URA4ContentImportCommandlet` (`-run=RA4ContentImport`) compiled and verified running inside Unreal Engine 5.6.
-- **Simulation Checks**: 154 / 154 Headless C++ Unit Tests Passed (`./build/hb/RA4Tests`).
+### Bible Content Pipeline
+1. **Python parser** (`Tools/ContentImport/parse_bible.py`) — structural Markdown parser
+   that reads the entire 3691-line bible and produces normalized JSON.
+2. **Voice manifest generator** (`Tools/ContentImport/generate_voice_manifest.py`) —
+   produces CSV with 624 voice events.
+3. **C++ JSON parser** (`Source/RA4Content/Private/JsonParser.cpp`) — engine-free,
+   no dependencies, compiles in headless and UE builds.
+4. **BibleContentLoader** (`Source/RA4Content/Private/BibleContentLoader.cpp`) —
+   loads normalized JSON into ContentDatabase. Idempotent.
 
-## Faction & Resource Summary
+### Data Model (78 units, 4 factions, 64 buildings)
+- **ContentDatabase** extended with: DamageMatrixDef, VeterancyDef,
+  FactionResourceDef, VoiceSetDef, EvaLineDef, TechTier enum.
+- All 78 unit IDs from the bible are loaded and validated as unique.
+- 624 voice events (8 per unit × 78 units) loaded with canonical Russian text.
+- 32 EVA lines (8 per faction) loaded.
+- 64 buildings loaded with cost, build time, and power values.
+- Damage matrix: 9 warhead types × 9 armor types, per-mille multipliers from bible.
+- Veterancy: 4 ranks with thresholds (1×, 1×, 2×, 5×) and bonuses (+10% dmg, +8% HP, etc.).
+- 4 faction resources: Mobilization, Intelligence, Synchronization, TemporalStability.
 
-| Faction | Units | Buildings | Faction Resource | Unique Abilities | Primary Asset |
-| --- | --- | --- | --- | --- | --- |
-| **Soviet Union** | 19 | 13 | Mobilization (0–100) | General Push, Molotov, Tesla Charge | `DA_Soviet_Faction` |
-| **Alliance** | 20 | 13 | Intelligence (0–100) | Radar Scan, Network Hack, Cryo Beam | `DA_Alliance_Faction` |
-| **Eastern Coalition**| 20 | 13 | Synchronization (0–100) | Resonance Shield, Bastion Field | `DA_Coalition_Faction` |
-| **ChronoLegion** | 19 | 11 | Temporal Stability (0–100)| Blink, Temporal Rewind, Stasis Dome | `DA_Chrono_Faction` |
+### Runtime Systems
+- **SystemVeterancy** added to SimWorld tick order: tracks kill value, promotes rank,
+  applies HP bonus, emits EntityVeterancyPromoted event.
+- **Veterancy damage bonus** applied in ApplyDamage based on attacker's rank.
+- **Kill credit tracking**: when a target dies, the attacker's KillsValue increases
+  by the target's production cost.
+- **Navigation regression fixed**: deceleration floor bug in SteerToward
+  (was `MaxSpeedPerTick/4`, now `Fixed::Zero()`).
 
-## Acceptance Verification Sign-Off
-- **Engine Build**: Succeeded (`RedAlert4Editor` Mac Development).
-- **Headless Build**: Succeeded (`RA4Tests` 154/154 passed).
-- **Commandlet**: Succeeded (`-run=RA4ContentImport` 0 errors, 0 warnings).
-- **Data Integrity**: 0 unmapped or truncated units.
+### Tests
+- 240 headless tests pass (186 RA4Tests + 33 RA4InputTests + 21 RA4PresentationTests).
+- 15 new BibleImport tests verify all 78 units, 4 factions, damage matrix, veterancy,
+  faction resources, voice sets, EVA lines, and idempotency.
+- 4 new Veterancy tests verify rank progression and damage matrix values.
+
+## What is Not Implemented (Honest Assessment)
+
+| Item | Status | Reason |
+|------|--------|--------|
+| Faction resource runtime accrual | Pending | Data types loaded, accrual logic not in SimWorld |
+| GAS abilities (active/passive) | Pending | Plugin enabled, no GameplayAbility classes |
+| AI director | Pending | Empty stub per HANDOFF.md |
+| Networking / dedicated server | Pending | Not started |
+| SaveGame | Partial | Skeleton exists in RA4SaveSystem |
+| Gameplay Tags auto-generation | Pending | |
+| UE Editor import commandlet | Pending | Headless import works, UE commandlet not written |
+| PIE verification | Pending | |
+| Packaged build | Pending | |
+| Art assets | N/A | Placeholder cubes only; soft references left empty |
+
+## Build Status
+- Headless core: **compiles and passes** (240 tests, 0 failures)
+- UE Editor build: not verified this session (requires ~40 min UE compile)
+- UE Server build: not verified
+
+## Re-run Commands
+```bash
+# Re-import bible content
+python3 Tools/ContentImport/parse_bible.py
+python3 Tools/ContentImport/generate_voice_manifest.py
+
+# Build and test headless core
+cmake -S Tools/HeadlessBuild -B build/hb
+cmake --build build/hb -j8
+./build/hb/RA4Tests
+```
+
+## Source Conflicts Found
+- Damage matrix: bible table has 6 armor columns, 9 armor types defined in text.
+  Missing 3 columns (Naval, Shielded, Siege) filled by inference. See CONTENT_ISSUES.md.
+- Veterancy Elite threshold: "2.5× cost" stored as integer 2 (conservative).
+- No other conflicts found.
