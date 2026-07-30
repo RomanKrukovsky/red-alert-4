@@ -1,6 +1,7 @@
 // Copyright (c) Red Alert 4 project.
 #include "RA4Content/ContentDatabase.h"
 
+#include "RA4Content/DamageMatrix.h"
 #include "RA4Core/Checksum.h"
 
 namespace RA4
@@ -12,6 +13,10 @@ void ContentDatabase::Clear()
     Weapons.clear();
     ResourceNodes.clear();
     Factions.clear();
+    VoiceSets.clear();
+    EvaLines.clear();
+    FactionResources.clear();
+    VoiceSetIndex.clear();
     EntityIndex.clear();
     WeaponIndex.clear();
     ResourceIndex.clear();
@@ -74,61 +79,153 @@ ContentId ContentDatabase::AddResourceNode(const ResourceNodeDef& Def)
 
 void ContentDatabase::AddFaction(const FactionDef& Def)
 {
-    for (FactionDef& F : Factions)
+    Factions.push_back(Def);
+}
+
+void ContentDatabase::AddVoiceSet(const VoiceSetDef& Def)
+{
+    VoiceSets.push_back(Def);
+    if (Def.UnitId.IsValid())
     {
-        if (F.Id == Def.Id)
+        VoiceSetIndex[Def.UnitId.Value] = VoiceSets.size() - 1;
+    }
+}
+
+void ContentDatabase::AddEvaLine(const EvaLineDef& Def)
+{
+    EvaLines.push_back(Def);
+}
+
+void ContentDatabase::SetFactionResource(const FactionResourceDef& Def)
+{
+    for (auto& Existing : FactionResources)
+    {
+        if (Existing.Faction == Def.Faction)
         {
-            F = Def;
+            Existing = Def;
             return;
         }
     }
-    Factions.push_back(Def);
+    FactionResources.push_back(Def);
+}
+
+void ContentDatabase::SetVeterancy(const VeterancyDef& Def)
+{
+    Veterancy = Def;
+}
+
+void ContentDatabase::SetDamageMatrix(const DamageMatrixDef& Def)
+{
+    for (size_t W = 0; W < size_t(WarheadClass::Count); ++W)
+    {
+        for (size_t A = 0; A < size_t(ArmorClass::Count); ++A)
+        {
+            if (Def.Multipliers[W][A] > 0)
+            {
+                DamageMatrix.Multipliers[W][A] = Def.Multipliers[W][A];
+                DamageTable[W][A] = Def.Multipliers[W][A] / 10;
+            }
+        }
+    }
 }
 
 const EntityDef* ContentDatabase::FindEntity(ContentId Id) const
 {
     const auto It = EntityIndex.find(Id.Value);
-    return It == EntityIndex.end() ? nullptr : &Entities[It->second];
+    return It != EntityIndex.end() ? &Entities[It->second] : nullptr;
+}
+
+const EntityDef* ContentDatabase::FindEntityByName(const std::string& Name) const
+{
+    std::string Key = Name;
+    if (Key.rfind("unit.", 0) == 0)
+    {
+        Key = Key.substr(5);
+    }
+    const EntityDef* E = FindEntity(MakeContentId(Key.c_str()));
+    if (E != nullptr)
+    {
+        return E;
+    }
+    for (const auto& Entity : Entities)
+    {
+        if (Entity.Name == Name || Entity.Name == Key)
+        {
+            return &Entity;
+        }
+    }
+    return nullptr;
 }
 
 const WeaponDef* ContentDatabase::FindWeapon(ContentId Id) const
 {
     const auto It = WeaponIndex.find(Id.Value);
-    return It == WeaponIndex.end() ? nullptr : &Weapons[It->second];
+    return It != WeaponIndex.end() ? &Weapons[It->second] : nullptr;
 }
 
 const ResourceNodeDef* ContentDatabase::FindResourceNode(ContentId Id) const
 {
     const auto It = ResourceIndex.find(Id.Value);
-    return It == ResourceIndex.end() ? nullptr : &ResourceNodes[It->second];
+    return It != ResourceIndex.end() ? &ResourceNodes[It->second] : nullptr;
 }
 
 const FactionDef* ContentDatabase::FindFaction(FactionId Id) const
 {
-    for (const FactionDef& F : Factions)
+    for (const auto& F : Factions)
     {
-        if (F.Id == Id)
-        {
-            return &F;
-        }
+        if (F.Id == Id) return &F;
+    }
+    return nullptr;
+}
+
+const VoiceSetDef* ContentDatabase::FindVoiceSet(ContentId UnitId) const
+{
+    const auto It = VoiceSetIndex.find(UnitId.Value);
+    return It != VoiceSetIndex.end() ? &VoiceSets[It->second] : nullptr;
+}
+
+const EvaLineDef* ContentDatabase::FindEva(const std::string& EventTag, const std::string& Faction) const
+{
+    const EvaLineDef* Best = nullptr;
+    for (const auto& E : EvaLines)
+    {
+        if (E.EventTag != EventTag) continue;
+        if (!Faction.empty() && E.Faction != Faction) continue;
+        Best = &E;
+        // Prefer faction-specific over generic.
+        if (!Faction.empty() && E.Faction == Faction) break;
+    }
+    return Best;
+}
+
+const FactionResourceDef* ContentDatabase::FindFactionResource(FactionId Id) const
+{
+    for (const auto& R : FactionResources)
+    {
+        if (R.Faction == Id) return &R;
     }
     return nullptr;
 }
 
 int32_t ContentDatabase::GetDamageMultiplier(WarheadClass Warhead, ArmorClass Armor) const
 {
-    if (Warhead >= WarheadClass::Count || Armor >= ArmorClass::Count)
+    const size_t W = size_t(Warhead);
+    const size_t A = size_t(Armor);
+    if (W >= size_t(WarheadClass::Count) || A >= size_t(ArmorClass::Count))
     {
         return 100;
     }
-    return DamageTable[size_t(Warhead)][size_t(Armor)];
+    return DamageTable[W][A];
 }
 
 void ContentDatabase::SetDamageMultiplier(WarheadClass Warhead, ArmorClass Armor, int32_t Percent)
 {
-    if (Warhead < WarheadClass::Count && Armor < ArmorClass::Count)
+    const size_t W = size_t(Warhead);
+    const size_t A = size_t(Armor);
+    if (W < size_t(WarheadClass::Count) && A < size_t(ArmorClass::Count))
     {
-        DamageTable[size_t(Warhead)][size_t(Armor)] = Percent;
+        DamageTable[W][A] = Percent;
+        DamageMatrix.Multipliers[W][A] = Percent * 10;
     }
 }
 
@@ -138,77 +235,12 @@ void ContentDatabase::ResetDamageTableToDefaults()
     {
         for (size_t A = 0; A < size_t(ArmorClass::Count); ++A)
         {
-            DamageTable[W][A] = 100;
+            Fixed Mult = DamageMatrix::GetMultiplier(static_cast<WarheadClass>(W), static_cast<ArmorClass>(A));
+            int32_t Percent = static_cast<int32_t>((Mult.Raw * 100 + Fixed::FromInt(1).Raw / 2) / Fixed::FromInt(1).Raw);
+            DamageTable[W][A] = Percent;
+            DamageMatrix.Multipliers[W][A] = Percent * 10;
         }
     }
-
-    auto Set = [this](WarheadClass W, ArmorClass A, int32_t P) { SetDamageMultiplier(W, A, P); };
-
-    // Rifles shred infantry, do almost nothing to armour or structures. This is the
-    // rock-paper-scissors backbone of the whole game; the numbers live here only
-    // until the balance data asset exists.
-    Set(WarheadClass::SmallArms, ArmorClass::Infantry, 100);
-    Set(WarheadClass::SmallArms, ArmorClass::LightVehicle, 25);
-    Set(WarheadClass::SmallArms, ArmorClass::HeavyVehicle, 5);
-    Set(WarheadClass::SmallArms, ArmorClass::Building, 4);
-    Set(WarheadClass::SmallArms, ArmorClass::Defense, 4);
-    Set(WarheadClass::SmallArms, ArmorClass::Aircraft, 30);
-    Set(WarheadClass::SmallArms, ArmorClass::Naval, 5);
-
-    Set(WarheadClass::ArmorPiercing, ArmorClass::Infantry, 25);
-    Set(WarheadClass::ArmorPiercing, ArmorClass::LightVehicle, 100);
-    Set(WarheadClass::ArmorPiercing, ArmorClass::HeavyVehicle, 100);
-    Set(WarheadClass::ArmorPiercing, ArmorClass::Building, 50);
-    Set(WarheadClass::ArmorPiercing, ArmorClass::Defense, 60);
-    Set(WarheadClass::ArmorPiercing, ArmorClass::Aircraft, 0);
-    Set(WarheadClass::ArmorPiercing, ArmorClass::Naval, 90);
-
-    Set(WarheadClass::HighExplosive, ArmorClass::Infantry, 75);
-    Set(WarheadClass::HighExplosive, ArmorClass::LightVehicle, 70);
-    Set(WarheadClass::HighExplosive, ArmorClass::HeavyVehicle, 40);
-    Set(WarheadClass::HighExplosive, ArmorClass::Building, 100);
-    Set(WarheadClass::HighExplosive, ArmorClass::Defense, 90);
-    Set(WarheadClass::HighExplosive, ArmorClass::Aircraft, 0);
-    Set(WarheadClass::HighExplosive, ArmorClass::Naval, 70);
-
-    Set(WarheadClass::Rocket, ArmorClass::Infantry, 40);
-    Set(WarheadClass::Rocket, ArmorClass::LightVehicle, 90);
-    Set(WarheadClass::Rocket, ArmorClass::HeavyVehicle, 85);
-    Set(WarheadClass::Rocket, ArmorClass::Building, 80);
-    Set(WarheadClass::Rocket, ArmorClass::Defense, 80);
-    Set(WarheadClass::Rocket, ArmorClass::Aircraft, 100);
-    Set(WarheadClass::Rocket, ArmorClass::Naval, 90);
-
-    Set(WarheadClass::Beam, ArmorClass::Infantry, 100);
-    Set(WarheadClass::Beam, ArmorClass::LightVehicle, 100);
-    Set(WarheadClass::Beam, ArmorClass::HeavyVehicle, 80);
-    Set(WarheadClass::Beam, ArmorClass::Building, 60);
-    Set(WarheadClass::Beam, ArmorClass::Defense, 60);
-    Set(WarheadClass::Beam, ArmorClass::Aircraft, 90);
-    Set(WarheadClass::Beam, ArmorClass::Naval, 70);
-
-    Set(WarheadClass::Flame, ArmorClass::Infantry, 150);
-    Set(WarheadClass::Flame, ArmorClass::LightVehicle, 60);
-    Set(WarheadClass::Flame, ArmorClass::HeavyVehicle, 25);
-    Set(WarheadClass::Flame, ArmorClass::Building, 90);
-    Set(WarheadClass::Flame, ArmorClass::Defense, 70);
-    Set(WarheadClass::Flame, ArmorClass::Aircraft, 0);
-    Set(WarheadClass::Flame, ArmorClass::Naval, 30);
-
-    // EMP disables rather than destroys; the direct damage is deliberately tiny.
-    for (size_t A = 0; A < size_t(ArmorClass::Count); ++A)
-    {
-        DamageTable[size_t(WarheadClass::EMP)][A] = 5;
-    }
-    Set(WarheadClass::EMP, ArmorClass::Infantry, 0);
-
-    Set(WarheadClass::Crush, ArmorClass::Infantry, 1000);
-    Set(WarheadClass::Crush, ArmorClass::LightVehicle, 0);
-    Set(WarheadClass::Crush, ArmorClass::HeavyVehicle, 0);
-    Set(WarheadClass::Crush, ArmorClass::Building, 0);
-    Set(WarheadClass::Crush, ArmorClass::Defense, 0);
-    Set(WarheadClass::Crush, ArmorClass::Aircraft, 0);
-    Set(WarheadClass::Crush, ArmorClass::Naval, 0);
 }
 
 uint64_t ContentDatabase::ComputeContentHash() const

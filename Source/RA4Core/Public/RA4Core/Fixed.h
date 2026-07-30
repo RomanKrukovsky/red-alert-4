@@ -9,6 +9,14 @@
 #include <cstdint>
 #include <limits>
 
+#if __has_include("HAL/Platform.h")
+#include "HAL/Platform.h"
+#endif
+
+#ifndef RA4CORE_API
+#define RA4CORE_API
+#endif
+
 namespace RA4
 {
 
@@ -129,7 +137,7 @@ inline constexpr Fixed FxMax(Fixed A, Fixed B) { return A.Raw > B.Raw ? A : B; }
 inline constexpr Fixed FxClamp(Fixed V, Fixed Lo, Fixed Hi) { return FxMin(FxMax(V, Lo), Hi); }
 
 // Integer Newton-Raphson square root. Deterministic on every platform, unlike std::sqrt.
-Fixed FxSqrt(Fixed V);
+RA4CORE_API Fixed FxSqrt(Fixed V);
 
 // Angle unit: 1 turn == kAngleTurn. Power of two so wrapping is a mask, never a modulo
 // of a negative number (which is implementation-defined before C++11 and error-prone after).
@@ -145,9 +153,9 @@ inline constexpr int32_t AngleDelta(int32_t From, int32_t To)
     return D > kAngleTurn / 2 ? D - kAngleTurn : D;
 }
 
-Fixed FxSin(int32_t Angle);
-Fixed FxCos(int32_t Angle);
+RA4CORE_API Fixed FxSin(int32_t Angle);
+RA4CORE_API Fixed FxCos(int32_t Angle);
 // Full-circle arctangent returning the fixed-point angle unit above.
-int32_t FxAtan2(Fixed Y, Fixed X);
+RA4CORE_API int32_t FxAtan2(Fixed Y, Fixed X);
 
 } // namespace RA4

@@ -158,6 +158,7 @@ enum class CommandReject : uint8_t
     NoProducer,
     TargetInvalid,
     RateLimited,
+    CommandCapExceeded,
     MatchOver,
 };
 

@@ -10,13 +10,7 @@ public class RA4FogOfWar : ModuleRules
 		
 		PublicDependencyModuleNames.AddRange(new string[] {
 			"Core",
-			"RA4Core",
-			"RA4Simulation"
-		});
-			
-		PrivateDependencyModuleNames.AddRange(new string[] {
-			"CoreUObject",
-			"Engine"
+			"RA4Core"
 		});
 	}
 }

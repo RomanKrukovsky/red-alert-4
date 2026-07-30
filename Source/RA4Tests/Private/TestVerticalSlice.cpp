@@ -459,7 +459,7 @@ RA4_TEST(Replay, RejectsFilesFromADifferentContentBuild)
     // A rebalance patch must refuse old replays rather than play them wrong.
     ContentDatabase Patched;
     BuildDefaultContent(Patched);
-    Patched.SetDamageMultiplier(WarheadClass::ArmorPiercing, ArmorClass::Building, 75);
+    Patched.SetDamageMultiplier(WarheadClass::ArmorPiercing, ArmorClass::Building, 99);
 
     const ReplayVerifyResult Verify = VerifyReplay(Data, Patched);
     RA4_EXPECT(!Verify.bSucceeded);

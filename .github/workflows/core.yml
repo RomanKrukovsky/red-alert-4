@@ -1,14 +1,28 @@
 # Fast gate on every push: the engine-free simulation core.
-#
-# The Unreal editor, packaging and Gauntlet suites are far slower and run on merge
-# (not yet configured -- see Docs/Roadmap.md). This job is what keeps determinism
-# regressions from landing.
 name: core
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ main, feature/* ]
+  pull_request:
+    branches: [ main, feature/* ]
 
 jobs:
+  compliance-scan:
+    name: Compliance Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Compliance Unit Tests
+        run: python3 -m unittest discover -s Build/Compliance/tests -p "test_*.py" -v
+
+      - name: Run Blocking Compliance Scanner
+        run: python3 Build/Compliance/compliance_scan.py --scope both
+
   headless:
+    name: Headless Simulation (${{ matrix.os }})
+    needs: [compliance-scan]
     strategy:
       fail-fast: false
       matrix:
@@ -17,29 +31,77 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure
+      - name: Configure CMake
         run: cmake -S Tools/HeadlessBuild -B build -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
-        run: cmake --build build --config Release -j
+        run: cmake --build build --config Release --parallel
 
       - name: Test
-        run: ctest --test-dir build --output-on-failure
+        run: ctest --test-dir build --build-config Release --output-on-failure
 
-      # The slice test prints the final state checksum. Collecting it from all three
-      # runners is the cross-platform determinism check: the values must be identical.
-      - name: Determinism checksum
-        shell: bash
+      - name: Extract Determinism Checksum (Bash)
+        if: runner.os != 'Windows'
         run: |
-          BIN=$(find build -name "RA4Tests*" -type f -perm -u+x | head -1)
-          "$BIN" --filter=VerticalSlice.FullMatch | tee checksum-${{ matrix.os }}.txt
+          ./build/RA4Tests --filter=VerticalSlice.FullMatch | tee raw_out.txt
+          grep -Eo 'final checksum [0-9A-Fa-f]+' raw_out.txt | tail -n 1 | awk '{print $3}' > checksum-${{ matrix.os }}.txt
+          test -s checksum-${{ matrix.os }}.txt
 
-      - uses: actions/upload-artifact@v4
+      - name: Extract Determinism Checksum (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          build\Release\RA4Tests.exe --filter=VerticalSlice.FullMatch | Tee-Object -FilePath raw_out.txt
+          $match = Select-String -Path raw_out.txt -Pattern 'final checksum ([0-9A-Fa-f]+)' | Select-Object -Last 1
+          if (-not $match) { throw 'Missing final checksum in VerticalSlice.FullMatch output.' }
+          $match.Matches[0].Groups[1].Value | Out-File -FilePath checksum-${{ matrix.os }}.txt -Encoding ascii -NoNewline
+
+      - name: Upload Checksum Artifact
+        uses: actions/upload-artifact@v4
         with:
           name: checksum-${{ matrix.os }}
           path: checksum-${{ matrix.os }}.txt
 
+  compare-checksums:
+    name: Cross-Platform Determinism Verification
+    needs: [headless]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Ubuntu Checksum
+        uses: actions/download-artifact@v4
+        with:
+          name: checksum-ubuntu-latest
+          path: ubuntu
+
+      - name: Download macOS Checksum
+        uses: actions/download-artifact@v4
+        with:
+          name: checksum-macos-latest
+          path: macos
+
+      - name: Download Windows Checksum
+        uses: actions/download-artifact@v4
+        with:
+          name: checksum-windows-latest
+          path: windows
+
+      - name: Verify Cross-Platform Checksum Identity
+        run: |
+          UBUNTU_SUM=$(cat ubuntu/checksum-ubuntu-latest.txt)
+          MACOS_SUM=$(cat macos/checksum-macos-latest.txt)
+          WINDOWS_SUM=$(cat windows/checksum-windows-latest.txt)
+          echo "Ubuntu:  $UBUNTU_SUM"
+          echo "macOS:   $MACOS_SUM"
+          echo "Windows: $WINDOWS_SUM"
+          if [ "$UBUNTU_SUM" != "$MACOS_SUM" ] || [ "$UBUNTU_SUM" != "$WINDOWS_SUM" ]; then
+            echo "ERROR: Cross-platform determinism mismatch detected between OS builds!"
+            exit 1
+          fi
+          echo "VERIFIED: Determinism checksums match identically across Ubuntu, macOS, and Windows."
+
   sanitizers:
+    name: ASan & UBSan Check (Linux)
+    needs: [compliance-scan]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,5 +110,7 @@ jobs:
           cmake -S Tools/HeadlessBuild -B build-san -DCMAKE_BUILD_TYPE=Debug
           -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=all"
           -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
-      - run: cmake --build build-san -j
-      - run: ./build-san/RA4Tests
+      - name: Build
+        run: cmake --build build-san -j
+      - name: Run Sanitized Tests
+        run: ./build-san/RA4Tests

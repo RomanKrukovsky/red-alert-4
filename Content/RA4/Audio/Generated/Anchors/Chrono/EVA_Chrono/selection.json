@@ -1,0 +1,44 @@
+{
+  "voice_id": "EVA_Chrono",
+  "candidates": [
+    {
+      "anchor_num": 2,
+      "file": "Anchors/Chrono/EVA_Chrono/anchor_02.wav",
+      "absolute_path": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Chrono/EVA_Chrono/anchor_02.wav",
+      "consistency": 0.6445,
+      "clarity": 5.0,
+      "duration": 3.52,
+      "duration_score": 0.9933,
+      "peak_db": -3.7,
+      "sample_rate": 48000,
+      "total_score": 0.8209
+    },
+    {
+      "anchor_num": 1,
+      "file": "Anchors/Chrono/EVA_Chrono/anchor_01.wav",
+      "absolute_path": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Chrono/EVA_Chrono/anchor_01.wav",
+      "consistency": 0.6607,
+      "clarity": 5.0,
+      "duration": 4.32,
+      "duration_score": 0.7267,
+      "peak_db": -8.84,
+      "sample_rate": 48000,
+      "total_score": 0.7757
+    },
+    {
+      "anchor_num": 3,
+      "file": "Anchors/Chrono/EVA_Chrono/anchor_03.wav",
+      "absolute_path": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Chrono/EVA_Chrono/anchor_03.wav",
+      "consistency": 0.3881,
+      "clarity": 5.0,
+      "duration": 4.0,
+      "duration_score": 0.8333,
+      "peak_db": -5.59,
+      "sample_rate": 48000,
+      "total_score": 0.6607
+    }
+  ],
+  "selected_anchor_num": 2,
+  "selected_file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Chrono/EVA_Chrono/anchor_02.wav",
+  "selection_reason": "tie_within_5pct_preferring_anchor_02"
+}

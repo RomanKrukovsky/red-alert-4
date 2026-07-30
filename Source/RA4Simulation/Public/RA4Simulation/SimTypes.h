@@ -15,6 +15,7 @@
 #include "RA4Core/Fixed.h"
 #include "RA4Core/Ids.h"
 #include "RA4Core/Vector.h"
+#include "RA4Navigation/MNavRouter.h"
 
 namespace RA4
 {
@@ -157,6 +158,10 @@ struct HealthComp
     int32_t Current = 0;
     int32_t Max = 0;
     bool bInvulnerable = false;
+    // Veterancy
+    VeterancyRank Rank = VeterancyRank::Recruit;
+    int32_t DamageDealt = 0;   // accumulated damage dealt (for veterancy tracking)
+    int32_t KillsValue = 0;    // accumulated value of destroyed targets
 };
 
 struct MovementComp
@@ -170,6 +175,20 @@ struct MovementComp
     // Ticks spent unable to make progress; the navigation system uses this to give
     // up rather than grind against an obstacle forever.
     int32_t BlockedTicks = 0;
+    // --- navigation milestone ---
+    Nav::MacroPath CurrentMacroPath;
+    int32_t NextWaypointIndex = 0;
+    TileCoord CurrentSubGoal;
+    ContentId FormationId;          // ContentId() == no formation
+    int32_t FormationSlot = -1;     // -1 == leader or unassigned
+    TickIndex LastRepathTick = 0;
+};
+
+struct MovementStats
+{
+    uint32_t FlowFieldBuilds = 0;
+    uint32_t MacroPathBuilds = 0;
+    uint32_t ReservationContests = 0;
 };
 
 struct CombatComp
@@ -257,6 +276,12 @@ struct PlayerState
     int32_t PowerProduced = 0;
     int32_t PowerConsumed = 0;
 
+    int32_t CommandLimitMax = 50;
+    int32_t CommandLimitUsed = 0;
+    int32_t FactionResource = 0;
+    FactionResourceType FactionResourceType = FactionResourceType::None;
+    int32_t FactionResourceCooldown = 0;  // ticks until active ability is ready
+
     // Running totals for the post-match screen and for AI self-evaluation.
     int32_t TotalHarvested = 0;
     int32_t UnitsBuilt = 0;
@@ -297,6 +322,10 @@ enum class SimEventType : uint8_t
     PlayerDefeated,
     MatchEnded,
     CommandRejected,
+    EntityVeterancyPromoted,
+    PowerShortageStarted,
+    PowerShortageEnded,
+    FactionResourceChanged,
 };
 
 struct SimEvent

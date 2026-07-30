@@ -3,6 +3,9 @@
 
 #include "RA4Core/Checksum.h"
 #include "RA4Core/SimConfig.h"
+#include "FogOfWarGrid.h"
+#include "RA4Navigation/MNavRouter.h"
+#include "RA4Navigation/ReservationGrid.h"
 
 #include <algorithm>
 #include <cassert>
@@ -23,14 +26,28 @@ constexpr int32_t kProgressScale = 100;
 // requires alignment will fire (~5.6 degrees).
 constexpr int32_t kTurretAlignTolerance = 64;
 
-// Harvesters dock when this close to a node or refinery centre.
+// How close a harvester must get to the *edge* of its target to dock.
 constexpr int64_t kDockDistanceUnits = 260;
 
 // Under-powered bases still make some progress; a full stall makes a lost power
 // plant unrecoverable, which is not the intent of the mechanic.
 constexpr int32_t kMinPowerRatioPercent = 20;
 
-Fixed SquaredUnits(int64_t Units) { return Fixed::FromInt(Units) * Fixed::FromInt(Units); }
+// Docking is measured to the target's centre, but a building occupies tiles that no
+// unit can enter. A harvester pressed against the wall of a 3x2 refinery is already
+// ~400 units from its centre, so a flat 260-unit radius made docking geometrically
+// impossible: the harvester ground against the building, repathed every 60 ticks and
+// never unloaded. The radius therefore grows with the target's footprint.
+Fixed DockRadiusFor(const EntityDef* Def)
+{
+    Fixed Radius = Fixed::FromInt(kDockDistanceUnits);
+    if (Def != nullptr && Def->Kind == EntityKind::Building)
+    {
+        const int64_t SpanTiles = std::max(Def->Building.FootprintX, Def->Building.FootprintY);
+        Radius += Fixed::FromInt((SpanTiles * kTileSizeUnits) / 2);
+    }
+    return Radius;
+}
 } // namespace
 
 // ---------------------------------------------------------------------------
@@ -39,6 +56,15 @@ Fixed SquaredUnits(int64_t Units) { return Fixed::FromInt(Units) * Fixed::FromIn
 
 void SimWorld::Reset()
 {
+    NavigationGrid.reset();
+    FogGrid.reset();
+    FlowFieldCache.clear();
+
+    if (Reservations) Reservations->Expire(0);
+    if (Router) Router->InvalidateAll();
+    FlowFieldBuildsThisTick = 0;
+    MacroPathBuildsThisTick = 0;
+    Stats = MovementStats{};
     Core.clear();
     Transforms.clear();
     Healths.clear();
@@ -83,6 +109,11 @@ void SimWorld::Initialize(const ContentDatabase* InContent, const MatchSetup& Se
     Reset();
     Content = InContent;
     Map = Setup.Map;
+    BuildNavigationGrid();
+    FogGrid = std::make_unique<FFogOfWarGrid>(Map.Width, Map.Height, kMaxPlayers);
+    Reservations = std::make_unique<Nav::ReservationGrid>(Map.Width, Map.Height);
+
+    Router = std::make_unique<Nav::MNavRouter>(*NavigationGrid);
     Rng.Reset(Setup.Seed);
 
     for (PlayerId I = 0; I < kMaxPlayers; ++I)
@@ -93,6 +124,14 @@ void SimWorld::Initialize(const ContentDatabase* InContent, const MatchSetup& Se
         P.bDefeated = false;
         P.Faction = Slot.Faction;
         P.Credits = Slot.StartingCredits;
+        switch (P.Faction)
+        {
+        case FactionId::Soviet: P.FactionResourceType = FactionResourceType::Mobilization; break;
+        case FactionId::Alliance: P.FactionResourceType = FactionResourceType::Intelligence; break;
+        case FactionId::EasternCoalition: P.FactionResourceType = FactionResourceType::Synchronization; break;
+        case FactionId::ChronoLegion: P.FactionResourceType = FactionResourceType::TemporalStability; break;
+        default: P.FactionResourceType = FactionResourceType::None; break;
+        }
     }
 
     Phase = MatchPhase::Running;
@@ -335,13 +374,178 @@ EntityId SimWorld::SpawnResourceNode(ContentId Def, const TileCoord& Tile, int32
 
 void SimWorld::OccupyTiles(const BuildingComp& B, bool bOccupy)
 {
+    if (NavigationGrid != nullptr)
+    {
+        NavigationGrid->BeginTopologyUpdate();
+    }
     for (int32_t Y = 0; Y < B.FootprintY; ++Y)
     {
         for (int32_t X = 0; X < B.FootprintX; ++X)
         {
-            Map.SetTileFlag(B.OriginTile.X + X, B.OriginTile.Y + Y, Tile_Occupied, bOccupy);
+            const TileCoord Tile(B.OriginTile.X + X, B.OriginTile.Y + Y);
+            Map.SetTileFlag(Tile.X, Tile.Y, Tile_Occupied, bOccupy);
+            if (NavigationGrid != nullptr)
+            {
+                NavigationGrid->SetPassability(Tile, GetNavigationPassability(Tile));
+            }
         }
     }
+    if (NavigationGrid != nullptr)
+    {
+        NavigationGrid->EndTopologyUpdate();
+    }
+}
+
+void SimWorld::BuildNavigationGrid()
+{
+    NavigationGrid = std::make_unique<Nav::NavGrid>(Map.Width, Map.Height);
+    FlowFieldCache.clear();
+    if (Router) Router->InvalidateAll();
+    NavigationGrid->BeginTopologyUpdate();
+    for (int32_t Y = 0; Y < Map.Height; ++Y)
+    {
+        for (int32_t X = 0; X < Map.Width; ++X)
+        {
+            const TileCoord Tile(X, Y);
+            NavigationGrid->SetPassability(Tile, GetNavigationPassability(Tile));
+        }
+    }
+    NavigationGrid->EndTopologyUpdate();
+}
+
+uint8_t SimWorld::GetNavigationPassability(const TileCoord& Tile) const
+{
+    if (!Map.IsInBounds(Tile.X, Tile.Y))
+    {
+        return Nav::NavLayer_None;
+    }
+
+    const uint8_t Flags = Map.GetTile(Tile.X, Tile.Y);
+    if ((Flags & Tile_Cliff) != 0)
+    {
+        return Nav::NavLayer_Air;
+    }
+    if ((Flags & Tile_Water) != 0)
+    {
+        return Nav::NavLayer_Amphibious | Nav::NavLayer_Naval | Nav::NavLayer_Air;
+    }
+    if ((Flags & Tile_GroundPassable) == 0)
+    {
+        return Nav::NavLayer_Air;
+    }
+
+    uint8_t Passability = Nav::NavLayer_Infantry | Nav::NavLayer_Wheeled | Nav::NavLayer_Tracked |
+                          Nav::NavLayer_Amphibious | Nav::NavLayer_Air;
+    if ((Flags & Tile_Occupied) != 0)
+    {
+        Passability = Nav::NavLayer_Air;
+    }
+    return Passability;
+}
+
+Nav::NavQuery SimWorld::MakeNavigationQuery(const EntityDef& Def) const
+{
+    Nav::NavQuery Query;
+    switch (Def.Unit.Layer)
+    {
+        case MovementLayer::Infantry: Query.LayerMask = Nav::NavLayer_Infantry; break;
+        case MovementLayer::Wheeled: Query.LayerMask = Nav::NavLayer_Wheeled; break;
+        case MovementLayer::Tracked: Query.LayerMask = Nav::NavLayer_Tracked; break;
+        case MovementLayer::Amphibious: Query.LayerMask = Nav::NavLayer_Amphibious; break;
+        case MovementLayer::Naval: Query.LayerMask = Nav::NavLayer_Naval; break;
+        case MovementLayer::Air: Query.LayerMask = Nav::NavLayer_Air; break;
+        case MovementLayer::None:
+        case MovementLayer::Count: Query.LayerMask = Nav::NavLayer_None; break;
+    }
+
+    const int64_t Radius = std::max<int64_t>(0, Def.Unit.CollisionRadius.ToIntRound());
+    const int64_t Diameter = Radius * 2;
+    const int64_t Required = std::max<int64_t>(1, (Diameter + kTileSizeUnits - 1) / kTileSizeUnits);
+    Query.RequiredClearance = static_cast<uint8_t>(std::min<int64_t>(Required, 255));
+    return Query;
+}
+
+TileCoord SimWorld::ResolveNavigationTarget(const TileCoord& Desired, const Nav::NavQuery& Query) const
+{
+    if (NavigationGrid == nullptr || NavigationGrid->IsTraversable(Desired, Query))
+    {
+        return Desired;
+    }
+
+    const int32_t MaxRadius = std::max(Map.Width, Map.Height);
+    for (int32_t Radius = 1; Radius <= MaxRadius; ++Radius)
+    {
+        const int32_t MinX = Desired.X - Radius;
+        const int32_t MaxX = Desired.X + Radius;
+        const int32_t MinY = Desired.Y - Radius;
+        const int32_t MaxY = Desired.Y + Radius;
+        for (int32_t Y = MinY; Y <= MaxY; ++Y)
+        {
+            for (int32_t X = MinX; X <= MaxX; ++X)
+            {
+                if (X != MinX && X != MaxX && Y != MinY && Y != MaxY)
+                {
+                    continue;
+                }
+                const TileCoord Candidate(X, Y);
+                if (NavigationGrid->IsTraversable(Candidate, Query))
+                {
+                    return Candidate;
+                }
+            }
+        }
+    }
+    return Desired;
+}
+
+const Nav::FlowField* SimWorld::GetFlowField(const TileCoord& Target, const Nav::NavQuery& Query)
+{
+    for (FlowFieldCacheEntry& Entry : FlowFieldCache)
+    {
+        if (Entry.Target == Target &&
+            Entry.Query.LayerMask == Query.LayerMask &&
+            Entry.Query.RequiredClearance == Query.RequiredClearance &&
+            Entry.TopologyRevision == NavigationGrid->GetTopologyRevision())
+        {
+            Entry.LastUsedTick = CurrentTick;
+            return Entry.Field.get();
+        }
+    }
+    // Budget: only build if we haven't built too many this tick.
+    if (FlowFieldBuildsThisTick >= kMaxFlowFieldBuildsPerTick)
+    {
+        // Return the most-recent field in the cache as a best-effort stale guide.
+        // If the cache is empty, the caller will treat null as "blocked" and retry
+        // next tick -- bounded latency, no crash, deterministic.
+        if (!FlowFieldCache.empty())
+        {
+            return FlowFieldCache.back().Field.get();
+        }
+        return nullptr;
+    }
+    constexpr size_t kMaxCachedFlowFields = 64;
+    if (FlowFieldCache.size() >= kMaxCachedFlowFields)
+    {
+        size_t EvictionIndex = 0;
+        for (size_t I = 1; I < FlowFieldCache.size(); ++I)
+        {
+            const FlowFieldCacheEntry& Candidate = FlowFieldCache[I];
+            const FlowFieldCacheEntry& Best = FlowFieldCache[EvictionIndex];
+            if (Candidate.LastUsedTick < Best.LastUsedTick) EvictionIndex = I;
+        }
+        FlowFieldCache.erase(FlowFieldCache.begin() + static_cast<std::ptrdiff_t>(EvictionIndex));
+    }
+    FlowFieldCacheEntry Entry;
+    Entry.Target = Target;
+    Entry.Query = Query;
+    Entry.TopologyRevision = NavigationGrid->GetTopologyRevision();
+    Entry.LastUsedTick = CurrentTick;
+    Entry.Field = std::make_unique<Nav::FlowField>(*NavigationGrid, Query, Target);
+    Entry.Field->Rebuild();
+    FlowFieldCache.push_back(std::move(Entry));
+    ++FlowFieldBuildsThisTick;
+    ++Stats.FlowFieldBuilds;
+    return FlowFieldCache.back().Field.get();
 }
 
 Vec2 SimWorld::FindFreeSpawnPoint(const BuildingComp& Producer, ContentId /*UnitDef*/) const
@@ -663,6 +867,10 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
             {
                 return Reject(CommandReject::QueueFull);
             }
+            if (Item->Kind == EntityKind::Unit && Player.CommandLimitUsed + Item->Production.CommandLimit > Player.CommandLimitMax)
+            {
+                return Reject(CommandReject::CommandCapExceeded);
+            }
             if (Player.Credits < Item->Production.Cost)
             {
                 return Reject(CommandReject::InsufficientCredits);
@@ -670,12 +878,12 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
 
             Player.Credits -= Item->Production.Cost;
 
-            ProductionItem PI;
-            PI.Content = Cmd.Content;
-            PI.TotalTicks = std::max(1, Item->Production.BuildTimeTicks);
-            PI.ProgressTicks = 0;
-            PI.PaidCredits = Item->Production.Cost;
-            Producer.Queue.push_back(PI);
+            ProductionItem QueueItem;
+            QueueItem.Content = Cmd.Content;
+            QueueItem.TotalTicks = std::max(1, Item->Production.BuildTimeTicks);
+            QueueItem.ProgressTicks = 0;
+            QueueItem.PaidCredits = Item->Production.Cost;
+            Producer.Queue.push_back(QueueItem);
 
             SimEvent Ev;
             Ev.Type = SimEventType::ProductionStarted;
@@ -700,18 +908,18 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
             {
                 return Reject(CommandReject::QueueFull);
             }
-            const ProductionItem& PI = Producer.Queue[size_t(Slot)];
-            const EntityDef* Item = Content->FindEntity(PI.Content);
+            const ProductionItem& QueueItem = Producer.Queue[size_t(Slot)];
+            const EntityDef* Item = Content->FindEntity(QueueItem.Content);
             const int32_t RefundPercent = Item ? Item->Production.CancelRefundPercent : 100;
-            Player.Credits += (PI.PaidCredits * RefundPercent) / 100;
+            Player.Credits += (QueueItem.PaidCredits * RefundPercent) / 100;
 
             SimEvent Ev;
             Ev.Type = SimEventType::ProductionCancelled;
             Ev.Tick = CurrentTick;
             Ev.Entity = Cmd.Primary;
             Ev.Player = Cmd.Issuer;
-            Ev.Content = PI.Content;
-            Ev.Value = (PI.PaidCredits * RefundPercent) / 100;
+            Ev.Content = QueueItem.Content;
+            Ev.Value = (QueueItem.PaidCredits * RefundPercent) / 100;
             EmitEvent(Ev);
 
             Producer.Queue.erase(Producer.Queue.begin() + Slot);
@@ -728,8 +936,8 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
             BuildingComp& Producer = Buildings[Cmd.Primary.Index];
             if (Cmd.Slot < Producer.Queue.size())
             {
-                ProductionItem& PI = Producer.Queue[Cmd.Slot];
-                PI.bPaused = !PI.bPaused;
+                ProductionItem& QueueItem = Producer.Queue[Cmd.Slot];
+                QueueItem.bPaused = !QueueItem.bPaused;
             }
             break;
         }
@@ -827,6 +1035,19 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
 // ---------------------------------------------------------------------------
 // Damage
 // ---------------------------------------------------------------------------
+
+void SimWorld::DebugDamage(EntityId TargetId, int32_t DamageAmount)
+{
+    if (IsAlive(TargetId))
+    {
+        HealthComp& H = Healths[TargetId.Index];
+        H.Current = (DamageAmount >= H.Current) ? 0 : (H.Current - DamageAmount);
+        if (H.Current == 0)
+        {
+            PendingDestroy.push_back(TargetId);
+        }
+    }
+}
 
 void SimWorld::ApplyDamage(EntityId TargetId, int32_t BaseDamage, WarheadClass Warhead, EntityId Source,
                            PlayerId SourcePlayer)
@@ -983,28 +1204,40 @@ void SimWorld::SystemPower()
     {
         P.PowerProduced = 0;
         P.PowerConsumed = 0;
+        P.CommandLimitMax = 50;
+        P.CommandLimitUsed = 0;
     }
     for (uint32_t I = 0; I < Core.size(); ++I)
     {
-        if (!Core[I].bAlive || Core[I].Kind != EntityKind::Building || Core[I].Owner >= kMaxPlayers)
+        if (!Core[I].bAlive || Core[I].Owner >= kMaxPlayers)
         {
             continue;
         }
-        if (Buildings[I].State != ConstructionState::Complete)
-        {
-            continue;
-        }
-        const EntityDef* D = Content->FindEntity(Core[I].Def);
+        const EntityDef* D = Content ? Content->FindEntity(Core[I].Def) : nullptr;
         if (D == nullptr)
         {
             continue;
         }
         PlayerState& P = Players[Core[I].Owner];
-        // A damaged power plant produces proportionally less. This is what makes
-        // hitting the power grid a real strategy rather than a binary switch.
-        const int64_t HealthRatio = Healths[I].Max > 0 ? (int64_t(Healths[I].Current) * 100) / Healths[I].Max : 0;
-        P.PowerProduced += int32_t((int64_t(D->Building.PowerProduced) * HealthRatio) / 100);
-        P.PowerConsumed += D->Building.PowerConsumed;
+        if (Core[I].Kind == EntityKind::Building && Buildings[I].State == ConstructionState::Complete)
+        {
+            const int64_t HealthRatio = Healths[I].Max > 0 ? (int64_t(Healths[I].Current) * 100) / Healths[I].Max : 0;
+            P.PowerProduced += int32_t((int64_t(D->Building.PowerProduced) * HealthRatio) / 100);
+            P.PowerConsumed += D->Building.PowerConsumed;
+            P.CommandLimitMax += D->Building.CommandLimitProvided;
+        }
+        else if (Core[I].Kind == EntityKind::Unit)
+        {
+            P.CommandLimitUsed += D->Production.CommandLimit;
+        }
+    }
+    for (PlayerState& P : Players)
+    {
+        P.CommandLimitMax = std::min(200, P.CommandLimitMax);
+        if (P.Faction == FactionId::ChronoLegion && (CurrentTick % 40) == 0)
+        {
+            P.FactionResource = std::min(100, P.FactionResource + 1);
+        }
     }
 }
 
@@ -1090,17 +1323,17 @@ void SimWorld::SystemProduction()
 
         // Only the head of the queue advances; parallel queues are per building,
         // matching the original games.
-        ProductionItem& PI = B.Queue.front();
-        if (PI.bPaused)
+        ProductionItem& QueueItem = B.Queue.front();
+        if (QueueItem.bPaused)
         {
             continue;
         }
-        const int32_t Complete = PI.TotalTicks * kProgressScale;
-        if (PI.ProgressTicks >= Complete)
+        const int32_t Complete = QueueItem.TotalTicks * kProgressScale;
+        if (QueueItem.ProgressTicks >= Complete)
         {
             // Structures wait here until the player picks a spot; everything else
             // pops out immediately.
-            const EntityDef* Item = Content->FindEntity(PI.Content);
+            const EntityDef* Item = Content->FindEntity(QueueItem.Content);
             if (Item != nullptr && Item->Kind == EntityKind::Building)
             {
                 continue;
@@ -1108,14 +1341,14 @@ void SimWorld::SystemProduction()
         }
         else
         {
-            PI.ProgressTicks += Ratio;
-            if (PI.ProgressTicks < Complete)
+            QueueItem.ProgressTicks += Ratio;
+            if (QueueItem.ProgressTicks < Complete)
             {
                 continue;
             }
         }
 
-        const EntityDef* Item = Content->FindEntity(PI.Content);
+        const EntityDef* Item = Content->FindEntity(QueueItem.Content);
         if (Item == nullptr)
         {
             B.Queue.erase(B.Queue.begin());
@@ -1126,8 +1359,8 @@ void SimWorld::SystemProduction()
             continue;   // awaiting placement
         }
 
-        const Vec2 SpawnAt = FindFreeSpawnPoint(B, PI.Content);
-        const EntityId Spawned = SpawnUnit(PI.Content, Owner, SpawnAt);
+        const Vec2 SpawnAt = FindFreeSpawnPoint(B, QueueItem.Content);
+        const EntityId Spawned = SpawnUnit(QueueItem.Content, Owner, SpawnAt);
         if (!Spawned.IsValid())
         {
             continue;   // entity budget exhausted; retry next tick
@@ -1147,7 +1380,7 @@ void SimWorld::SystemProduction()
         Ev.Entity = Spawned;
         Ev.Other = MakeId(I);
         Ev.Player = Owner;
-        Ev.Content = PI.Content;
+        Ev.Content = QueueItem.Content;
         Ev.Location = SpawnAt;
         EmitEvent(Ev);
 
@@ -1206,7 +1439,6 @@ EntityId SimWorld::FindNearestRefinery(const Vec2& From, PlayerId Owner) const
 
 void SimWorld::SystemHarvesters()
 {
-    const Fixed DockDistSq = SquaredUnits(kDockDistanceUnits);
 
     for (uint32_t I = 0; I < Core.size(); ++I)
     {
@@ -1272,7 +1504,8 @@ void SimWorld::SystemHarvesters()
                     }
                 }
                 const Vec2 NodePos = Transforms[H.AssignedNode.Index].Position;
-                if (DistanceSquared(Pos, NodePos) <= DockDistSq)
+                const Fixed NodeDock = DockRadiusFor(Content->FindEntity(Core[H.AssignedNode.Index].Def));
+                if (DistanceSquared(Pos, NodePos) <= NodeDock * NodeDock)
                 {
                     H.State = HarvesterState::Harvesting;
                     Movements[I].bHasDestination = false;
@@ -1328,7 +1561,8 @@ void SimWorld::SystemHarvesters()
                     break;
                 }
                 const Vec2 RefPos = Transforms[H.AssignedRefinery.Index].Position;
-                if (DistanceSquared(Pos, RefPos) <= DockDistSq)
+                const Fixed RefDock = DockRadiusFor(Content->FindEntity(Core[H.AssignedRefinery.Index].Def));
+                if (DistanceSquared(Pos, RefPos) <= RefDock * RefDock)
                 {
                     H.State = HarvesterState::Unloading;
                     Movements[I].bHasDestination = false;
@@ -1407,7 +1641,8 @@ void SimWorld::SystemOrders()
             {
                 M.Destination = O.Location;
                 M.bHasDestination = true;
-                if (DistanceSquared(Transforms[I].Position, O.Location) <= M.ArriveRadius * M.ArriveRadius)
+                const Fixed D2 = DistanceSquared(Transforms[I].Position, O.Location);
+                if (D2 <= M.ArriveRadius * M.ArriveRadius)
                 {
                     M.bHasDestination = false;
                     M.CurrentSpeed = Fixed::Zero();
@@ -1506,74 +1741,61 @@ void SimWorld::SystemOrders()
 
 void SimWorld::SystemMovement()
 {
-    for (uint32_t I = 0; I < Core.size(); ++I)
+    if (Reservations) Reservations->Expire(CurrentTick);
+    FlowFieldBuildsThisTick = 0;
+    MacroPathBuildsThisTick = 0;
+
+    // Shared turn / accelerate / advance step. Extracted so the final approach and
+    // the flow-field path steer through identical code -- if they diverged, a unit
+    // would behave differently in the last tile than it did on the way there.
+    auto SteerToward = [this](uint32_t Index, const EntityDef& Def, const Vec2& Target,
+                              const Nav::NavQuery& Query)
     {
-        if (!Core[I].bAlive || Core[I].Kind != EntityKind::Unit)
+        MovementComp& M = Movements[Index];
+        TransformComp& T = Transforms[Index];
+
+        const Vec2 SteeringDelta = Target - T.Position;
+        if (SteeringDelta.LengthSquared().Raw == 0)
         {
-            continue;
-        }
-        MovementComp& M = Movements[I];
-        TransformComp& T = Transforms[I];
-        const EntityDef* D = Content->FindEntity(Core[I].Def);
-        if (D == nullptr)
-        {
-            continue;
+            return;
         }
 
-        if (!M.bHasDestination)
-        {
-            M.CurrentSpeed = Fixed::Zero();
-            M.BlockedTicks = 0;
-            continue;
-        }
-
-        const Vec2 Delta = M.Destination - T.Position;
-        const Fixed DistSq = Delta.LengthSquared();
-        if (DistSq <= M.ArriveRadius * M.ArriveRadius)
-        {
-            M.bHasDestination = false;
-            M.CurrentSpeed = Fixed::Zero();
-            M.BlockedTicks = 0;
-            continue;
-        }
-
-        // Rotate the hull toward the destination at the unit's turn rate. Heavy
-        // tracked vehicles turn slowly on purpose -- it is the main reason armour
-        // needs an escort rather than a bigger gun.
-        const int32_t DesiredFacing = Delta.ToAngle();
-        const int32_t TurnPerTick = std::max(1, D->Unit.TurnRatePerSecond / kTicksPerSecond);
+        const int32_t DesiredFacing = SteeringDelta.ToAngle();
+        const int32_t TurnPerTick = std::max(1, Def.Unit.TurnRatePerSecond / kTicksPerSecond);
         const int32_t Diff = AngleDelta(T.Facing, DesiredFacing);
         if (Diff > TurnPerTick) { T.Facing = WrapAngle(T.Facing + TurnPerTick); }
         else if (Diff < -TurnPerTick) { T.Facing = WrapAngle(T.Facing - TurnPerTick); }
         else { T.Facing = DesiredFacing; }
 
-        const Fixed MaxSpeedPerTick = PerSecondToPerTick(D->Unit.MaxSpeed);
-        const Fixed AccelPerTick = PerSecondToPerTick(D->Unit.Acceleration);
-
-        // Only accelerate when roughly pointed the right way; otherwise slow down.
-        // Without this, units carve wide arcs through their own base.
-        const int32_t AlignedThreshold = kAngleTurn / 8;   // 45 degrees
+        const Fixed MaxSpeedPerTick = PerSecondToPerTick(Def.Unit.MaxSpeed);
+        const Fixed AccelPerTick = PerSecondToPerTick(Def.Unit.Acceleration);
+        const int32_t AlignedThreshold = kAngleTurn / 8;
         if (Diff > -AlignedThreshold && Diff < AlignedThreshold)
         {
             M.CurrentSpeed = FxMin(M.CurrentSpeed + AccelPerTick, MaxSpeedPerTick);
         }
         else
         {
-            M.CurrentSpeed = FxMax(M.CurrentSpeed - AccelPerTick, MaxSpeedPerTick / int64_t(4));
+            // Decelerate toward zero when not aligned with the target heading.
+            // The old floor of MaxSpeedPerTick/4 made units slide at quarter speed
+            // in whatever direction they happened to be facing -- including away
+            // from the destination -- which is why harvesters drove past their
+            // docking point and never arrived.
+            M.CurrentSpeed = FxMax(M.CurrentSpeed - AccelPerTick, Fixed::Zero());
         }
 
-        const Vec2 Step = Vec2::FromAngle(T.Facing) * M.CurrentSpeed;
-        const Vec2 NextPos = T.Position + Step;
+        // Never overshoot the target inside one tick: at 25 units per tick a unit
+        // would otherwise oscillate around a point it can never land on.
+        Fixed StepLength = M.CurrentSpeed;
+        const Fixed Remaining = SteeringDelta.Length();
+        if (StepLength > Remaining)
+        {
+            StepLength = Remaining;
+        }
 
-        // Terrain check only; unit-versus-unit avoidance arrives with the
-        // navigation milestone (Docs/Roadmap.md, stage 3).
-        const TileCoord NextTile = Map.WorldToTile(NextPos);
-        const uint8_t Flags = Map.GetTile(NextTile.X, NextTile.Y);
-        const bool bPassable = (Flags & Tile_GroundPassable) != 0 &&
-                               (Flags & (Tile_Water | Tile_Cliff)) == 0 &&
-                               Map.IsInBounds(NextTile.X, NextTile.Y);
-
-        if (bPassable)
+        const Vec2 NextPos = T.Position + Vec2::FromAngle(T.Facing) * StepLength;
+        const TileCoord NextPosTile = Map.WorldToTile(NextPos);
+        if (NavigationGrid->IsTraversable(NextPosTile, Query))
         {
             T.Position = NextPos;
             M.BlockedTicks = 0;
@@ -1582,6 +1804,225 @@ void SimWorld::SystemMovement()
         {
             M.CurrentSpeed = Fixed::Zero();
             M.BlockedTicks += 1;
+        }
+    };
+
+    for (uint32_t I = 0; I < Core.size(); ++I)
+    {
+        if (!Core[I].bAlive || Core[I].Kind != EntityKind::Unit) continue;
+        MovementComp& M = Movements[I];
+        TransformComp& T = Transforms[I];
+        const EntityDef* D = Content->FindEntity(Core[I].Def);
+        if (D == nullptr) continue;
+
+        if (!M.bHasDestination)
+        {
+            M.CurrentSpeed = Fixed::Zero();
+            M.BlockedTicks = 0;
+            if (Reservations) Reservations->Release(I);
+            continue;
+        }
+
+        // 1. Arrived?
+        const Vec2 GoalDelta = M.Destination - T.Position;
+        const Fixed GoalDistSq = GoalDelta.LengthSquared();
+        if (GoalDistSq <= M.ArriveRadius * M.ArriveRadius)
+        {
+            M.bHasDestination = false;
+            M.CurrentSpeed = Fixed::Zero();
+            M.BlockedTicks = 0;
+            if (Reservations) Reservations->Release(I);
+            continue;
+        }
+
+        const Nav::NavQuery Query = MakeNavigationQuery(*D);
+        if (NavigationGrid == nullptr || Query.LayerMask == Nav::NavLayer_None)
+        {
+            continue;   // no navigation for this unit (e.g. air, handled later)
+        }
+
+        const TileCoord FromTile = Map.WorldToTile(T.Position);
+        const TileCoord ToTile = ResolveNavigationTarget(Map.WorldToTile(M.Destination), Query);
+
+        // 2. Final approach. Inside the destination tile the flow field has nothing
+        // left to say -- its direction at its own target is zero -- so steer at the
+        // exact point instead. Without this a unit stops wherever the tile centre
+        // happens to be, up to a tile-width short of where it was sent, stalls, and
+        // the order system eventually gives up on it. That was the cause of
+        // harvesters never docking and the vertical slice harvesting nothing.
+        if (FromTile.X == ToTile.X && FromTile.Y == ToTile.Y)
+        {
+            if (Reservations) Reservations->Release(I);
+            const Vec2 TargetPos = NavigationGrid->IsTraversable(Map.WorldToTile(M.Destination), Query)
+                                       ? M.Destination
+                                       : Map.TileCenterToWorld(ToTile);
+            SteerToward(I, *D, TargetPos, Query);
+            const Vec2 Delta = TargetPos - T.Position;
+            if (Delta.LengthSquared() <= M.ArriveRadius * M.ArriveRadius)
+            {
+                M.bHasDestination = false;
+                M.CurrentSpeed = Fixed::Zero();
+                M.BlockedTicks = 0;
+            }
+            else if (M.BlockedTicks > kRepathBlockedTickThreshold)
+            {
+                M.CurrentMacroPath = Nav::MacroPath{};
+                M.BlockedTicks = 0;
+                M.LastRepathTick = CurrentTick;
+            }
+            continue;
+        }
+
+        // 3. Macro path (budgeted, shared, topology-aware).
+        if (M.CurrentMacroPath.BuiltTopologyRevision != NavigationGrid->GetTopologyRevision() ||
+            M.CurrentMacroPath.Waypoints.empty())
+        {
+            if (MacroPathBuildsThisTick < kMaxMacroPathBuildsPerTick && Router)
+            {
+                M.CurrentMacroPath = Router->Find(FromTile, ToTile, Query, /*MaxWaypoints=*/8);
+                M.NextWaypointIndex = 0;
+                ++MacroPathBuildsThisTick;
+                ++Stats.MacroPathBuilds;
+            }
+            else
+            {
+                // Budget exhausted this tick: follow the last-known flow (if any)
+                // and retry next tick. Fall through to steering with stale sub-goal.
+            }
+        }
+
+        // 4. Sub-goal selection.
+        const int32_t Sx = FromTile.X / Nav::NavGrid::kSectorSize;
+        const int32_t Sy = FromTile.Y / Nav::NavGrid::kSectorSize;
+        const int32_t Dsx = ToTile.X / Nav::NavGrid::kSectorSize;
+        const int32_t Dsy = ToTile.Y / Nav::NavGrid::kSectorSize;
+
+        if (Sx == Dsx && Sy == Dsy)
+        {
+            // Same sector as the goal: the macro path has nothing to contribute, so
+            // head straight for the destination tile rather than a sector centre.
+            M.CurrentSubGoal = ToTile;
+        }
+        else if (!M.CurrentMacroPath.Waypoints.empty())
+        {
+            const int32_t Count = int32_t(M.CurrentMacroPath.Waypoints.size());
+            // Consume every waypoint whose sector we have already entered.
+            while (M.NextWaypointIndex < Count)
+            {
+                const TileCoord& Waypoint = M.CurrentMacroPath.Waypoints[size_t(M.NextWaypointIndex)];
+                if (Waypoint.X / Nav::NavGrid::kSectorSize == Sx &&
+                    Waypoint.Y / Nav::NavGrid::kSectorSize == Sy)
+                {
+                    ++M.NextWaypointIndex;
+                    continue;
+                }
+                break;
+            }
+            // Once the corridor is exhausted the goal itself becomes the sub-goal.
+            // Leaving the last waypoint in place here is what parked units on sector
+            // centres and made them report arrival far from their destination.
+            M.CurrentSubGoal = M.NextWaypointIndex < Count
+                                   ? M.CurrentMacroPath.Waypoints[size_t(M.NextWaypointIndex)]
+                                   : ToTile;
+        }
+        else
+        {
+            // No macro path (unreachable or budget-stalled). Count blocked.
+            M.BlockedTicks += 1;
+            if (M.BlockedTicks > kRepathBlockedTickThreshold)
+            {
+                M.CurrentMacroPath = Nav::MacroPath{};
+                M.BlockedTicks = 0;
+                M.LastRepathTick = CurrentTick;
+            }
+            M.CurrentSpeed = Fixed::Zero();
+            continue;
+        }
+
+        // 5. Flow field for the sub-goal (shared across all units heading there).
+        const Nav::FlowField* Field = GetFlowField(M.CurrentSubGoal, Query);
+        if (Field == nullptr || !Field->IsReachable(FromTile))
+        {
+            M.BlockedTicks += 1;
+            M.CurrentSpeed = Fixed::Zero();
+            continue;
+        }
+
+        // 6. Steering: flow direction -> desired tile.
+        const Nav::FlowDirection Dir = Field->GetDirection(FromTile);
+        if (Dir.X == 0 && Dir.Y == 0)
+        {
+            // Standing on the sub-goal tile but not yet on the goal: aim at the real
+            // destination so the unit keeps closing instead of declaring itself stuck.
+            SteerToward(I, *D, M.Destination, Query);
+            continue;
+        }
+        const TileCoord DesiredTile(FromTile.X + Dir.X, FromTile.Y + Dir.Y);
+
+        // 7. Reservation (soft, slot-order tie-break).
+        // Drop last tick's claim first. The tie-break only lets a *lower* slot take
+        // an occupied tile, so a unit could not re-reserve the tile it was already
+        // holding: it fell through to avoidance every tick and stalled one step from
+        // where it started.
+        if (Reservations) Reservations->Release(I);
+
+        TileCoord NextTile = DesiredTile;
+        if (Reservations && Reservations->TryReserve(DesiredTile, I, CurrentTick, /*HoldTicks=*/2))
+        {
+            M.BlockedTicks = 0;
+        }
+        else
+        {
+            ++Stats.ReservationContests;
+            // 7b. Local avoidance: best open neighbor by flow-direction alignment.
+            // Fixed neighbor order: N,E,S,W,NE,SE,SW,NW (matches FlowField GDirections).
+            static const int8_t Deltas[8][2] = {
+                {0, -1}, {1, 0}, {0, 1}, {-1, 0}, {1, -1}, {1, 1}, {-1, 1}, {-1, -1},
+            };
+            TileCoord Best;
+            Fixed BestScore = Fixed::FromInt(-1) * Fixed::FromInt(1000000);
+            bool bFound = false;
+            for (int32_t N = 0; N < 8; ++N)
+            {
+                const TileCoord C(DesiredTile.X + Deltas[N][0], DesiredTile.Y + Deltas[N][1]);
+                // Never "avoid" into the tile we already occupy. The neighbours of
+                // the desired tile include our own, and a unit standing on that
+                // tile's centre would then steer at a point zero units away, take a
+                // zero-length step and freeze there permanently -- with no blocked
+                // ticks to trigger a repath, because the reservation succeeded.
+                if (C.X == FromTile.X && C.Y == FromTile.Y) continue;
+                if (!NavigationGrid->IsTraversable(C, Query)) continue;
+                if (Reservations && !Reservations->IsFree(C, CurrentTick)) continue;
+                // Score = dot of flow dir with (C - FromTile) direction.
+                const Vec2 Dn(Fixed::FromInt(C.X - FromTile.X), Fixed::FromInt(C.Y - FromTile.Y));
+                const Fixed Score = Fixed::FromInt(Dir.X) * Dn.X + Fixed::FromInt(Dir.Y) * Dn.Y;
+                if (!bFound || Score > BestScore)
+                {
+                    Best = C; BestScore = Score; bFound = true;
+                }
+            }
+            if (bFound && Reservations && Reservations->TryReserve(Best, I, CurrentTick, 2))
+            {
+                NextTile = Best;
+                M.BlockedTicks = 0;
+            }
+            else
+            {
+                M.CurrentSpeed = Fixed::Zero();
+                M.BlockedTicks += 1;
+                continue;
+            }
+        }
+
+        // 8. Steer toward the centre of the chosen tile.
+        SteerToward(I, *D, Map.TileCenterToWorld(NextTile), Query);
+
+        // 9. Blocked fallback: force a fresh macro path next tick.
+        if (M.BlockedTicks > kRepathBlockedTickThreshold)
+        {
+            M.CurrentMacroPath = Nav::MacroPath{};
+            M.BlockedTicks = 0;
+            M.LastRepathTick = CurrentTick;
         }
     }
 }
@@ -1938,6 +2379,47 @@ void SimWorld::SystemVictory()
     }
 }
 
+void SimWorld::SystemFogOfWar()
+{
+    if (!FogGrid)
+    {
+        return;
+    }
+
+    for (int32_t P = 0; P < kMaxPlayers; ++P)
+    {
+        FogGrid->ClearCurrentVisibility(P);
+    }
+
+    for (uint32_t I = 0; I < HighWaterMark; ++I)
+    {
+        if (!Core[I].bAlive)
+        {
+            continue;
+        }
+
+        const PlayerId Owner = Core[I].Owner;
+        if (Owner >= kMaxPlayers)
+        {
+            continue;
+        }
+
+        const EntityDef* D = Content ? Content->FindEntity(Core[I].Def) : nullptr;
+        if (D == nullptr)
+        {
+            continue;
+        }
+
+        const int32_t VisionRangeWorld = int32_t(D->VisionRange.ToIntFloor());
+        const int32_t VisionRadiusTiles = std::max(1, VisionRangeWorld / 200);
+
+
+        const TileCoord Tile = Map.WorldToTile(Transforms[I].Position);
+        FogGrid->RevealCircularArea(int32_t(Owner), Tile.X, Tile.Y, VisionRadiusTiles);
+    }
+}
+
+
 // ---------------------------------------------------------------------------
 // Tick
 // ---------------------------------------------------------------------------
@@ -1960,11 +2442,39 @@ void SimWorld::Tick(const CommandFrame* Frame)
     SystemMovement();
     SystemCombat();
     SystemProjectiles();
+    SystemFactionResources();
+    SystemFogOfWar();
     SystemDeaths();
     SystemVictory();
 
     CurrentTick += 1;
 }
+
+void SimWorld::SystemFactionResources()
+{
+    for (PlayerId I = 0; I < kMaxPlayers; ++I)
+    {
+        PlayerState& P = Players[I];
+        if (!P.bActive || P.bDefeated) continue;
+
+        if (P.FactionResourceType == FactionResourceType::TemporalStability)
+        {
+            // Regenerate 1 point per 40 ticks (2 seconds at 20Hz)
+            if (CurrentTick > 0 && CurrentTick % 40 == 0)
+            {
+                P.FactionResource = std::min(100, P.FactionResource + 1);
+            }
+        }
+        else if (P.FactionResourceType == FactionResourceType::Synchronization)
+        {
+            if (CurrentTick > 0 && CurrentTick % 60 == 0)
+            {
+                P.FactionResource = std::min(100, P.FactionResource + 1);
+            }
+        }
+    }
+}
+
 
 // ---------------------------------------------------------------------------
 // Checksum
@@ -2025,11 +2535,11 @@ uint64_t SimWorld::ComputeStateChecksum() const
             H.FeedUInt8(uint8_t(Buildings[I].State));
             H.FeedInt32(Buildings[I].ConstructionProgressTicks);
             H.FeedInt32(int32_t(Buildings[I].Queue.size()));
-            for (const ProductionItem& PI : Buildings[I].Queue)
+            for (const ProductionItem& QueueItem : Buildings[I].Queue)
             {
-                H.FeedUInt32(PI.Content.Value);
-                H.FeedInt32(PI.ProgressTicks);
-                H.FeedBool(PI.bPaused);
+                H.FeedUInt32(QueueItem.Content.Value);
+                H.FeedInt32(QueueItem.ProgressTicks);
+                H.FeedBool(QueueItem.bPaused);
             }
         }
         else if (Core[I].Kind == EntityKind::Unit)
@@ -2042,8 +2552,319 @@ uint64_t SimWorld::ComputeStateChecksum() const
             H.FeedInt32(ResourceNodes[I].Amount);
         }
     }
-
     return H.Get();
+}
+
+// ---------------------------------------------------------------------------
+// Serialization & Restoration
+// ---------------------------------------------------------------------------
+
+constexpr uint32_t kSimSaveMagic = 0x52413453u; // "RA4S"
+constexpr uint32_t kSimSaveVersion = 1;
+
+void SimWorld::Serialize(ByteWriter& W) const
+{
+    W.WriteUInt32(kSimSaveMagic);
+    W.WriteUInt32(kSimSaveVersion);
+    W.WriteUInt32(CurrentTick);
+    W.WriteUInt8(static_cast<uint8_t>(Phase));
+    W.WriteUInt8(Winner);
+    W.WriteUInt64(Rng.GetState());
+    W.WriteUInt64(Rng.GetIncrement());
+
+    // Map description
+    W.WriteString(Map.Name);
+    W.WriteInt32(Map.Width);
+    W.WriteInt32(Map.Height);
+    W.WriteUInt32(static_cast<uint32_t>(Map.Tiles.size()));
+    for (uint8_t Tile : Map.Tiles)
+    {
+        W.WriteUInt8(Tile);
+    }
+
+    // Players
+    for (int32_t P = 0; P < kMaxPlayers; ++P)
+    {
+        const PlayerState& S = Players[P];
+        W.WriteBool(S.bActive);
+        W.WriteBool(S.bDefeated);
+        W.WriteUInt8(static_cast<uint8_t>(S.Faction));
+        W.WriteInt32(S.Credits);
+        W.WriteInt32(S.PowerProduced);
+        W.WriteInt32(S.PowerConsumed);
+        W.WriteInt32(S.UnitsBuilt);
+        W.WriteInt32(S.BuildingsBuilt);
+        W.WriteInt32(S.UnitsLost);
+        W.WriteInt32(S.BuildingsLost);
+        W.WriteInt32(S.TotalHarvested);
+        W.WriteUInt32(static_cast<uint32_t>(S.CompletedBuildingTypes.size()));
+        for (const ContentId& C : S.CompletedBuildingTypes)
+        {
+            W.WriteUInt32(C.Value);
+        }
+    }
+
+    // Free slots & High water mark
+    W.WriteUInt32(HighWaterMark);
+    W.WriteUInt32(static_cast<uint32_t>(FreeSlots.size()));
+    for (uint32_t Slot : FreeSlots)
+    {
+        W.WriteUInt32(Slot);
+    }
+
+    // Entity arrays
+    for (uint32_t I = 0; I < HighWaterMark; ++I)
+    {
+        const EntityCore& C = Core[I];
+        W.WriteBool(C.bAlive);
+        W.WriteUInt32(C.Generation);
+        W.WriteUInt32(C.Def.Value);
+        W.WriteUInt8(static_cast<uint8_t>(C.Kind));
+        W.WriteUInt8(C.Owner);
+
+        const TransformComp& T = Transforms[I];
+        W.WriteInt64(T.Position.X.Raw);
+        W.WriteInt64(T.Position.Y.Raw);
+        W.WriteInt32(T.Facing);
+        W.WriteInt32(T.TurretFacing);
+
+        const HealthComp& H = Healths[I];
+        W.WriteInt32(H.Current);
+        W.WriteInt32(H.Max);
+        W.WriteBool(H.bInvulnerable);
+
+        const MovementComp& M = Movements[I];
+        W.WriteInt64(M.Destination.X.Raw);
+        W.WriteInt64(M.Destination.Y.Raw);
+        W.WriteBool(M.bHasDestination);
+        W.WriteInt64(M.CurrentSpeed.Raw);
+        W.WriteInt64(M.ArriveRadius.Raw);
+        W.WriteInt32(M.BlockedTicks);
+
+        const CombatComp& Cm = Combats[I];
+        W.WriteUInt32(Cm.Target.Index);
+        W.WriteUInt32(Cm.Target.Generation);
+        W.WriteInt32(Cm.CooldownTicks);
+        W.WriteBool(Cm.bTargetIsForced);
+
+        const BuildingComp& B = Buildings[I];
+        W.WriteInt32(B.OriginTile.X);
+        W.WriteInt32(B.OriginTile.Y);
+        W.WriteInt32(B.FootprintX);
+        W.WriteInt32(B.FootprintY);
+        W.WriteUInt8(static_cast<uint8_t>(B.State));
+        W.WriteInt32(B.ConstructionProgressTicks);
+        W.WriteInt32(B.ConstructionTotalTicks);
+        W.WriteInt64(B.RallyPoint.X.Raw);
+        W.WriteInt64(B.RallyPoint.Y.Raw);
+        W.WriteBool(B.bHasRallyPoint);
+        W.WriteBool(B.bSelling);
+        W.WriteUInt32(static_cast<uint32_t>(B.Queue.size()));
+        for (const ProductionItem& Item : B.Queue)
+        {
+            W.WriteUInt32(Item.Content.Value);
+            W.WriteInt32(Item.ProgressTicks);
+            W.WriteInt32(Item.TotalTicks);
+            W.WriteInt32(Item.PaidCredits);
+            W.WriteBool(Item.bPaused);
+        }
+
+        const HarvesterComp& Hv = Harvesters[I];
+        W.WriteUInt8(static_cast<uint8_t>(Hv.State));
+        W.WriteInt32(Hv.Cargo);
+        W.WriteUInt32(Hv.AssignedNode.Index);
+        W.WriteUInt32(Hv.AssignedNode.Generation);
+        W.WriteUInt32(Hv.AssignedRefinery.Index);
+        W.WriteUInt32(Hv.AssignedRefinery.Generation);
+
+        const ResourceNodeComp& Rn = ResourceNodes[I];
+        W.WriteInt32(Rn.Amount);
+        W.WriteUInt32(Rn.Def.Value);
+
+        const OrderQueue& Oq = Orders[I];
+        W.WriteInt32(Oq.Count);
+        for (int32_t K = 0; K < Oq.Count; ++K)
+        {
+            const Order& Ord = Oq.Orders[K];
+            W.WriteUInt8(static_cast<uint8_t>(Ord.Type));
+            W.WriteInt64(Ord.Location.X.Raw);
+            W.WriteInt64(Ord.Location.Y.Raw);
+            W.WriteUInt32(Ord.Target.Index);
+            W.WriteUInt32(Ord.Target.Generation);
+        }
+    }
+}
+
+bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
+{
+    if (R.ReadUInt32() != kSimSaveMagic)
+    {
+        return false;
+    }
+    const uint32_t Version = R.ReadUInt32();
+    if (Version != kSimSaveVersion)
+    {
+        return false;
+    }
+
+    Reset();
+    Content = InContent;
+
+    CurrentTick = R.ReadUInt32();
+    Phase = static_cast<MatchPhase>(R.ReadUInt8());
+    Winner = R.ReadUInt8();
+    const uint64_t RState = R.ReadUInt64();
+    const uint64_t RInc = R.ReadUInt64();
+    Rng.SetState(RState, RInc);
+
+    Map.Name = R.ReadString();
+    Map.Width = R.ReadInt32();
+    Map.Height = R.ReadInt32();
+    const uint32_t TileCount = R.ReadUInt32();
+    Map.Tiles.resize(TileCount);
+    for (uint32_t I = 0; I < TileCount; ++I)
+    {
+        Map.Tiles[I] = R.ReadUInt8();
+    }
+
+    for (int32_t P = 0; P < kMaxPlayers; ++P)
+    {
+        PlayerState& S = Players[P];
+        S.bActive = R.ReadBool();
+        S.bDefeated = R.ReadBool();
+        S.Faction = static_cast<FactionId>(R.ReadUInt8());
+        S.Credits = R.ReadInt32();
+        S.PowerProduced = R.ReadInt32();
+        S.PowerConsumed = R.ReadInt32();
+        S.UnitsBuilt = R.ReadInt32();
+        S.BuildingsBuilt = R.ReadInt32();
+        S.UnitsLost = R.ReadInt32();
+        S.BuildingsLost = R.ReadInt32();
+        S.TotalHarvested = R.ReadInt32();
+        const uint32_t TechCount = R.ReadUInt32();
+        S.CompletedBuildingTypes.resize(TechCount);
+        for (uint32_t T = 0; T < TechCount; ++T)
+        {
+            S.CompletedBuildingTypes[T].Value = R.ReadUInt32();
+        }
+    }
+
+    HighWaterMark = R.ReadUInt32();
+    const uint32_t FreeCount = R.ReadUInt32();
+    FreeSlots.resize(FreeCount);
+    for (uint32_t I = 0; I < FreeCount; ++I)
+    {
+        FreeSlots[I] = R.ReadUInt32();
+    }
+
+    Core.resize(HighWaterMark);
+    Transforms.resize(HighWaterMark);
+    Healths.resize(HighWaterMark);
+    Movements.resize(HighWaterMark);
+    Combats.resize(HighWaterMark);
+    Buildings.resize(HighWaterMark);
+    Harvesters.resize(HighWaterMark);
+    ResourceNodes.resize(HighWaterMark);
+    Projectiles.resize(HighWaterMark);
+    Orders.resize(HighWaterMark);
+
+    for (uint32_t I = 0; I < HighWaterMark; ++I)
+    {
+        EntityCore& C = Core[I];
+        C.bAlive = R.ReadBool();
+        C.Generation = R.ReadUInt32();
+        C.Def.Value = R.ReadUInt32();
+        C.Kind = static_cast<EntityKind>(R.ReadUInt8());
+        C.Owner = R.ReadUInt8();
+
+        TransformComp& T = Transforms[I];
+        T.Position.X.Raw = R.ReadInt64();
+        T.Position.Y.Raw = R.ReadInt64();
+        T.Facing = R.ReadInt32();
+        T.TurretFacing = R.ReadInt32();
+
+        HealthComp& H = Healths[I];
+        H.Current = R.ReadInt32();
+        H.Max = R.ReadInt32();
+        H.bInvulnerable = R.ReadBool();
+
+        MovementComp& M = Movements[I];
+        M.Destination.X.Raw = R.ReadInt64();
+        M.Destination.Y.Raw = R.ReadInt64();
+        M.bHasDestination = R.ReadBool();
+        M.CurrentSpeed.Raw = R.ReadInt64();
+        M.ArriveRadius.Raw = R.ReadInt64();
+        M.BlockedTicks = R.ReadInt32();
+
+        CombatComp& Cm = Combats[I];
+        Cm.Target.Index = R.ReadUInt32();
+        Cm.Target.Generation = R.ReadUInt32();
+        Cm.CooldownTicks = R.ReadInt32();
+        Cm.bTargetIsForced = R.ReadBool();
+
+        BuildingComp& B = Buildings[I];
+        B.OriginTile.X = R.ReadInt32();
+        B.OriginTile.Y = R.ReadInt32();
+        B.FootprintX = R.ReadInt32();
+        B.FootprintY = R.ReadInt32();
+        B.State = static_cast<ConstructionState>(R.ReadUInt8());
+        B.ConstructionProgressTicks = R.ReadInt32();
+        B.ConstructionTotalTicks = R.ReadInt32();
+        B.RallyPoint.X.Raw = R.ReadInt64();
+        B.RallyPoint.Y.Raw = R.ReadInt64();
+        B.bHasRallyPoint = R.ReadBool();
+        B.bSelling = R.ReadBool();
+        const uint32_t QueueCount = R.ReadUInt32();
+        B.Queue.resize(QueueCount);
+        for (uint32_t Q = 0; Q < QueueCount; ++Q)
+        {
+            ProductionItem& Item = B.Queue[Q];
+            Item.Content.Value = R.ReadUInt32();
+            Item.ProgressTicks = R.ReadInt32();
+            Item.TotalTicks = R.ReadInt32();
+            Item.PaidCredits = R.ReadInt32();
+            Item.bPaused = R.ReadBool();
+        }
+
+        HarvesterComp& Hv = Harvesters[I];
+        Hv.State = static_cast<HarvesterState>(R.ReadUInt8());
+        Hv.Cargo = R.ReadInt32();
+        Hv.AssignedNode.Index = R.ReadUInt32();
+        Hv.AssignedNode.Generation = R.ReadUInt32();
+        Hv.AssignedRefinery.Index = R.ReadUInt32();
+        Hv.AssignedRefinery.Generation = R.ReadUInt32();
+
+        ResourceNodeComp& Rn = ResourceNodes[I];
+        Rn.Amount = R.ReadInt32();
+        Rn.Def.Value = R.ReadUInt32();
+
+        OrderQueue& Oq = Orders[I];
+        Oq.Count = R.ReadInt32();
+        for (int32_t K = 0; K < Oq.Count; ++K)
+        {
+            Order& Ord = Oq.Orders[K];
+            Ord.Type = static_cast<OrderType>(R.ReadUInt8());
+            Ord.Location.X.Raw = R.ReadInt64();
+            Ord.Location.Y.Raw = R.ReadInt64();
+            Ord.Target.Index = R.ReadUInt32();
+            Ord.Target.Generation = R.ReadUInt32();
+        }
+    }
+
+    BuildNavigationGrid();
+    Reservations = std::make_unique<Nav::ReservationGrid>(Map.Width, Map.Height);
+    Router = std::make_unique<Nav::MNavRouter>(*NavigationGrid);
+    FogGrid = std::make_unique<FFogOfWarGrid>(Map.Width, Map.Height, kMaxPlayers);
+
+    for (PlayerId P = 0; P < kMaxPlayers; ++P)
+    {
+        if (Players[P].bActive)
+        {
+            RefreshPlayerTech(P);
+        }
+    }
+
+    return !R.HasError();
 }
 
 } // namespace RA4

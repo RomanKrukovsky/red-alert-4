@@ -1,0 +1,143 @@
+{
+  "version": "1.0",
+  "global_settings": {
+    "sample_rate": 48000,
+    "channels": 1,
+    "bit_depth": 24,
+    "pcm_format": "PCM_24",
+    "target_lufs": -18.0,
+    "lufs_tolerance": 0.5,
+    "true_peak_dbtp": -1.0,
+    "silence_trimming": {
+      "threshold_db": -40.0,
+      "head_min_ms": 80,
+      "head_max_ms": 140,
+      "head_target_ms": 100,
+      "tail_min_ms": 160,
+      "tail_max_ms": 260,
+      "tail_target_ms": 200
+    }
+  },
+  "faction_profiles": {
+    "Soviet": {
+      "faction": "Soviet",
+      "system_name": "КОНТУР",
+      "eq": {
+        "high_pass_hz": 80,
+        "low_shelf_hz": 180,
+        "low_shelf_gain_db": 1.5,
+        "mid_notch_hz": 450,
+        "mid_notch_q": 3.0,
+        "mid_notch_gain_db": -1.0,
+        "high_shelf_hz": 7500,
+        "high_shelf_gain_db": 0.5
+      },
+      "compressor": {
+        "threshold_db": -20.0,
+        "ratio": 3.5,
+        "attack_ms": 15.0,
+        "release_ms": 120.0,
+        "knee_db": 3.0
+      },
+      "saturation": {
+        "enabled": true,
+        "drive_db": 0.8,
+        "warmth": 0.3
+      },
+      "temporal_double_layer": {
+        "enabled": false
+      }
+    },
+    "Alliance": {
+      "faction": "Alliance",
+      "system_name": "АСТРА",
+      "eq": {
+        "high_pass_hz": 100,
+        "low_shelf_hz": 200,
+        "low_shelf_gain_db": -0.5,
+        "mid_notch_hz": 1200,
+        "mid_notch_q": 2.5,
+        "mid_notch_gain_db": -1.5,
+        "high_shelf_hz": 8000,
+        "high_shelf_gain_db": 2.0
+      },
+      "compressor": {
+        "threshold_db": -18.0,
+        "ratio": 2.5,
+        "attack_ms": 10.0,
+        "release_ms": 100.0,
+        "knee_db": 6.0
+      },
+      "saturation": {
+        "enabled": false
+      },
+      "de_esser": {
+        "enabled": true,
+        "frequency_hz": 6500,
+        "threshold_db": -16.0
+      },
+      "temporal_double_layer": {
+        "enabled": false
+      }
+    },
+    "Coalition": {
+      "faction": "Coalition",
+      "system_name": "ГАРМОНИЯ",
+      "eq": {
+        "high_pass_hz": 90,
+        "low_shelf_hz": 160,
+        "low_shelf_gain_db": 0.0,
+        "mid_notch_hz": 2500,
+        "mid_notch_q": 2.0,
+        "mid_notch_gain_db": 0.5,
+        "high_shelf_hz": 9000,
+        "high_shelf_gain_db": 1.0
+      },
+      "compressor": {
+        "threshold_db": -19.0,
+        "ratio": 3.0,
+        "attack_ms": 12.0,
+        "release_ms": 150.0,
+        "knee_db": 4.0
+      },
+      "saturation": {
+        "enabled": false
+      },
+      "temporal_double_layer": {
+        "enabled": false
+      }
+    },
+    "Chrono": {
+      "faction": "Chrono",
+      "system_name": "МОЙРА",
+      "eq": {
+        "high_pass_hz": 120,
+        "low_shelf_hz": 220,
+        "low_shelf_gain_db": -1.0,
+        "mid_notch_hz": 3200,
+        "mid_notch_q": 4.0,
+        "mid_notch_gain_db": 1.5,
+        "high_shelf_hz": 10000,
+        "high_shelf_gain_db": 1.5
+      },
+      "compressor": {
+        "threshold_db": -22.0,
+        "ratio": 4.0,
+        "attack_ms": 8.0,
+        "release_ms": 90.0,
+        "knee_db": 2.0
+      },
+      "saturation": {
+        "enabled": false
+      },
+      "temporal_double_layer": {
+        "enabled": true,
+        "delay_ms": 18.0,
+        "pitch_shift_cents": -7.0,
+        "wet_dry_ratio": 0.25,
+        "phase_invert": false,
+        "flange_mod_hz": 0.2
+      }
+    }
+  }
+}

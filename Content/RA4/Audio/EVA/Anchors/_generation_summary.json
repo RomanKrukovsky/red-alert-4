@@ -1,0 +1,425 @@
+{
+  "total": 60,
+  "results": [
+    {
+      "voice_id": "EVA_Soviet",
+      "anchor_num": 1,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/EVA_Soviet/anchor_01.wav",
+      "duration_sec": 4.48,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "EVA_Soviet",
+      "anchor_num": 2,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/EVA_Soviet/anchor_02.wav",
+      "duration_sec": 3.04,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "EVA_Soviet",
+      "anchor_num": 3,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/EVA_Soviet/anchor_03.wav",
+      "duration_sec": 4.0,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "USSR_Rifleman",
+      "anchor_num": 1,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_Rifleman/anchor_01.wav",
+      "duration_sec": 2.24,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "USSR_Rifleman",
+      "anchor_num": 2,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_Rifleman/anchor_02.wav",
+      "duration_sec": 3.2,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "USSR_Rifleman",
+      "anchor_num": 3,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_Rifleman/anchor_03.wav",
+      "duration_sec": 2.88,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "USSR_MainTank",
+      "anchor_num": 1,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_MainTank/anchor_01.wav",
+      "duration_sec": 3.68,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "USSR_MainTank",
+      "anchor_num": 2,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_MainTank/anchor_02.wav",
+      "duration_sec": 2.88,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "USSR_MainTank",
+      "anchor_num": 3,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_MainTank/anchor_03.wav",
+      "duration_sec": 4.0,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "USSR_Fighter",
+      "anchor_num": 1,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_Fighter/anchor_01.wav",
+      "duration_sec": 2.24,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "USSR_Fighter",
+      "anchor_num": 2,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_Fighter/anchor_02.wav",
+      "duration_sec": 2.24,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "USSR_Fighter",
+      "anchor_num": 3,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_Fighter/anchor_03.wav",
+      "duration_sec": 2.56,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "USSR_Captain",
+      "anchor_num": 1,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_Captain/anchor_01.wav",
+      "duration_sec": 3.04,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "USSR_Captain",
+      "anchor_num": 2,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_Captain/anchor_02.wav",
+      "duration_sec": 4.16,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "USSR_Captain",
+      "anchor_num": 3,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_Captain/anchor_03.wav",
+      "duration_sec": 3.84,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "EVA_Alliance",
+      "anchor_num": 1,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Alliance/EVA_Alliance/anchor_01.wav",
+      "duration_sec": 4.16,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "EVA_Alliance",
+      "anchor_num": 2,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Alliance/EVA_Alliance/anchor_02.wav",
+      "duration_sec": 3.52,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "EVA_Alliance",
+      "anchor_num": 3,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Alliance/EVA_Alliance/anchor_03.wav",
+      "duration_sec": 3.04,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Alliance_Rifleman",
+      "anchor_num": 1,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Alliance/Alliance_Rifleman/anchor_01.wav",
+      "duration_sec": 1.6,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Alliance_Rifleman",
+      "anchor_num": 2,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Alliance/Alliance_Rifleman/anchor_02.wav",
+      "duration_sec": 2.56,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Alliance_Rifleman",
+      "anchor_num": 3,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Alliance/Alliance_Rifleman/anchor_03.wav",
+      "duration_sec": 2.56,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Alliance_MainTank",
+      "anchor_num": 1,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Alliance/Alliance_MainTank/anchor_01.wav",
+      "duration_sec": 3.04,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Alliance_MainTank",
+      "anchor_num": 2,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Alliance/Alliance_MainTank/anchor_02.wav",
+      "duration_sec": 2.72,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Alliance_MainTank",
+      "anchor_num": 3,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Alliance/Alliance_MainTank/anchor_03.wav",
+      "duration_sec": 3.2,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Alliance_Fighter",
+      "anchor_num": 1,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Alliance/Alliance_Fighter/anchor_01.wav",
+      "duration_sec": 1.6,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Alliance_Fighter",
+      "anchor_num": 2,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Alliance/Alliance_Fighter/anchor_02.wav",
+      "duration_sec": 2.56,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Alliance_Fighter",
+      "anchor_num": 3,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Alliance/Alliance_Fighter/anchor_03.wav",
+      "duration_sec": 2.72,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Alliance_Captain",
+      "anchor_num": 1,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Alliance/Alliance_Captain/anchor_01.wav",
+      "duration_sec": 3.2,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Alliance_Captain",
+      "anchor_num": 2,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Alliance/Alliance_Captain/anchor_02.wav",
+      "duration_sec": 3.68,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Alliance_Captain",
+      "anchor_num": 3,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Alliance/Alliance_Captain/anchor_03.wav",
+      "duration_sec": 2.88,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "EVA_Coalition",
+      "anchor_num": 1,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Coalition/EVA_Coalition/anchor_01.wav",
+      "duration_sec": 3.04,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "EVA_Coalition",
+      "anchor_num": 2,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Coalition/EVA_Coalition/anchor_02.wav",
+      "duration_sec": 3.52,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "EVA_Coalition",
+      "anchor_num": 3,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Coalition/EVA_Coalition/anchor_03.wav",
+      "duration_sec": 3.36,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Coalition_Rifleman",
+      "anchor_num": 1,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Coalition/Coalition_Rifleman/anchor_01.wav",
+      "duration_sec": 2.4,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Coalition_Rifleman",
+      "anchor_num": 2,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Coalition/Coalition_Rifleman/anchor_02.wav",
+      "duration_sec": 3.36,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Coalition_Rifleman",
+      "anchor_num": 3,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Coalition/Coalition_Rifleman/anchor_03.wav",
+      "duration_sec": 2.88,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Coalition_MainTank",
+      "anchor_num": 1,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Coalition/Coalition_MainTank/anchor_01.wav",
+      "duration_sec": 3.68,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Coalition_MainTank",
+      "anchor_num": 2,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Coalition/Coalition_MainTank/anchor_02.wav",
+      "duration_sec": 3.68,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Coalition_MainTank",
+      "anchor_num": 3,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Coalition/Coalition_MainTank/anchor_03.wav",
+      "duration_sec": 2.88,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Coalition_Fighter",
+      "anchor_num": 1,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Coalition/Coalition_Fighter/anchor_01.wav",
+      "duration_sec": 2.56,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Coalition_Fighter",
+      "anchor_num": 2,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Coalition/Coalition_Fighter/anchor_02.wav",
+      "duration_sec": 2.72,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Coalition_Fighter",
+      "anchor_num": 3,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Coalition/Coalition_Fighter/anchor_03.wav",
+      "duration_sec": 2.56,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Coalition_Captain",
+      "anchor_num": 1,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Coalition/Coalition_Captain/anchor_01.wav",
+      "duration_sec": 3.2,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Coalition_Captain",
+      "anchor_num": 2,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Coalition/Coalition_Captain/anchor_02.wav",
+      "duration_sec": 3.36,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Coalition_Captain",
+      "anchor_num": 3,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Coalition/Coalition_Captain/anchor_03.wav",
+      "duration_sec": 3.2,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "EVA_Chrono",
+      "anchor_num": 1,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Chrono/EVA_Chrono/anchor_01.wav",
+      "duration_sec": 4.32,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "EVA_Chrono",
+      "anchor_num": 2,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Chrono/EVA_Chrono/anchor_02.wav",
+      "duration_sec": 3.52,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "EVA_Chrono",
+      "anchor_num": 3,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Chrono/EVA_Chrono/anchor_03.wav",
+      "duration_sec": 4.0,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Chrono_Rifleman",
+      "anchor_num": 1,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Chrono/Chrono_Rifleman/anchor_01.wav",
+      "duration_sec": 3.52,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Chrono_Rifleman",
+      "anchor_num": 2,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Chrono/Chrono_Rifleman/anchor_02.wav",
+      "duration_sec": 3.2,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Chrono_Rifleman",
+      "anchor_num": 3,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Chrono/Chrono_Rifleman/anchor_03.wav",
+      "duration_sec": 3.52,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Chrono_MainTank",
+      "anchor_num": 1,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Chrono/Chrono_MainTank/anchor_01.wav",
+      "duration_sec": 4.0,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Chrono_MainTank",
+      "anchor_num": 2,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Chrono/Chrono_MainTank/anchor_02.wav",
+      "duration_sec": 3.68,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Chrono_MainTank",
+      "anchor_num": 3,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Chrono/Chrono_MainTank/anchor_03.wav",
+      "duration_sec": 3.68,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Chrono_Fighter",
+      "anchor_num": 1,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Chrono/Chrono_Fighter/anchor_01.wav",
+      "duration_sec": 2.4,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Chrono_Fighter",
+      "anchor_num": 2,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Chrono/Chrono_Fighter/anchor_02.wav",
+      "duration_sec": 2.88,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Chrono_Fighter",
+      "anchor_num": 3,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Chrono/Chrono_Fighter/anchor_03.wav",
+      "duration_sec": 2.72,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Chrono_Captain",
+      "anchor_num": 1,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Chrono/Chrono_Captain/anchor_01.wav",
+      "duration_sec": 4.64,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Chrono_Captain",
+      "anchor_num": 2,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Chrono/Chrono_Captain/anchor_02.wav",
+      "duration_sec": 4.64,
+      "sample_rate": 48000
+    },
+    {
+      "voice_id": "Chrono_Captain",
+      "anchor_num": 3,
+      "file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Chrono/Chrono_Captain/anchor_03.wav",
+      "duration_sec": 4.48,
+      "sample_rate": 48000
+    }
+  ]
+}

@@ -563,6 +563,30 @@ void BuildDefaultContent(ContentDatabase& Db)
         F.StartingCredits = 10000;
         Db.AddFaction(F);
     }
+
+    // Veterancy from bible: Recruit(0), Veteran(1x, +10% dmg, +8% HP),
+    // Elite(2x, +10% more, +10% HP), Heroic(5x, unique passive)
+    {
+        VeterancyDef Vet;
+        Vet.Levels[int32_t(VeterancyRank::Recruit)] = {1, 0, 0, 0, false, false};
+        Vet.Levels[int32_t(VeterancyRank::Veteran)] = {1, 10, 8, 1, false, false};
+        Vet.Levels[int32_t(VeterancyRank::Elite)] = {2, 10, 10, 2, true, false};
+        Vet.Levels[int32_t(VeterancyRank::Heroic)] = {5, 10, 10, 3, true, true};
+        Db.SetVeterancy(Vet);
+    }
+
+    {
+        DamageMatrixDef Dm;
+        Dm.SetMultiplier(WarheadClass::Ballistic, ArmorClass::LightInfantry, 1000);
+        Dm.SetMultiplier(WarheadClass::Fragmentation, ArmorClass::LightInfantry, 1500);
+        Dm.SetMultiplier(WarheadClass::ArmorPiercing, ArmorClass::HeavyVehicle, 1450);
+        Dm.SetMultiplier(WarheadClass::Siege, ArmorClass::Building, 1700);
+        Dm.SetMultiplier(WarheadClass::Electric, ArmorClass::Air, 750);
+        Dm.SetMultiplier(WarheadClass::AntiAir, ArmorClass::Air, 2000);
+        Db.SetDamageMatrix(Dm);
+
+    }
 }
+
 
 } // namespace RA4

@@ -1,0 +1,605 @@
+{
+  "total": 100,
+  "results": [
+    {
+      "asset_id": "LINE_EVA_Soviet_Game.Start_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/EVA/Soviet/VO_EVA_Soviet_Game_Start_01.wav"
+    },
+    {
+      "asset_id": "LINE_EVA_Soviet_Base.UnderAttack_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/EVA/Soviet/VO_EVA_Soviet_Base_UnderAttack_01.wav"
+    },
+    {
+      "asset_id": "LINE_EVA_Soviet_Unit.Ready_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/EVA/Soviet/VO_EVA_Soviet_Unit_Ready_01.wav"
+    },
+    {
+      "asset_id": "LINE_EVA_Soviet_Player.Victory_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/EVA/Soviet/VO_EVA_Soviet_Player_Victory_01.wav"
+    },
+    {
+      "asset_id": "LINE_EVA_Soviet_Resources.Low_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/EVA/Soviet/VO_EVA_Soviet_Resources_Low_01.wav"
+    },
+    {
+      "asset_id": "LINE_EVA_Alliance_Game.Start_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/EVA/Alliance/VO_EVA_Alliance_Game_Start_01.wav"
+    },
+    {
+      "asset_id": "LINE_EVA_Alliance_Base.UnderAttack_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/EVA/Alliance/VO_EVA_Alliance_Base_UnderAttack_01.wav"
+    },
+    {
+      "asset_id": "LINE_EVA_Alliance_Unit.Ready_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/EVA/Alliance/VO_EVA_Alliance_Unit_Ready_01.wav"
+    },
+    {
+      "asset_id": "LINE_EVA_Alliance_Player.Victory_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/EVA/Alliance/VO_EVA_Alliance_Player_Victory_01.wav"
+    },
+    {
+      "asset_id": "LINE_EVA_Alliance_Resources.Low_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/EVA/Alliance/VO_EVA_Alliance_Resources_Low_01.wav"
+    },
+    {
+      "asset_id": "LINE_EVA_Coalition_Game.Start_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/EVA/Coalition/VO_EVA_Coalition_Game_Start_01.wav"
+    },
+    {
+      "asset_id": "LINE_EVA_Coalition_Base.UnderAttack_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/EVA/Coalition/VO_EVA_Coalition_Base_UnderAttack_01.wav"
+    },
+    {
+      "asset_id": "LINE_EVA_Coalition_Unit.Ready_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/EVA/Coalition/VO_EVA_Coalition_Unit_Ready_01.wav"
+    },
+    {
+      "asset_id": "LINE_EVA_Coalition_Player.Victory_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/EVA/Coalition/VO_EVA_Coalition_Player_Victory_01.wav"
+    },
+    {
+      "asset_id": "LINE_EVA_Coalition_Resources.Low_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/EVA/Coalition/VO_EVA_Coalition_Resources_Low_01.wav"
+    },
+    {
+      "asset_id": "LINE_EVA_Chrono_Game.Start_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/EVA/Chrono/VO_EVA_Chrono_Game_Start_01.wav"
+    },
+    {
+      "asset_id": "LINE_EVA_Chrono_Base.UnderAttack_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/EVA/Chrono/VO_EVA_Chrono_Base_UnderAttack_01.wav"
+    },
+    {
+      "asset_id": "LINE_EVA_Chrono_Unit.Ready_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/EVA/Chrono/VO_EVA_Chrono_Unit_Ready_01.wav"
+    },
+    {
+      "asset_id": "LINE_EVA_Chrono_Player.Victory_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/EVA/Chrono/VO_EVA_Chrono_Player_Victory_01.wav"
+    },
+    {
+      "asset_id": "LINE_EVA_Chrono_Resources.Low_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/EVA/Chrono/VO_EVA_Chrono_Resources_Low_01.wav"
+    },
+    {
+      "asset_id": "LINE_USSR_Rifleman_Selected_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Soviet/VO_USSR_Rifleman_Selected_01.wav"
+    },
+    {
+      "asset_id": "LINE_USSR_Rifleman_Move_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Soviet/VO_USSR_Rifleman_Move_01.wav"
+    },
+    {
+      "asset_id": "LINE_USSR_Rifleman_Attack_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Soviet/VO_USSR_Rifleman_Attack_01.wav"
+    },
+    {
+      "asset_id": "LINE_USSR_Rifleman_EnemyDestroyed_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Soviet/VO_USSR_Rifleman_EnemyDestroyed_01.wav"
+    },
+    {
+      "asset_id": "LINE_USSR_Rifleman_Idle_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Soviet/VO_USSR_Rifleman_Idle_01.wav"
+    },
+    {
+      "asset_id": "LINE_Alliance_Rifleman_Selected_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Alliance/VO_Alliance_Rifleman_Selected_01.wav"
+    },
+    {
+      "asset_id": "LINE_Alliance_Rifleman_Move_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Alliance/VO_Alliance_Rifleman_Move_01.wav"
+    },
+    {
+      "asset_id": "LINE_Alliance_Rifleman_Attack_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Alliance/VO_Alliance_Rifleman_Attack_01.wav"
+    },
+    {
+      "asset_id": "LINE_Alliance_Rifleman_EnemyDestroyed_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Alliance/VO_Alliance_Rifleman_EnemyDestroyed_01.wav"
+    },
+    {
+      "asset_id": "LINE_Alliance_Rifleman_Idle_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Alliance/VO_Alliance_Rifleman_Idle_01.wav"
+    },
+    {
+      "asset_id": "LINE_Coalition_Rifleman_Selected_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Coalition/VO_Coalition_Rifleman_Selected_01.wav"
+    },
+    {
+      "asset_id": "LINE_Coalition_Rifleman_Move_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Coalition/VO_Coalition_Rifleman_Move_01.wav"
+    },
+    {
+      "asset_id": "LINE_Coalition_Rifleman_Attack_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Coalition/VO_Coalition_Rifleman_Attack_01.wav"
+    },
+    {
+      "asset_id": "LINE_Coalition_Rifleman_EnemyDestroyed_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Coalition/VO_Coalition_Rifleman_EnemyDestroyed_01.wav"
+    },
+    {
+      "asset_id": "LINE_Coalition_Rifleman_Idle_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Coalition/VO_Coalition_Rifleman_Idle_01.wav"
+    },
+    {
+      "asset_id": "LINE_Chrono_Rifleman_Selected_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Chrono/VO_Chrono_Rifleman_Selected_01.wav"
+    },
+    {
+      "asset_id": "LINE_Chrono_Rifleman_Move_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Chrono/VO_Chrono_Rifleman_Move_01.wav"
+    },
+    {
+      "asset_id": "LINE_Chrono_Rifleman_Attack_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Chrono/VO_Chrono_Rifleman_Attack_01.wav"
+    },
+    {
+      "asset_id": "LINE_Chrono_Rifleman_EnemyDestroyed_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Chrono/VO_Chrono_Rifleman_EnemyDestroyed_01.wav"
+    },
+    {
+      "asset_id": "LINE_Chrono_Rifleman_Idle_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Chrono/VO_Chrono_Rifleman_Idle_01.wav"
+    },
+    {
+      "asset_id": "LINE_USSR_MainTank_Selected_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Soviet/VO_USSR_MainTank_Selected_01.wav"
+    },
+    {
+      "asset_id": "LINE_USSR_MainTank_Attack_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Soviet/VO_USSR_MainTank_Attack_01.wav"
+    },
+    {
+      "asset_id": "LINE_USSR_MainTank_Attack.Building_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Soviet/VO_USSR_MainTank_Attack_Building_01.wav"
+    },
+    {
+      "asset_id": "LINE_USSR_MainTank_Damaged_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Soviet/VO_USSR_MainTank_Damaged_01.wav"
+    },
+    {
+      "asset_id": "LINE_USSR_MainTank_CriticalDamage_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Soviet/VO_USSR_MainTank_CriticalDamage_01.wav"
+    },
+    {
+      "asset_id": "LINE_Alliance_MainTank_Selected_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Alliance/VO_Alliance_MainTank_Selected_01.wav"
+    },
+    {
+      "asset_id": "LINE_Alliance_MainTank_Attack_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Alliance/VO_Alliance_MainTank_Attack_01.wav"
+    },
+    {
+      "asset_id": "LINE_Alliance_MainTank_Attack.Building_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Alliance/VO_Alliance_MainTank_Attack_Building_01.wav"
+    },
+    {
+      "asset_id": "LINE_Alliance_MainTank_Damaged_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Alliance/VO_Alliance_MainTank_Damaged_01.wav"
+    },
+    {
+      "asset_id": "LINE_Alliance_MainTank_CriticalDamage_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Alliance/VO_Alliance_MainTank_CriticalDamage_01.wav"
+    },
+    {
+      "asset_id": "LINE_Coalition_MainTank_Selected_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Coalition/VO_Coalition_MainTank_Selected_01.wav"
+    },
+    {
+      "asset_id": "LINE_Coalition_MainTank_Attack_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Coalition/VO_Coalition_MainTank_Attack_01.wav"
+    },
+    {
+      "asset_id": "LINE_Coalition_MainTank_Attack.Building_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Coalition/VO_Coalition_MainTank_Attack_Building_01.wav"
+    },
+    {
+      "asset_id": "LINE_Coalition_MainTank_Damaged_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Coalition/VO_Coalition_MainTank_Damaged_01.wav"
+    },
+    {
+      "asset_id": "LINE_Coalition_MainTank_CriticalDamage_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Coalition/VO_Coalition_MainTank_CriticalDamage_01.wav"
+    },
+    {
+      "asset_id": "LINE_Chrono_MainTank_Selected_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Chrono/VO_Chrono_MainTank_Selected_01.wav"
+    },
+    {
+      "asset_id": "LINE_Chrono_MainTank_Attack_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Chrono/VO_Chrono_MainTank_Attack_01.wav"
+    },
+    {
+      "asset_id": "LINE_Chrono_MainTank_Attack.Building_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Chrono/VO_Chrono_MainTank_Attack_Building_01.wav"
+    },
+    {
+      "asset_id": "LINE_Chrono_MainTank_Damaged_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Chrono/VO_Chrono_MainTank_Damaged_01.wav"
+    },
+    {
+      "asset_id": "LINE_Chrono_MainTank_CriticalDamage_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Chrono/VO_Chrono_MainTank_CriticalDamage_01.wav"
+    },
+    {
+      "asset_id": "LINE_USSR_Fighter_Selected_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Soviet/VO_USSR_Fighter_Selected_01.wav"
+    },
+    {
+      "asset_id": "LINE_USSR_Fighter_Attack.Air_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Soviet/VO_USSR_Fighter_Attack_Air_01.wav"
+    },
+    {
+      "asset_id": "LINE_USSR_Fighter_Ability.Activate_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Soviet/VO_USSR_Fighter_Ability_Activate_01.wav"
+    },
+    {
+      "asset_id": "LINE_USSR_Fighter_EnemyDestroyed_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Soviet/VO_USSR_Fighter_EnemyDestroyed_01.wav"
+    },
+    {
+      "asset_id": "LINE_USSR_Fighter_Death_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Soviet/VO_USSR_Fighter_Death_01.wav"
+    },
+    {
+      "asset_id": "LINE_Alliance_Fighter_Selected_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Alliance/VO_Alliance_Fighter_Selected_01.wav"
+    },
+    {
+      "asset_id": "LINE_Alliance_Fighter_Attack.Air_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Alliance/VO_Alliance_Fighter_Attack_Air_01.wav"
+    },
+    {
+      "asset_id": "LINE_Alliance_Fighter_Ability.Activate_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Alliance/VO_Alliance_Fighter_Ability_Activate_01.wav"
+    },
+    {
+      "asset_id": "LINE_Alliance_Fighter_EnemyDestroyed_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Alliance/VO_Alliance_Fighter_EnemyDestroyed_01.wav"
+    },
+    {
+      "asset_id": "LINE_Alliance_Fighter_Death_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Alliance/VO_Alliance_Fighter_Death_01.wav"
+    },
+    {
+      "asset_id": "LINE_Coalition_Fighter_Selected_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Coalition/VO_Coalition_Fighter_Selected_01.wav"
+    },
+    {
+      "asset_id": "LINE_Coalition_Fighter_Attack.Air_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Coalition/VO_Coalition_Fighter_Attack_Air_01.wav"
+    },
+    {
+      "asset_id": "LINE_Coalition_Fighter_Ability.Activate_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Coalition/VO_Coalition_Fighter_Ability_Activate_01.wav"
+    },
+    {
+      "asset_id": "LINE_Coalition_Fighter_EnemyDestroyed_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Coalition/VO_Coalition_Fighter_EnemyDestroyed_01.wav"
+    },
+    {
+      "asset_id": "LINE_Coalition_Fighter_Death_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Coalition/VO_Coalition_Fighter_Death_01.wav"
+    },
+    {
+      "asset_id": "LINE_Chrono_Fighter_Selected_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Chrono/VO_Chrono_Fighter_Selected_01.wav"
+    },
+    {
+      "asset_id": "LINE_Chrono_Fighter_Attack.Air_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Chrono/VO_Chrono_Fighter_Attack_Air_01.wav"
+    },
+    {
+      "asset_id": "LINE_Chrono_Fighter_Ability.Activate_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Chrono/VO_Chrono_Fighter_Ability_Activate_01.wav"
+    },
+    {
+      "asset_id": "LINE_Chrono_Fighter_EnemyDestroyed_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Chrono/VO_Chrono_Fighter_EnemyDestroyed_01.wav"
+    },
+    {
+      "asset_id": "LINE_Chrono_Fighter_Death_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Chrono/VO_Chrono_Fighter_Death_01.wav"
+    },
+    {
+      "asset_id": "LINE_USSR_Captain_Selected_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Soviet/VO_USSR_Captain_Selected_01.wav"
+    },
+    {
+      "asset_id": "LINE_USSR_Captain_Move_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Soviet/VO_USSR_Captain_Move_01.wav"
+    },
+    {
+      "asset_id": "LINE_USSR_Captain_Attack_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Soviet/VO_USSR_Captain_Attack_01.wav"
+    },
+    {
+      "asset_id": "LINE_USSR_Captain_CannotComply_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Soviet/VO_USSR_Captain_CannotComply_01.wav"
+    },
+    {
+      "asset_id": "LINE_USSR_Captain_Death_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Soviet/VO_USSR_Captain_Death_01.wav"
+    },
+    {
+      "asset_id": "LINE_Alliance_Captain_Selected_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Alliance/VO_Alliance_Captain_Selected_01.wav"
+    },
+    {
+      "asset_id": "LINE_Alliance_Captain_Move_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Alliance/VO_Alliance_Captain_Move_01.wav"
+    },
+    {
+      "asset_id": "LINE_Alliance_Captain_Attack_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Alliance/VO_Alliance_Captain_Attack_01.wav"
+    },
+    {
+      "asset_id": "LINE_Alliance_Captain_CannotComply_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Alliance/VO_Alliance_Captain_CannotComply_01.wav"
+    },
+    {
+      "asset_id": "LINE_Alliance_Captain_Death_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Alliance/VO_Alliance_Captain_Death_01.wav"
+    },
+    {
+      "asset_id": "LINE_Coalition_Captain_Selected_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Coalition/VO_Coalition_Captain_Selected_01.wav"
+    },
+    {
+      "asset_id": "LINE_Coalition_Captain_Move_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Coalition/VO_Coalition_Captain_Move_01.wav"
+    },
+    {
+      "asset_id": "LINE_Coalition_Captain_Attack_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Coalition/VO_Coalition_Captain_Attack_01.wav"
+    },
+    {
+      "asset_id": "LINE_Coalition_Captain_CannotComply_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Coalition/VO_Coalition_Captain_CannotComply_01.wav"
+    },
+    {
+      "asset_id": "LINE_Coalition_Captain_Death_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Coalition/VO_Coalition_Captain_Death_01.wav"
+    },
+    {
+      "asset_id": "LINE_Chrono_Captain_Selected_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Chrono/VO_Chrono_Captain_Selected_01.wav"
+    },
+    {
+      "asset_id": "LINE_Chrono_Captain_Move_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Chrono/VO_Chrono_Captain_Move_01.wav"
+    },
+    {
+      "asset_id": "LINE_Chrono_Captain_Attack_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Chrono/VO_Chrono_Captain_Attack_01.wav"
+    },
+    {
+      "asset_id": "LINE_Chrono_Captain_CannotComply_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Chrono/VO_Chrono_Captain_CannotComply_01.wav"
+    },
+    {
+      "asset_id": "LINE_Chrono_Captain_Death_01",
+      "status": "ok",
+      "attempts": 1,
+      "output": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Units/Chrono/VO_Chrono_Captain_Death_01.wav"
+    }
+  ]
+}

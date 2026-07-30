@@ -1,0 +1,52 @@
+{
+  "generated_at": "2026-07-30T10:18:00+03:00",
+  "project": "red-alert-4",
+  "policy": "research-only-clean-room",
+  "sources": [
+    {
+      "id": "ea-generals-zero-hour-source",
+      "type": "primary",
+      "publisher": "Electronic Arts",
+      "url": "https://github.com/electronicarts/CnC_Generals_Zero_Hour",
+      "license": "GPL-3.0 with EA additional terms",
+      "allowed_use_in_project": "architectural study only; no copying into proprietary runtime",
+      "notes": "Archived 2025-02-27"
+    },
+    {
+      "id": "ea-cnc-modding-support-ra3",
+      "type": "primary",
+      "publisher": "Electronic Arts",
+      "url": "https://github.com/electronicarts/CnC_Modding_Support/tree/main/Red%20Alert%203",
+      "license": "GPL-3.0 with EA additional terms",
+      "allowed_use_in_project": "data-shape and pipeline study only",
+      "notes": "Archived 2025-08-15; contains XML, XSD, libraries, shaders and RA3Music.h"
+    },
+    {
+      "id": "ea-modding-guidelines",
+      "type": "primary",
+      "publisher": "Electronic Arts",
+      "url": "https://www.ea.com/games/command-and-conquer/command-and-conquer-remastered/news/modding-faq",
+      "license": "publisher guidelines",
+      "allowed_use_in_project": "compliance reference",
+      "notes": "Noncommercial mod rules and trademark/affiliation restrictions"
+    },
+    {
+      "id": "cnclabs-ra3-sdk-index",
+      "type": "secondary",
+      "publisher": "C&C Labs",
+      "url": "https://www.cnclabs.com/downloads/redalert3/modding-and-mapping.aspx",
+      "license": "varies by download",
+      "allowed_use_in_project": "navigation/reference after provenance verification",
+      "notes": "SDK, World Builder, campaign and art source listings"
+    },
+    {
+      "id": "generals-game-code-community",
+      "type": "secondary",
+      "publisher": "TheSuperHackers community",
+      "url": "https://github.com/TheSuperHackers/GeneralsGameCode",
+      "license": "GPL-3.0",
+      "allowed_use_in_project": "issue discovery and modernized code navigation only",
+      "notes": "Verify architectural claims against official EA snapshot"
+    }
+  ]
+}

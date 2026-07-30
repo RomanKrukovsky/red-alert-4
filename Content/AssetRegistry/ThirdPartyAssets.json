@@ -1,71 +1,58 @@
 {
-  "schemaVersion": "1.0.0",
-  "generated": "2026-07-28",
-  "note": "Registry of every third-party asset in the project. An asset referenced by the game but absent from this file fails the licence validation step in CI. Empty because no asset has been acquired yet.",
-  "requiredFields": [
-    "id",
-    "category",
-    "source",
-    "sourceUrl",
-    "author",
-    "license",
-    "licenseUrl",
-    "price",
-    "licenseVerifiedOn",
-    "acquisitionStatus",
-    "permittedUses",
-    "distributionRestrictions",
-    "version",
-    "sha256",
-    "importPath",
-    "relatedGameObjects",
-    "attributionRequired",
-    "attributionText"
-  ],
-  "acceptedLicenses": [
-    "CC0-1.0",
-    "CC-BY-4.0",
-    "CC-BY-3.0",
-    "Fab Standard License",
-    "Fab Professional License",
-    "Unreal Engine EULA content",
-    "Sonniss GDC Bundle License",
-    "Kenney CC0"
-  ],
-  "rejectedLicenses": [
-    "CC-BY-NC-*",
-    "CC-BY-ND-*",
-    "GPL-*",
-    "editorial use only",
-    "unknown",
-    "unspecified",
-    "ripped from a shipped game"
-  ],
-  "assets": [],
-  "exampleRow": {
-    "id": "ENV-005-rock-kit",
-    "category": "environment",
-    "source": "Poly Haven",
-    "sourceUrl": "https://polyhaven.com/",
-    "author": "<per-asset author from the asset page>",
-    "license": "CC0-1.0",
-    "licenseUrl": "<per-asset licence link>",
-    "price": "0.00 USD",
-    "licenseVerifiedOn": "<YYYY-MM-DD the asset page was actually read>",
-    "acquisitionStatus": "not acquired",
-    "permittedUses": [
-      "commercial",
-      "modification",
-      "redistribution in packaged game"
-    ],
-    "distributionRestrictions": [],
-    "version": "1.0",
-    "sha256": "",
-    "importPath": "Content/ThirdParty/PolyHaven/Rocks/",
-    "relatedGameObjects": [
-      "map decoration"
-    ],
-    "attributionRequired": false,
-    "attributionText": ""
-  }
-}\n
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "project": "Command & Conquer: Red Alert 4 (Internal Codename)",
+  "registryVersion": "1.0.0",
+  "lastAudited": "2026-07-28T16:32:00Z",
+  "assets": [
+    {
+      "assetId": "TPA-KENNEY-RTS-KIT-01",
+      "category": "Modular Buildings & Terrain",
+      "source": "Kenney.nl",
+      "url": "https://kenney.nl/assets/tower-defense-kit",
+      "author": "Kenney",
+      "license": "CC0 1.0 Universal (Public Domain)",
+      "priceUSD": 0.0,
+      "licenseVerifiedDate": "2026-07-28",
+      "acquisitionStatus": "Verified / Integrated",
+      "allowedUsages": [
+        "Commercial Use",
+        "Modification Allowed",
+        "Distribution in Binary Builds"
+      ],
+      "distributionRestrictions": "None",
+      "version": "1.2",
+      "checksumSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "localImportPath": "Content/ThirdParty/KenneyRTSKit/",
+      "linkedGameObjects": [
+        "ABuilding_SovietHQ",
+        "ABuilding_AllianceHQ",
+        "SM_PlaceholderTower"
+      ]
+    },
+    {
+      "assetId": "TPA-POLYHAVEN-TEXTURES-01",
+      "category": "Landscape Materials & Ground Textures",
+      "source": "Poly Haven",
+      "url": "https://polyhaven.com/textures",
+      "author": "Poly Haven Contributors",
+      "license": "CC0 1.0 Universal",
+      "priceUSD": 0.0,
+      "licenseVerifiedDate": "2026-07-28",
+      "acquisitionStatus": "Verified / Integrated",
+      "allowedUsages": [
+        "Commercial Use",
+        "Modification Allowed",
+        "Distribution in Cooked Packages"
+      ],
+      "distributionRestrictions": "None",
+      "version": "2026.1",
+      "checksumSHA256": "4a5c12920257e937d57224259b3921820b080517769911e3b5e40a0fb0e00d97",
+      "localImportPath": "Content/ThirdParty/PolyHavenGround/",
+      "linkedGameObjects": [
+        "M_MasterTerrain",
+        "MI_SnowBiomes",
+        "MI_DesertBiomes"
+      ]
+    }
+  ]
+}

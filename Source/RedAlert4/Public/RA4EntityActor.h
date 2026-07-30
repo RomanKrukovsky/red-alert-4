@@ -6,7 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "RA4EntityActor.generated.h"
 
-UCLASS(Abstract, Blueprintable)
+UCLASS(Blueprintable)
 class REDALERT4_API ARA4EntityActor : public AActor
 {
     GENERATED_BODY()
@@ -35,8 +35,18 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Visuals")
     void SetTeamColor(const FLinearColor& TeamColor);
 
+    // Sizes the placeholder primitive to the entity's real footprint, so a 3x3
+    // factory does not render the same size as a rifleman.
+    UFUNCTION(BlueprintCallable, Category = "Visuals")
+    void SetVisualScale(const FVector& Scale);
+
+    // Diagnostic dump of what this actor is actually rendering. Used to answer
+    // "the match runs but I see nothing" with data instead of guesses.
+    FString DescribeVisualState() const;
+
 protected:
     virtual void BeginPlay() override;
+    virtual void Tick(float DeltaTime) override;
     
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     TObjectPtr<UStaticMeshComponent> MeshComponent;
@@ -44,6 +54,10 @@ protected:
     // Smooth interpolation targets
     FVector TargetPosition;
     float TargetRotationZ;
+
+    // Half the placeholder's height, so the cube rests on the ground plane instead
+    // of being centred in it.
+    float VisualZOffset = 0.0f;
 
 private:
     uint32 EntityIndex = 0xFFFFFFFFu;

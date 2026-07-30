@@ -16,6 +16,12 @@ Saved/
 build/
 *.rep
 
+!Build/
+Build/*
+!Build/Compliance/
+!Build/Compliance/**
+Build/Compliance/**/__pycache__/
+
 # Python leftovers from an unrelated project in this directory
 .venv/
 __pycache__/

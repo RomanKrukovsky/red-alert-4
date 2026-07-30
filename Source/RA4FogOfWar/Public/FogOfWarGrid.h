@@ -2,9 +2,28 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <vector>
+
+#if __has_include("CoreMinimal.h")
 #include "CoreMinimal.h"
+#else
+struct FIntRect
+{
+    int32_t MinX = 0;
+    int32_t MinY = 0;
+    int32_t MaxX = 0;
+    int32_t MaxY = 0;
+    FIntRect() = default;
+    FIntRect(int32_t InMinX, int32_t InMinY, int32_t InMaxX, int32_t InMaxY)
+        : MinX(InMinX), MinY(InMinY), MaxX(InMaxX), MaxY(InMaxY) {}
+};
+#endif
+
+#ifndef RA4FOGOFWAR_API
+#define RA4FOGOFWAR_API
+#endif
 
 namespace RA4
 {
@@ -22,10 +41,14 @@ class RA4FOGOFWAR_API FFogOfWarGrid
 public:
     FFogOfWarGrid(int32_t InWidth, int32_t InHeight, int32_t InNumPlayers);
 
+    int32_t GetWidth() const { return Width; }
+    int32_t GetHeight() const { return Height; }
+    int32_t GetNumPlayers() const { return NumPlayers; }
+
     // Updates visibility around a center point for a specific player
     void RevealCircularArea(int32_t PlayerIndex, int32_t CenterX, int32_t CenterY, int32_t Radius);
 
-    // Resets current visibility (usually called at the start of a tick before applying all unit visions)
+    // Resets current visibility (called at the start of a tick before applying unit visions)
     void ClearCurrentVisibility(int32_t PlayerIndex);
 
     // Get visibility state for a specific cell and player
@@ -36,9 +59,9 @@ public:
     void ClearDirtyRegions(int32_t PlayerIndex);
 
 private:
-    int32_t Width;
-    int32_t Height;
-    int32_t NumPlayers;
+    int32_t Width = 0;
+    int32_t Height = 0;
+    int32_t NumPlayers = 0;
 
     // We store visibility for all players
     std::vector<std::vector<VisibilityState>> VisibilityData;

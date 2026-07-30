@@ -34,4 +34,11 @@ constexpr int32_t kMaxProductionQueueLength = 9;
 // actual divergence.
 constexpr int32_t kChecksumIntervalTicks = 20;
 
+// Per-tick repath budget. Tick-bounded, not wall-clock: a slow machine does fewer
+// builds per tick and catches up over more ticks, but the build *sequence* is
+// identical, so the checksum is identical. Identical inputs -> identical state.
+constexpr int32_t kMaxFlowFieldBuildsPerTick = 2;
+constexpr int32_t kMaxMacroPathBuildsPerTick = 4;
+constexpr int32_t kRepathBlockedTickThreshold = 60;   // 3s at 20Hz
+
 } // namespace RA4

@@ -31,8 +31,10 @@ input / AI / mission script
 | --- | --- | --- |
 | `RA4Core` | fixed-point math, RNG, entity ids, commands, serialization, checksums, tick constants | - |
 | `RA4Content` | data definitions for units, buildings, weapons, factions; damage table; validation; content hash | `RA4Core` |
-| `RA4Simulation` | match state, SoA storage, system scheduler, all gameplay systems | `RA4Core`, `RA4Content` |
+| `RA4Simulation` | match state, SoA storage, system scheduler, all gameplay systems | `RA4Core`, `RA4Content`, `RA4Navigation` |
 | `RA4Replay` | replay container, recording, playback, checksum verification | above |
+| `RA4Navigation` | deterministic tile topology, clearance, sectors, portals, group flow fields | `RA4Core` |
+| `RA4Campaign` | campaign and mission data registry, prerequisite progression | `RA4Core` |
 | `RedAlert4` | Unreal game module: presentation, input, UI, networking glue | all of the above |
 
 Dependencies point one way. Nothing in the simulation may include `RedAlert4`.

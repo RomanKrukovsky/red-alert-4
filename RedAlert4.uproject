@@ -2,7 +2,7 @@
 	"FileVersion": 3,
 	"EngineAssociation": "5.6",
 	"Category": "Strategy",
-	"Description": "Red Alert 4 (internal working title) - real-time strategy on a deterministic C++ core.",
+	"Description": "Red Alert 4 - real-time strategy on a deterministic C++ core.",
 	"Modules": [
 		{
 			"Name": "RA4Core",
@@ -34,27 +34,22 @@
 			]
 		},
 		{
-			"Name": "RA4Units",
-			"Type": "Runtime",
-			"LoadingPhase": "Default"
-		},
-		{
-			"Name": "RA4Buildings",
-			"Type": "Runtime",
-			"LoadingPhase": "Default"
-		},
-		{
-			"Name": "RA4Economy",
-			"Type": "Runtime",
-			"LoadingPhase": "Default"
-		},
-		{
 			"Name": "RA4Combat",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		},
 		{
 			"Name": "RA4Navigation",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "RA4Input",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "RA4Presentation",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		},
@@ -79,33 +74,13 @@
 			"LoadingPhase": "Default"
 		},
 		{
-			"Name": "RA4SaveSystem",
-			"Type": "Runtime",
-			"LoadingPhase": "Default"
-		},
-		{
 			"Name": "RA4UI",
-			"Type": "Runtime",
-			"LoadingPhase": "Default"
-		},
-		{
-			"Name": "RA4Audio",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		},
 		{
 			"Name": "RA4Editor",
 			"Type": "Editor",
-			"LoadingPhase": "Default"
-		},
-		{
-			"Name": "RA4Modding",
-			"Type": "Runtime",
-			"LoadingPhase": "Default"
-		},
-		{
-			"Name": "RA4Diagnostics",
-			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		}
 	],
@@ -128,6 +103,10 @@
 		},
 		{
 			"Name": "FunctionalTestingEditor",
+			"Enabled": true
+		},
+		{
+			"Name": "PythonScriptPlugin",
 			"Enabled": true
 		}
 	],

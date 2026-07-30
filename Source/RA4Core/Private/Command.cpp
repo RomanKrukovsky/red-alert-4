@@ -45,6 +45,7 @@ const char* ToString(CommandReject Reason)
         case CommandReject::NoProducer: return "NoProducer";
         case CommandReject::TargetInvalid: return "TargetInvalid";
         case CommandReject::RateLimited: return "RateLimited";
+        case CommandReject::CommandCapExceeded: return "CommandCapExceeded";
         case CommandReject::MatchOver: return "MatchOver";
         default: return "Unknown";
     }

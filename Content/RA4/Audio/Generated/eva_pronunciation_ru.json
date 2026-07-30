@@ -1,0 +1,253 @@
+{
+  "$schema": "https://raw.githubusercontent.com/RedAlert4/schemas/main/eva_pronunciation_ru.schema.json",
+  "version": "1.0.0",
+  "language": "ru-RU",
+  "description": "Russian pronunciation dictionary and phonetic normalization rules for Red Alert 4 EVA VoxCPM TTS synthesis engine.",
+  "tech_codes": {
+    "T1": {
+      "display": "T1",
+      "spoken": "Тир один",
+      "phonetic_ipa": "tʲir ɐˈdʲin",
+      "context": "Tech tier 1 level"
+    },
+    "T2": {
+      "display": "T2",
+      "spoken": "Тир два",
+      "phonetic_ipa": "tʲir dva",
+      "context": "Tech tier 2 level"
+    },
+    "T3": {
+      "display": "T3",
+      "spoken": "Тир три",
+      "phonetic_ipa": "tʲir trʲi",
+      "context": "Tech tier 3 level"
+    },
+    "RA-4": {
+      "display": "RA-4",
+      "spoken": "Эр-А четыре",
+      "phonetic_ipa": "ɛr a tɕɨˈtɨrʲɪ",
+      "context": "Project designation"
+    },
+    "MCV": {
+      "display": "MCV",
+      "spoken": "Эм-Си-Ви",
+      "phonetic_ipa": "ɛm sʲi vʲi",
+      "context": "Mobile Construction Vehicle / Сборочный комплекс"
+    },
+    "EMP": {
+      "display": "EMP",
+      "spoken": "Электро-магнитный импульс",
+      "phonetic_ipa": "ɛlʲɪktrə mɐɡˈnʲitnɨj ˈimpʊlʲs",
+      "context": "Electromagnetic Pulse"
+    },
+    "GPS": {
+      "display": "GPS",
+      "spoken": "Джи-Пи-Эс",
+      "phonetic_ipa": "dʐɨ pʲi ɛs",
+      "context": "Global Positioning Satellite"
+    },
+    "AP": {
+      "display": "AP",
+      "spoken": "Бронебойный",
+      "phonetic_ipa": "brənʲɪˈboj nɨj",
+      "context": "Armor Piercing rounds"
+    },
+    "HE": {
+      "display": "HE",
+      "spoken": "Фугасный",
+      "phonetic_ipa": "fʊˈɡasnɨj",
+      "context": "High Explosive rounds"
+    },
+    "SAM": {
+      "display": "SAM",
+      "spoken": "ЗРК",
+      "phonetic_ipa": "zɛ ʔɛr ka",
+      "context": "Surface-to-Air Missile system"
+    },
+    "V3": {
+      "display": "V3",
+      "spoken": "Фау-три",
+      "phonetic_ipa": "faʊ trʲi",
+      "context": "V3 Rocket Launcher"
+    },
+    "V4": {
+      "display": "V4",
+      "spoken": "Фау-четыре",
+      "phonetic_ipa": "faʊ tɕɨˈtɨrʲɪ",
+      "context": "V4 Rocket Launcher"
+    }
+  },
+  "factions_and_characters": {
+    "СССР": {
+      "display": "СССР",
+      "spoken": "Советский Союз",
+      "phonetic_ipa": "sɐˈvʲetskʲɪj sɐˈjus",
+      "abbreviation_spoken": "Эс-Эс-Эс-Эр"
+    },
+    "Альянс": {
+      "display": "Альянс",
+      "spoken": "Алья́нс",
+      "phonetic_ipa": "ɐlʲˈjans"
+    },
+    "Империя": {
+      "display": "Империя",
+      "spoken": "Импе́рия",
+      "phonetic_ipa": "ɪmˈpʲerʲɪjə"
+    },
+    "Восточная коалиция": {
+      "display": "Восточная коалиция",
+      "spoken": "Восто́чная коали́ция",
+      "phonetic_ipa": "vɐˈstotɕnəjə kəɐˈlʲitsɪjə"
+    },
+    "Хронолегион": {
+      "display": "Хронолегион",
+      "spoken": "Хронолегио́н",
+      "phonetic_ipa": "xrənəlʲɪɡʲɪˈon"
+    },
+    "Книппер": {
+      "display": "Книппер",
+      "spoken": "Кни́ппер",
+      "phonetic_ipa": "ˈknʲipʲːɪr"
+    },
+    "Борман": {
+      "display": "Борман",
+      "spoken": "Бо́рман",
+      "phonetic_ipa": "ˈbormən"
+    },
+    "Круков": {
+      "display": "Круков",
+      "spoken": "Круко́в",
+      "phonetic_ipa": "krʊˈkof"
+    },
+    "Москвин": {
+      "display": "Москвин",
+      "spoken": "Москви́н",
+      "phonetic_ipa": "mɐskˈvʲin"
+    },
+    "Чапланов": {
+      "display": "Чапланов",
+      "spoken": "Чапла́нов",
+      "phonetic_ipa": "tɕɐˈplanəf"
+    }
+  },
+  "indices_and_callsigns": {
+    "Alpha-1": {
+      "display": "Alpha-1",
+      "spoken": "А́льфа оди́н",
+      "phonetic_ipa": "ˈalʲfə ɐˈdʲin"
+    },
+    "Bravo-2": {
+      "display": "Bravo-2",
+      "spoken": "Бра́во два",
+      "phonetic_ipa": "ˈbravo dva"
+    },
+    "Charlie-3": {
+      "display": "Charlie-3",
+      "spoken": "Ча́рли три",
+      "phonetic_ipa": "ˈtɕarlʲi trʲi"
+    },
+    "Delta-4": {
+      "display": "Delta-4",
+      "spoken": "Де́льта четы́ре",
+      "phonetic_ipa": "ˈdʲɛlʲtə tɕɨˈtɨrʲɪ"
+    },
+    "Echo-5": {
+      "display": "Echo-5",
+      "spoken": "Э́хо пять",
+      "phonetic_ipa": "ˈɛxə pʲætʲ"
+    },
+    "Red-1": {
+      "display": "Red-1",
+      "spoken": "Кра́сный оди́н",
+      "phonetic_ipa": "ˈkrasnɨj ɐˈdʲin"
+    },
+    "Eagle-6": {
+      "display": "Eagle-6",
+      "spoken": "Орёл шесть",
+      "phonetic_ipa": "ɐˈrʲol ʂɛstʲ"
+    },
+    "Vanguard-9": {
+      "display": "Vanguard-9",
+      "spoken": "Аванга́рд девя́ть",
+      "phonetic_ipa": "ɐvɐnˈɡart dʲɪˈvʲætʲ"
+    }
+  },
+  "military_terms": {
+    "ОБТ": {
+      "display": "ОБТ",
+      "spoken": "Основно́й боево́й танк",
+      "phonetic_ipa": "ɐsnɐvˈnoj bəjɪˈvoj tank"
+    },
+    "БМП": {
+      "display": "БМП",
+      "spoken": "Бе-Эм-Пе́",
+      "phonetic_ipa": "bʲe ɛm ˈpʲe"
+    },
+    "ПВО": {
+      "display": "ПВО",
+      "spoken": "Пе-Ве-О́",
+      "phonetic_ipa": "pʲe vʲe ˈo"
+    },
+    "ПТУР": {
+      "display": "ПТУР",
+      "spoken": "Пту́р",
+      "phonetic_ipa": "ptʊr"
+    },
+    "РЛС": {
+      "display": "РЛС",
+      "spoken": "Эр-Эл-Э́с",
+      "phonetic_ipa": "ɛr ɛl ˈɛs"
+    },
+    "КП": {
+      "display": "КП",
+      "spoken": "Кома́ндный пункт",
+      "phonetic_ipa": "kɐˈmandnɨj punkt"
+    },
+    "ПП": {
+      "display": "ПП",
+      "spoken": "Пункт управле́ния",
+      "phonetic_ipa": "punkt ʊprɐvˈlʲenʲɪjə"
+    }
+  },
+  "numbers_and_units": {
+    "0": "ноль",
+    "1": "оди́н",
+    "2": "два",
+    "3": "три",
+    "4": "четы́ре",
+    "5": "пять",
+    "10": "де́сять",
+    "30": "три́дцать",
+    "60": "шестьдеся́т",
+    "100": "сто",
+    "25%": "два́дцать пять проце́нтов",
+    "50%": "пятьдеся́т проце́нтов",
+    "100%": "сто проце́нтов",
+    "10s": "де́сять секу́нд",
+    "30s": "три́дцать секу́нд",
+    "60s": "шестьдеся́т секу́нд",
+    "3, 2, 1": "три, два, один"
+  },
+  "normalization_rules": [
+    {
+      "pattern": "\\bT([1-3])\\b",
+      "replace": "Тир $1"
+    },
+    {
+      "pattern": "\\b([0-9]+)%\\b",
+      "replace": "$1 процентов"
+    },
+    {
+      "pattern": "\\b([0-9]+)s\\b",
+      "replace": "$1 секунд"
+    },
+    {
+      "pattern": "\\bMCV\\b",
+      "replace": "Эм-Си-Ви"
+    },
+    {
+      "pattern": "\\bEMP\\b",
+      "replace": "Электро-магнитный импульс"
+    }
+  ]
+}

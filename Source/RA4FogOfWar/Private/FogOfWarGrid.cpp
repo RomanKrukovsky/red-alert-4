@@ -11,12 +11,14 @@ FFogOfWarGrid::FFogOfWarGrid(int32_t InWidth, int32_t InHeight, int32_t InNumPla
     , Height(InHeight)
     , NumPlayers(InNumPlayers)
 {
-    VisibilityData.resize(NumPlayers);
-    DirtyRegions.resize(NumPlayers);
+    const size_t PlayersCount = NumPlayers > 0 ? static_cast<size_t>(NumPlayers) : 0;
+    VisibilityData.resize(PlayersCount);
+    DirtyRegions.resize(PlayersCount);
 
-    for (int32_t i = 0; i < NumPlayers; ++i)
+    const size_t CellCount = (Width > 0 && Height > 0) ? static_cast<size_t>(Width) * static_cast<size_t>(Height) : 0;
+    for (size_t i = 0; i < PlayersCount; ++i)
     {
-        VisibilityData[i].resize(Width * Height, VisibilityState::NeverSeen);
+        VisibilityData[i].resize(CellCount, VisibilityState::NeverSeen);
     }
 }
 
@@ -24,24 +26,25 @@ void FFogOfWarGrid::RevealCircularArea(int32_t PlayerIndex, int32_t CenterX, int
 {
     if (PlayerIndex < 0 || PlayerIndex >= NumPlayers) return;
 
-    int32_t MinX = std::max(0, CenterX - Radius);
-    int32_t MaxX = std::min(Width - 1, CenterX + Radius);
-    int32_t MinY = std::max(0, CenterY - Radius);
-    int32_t MaxY = std::min(Height - 1, CenterY + Radius);
+    const size_t PIdx = static_cast<size_t>(PlayerIndex);
+    const int32_t MinX = std::max(0, CenterX - Radius);
+    const int32_t MaxX = std::min(Width - 1, CenterX + Radius);
+    const int32_t MinY = std::max(0, CenterY - Radius);
+    const int32_t MaxY = std::min(Height - 1, CenterY + Radius);
 
-    int32_t RadiusSq = Radius * Radius;
+    const int32_t RadiusSq = Radius * Radius;
     bool bChanged = false;
 
-    auto& Data = VisibilityData[PlayerIndex];
+    auto& Data = VisibilityData[PIdx];
 
     for (int32_t Y = MinY; Y <= MaxY; ++Y)
     {
         for (int32_t X = MinX; X <= MaxX; ++X)
         {
-            int32_t DistSq = (X - CenterX) * (X - CenterX) + (Y - CenterY) * (Y - CenterY);
+            const int32_t DistSq = (X - CenterX) * (X - CenterX) + (Y - CenterY) * (Y - CenterY);
             if (DistSq <= RadiusSq)
             {
-                int32_t Idx = Y * Width + X;
+                const size_t Idx = static_cast<size_t>(Y) * static_cast<size_t>(Width) + static_cast<size_t>(X);
                 if (Data[Idx] != VisibilityState::CurrentlyVisible)
                 {
                     Data[Idx] = VisibilityState::CurrentlyVisible;
@@ -53,9 +56,8 @@ void FFogOfWarGrid::RevealCircularArea(int32_t PlayerIndex, int32_t CenterX, int
 
     if (bChanged)
     {
-        // Add to dirty regions (for simplicity, we add the bounding box of the vision circle)
-        FIntRect DirtyRect(MinX, MinY, MaxX, MaxY);
-        DirtyRegions[PlayerIndex].push_back(DirtyRect);
+        const FIntRect DirtyRect(MinX, MinY, MaxX, MaxY);
+        DirtyRegions[PIdx].push_back(DirtyRect);
     }
 }
 
@@ -63,7 +65,8 @@ void FFogOfWarGrid::ClearCurrentVisibility(int32_t PlayerIndex)
 {
     if (PlayerIndex < 0 || PlayerIndex >= NumPlayers) return;
 
-    auto& Data = VisibilityData[PlayerIndex];
+    const size_t PIdx = static_cast<size_t>(PlayerIndex);
+    auto& Data = VisibilityData[PIdx];
     for (auto& Cell : Data)
     {
         if (Cell == VisibilityState::CurrentlyVisible)
@@ -79,21 +82,25 @@ VisibilityState FFogOfWarGrid::GetVisibility(int32_t PlayerIndex, int32_t X, int
     {
         return VisibilityState::NeverSeen;
     }
-    return VisibilityData[PlayerIndex][Y * Width + X];
+    const size_t PIdx = static_cast<size_t>(PlayerIndex);
+    const size_t Idx = static_cast<size_t>(Y) * static_cast<size_t>(Width) + static_cast<size_t>(X);
+    return VisibilityData[PIdx][Idx];
 }
 
 const std::vector<FIntRect>& FFogOfWarGrid::GetDirtyRegions(int32_t PlayerIndex) const
 {
     static const std::vector<FIntRect> Empty;
     if (PlayerIndex < 0 || PlayerIndex >= NumPlayers) return Empty;
-    return DirtyRegions[PlayerIndex];
+    const size_t PIdx = static_cast<size_t>(PlayerIndex);
+    return DirtyRegions[PIdx];
 }
 
 void FFogOfWarGrid::ClearDirtyRegions(int32_t PlayerIndex)
 {
     if (PlayerIndex >= 0 && PlayerIndex < NumPlayers)
     {
-        DirtyRegions[PlayerIndex].clear();
+        const size_t PIdx = static_cast<size_t>(PlayerIndex);
+        DirtyRegions[PIdx].clear();
     }
 }
 

@@ -13,7 +13,7 @@ void URA4HUDViewModel::SetCredits(int32 InCredits)
     if (Credits != InCredits)
     {
         Credits = InCredits;
-        UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetCredits);
+        UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(Credits);
     }
 }
 
@@ -33,11 +33,54 @@ void URA4HUDViewModel::SetPower(int32 InPowerProvided, int32 InPowerDrained)
     if (PowerRatio != NewRatio)
     {
         PowerRatio = NewRatio;
-        UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(GetPowerRatio);
+        UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(PowerRatio);
     }
 }
 
 float URA4HUDViewModel::GetPowerRatio() const
 {
     return PowerRatio;
+}
+
+void URA4HUDViewModel::SetPowerShortage(bool bShortage)
+{
+    if (bPowerShortage != bShortage)
+    {
+        bPowerShortage = bShortage;
+        UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(bPowerShortage);
+    }
+}
+
+bool URA4HUDViewModel::IsPowerShortage() const
+{
+    return bPowerShortage;
+}
+
+void URA4HUDViewModel::SetSelectionState(int32 Count, float HealthRatio, const FString& EntityName, bool bOwned)
+{
+    bool bChanged = false;
+    if (SelectionCount != Count)
+    {
+        SelectionCount = Count;
+        bChanged = true;
+        UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(SelectionCount);
+    }
+    if (!FMath::IsNearlyEqual(SelectionHealthRatio, HealthRatio))
+    {
+        SelectionHealthRatio = HealthRatio;
+        bChanged = true;
+        UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(SelectionHealthRatio);
+    }
+    if (PrimaryEntityName != EntityName)
+    {
+        PrimaryEntityName = EntityName;
+        bChanged = true;
+        UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(PrimaryEntityName);
+    }
+    if (bPrimaryOwned != bOwned)
+    {
+        bPrimaryOwned = bOwned;
+        bChanged = true;
+        UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(bPrimaryOwned);
+    }
 }

@@ -3,8 +3,16 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Curves/CurveFloat.h"
 #include "Engine/DataAsset.h"
+#include "Engine/Texture2D.h"
+#include "Materials/MaterialInterface.h"
+#include "Sound/SoundBase.h"
+#include "Styling/SlateBrush.h"
+#include "Styling/SlateTypes.h"
 #include "RA4UITheme.generated.h"
+
+class UCommonButtonStyle;
 
 UENUM(BlueprintType)
 enum class ERA4FactionTheme : uint8
@@ -38,4 +46,50 @@ public:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Theme|Colors")
     FLinearColor TextColor;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Theme|Visuals")
+    TSoftObjectPtr<UTexture2D> MenuBackground;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Theme|Visuals")
+    TSoftObjectPtr<UTexture2D> CommanderPortrait;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Theme|Visuals")
+    TSoftObjectPtr<UTexture2D> FactionIcon;
+
+    /** Stretchable 9-slice panel supplied by the active visual kit. */
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Theme|Styles")
+    FSlateBrush PanelBrush;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Theme|Styles")
+    TSoftClassPtr<UCommonButtonStyle> ButtonStyle;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Theme|Styles")
+    FTextBlockStyle TextStyle;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Theme|Visuals")
+    TSoftObjectPtr<UMaterialInterface> PanelMaterial;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Theme|Visuals")
+    TSoftObjectPtr<UMaterialInterface> FrameMaterial;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Theme|Visuals")
+    TSoftObjectPtr<UMaterialInterface> GlowMaterial;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Theme|Audio")
+    TSoftObjectPtr<USoundBase> ClickSound;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Theme|Audio")
+    TSoftObjectPtr<USoundBase> HoverSound;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Theme|Animation")
+    TSoftObjectPtr<UCurveFloat> TransitionCurve;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Theme|Animation", meta = (ClampMin = "0.0"))
+    float TransitionDuration = 0.28f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Theme|Layout", meta = (ClampMin = "1.0"))
+    float FrameStroke = 2.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Theme|Layout", meta = (ClampMin = "0.0"))
+    float GlowStrength = 1.0f;
 };

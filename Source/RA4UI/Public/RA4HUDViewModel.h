@@ -26,10 +26,46 @@ public:
     UFUNCTION(BlueprintPure, Category = "ViewModel|Economy")
     float GetPowerRatio() const;
 
+    UFUNCTION(BlueprintCallable, Category = "ViewModel|Economy")
+    void SetPowerShortage(bool bShortage);
+
+    UFUNCTION(BlueprintPure, Category = "ViewModel|Economy")
+    bool IsPowerShortage() const;
+
+    UFUNCTION(BlueprintCallable, Category = "ViewModel|Selection")
+    void SetSelectionState(int32 Count, float HealthRatio, const FString& EntityName, bool bOwned);
+
+    UFUNCTION(BlueprintPure, Category = "ViewModel|Selection")
+    int32 GetSelectionCount() const { return SelectionCount; }
+
+    UFUNCTION(BlueprintPure, Category = "ViewModel|Selection")
+    float GetSelectionHealthRatio() const { return SelectionHealthRatio; }
+
+    UFUNCTION(BlueprintPure, Category = "ViewModel|Selection")
+    FString GetPrimaryEntityName() const { return PrimaryEntityName; }
+
+    UFUNCTION(BlueprintPure, Category = "ViewModel|Selection")
+    bool IsPrimaryOwned() const { return bPrimaryOwned; }
+
 private:
     UPROPERTY(FieldNotify, Setter, Getter)
     int32 Credits;
 
-    UPROPERTY(FieldNotify, Setter, Getter)
+    UPROPERTY(FieldNotify, Getter = GetPowerRatio)
     float PowerRatio;
+
+    UPROPERTY(FieldNotify, Getter = IsPowerShortage)
+    bool bPowerShortage;
+
+    UPROPERTY(FieldNotify, Getter = GetSelectionCount)
+    int32 SelectionCount;
+
+    UPROPERTY(FieldNotify, Getter = GetSelectionHealthRatio)
+    float SelectionHealthRatio;
+
+    UPROPERTY(FieldNotify, Getter = GetPrimaryEntityName)
+    FString PrimaryEntityName;
+
+    UPROPERTY(FieldNotify, Getter = IsPrimaryOwned)
+    bool bPrimaryOwned;
 };

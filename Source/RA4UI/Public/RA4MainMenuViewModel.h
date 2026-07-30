@@ -17,12 +17,12 @@ public:
     // Field-notifying properties for MVVM data binding
     
     UFUNCTION(BlueprintCallable, Category = "ViewModel")
-    void SetPlayerProfileName(const FString& InName);
+    void SetPlayerProfileName(const FText& InName);
     
     UFUNCTION(BlueprintPure, Category = "ViewModel")
-    FString GetPlayerProfileName() const;
+    FText GetPlayerProfileName() const;
 
 private:
     UPROPERTY(FieldNotify, Setter, Getter)
-    FString PlayerProfileName;
+    FText PlayerProfileName;
 };
