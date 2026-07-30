@@ -15,12 +15,11 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Components/Button.h"
 
 #include "RA4HUDTypes.h"
 
 #include "RA4SidebarWidget.generated.h"
-
-#include "Components/Button.h"
 
 class UProgressBar;
 class UTextBlock;
@@ -116,6 +115,9 @@ private:
     TArray<int64> CardContentIds;
 
     int32 ActiveCategory = 0;
+
+    // What the card grid was last built from. See RefreshCards.
+    uint32 CardsSignature = 0;
 
     FDelegateHandle ResourceChangeHandle;
     FDelegateHandle ProductionChangeHandle;

@@ -1,0 +1,36 @@
+{
+    "FileVersion": 3,
+    "EngineAssociation": "5.8",
+    "Category": "",
+    "Description": "Red Alert 4 - RTS AI System for Unreal Engine 5.8",
+    "Modules": [
+        {
+            "Name": "RAAI",
+            "Type": "Runtime",
+            "LoadingPhase": "Default",
+            "AdditionalDependencies": [
+                "AIModule",
+                "GameplayTasks",
+                "NavigationSystem",
+                "MassEntity",
+                "MassAI",
+                "StateTreeModule",
+                "StateTreeAI"
+            ]
+        }
+    ],
+    "Plugins": [
+        {
+            "Name": "MassEntity",
+            "Enabled": true
+        },
+        {
+            "Name": "MassAI",
+            "Enabled": true
+        },
+        {
+            "Name": "StateTree",
+            "Enabled": true
+        }
+    ]
+}

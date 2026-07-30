@@ -112,6 +112,13 @@ private:
     UPROPERTY(Transient)
     TObjectPtr<class URA4ResourceBarWidget> ResourceBar;
 
+    // The classic right-hand command column. Owned here for the same reason as the
+    // resource bar; it reports card clicks back and never issues commands itself.
+    UPROPERTY(Transient)
+    TObjectPtr<class URA4SidebarWidget> Sidebar;
+
+    void HandleBuildCardClicked(int64 ContentIdValue);
+
     // --- state ---------------------------------------------------------------
     RA4::Input::SelectionModel Selection;
     RA4::Input::CursorHint CurrentCursorHint = RA4::Input::CursorHint::Select;

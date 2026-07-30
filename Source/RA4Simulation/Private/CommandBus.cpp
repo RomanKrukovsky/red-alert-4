@@ -37,22 +37,29 @@ CommandFrame CommandBus::FetchFrameForTick(TickIndex Tick) const
 int32_t CommandBus::DispatchTick(TickIndex Tick, SimWorld& World)
 {
     CommandFrame Frame = FetchFrameForTick(Tick);
-    int32_t ExecutedCount = 0;
-    
-    // Apply each command in deterministic frame order
-    for (const Command& Cmd : Frame.Commands)
+    if (World.GetPhase() != MatchPhase::Running)
     {
-        CommandResult Res = World.ApplyCommand(Cmd);
-        if (Res.IsAccepted())
+        return 0;
+    }
+
+    const size_t EventCountBefore = World.GetEvents().size();
+
+    // SimWorld::Tick owns command application for the whole frame. DispatchTick
+    // must not pre-apply the same commands or non-idempotent commands (credits,
+    // production queue, refunds) will execute twice.
+    World.Tick(&Frame);
+
+    const std::vector<SimEvent>& Events = World.GetEvents();
+    int32_t RejectedCount = 0;
+    for (size_t I = EventCountBefore; I < Events.size(); ++I)
+    {
+        if (Events[I].Type == SimEventType::CommandRejected)
         {
-            ExecutedCount++;
+            ++RejectedCount;
         }
     }
 
-    // Step simulation tick with the applied frame
-    World.Tick(&Frame);
-
-    return ExecutedCount;
+    return int32_t(Frame.Commands.size()) - RejectedCount;
 }
 
 void CommandBus::ClearUpToTick(TickIndex Tick)

@@ -1,9 +1,29 @@
 // Copyright (c) Red Alert 4 project. Unit tests for ArmorMatrix and CommandBus.
 #include "TestFramework.h"
+#include "TestHelpers.h"
 
 #include "RA4Combat/ArmorMatrix.h"
 #include "RA4Simulation/CommandBus.h"
 #include "RA4Simulation/SimWorld.h"
+
+using namespace RA4;
+using namespace RA4Test;
+
+namespace
+{
+struct CommandBusFixture
+{
+    ContentDatabase Content;
+    SimWorld World;
+
+    CommandBusFixture()
+    {
+        BuildDefaultContent(Content);
+        World.Initialize(&Content, MakeTestSetup());
+        SpawnEnemyOutpost(World);
+    }
+};
+} // namespace
 
 RA4_TEST(ArmorMatrix, DamageCalculation)
 {
@@ -44,4 +64,68 @@ RA4_TEST(CommandBus, QueueAndDispatch)
 
     Bus.ClearUpToTick(1);
     RA4_EXPECT_EQ(Bus.GetPendingCommandCount(), 0);
+}
+
+RA4_TEST(CommandBus, DispatchTickAppliesAProductionFrameExactlyOnce)
+{
+    CommandBusFixture F;
+    CommandBus Bus;
+
+    const EntityId Yard = F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    RA4_REQUIRE(Yard.IsValid());
+
+    const int32_t BeforeCredits = F.World.GetPlayer(0).Credits;
+
+    Command Start = MakeCommand(CommandType::StartProduction, 0);
+    Start.Primary = Yard;
+    Start.Content = Ids::SovPower;
+    Bus.EnqueueCommand(F.World.GetTick(), Start);
+
+    const int32_t Accepted = Bus.DispatchTick(F.World.GetTick(), F.World);
+    const BuildingComp* YardState = F.World.GetBuilding(Yard);
+    RA4_REQUIRE(YardState != nullptr);
+
+    RA4_EXPECT_EQ(Accepted, 1);
+    RA4_EXPECT_EQ(F.World.GetPlayer(0).Credits, BeforeCredits - 800);
+    RA4_EXPECT_EQ(int32_t(YardState->Queue.size()), 1);
+}
+
+RA4_TEST(CommandBus, DispatchTickReturnsZeroForRejectedCommands)
+{
+    CommandBusFixture F;
+    CommandBus Bus;
+
+    Command Start = MakeCommand(CommandType::StartProduction, 0);
+    Start.Content = Ids::SovPower;
+    Bus.EnqueueCommand(F.World.GetTick(), Start);
+
+    const int32_t Accepted = Bus.DispatchTick(F.World.GetTick(), F.World);
+
+    RA4_EXPECT_EQ(Accepted, 0);
+    RA4_EXPECT_EQ(F.World.GetPlayer(0).Credits, 10000);
+}
+
+RA4_TEST(CommandBus, DispatchTickReturnsZeroWhenMatchIsAlreadyOver)
+{
+    CommandBusFixture F;
+    CommandBus Bus;
+
+    const EntityId Yard = F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    RA4_REQUIRE(Yard.IsValid());
+
+    Command Surrender = MakeCommand(CommandType::Surrender, 0);
+    RA4_REQUIRE(F.World.ApplyCommand(Surrender).IsAccepted());
+
+    Command Start = MakeCommand(CommandType::StartProduction, 0);
+    Start.Primary = Yard;
+    Start.Content = Ids::SovPower;
+    Bus.EnqueueCommand(F.World.GetTick(), Start);
+
+    const int32_t Accepted = Bus.DispatchTick(F.World.GetTick(), F.World);
+    const BuildingComp* YardState = F.World.GetBuilding(Yard);
+    RA4_REQUIRE(YardState != nullptr);
+
+    RA4_EXPECT_EQ(Accepted, 0);
+    RA4_EXPECT_EQ(F.World.GetPlayer(0).Credits, 10000);
+    RA4_EXPECT_EQ(int32_t(YardState->Queue.size()), 0);
 }

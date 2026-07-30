@@ -8,6 +8,8 @@
 #include "RA4SimCoords.h"
 #include "RA4SimWorldSubsystem.h"
 #include "RA4HUDWidget.h"
+#include "RA4SidebarWidget.h"
+#include "RA4UIDataProviderSubsystem.h"
 #include "Blueprint/UserWidget.h"
 #include "UnrealClient.h"
 
@@ -45,6 +47,22 @@ void ARA4PlayerController::BeginPlay()
         else
         {
             UE_LOG(LogTemp, Error, TEXT("RA4 HUD: failed to create the resource bar"));
+        }
+
+        Sidebar = CreateWidget<URA4SidebarWidget>(this, URA4SidebarWidget::StaticClass());
+        if (Sidebar != nullptr)
+        {
+            Sidebar->AddToViewport(/*ZOrder*/ 10);
+            // Pinned to the right edge and stretched over the full height: the column
+            // is furniture, not a floating panel, and its cards must not move when the
+            // window is resized.
+            Sidebar->SetAnchorsInViewport(FAnchors(1.0f, 0.0f, 1.0f, 1.0f));
+            Sidebar->SetAlignmentInViewport(FVector2D(1.0f, 0.0f));
+            Sidebar->OnBuildCardClicked.AddUObject(this, &ARA4PlayerController::HandleBuildCardClicked);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("RA4 HUD: failed to create the sidebar"));
         }
     }
     TryInitializeCamera();
@@ -734,6 +752,43 @@ void ARA4PlayerController::BeginPlacement(int64 ContentIdValue)
     PlacementContent = ContentId(uint32(ContentIdValue));
     bPlacementArmed = PlacementContent.IsValid();
     bAttackMoveArmed = false;
+}
+
+void ARA4PlayerController::HandleBuildCardClicked(int64 ContentIdValue)
+{
+    const URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
+    const SimWorld* World = Subsystem != nullptr ? Subsystem->GetSimWorld() : nullptr;
+    if (World == nullptr)
+    {
+        return;
+    }
+
+    const ContentId Content = ContentId(uint32(ContentIdValue));
+    if (!Content.IsValid())
+    {
+        return;
+    }
+
+    // A structure that has finished building is waiting for a spot, so the same card
+    // that queued it now arms placement instead of queueing a second one -- which is
+    // exactly how the sidebar behaved in the originals.
+    if (const URA4UIDataProviderSubsystem* Provider = GetWorld()->GetSubsystem<URA4UIDataProviderSubsystem>())
+    {
+        for (const FRA4ProductionEntry& Entry : Provider->GetProductionQueue())
+        {
+            if (Entry.bAwaitingPlacement && Entry.ContentId == ContentIdValue)
+            {
+                BeginPlacement(ContentIdValue);
+                return;
+            }
+        }
+    }
+
+    Command C;
+    C.Type = CommandType::StartProduction;
+    C.Issuer = Selection.GetLocalPlayer();
+    C.Content = Content;
+    SubmitOrders({C});
 }
 
 void ARA4PlayerController::CancelPendingAction()
