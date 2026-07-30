@@ -1,0 +1,2 @@
+/usr/bin/ar qc libRA4Core.a "CMakeFiles/RA4Core.dir/Users/romanmolodyko/Documents/red-alert-4/Source/RA4Core/Private/FixedMath.cpp.o" "CMakeFiles/RA4Core.dir/Users/romanmolodyko/Documents/red-alert-4/Source/RA4Core/Private/Command.cpp.o"
+/usr/bin/ranlib libRA4Core.a

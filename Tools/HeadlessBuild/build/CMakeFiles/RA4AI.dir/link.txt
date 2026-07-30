@@ -1,0 +1,2 @@
+/usr/bin/ar qc libRA4AI.a "CMakeFiles/RA4AI.dir/Users/romanmolodyko/Documents/red-alert-4/Source/RA4AI/Private/AIStrategy.cpp.o" "CMakeFiles/RA4AI.dir/Users/romanmolodyko/Documents/red-alert-4/Source/RA4AI/Private/AICommander.cpp.o" "CMakeFiles/RA4AI.dir/Users/romanmolodyko/Documents/red-alert-4/Source/RA4AI/Private/AIWorldView.cpp.o" "CMakeFiles/RA4AI.dir/Users/romanmolodyko/Documents/red-alert-4/Source/RA4AI/Private/TacticalOperation.cpp.o"
+/usr/bin/ranlib libRA4AI.a

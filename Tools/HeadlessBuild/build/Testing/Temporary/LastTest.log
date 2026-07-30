@@ -1,0 +1,240 @@
+Start testing: Jul 30 12:07 MSK
+----------------------------------------------------------
+1/4 Testing: core
+1/4 Test: core
+Command: "/Users/romanmolodyko/Documents/red-alert-4/Tools/HeadlessBuild/build/RA4Tests"
+Directory: /Users/romanmolodyko/Documents/red-alert-4/Tools/HeadlessBuild/../..
+"core" start time: Jul 30 12:07 MSK
+Output:
+----------------------------------------------------------
+[ PASS ] FixedMath.BasicArithmetic                                0 ms
+[ PASS ] FixedMath.SqrtAccuracy                                   0 ms
+[ PASS ] FixedMath.TrigonometryMatchesReference                   0 ms
+[ PASS ] FixedMath.Atan2RoundTrip                                 0 ms
+[ PASS ] FixedMath.AngleWrapping                                  0 ms
+[ PASS ] Vector.LengthAndNormalize                                0 ms
+[ PASS ] Random.ReproducibleFromSeed                              0 ms
+[ PASS ] Random.BoundedDrawsStayInRange                           0 ms
+[ PASS ] ByteStream.RoundTripsEveryType                           0 ms
+[ PASS ] ByteStream.TruncatedInputSetsErrorInsteadOfReadingPastEnd     0 ms
+[ PASS ] Command.SerializationIsStable                            0 ms
+[ PASS ] Ids.GenerationDistinguishesRecycledSlots                 0 ms
+[ PASS ] Ids.ContentHashesAreStableAndDistinct                    0 ms
+[ PASS ] Checksum.DetectsSingleBitChanges                         0 ms
+[ PASS ] Content.DefaultSetPassesValidation                       6 ms
+[ PASS ] Content.ValidationCatchesAuthoringMistakes               0 ms
+[ PASS ] Content.HashChangesWithBalanceEdits                      0 ms
+[ PASS ] Content.DamageTableEncodesRockPaperScissors              0 ms
+[ PASS ] Simulation.RecycledSlotsInvalidateOldHandles             3 ms
+[ PASS ] Commands.RejectsOrdersOnUnitsYouDoNotOwn                 0 ms
+[ PASS ] Commands.RejectsStaleEntityHandles                       0 ms
+[ PASS ] Commands.RejectsProductionWithoutPrerequisites           0 ms
+[ PASS ] Commands.RejectsProductionYouCannotAfford                0 ms
+[ PASS ] Commands.ThrottlesCommandFloods                          0 ms
+[ PASS ] Placement.RequiresBuildRadiusAndClearGround              0 ms
+[ PASS ] Placement.RejectsWaterAndCliffs                          0 ms
+[ PASS ] Production.StructureIsPaidQueuedThenPlaced              10 ms
+[ PASS ] Production.CancellingRefundsCredits                    192 ms
+[ PASS ] Production.UnitLeavesTheFactoryAndObeysTheRallyPoint   137 ms
+[ PASS ] Power.ShortageSlowsProductionInsteadOfStoppingIt        39 ms
+[ PASS ] Economy.HarvesterCompletesTheFullGatherLoop            122 ms
+[ PASS ] Economy.ResourceFieldsAreFinite                        137 ms
+[ PASS ] Combat.ArmourClassesDecideTheOutcome                    47 ms
+[ PASS ] Combat.UnitsHoldFireOutsideWeaponRange                  61 ms
+[ PASS ] Combat.AttackOrderClosesTheDistance                    187 ms
+[ PASS ] Combat.DefensiveStructuresEngageOnTheirOwn              39 ms
+[ PASS ] Combat.SplashDamageHitsEverythingInTheBlast              5 ms
+[ PASS ] Movement.UnitsReachTheirDestination                     17 ms
+[ PASS ] Movement.QueuedWaypointsAreFollowedInOrder             125 ms
+[ PASS ] Movement.StopClearsTheWholeOrderQueue                    0 ms
+[ PASS ] Movement.ImpassableTerrainBlocksGroundUnits            208 ms
+[ PASS ] Movement.RoutesAroundTerrainWallThroughItsOnlyGap      191 ms
+[ PASS ] Victory.LosingEverythingEndsTheMatch                     8 ms
+[ PASS ] Victory.SurrenderEndsTheMatchImmediately                 0 ms
+         slice finished in 2816 ticks (140.8 s simulated), harvested 6000 credits, final checksum 4e6d9e69576c002b
+[ PASS ] VerticalSlice.FullMatchFromBaseBuildingToVictory      1036 ms
+[ PASS ] VerticalSlice.IdenticalInputsProduceIdenticalStateEveryTick  1365 ms
+[ PASS ] VerticalSlice.DifferentSeedsDoNotProduceIdenticalState   380 ms
+[ PASS ] Replay.RecordedMatchReplaysToTheSameResult              87 ms
+[ PASS ] Replay.PlaybackReproducesEveryCheckpointChecksum         0 ms
+[ PASS ] Replay.RejectsFilesFromADifferentContentBuild            0 ms
+[ PASS ] Replay.RejectsCorruptFiles                               0 ms
+[ PASS ] Replay.SurvivesAFileRoundTrip                            3 ms
+[ PASS ] Navigation.ExtractsStablePortalsForOpenSectorBoundary     0 ms
+[ PASS ] Navigation.FlowFieldRoutesThroughOnlyGapWithoutDiagonalCornerCutting     0 ms
+[ PASS ] Navigation.FlowFieldRespectsLayerAndClearanceRequirements     0 ms
+[ PASS ] Navigation.RebuildsOnceForBatchedTopologyChanges         0 ms
+[ PASS ] Navigation.ReservationLowerSlotWinsTie                   0 ms
+[ PASS ] Navigation.ReservationExpiresAndFreesTile                0 ms
+[ PASS ] Navigation.MacroRouterFindsShortestCorridor              0 ms
+[ PASS ] Navigation.MacroRouterRespectsLayerAndClearance          0 ms
+[ PASS ] Navigation.MacroRouterInvalidatesOnTopologyRevision      0 ms
+[ PASS ] Navigation.MacroRouterCacheHitMovesNewestEntrySafely     0 ms
+[ PASS ] Navigation.FormationMembersFollowLeaderSlot              0 ms
+[ PASS ] Navigation.NavDebugSnapshotHasNoDrawDependency           0 ms
+[ PASS ] Navigation.FlowFieldSharedAcrossUnits                    1 ms
+[ PASS ] Navigation.LocalAvoidancePicksBestOpenNeighbor           1 ms
+[ PASS ] Navigation.BlockedUnitRepatsAfterThreshold               0 ms
+[ PASS ] Navigation.RepathBudgetStallsDeterministically           0 ms
+[ PASS ] Navigation.BridgeDestroyInvalidatesPath                  0 ms
+[ PASS ] FogOfWar.GridInitialization                              0 ms
+[ PASS ] FogOfWar.RevealCircularArea                              0 ms
+[ PASS ] FogOfWar.ClearCurrentVisibility                          0 ms
+[ PASS ] FogOfWar.SimWorldIntegration                             0 ms
+[ PASS ] FogOfWar.UnitMovementUpdatesFog                          3 ms
+[ PASS ] Camera.KeyboardPanMovesTheFocusAndSettles                0 ms
+[ PASS ] Camera.DiagonalPanIsNotFasterThanCardinalPan             0 ms
+[ PASS ] Camera.FocusIsClampedToTheMap                            0 ms
+[ PASS ] Camera.ZoomStaysWithinItsLimits                          0 ms
+[ PASS ] Camera.EdgeScrollOnlyRunsWhenTheWindowIsFocused          0 ms
+[ PASS ] Camera.EdgeScrollIsSuppressedWhileDragging               0 ms
+[ PASS ] Camera.PanIsFrameRateIndependent                         0 ms
+[ PASS ] Camera.FocusOnJumpsInstantlyWhenAsked                    0 ms
+[ PASS ] Selection.ClickPrefersOwnUnitsOverEverythingElse         0 ms
+[ PASS ] Selection.ClickingEmptyGroundClearsButShiftClickingDoesNot     0 ms
+[ PASS ] Selection.MarqueeTakesOwnUnitsAndIgnoresEnemiesAndBuildings     0 ms
+[ PASS ] Selection.MarqueeOverBaseWithNoUnitsPicksASingleBuilding     0 ms
+[ PASS ] Selection.ShiftAddsAndCtrlToggles                        0 ms
+[ PASS ] Selection.DoubleClickSelectsOnlyTheSameUnitType          0 ms
+[ PASS ] Selection.ControlGroupsAssignRecallAndForgetTheDead      1 ms
+[ PASS ] Selection.DeadUnitsLeaveTheSelection                     2 ms
+[ PASS ] Selection.SelectionIsCappedSoOrdersFitTheCommandBudget     0 ms
+[ PASS ] Orders.RightClickOnGroundIsAMoveForEverySelectedUnit     0 ms
+[ PASS ] Orders.RightClickOnAnEnemyAttacksWithArmedUnitsAndMovesTheRest     0 ms
+[ PASS ] Orders.ShiftQueuesInsteadOfReplacing                     0 ms
+[ PASS ] Orders.ForceAttackTargetsAnAllyWhenCtrlIsHeld            0 ms
+[ PASS ] Orders.AttackMoveModeProducesAttackMove                  0 ms
+[ PASS ] Orders.HarvesterSentToOreGetsAHarvestOrder               0 ms
+[ PASS ] Orders.PlacementModeEmitsPlaceBuilding                   0 ms
+[ PASS ] Orders.GroundClickWithOnlyBuildingsSelectedSetsTheRallyPoint     0 ms
+[ PASS ] Orders.ResolvedOrdersAreAcceptedByTheServer              0 ms
+[ PASS ] Orders.CursorHintMatchesWhatTheClickWillDo               1 ms
+[ PASS ] Orders.PlacementCursorRefusesIllegalGround               0 ms
+[ PASS ] HitTest.PointPickReturnsOnlyDiscsItTouches               0 ms
+[ PASS ] HitTest.OverlappingDiscsResolveNearestFirstAndStably     0 ms
+[ PASS ] HitTest.MarqueeQuadSelectsWhatItCovers                   0 ms
+[ PASS ] HitTest.QuadWindingAndRotationDoNotMatter                0 ms
+[ PASS ] HitTest.ShortDragCountsAsAClick                          0 ms
+[ PASS ] ClassicScheme.LeftClickOnGroundIssuesTheOrder            0 ms
+[ PASS ] ClassicScheme.LeftClickOnOwnUnitSelectsRatherThanOrderingIntoIt     0 ms
+[ PASS ] ClassicScheme.LeftClickOnAnEnemyIssuesTheOrder           0 ms
+[ PASS ] ClassicScheme.DraggingIsAlwaysAMarqueeEvenWithUnitsSelected     0 ms
+[ PASS ] ClassicScheme.EmptySelectionMakesEveryLeftClickASelection     0 ms
+[ PASS ] ClassicScheme.SelectingSomeoneElsesUnitsNeverArmsAnOrder     0 ms
+[ PASS ] ClassicScheme.CtrlIsForceFireAndAltIsForceMove           0 ms
+[ PASS ] ClassicScheme.ShiftClickingOwnUnitsGrowsTheSelection     0 ms
+[ PASS ] ClassicScheme.CtrlNeverTogglesSelectionTheWayTheModernSchemeDoes     0 ms
+[ PASS ] ClassicScheme.RightClickClearsTheSelectionInsteadOfOrdering     0 ms
+[ PASS ] ClassicScheme.ArmedModesOwnTheClickInBothSchemes         0 ms
+[ PASS ] Orders.AltForcesAPlainMoveOntoAnOccupiedSpot             0 ms
+[ PASS ] Orders.ForceMoveOutranksForceAttackAndAttackMove         0 ms
+[ PASS ] Hud.ResourceBarReportsRealCreditsAndPower                0 ms
+[ PASS ] Hud.FirstSnapshotDoesNotReportStartingCreditsAsIncome     0 ms
+[ PASS ] Hud.CreditDeltaTracksSpending                            0 ms
+[ PASS ] Hud.PowerShortageIsReportedNotInvented                   0 ms
+[ PASS ] Hud.SupplyIsMarkedUnmodelledRatherThanFabricated         0 ms
+[ PASS ] Hud.EmptySelectionIsAnExplicitState                      0 ms
+[ PASS ] Hud.SingleUnitFillsThePortraitFromRealData               0 ms
+[ PASS ] Hud.IdenticalUnitsAreGroupedWithCounts                   0 ms
+[ PASS ] Hud.MixedSelectionIsDistinguishedFromUnitsOnly           0 ms
+[ PASS ] Hud.SelectingAProducerSwitchesTheProductionPanelToIt     0 ms
+[ PASS ] Hud.BuildCardsReportWhyTheyAreBlocked                    0 ms
+[ PASS ] Hud.AffordabilityIsReportedSeparatelyFromTech            0 ms
+[ PASS ] Hud.QueueReportsProgressAndRemainingTime                 1 ms
+[ PASS ] Hud.FinishedStructureIsFlaggedAsAwaitingPlacement        3 ms
+[ PASS ] Hud.OptionsAreGroupedByCategoryForTheTabs                0 ms
+[ PASS ] Hud.RepeatedDamageMergesIntoOneAlert                     3 ms
+[ PASS ] Hud.CriticalAlertsOutrankInformationalOnes               2 ms
+[ PASS ] Hud.AlertsExpireOnceTheConditionStops                    4 ms
+[ PASS ] Hud.EnemyLossesAreNotLocalAlerts                         1 ms
+[ PASS ] Hud.MatchStateDrivesVictoryAndDefeatScreens              0 ms
+[ PASS ] Hud.ElapsedTimeTracksTheSimulationClock                  2 ms
+[ PASS ] AI.BuildsPowerBeforeItStalls                            25 ms
+[ PASS ] AI.BuildsRefineryAndActuallyEarns                      212 ms
+         balanced @240s: buildings=6 units=11 armed=8 harvested=16000
+[ PASS ] AI.BuildsProductionBuildingsAndTrainsAnArmy           1452 ms
+[ PASS ] AI.DoesNotBankruptItselfOnOneDecisionTick              109 ms
+[ PASS ] AI.QueuesOneOfAKindNotSix                              141 ms
+[ PASS ] AI.ProfilesProduceDifferentConfigurations                0 ms
+[ PASS ] AI.ExposesAdaptiveProfile                                0 ms
+[ PASS ] AI.UtilitySelectsEconomyForNewBase                       0 ms
+[ PASS ] AI.UtilitySelectsFortifyUnderAttack                      0 ms
+[ PASS ] AI.UtilitySelectsAssaultWithReadyArmy                    0 ms
+[ PASS ] AI.UtilitySelectsTechWhenEconomyIsReady                  0 ms
+[ PASS ] AI.UtilitySelectsArmyWhenProductionIsReady               0 ms
+[ PASS ] AI.UtilitySelectsRecoveryAfterEconomyLoss                0 ms
+[ PASS ] AI.StrategyHysteresisKeepsCurrentChoiceNearATie          0 ms
+[ PASS ] AI.EmergencyStrategyOverridesHysteresis                  0 ms
+[ PASS ] AI.RecoveryMaySpendTheCreditReserve                      0 ms
+[ PASS ] AI.AggressiveProfileValuesAssaultMoreThanDefensive       0 ms
+         economic harvested=16000, aggressive harvested=4280
+[ PASS ] AI.EconomicProfileOutEarnsAggressive                  2025 ms
+         aggressive @300s: armed=7, enemy HQ engaged=1
+[ PASS ] AI.AttacksOnceTheArmyReachesStrength                   473 ms
+[ PASS ] AI.RecentDamageTriggersDefenceStrategy               1621528 ms
+         first decisions: TechUp: strategy selected; no valid action / TechUp: strategy selected; no valid action
+[ PASS ] AI.DecisionLogExplainsWhatItDid                         95 ms
+[ PASS ] AI.CommanderReportsSelectedStrategyAndScore              1 ms
+         AI vs AI: tick=3525 phase=2 winner=0 | P0 b=6 u=10 harv=5400 | P1 b=0 u=0 harv=22800
+[ PASS ] AI.TwoCommandersPlayAMatchToCompletion                 128 ms
+[ PASS ] AI.IsDeterministic                                      95 ms
+[ PASS ] AI.StopsIssuingOrdersOnceDefeated                        9 ms
+[ PASS ] AI.SimWorldViewTracksEnemyMemoryAndDecaysConfidence     31 ms
+[ PASS ] AI.TacticalOperationLifecycleStateTransitions            0 ms
+[ PASS ] AI.CommanderTracksActiveOperationLifecycleInMatch       47 ms
+[ PASS ] AI.WoundedUnitRetreatsToBase                             2 ms
+[ PASS ] BibleContent.VerifyAllFourFactionsDefined               15 ms
+[ PASS ] BibleContent.Verify78UniqueUnitsInManifest              26 ms
+[ PASS ] BibleContent.VerifyDamageMatrixMultipliers               0 ms
+[ PASS ] BibleContent.VerifyVoiceManifestContains624Events        1 ms
+[ PASS ] BibleImport.LoadsNormalizedJsonWithoutErrors             5 ms
+[ PASS ] BibleImport.CreatesExactlyFourFactions                   4 ms
+[ PASS ] BibleImport.CreatesExactly78UniqueUnits                  3 ms
+[ PASS ] BibleImport.EveryUnitHasVoiceSetWithEightEvents          4 ms
+[ PASS ] BibleImport.DamageMatrixHasAllWarheadArmorCombinations     4 ms
+[ PASS ] BibleImport.VeterancyThresholdsMatchBible                4 ms
+[ PASS ] BibleImport.AllFourFactionResourcesExist                 4 ms
+[ PASS ] BibleImport.SovietHeroMorozovaExists                     4 ms
+[ PASS ] BibleImport.AllianceHeroHartExists                       4 ms
+[ PASS ] BibleImport.CoalitionHeroMeiExists                       4 ms
+[ PASS ] BibleImport.ChronoHeroVossExists                         4 ms
+[ PASS ] BibleImport.All78UnitIdsArePresentAndUnique              5 ms
+[ PASS ] BibleImport.BuildingsHavePowerValues                     4 ms
+[ PASS ] BibleImport.EvaLinesExistForAllFactions                  4 ms
+[ PASS ] BibleImport.IdempotentReloadDoesNotDuplicate             7 ms
+[ PASS ] Veterancy.UnitStartsAsRecruit                            0 ms
+[ PASS ] Veterancy.PromotesToVeteranAfterOneCostWorthOfKills      0 ms
+[ PASS ] Veterancy.HigherRankIncreasesDamage                      0 ms
+[ PASS ] Veterancy.DamageMatrixFromBibleMatchesExpectedValues     4 ms
+[ PASS ] FactionResource.SovietStartsWithZeroMobilization         0 ms
+[ PASS ] FactionResource.AllianceStartsWithZeroIntelligence       0 ms
+[ PASS ] FactionResource.TemporalStabilityRegeneratesOverTime     0 ms
+[ PASS ] FactionResource.SovietMobilizationAccruesFromDamage      0 ms
+[ PASS ] FactionResource.ResourceClampedToZeroAndHundred          0 ms
+[ PASS ] FactionResource.DifferentFactionsHaveDifferentTypes      2 ms
+[ PASS ] SaveSystem.MidMatchSaveAndRestorePreservesStateAndChecksum     3 ms
+[ PASS ] Campaign.VerifyAllFourChaptersAnd38MissionsExist         0 ms
+[ PASS ] Campaign.VerifySokolovDemonstrationCutscene              0 ms
+[ PASS ] ArmorMatrix.DamageCalculation                            0 ms
+[ PASS ] CommandBus.QueueAndDispatch                              0 ms
+[ PASS ] CommandBus.DispatchTickAppliesAProductionFrameExactlyOnce     0 ms
+[ PASS ] CommandBus.DispatchTickReturnsZeroForRejectedCommands     0 ms
+[ PASS ] CommandBus.DispatchTickAdvancesAnIdleRunningWorld        0 ms
+[ PASS ] CommandBus.DispatchTickReturnsZeroWhenMatchIsAlreadyOver     0 ms
+[ PASS ] CommandBus.DispatchTickRejectsLaterCommandsAfterSurrenderWithCurrentReason     0 ms
+[ PASS ] CommandBus.DispatchTickConsumesItsBufferedFrame          0 ms
+[ PASS ] HudSnapshot.SnapshotBuilderGeneratesResourcesAndSelection     0 ms
+[ PASS ] HudSnapshot.PrimarySelectionPopulatesHealthAndName       0 ms
+[ PASS ] ProvingGround.HeadlessStressScenario500Entities       1870 ms
+[ PASS ] ProvingGround.ForcedDesyncDetection                      0 ms
+
+214 passed, 0 failed, 1632857 ms total
+<end of output>
+Test time = 1633.64 sec
+----------------------------------------------------------
+Test Passed.
+"core" end time: Jul 30 12:35 MSK
+"core" time elapsed: 00:27:13
+----------------------------------------------------------
+
+End testing: Jul 30 12:35 MSK

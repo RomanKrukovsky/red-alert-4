@@ -1,0 +1,2 @@
+/usr/bin/ar qc libRA4Presentation.a "CMakeFiles/RA4Presentation.dir/Users/romanmolodyko/Documents/red-alert-4/Source/RA4Presentation/Private/HudSnapshot.cpp.o"
+/usr/bin/ranlib libRA4Presentation.a

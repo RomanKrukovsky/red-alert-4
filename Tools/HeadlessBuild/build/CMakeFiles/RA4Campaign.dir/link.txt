@@ -1,0 +1,2 @@
+/usr/bin/ar qc libRA4Campaign.a "CMakeFiles/RA4Campaign.dir/Users/romanmolodyko/Documents/red-alert-4/Source/RA4Campaign/Private/CampaignDatabase.cpp.o"
+/usr/bin/ranlib libRA4Campaign.a
