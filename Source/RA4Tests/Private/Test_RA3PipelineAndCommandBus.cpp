@@ -115,6 +115,8 @@ RA4_TEST(CommandBus, DispatchTickReturnsZeroWhenMatchIsAlreadyOver)
 
     Command Surrender = MakeCommand(CommandType::Surrender, 0);
     RA4_REQUIRE(F.World.ApplyCommand(Surrender).IsAccepted());
+    RunTicks(F.World, 1);
+    RA4_REQUIRE(F.World.GetPhase() != MatchPhase::Running);
 
     Command Start = MakeCommand(CommandType::StartProduction, 0);
     Start.Primary = Yard;
@@ -155,18 +157,19 @@ RA4_TEST(CommandBus, DispatchTickConsumesItsBufferedFrame)
     RA4_REQUIRE(Yard.IsValid());
 
     const int32_t BeforeCredits = F.World.GetPlayer(0).Credits;
+    const TickIndex DispatchTick = F.World.GetTick();
 
     Command Start = MakeCommand(CommandType::StartProduction, 0);
     Start.Primary = Yard;
     Start.Content = Ids::SovPower;
-    Bus.EnqueueCommand(F.World.GetTick(), Start);
+    Bus.EnqueueCommand(DispatchTick, Start);
 
-    const int32_t FirstAccepted = Bus.DispatchTick(F.World.GetTick(), F.World);
+    const int32_t FirstAccepted = Bus.DispatchTick(DispatchTick, F.World);
     const int32_t CreditsAfterFirst = F.World.GetPlayer(0).Credits;
     const BuildingComp* YardAfterFirst = F.World.GetBuilding(Yard);
     RA4_REQUIRE(YardAfterFirst != nullptr);
 
-    const int32_t SecondAccepted = Bus.DispatchTick(F.World.GetTick(), F.World);
+    const int32_t SecondAccepted = Bus.DispatchTick(DispatchTick, F.World);
     const BuildingComp* YardAfterSecond = F.World.GetBuilding(Yard);
     RA4_REQUIRE(YardAfterSecond != nullptr);
 

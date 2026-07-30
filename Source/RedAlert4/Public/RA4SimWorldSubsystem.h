@@ -22,6 +22,10 @@ namespace RA4
         struct HudSnapshot;
         class HudSnapshotBuilder;
     }
+    namespace AI
+    {
+        class AICommander;
+    }
 }
 
 #include "RA4SimWorldSubsystem.generated.h"

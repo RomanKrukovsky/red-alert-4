@@ -37,12 +37,27 @@ CommandFrame CommandBus::FetchFrameForTick(TickIndex Tick) const
 int32_t CommandBus::DispatchTick(TickIndex Tick, SimWorld& World)
 {
     CommandFrame Frame = FetchFrameForTick(Tick);
-    if (World.GetPhase() != MatchPhase::Running)
+    FrameBuffer.erase(Tick);
+
+    if (Frame.Commands.empty())
     {
         return 0;
     }
 
     const size_t EventCountBefore = World.GetEvents().size();
+
+    if (World.GetPhase() != MatchPhase::Running)
+    {
+        int32_t AcceptedCount = 0;
+        for (const Command& Cmd : Frame.Commands)
+        {
+            if (World.ApplyCommand(Cmd).IsAccepted())
+            {
+                ++AcceptedCount;
+            }
+        }
+        return AcceptedCount;
+    }
 
     // SimWorld::Tick owns command application for the whole frame. DispatchTick
     // must not pre-apply the same commands or non-idempotent commands (credits,

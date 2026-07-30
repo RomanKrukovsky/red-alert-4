@@ -13,20 +13,66 @@ constexpr int32 kMapTiles = 64;
 
 // Mirrors the ids in RA4Content/DefaultContent.cpp. Resolved by name so that a
 // content rename fails loudly here instead of silently seeding an empty base.
-const ContentId SovietYard = MakeContentId("building.sov.construction_yard");
-const ContentId AllianceYard = MakeContentId("building.all.construction_yard");
 const ContentId OreField = MakeContentId("resource.ore_field");
 
-void SeedBase(SimWorld& World, ContentId Yard, PlayerId Owner, const TileCoord& YardTile,
+// One faction's opening loadout. Grouped in a struct so both sides are seeded by the
+// same code and cannot drift apart -- an asymmetric start is a bug that only shows up
+// as "the AI always wins".
+struct StartingForce
+{
+    ContentId Yard;
+    ContentId Refinery;
+    ContentId Harvester;
+    ContentId Infantry;
+    ContentId Tank;
+};
+
+const StartingForce SovietForce{
+    MakeContentId("building.sov.construction_yard"), MakeContentId("building.sov.ore_refinery"),
+    MakeContentId("unit.sov.ore_harvester"), MakeContentId("unit.sov.conscript"),
+    MakeContentId("unit.sov.heavy_tank")};
+
+const StartingForce AllianceForce{
+    MakeContentId("building.all.construction_yard"), MakeContentId("building.all.ore_refinery"),
+    MakeContentId("unit.all.ore_harvester"), MakeContentId("unit.all.rifleman"),
+    MakeContentId("unit.all.light_tank")};
+
+Vec2 TileCentre(const TileCoord& Tile)
+{
+    return Vec2(Fixed::FromInt(int64(Tile.X) * kTileSizeUnits + kTileSizeUnits / 2),
+                Fixed::FromInt(int64(Tile.Y) * kTileSizeUnits + kTileSizeUnits / 2));
+}
+
+// A construction yard on an empty field is not a playable start: with nothing to
+// select there is no selection, no orders and nothing for the sidebar to attach to.
+// Both sides open with the classic skirmish kit -- yard, refinery, a harvester on the
+// ore and a small escort.
+void SeedBase(SimWorld& World, const StartingForce& Force, PlayerId Owner, const TileCoord& YardTile,
               const TileCoord& OreOrigin)
 {
-    World.SpawnBuilding(Yard, Owner, YardTile, /*bInstantComplete*/ true);
+    World.SpawnBuilding(Force.Yard, Owner, YardTile, /*bInstantComplete*/ true);
+    World.SpawnBuilding(Force.Refinery, Owner, TileCoord(YardTile.X + 4, YardTile.Y), true);
+
     for (int32 X = 0; X < 3; ++X)
     {
         for (int32 Y = 0; Y < 3; ++Y)
         {
             World.SpawnResourceNode(OreField, TileCoord(OreOrigin.X + X, OreOrigin.Y + Y), 3000);
         }
+    }
+
+    World.SpawnUnit(Force.Harvester, Owner, TileCentre(TileCoord(YardTile.X + 4, YardTile.Y + 2)));
+
+    // Spread along a row rather than stacked on one tile, so the opening screen shows
+    // a formation and the movement systems are not asked to untangle an overlap on
+    // the first tick.
+    for (int32 Index = 0; Index < 4; ++Index)
+    {
+        World.SpawnUnit(Force.Infantry, Owner, TileCentre(TileCoord(YardTile.X - 2 + Index, YardTile.Y + 3)));
+    }
+    for (int32 Index = 0; Index < 2; ++Index)
+    {
+        World.SpawnUnit(Force.Tank, Owner, TileCentre(TileCoord(YardTile.X - 2 + Index * 3, YardTile.Y + 5)));
     }
 }
 } // namespace
@@ -61,7 +107,7 @@ void FRA4MatchBootstrap::BuildSkirmish(ContentDatabase& Content, SimWorld& World
 
     World.Initialize(&Content, Setup);
 
-    SeedBase(World, SovietYard, 0, TileCoord(10, 10), TileCoord(6, 15));
-    SeedBase(World, AllianceYard, 1, TileCoord(48, 48), TileCoord(53, 43));
+    SeedBase(World, SovietForce, 0, TileCoord(10, 10), TileCoord(6, 15));
+    SeedBase(World, AllianceForce, 1, TileCoord(48, 48), TileCoord(53, 43));
     World.ClearEvents();
 }

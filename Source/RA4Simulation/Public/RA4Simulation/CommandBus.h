@@ -31,8 +31,8 @@ public:
     /** Fetches the assembled CommandFrame for the given tick. */
     CommandFrame FetchFrameForTick(TickIndex Tick) const;
 
-    /** Dispatches queued commands for Tick into one SimWorld simulation step and
-        returns how many commands were accepted by validation. */
+    /** Dispatches and consumes the buffered frame for Tick exactly once, returning
+        how many commands were accepted by validation. */
     int32_t DispatchTick(TickIndex Tick, SimWorld& World);
 
     /** Clears processed commands up to and including Tick. */

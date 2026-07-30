@@ -47,6 +47,23 @@ void URA4SimWorldSubsystem::Initialize(FSubsystemCollectionBase& Collection)
     // Temporary: the lobby will supply the match setup. Until then a fixed skirmish
     // is seeded so the map is actually playable rather than an empty world.
     FRA4MatchBootstrap::BuildSkirmish(*Content, *SimWorld, /*Seed*/ 20260728);
+
+    // Every active player other than the local one gets a commander. Without this the
+    // opponent's base sat inert: the AI existed and was tested, but nothing in the
+    // engine module ever ticked it.
+    constexpr RA4::PlayerId kLocalPlayer = 0;
+    for (RA4::PlayerId Player = 0; Player < RA4::kMaxPlayers; ++Player)
+    {
+        if (Player == kLocalPlayer || !SimWorld->GetPlayer(Player).bActive)
+        {
+            continue;
+        }
+        RA4::AI::AICommander* Commander = new RA4::AI::AICommander();
+        Commander->Initialize(Player, RA4::AI::AIProfile::Balanced, 20260728ull ^ (uint64(Player) * 0x9E3779B9ull));
+        AICommanders.push_back(Commander);
+        UE_LOG(LogTemp, Display, TEXT("RA4 AI commander attached to player %d"), int32(Player));
+    }
+
     RegisterDefaultBlockoutMeshes();
     UE_LOG(LogTemp, Display, TEXT("RA4 skirmish initialized with %llu simulation entities"),
            static_cast<uint64>(SimWorld->GetAllCores().size()));
@@ -54,6 +71,13 @@ void URA4SimWorldSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void URA4SimWorldSubsystem::Deinitialize()
 {
+    // Commanders hold no ownership over the world, but they must stop before it goes.
+    for (RA4::AI::AICommander* Commander : AICommanders)
+    {
+        delete Commander;
+    }
+    AICommanders.clear();
+
     // Simulation first: it references Content.
     if (SimWorld)
     {
@@ -121,6 +145,13 @@ void URA4SimWorldSubsystem::TickSimulation()
     Frame.Tick = SimWorld->GetTick();
     Frame.Commands.swap(PendingCommands);
     PendingCommands.clear();
+
+    // The AI issues commands through exactly the same frame the player does, so it is
+    // bound by the same server-side validation and stays replay-compatible.
+    for (RA4::AI::AICommander* Commander : AICommanders)
+    {
+        Commander->Tick(*SimWorld, Frame.Commands);
+    }
 
     SimWorld->Tick(&Frame);
 
