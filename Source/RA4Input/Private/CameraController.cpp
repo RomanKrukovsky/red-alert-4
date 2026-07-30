@@ -49,6 +49,19 @@ void CameraController::RotateSteps(int32_t Steps)
     }
 }
 
+void CameraController::AddYawDegrees(float Delta)
+{
+    if (Delta == 0.0f)
+    {
+        return;
+    }
+    YawDegrees = std::fmod(YawDegrees + Delta, 360.0f);
+    if (YawDegrees < 0.0f)
+    {
+        YawDegrees += 360.0f;
+    }
+}
+
 void CameraController::BeginMiddleDrag(float PixelX, float PixelY)
 {
     bMiddleDragging = true;
@@ -184,8 +197,21 @@ void CameraController::Update(float DeltaSeconds)
 
     if (Pan.X != 0.0f || Pan.Y != 0.0f)
     {
+        // Pan input is screen-relative: "W" means up-screen whatever way the camera
+        // is facing. Rotating the view without rotating this vector is precisely what
+        // makes WASD feel swapped, so the input is turned into world space by the
+        // camera's own yaw before it moves the focus.
+        const float Radians = YawDegrees * 3.14159265358979323846f / 180.0f;
+        const float SinYaw = std::sin(Radians);
+        const float CosYaw = std::cos(Radians);
+        // At yaw 0 the camera looks down +Y (see ARA4CameraPawn), so screen-up is +Y
+        // and screen-right is +X; this rotation reduces to the identity there.
+        const Vec2f WorldPan(Pan.X * CosYaw + Pan.Y * SinYaw,
+                             Pan.Y * CosYaw - Pan.X * SinYaw);
+
         const float Speed = CurrentPanSpeed();
-        TargetFocus = ClampToBounds(Vec2f(TargetFocus.X + Pan.X * Speed * Dt, TargetFocus.Y + Pan.Y * Speed * Dt));
+        TargetFocus = ClampToBounds(Vec2f(TargetFocus.X + WorldPan.X * Speed * Dt,
+                                          TargetFocus.Y + WorldPan.Y * Speed * Dt));
     }
 
     // Frame-rate independent exponential approach: the fraction of the remaining

@@ -183,6 +183,7 @@ void ARA4PlayerController::SetupInputComponent()
     InputComponent->BindKey(EKeys::LeftMouseButton, IE_Pressed, this, &ARA4PlayerController::OnPrimaryPressed);
     InputComponent->BindKey(EKeys::LeftMouseButton, IE_Released, this, &ARA4PlayerController::OnPrimaryReleased);
     InputComponent->BindKey(EKeys::RightMouseButton, IE_Pressed, this, &ARA4PlayerController::OnSecondaryPressed);
+    InputComponent->BindKey(EKeys::RightMouseButton, IE_Released, this, &ARA4PlayerController::OnSecondaryReleased);
     InputComponent->BindKey(EKeys::MiddleMouseButton, IE_Pressed, this, &ARA4PlayerController::OnMiddlePressed);
     InputComponent->BindKey(EKeys::MiddleMouseButton, IE_Released, this, &ARA4PlayerController::OnMiddleReleased);
 
@@ -406,6 +407,22 @@ void ARA4PlayerController::UpdateCameraInput(float DeltaTime)
     if (Camera.IsMiddleDragging() && bHasCursor)
     {
         Camera.UpdateMiddleDrag(MouseX, MouseY);
+    }
+
+    // Space + right-drag: horizontal mouse travel spins the view. Edge scrolling is
+    // suppressed meanwhile, or dragging toward a border would slide the map as well
+    // as turn it.
+    if (bRotatingCamera)
+    {
+        if (bHasCursor)
+        {
+            const float DeltaX = float(MouseX - RotateAnchorScreen.X);
+            RotateAnchorScreen = FVector2D(MouseX, MouseY);
+            Camera.AddYawDegrees(DeltaX * CameraRotateDegreesPerPixel);
+            Camera.SetCursorPosition(MouseX, MouseY, /*bWindowFocused*/ false);
+        }
+        // The player is turning the camera, not driving it with the keyboard.
+        Camera.SetKeyboardPan(0.0f, 0.0f);
     }
 
     // The pawn ticks itself; nothing to advance here.
@@ -696,9 +713,27 @@ void ARA4PlayerController::OnSecondaryPressed()
     {
         return;
     }
+
+    // Space held turns the right button into a camera-rotate drag instead of an
+    // order/deselect. Checked on press so the button's normal meaning is untouched
+    // whenever the modifier is not down.
+    if (IsInputKeyDown(EKeys::SpaceBar))
+    {
+        bRotatingCamera = true;
+        RotateAnchorScreen = FVector2D(MouseX, MouseY);
+        return;
+    }
+
     // A right click is never a drag: under the classic scheme it deselects, and there
     // is nothing to rubber-band.
     HandleClick(/*bLeftButton*/ false, FVector2D(MouseX, MouseY), /*bWasDrag*/ false);
+}
+
+void ARA4PlayerController::OnSecondaryReleased()
+{
+    // Releasing ends the gesture without issuing the order the button would normally
+    // carry -- the drag was the whole intent.
+    bRotatingCamera = false;
 }
 
 void ARA4PlayerController::OnMiddlePressed()

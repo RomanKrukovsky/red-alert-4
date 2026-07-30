@@ -83,6 +83,10 @@ public:
     void SetCursorPosition(float PixelX, float PixelY, bool bWindowFocused);
     void AddZoomNotches(float Notches);
     void RotateSteps(int32_t Steps);
+    // Continuous rotation, for dragging the mouse to spin the view. Unlike
+    // RotateSteps this is not quantised, and it is not gated by bRotationEnabled --
+    // the caller decides when a rotate gesture is active.
+    void AddYawDegrees(float Delta);
 
     void BeginMiddleDrag(float PixelX, float PixelY);
     void UpdateMiddleDrag(float PixelX, float PixelY);

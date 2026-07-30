@@ -3,6 +3,8 @@
 #include "TestHelpers.h"
 
 #include "RA4Core/SimConfig.h"
+#include <cmath>
+
 #include "RA4Input/CameraController.h"
 #include "RA4Input/ControlScheme.h"
 #include "RA4Input/HitTest.h"
@@ -922,3 +924,40 @@ RA4_TEST(Selection, SelectWoundedUnitsSelectsDamagedUnits)
 }
 
 
+
+RA4_TEST(Camera, PanFollowsTheCameraWhenItRotates)
+{
+    // Screen-relative panning: "forward" must move the focus in whatever direction
+    // the camera is currently facing. Without this the moment the view is rotated the
+    // keys feel swapped, which is the exact complaint that motivated the test.
+    CameraController Cam = MakeCamera();
+    const Vec2f Start = Cam.GetFocus();
+
+    // Yaw 0: the camera looks down +Y, so pushing forward increases Y and leaves X.
+    Cam.SetKeyboardPan(0.0f, 1.0f);
+    Advance(Cam, 0.5f);
+    const Vec2f Unrotated = Cam.GetFocus();
+    RA4_EXPECT(Unrotated.Y > Start.Y + 1.0f);
+    RA4_EXPECT(std::fabs(Unrotated.X - Start.X) < 1.0f);
+
+    // Turn a quarter turn and push forward again: the motion must now be along the
+    // other world axis, not still along +Y.
+    CameraController Rotated = MakeCamera();
+    Rotated.AddYawDegrees(90.0f);
+    const Vec2f RotatedStart = Rotated.GetFocus();
+    Rotated.SetKeyboardPan(0.0f, 1.0f);
+    Advance(Rotated, 0.5f);
+    const Vec2f RotatedEnd = Rotated.GetFocus();
+
+    RA4_EXPECT(std::fabs(RotatedEnd.Y - RotatedStart.Y) < 1.0f);
+    RA4_EXPECT(std::fabs(RotatedEnd.X - RotatedStart.X) > 1.0f);
+}
+
+RA4_TEST(Camera, YawWrapsAndStaysWithinOneTurn)
+{
+    CameraController Cam = MakeCamera();
+    Cam.AddYawDegrees(370.0f);
+    RA4_EXPECT(Cam.GetYawDegrees() >= 0.0f && Cam.GetYawDegrees() < 360.0f);
+    Cam.AddYawDegrees(-720.0f);
+    RA4_EXPECT(Cam.GetYawDegrees() >= 0.0f && Cam.GetYawDegrees() < 360.0f);
+}

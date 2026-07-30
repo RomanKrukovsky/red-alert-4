@@ -69,6 +69,14 @@ protected:
     // of being centred in it.
     float VisualZOffset = 0.0f;
 
+    // The footprint last asked for, kept so the scale can be recomputed whenever the
+    // root mesh is swapped. SetVisualScale normalises against the *current* mesh's
+    // bounds, so a later mesh change would otherwise leave the old mesh's correction
+    // applied to new geometry -- which is exactly how the refinery and the harvester
+    // once collapsed to nothing.
+    FVector RequestedVisualScale = FVector::OneVector;
+    bool bHasRequestedVisualScale = false;
+
 private:
     uint32 EntityIndex = 0xFFFFFFFFu;
     uint32 EntityGeneration = 0;

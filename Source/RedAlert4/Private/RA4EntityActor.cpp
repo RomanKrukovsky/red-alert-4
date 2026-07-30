@@ -55,6 +55,13 @@ void ARA4EntityActor::SetEntityMesh(UStaticMesh* InMesh)
     if (MeshComponent)
     {
         MeshComponent->SetStaticMesh(InMesh);
+        // The scale correction is relative to the mesh's own bounds, so a swap
+        // invalidates it. Recompute against the new geometry rather than relying on
+        // callers to happen to set the mesh before the scale.
+        if (bHasRequestedVisualScale)
+        {
+            SetVisualScale(RequestedVisualScale);
+        }
     }
 }
 
@@ -98,6 +105,9 @@ void ARA4EntityActor::SetVisualScale(const FVector& Scale)
     {
         return;
     }
+
+    RequestedVisualScale = Scale;
+    bHasRequestedVisualScale = true;
 
     // Scale expresses the wanted world footprint in units of the 100 cm engine
     // placeholder cube. Authored blockout meshes do not share that source size:
@@ -276,7 +286,13 @@ void ARA4EntityActor::ApplyPrimitiveComposition(const FString& EntityId)
         Container->RegisterComponent();
     }
     FString LowerId = EntityId.ToLower();
-    if (LowerId.Contains(TEXT("ore")) || LowerId.Contains(TEXT("resource")))
+    // Substring matching on the content name is a trap here: "ore" is inside
+    // building.sov.ore_refinery and unit.all.ore_harvester, so matching it swapped the
+    // refinery's and the harvester's authored mesh for a cylinder -- and because the
+    // scale had already been normalised against the blockout's bounds, the tiny scale
+    // applied to a 100-unit cylinder collapsed both to radius 0 and they vanished.
+    // Only an actual resource node is a heap of ore; it is identified by the caller.
+    if (LowerId == TEXT("ore_resource_node"))
     {
         if (CylinderMesh)
         {

@@ -74,11 +74,16 @@ protected:
     // settings screen flips this; the rules themselves live in RA4Input/ControlScheme.
     RA4::Input::ControlScheme Scheme = RA4::Input::ControlScheme::ClassicRA;
 
+    // Degrees of yaw per pixel of horizontal drag while space + right button is held.
+    UPROPERTY(EditAnywhere, Category = "RA4|Input")
+    float CameraRotateDegreesPerPixel = 0.35f;
+
 private:
     // --- input handlers ------------------------------------------------------
     void OnPrimaryPressed();
     void OnPrimaryReleased();
     void OnSecondaryPressed();
+    void OnSecondaryReleased();
     void OnMiddlePressed();
     void OnMiddleReleased();
     void OnZoomIn();
@@ -145,6 +150,11 @@ private:
     bool bAttackMoveArmed = false;
     bool bPlacementArmed = false;
     RA4::ContentId PlacementContent;
+
+    // Space + right-drag spins the view. Space is the modifier so the right button
+    // keeps its normal job (deselect, in the classic scheme) when pressed alone.
+    bool bRotatingCamera = false;
+    FVector2D RotateAnchorScreen = FVector2D::ZeroVector;
 
     double LastPrimaryClickTime = -1.0;
     RA4::EntityId LastClickedEntity;
