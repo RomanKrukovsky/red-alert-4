@@ -4,10 +4,10 @@
 
 | Parameter | Value | Target Spec |
 | :--- | :--- | :--- |
-| **Execution Mode** | `validate` | Pilot / Generate / Regenerate-Failed / Validate / Report |
+| **Execution Mode** | `generate` | Pilot / Generate / Regenerate-Failed / Validate / Report |
 | **Hardware Device** | `auto` | auto / cuda / mps / cpu |
 | **Total Voice Events** | `152` | 152 events (19 units × 8 events) |
-| **QC Pass Rate** | `99.3%` (151 PASS, 1 WARN, 0 FAIL) | 100% PASS |
+| **QC Pass Rate** | `100.0%` (152 PASS, 0 WARN, 0 FAIL) | 100% PASS |
 | **Sample Rate / Bit Depth** | `48000 Hz / 24-bit PCM Mono` | 48 kHz 24-bit PCM Mono |
 | **Target Perceived Loudness** | `-17.0 LUFS` | -18.0 .. -16.0 LUFS |
 | **True Peak Limit** | `<= -2.0 dBTP` | <= -2.0 dBTP |
@@ -18,12 +18,12 @@
 
 | Category | Units Count | DSP Description | Average LUFS | Average Peak dBTP | Pass Rate |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Infantry** | `48` | Very light radio compression | `-17.05 LUFS` | `-2.23 dBTP` | `100.0%` |
-| **Ground Vehicles** | `48` | Light intercom (narrowed band 200Hz-6000Hz, subtle drive) | `-17.10 LUFS` | `-2.16 dBTP` | `100.0%` |
-| **Aviation** | `24` | Moderate aviation radio channel (bandpass 300Hz-4500Hz, mild radio character) | `-17.12 LUFS` | `-2.12 dBTP` | `95.8%` |
-| **Navy/Boat** | `16` | Light ship intercom (bandpass 250Hz-5500Hz) | `-17.07 LUFS` | `-2.08 dBTP` | `100.0%` |
-| **Submarine** | `8` | Muffled, clear sub channel (lowpass 4000Hz, slight resonance) | `-17.04 LUFS` | `-2.14 dBTP` | `100.0%` |
-| **Morozova** | `8` | Near-clean tactical command comms | `-17.07 LUFS` | `-2.14 dBTP` | `100.0%` |
+| **Infantry** | `48` | Very light radio compression | `-17.04 LUFS` | `-2.29 dBTP` | `100.0%` |
+| **Ground Vehicles** | `48` | Light intercom (narrowed band 200Hz-6000Hz, subtle drive) | `-17.01 LUFS` | `-2.74 dBTP` | `100.0%` |
+| **Aviation** | `24` | Moderate aviation radio channel (bandpass 300Hz-4500Hz, mild radio character) | `-17.01 LUFS` | `-3.19 dBTP` | `100.0%` |
+| **Navy/Boat** | `16` | Light ship intercom (bandpass 250Hz-5500Hz) | `-17.01 LUFS` | `-2.69 dBTP` | `100.0%` |
+| **Submarine** | `8` | Muffled, clear sub channel (lowpass 4000Hz, slight resonance) | `-17.00 LUFS` | `-3.46 dBTP` | `100.0%` |
+| **Morozova** | `8` | Near-clean tactical command comms | `-17.00 LUFS` | `-2.88 dBTP` | `100.0%` |
 
 ## Generated Units Breakdown
 
@@ -43,7 +43,7 @@
 | `SU_VoevodaHeavyTank` | Тяжёлый танк прорыва ТТП-11 «Воевода» | Ground Vehicles | `8` | ✅ PASS |
 | `SU_KrechetInterceptor` | Истребитель И-47 «Кречет» | Aviation | `8` | ✅ PASS |
 | `SU_KorshunGunship` | Штурмовой вертолёт ШВ-38 «Коршун» | Aviation | `8` | ✅ PASS |
-| `SU_GromadaAirship` | Тяжёлый дирижабль ТДА-8 «Громада» | Aviation | `8` | ⚠️ WARNING |
+| `SU_GromadaAirship` | Тяжёлый дирижабль ТДА-8 «Громада» | Aviation | `8` | ✅ PASS |
 | `SU_BuranPatrolBoat` | Боевой катер БК-27 «Буран» | Navy/Boat | `8` | ✅ PASS |
 | `SU_MorokSubmarine` | Ударная подлодка УПЛ-90 «Морок» | Submarine | `8` | ✅ PASS |
 | `SU_SvyatogorCruiser` | Ракетный крейсер РКР-44 «Святогор» | Navy/Boat | `8` | ✅ PASS |

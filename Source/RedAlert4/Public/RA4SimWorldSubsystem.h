@@ -86,6 +86,7 @@ private:
     void RegisterDefaultBlockoutMeshes();
     void FitGroundPlaneToMap();
     void TickSimulation();
+    void ProcessPresentationEvents();
     void SyncPresentation();
     // Height of the terrain surface at a world XY, or the flat sim ground level if
     // there is no landscape in this map. Visual-only: the simulation stays 2D.
@@ -110,6 +111,7 @@ private:
     RA4::Presentation::HudSnapshotBuilder* SnapshotBuilder = nullptr;
     RA4::Presentation::HudSnapshot* LatestSnapshot = nullptr;
     std::vector<RA4::EntityId> LocalSelection;
+    bool bWasLocalPowerShortage = false;
 
     // How many newly spawned actors still dump their render state to the log.
     int32 DiagnosticDumpsRemaining = 6;

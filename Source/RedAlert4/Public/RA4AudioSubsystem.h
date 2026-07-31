@@ -31,6 +31,18 @@ enum class ERA4VoiceEvent : uint8
     Death
 };
 
+UENUM(BlueprintType)
+enum class ERA4EVAEvent : uint8
+{
+    ConstructionComplete,
+    UnitReady,
+    BaseUnderAttack,
+    InsufficientFunds,
+    PowerLow,
+    Victory,
+    Defeat
+};
+
 UCLASS()
 class REDALERT4_API URA4AudioSubsystem : public UWorldSubsystem
 {
@@ -47,7 +59,11 @@ public:
      * been recorded yet.
      */
     UFUNCTION(BlueprintCallable, Category = "RA4|Audio")
-    void PlayUnitVoice(const FString& VoiceId, ERA4VoiceEvent Event);
+    void PlayUnitVoice(const FString& VoiceId, ERA4VoiceEvent Event, bool bBypassCooldown = false);
+
+    /** Plays a faction announcer line imported by RA4AudioImport. */
+    UFUNCTION(BlueprintCallable, Category = "RA4|Audio")
+    void PlayEVA(uint8 Faction, ERA4EVAEvent Event, bool bBypassCooldown = false);
 
     /** Starts the background music track, looping. Safe to call more than once. */
     UFUNCTION(BlueprintCallable, Category = "RA4|Audio")
@@ -58,6 +74,7 @@ public:
 
 private:
     USoundBase* FindVoiceClip(const FString& VoiceId, ERA4VoiceEvent Event);
+    USoundBase* FindEVAClip(uint8 Faction, ERA4EVAEvent Event);
 
     // Resolved clips are cached because a miss costs a synchronous package load, and
     // most lookups miss: only Soviet units are recorded so far.
@@ -70,5 +87,6 @@ private:
     // Rapid re-selection of the same unit would otherwise retrigger its line every
     // click and turn the mix into a stutter.
     double LastVoiceTimeSeconds = -1000.0;
+    double LastEvaTimeSeconds = -1000.0;
     FString LastVoiceId;
 };

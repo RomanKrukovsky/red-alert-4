@@ -15,6 +15,7 @@ const TCHAR* kMusicAsset =
 
 // A selected unit answering every single click is noise rather than feedback.
 constexpr double kVoiceCooldownSeconds = 0.6;
+constexpr double kEvaCooldownSeconds = 2.5;
 
 const TCHAR* ToEventName(ERA4VoiceEvent Event)
 {
@@ -29,6 +30,21 @@ const TCHAR* ToEventName(ERA4VoiceEvent Event)
     case ERA4VoiceEvent::Idle:     return TEXT("Idle");
     case ERA4VoiceEvent::Death:    return TEXT("Death");
     default:                       return TEXT("Selected");
+    }
+}
+
+const TCHAR* ToEvaEventName(ERA4EVAEvent Event)
+{
+    switch (Event)
+    {
+    case ERA4EVAEvent::ConstructionComplete: return TEXT("CONSTRUCTION_COMPLETE");
+    case ERA4EVAEvent::UnitReady:             return TEXT("UNIT_READY_GENERIC");
+    case ERA4EVAEvent::BaseUnderAttack:       return TEXT("BASE_UNDER_ATTACK");
+    case ERA4EVAEvent::InsufficientFunds:     return TEXT("INSUFFICIENT_FUNDS");
+    case ERA4EVAEvent::PowerLow:              return TEXT("POWER_LOW");
+    case ERA4EVAEvent::Victory:               return TEXT("MATCH_VICTORY");
+    case ERA4EVAEvent::Defeat:                return TEXT("MATCH_DEFEAT");
+    default:                                  return TEXT("UNIT_READY_GENERIC");
     }
 }
 } // namespace
@@ -65,7 +81,7 @@ USoundBase* URA4AudioSubsystem::FindVoiceClip(const FString& VoiceId, ERA4VoiceE
     return Clip;
 }
 
-void URA4AudioSubsystem::PlayUnitVoice(const FString& VoiceId, ERA4VoiceEvent Event)
+void URA4AudioSubsystem::PlayUnitVoice(const FString& VoiceId, ERA4VoiceEvent Event, bool bBypassCooldown)
 {
     if (VoiceId.IsEmpty())
     {
@@ -79,7 +95,7 @@ void URA4AudioSubsystem::PlayUnitVoice(const FString& VoiceId, ERA4VoiceEvent Ev
     }
 
     const double Now = World->GetTimeSeconds();
-    if (Now - LastVoiceTimeSeconds < kVoiceCooldownSeconds)
+    if (!bBypassCooldown && Now - LastVoiceTimeSeconds < kVoiceCooldownSeconds)
     {
         return;
     }
@@ -94,6 +110,61 @@ void URA4AudioSubsystem::PlayUnitVoice(const FString& VoiceId, ERA4VoiceEvent Ev
     UGameplayStatics::PlaySound2D(World, Clip);
     LastVoiceTimeSeconds = Now;
     LastVoiceId = VoiceId;
+}
+
+USoundBase* URA4AudioSubsystem::FindEVAClip(uint8 Faction, ERA4EVAEvent Event)
+{
+    const TCHAR* Folder = nullptr;
+    const TCHAR* Code = nullptr;
+    switch (Faction)
+    {
+    case 1:
+        Folder = TEXT("Soviet");
+        Code = TEXT("SU");
+        break;
+    case 2:
+        Folder = TEXT("Alliance");
+        Code = TEXT("AL");
+        break;
+    default:
+        return nullptr;
+    }
+
+    const FString AssetName = FString::Printf(
+        TEXT("VO_EVA_%s_%s_01"), Code, ToEvaEventName(Event));
+    const FString ObjectPath = FString::Printf(
+        TEXT("/Game/RA4/Audio/Generated/EVA/%s/%s.%s"),
+        Folder, *AssetName, *AssetName);
+
+    if (TObjectPtr<USoundBase>* Cached = ClipCache.Find(ObjectPath))
+    {
+        return Cached->Get();
+    }
+
+    USoundBase* Clip = LoadObject<USoundBase>(nullptr, *ObjectPath);
+    ClipCache.Add(ObjectPath, Clip);
+    return Clip;
+}
+
+void URA4AudioSubsystem::PlayEVA(uint8 Faction, ERA4EVAEvent Event, bool bBypassCooldown)
+{
+    UWorld* World = GetWorld();
+    if (World == nullptr)
+    {
+        return;
+    }
+
+    const double Now = World->GetTimeSeconds();
+    if (!bBypassCooldown && Now - LastEvaTimeSeconds < kEvaCooldownSeconds)
+    {
+        return;
+    }
+
+    if (USoundBase* Clip = FindEVAClip(Faction, Event))
+    {
+        UGameplayStatics::PlaySound2D(World, Clip);
+        LastEvaTimeSeconds = Now;
+    }
 }
 
 void URA4AudioSubsystem::StartMusic()

@@ -3,6 +3,7 @@
 #include "RA4EntityActor.h"
 
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/MeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
@@ -21,6 +22,10 @@ ARA4EntityActor::ARA4EntityActor()
     SkeletalMeshComponent->SetupAttachment(MeshComponent);
     SkeletalMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     SkeletalMeshComponent->SetVisibility(false);
+    // The static root is normalised against wildly different FBX bounds. Infantry
+    // uses a shared character mesh at real world scale and must not inherit that
+    // correction (some vehicle roots are scaled down by several thousand times).
+    SkeletalMeshComponent->SetAbsolute(false, false, true);
 
     // Fall back to an engine primitive so an entity is always visible. Without this
     // an unregistered content id spawns an actor with no mesh, and the match looks
@@ -72,7 +77,9 @@ void ARA4EntityActor::SetTeamColor(const FLinearColor& TeamColor)
         return;
     }
 
-    // Phase 0: Dynamically select faction material instances if they exist
+    // Select the faction's textured metal material. Imported FBX blockouts commonly
+    // have several material slots; changing only slot zero left most of every model
+    // on its original white material even though the log reported the correct MID.
     UMaterialInterface* FactionMat = nullptr;
     if (TeamColor.R > 0.5f && TeamColor.B < 0.2f)
     {
@@ -82,21 +89,33 @@ void ARA4EntityActor::SetTeamColor(const FLinearColor& TeamColor)
     {
         FactionMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/RA4/Presentation/Materials/Blockout/MI_RA4_Blockout_AL.MI_RA4_Blockout_AL"));
     }
-
-    if (FactionMat)
+    else
     {
-        MeshComponent->SetMaterial(0, FactionMat);
+        FactionMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/RA4/Presentation/Materials/Blockout/MI_RA4_Blockout_Neutral.MI_RA4_Blockout_Neutral"));
     }
 
-    UMaterialInstanceDynamic* DynMat = MeshComponent->CreateAndSetMaterialInstanceDynamic(0);
-    if (DynMat == nullptr)
+    const auto ApplyFactionMaterial = [FactionMat, &TeamColor](UMeshComponent* Component)
     {
-        return;
-    }
-    
-    // Set the TeamColor for the blockout structure
-    DynMat->SetVectorParameterValue(TEXT("TeamColor"), TeamColor);
-    DynMat->SetVectorParameterValue(TEXT("Color"), TeamColor);
+        if (Component == nullptr)
+        {
+            return;
+        }
+
+        const int32 SlotCount = FMath::Max(1, Component->GetNumMaterials());
+        for (int32 Slot = 0; Slot < SlotCount; ++Slot)
+        {
+            UMaterialInstanceDynamic* DynamicMaterial =
+                Component->CreateDynamicMaterialInstance(Slot, FactionMat);
+            if (DynamicMaterial != nullptr)
+            {
+                DynamicMaterial->SetVectorParameterValue(TEXT("TeamColor"), TeamColor);
+                DynamicMaterial->SetVectorParameterValue(TEXT("Color"), TeamColor);
+            }
+        }
+    };
+
+    ApplyFactionMaterial(MeshComponent);
+    ApplyFactionMaterial(SkeletalMeshComponent);
 }
 
 void ARA4EntityActor::SetVisualScale(const FVector& Scale)

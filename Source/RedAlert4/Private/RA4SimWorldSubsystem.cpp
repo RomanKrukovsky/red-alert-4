@@ -8,6 +8,7 @@
 #include "RA4Core/Command.h"
 #include "RA4Core/SimConfig.h"
 #include "RA4MatchBootstrap.h"
+#include "RA4AudioSubsystem.h"
 #include "RA4SimCoords.h"
 #include "RA4UIDataProviderSubsystem.h"
 #include "Engine/World.h"
@@ -76,6 +77,7 @@ void URA4SimWorldSubsystem::StartSkirmishMatch(uint8 PlayerFaction, uint8 EnemyF
 {
     // The lobby or GameMode supplies the match setup.
     FRA4MatchBootstrap::BuildSkirmish(*Content, *SimWorld, /*Seed*/ 20260728, static_cast<RA4::FactionId>(PlayerFaction), static_cast<RA4::FactionId>(EnemyFaction));
+    bWasLocalPowerShortage = false;
 
     // Every active player other than the local one gets a commander.
     constexpr RA4::PlayerId kLocalPlayer = 0;
@@ -282,6 +284,7 @@ void URA4SimWorldSubsystem::TickSimulation()
     }
 
     SimWorld->Tick(&Frame);
+    ProcessPresentationEvents();
 
     if (SnapshotBuilder && LatestSnapshot && SimWorld)
     {
@@ -299,6 +302,112 @@ void URA4SimWorldSubsystem::TickSimulation()
             }
         }
     }
+}
+
+void URA4SimWorldSubsystem::ProcessPresentationEvents()
+{
+    UWorld* UnrealWorld = GetWorld();
+    if (UnrealWorld == nullptr || SimWorld == nullptr || Content == nullptr)
+    {
+        return;
+    }
+
+    URA4AudioSubsystem* Audio = UnrealWorld->GetSubsystem<URA4AudioSubsystem>();
+    if (Audio == nullptr)
+    {
+        return;
+    }
+
+    constexpr RA4::PlayerId LocalPlayer = 0;
+    const RA4::PlayerState& Player = SimWorld->GetPlayer(LocalPlayer);
+    const uint8 Faction = static_cast<uint8>(Player.Faction);
+
+    const auto PlayVoiceForContent =
+        [this, Audio](RA4::ContentId ContentId, ERA4VoiceEvent VoiceEvent, bool bBypassCooldown)
+    {
+        const RA4::VoiceSetDef* VoiceSet = Content->FindVoiceSet(ContentId);
+        if (VoiceSet != nullptr && !VoiceSet->VoiceId.empty())
+        {
+            Audio->PlayUnitVoice(FString(VoiceSet->VoiceId.c_str()), VoiceEvent, bBypassCooldown);
+        }
+    };
+
+    for (const RA4::SimEvent& Event : SimWorld->GetEvents())
+    {
+        switch (Event.Type)
+        {
+        case RA4::SimEventType::DamageApplied:
+            // A lethal hit also emits EntityDestroyed. Skip its damage bark so the
+            // death line is not played on top of it.
+            if (SimWorld->IsAlive(Event.Entity))
+            {
+                const RA4::EntityCore* Core = SimWorld->GetCore(Event.Entity);
+                if (Core != nullptr && Core->Owner == LocalPlayer)
+                {
+                    PlayVoiceForContent(Core->Def, ERA4VoiceEvent::Damaged, false);
+                    if (Core->Kind == RA4::EntityKind::Building)
+                    {
+                        Audio->PlayEVA(Faction, ERA4EVAEvent::BaseUnderAttack);
+                    }
+                }
+            }
+            break;
+
+        case RA4::SimEventType::EntityDestroyed:
+            if (Event.Player == LocalPlayer)
+            {
+                PlayVoiceForContent(Event.Content, ERA4VoiceEvent::Death, true);
+            }
+            break;
+
+        case RA4::SimEventType::EntityVeterancyPromoted:
+            if (Event.Player == LocalPlayer)
+            {
+                PlayVoiceForContent(Event.Content, ERA4VoiceEvent::Elite, true);
+            }
+            break;
+
+        case RA4::SimEventType::BuildingCompleted:
+            if (Event.Player == LocalPlayer)
+            {
+                Audio->PlayEVA(Faction, ERA4EVAEvent::ConstructionComplete);
+            }
+            break;
+
+        case RA4::SimEventType::ProductionCompleted:
+            if (Event.Player == LocalPlayer)
+            {
+                Audio->PlayEVA(Faction, ERA4EVAEvent::UnitReady);
+            }
+            break;
+
+        case RA4::SimEventType::CommandRejected:
+            if (Event.Player == LocalPlayer &&
+                Event.Value == int32(RA4::CommandReject::InsufficientCredits))
+            {
+                Audio->PlayEVA(Faction, ERA4EVAEvent::InsufficientFunds);
+            }
+            break;
+
+        case RA4::SimEventType::MatchEnded:
+            Audio->PlayEVA(
+                Faction,
+                Event.Player == LocalPlayer ? ERA4EVAEvent::Victory : ERA4EVAEvent::Defeat,
+                true);
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    const bool bPowerShortage =
+        Player.PowerConsumed > 0 && Player.PowerProduced < Player.PowerConsumed;
+    if (bPowerShortage && !bWasLocalPowerShortage)
+    {
+        Audio->PlayEVA(Faction, ERA4EVAEvent::PowerLow);
+    }
+    bWasLocalPowerShortage = bPowerShortage;
 }
 
 float URA4SimWorldSubsystem::SampleGroundHeight(double WorldX, double WorldY)
