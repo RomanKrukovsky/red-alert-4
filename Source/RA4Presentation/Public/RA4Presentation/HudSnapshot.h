@@ -150,6 +150,8 @@ struct BuildOption
     ProductionCategory Category = ProductionCategory::Infantry;
     int32_t Cost = 0;
     int32_t BuildTimeTicks = 0;
+    int32_t PowerDelta = 0;             // +provided or -drained
+    std::string PrerequisiteKey;
     bool bAvailable = false;
     BuildBlockReason BlockReason = BuildBlockReason::NoProducer;
     // The producer a click would actually go to, so the card can send a command

@@ -659,16 +659,35 @@ void URA4SidebarWidget::RefreshCards()
         Name->SetAutoWrapText(true);
         CardStack->AddChildToVerticalBox(Name);
 
-        UTextBlock* Cost = MakeLabel(WidgetTree, *FString::Printf(TEXT("CardCost%d"), Index), kCredits, 10, false);
-        Cost->SetText(FText::AsNumber(Option.Cost));
+        FText InfoText = FText::Format(NSLOCTEXT("RA4", "Card_CostTimeFormat", "{0} Кр. | {1}с"),
+                                       FText::AsNumber(Option.Cost),
+                                       FText::AsNumber(FMath::RoundToInt(Option.BuildSeconds)));
+        UTextBlock* Cost = MakeLabel(WidgetTree, *FString::Printf(TEXT("CardCost%d"), Index), kCredits, 9, false);
+        Cost->SetText(InfoText);
         Cost->SetJustification(ETextJustify::Center);
         CardStack->AddChildToVerticalBox(Cost);
 
+        if (Option.PowerDelta != 0)
+        {
+            FLinearColor PowerColor = Option.PowerDelta > 0 ? kPowerOk : kPowerLow;
+            FText CardPowerText = FText::Format(NSLOCTEXT("RA4", "Card_PowerFormat", "{0}{1} Энергии"),
+                                                FText::FromString(Option.PowerDelta > 0 ? TEXT("+") : TEXT("")),
+                                                FText::AsNumber(Option.PowerDelta));
+            UTextBlock* PowerLabel = MakeLabel(WidgetTree, *FString::Printf(TEXT("CardPower%d"), Index), PowerColor, 8, false);
+            PowerLabel->SetText(CardPowerText);
+            PowerLabel->SetJustification(ETextJustify::Center);
+            CardStack->AddChildToVerticalBox(PowerLabel);
+        }
+
         if (!Option.bAvailable)
         {
-            UTextBlock* Reason =
-                MakeLabel(WidgetTree, *FString::Printf(TEXT("CardWhy%d"), Index), kTextDim, 8, false);
-            Reason->SetText(BlockReasonText(Option.BlockReason));
+            FText WhyText = BlockReasonText(Option.BlockReason);
+            if (Option.BlockReason == ERA4BuildBlockReason::MissingPrerequisite && !Option.PrerequisiteText.IsEmpty())
+            {
+                WhyText = FText::Format(NSLOCTEXT("RA4", "Card_PrereqFormat", "Треб: {0}"), Option.PrerequisiteText);
+            }
+            UTextBlock* Reason = MakeLabel(WidgetTree, *FString::Printf(TEXT("CardWhy%d"), Index), kTextDim, 8, false);
+            Reason->SetText(WhyText);
             Reason->SetJustification(ETextJustify::Center);
             Reason->SetAutoWrapText(true);
             CardStack->AddChildToVerticalBox(Reason);

@@ -56,7 +56,22 @@ void ARA4CameraPawn::Tick(float DeltaSeconds)
     CameraController.Update(DeltaSeconds);
 
     const RA4::Input::Vec2f Focus = CameraController.GetFocus();
-    SetActorLocation(FVector(Focus.X, Focus.Y, RA4Coords::GroundZ));
+    float GroundZ = RA4Coords::GroundZ;
+
+    if (UWorld* World = GetWorld())
+    {
+        FVector TraceStart(Focus.X, Focus.Y, 20000.0f);
+        FVector TraceEnd(Focus.X, Focus.Y, -5000.0f);
+        FHitResult HitResult;
+        FCollisionQueryParams QueryParams;
+        QueryParams.bTraceComplex = false;
+        if (World->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECC_WorldStatic, QueryParams))
+        {
+            GroundZ = FMath::Max(GroundZ, float(HitResult.ImpactPoint.Z));
+        }
+    }
+
+    SetActorLocation(FVector(Focus.X, Focus.Y, GroundZ));
 
     if (SpringArm != nullptr)
     {
