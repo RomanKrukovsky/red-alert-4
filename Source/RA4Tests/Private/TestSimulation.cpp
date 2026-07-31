@@ -716,3 +716,117 @@ RA4_TEST(Victory, SurrenderEndsTheMatchImmediately)
     RA4_EXPECT(F.World.GetPhase() == MatchPhase::Finished);
     RA4_EXPECT_EQ(int32_t(F.World.GetWinner()), 0);
 }
+
+RA4_TEST(Economy, MultiHarvesterTenCyclesAndRefineryQueue)
+{
+    Fixture F;
+    SpawnEnemyOutpost(F.World);
+    EntityId Ref1 = F.World.SpawnBuilding(Ids::SovRefinery, 0, TileCoord(15, 15), true);
+    EntityId Ref2 = F.World.SpawnBuilding(Ids::SovRefinery, 0, TileCoord(25, 25), true);
+    RA4_REQUIRE(F.World.IsAlive(Ref2));
+
+    for (int X = 0; X < 4; ++X)
+    {
+        for (int Y = 0; Y < 4; ++Y)
+        {
+            F.World.SpawnResourceNode(Ids::OreField, TileCoord(18 + X, 18 + Y), 50000);
+        }
+    }
+
+    std::vector<EntityId> Harvs;
+    for (int I = 0; I < 4; ++I)
+    {
+        Harvs.push_back(F.World.SpawnUnit(Ids::SovHarvester, 0, Vec2::FromInts(16 * kTileSizeUnits + I * 40, 16 * kTileSizeUnits)));
+    }
+
+    const int32_t InitialCredits = F.World.GetPlayer(0).Credits;
+    RunTicks(F.World, 1500);
+
+    RA4_EXPECT(F.World.GetPlayer(0).TotalHarvested > 0);
+    RA4_EXPECT(F.World.GetPlayer(0).Credits > InitialCredits);
+
+    // Destroy Ref1 mid-match; harvesters targeting Ref1 must recover and reroute to Ref2
+    F.World.DebugDamage(Ref1, 10000);
+    RunTicks(F.World, 500);
+
+    for (EntityId HarvId : Harvs)
+    {
+        RA4_EXPECT(F.World.IsAlive(HarvId));
+        const HarvesterComp* Hv = F.World.GetHarvester(HarvId);
+        RA4_REQUIRE(Hv != nullptr);
+        RA4_EXPECT(Hv->AssignedRefinery != Ref1);
+    }
+}
+
+RA4_TEST(Content, PrerequisitesGroupGroupedRules)
+{
+    Fixture F;
+    EntityDef TestDef;
+    TestDef.Production.PrerequisitesGroup.AllOf = { Ids::SovRefinery };
+    TestDef.Production.PrerequisitesGroup.AnyOf = { Ids::SovBarracks, Ids::SovWarFactory };
+    TestDef.Production.PrerequisitesGroup.NoneOf = { Ids::AllConYard };
+
+    RA4_EXPECT(!F.World.HasPrerequisites(0, TestDef));
+
+    F.World.SpawnBuilding(Ids::SovRefinery, 0, TileCoord(10, 10), true);
+    RA4_EXPECT(!F.World.HasPrerequisites(0, TestDef)); // Missing AnyOf (Barracks or WarFactory)
+
+    F.World.SpawnBuilding(Ids::SovBarracks, 0, TileCoord(15, 15), true);
+    RA4_EXPECT(F.World.HasPrerequisites(0, TestDef)); // AllOf + AnyOf met
+
+    F.World.SpawnBuilding(Ids::AllConYard, 0, TileCoord(20, 20), true);
+    RA4_EXPECT(!F.World.HasPrerequisites(0, TestDef)); // Failed NoneOf constraint
+}
+
+RA4_TEST(Construction, UnderConstructionTargetabilityAndCancellation)
+{
+    Fixture F;
+    EntityId ConYard = F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    RA4_REQUIRE(F.World.IsAlive(ConYard));
+    EntityId Barracks = F.World.SpawnBuilding(Ids::SovBarracks, 0, TileCoord(15, 15), false);
+
+    const BuildingComp* B = F.World.GetBuilding(Barracks);
+    RA4_REQUIRE(B != nullptr);
+    RA4_EXPECT(B->State == ConstructionState::UnderConstruction);
+
+    // Can be targeted and damaged while under construction
+    F.World.DebugDamage(Barracks, 50);
+    const HealthComp* H = F.World.GetHealth(Barracks);
+    RA4_REQUIRE(H != nullptr);
+    RA4_EXPECT(H->Current < H->Max);
+
+    // Selling / cancelling refunds portion of cost and clears occupancy
+    const int32_t CreditsBefore = F.World.GetPlayer(0).Credits;
+    Command SellCmd = MakeCommand(CommandType::SellBuilding, 0);
+    SellCmd.Primary = Barracks;
+    RA4_REQUIRE(F.World.ApplyCommand(SellCmd).IsAccepted());
+    RunTicks(F.World, 1);
+
+    RA4_EXPECT(!F.World.IsAlive(Barracks));
+    RA4_EXPECT(F.World.GetPlayer(0).Credits > CreditsBefore);
+}
+
+RA4_TEST(Lifecycle, SimWorldRestartRestoresCleanState)
+{
+    Fixture F;
+    SpawnEnemyOutpost(F.World);
+    F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    F.World.SpawnUnit(Ids::SovConscript, 0, Vec2::FromInts(12 * kTileSizeUnits, 12 * kTileSizeUnits));
+    RunTicks(F.World, 100);
+
+    const uint32_t TickBefore = F.World.GetTick();
+    RA4_EXPECT_EQ(int32_t(TickBefore), 100);
+
+    uint32_t AliveBefore = 0;
+    for (const EntityCore& C : F.World.GetAllCores()) { if (C.bAlive) AliveBefore++; }
+    RA4_EXPECT(AliveBefore > 0);
+
+    F.World.Restart();
+
+    const uint32_t TickAfter = F.World.GetTick();
+    RA4_EXPECT_EQ(int32_t(TickAfter), 0);
+
+    uint32_t AliveAfter = 0;
+    for (const EntityCore& C : F.World.GetAllCores()) { if (C.bAlive) AliveAfter++; }
+    RA4_EXPECT_EQ(int32_t(AliveAfter), 0);
+}

@@ -229,6 +229,9 @@ struct BuildingComp
 
     std::vector<ProductionItem> Queue;
     bool bSelling = false;
+
+    EntityId DockedHarvester;
+    std::vector<EntityId> UnloadingQueue;
 };
 
 enum class HarvesterState : uint8_t
