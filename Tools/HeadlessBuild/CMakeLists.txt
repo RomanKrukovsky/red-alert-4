@@ -33,6 +33,8 @@ else()
     )
 endif()
 
+add_compile_definitions(HEADLESS_BUILD=1)
+
 add_library(RA4Core STATIC
     ${RA4_SOURCE_ROOT}/RA4Core/Private/FixedMath.cpp
     ${RA4_SOURCE_ROOT}/RA4Core/Private/Command.cpp
@@ -90,8 +92,12 @@ target_link_libraries(RA4Input PUBLIC RA4Simulation)
 
 add_library(RA4Presentation STATIC
     ${RA4_SOURCE_ROOT}/RA4Presentation/Private/HudSnapshot.cpp
+    ${RA4_SOURCE_ROOT}/RA4Presentation/Private/RA4ArtMapping.cpp
 )
-target_include_directories(RA4Presentation PUBLIC ${RA4_SOURCE_ROOT}/RA4Presentation/Public)
+target_include_directories(RA4Presentation PUBLIC 
+    ${RA4_SOURCE_ROOT}/RA4Presentation/Public
+    ${CMAKE_CURRENT_SOURCE_DIR}/UnrealStub
+)
 target_link_libraries(RA4Presentation PUBLIC RA4Simulation)
 
 add_library(RA4AI STATIC

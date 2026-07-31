@@ -3,6 +3,7 @@
 #include "RA4EntityActor.h"
 #include "RA4Presentation/RA4ArtMapping.h"
 
+#include "Components/DecalComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/MeshComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -23,10 +24,12 @@ ARA4EntityActor::ARA4EntityActor()
     SkeletalMeshComponent->SetupAttachment(MeshComponent);
     SkeletalMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     SkeletalMeshComponent->SetVisibility(false);
-    // The static root is normalised against wildly different FBX bounds. Infantry
-    // uses a shared character mesh at real world scale and must not inherit that
-    // correction (some vehicle roots are scaled down by several thousand times).
     SkeletalMeshComponent->SetAbsolute(false, false, true);
+
+    SelectionDecalComponent = CreateDefaultSubobject<UDecalComponent>(TEXT("SelectionDecalComponent"));
+    SelectionDecalComponent->SetupAttachment(MeshComponent);
+    SelectionDecalComponent->SetVisibility(false);
+    SelectionDecalComponent->DecalSize = FVector(64.0f, 64.0f, 64.0f);
 
     // Fall back to an engine primitive so an entity is always visible. Without this
     // an unregistered content id spawns an actor with no mesh, and the match looks
@@ -54,6 +57,14 @@ ARA4EntityActor::ARA4EntityActor()
 
     TargetPosition = FVector::ZeroVector;
     TargetRotationZ = 0.0f;
+}
+
+void ARA4EntityActor::SetSelected(bool bSelected)
+{
+    if (SelectionDecalComponent)
+    {
+        SelectionDecalComponent->SetVisibility(bSelected);
+    }
 }
 
 void ARA4EntityActor::SetEntityMesh(UStaticMesh* InMesh)

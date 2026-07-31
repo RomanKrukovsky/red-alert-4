@@ -61,6 +61,12 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     TObjectPtr<class UNiagaraComponent> VFXComponent;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    TObjectPtr<class UDecalComponent> SelectionDecalComponent;
+
+    UFUNCTION(BlueprintCallable, Category = "Visuals")
+    void SetSelected(bool bSelected);
+
     UPROPERTY(Transient)
     TObjectPtr<class UAnimSequence> CachedIdleAnim;
 
