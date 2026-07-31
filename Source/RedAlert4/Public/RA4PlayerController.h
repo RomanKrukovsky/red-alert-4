@@ -155,6 +155,7 @@ private:
     TObjectPtr<class URA4SidebarWidget> Sidebar;
 
     void HandleBuildCardClicked(int64 ContentIdValue);
+    void HandleRadarClicked(FVector2D WorldPosition);
     void BindMatchResultEvents();
     void HandleMatchEnded(bool bLocalPlayerWon, int32 WinningPlayer);
     void HandleRetryRequested();

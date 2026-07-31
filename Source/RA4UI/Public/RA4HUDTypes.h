@@ -47,6 +47,32 @@ enum class ERA4MatchPhase : uint8
     Finished,
 };
 
+UENUM(BlueprintType)
+enum class ERA4RadarMarkerKind : uint8
+{
+    Unit,
+    Building,
+    Resource,
+};
+
+USTRUCT(BlueprintType)
+struct FRA4RadarMarker
+{
+    GENERATED_BODY()
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|Radar")
+    FVector2D WorldPosition = FVector2D::ZeroVector;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|Radar")
+    int32 Owner = -1;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|Radar")
+    ERA4RadarMarkerKind Kind = ERA4RadarMarkerKind::Unit;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|Radar")
+    bool bSelected = false;
+};
+
 /** One row of the multi-selection grid: same-type units collapsed into a count. */
 USTRUCT(BlueprintType)
 struct FRA4SelectionGroup

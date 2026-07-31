@@ -26,6 +26,34 @@ class UTextBlock;
 class UVerticalBox;
 class UUniformGridPanel;
 class URA4UIDataProviderSubsystem;
+class SRA4RadarSlate;
+
+DECLARE_MULTICAST_DELEGATE_OneParam(FRA4OnRadarClicked, FVector2D /*WorldPosition*/);
+
+/** Lightweight Slate-painted radar. It only reads the fog-filtered HUD provider. */
+UCLASS()
+class RA4UI_API URA4RadarWidget : public UWidget
+{
+    GENERATED_BODY()
+
+public:
+    FRA4OnRadarClicked OnRadarClicked;
+
+    const TArray<FRA4RadarMarker>& GetMarkers() const;
+    FVector2D GetMapSize() const;
+    int32 GetLocalPlayer() const;
+    void HandleSlateClick(const FVector2D& NormalizedPosition);
+
+    virtual void ReleaseSlateResources(bool bReleaseChildren) override;
+
+protected:
+    virtual TSharedRef<SWidget> RebuildWidget() override;
+
+private:
+    URA4UIDataProviderSubsystem* GetProvider() const;
+
+    TSharedPtr<SRA4RadarSlate> RadarSlate;
+};
 
 /**
  * UButton::OnClicked carries no payload, so a grid of build cards cannot tell which
@@ -75,6 +103,7 @@ public:
     virtual void NativeDestruct() override;
 
     FRA4OnBuildCardClicked OnBuildCardClicked;
+    FRA4OnRadarClicked OnRadarClicked;
 
     /** Which sidebar tab is showing. Values match ProductionCategory. */
     UFUNCTION(BlueprintCallable, Category = "RA4|UI")
@@ -93,6 +122,7 @@ private:
 
     void HandleTabClicked(int32 TabIndex);
     void HandleCardClicked(int32 CardIndex);
+    void HandleRadarClicked(FVector2D WorldPosition);
 
     // Widgets rebuilt on refresh rather than kept in sync one by one: the card grid is
     // at most a couple of dozen entries and only changes when availability does.
@@ -119,6 +149,9 @@ private:
 
     UPROPERTY(Transient)
     TObjectPtr<UTextBlock> SelectionDetailsText;
+
+    UPROPERTY(Transient)
+    TObjectPtr<URA4RadarWidget> RadarWidget;
 
     UPROPERTY(Transient)
     TArray<TObjectPtr<URA4IndexedButton>> TabButtons;

@@ -375,6 +375,40 @@ RA4_TEST(Hud, OptionsAreGroupedByCategoryForTheTabs)
     }
 }
 
+RA4_TEST(Hud, RadarShowsOwnForcesButNotEnemiesHiddenByFog)
+{
+    HudFixture F;
+    const EntityId OwnUnit =
+        F.World.SpawnUnit(Ids::SovConscript, 0, Vec2::FromInts(1200, 1200));
+    const EntityId HiddenEnemy =
+        F.World.SpawnUnit(Ids::AllRifleman, 1, Vec2::FromInts(11000, 11000));
+    F.Step(1, {OwnUnit});
+
+    RA4_EXPECT_EQ(F.Snapshot.Radar.MapWidthUnits,
+                  F.World.GetMap().Width * kTileSizeUnits);
+    RA4_EXPECT_EQ(F.Snapshot.Radar.MapHeightUnits,
+                  F.World.GetMap().Height * kTileSizeUnits);
+
+    bool bFoundOwn = false;
+    bool bFoundHiddenEnemy = false;
+    for (const RadarMarker& Marker : F.Snapshot.Radar.Markers)
+    {
+        if (Marker.Entity == OwnUnit)
+        {
+            bFoundOwn = true;
+            RA4_EXPECT(Marker.bSelected);
+            RA4_EXPECT_EQ(Marker.Owner, 0);
+        }
+        if (Marker.Entity == HiddenEnemy)
+        {
+            bFoundHiddenEnemy = true;
+        }
+    }
+
+    RA4_EXPECT(bFoundOwn);
+    RA4_EXPECT(!bFoundHiddenEnemy);
+}
+
 // ---------------------------------------------------------------------------
 // Alerts
 // ---------------------------------------------------------------------------

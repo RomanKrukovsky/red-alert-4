@@ -175,6 +175,24 @@ struct ProductionState
     std::vector<BuildOption> Options;
 };
 
+// --- Radar -----------------------------------------------------------------
+
+struct RadarMarker
+{
+    EntityId Entity;
+    Vec2 Position;
+    PlayerId Owner = kInvalidPlayer;
+    EntityKind Kind = EntityKind::Unit;
+    bool bSelected = false;
+};
+
+struct RadarState
+{
+    int32_t MapWidthUnits = 0;
+    int32_t MapHeightUnits = 0;
+    std::vector<RadarMarker> Markers;
+};
+
 // --- Match -----------------------------------------------------------------
 
 struct MatchState
@@ -194,6 +212,7 @@ struct HudSnapshot
     ResourceState Resources;
     SelectionState Selection;
     ProductionState Production;
+    RadarState Radar;
     MatchState Match;
     std::vector<Alert> Alerts;
 };
@@ -223,6 +242,7 @@ private:
     void BuildResources(const SimWorld& World, ResourceState& Out);
     void BuildSelection(const SimWorld& World, const std::vector<EntityId>& Selection, SelectionState& Out) const;
     void BuildProduction(const SimWorld& World, const SelectionState& Selection, ProductionState& Out) const;
+    void BuildRadar(const SimWorld& World, const std::vector<EntityId>& Selection, RadarState& Out) const;
     void BuildMatch(const SimWorld& World, MatchState& Out) const;
     void AccumulateAlerts(const SimWorld& World, const ResourceState& Resources);
     void PushAlert(const Alert& Incoming);

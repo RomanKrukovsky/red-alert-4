@@ -78,6 +78,7 @@ void ARA4PlayerController::BeginPlay()
         if (Sidebar != nullptr)
         {
             Sidebar->OnBuildCardClicked.AddUObject(this, &ARA4PlayerController::HandleBuildCardClicked);
+            Sidebar->OnRadarClicked.AddUObject(this, &ARA4PlayerController::HandleRadarClicked);
             FGameViewportWidgetSlot Slot;
             Slot.Anchors = FAnchors(1.0f, 0.0f, 1.0f, 1.0f);
             Slot.Offsets = FMargin(0.0f, 0.0f, URA4SidebarWidget::SidebarWidth, 0.0f);
@@ -380,11 +381,10 @@ void ARA4PlayerController::UpdateHoverTooltip(const SimWorld& World)
     if (!Def->DisplayNameKey.empty())
     {
         const FString Key(Def->DisplayNameKey.c_str());
-        Title = FText::AsCultureInvariant(Key);
-        FText Localised;
-        if (FText::FindTextInLiveTable_Advanced(TEXT("RA4"), *Key, Localised))
+        if (const URA4UIDataProviderSubsystem* Provider =
+                GetWorld()->GetSubsystem<URA4UIDataProviderSubsystem>())
         {
-            Title = Localised;
+            Title = Provider->GetDisplayNameForKey(Key);
         }
     }
 
@@ -1201,6 +1201,15 @@ void ARA4PlayerController::CancelPendingAction()
     bAttackMoveArmed = false;
     bPlacementArmed = false;
     PlacementContent = ContentId();
+}
+
+void ARA4PlayerController::HandleRadarClicked(FVector2D WorldPosition)
+{
+    if (ARA4CameraPawn* CameraPawn = GetCameraPawn())
+    {
+        CameraPawn->GetCameraController().FocusOn(
+            Vec2f(float(WorldPosition.X), float(WorldPosition.Y)), true);
+    }
 }
 
 // ---------------------------------------------------------------------------

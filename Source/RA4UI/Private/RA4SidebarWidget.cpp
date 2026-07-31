@@ -14,15 +14,155 @@
 #include "Components/UniformGridSlot.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
+#include "Input/Reply.h"
+#include "InputCoreTypes.h"
+#include "Rendering/DrawElements.h"
+#include "Styling/CoreStyle.h"
+#include "Widgets/SLeafWidget.h"
 
 #include "RA4UIDataProviderSubsystem.h"
+
+namespace
+{
+constexpr float kRadarDesiredSize = 208.0f;
+}
+
+class SRA4RadarSlate final : public SLeafWidget
+{
+public:
+    SLATE_BEGIN_ARGS(SRA4RadarSlate) {}
+    SLATE_END_ARGS()
+
+    void Construct(const FArguments&, URA4RadarWidget* InOwner)
+    {
+        Owner = InOwner;
+    }
+
+    virtual FVector2D ComputeDesiredSize(float) const override
+    {
+        return FVector2D(kRadarDesiredSize, kRadarDesiredSize);
+    }
+
+    virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry,
+                          const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements,
+                          int32 LayerId, const FWidgetStyle& InWidgetStyle,
+                          bool bParentEnabled) const override
+    {
+        const FVector2D Size = AllottedGeometry.GetLocalSize();
+        if (Size.X <= 0.0f || Size.Y <= 0.0f)
+        {
+            return LayerId;
+        }
+
+        const FSlateBrush* WhiteBrush = FCoreStyle::Get().GetBrush(TEXT("WhiteBrush"));
+        FSlateDrawElement::MakeBox(
+            OutDrawElements, LayerId,
+            AllottedGeometry.ToPaintGeometry(Size, FSlateLayoutTransform()),
+            WhiteBrush, ESlateDrawEffect::None, FLinearColor(0.018f, 0.028f, 0.040f, 1.0f));
+
+        const FLinearColor GridColour(0.12f, 0.19f, 0.22f, 0.65f);
+        for (int32 Division = 1; Division < 4; ++Division)
+        {
+            const float X = Size.X * float(Division) / 4.0f;
+            const float Y = Size.Y * float(Division) / 4.0f;
+            TArray<FVector2D> Vertical{FVector2D(X, 0.0f), FVector2D(X, Size.Y)};
+            TArray<FVector2D> Horizontal{FVector2D(0.0f, Y), FVector2D(Size.X, Y)};
+            FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 1, AllottedGeometry.ToPaintGeometry(),
+                                         Vertical, ESlateDrawEffect::None, GridColour, true, 1.0f);
+            FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 1, AllottedGeometry.ToPaintGeometry(),
+                                         Horizontal, ESlateDrawEffect::None, GridColour, true, 1.0f);
+        }
+
+        const URA4RadarWidget* RadarOwner = Owner.Get();
+        if (RadarOwner == nullptr)
+        {
+            return LayerId + 1;
+        }
+
+        const FVector2D MapSize = RadarOwner->GetMapSize();
+        if (MapSize.X <= 0.0f || MapSize.Y <= 0.0f)
+        {
+            return LayerId + 1;
+        }
+
+        const int32 LocalPlayer = RadarOwner->GetLocalPlayer();
+        for (const FRA4RadarMarker& Marker : RadarOwner->GetMarkers())
+        {
+            const float NormalizedX = FMath::Clamp(float(Marker.WorldPosition.X / MapSize.X), 0.0f, 1.0f);
+            const float NormalizedY = FMath::Clamp(float(Marker.WorldPosition.Y / MapSize.Y), 0.0f, 1.0f);
+            const FVector2D Centre(NormalizedX * Size.X, (1.0f - NormalizedY) * Size.Y);
+
+            float MarkerExtent = 4.0f;
+            FLinearColor Colour;
+            if (Marker.Kind == ERA4RadarMarkerKind::Resource)
+            {
+                MarkerExtent = 3.0f;
+                Colour = FLinearColor(0.96f, 0.78f, 0.20f, 1.0f);
+            }
+            else if (Marker.Owner == LocalPlayer)
+            {
+                MarkerExtent = Marker.Kind == ERA4RadarMarkerKind::Building ? 6.0f : 4.0f;
+                Colour = FLinearColor(0.20f, 0.92f, 0.38f, 1.0f);
+            }
+            else
+            {
+                MarkerExtent = Marker.Kind == ERA4RadarMarkerKind::Building ? 6.0f : 4.0f;
+                Colour = FLinearColor(0.96f, 0.22f, 0.16f, 1.0f);
+            }
+
+            if (Marker.bSelected)
+            {
+                const FVector2D OutlineSize(MarkerExtent + 4.0f, MarkerExtent + 4.0f);
+                FSlateDrawElement::MakeBox(
+                    OutDrawElements, LayerId + 2,
+                    AllottedGeometry.ToPaintGeometry(
+                        OutlineSize, FSlateLayoutTransform(Centre - OutlineSize * 0.5f)),
+                    WhiteBrush, ESlateDrawEffect::None, FLinearColor::White);
+            }
+
+            const FVector2D MarkerSize(MarkerExtent, MarkerExtent);
+            FSlateDrawElement::MakeBox(
+                OutDrawElements, LayerId + 3,
+                AllottedGeometry.ToPaintGeometry(
+                    MarkerSize, FSlateLayoutTransform(Centre - MarkerSize * 0.5f)),
+                WhiteBrush, ESlateDrawEffect::None, Colour);
+        }
+
+        return LayerId + 3;
+    }
+
+    virtual FReply OnMouseButtonDown(const FGeometry& MyGeometry,
+                                     const FPointerEvent& MouseEvent) override
+    {
+        if (MouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+        {
+            const FVector2D Size = MyGeometry.GetLocalSize();
+            if (Size.X > 0.0f && Size.Y > 0.0f)
+            {
+                const FVector2D Local = MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
+                if (URA4RadarWidget* RadarOwner = Owner.Get())
+                {
+                    RadarOwner->HandleSlateClick(FVector2D(
+                        FMath::Clamp(Local.X / Size.X, 0.0f, 1.0f),
+                        FMath::Clamp(Local.Y / Size.Y, 0.0f, 1.0f)));
+                }
+            }
+        }
+
+        // Both mouse buttons belong to the radar while the pointer is over it.
+        return FReply::Handled();
+    }
+
+private:
+    TWeakObjectPtr<URA4RadarWidget> Owner;
+};
 
 namespace
 {
 // The sidebar is a fixed-width column, as in the originals: it does not reflow with
 // resolution, it stays the same slice of screen so the cards keep their positions.
 constexpr float kSidebarWidth = URA4SidebarWidget::SidebarWidth;
-constexpr float kMinimapHeight = 208.0f;
+constexpr float kMinimapHeight = kRadarDesiredSize;
 constexpr int32 kCardColumns = 2;
 
 const FLinearColor kPanel(0.055f, 0.065f, 0.080f, 0.94f);
@@ -94,6 +234,60 @@ FText BlockReasonText(ERA4BuildBlockReason Reason)
 } // namespace
 
 // ---------------------------------------------------------------------------
+// URA4RadarWidget
+// ---------------------------------------------------------------------------
+
+TSharedRef<SWidget> URA4RadarWidget::RebuildWidget()
+{
+    RadarSlate = SNew(SRA4RadarSlate, this);
+    return RadarSlate.ToSharedRef();
+}
+
+void URA4RadarWidget::ReleaseSlateResources(bool bReleaseChildren)
+{
+    Super::ReleaseSlateResources(bReleaseChildren);
+    RadarSlate.Reset();
+}
+
+URA4UIDataProviderSubsystem* URA4RadarWidget::GetProvider() const
+{
+    UWorld* World = GetWorld();
+    return World != nullptr ? World->GetSubsystem<URA4UIDataProviderSubsystem>() : nullptr;
+}
+
+const TArray<FRA4RadarMarker>& URA4RadarWidget::GetMarkers() const
+{
+    static const TArray<FRA4RadarMarker> Empty;
+    const URA4UIDataProviderSubsystem* Provider = GetProvider();
+    return Provider != nullptr ? Provider->GetRadarMarkers() : Empty;
+}
+
+FVector2D URA4RadarWidget::GetMapSize() const
+{
+    const URA4UIDataProviderSubsystem* Provider = GetProvider();
+    return Provider != nullptr ? Provider->GetRadarMapSize() : FVector2D::ZeroVector;
+}
+
+int32 URA4RadarWidget::GetLocalPlayer() const
+{
+    const URA4UIDataProviderSubsystem* Provider = GetProvider();
+    return Provider != nullptr ? Provider->GetRadarLocalPlayer() : 0;
+}
+
+void URA4RadarWidget::HandleSlateClick(const FVector2D& NormalizedPosition)
+{
+    const FVector2D MapSize = GetMapSize();
+    if (MapSize.X <= 0.0f || MapSize.Y <= 0.0f)
+    {
+        return;
+    }
+
+    OnRadarClicked.Broadcast(FVector2D(
+        NormalizedPosition.X * MapSize.X,
+        (1.0f - NormalizedPosition.Y) * MapSize.Y));
+}
+
+// ---------------------------------------------------------------------------
 // URA4IndexedButton
 // ---------------------------------------------------------------------------
 
@@ -132,17 +326,15 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
     };
 
     // --- minimap ------------------------------------------------------------
-    // A framed placeholder, not a fake map: the radar render target is a separate
-    // piece of work, and drawing invented blips would be worse than an honest panel.
     {
         UBorder* Frame = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("MinimapFrame"));
         Frame->SetBrushColor(kPanelDeep);
         Frame->SetPadding(FMargin(6.0f));
 
-        UTextBlock* Caption = MakeLabel(WidgetTree, TEXT("MinimapCaption"), kTextDim, 10, false);
-        Caption->SetText(NSLOCTEXT("RA4", "Sidebar_Radar", "РАДАР"));
-        Caption->SetJustification(ETextJustify::Center);
-        Frame->AddChild(Caption);
+        RadarWidget = WidgetTree->ConstructWidget<URA4RadarWidget>(
+            URA4RadarWidget::StaticClass(), TEXT("Radar"));
+        RadarWidget->OnRadarClicked.AddUObject(this, &URA4SidebarWidget::HandleRadarClicked);
+        Frame->AddChild(RadarWidget);
 
         USizeBox* Sizer = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("MinimapSizer"));
         Sizer->SetHeightOverride(kMinimapHeight);
@@ -270,6 +462,11 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
 
     WidgetTree->RootWidget = WidthBox;
     return Super::RebuildWidget();
+}
+
+void URA4SidebarWidget::HandleRadarClicked(FVector2D WorldPosition)
+{
+    OnRadarClicked.Broadcast(WorldPosition);
 }
 
 void URA4SidebarWidget::NativeConstruct()

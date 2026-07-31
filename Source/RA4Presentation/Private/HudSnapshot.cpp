@@ -353,6 +353,60 @@ void HudSnapshotBuilder::BuildProduction(const SimWorld& World, const SelectionS
 }
 
 // ---------------------------------------------------------------------------
+// Radar
+// ---------------------------------------------------------------------------
+
+void HudSnapshotBuilder::BuildRadar(const SimWorld& World, const std::vector<EntityId>& Selection,
+                                    RadarState& Out) const
+{
+    Out = RadarState();
+    const MapDescription& Map = World.GetMap();
+    Out.MapWidthUnits = Map.Width * kTileSizeUnits;
+    Out.MapHeightUnits = Map.Height * kTileSizeUnits;
+
+    const FFogOfWarGrid* Fog = World.GetFogGrid();
+    const std::vector<EntityCore>& Cores = World.GetAllCores();
+    Out.Markers.reserve(Cores.size());
+
+    for (uint32_t Index = 0; Index < uint32_t(Cores.size()); ++Index)
+    {
+        const EntityCore& Core = Cores[Index];
+        if (!Core.bAlive || Core.Kind == EntityKind::Projectile)
+        {
+            continue;
+        }
+
+        const EntityId Id = World.MakeId(Index);
+        const TransformComp* Transform = World.GetTransform(Id);
+        if (Transform == nullptr)
+        {
+            continue;
+        }
+
+        // Own forces are always known. Enemy and neutral markers obey exactly the
+        // same fog lookup as the AI view, so the minimap cannot become a maphack.
+        if (Core.Owner != LocalPlayer && Fog != nullptr)
+        {
+            const TileCoord Tile = Map.WorldToTile(Transform->Position);
+            const VisibilityState Visibility = Fog->GetVisibility(LocalPlayer, Tile.X, Tile.Y);
+            if (Visibility != VisibilityState::CurrentlyVisible &&
+                Visibility != VisibilityState::RadarDetected)
+            {
+                continue;
+            }
+        }
+
+        RadarMarker Marker;
+        Marker.Entity = Id;
+        Marker.Position = Transform->Position;
+        Marker.Owner = Core.Owner;
+        Marker.Kind = Core.Kind;
+        Marker.bSelected = std::find(Selection.begin(), Selection.end(), Id) != Selection.end();
+        Out.Markers.push_back(Marker);
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Match
 // ---------------------------------------------------------------------------
 
@@ -520,6 +574,7 @@ void HudSnapshotBuilder::Build(const SimWorld& World, const std::vector<EntityId
     BuildResources(World, Out.Resources);
     BuildSelection(World, Selection, Out.Selection);
     BuildProduction(World, Out.Selection, Out.Production);
+    BuildRadar(World, Selection, Out.Radar);
     BuildMatch(World, Out.Match);
     AccumulateAlerts(World, Out.Resources);
 

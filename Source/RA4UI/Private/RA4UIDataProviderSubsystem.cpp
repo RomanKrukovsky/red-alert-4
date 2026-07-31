@@ -226,6 +226,11 @@ TArray<FRA4BuildOption> URA4UIDataProviderSubsystem::GetBuildOptionsForCategory(
     return Result;
 }
 
+FText URA4UIDataProviderSubsystem::GetDisplayNameForKey(const FString& Key) const
+{
+    return KeyToText(std::string(TCHAR_TO_UTF8(*Key)));
+}
+
 void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnapshot& Snapshot)
 {
     if (HUDViewModel == nullptr)
@@ -263,9 +268,10 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
         Snapshot.Selection.PrimaryHealthMax > 0
             ? float(Snapshot.Selection.PrimaryHealthCurrent) / float(Snapshot.Selection.PrimaryHealthMax)
             : 0.0f;
-    HUDViewModel->SetSelectionState(Snapshot.Selection.TotalCount, PrimaryHealthRatio,
-                                    UTF8_TO_TCHAR(Snapshot.Selection.PrimaryDisplayNameKey.c_str()),
-                                    Snapshot.Selection.bPrimaryIsOwned);
+    HUDViewModel->SetSelectionState(
+        Snapshot.Selection.TotalCount, PrimaryHealthRatio,
+        KeyToText(Snapshot.Selection.PrimaryDisplayNameKey).ToString(),
+        Snapshot.Selection.bPrimaryIsOwned);
     OnSelectionChanged.Broadcast();
 
     SelectionKind = ToBlueprint(Snapshot.Selection.Kind);
@@ -317,6 +323,34 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
     if (HasVisibleProductionChange(PreviousQueue, PreviousOptions))
     {
         OnProductionChanged.Broadcast();
+    }
+
+    // --- radar ---------------------------------------------------------------
+    // The snapshot has already applied fog-of-war filtering. The UI only receives
+    // markers it is allowed to draw and therefore cannot reveal hidden enemies.
+    RadarMapSize = FVector2D(Snapshot.Radar.MapWidthUnits, Snapshot.Radar.MapHeightUnits);
+    RadarLocalPlayer = int32(Snapshot.LocalPlayer);
+    RadarMarkers.Reset(int32(Snapshot.Radar.Markers.size()));
+    for (const RP::RadarMarker& Marker : Snapshot.Radar.Markers)
+    {
+        FRA4RadarMarker Out;
+        Out.WorldPosition = FVector2D(Marker.Position.X.ToDoubleUnsafe(),
+                                      Marker.Position.Y.ToDoubleUnsafe());
+        Out.Owner = Marker.Owner < RA4::kMaxPlayers ? int32(Marker.Owner) : -1;
+        switch (Marker.Kind)
+        {
+            case RA4::EntityKind::Building:
+                Out.Kind = ERA4RadarMarkerKind::Building;
+                break;
+            case RA4::EntityKind::ResourceNode:
+                Out.Kind = ERA4RadarMarkerKind::Resource;
+                break;
+            default:
+                Out.Kind = ERA4RadarMarkerKind::Unit;
+                break;
+        }
+        Out.bSelected = Marker.bSelected;
+        RadarMarkers.Add(Out);
     }
 
     // --- alerts ---------------------------------------------------------------

@@ -53,6 +53,19 @@ public:
     UFUNCTION(BlueprintPure, Category = "RA4|UI")
     const TArray<FRA4Alert>& GetAlerts() const { return Alerts; }
 
+    UFUNCTION(BlueprintPure, Category = "RA4|UI")
+    const TArray<FRA4RadarMarker>& GetRadarMarkers() const { return RadarMarkers; }
+
+    UFUNCTION(BlueprintPure, Category = "RA4|UI")
+    FVector2D GetRadarMapSize() const { return RadarMapSize; }
+
+    UFUNCTION(BlueprintPure, Category = "RA4|UI")
+    int32 GetRadarLocalPlayer() const { return RadarLocalPlayer; }
+
+    /** Resolves the stable simulation display key through the HUD localization map. */
+    UFUNCTION(BlueprintPure, Category = "RA4|UI")
+    FText GetDisplayNameForKey(const FString& Key) const;
+
     /** Build options filtered to one sidebar tab. */
     UFUNCTION(BlueprintPure, Category = "RA4|UI")
     TArray<FRA4BuildOption> GetBuildOptionsForCategory(int32 Category) const;
@@ -141,6 +154,12 @@ private:
 
     UPROPERTY(Transient)
     TArray<FRA4Alert> Alerts;
+
+    UPROPERTY(Transient)
+    TArray<FRA4RadarMarker> RadarMarkers;
+
+    FVector2D RadarMapSize = FVector2D::ZeroVector;
+    int32 RadarLocalPlayer = 0;
 
     int32 Credits = 0;
     int32 PowerProduced = 0;

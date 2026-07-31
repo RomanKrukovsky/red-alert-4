@@ -28,6 +28,7 @@ public class RA4UI : ModuleRules
 		PrivateDependencyModuleNames.AddRange(new string[] {
             "Slate",
             "SlateCore",
+            "InputCore",
             "CommonUI",
             "ModelViewViewModel",
             "EnhancedInput"

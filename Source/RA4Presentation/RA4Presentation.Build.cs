@@ -21,7 +21,8 @@ public class RA4Presentation : ModuleRules
 			"Core",
 			"RA4Core",
 			"RA4Content",
-			"RA4Simulation"
+			"RA4Simulation",
+			"RA4FogOfWar"
 		});
 	}
 }
