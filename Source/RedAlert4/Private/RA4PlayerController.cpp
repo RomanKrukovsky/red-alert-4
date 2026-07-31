@@ -13,6 +13,7 @@
 #include "RA4HoverTooltipWidget.h"
 #include "RA4SidebarWidget.h"
 #include "RA4UIDataProviderSubsystem.h"
+#include "Blueprint/GameViewportSubsystem.h"
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
 #include "Misc/PackageName.h"
@@ -43,22 +44,30 @@ void ARA4PlayerController::BeginPlay()
 
     if (IsLocalController())
     {
-        // AddToViewport MUST come before the slot setters. Until the widget is
-        // managed by the game viewport subsystem, each of SetDesiredSizeInViewport /
-        // SetAnchorsInViewport / SetAlignmentInViewport builds a *fresh default* slot
-        // and writes only its own field, silently discarding whatever the previous
-        // call set. Called in the old order only the last one survived, which left
-        // the sidebar on default top-left anchors with right-edge alignment -- parked
-        // entirely off the left of the screen, which is why it was invisible.
+        // Build the complete viewport slots before adding the widgets. In UE 5.6 the
+        // UUserWidget convenience setters each rewrite part of the slot, and the size
+        // helper also resets its anchors to top-left. Supplying one complete slot is
+        // both simpler and immune to setter ordering.
+        UGameViewportSubsystem* ViewportSubsystem = UGameViewportSubsystem::Get(GetWorld());
+
         ResourceBar = CreateWidget<URA4ResourceBarWidget>(this, URA4ResourceBarWidget::StaticClass());
         if (ResourceBar != nullptr)
         {
-            ResourceBar->AddToViewport(/*ZOrder*/ 10);
-            ResourceBar->SetAnchorsInViewport(FAnchors(0.0f, 0.0f, 0.0f, 0.0f));
-            ResourceBar->SetAlignmentInViewport(FVector2D(0.0f, 0.0f));
-            ResourceBar->SetDesiredSizeInViewport(FVector2D(1400.0f, 46.0f));
-            ResourceBar->SetPositionInViewport(FVector2D(16.0f, 16.0f));
-            UE_LOG(LogTemp, Display, TEXT("RA4 HUD: resource bar added to viewport"));
+            FGameViewportWidgetSlot Slot;
+            Slot.Anchors = FAnchors(0.0f, 0.0f);
+            Slot.Offsets = FMargin(16.0f, 16.0f, 1400.0f, 46.0f);
+            Slot.Alignment = FVector2D::ZeroVector;
+            Slot.ZOrder = 10;
+            const bool bAdded = ViewportSubsystem != nullptr &&
+                                ViewportSubsystem->AddWidget(ResourceBar, Slot);
+            if (bAdded)
+            {
+                UE_LOG(LogTemp, Display, TEXT("RA4 HUD: resource bar added to viewport"));
+            }
+            else
+            {
+                UE_LOG(LogTemp, Error, TEXT("RA4 HUD: resource bar viewport add failed"));
+            }
         }
         else
         {
@@ -69,17 +78,16 @@ void ARA4PlayerController::BeginPlay()
         if (Sidebar != nullptr)
         {
             Sidebar->OnBuildCardClicked.AddUObject(this, &ARA4PlayerController::HandleBuildCardClicked);
-            Sidebar->AddToViewport(/*ZOrder*/ 10);
-            // Anchored to the right edge, stretched over the full height.
-            Sidebar->SetAnchorsInViewport(FAnchors(1.0f, 0.0f, 1.0f, 1.0f));
-            Sidebar->SetAlignmentInViewport(FVector2D(1.0f, 0.0f));
-            // Required, not cosmetic: FGameViewportWidgetSlot has no auto-size, and on
-            // a non-stretched axis the extent comes from Offsets.Right, which only
-            // SetDesiredSizeInViewport writes. Without it the width is 0 and the panel
-            // renders as nothing at all. The height is ignored here because Y is
-            // stretched by the anchors above.
-            Sidebar->SetDesiredSizeInViewport(FVector2D(URA4SidebarWidget::SidebarWidth, 0.0f));
-            UE_LOG(LogTemp, Display, TEXT("RA4 HUD: production sidebar added to viewport"));
+            FGameViewportWidgetSlot Slot;
+            Slot.Anchors = FAnchors(1.0f, 0.0f, 1.0f, 1.0f);
+            Slot.Offsets = FMargin(0.0f, 0.0f, URA4SidebarWidget::SidebarWidth, 0.0f);
+            Slot.Alignment = FVector2D(1.0f, 0.0f);
+            Slot.ZOrder = 10;
+            const bool bAdded = ViewportSubsystem != nullptr &&
+                                ViewportSubsystem->AddWidget(Sidebar, Slot);
+            UE_LOG(LogTemp, Display,
+                   TEXT("RA4 HUD: production sidebar viewport add=%d width=%.0f"),
+                   bAdded ? 1 : 0, URA4SidebarWidget::SidebarWidth);
         }
         else
         {
@@ -659,6 +667,15 @@ OrderContext ARA4PlayerController::MakeOrderContext(const Vec2& GroundPosition) 
 
 void ARA4PlayerController::OnPrimaryPressed()
 {
+    bPrimaryConsumedByUI =
+        (Sidebar != nullptr && Sidebar->IsHovered()) ||
+        (ResourceBar != nullptr && ResourceBar->IsHovered());
+    if (bPrimaryConsumedByUI)
+    {
+        bMarqueeActive = false;
+        return;
+    }
+
     float MouseX = 0.0f;
     float MouseY = 0.0f;
     if (!GetMousePosition(MouseX, MouseY))
@@ -676,6 +693,13 @@ void ARA4PlayerController::OnPrimaryPressed()
 
 void ARA4PlayerController::OnPrimaryReleased()
 {
+    if (bPrimaryConsumedByUI)
+    {
+        bPrimaryConsumedByUI = false;
+        bMarqueeActive = false;
+        return;
+    }
+
     const bool bWasPressed = bMarqueeActive;
     bMarqueeActive = false;
     if (!bWasPressed)
@@ -911,6 +935,12 @@ void ARA4PlayerController::PlayVoiceForPrimary(const SimWorld& World, ERA4VoiceE
 
 void ARA4PlayerController::OnSecondaryPressed()
 {
+    if ((Sidebar != nullptr && Sidebar->IsHovered()) ||
+        (ResourceBar != nullptr && ResourceBar->IsHovered()))
+    {
+        return;
+    }
+
     float MouseX = 0.0f;
     float MouseY = 0.0f;
     if (!GetMousePosition(MouseX, MouseY))

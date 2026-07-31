@@ -166,6 +166,10 @@ private:
     RA4::Input::CursorHint CurrentCursorHint = RA4::Input::CursorHint::Select;
 
     bool bMarqueeActive = false;
+    // A press that starts over the HUD belongs to Slate even if the low-level key
+    // binding also sees it. Remember it through release so no selection or order can
+    // leak into the world under a button.
+    bool bPrimaryConsumedByUI = false;
     FVector2D MarqueeStartScreen = FVector2D::ZeroVector;
     FVector2D MarqueeCurrentScreen = FVector2D::ZeroVector;
     RA4::Vec2 MarqueeStartGround;

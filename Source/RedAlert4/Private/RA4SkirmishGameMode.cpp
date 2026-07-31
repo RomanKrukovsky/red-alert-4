@@ -20,6 +20,8 @@
 #include "RA4SimWorldSubsystem.h"
 #include "Kismet/GameplayStatics.h"
 
+#include "RA4Content/ContentTypes.h"
+
 ARA4SkirmishGameMode::ARA4SkirmishGameMode()
 {
     PlayerControllerClass = ARA4PlayerController::StaticClass();
@@ -39,9 +41,34 @@ void ARA4SkirmishGameMode::BeginPlay()
 
     // Extract options from the URL (Main Menu passes them here)
     FString Options = OptionsString;
-    uint8 PlayerFaction = UGameplayStatics::GetIntOption(Options, TEXT("PlayerFaction"), 0);
-    uint8 EnemyFaction = UGameplayStatics::GetIntOption(Options, TEXT("EnemyFaction"), 1);
+    constexpr uint8 SovietFaction = static_cast<uint8>(RA4::FactionId::Soviet);
+    constexpr uint8 AllianceFaction = static_cast<uint8>(RA4::FactionId::Alliance);
+
+    uint8 PlayerFaction = UGameplayStatics::GetIntOption(Options, TEXT("PlayerFaction"), SovietFaction);
+    uint8 EnemyFaction = UGameplayStatics::GetIntOption(Options, TEXT("EnemyFaction"), AllianceFaction);
     int32 Difficulty = UGameplayStatics::GetIntOption(Options, TEXT("Difficulty"), 1);
+
+    // Only the Soviet and Alliance skirmish tech trees exist today. A bare map
+    // launch previously defaulted to FactionId::None while seeding Alliance units;
+    // the HUD then correctly filtered every build option because the player's
+    // declared faction matched none of them. Keep direct editor/game launches
+    // playable and reject malformed URL options at the presentation boundary.
+    const auto IsPlayableFaction = [](uint8 Faction)
+    {
+        return Faction == SovietFaction || Faction == AllianceFaction;
+    };
+    if (!IsPlayableFaction(PlayerFaction))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("RA4 invalid PlayerFaction=%u; using Soviet"), PlayerFaction);
+        PlayerFaction = SovietFaction;
+    }
+    if (!IsPlayableFaction(EnemyFaction) || EnemyFaction == PlayerFaction)
+    {
+        EnemyFaction = PlayerFaction == SovietFaction ? AllianceFaction : SovietFaction;
+        UE_LOG(LogTemp, Warning, TEXT("RA4 invalid EnemyFaction option; using %u"), EnemyFaction);
+    }
+
+    UE_LOG(LogTemp, Display, TEXT("RA4 skirmish factions: player=%u enemy=%u"), PlayerFaction, EnemyFaction);
 
     // Start the simulation match
     if (UWorld* World = GetWorld())
