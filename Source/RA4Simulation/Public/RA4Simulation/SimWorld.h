@@ -123,6 +123,12 @@ public:
     bool IsPlacementValid(ContentId BuildingDef, PlayerId Owner, const TileCoord& OriginTile) const;
     bool HasPrerequisites(PlayerId Owner, const EntityDef& Def) const;
 
+    // --- Cheat Engine Hooks --------------------------------------------------
+    void CheatGrantCredits(PlayerId Owner, int32_t Amount);
+    void CheatGrantPower(PlayerId Owner, int32_t PowerAmount);
+    void CheatInstantBuild(PlayerId Owner);
+    void CheatToggleGodMode(PlayerId Owner);
+
     // --- Determinism & Save/Restore -----------------------------------------
     // Hashes every value that can influence future state. Deliberately excludes
     // event lists and caches, which are outputs rather than state.

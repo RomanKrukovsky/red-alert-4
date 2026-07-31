@@ -87,6 +87,12 @@ public:
     UFUNCTION(BlueprintCallable, Category = "RA4|DirectControl")
     bool IsDirectControlActive() const { return bDirectControlActive; }
 
+    // --- Cheat Console -------------------------------------------------------
+    UFUNCTION(BlueprintCallable, Category = "RA4|CheatConsole")
+    void ToggleCheatConsole();
+
+    bool IsCheatConsoleOpen() const { return bCheatConsoleOpen; }
+
 protected:
     void OnDirectControlTogglePressed();
     void UpdateDirectControl(float DeltaTime);
@@ -223,6 +229,10 @@ private:
     bool bDirectControlActive = false;
     RA4::EntityId DirectControlEntityId = 0;
     FRotator DirectControlCameraRotation = FRotator::ZeroRotator;
+
+    UPROPERTY(Transient)
+    TObjectPtr<class URA4CheatConsoleWidget> CheatConsoleOverlay;
+    bool bCheatConsoleOpen = false;
 
     UPROPERTY(Transient)
     TObjectPtr<class UUserWidget> PauseMenuOverlay;

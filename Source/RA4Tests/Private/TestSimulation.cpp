@@ -214,6 +214,16 @@ RA4_TEST(Commands, ThrottlesCommandFloods)
     RA4_EXPECT(RateLimited > 0);
 }
 
+RA4_TEST(Cheats, GrantCreditsAndPower)
+{
+    Fixture F;
+    F.World.CheatGrantCredits(0, 10000);
+    RA4_EXPECT(F.World.GetPlayer(0).Credits == 20000);
+
+    F.World.CheatGrantPower(0, 500);
+    RA4_EXPECT(F.World.GetPlayer(0).PowerProduced >= 500);
+}
+
 // ---------------------------------------------------------------------------
 // Placement
 // ---------------------------------------------------------------------------

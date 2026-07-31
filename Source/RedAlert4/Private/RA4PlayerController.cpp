@@ -12,6 +12,7 @@
 #include "RA4AudioSubsystem.h"
 #include "RA4HoverTooltipWidget.h"
 #include "RA4SidebarWidget.h"
+#include "RA4UI/Public/RA4CheatConsoleWidget.h"
 #include "RA4UIDataProviderSubsystem.h"
 #include "Blueprint/GameViewportSubsystem.h"
 #include "Blueprint/UserWidget.h"
@@ -248,6 +249,8 @@ void ARA4PlayerController::SetupInputComponent()
     InputComponent->BindKey(EKeys::F, IE_Pressed, this, &ARA4PlayerController::OnDirectControlTogglePressed);
     InputComponent->BindKey(EKeys::X, IE_Pressed, this, &ARA4PlayerController::OnStopPressed);
     InputComponent->BindKey(EKeys::G, IE_Pressed, this, &ARA4PlayerController::OnGuardPressed);
+    InputComponent->BindKey(EKeys::Tilde, IE_Pressed, this, &ARA4PlayerController::ToggleCheatConsole);
+    InputComponent->BindKey(EKeys::Grave, IE_Pressed, this, &ARA4PlayerController::ToggleCheatConsole);
     InputComponent->BindKey(EKeys::Escape, IE_Pressed, this, &ARA4PlayerController::CancelPendingAction);
 
     // Control groups 1..9 then 0, matching the on-screen numbering.
@@ -550,13 +553,13 @@ void ARA4PlayerController::UpdateCameraInput(float DeltaTime)
         Camera.UpdateMiddleDrag(MouseX, MouseY);
     }
 
-    // Space + right-drag: horizontal mouse travel spins the view. Edge scrolling is
+    // Space + left-drag (ЛКМ): horizontal mouse travel spins the view. Edge scrolling is
     // suppressed meanwhile, or dragging toward a border would slide the map as well
     // as turn it.
-    const bool bRightMouseDown = IsInputKeyDown(EKeys::RightMouseButton);
+    const bool bLeftMouseDown = IsInputKeyDown(EKeys::LeftMouseButton);
     const bool bSpaceDown = IsInputKeyDown(EKeys::SpaceBar);
 
-    if ((bSpaceDown && bRightMouseDown) || bRotatingCamera)
+    if ((bSpaceDown && bLeftMouseDown) || bRotatingCamera)
     {
         if (!bRotatingCamera)
         {
@@ -564,7 +567,7 @@ void ARA4PlayerController::UpdateCameraInput(float DeltaTime)
             RotateAnchorScreen = FVector2D(MouseX, MouseY);
         }
 
-        if (!bRightMouseDown)
+        if (!bLeftMouseDown)
         {
             bRotatingCamera = false;
         }
@@ -578,6 +581,7 @@ void ARA4PlayerController::UpdateCameraInput(float DeltaTime)
         // The player is turning the camera, not driving it with the keyboard.
         Camera.SetKeyboardPan(0.0f, 0.0f);
     }
+
 
 
     // The pawn ticks itself; nothing to advance here.
@@ -735,6 +739,15 @@ void ARA4PlayerController::OnPrimaryPressed()
     {
         return;
     }
+
+    if (IsInputKeyDown(EKeys::SpaceBar))
+    {
+        bRotatingCamera = true;
+        RotateAnchorScreen = FVector2D(MouseX, MouseY);
+        bMarqueeActive = false;
+        return;
+    }
+
     MarqueeStartScreen = FVector2D(MouseX, MouseY);
     MarqueeCurrentScreen = MarqueeStartScreen;
 
@@ -746,6 +759,13 @@ void ARA4PlayerController::OnPrimaryPressed()
 
 void ARA4PlayerController::OnPrimaryReleased()
 {
+    if (bRotatingCamera)
+    {
+        bRotatingCamera = false;
+        bMarqueeActive = false;
+        return;
+    }
+
     if (bPrimaryConsumedByUI)
     {
         bPrimaryConsumedByUI = false;
@@ -759,6 +779,7 @@ void ARA4PlayerController::OnPrimaryReleased()
     {
         return;
     }
+
 
     float MouseX = 0.0f;
     float MouseY = 0.0f;
@@ -1250,6 +1271,12 @@ void ARA4PlayerController::HandleBuildCardClicked(int64 ContentIdValue)
 
 void ARA4PlayerController::CancelPendingAction()
 {
+    if (bCheatConsoleOpen)
+    {
+        ToggleCheatConsole();
+        return;
+    }
+
     if (bAttackMoveArmed || bPlacementArmed)
     {
         bAttackMoveArmed = false;
@@ -1259,6 +1286,34 @@ void ARA4PlayerController::CancelPendingAction()
     }
 
     TogglePauseMenu();
+}
+
+void ARA4PlayerController::ToggleCheatConsole()
+{
+    if (bCheatConsoleOpen)
+    {
+        if (CheatConsoleOverlay)
+        {
+            CheatConsoleOverlay->RemoveFromParent();
+        }
+        bCheatConsoleOpen = false;
+        SetInputMode(FInputModeGameAndUI());
+        bShowMouseCursor = true;
+    }
+    else
+    {
+        if (CheatConsoleOverlay == nullptr)
+        {
+            CheatConsoleOverlay = CreateWidget<URA4CheatConsoleWidget>(this, URA4CheatConsoleWidget::StaticClass());
+        }
+        if (CheatConsoleOverlay)
+        {
+            CheatConsoleOverlay->AddToViewport(150);
+            bCheatConsoleOpen = true;
+            SetInputMode(FInputModeGameAndUI());
+            bShowMouseCursor = true;
+        }
+    }
 }
 
 void ARA4PlayerController::TogglePauseMenu()
@@ -1280,9 +1335,10 @@ void ARA4PlayerController::TogglePauseMenu()
             if (URA4MatchResultOverlayWidget* MenuWidget = CreateWidget<URA4MatchResultOverlayWidget>(
                 this, URA4MatchResultOverlayWidget::StaticClass()))
             {
-                MenuWidget->Configure(/*bLocalPlayerWon*/ true, HasMainMenuMap());
-                MenuWidget->OnRetryRequested.AddUObject(this, &ARA4PlayerController::HandleRetryRequested);
+                MenuWidget->ConfigureForPauseMenu(HasMainMenuMap());
+                MenuWidget->OnRetryRequested.AddUObject(this, &ARA4PlayerController::TogglePauseMenu);
                 MenuWidget->OnExitRequested.AddUObject(this, &ARA4PlayerController::HandleExitRequested);
+
                 PauseMenuOverlay = MenuWidget;
                 PauseMenuOverlay->AddToViewport(90);
             }

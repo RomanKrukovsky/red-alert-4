@@ -1225,6 +1225,57 @@ void SimWorld::DestroyEntity(EntityId Id, EntityId Killer)
     }
 }
 
+void SimWorld::CheatGrantCredits(PlayerId Owner, int32_t Amount)
+{
+    if (Owner < kMaxPlayers)
+    {
+        Players[Owner].Credits += Amount;
+    }
+}
+
+void SimWorld::CheatGrantPower(PlayerId Owner, int32_t PowerAmount)
+{
+    if (Owner < kMaxPlayers)
+    {
+        Players[Owner].PowerProduced += PowerAmount;
+    }
+}
+
+void SimWorld::CheatInstantBuild(PlayerId Owner)
+{
+    for (size_t Index = 0; Index < Core.size(); ++Index)
+    {
+        if (Core[Index].bAlive && Core[Index].Owner == Owner)
+        {
+            if (Index < Buildings.size())
+            {
+                Buildings[Index].State = ConstructionState::Complete;
+                Buildings[Index].ConstructionProgressTicks = Buildings[Index].ConstructionTotalTicks;
+                if (!Buildings[Index].Queue.empty())
+                {
+                    Buildings[Index].Queue.front().ProgressTicks = Buildings[Index].Queue.front().TotalTicks;
+                }
+            }
+        }
+    }
+}
+
+void SimWorld::CheatToggleGodMode(PlayerId Owner)
+{
+    for (size_t Index = 0; Index < Core.size(); ++Index)
+    {
+        if (Core[Index].bAlive && Core[Index].Owner == Owner)
+        {
+            if (Index < Healths.size())
+            {
+                Healths[Index].bInvulnerable = !Healths[Index].bInvulnerable;
+                Healths[Index].Current = 999999;
+                Healths[Index].Max = 999999;
+            }
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Systems
 // ---------------------------------------------------------------------------
