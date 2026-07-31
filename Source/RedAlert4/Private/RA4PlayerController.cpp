@@ -245,7 +245,7 @@ void ARA4PlayerController::SetupInputComponent()
     // WASD pans the camera, so the order hotkeys sit on keys it does not use. A and S
     // are deliberately not bound here: sharing them with panning meant every step to
     // the left also armed an attack-move.
-    InputComponent->BindKey(EKeys::F, IE_Pressed, this, &ARA4PlayerController::ArmAttackMove);
+    InputComponent->BindKey(EKeys::F, IE_Pressed, this, &ARA4PlayerController::OnDirectControlTogglePressed);
     InputComponent->BindKey(EKeys::X, IE_Pressed, this, &ARA4PlayerController::OnStopPressed);
     InputComponent->BindKey(EKeys::G, IE_Pressed, this, &ARA4PlayerController::OnGuardPressed);
     InputComponent->BindKey(EKeys::Escape, IE_Pressed, this, &ARA4PlayerController::CancelPendingAction);
@@ -303,6 +303,12 @@ void ARA4PlayerController::PlayerTick(float DeltaTime)
     // A unit that died this tick has to leave the selection immediately, or the
     // next order references a stale handle and the server rejects it.
     Selection.PruneDead(*World);
+
+    if (bDirectControlActive)
+    {
+        UpdateDirectControl(DeltaTime);
+        return;
+    }
 
     UpdateCameraInput(DeltaTime);
     if (EdgeScrollWarmupFrames > 0)
@@ -547,9 +553,22 @@ void ARA4PlayerController::UpdateCameraInput(float DeltaTime)
     // Space + right-drag: horizontal mouse travel spins the view. Edge scrolling is
     // suppressed meanwhile, or dragging toward a border would slide the map as well
     // as turn it.
-    if (bRotatingCamera)
+    const bool bRightMouseDown = IsInputKeyDown(EKeys::RightMouseButton);
+    const bool bSpaceDown = IsInputKeyDown(EKeys::SpaceBar);
+
+    if ((bSpaceDown && bRightMouseDown) || bRotatingCamera)
     {
-        if (bHasCursor)
+        if (!bRotatingCamera)
+        {
+            bRotatingCamera = true;
+            RotateAnchorScreen = FVector2D(MouseX, MouseY);
+        }
+
+        if (!bRightMouseDown)
+        {
+            bRotatingCamera = false;
+        }
+        else if (bHasCursor)
         {
             const float DeltaX = float(MouseX - RotateAnchorScreen.X);
             RotateAnchorScreen = FVector2D(MouseX, MouseY);
@@ -559,6 +578,7 @@ void ARA4PlayerController::UpdateCameraInput(float DeltaTime)
         // The player is turning the camera, not driving it with the keyboard.
         Camera.SetKeyboardPan(0.0f, 0.0f);
     }
+
 
     // The pawn ticks itself; nothing to advance here.
     (void)DeltaTime;
@@ -1340,6 +1360,122 @@ URA4SimWorldSubsystem* ARA4PlayerController::GetSimSubsystem() const
 {
     UWorld* World = GetWorld();
     return World != nullptr ? World->GetSubsystem<URA4SimWorldSubsystem>() : nullptr;
+}
+
+void ARA4PlayerController::OnDirectControlTogglePressed()
+{
+    ToggleDirectControl();
+}
+
+void ARA4PlayerController::ToggleDirectControl()
+{
+    if (bDirectControlActive)
+    {
+        ExitDirectControl();
+    }
+    else
+    {
+        const auto& Selected = Selection.GetSelectedEntities();
+        if (!Selected.empty())
+        {
+            EnterDirectControl(Selected.front());
+        }
+        else if (LastClickedEntity != 0)
+        {
+            EnterDirectControl(LastClickedEntity);
+        }
+    }
+}
+
+void ARA4PlayerController::EnterDirectControl(int64 EntityIdValue)
+{
+    URA4SimWorldSubsystem* Sim = GetSimSubsystem();
+    if (!Sim) return;
+
+    ARA4EntityActor* EntityActor = Sim->FindEntityActor(EntityIdValue);
+    if (!EntityActor) return;
+
+    bDirectControlActive = true;
+    DirectControlEntityId = EntityIdValue;
+    DirectControlCameraRotation = EntityActor->GetActorRotation();
+
+    bShowMouseCursor = false;
+    SetInputMode(FInputModeGameOnly());
+
+    UE_LOG(LogTemp, Display, TEXT("Entered Direct Possession Mode for Entity %lld"), EntityIdValue);
+}
+
+void ARA4PlayerController::ExitDirectControl()
+{
+    bDirectControlActive = false;
+    DirectControlEntityId = 0;
+
+    bShowMouseCursor = true;
+    SetInputMode(FInputModeGameAndUI());
+
+    UE_LOG(LogTemp, Display, TEXT("Exited Direct Possession Mode"));
+}
+
+void ARA4PlayerController::UpdateDirectControl(float DeltaTime)
+{
+    if (!bDirectControlActive) return;
+
+    URA4SimWorldSubsystem* Sim = GetSimSubsystem();
+    if (!Sim)
+    {
+        ExitDirectControl();
+        return;
+    }
+
+    ARA4EntityActor* EntityActor = Sim->FindEntityActor(DirectControlEntityId);
+    if (!EntityActor)
+    {
+        ExitDirectControl();
+        return;
+    }
+
+    // Process Mouse Look
+    float MouseX = 0.0f;
+    float MouseY = 0.0f;
+    GetInputMouseDelta(MouseX, MouseY);
+
+    DirectControlCameraRotation.Yaw += MouseX * 2.5f;
+    DirectControlCameraRotation.Pitch = FMath::Clamp(DirectControlCameraRotation.Pitch - MouseY * 2.5f, -75.0f, 75.0f);
+
+    // Attach View
+    FVector CamLoc = EntityActor->GetPossessionCameraLocation();
+    SetInitialLocationAndRotation(CamLoc, DirectControlCameraRotation);
+    SetControlRotation(DirectControlCameraRotation);
+
+    // WASD Movement
+    FVector ForwardDir = DirectControlCameraRotation.Vector();
+    ForwardDir.Z = 0.0f;
+    ForwardDir.Normalize();
+
+    FVector RightDir = FRotationMatrix(DirectControlCameraRotation).GetScaledAxis(EAxis::Y);
+    RightDir.Z = 0.0f;
+    RightDir.Normalize();
+
+    FVector MoveInput = FVector::ZeroVector;
+    if (IsInputKeyDown(EKeys::W)) MoveInput += ForwardDir;
+    if (IsInputKeyDown(EKeys::S)) MoveInput -= ForwardDir;
+    if (IsInputKeyDown(EKeys::D)) MoveInput += RightDir;
+    if (IsInputKeyDown(EKeys::A)) MoveInput -= RightDir;
+
+    if (!MoveInput.IsNearlyZero())
+    {
+        MoveInput.Normalize();
+        FVector TargetPos = EntityActor->GetActorLocation() + MoveInput * 500.0f * DeltaTime;
+
+        Vec2 TargetGround(TargetPos.X / 100.0, TargetPos.Y / 100.0);
+        Command MoveCmd;
+        MoveCmd.Type = CommandType::Move;
+        MoveCmd.Issuer = Selection.GetLocalPlayer();
+        MoveCmd.Entities = { DirectControlEntityId };
+        MoveCmd.TargetTile = TileCoord(int32_t(TargetGround.X), int32_t(TargetGround.Y));
+
+        SubmitOrders({ MoveCmd });
+    }
 }
 
 ARA4CameraPawn* ARA4PlayerController::GetCameraPawn() const

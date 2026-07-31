@@ -48,6 +48,13 @@ public:
     // "the match runs but I see nothing" with data instead of guesses.
     FString DescribeVisualState() const;
 
+    // Direct Unit Possession Camera View Location & Rotation
+    UFUNCTION(BlueprintCallable, Category = "DirectControl")
+    FVector GetPossessionCameraLocation() const;
+
+    UFUNCTION(BlueprintCallable, Category = "DirectControl")
+    FRotator GetPossessionCameraRotation() const;
+
 protected:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;

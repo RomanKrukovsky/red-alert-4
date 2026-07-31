@@ -32,13 +32,13 @@ struct RA4PRESENTATION_API FRA4UnitArtDefinition
     TSoftObjectPtr<UAnimSequence> AttackAnim;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh Transform")
-    FVector MeshOffset = FVector::ZeroVector;
+    FVector MeshOffset = FVector(0.0, 0.0, 0.0);
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh Transform")
-    FRotator MeshRotation = FRotator::ZeroRotator;
+    FRotator MeshRotation = FRotator(0.0, 0.0, 0.0);
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh Transform")
-    FVector MeshScale = FVector::OneVector;
+    FVector MeshScale = FVector(1.0, 1.0, 1.0);
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sockets")
     FName TurretSocketName = FName("Socket_Turret");

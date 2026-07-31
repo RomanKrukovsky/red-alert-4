@@ -74,7 +74,22 @@ public:
     UFUNCTION(BlueprintCallable, Category = "RA4|UI")
     void TogglePauseMenu();
 
+    // --- Direct Control / Possession Mode ------------------------------------
+    UFUNCTION(BlueprintCallable, Category = "RA4|DirectControl")
+    void ToggleDirectControl();
+
+    UFUNCTION(BlueprintCallable, Category = "RA4|DirectControl")
+    void EnterDirectControl(int64 EntityIdValue);
+
+    UFUNCTION(BlueprintCallable, Category = "RA4|DirectControl")
+    void ExitDirectControl();
+
+    UFUNCTION(BlueprintCallable, Category = "RA4|DirectControl")
+    bool IsDirectControlActive() const { return bDirectControlActive; }
+
 protected:
+    void OnDirectControlTogglePressed();
+    void UpdateDirectControl(float DeltaTime);
     // Drag shorter than this on the ground plane counts as a click. Measured in
     // world units rather than pixels so it means the same thing at every zoom.
     UPROPERTY(EditAnywhere, Category = "RA4|Input")
@@ -204,6 +219,10 @@ private:
 
     UPROPERTY(Transient)
     TObjectPtr<URA4MatchResultOverlayWidget> MatchResultOverlay;
+
+    bool bDirectControlActive = false;
+    RA4::EntityId DirectControlEntityId = 0;
+    FRotator DirectControlCameraRotation = FRotator::ZeroRotator;
 
     UPROPERTY(Transient)
     TObjectPtr<class UUserWidget> PauseMenuOverlay;

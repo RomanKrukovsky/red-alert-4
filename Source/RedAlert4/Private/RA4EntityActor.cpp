@@ -67,6 +67,20 @@ void ARA4EntityActor::SetSelected(bool bSelected)
     }
 }
 
+FVector ARA4EntityActor::GetPossessionCameraLocation() const
+{
+    if (SkeletalMeshComponent && SkeletalMeshComponent->IsVisible())
+    {
+        return GetActorLocation() + FVector(0.0f, 0.0f, 65.0f);
+    }
+    return GetActorLocation() + FVector(0.0f, 0.0f, 110.0f);
+}
+
+FRotator ARA4EntityActor::GetPossessionCameraRotation() const
+{
+    return GetActorRotation();
+}
+
 void ARA4EntityActor::SetEntityMesh(UStaticMesh* InMesh)
 {
     if (MeshComponent)
