@@ -108,6 +108,7 @@ void SimWorld::Initialize(const ContentDatabase* InContent, const MatchSetup& Se
 {
     Reset();
     Content = InContent;
+    SetupConfig = Setup;
     Map = Setup.Map;
     BuildNavigationGrid();
     FogGrid = std::make_unique<FFogOfWarGrid>(Map.Width, Map.Height, kMaxPlayers);
@@ -135,6 +136,13 @@ void SimWorld::Initialize(const ContentDatabase* InContent, const MatchSetup& Se
     }
 
     Phase = MatchPhase::Running;
+}
+
+void SimWorld::Restart()
+{
+    const ContentDatabase* SavedContent = Content;
+    const MatchSetup SavedSetup = SetupConfig;
+    Initialize(SavedContent, SavedSetup);
 }
 
 // ---------------------------------------------------------------------------
@@ -619,6 +627,8 @@ bool SimWorld::HasPrerequisites(PlayerId Owner, const EntityDef& Def) const
         return false;
     }
     const std::vector<ContentId>& Have = Players[Owner].CompletedBuildingTypes;
+
+    // Legacy direct list / AllOf check
     for (const ContentId& Req : Def.Production.Prerequisites)
     {
         if (std::find(Have.begin(), Have.end(), Req) == Have.end())
@@ -626,6 +636,43 @@ bool SimWorld::HasPrerequisites(PlayerId Owner, const EntityDef& Def) const
             return false;
         }
     }
+
+    // Group-based AllOf check
+    for (const ContentId& Req : Def.Production.PrerequisitesGroup.AllOf)
+    {
+        if (std::find(Have.begin(), Have.end(), Req) == Have.end())
+        {
+            return false;
+        }
+    }
+
+    // Group-based AnyOf check
+    if (!Def.Production.PrerequisitesGroup.AnyOf.empty())
+    {
+        bool bAnyMet = false;
+        for (const ContentId& Req : Def.Production.PrerequisitesGroup.AnyOf)
+        {
+            if (std::find(Have.begin(), Have.end(), Req) != Have.end())
+            {
+                bAnyMet = true;
+                break;
+            }
+        }
+        if (!bAnyMet)
+        {
+            return false;
+        }
+    }
+
+    // Group-based NoneOf check
+    for (const ContentId& Forbidden : Def.Production.PrerequisitesGroup.NoneOf)
+    {
+        if (std::find(Have.begin(), Have.end(), Forbidden) != Have.end())
+        {
+            return false;
+        }
+    }
+
     return true;
 }
 
@@ -1142,9 +1189,9 @@ void SimWorld::DestroyEntity(EntityId Id, EntityId Killer)
     if (Kind == EntityKind::Building)
     {
         OccupyTiles(Buildings[Index], false);
-        // Queued items are lost with the factory. Refunding them would make losing a
-        // production building consequence-free.
         Buildings[Index].Queue.clear();
+        Buildings[Index].DockedHarvester = EntityId::Invalid();
+        Buildings[Index].UnloadingQueue.clear();
         if (Owner < kMaxPlayers)
         {
             Players[Owner].BuildingsLost += 1;
@@ -1549,24 +1596,38 @@ void SimWorld::SystemHarvesters()
 
             case HarvesterState::MovingToRefinery:
             {
-                if (!IsAlive(H.AssignedRefinery))
+                if (!IsAlive(H.AssignedRefinery) || Buildings[H.AssignedRefinery.Index].State != ConstructionState::Complete)
                 {
                     H.AssignedRefinery = FindNearestRefinery(Pos, Owner);
                 }
                 if (!H.AssignedRefinery.IsValid())
                 {
-                    // Nowhere to unload: hold position rather than wander, so that
-                    // rebuilding a refinery resumes the loop immediately.
                     Movements[I].bHasDestination = false;
                     break;
                 }
+                BuildingComp& RefComp = Buildings[H.AssignedRefinery.Index];
                 const Vec2 RefPos = Transforms[H.AssignedRefinery.Index].Position;
                 const Fixed RefDock = DockRadiusFor(Content->FindEntity(Core[H.AssignedRefinery.Index].Def));
+                const EntityId SelfId = MakeId(I);
+
                 if (DistanceSquared(Pos, RefPos) <= RefDock * RefDock)
                 {
-                    H.State = HarvesterState::Unloading;
-                    Movements[I].bHasDestination = false;
-                    Movements[I].CurrentSpeed = Fixed::Zero();
+                    if (!RefComp.DockedHarvester.IsValid() || !IsAlive(RefComp.DockedHarvester) || RefComp.DockedHarvester == SelfId)
+                    {
+                        RefComp.DockedHarvester = SelfId;
+                        H.State = HarvesterState::Unloading;
+                        Movements[I].bHasDestination = false;
+                        Movements[I].CurrentSpeed = Fixed::Zero();
+                    }
+                    else
+                    {
+                        if (std::find(RefComp.UnloadingQueue.begin(), RefComp.UnloadingQueue.end(), SelfId) == RefComp.UnloadingQueue.end())
+                        {
+                            RefComp.UnloadingQueue.push_back(SelfId);
+                        }
+                        Movements[I].bHasDestination = false;
+                        Movements[I].CurrentSpeed = Fixed::Zero();
+                    }
                 }
                 else
                 {
@@ -1578,11 +1639,13 @@ void SimWorld::SystemHarvesters()
 
             case HarvesterState::Unloading:
             {
+                const EntityId SelfId = MakeId(I);
                 if (!IsAlive(H.AssignedRefinery))
                 {
                     H.State = HarvesterState::MovingToRefinery;
                     break;
                 }
+                BuildingComp& RefComp = Buildings[H.AssignedRefinery.Index];
                 const int32_t Amount = std::min(D->Unit.UnloadPerTick, H.Cargo);
                 H.Cargo -= Amount;
 
@@ -1599,7 +1662,7 @@ void SimWorld::SystemHarvesters()
                     SimEvent Ev;
                     Ev.Type = SimEventType::ResourceDelivered;
                     Ev.Tick = CurrentTick;
-                    Ev.Entity = MakeId(I);
+                    Ev.Entity = SelfId;
                     Ev.Other = H.AssignedRefinery;
                     Ev.Player = Owner;
                     Ev.Value = Amount * Value;
@@ -1608,6 +1671,21 @@ void SimWorld::SystemHarvesters()
 
                 if (H.Cargo <= 0)
                 {
+                    if (RefComp.DockedHarvester == SelfId)
+                    {
+                        RefComp.DockedHarvester = EntityId::Invalid();
+                        while (!RefComp.UnloadingQueue.empty())
+                        {
+                            EntityId NextId = RefComp.UnloadingQueue.front();
+                            RefComp.UnloadingQueue.erase(RefComp.UnloadingQueue.begin());
+                            if (IsAlive(NextId))
+                            {
+                                RefComp.DockedHarvester = NextId;
+                                Harvesters[NextId.Index].State = HarvesterState::Unloading;
+                                break;
+                            }
+                        }
+                    }
                     H.State = HarvesterState::MovingToResource;
                 }
                 break;

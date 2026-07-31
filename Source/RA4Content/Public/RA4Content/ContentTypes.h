@@ -185,6 +185,18 @@ struct WeaponDef
 
 // --- Entities -------------------------------------------------------------
 
+struct PrerequisiteGroup
+{
+    std::vector<ContentId> AllOf;
+    std::vector<ContentId> AnyOf;
+    std::vector<ContentId> NoneOf;
+
+    bool IsEmpty() const
+    {
+        return AllOf.empty() && AnyOf.empty() && NoneOf.empty();
+    }
+};
+
 struct ProductionInfo
 {
     int32_t Cost = 0;
@@ -193,6 +205,7 @@ struct ProductionInfo
     ProductionCategory Category = ProductionCategory::Infantry;
     std::vector<ContentId> ProducedBy;
     std::vector<ContentId> Prerequisites;
+    PrerequisiteGroup PrerequisitesGroup;
     int32_t CancelRefundPercent = 100;
 };
 

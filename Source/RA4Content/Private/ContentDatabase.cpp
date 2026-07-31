@@ -373,6 +373,9 @@ uint64_t ContentDatabase::ComputeContentHash() const
         H.FeedInt32(E.Production.CancelRefundPercent);
         for (const ContentId& P : E.Production.ProducedBy) { H.FeedUInt32(P.Value); }
         for (const ContentId& P : E.Production.Prerequisites) { H.FeedUInt32(P.Value); }
+        for (const ContentId& P : E.Production.PrerequisitesGroup.AllOf) { H.FeedUInt32(P.Value); }
+        for (const ContentId& P : E.Production.PrerequisitesGroup.AnyOf) { H.FeedUInt32(P.Value); }
+        for (const ContentId& P : E.Production.PrerequisitesGroup.NoneOf) { H.FeedUInt32(P.Value); }
 
         H.FeedInt32(E.Building.FootprintX);
         H.FeedInt32(E.Building.FootprintY);

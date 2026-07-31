@@ -72,6 +72,7 @@ public:
     // --- Lifecycle ---------------------------------------------------------
     void Initialize(const ContentDatabase* InContent, const MatchSetup& Setup);
     void Reset();
+    void Restart();
 
     // Advances exactly one fixed tick. Systems run in a fixed order; see the
     // implementation for why that order is what it is.
@@ -203,6 +204,7 @@ private:
     int32_t FlowFieldBuildsThisTick = 0;
     int32_t MacroPathBuildsThisTick = 0;
 
+    MatchSetup SetupConfig;
     Random Rng;
     TickIndex CurrentTick = 0;
     MatchPhase Phase = MatchPhase::NotStarted;
