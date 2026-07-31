@@ -183,13 +183,40 @@ void ARA4EntityActor::Tick(float DeltaTime)
     FRotator CurrentRotation = GetActorRotation();
     FRotator TargetRotator(0.0f, TargetRotationZ, 0.0f);
     FRotator InterpolatedRotation = FMath::RInterpTo(CurrentRotation, TargetRotator, DeltaTime, 15.0f);
-    
-    SetActorLocationAndRotation(InterpolatedLocation, InterpolatedRotation);
+
+    // AAA RTS Vehicle Dynamics: pitch dip on acceleration/brake, roll lean on turn, engine vibration
+    const FVector Velocity = (InterpolatedLocation - CurrentLocation) / FMath::Max(DeltaTime, 0.001f);
+    const float Speed = Velocity.Size();
+
+    if (MeshComponent != nullptr && Speed > 10.0f && GetWorld() != nullptr)
+    {
+        const FVector Forward = InterpolatedRotation.Vector();
+        const FVector Right = FRotationMatrix(InterpolatedRotation).GetUnitAxis(EAxis::Y);
+
+        const float ForwardSpeed = FVector::DotProduct(Velocity, Forward);
+        const float LateralSpeed = FVector::DotProduct(Velocity, Right);
+
+        const float PitchTilt = FMath::Clamp(ForwardSpeed * 0.004f, -6.0f, 6.0f);
+        const float RollTilt = FMath::Clamp(LateralSpeed * 0.006f, -5.0f, 5.0f);
+        const float EngineVibration = FMath::Sin(GetWorld()->GetTimeSeconds() * 22.0f) * 0.8f;
+
+        FRotator DynamicRotator = InterpolatedRotation;
+        DynamicRotator.Pitch += PitchTilt;
+        DynamicRotator.Roll += RollTilt;
+
+        FVector DynamicLocation = InterpolatedLocation;
+        DynamicLocation.Z += EngineVibration;
+
+        SetActorLocationAndRotation(DynamicLocation, DynamicRotator);
+    }
+    else
+    {
+        SetActorLocationAndRotation(InterpolatedLocation, InterpolatedRotation);
+    }
 
     // Phase 2: Infantry Locomotion Animation
     if (SkeletalMeshComponent && SkeletalMeshComponent->IsVisible())
     {
-        float Speed = (InterpolatedLocation - CurrentLocation).Size() / FMath::Max(DeltaTime, 0.001f);
         bool bIsMoving = Speed > 20.0f;
         
         static UAnimSequence* IdleAnim = LoadObject<UAnimSequence>(nullptr, TEXT("/Game/ThirdParty/QuantumCharacter/Demo/Animations/A_MM_Idle.A_MM_Idle"));
