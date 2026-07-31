@@ -8,8 +8,10 @@
 #include "Components/DirectionalLightComponent.h"
 #include "Components/SkyLightComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/ExponentialHeightFogComponent.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/SkyLight.h"
+#include "Engine/ExponentialHeightFog.h"
 #include "Engine/StaticMeshActor.h"
 #include "EngineUtils.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -21,6 +23,12 @@
 #include "Kismet/GameplayStatics.h"
 
 #include "RA4Content/ContentTypes.h"
+
+namespace
+{
+constexpr uint8 SovietFaction = static_cast<uint8>(RA4::FactionId::Soviet);
+constexpr uint8 AllianceFaction = static_cast<uint8>(RA4::FactionId::Alliance);
+}
 
 ARA4SkirmishGameMode::ARA4SkirmishGameMode()
 {
@@ -41,18 +49,10 @@ void ARA4SkirmishGameMode::BeginPlay()
 
     // Extract options from the URL (Main Menu passes them here)
     FString Options = OptionsString;
-    constexpr uint8 SovietFaction = static_cast<uint8>(RA4::FactionId::Soviet);
-    constexpr uint8 AllianceFaction = static_cast<uint8>(RA4::FactionId::Alliance);
-
     uint8 PlayerFaction = UGameplayStatics::GetIntOption(Options, TEXT("PlayerFaction"), SovietFaction);
     uint8 EnemyFaction = UGameplayStatics::GetIntOption(Options, TEXT("EnemyFaction"), AllianceFaction);
     int32 Difficulty = UGameplayStatics::GetIntOption(Options, TEXT("Difficulty"), 1);
 
-    // Only the Soviet and Alliance skirmish tech trees exist today. A bare map
-    // launch previously defaulted to FactionId::None while seeding Alliance units;
-    // the HUD then correctly filtered every build option because the player's
-    // declared faction matched none of them. Keep direct editor/game launches
-    // playable and reject malformed URL options at the presentation boundary.
     const auto IsPlayableFaction = [](uint8 Faction)
     {
         return Faction == SovietFaction || Faction == AllianceFaction;
@@ -82,61 +82,74 @@ void ARA4SkirmishGameMode::BeginPlay()
     AStaticMeshActor* LargestFloorActor = nullptr;
     double LargestFloorArea = 0.0;
 
-    // This project uses the default exposure range rather than the extended
-    // physical-luminance range. A physical 75,000-lux value clips this simple
-    // skirmish map to solid white, while the old authored value 6 is too dark.
-    // Normalize either legacy extreme to the level generator's tested value.
+    // Directional light tuned to 3.2f
     for (TActorIterator<ADirectionalLight> It(GetWorld()); It; ++It)
     {
-        if (UDirectionalLightComponent* Light =
-                Cast<UDirectionalLightComponent>(It->GetLightComponent()))
+        if (UDirectionalLightComponent* Light = Cast<UDirectionalLightComponent>(It->GetLightComponent()))
         {
             Light->SetMobility(EComponentMobility::Movable);
-            // Non-physical exposure is used by this prototype level. A low value
-            // preserves saturated team colours instead of washing every placeholder
-            // mesh to white.
-            Light->SetIntensity(5.0f);
+            Light->SetIntensity(3.2f);
         }
     }
 
+    // Sky light tuned to 1.0f
     for (TActorIterator<ASkyLight> It(GetWorld()); It; ++It)
     {
         if (USkyLightComponent* Sky = It->GetLightComponent())
         {
             Sky->SetMobility(EComponentMobility::Movable);
-            Sky->SetIntensity(0.5f);
+            Sky->SetIntensity(1.0f);
         }
     }
 
-    // Keep old copies of RA4_Skirmish playable after the material assets evolve.
-    // The level contains a single authored static-mesh actor: the map-sized floor.
-    // Runtime entities are ARA4EntityActor instances and are therefore unaffected.
+    // Configure ExponentialHeightFog density 0.0015 and start distance 9000
+    bool bFoundFog = false;
+    for (TActorIterator<AExponentialHeightFog> It(GetWorld()); It; ++It)
+    {
+        bFoundFog = true;
+        if (UExponentialHeightFogComponent* Fog = It->GetComponent())
+        {
+            Fog->SetFogDensity(0.0015f);
+            Fog->SetStartDistance(9000.0f);
+        }
+    }
+    if (!bFoundFog && GetWorld() != nullptr)
+    {
+        AExponentialHeightFog* FogActor = GetWorld()->SpawnActor<AExponentialHeightFog>(AExponentialHeightFog::StaticClass());
+        if (FogActor && FogActor->GetComponent())
+        {
+            FogActor->GetComponent()->SetFogDensity(0.0015f);
+            FogActor->GetComponent()->SetStartDistance(9000.0f);
+        }
+    }
+
+    // Load PBR ground material with terrain textures for skirmish floor
     UMaterialInterface* GroundMaterial = LoadObject<UMaterialInterface>(
         nullptr,
-        TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
-    if (GroundMaterial != nullptr)
+        TEXT("/Game/RA4/Presentation/Materials/Blockout/M_RA4_BlockoutGround.M_RA4_BlockoutGround"));
+    if (GroundMaterial == nullptr)
     {
-        for (TActorIterator<AStaticMeshActor> It(GetWorld()); It; ++It)
-        {
-            if (UStaticMeshComponent* Mesh = It->GetStaticMeshComponent())
-            {
-                const FVector Extent = Mesh->Bounds.BoxExtent;
-                const double FloorArea = double(Extent.X) * double(Extent.Y);
-                if (Extent.Z > 1.0f && Extent.X > 1000.0f && Extent.Y > 1000.0f &&
-                    FloorArea > LargestFloorArea)
-                {
-                    LargestFloorArea = FloorArea;
-                    LargestFloorActor = *It;
-                }
+        GroundMaterial = LoadObject<UMaterialInterface>(
+            nullptr,
+            TEXT("/Game/RA4/Presentation/Materials/Environment/Ground039.Ground039"));
+    }
 
-                if (UMaterialInstanceDynamic* Material =
-                        UMaterialInstanceDynamic::Create(GroundMaterial, Mesh))
-                {
-                    Material->SetVectorParameterValue(
-                        TEXT("Color"),
-                        FLinearColor(0.025f, 0.055f, 0.065f));
-                    Mesh->SetMaterial(0, Material);
-                }
+    for (TActorIterator<AStaticMeshActor> It(GetWorld()); It; ++It)
+    {
+        if (UStaticMeshComponent* Mesh = It->GetStaticMeshComponent())
+        {
+            const FVector Extent = Mesh->Bounds.BoxExtent;
+            const double FloorArea = double(Extent.X) * double(Extent.Y);
+            if (Extent.Z > 1.0f && Extent.X > 1000.0f && Extent.Y > 1000.0f &&
+                FloorArea > LargestFloorArea)
+            {
+                LargestFloorArea = FloorArea;
+                LargestFloorActor = *It;
+            }
+
+            if (GroundMaterial != nullptr)
+            {
+                Mesh->SetMaterial(0, GroundMaterial);
             }
         }
     }
@@ -148,11 +161,49 @@ void ARA4SkirmishGameMode::BeginPlay()
             const float HalfThickness = Mesh->Bounds.BoxExtent.Z;
             Mesh->SetMobility(EComponentMobility::Movable);
             FVector Location = LargestFloorActor->GetActorLocation();
-            // The simulation and picking treat GroundZ as the walkable surface. Many
-            // placeholder floor meshes are authored around their centre, so align the
-            // mesh top to GroundZ instead of leaving the camera to look through it.
             Location.Z = float(RA4Coords::GroundZ) - HalfThickness;
             LargestFloorActor->SetActorLocation(Location);
+        }
+    }
+
+    // Scatter industrial props around the map for visual detail
+    static const TCHAR* PropPaths[] = {
+        TEXT("/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_Barrel01.SM_Barrel01"),
+        TEXT("/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_Barrel02.SM_Barrel02"),
+        TEXT("/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_Pallet01.SM_Pallet01"),
+        TEXT("/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_WaterTank01.SM_WaterTank01"),
+        TEXT("/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_Box01.SM_Box01"),
+        TEXT("/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_TrafficBarrel01.SM_TrafficBarrel01")
+    };
+    TArray<UStaticMesh*> PropMeshes;
+    for (const TCHAR* Path : PropPaths)
+    {
+        if (UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, Path))
+        {
+            PropMeshes.Add(Mesh);
+        }
+    }
+    if (PropMeshes.Num() > 0 && GetWorld() != nullptr)
+    {
+        FActorSpawnParameters SpawnParams;
+        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+        const FVector ScatterSpots[] = {
+            FVector(400.0, 400.0, RA4Coords::GroundZ),
+            FVector(450.0, 380.0, RA4Coords::GroundZ),
+            FVector(380.0, 480.0, RA4Coords::GroundZ),
+            FVector(-400.0, -400.0, RA4Coords::GroundZ),
+            FVector(-420.0, -360.0, RA4Coords::GroundZ),
+            FVector(1200.0, 800.0, RA4Coords::GroundZ),
+            FVector(-1200.0, -800.0, RA4Coords::GroundZ)
+        };
+        for (int32 i = 0; i < 7; ++i)
+        {
+            AStaticMeshActor* PropActor = GetWorld()->SpawnActor<AStaticMeshActor>(AStaticMeshActor::StaticClass(), ScatterSpots[i], FRotator(0.0f, float(i * 45), 0.0f), SpawnParams);
+            if (PropActor && PropActor->GetStaticMeshComponent())
+            {
+                PropActor->GetStaticMeshComponent()->SetStaticMesh(PropMeshes[i % PropMeshes.Num()]);
+                PropActor->GetStaticMeshComponent()->SetMobility(EComponentMobility::Movable);
+            }
         }
     }
 }

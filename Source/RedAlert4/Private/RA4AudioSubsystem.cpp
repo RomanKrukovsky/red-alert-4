@@ -114,20 +114,27 @@ void URA4AudioSubsystem::PlayUnitVoice(const FString& VoiceId, ERA4VoiceEvent Ev
 
 USoundBase* URA4AudioSubsystem::FindEVAClip(uint8 Faction, ERA4EVAEvent Event)
 {
-    const TCHAR* Folder = nullptr;
-    const TCHAR* Code = nullptr;
-    switch (Faction)
+    const TCHAR* Folder = TEXT("Soviet");
+    const TCHAR* Code = TEXT("SU");
+    const TCHAR* AltPrefix = TEXT("Soviet");
+
+    if (Faction == 2)
     {
-    case 1:
-        Folder = TEXT("Soviet");
-        Code = TEXT("SU");
-        break;
-    case 2:
         Folder = TEXT("Alliance");
         Code = TEXT("AL");
-        break;
-    default:
-        return nullptr;
+        AltPrefix = TEXT("Alliance");
+    }
+    else if (Faction == 3)
+    {
+        Folder = TEXT("Coalition");
+        Code = TEXT("CO");
+        AltPrefix = TEXT("Coalition");
+    }
+    else if (Faction == 4)
+    {
+        Folder = TEXT("Chrono");
+        Code = TEXT("CH");
+        AltPrefix = TEXT("Chrono");
     }
 
     const FString AssetName = FString::Printf(
@@ -142,6 +149,27 @@ USoundBase* URA4AudioSubsystem::FindEVAClip(uint8 Faction, ERA4EVAEvent Event)
     }
 
     USoundBase* Clip = LoadObject<USoundBase>(nullptr, *ObjectPath);
+    if (Clip == nullptr)
+    {
+        FString AltEventName;
+        switch (Event)
+        {
+        case ERA4EVAEvent::ConstructionComplete: AltEventName = TEXT("BuildingConstructionComplete"); break;
+        case ERA4EVAEvent::UnitReady: AltEventName = TEXT("UnitReady"); break;
+        case ERA4EVAEvent::BaseUnderAttack: AltEventName = TEXT("BaseUnderAttack"); break;
+        case ERA4EVAEvent::InsufficientFunds: AltEventName = TEXT("ResourcesLow"); break;
+        case ERA4EVAEvent::PowerLow: AltEventName = TEXT("PowerLow"); break;
+        case ERA4EVAEvent::Victory: AltEventName = TEXT("PlayerVictory"); break;
+        case ERA4EVAEvent::Defeat: AltEventName = TEXT("PlayerDefeat"); break;
+        }
+        if (!AltEventName.IsEmpty())
+        {
+            const FString AltAssetName = FString::Printf(TEXT("VO_%s_EVA_%s"), AltPrefix, *AltEventName);
+            const FString AltObjectPath = FString::Printf(TEXT("/Game/RA4/Audio/Generated/EVA/%s/%s.%s"), Folder, *AltAssetName, *AltAssetName);
+            Clip = LoadObject<USoundBase>(nullptr, *AltObjectPath);
+        }
+    }
+
     ClipCache.Add(ObjectPath, Clip);
     return Clip;
 }
