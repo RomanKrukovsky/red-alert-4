@@ -1,6 +1,7 @@
 // Copyright (c) Red Alert 4 project.
 
 #include "RA4EntityActor.h"
+#include "RA4Presentation/RA4ArtMapping.h"
 
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/MeshComponent.h"
@@ -225,8 +226,8 @@ void ARA4EntityActor::Tick(float DeltaTime)
         static UAnimSequence* DefaultIdleAnim = LoadObject<UAnimSequence>(nullptr, TEXT("/Game/ThirdParty/QuantumCharacter/Demo/Animations/A_MM_Idle.A_MM_Idle"));
         static UAnimSequence* DefaultRunAnim = LoadObject<UAnimSequence>(nullptr, TEXT("/Game/ThirdParty/QuantumCharacter/Demo/Animations/A_MM_Run_Fwd.A_MM_Run_Fwd"));
         
-        UAnimSequence* IdleAnim = CachedIdleAnim ? CachedIdleAnim : DefaultIdleAnim;
-        UAnimSequence* RunAnim = CachedRunAnim ? CachedRunAnim : DefaultRunAnim;
+        UAnimSequence* IdleAnim = CachedIdleAnim.Get() != nullptr ? CachedIdleAnim.Get() : DefaultIdleAnim;
+        UAnimSequence* RunAnim = CachedRunAnim.Get() != nullptr ? CachedRunAnim.Get() : DefaultRunAnim;
         UAnimSequence* TargetAnim = bIsMoving ? RunAnim : IdleAnim;
 
         if (TargetAnim && SkeletalMeshComponent->GetAnimationMode() != EAnimationMode::AnimationSingleNode)

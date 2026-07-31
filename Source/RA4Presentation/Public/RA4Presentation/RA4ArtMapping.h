@@ -1,5 +1,10 @@
-// Copyright (c) Red Alert 4 project. Data-driven mapping from Bible ID to Unreal Engine presentation assets.
-#pragma once
+class UObject;
+class UStaticMesh;
+class USkeletalMesh;
+class UAnimInstance;
+class UAnimSequence;
+class UMaterialInterface;
+class USoundBase;
 
 #if __has_include("CoreMinimal.h")
 #include "CoreMinimal.h"
@@ -8,7 +13,51 @@
 #else
 #include <string>
 #include <map>
-#include <memory>
+
+struct FName
+{
+    std::string Name;
+    FName() = default;
+    FName(const char* s) : Name(s ? s : "") {}
+    bool operator==(const FName& Other) const { return Name == Other.Name; }
+};
+
+struct FLinearColor
+{
+    float R = 0.0f, G = 0.0f, B = 0.0f, A = 1.0f;
+    FLinearColor() = default;
+    FLinearColor(float r, float g, float b, float a = 1.0f) : R(r), G(g), B(b), A(a) {}
+};
+
+struct FVector
+{
+    double X = 0.0, Y = 0.0, Z = 0.0;
+    FVector() = default;
+    FVector(double x, double y, double z) : X(x), Y(y), Z(z) {}
+};
+
+struct FRotator
+{
+    double Pitch = 0.0, Yaw = 0.0, Roll = 0.0;
+    FRotator() = default;
+    FRotator(double p, double y, double r) : Pitch(p), Yaw(y), Roll(r) {}
+};
+
+template<typename T>
+struct TSoftObjectPtr
+{
+    std::string Path;
+    bool IsNull() const { return Path.empty(); }
+};
+
+template<typename T>
+struct TSoftClassPtr
+{
+    std::string Path;
+    bool IsNull() const { return Path.empty(); }
+};
+
+class UDataAsset {};
 
 #ifndef USTRUCT
 #define USTRUCT(...)
@@ -32,71 +81,7 @@
 #define BlueprintType
 #endif
 
-struct FName
-{
-    std::string Name;
-    FName() = default;
-    FName(const char* InName) : Name(InName ? InName : "") {}
-    FName(const std::string& InName) : Name(InName) {}
-    bool operator==(const FName& Other) const { return Name == Other.Name; }
-};
-
-struct FVector
-{
-    float X = 0.0f, Y = 0.0f, Z = 0.0f;
-    FVector() = default;
-    FVector(float InX, float InY, float InZ) : X(InX), Y(InY), Z(InZ) {}
-};
-
-struct FRotator
-{
-    float Pitch = 0.0f, Yaw = 0.0f, Roll = 0.0f;
-    FRotator() = default;
-    FRotator(float InP, float InY, float InR) : Pitch(InP), Yaw(InY), Roll(InR) {}
-};
-
-struct FLinearColor
-{
-    float R = 1.0f, G = 0.0f, B = 0.0f, A = 1.0f;
-    FLinearColor() = default;
-    FLinearColor(float InR, float InG, float InB, float InA = 1.0f) : R(InR), G(InG), B(InB), A(InA) {}
-};
-
-template<typename K, typename V>
-using TMap = std::map<K, V>;
-
-template<typename T>
-struct TSoftObjectPtr
-{
-    std::string Path;
-    bool IsNull() const { return Path.empty(); }
-    T* LoadSynchronous() const { return nullptr; }
-};
-
-template<typename T>
-struct TSoftClassPtr
-{
-    std::string Path;
-    bool IsNull() const { return Path.empty(); }
-};
-
-class UObject {};
-class UStaticMesh {};
-class USkeletalMesh {};
-class UAnimInstance {};
-class UAnimSequence {};
-class UMaterialInterface {};
-class USoundBase {};
-class UDataAsset {};
-
 #endif
-
-class UStaticMesh;
-class USkeletalMesh;
-class UAnimInstance;
-class UAnimSequence;
-class UMaterialInterface;
-class USoundBase;
 
 USTRUCT(BlueprintType)
 struct RA4PRESENTATION_API FRA4UnitArtDefinition
@@ -119,25 +104,19 @@ struct RA4PRESENTATION_API FRA4UnitArtDefinition
     TSoftObjectPtr<UAnimSequence> IdleAnim;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
-    TSoftObjectPtr<UAnimSequence> WalkAnim;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
     TSoftObjectPtr<UAnimSequence> RunAnim;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
     TSoftObjectPtr<UAnimSequence> AttackAnim;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
-    TSoftObjectPtr<UAnimSequence> DeathAnim;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh Transform")
+    FVector MeshOffset;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh Transform")
-    FVector MeshScale = FVector(1.0f, 1.0f, 1.0f);
+    FRotator MeshRotation;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh Transform")
-    FVector MeshOffset = FVector(0.0f, 0.0f, -90.0f);
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh Transform")
-    FRotator MeshRotation = FRotator(0.0f, -90.0f, 0.0f);
+    FVector MeshScale;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sockets")
     FName TurretSocketName = FName("Socket_Turret");
@@ -152,7 +131,7 @@ struct RA4PRESENTATION_API FRA4UnitArtDefinition
     FName CargoSocketName = FName("Socket_Cargo");
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Materials")
-    TSoftObjectPtr<UMaterialInterface> MaterialOverride;
+    TSoftObjectPtr<UMaterialInterface> CustomMaterial;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Materials")
     FLinearColor TeamColorOverride = FLinearColor(1.0f, 0.0f, 0.0f, 1.0f);
@@ -234,14 +213,11 @@ class RA4PRESENTATION_API URA4ArtMappingDataAsset : public UDataAsset
 
 public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Art Mappings")
-    TMap<FName, FRA4UnitArtDefinition> Units;
+    std::map<std::string, FRA4UnitArtDefinition> Units;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Art Mappings")
-    TMap<FName, FRA4BuildingArtDefinition> Buildings;
+    std::map<std::string, FRA4BuildingArtDefinition> Buildings;
 
-    UFUNCTION(BlueprintCallable, Category = "Art Mappings")
-    bool FindUnitArt(FName UnitId, FRA4UnitArtDefinition& OutDefinition) const;
-
-    UFUNCTION(BlueprintCallable, Category = "Art Mappings")
-    bool FindBuildingArt(FName BuildingId, FRA4BuildingArtDefinition& OutDefinition) const;
+    bool FindUnitArt(const std::string& UnitId, FRA4UnitArtDefinition& OutDefinition) const;
+    bool FindBuildingArt(const std::string& BuildingId, FRA4BuildingArtDefinition& OutDefinition) const;
 };
