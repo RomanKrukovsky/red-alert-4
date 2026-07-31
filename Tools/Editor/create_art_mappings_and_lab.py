@@ -12,7 +12,7 @@ def create_art_mappings_and_map():
     asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
     editor_asset_subsystem = unreal.get_editor_subsystem(unreal.EditorAssetSubsystem)
 
-    # 1. Ensure Generated Folders Exist
+    # 1. Ensure Generated Folders Exist & Scan Asset Registry
     folders = [
         "/Game/RA4/Art/Generated",
         "/Game/RA4/Animation/Generated",
@@ -25,16 +25,20 @@ def create_art_mappings_and_map():
             editor_asset_subsystem.make_directory(folder)
             log(f"Created directory: {folder}")
 
+    asset_registry = unreal.AssetRegistryHelpers.get_asset_registry()
+    asset_registry.scan_paths_synchronous(["/Game/RA4/Art/Blockout"], True)
+    log("AssetRegistry scanned /Game/RA4/Art/Blockout synchronously.")
+
     # 2. Create Art Mapping Data Asset
     da_path = "/Game/RA4/Art/Generated/DA_RA4_ArtMappings"
     factory = unreal.DataAssetFactory()
-    factory.set_editor_property("data_asset_class", unreal.URA4ArtMappingDataAsset)
+    factory.set_editor_property("data_asset_class", unreal.RA4ArtMappingDataAsset)
 
     if editor_asset_subsystem.does_asset_exist(da_path):
         art_da = editor_asset_subsystem.load_asset(da_path)
         log("Loaded existing DA_RA4_ArtMappings")
     else:
-        art_da = asset_tools.create_asset("DA_RA4_ArtMappings", "/Game/RA4/Art/Generated", unreal.URA4ArtMappingDataAsset, factory)
+        art_da = asset_tools.create_asset("DA_RA4_ArtMappings", "/Game/RA4/Art/Generated", unreal.RA4ArtMappingDataAsset, factory)
         log("Created new DA_RA4_ArtMappings")
 
     if not art_da:
@@ -49,7 +53,7 @@ def create_art_mappings_and_map():
         ("SU_Refinery", "Building", "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Refinery_Blockout"),
         ("SU_Barracks", "Building", "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Barracks_Blockout"),
         ("SU_WarFactory", "Building", "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_WarFactory_Blockout"),
-        ("SU_SentryTurret", "Building", "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_SentryTurret_Blockout"),
+        ("SU_SentryTurret", "Building", "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_GunTurret_Blockout"),
         
         # Alliance Buildings
         ("AL_ConYard", "Building", "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_ConYard_Blockout"),
@@ -57,17 +61,17 @@ def create_art_mappings_and_map():
         ("AL_Refinery", "Building", "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_Refinery_Blockout"),
         ("AL_Barracks", "Building", "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_Barracks_Blockout"),
         ("AL_WarFactory", "Building", "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_WarFactory_Blockout"),
-        ("AL_MultigunTurret", "Building", "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_MultigunTurret_Blockout"),
+        ("AL_MultigunTurret", "Building", "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_GunTurret_Blockout"),
 
         # USSR Units
-        ("SU_Conscript", "Unit", "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Conscript_Blockout"),
-        ("SU_ShockTrooper", "Unit", "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_ShockTrooper_Blockout"),
-        ("SU_Commissar", "Unit", "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Commissar_Blockout"),
-        ("SU_Sickle", "Unit", "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_SickleScout_Blockout"),
-        ("SU_HammerTank", "Unit", "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_HammerTank_Blockout"),
-        ("SU_Harvester", "Unit", "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Harvester_Blockout"),
-        ("SU_Flak", "Unit", "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_FlakTrooper_Blockout"),
-        ("SU_Buratino", "Unit", "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Buratino_Blockout"),
+        ("SU_Conscript", "Unit", "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_RubezhRifleman_Blockout"),
+        ("SU_ShockTrooper", "Unit", "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_RazryadTrooper_Blockout"),
+        ("SU_Commissar", "Unit", "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_VektorOfficer_Blockout"),
+        ("SU_Sickle", "Unit", "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_RysScout_Blockout"),
+        ("SU_HammerTank", "Unit", "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_GranitMBT_Blockout"),
+        ("SU_Harvester", "Unit", "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_BogatyrOreCarrier_Blockout"),
+        ("SU_Flak", "Unit", "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_ZaslonAATeam_Blockout"),
+        ("SU_Buratino", "Unit", "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_ZarevoMLRS_Blockout"),
 
         # Alliance Units
         ("AL_Peacekeeper", "Unit", "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_Peacekeeper_Blockout"),
@@ -84,13 +88,16 @@ def create_art_mappings_and_map():
     building_map = art_da.get_editor_property("buildings")
 
     for bible_id, entity_kind, mesh_path in roles_data:
-        mesh_obj = editor_asset_subsystem.load_asset(mesh_path)
+        mesh_obj = None
+        if editor_asset_subsystem.does_asset_exist(mesh_path):
+            mesh_obj = editor_asset_subsystem.load_asset(mesh_path)
+
         if entity_kind == "Unit":
-            unit_def = unreal.FRA4UnitArtDefinition()
+            unit_def = unreal.RA4UnitArtDefinition()
             unit_def.set_editor_property("unit_id", bible_id)
-            if isinstance(mesh_obj, unreal.StaticMesh):
+            if mesh_obj and isinstance(mesh_obj, unreal.StaticMesh):
                 unit_def.set_editor_property("static_mesh", mesh_obj)
-            elif isinstance(mesh_obj, unreal.SkeletalMesh):
+            elif mesh_obj and isinstance(mesh_obj, unreal.SkeletalMesh):
                 unit_def.set_editor_property("skeletal_mesh", mesh_obj)
             
             unit_def.set_editor_property("turret_socket_name", "Socket_Turret")
@@ -105,9 +112,9 @@ def create_art_mappings_and_map():
                 
             unit_map[bible_id] = unit_def
         else:
-            bldg_def = unreal.FRA4BuildingArtDefinition()
+            bldg_def = unreal.RA4BuildingArtDefinition()
             bldg_def.set_editor_property("building_id", bible_id)
-            if isinstance(mesh_obj, unreal.StaticMesh):
+            if mesh_obj and isinstance(mesh_obj, unreal.StaticMesh):
                 bldg_def.set_editor_property("stage0_delivery_mesh", mesh_obj)
                 bldg_def.set_editor_property("stage1_foundation_mesh", mesh_obj)
                 bldg_def.set_editor_property("stage2_structure_mesh", mesh_obj)
@@ -145,7 +152,9 @@ def create_art_mappings_and_map():
     y_offset = -2000
     
     for bible_id, entity_kind, mesh_path in roles_data:
-        mesh_obj = editor_asset_subsystem.load_asset(mesh_path)
+        mesh_obj = None
+        if editor_asset_subsystem.does_asset_exist(mesh_path):
+            mesh_obj = editor_asset_subsystem.load_asset(mesh_path)
         if mesh_obj and isinstance(mesh_obj, unreal.StaticMesh):
             actor = unreal.EditorLevelLibrary.spawn_actor_from_class(unreal.StaticMeshActor, unreal.Vector(x_offset, y_offset, 0))
             if actor:
