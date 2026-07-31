@@ -130,6 +130,14 @@ void URA4SimWorldSubsystem::FitGroundPlaneToMap()
     // The engine's basic cube is 100 units across and centred on its origin, so a
     // scale of Span/100 covers the map exactly and a thin Z keeps it a floor rather
     // than a block units would have to climb.
+    // If the map contains a real ALandscape, do not spawn or modify placeholder cube ground!
+    TActorIterator<ALandscapeProxy> LandscapeIt(World);
+    if (LandscapeIt)
+    {
+        UE_LOG(LogTemp, Display, TEXT("RA4 real landscape found in map %s, skipping placeholder ground plane"), *World->GetName());
+        return;
+    }
+
     constexpr double CubeSize = 100.0;
     constexpr double Thickness = 0.5;
     const FVector Scale(SpanX / CubeSize, SpanY / CubeSize, Thickness);

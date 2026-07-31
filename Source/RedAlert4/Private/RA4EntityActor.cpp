@@ -258,6 +258,13 @@ FString ARA4EntityActor::DescribeVisualState() const
 
 void ARA4EntityActor::ApplyPrimitiveComposition(const FString& EntityId)
 {
+    // If a real 3D static mesh is assigned, skip Phase 0 procedural shape composition
+    if (MeshComponent != nullptr && MeshComponent->GetStaticMesh() != nullptr &&
+        !MeshComponent->GetStaticMesh()->GetPathName().Contains(TEXT("BasicShapes/Cube")))
+    {
+        return;
+    }
+
     // Phase 0: Visually distinguish buildings without external assets.
     UStaticMesh* CylinderMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
     UStaticMesh* ConeMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cone.Cone"));
