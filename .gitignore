@@ -30,3 +30,9 @@ __pycache__/
 
 # OS
 .DS_Store
+
+# Generated SoundWave assets: reproduced from the WAVs in Audio/ and
+# Content/RA4/Audio/ by "UnrealEditor RedAlert4.uproject -run=RA4AudioImport".
+# ~590 binary assets that would otherwise be committed twice, once as source
+# audio and once as engine assets.
+/Content/RA4/Audio/Generated/

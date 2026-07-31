@@ -1,0 +1,1835 @@
+﻿# Game Russian translation.
+# Fill out your copyright notice in the Description page of Project Settings.
+# 
+msgid ""
+msgstr ""
+"Project-Id-Version: Game\n"
+"POT-Creation-Date: 2026-07-31 06:41\n"
+"PO-Revision-Date: 2026-07-31 06:41\n"
+"Language-Team: \n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+#. Key:	MainNav
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(250)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(250)
+msgctxt "RA4CampaignSelect,MainNav"
+msgid "ГЛАВНАЯ"
+msgstr "ГЛАВНАЯ"
+
+#. Key:	CampaignNav
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(253)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(253)
+msgctxt "RA4CampaignSelect,CampaignNav"
+msgid "КАМПАНИЯ"
+msgstr "КАМПАНИЯ"
+
+#. Key:	NetworkNav
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(255)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(255)
+msgctxt "RA4CampaignSelect,NetworkNav"
+msgid "СЕТЕВАЯ ИГРА"
+msgstr "СЕТЕВАЯ ИГРА"
+
+#. Key:	ChallengesNav
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(257)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(257)
+msgctxt "RA4CampaignSelect,ChallengesNav"
+msgid "ИСПЫТАНИЯ"
+msgstr "ИСПЫТАНИЯ"
+
+#. Key:	BarracksNav
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(259)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(259)
+msgctxt "RA4CampaignSelect,BarracksNav"
+msgid "КАЗАРМА"
+msgstr "КАЗАРМА"
+
+#. Key:	SettingsNav
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(261)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(261)
+msgctxt "RA4CampaignSelect,SettingsNav"
+msgid "НАСТРОЙКИ"
+msgstr "НАСТРОЙКИ"
+
+#. Key:	ProfileCommander
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(271)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(271)
+msgctxt "RA4CampaignSelect,ProfileCommander"
+msgid "ТОВАРИЩ КОМАНДИР"
+msgstr "ТОВАРИЩ КОМАНДИР"
+
+#. Key:	ProfileLevel
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(273)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(273)
+msgctxt "RA4CampaignSelect,ProfileLevel"
+msgid "УРОВЕНЬ 47  //  СЕТЬ ПОДКЛЮЧЕНА"
+msgstr "УРОВЕНЬ 47  //  СЕТЬ ПОДКЛЮЧЕНА"
+
+#. Key:	CampaignTitle
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(285)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(285)
+msgctxt "RA4CampaignSelect,CampaignTitle"
+msgid "ВЫБОР КАМПАНИИ"
+msgstr "ВЫБОР КАМПАНИИ"
+
+#. Key:	USSRCard
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(307)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(307)
+msgctxt "RA4CampaignSelect,USSRCard"
+msgid "СССР"
+msgstr "СССР"
+
+#. Key:	AllianceCard
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(308)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(308)
+msgctxt "RA4CampaignSelect,AllianceCard"
+msgid "АЛЬЯНС"
+msgstr "АЛЬЯНС"
+
+#. Key:	EasternCard
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(309)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(309)
+msgctxt "RA4CampaignSelect,EasternCard"
+msgid "ВОСТОЧНАЯ\nКОАЛИЦИЯ"
+msgstr "ВОСТОЧНАЯ\nКОАЛИЦИЯ"
+
+#. Key:	ChronoCard
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(310)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(310)
+msgctxt "RA4CampaignSelect,ChronoCard"
+msgid "ХРОНОЛЕГИОН"
+msgstr "ХРОНОЛЕГИОН"
+
+#. Key:	InformationHeader
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(384)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(384)
+msgctxt "RA4CampaignSelect,InformationHeader"
+msgid "О ВЫБРАННОЙ КАМПАНИИ"
+msgstr "О ВЫБРАННОЙ КАМПАНИИ"
+
+#. Key:	ProgressHeader
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(399)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(399)
+msgctxt "RA4CampaignSelect,ProgressHeader"
+msgid "ПРОГРЕСС КАМПАНИИ"
+msgstr "ПРОГРЕСС КАМПАНИИ"
+
+#. Key:	BackButton
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(431)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(431)
+msgctxt "RA4CampaignSelect,BackButton"
+msgid "<  НАЗАД"
+msgstr "<  НАЗАД"
+
+#. Key:	Training
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(437)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(437)
+msgctxt "RA4CampaignSelect,Training"
+msgid "ОБУЧЕНИЕ"
+msgstr "ОБУЧЕНИЕ"
+
+#. Key:	Era
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(441)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(441)
+msgctxt "RA4CampaignSelect,Era"
+msgid "1927  —  2047  //  АРХИВ КОМАНДОВАНИЯ"
+msgstr "1927  —  2047  //  АРХИВ КОМАНДОВАНИЯ"
+
+#. Key:	USSRName
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(472)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(472)
+msgctxt "RA4CampaignSelect,USSRName"
+msgid "СССР"
+msgstr "СССР"
+
+#. Key:	AllianceName
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(473)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(473)
+msgctxt "RA4CampaignSelect,AllianceName"
+msgid "АЛЬЯНС"
+msgstr "АЛЬЯНС"
+
+#. Key:	EasternName
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(474)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(474)
+msgctxt "RA4CampaignSelect,EasternName"
+msgid "ВОСТОЧНАЯ КОАЛИЦИЯ"
+msgstr "ВОСТОЧНАЯ КОАЛИЦИЯ"
+
+#. Key:	ChronoName
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(475)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(475)
+msgctxt "RA4CampaignSelect,ChronoName"
+msgid "ХРОНОЛЕГИОН"
+msgstr "ХРОНОЛЕГИОН"
+
+#. Key:	USSRMotto
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(478)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(478)
+msgctxt "RA4CampaignSelect,USSRMotto"
+msgid "СЛАВА РОДИНЕ. БУДУЩЕЕ ЗА НАМИ."
+msgstr "СЛАВА РОДИНЕ. БУДУЩЕЕ ЗА НАМИ."
+
+#. Key:	AllianceMotto
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(479)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(479)
+msgctxt "RA4CampaignSelect,AllianceMotto"
+msgid "СВОБОДА. ТОЧНОСТЬ. ПРЕВОСХОДСТВО."
+msgstr "СВОБОДА. ТОЧНОСТЬ. ПРЕВОСХОДСТВО."
+
+#. Key:	EasternMotto
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(480)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(480)
+msgctxt "RA4CampaignSelect,EasternMotto"
+msgid "ЕДИНСТВО СОЗДАЁТ ПОБЕДУ."
+msgstr "ЕДИНСТВО СОЗДАЁТ ПОБЕДУ."
+
+#. Key:	ChronoMotto
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(481)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(481)
+msgctxt "RA4CampaignSelect,ChronoMotto"
+msgid "ВРЕМЯ — НАШЕ ОРУЖИЕ."
+msgstr "ВРЕМЯ — НАШЕ ОРУЖИЕ."
+
+#. Key:	USSRDescription
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(484)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(484)
+msgctxt "RA4CampaignSelect,USSRDescription"
+msgid "Возглавьте возрождённый Советский Союз в борьбе за мировое господство. Тяжёлая броня, дисциплина и несокрушимая воля сокрушат врагов революции."
+msgstr "Возглавьте возрождённый Советский Союз в борьбе за мировое господство. Тяжёлая броня, дисциплина и несокрушимая воля сокрушат врагов революции."
+
+#. Key:	AllianceDescription
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(485)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(485)
+msgctxt "RA4CampaignSelect,AllianceDescription"
+msgid "Соберите коалицию демократических держав. Используйте авиацию, высокоточное оружие и мобильные силы для защиты свободного мира."
+msgstr "Соберите коалицию демократических держав. Используйте авиацию, высокоточное оружие и мобильные силы для защиты свободного мира."
+
+#. Key:	EasternDescription
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(486)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(486)
+msgctxt "RA4CampaignSelect,EasternDescription"
+msgid "Объедините промышленную мощь Востока. Развивайте производство, боевые механизмы и контроль энергетических узлов."
+msgstr "Объедините промышленную мощь Востока. Развивайте производство, боевые механизмы и контроль энергетических узлов."
+
+#. Key:	ChronoDescription
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(487)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(487)
+msgctxt "RA4CampaignSelect,ChronoDescription"
+msgid "Командуйте армией вне времени. Искажайте поле боя, перемещайте войска через хронокоридоры и переписывайте исход войны."
+msgstr "Командуйте армией вне времени. Искажайте поле боя, перемещайте войска через хронокоридоры и переписывайте исход войны."
+
+#. Key:	USSRProgress
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(490)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(490)
+msgctxt "RA4CampaignSelect,USSRProgress"
+msgid "МИССИИ ПРОЙДЕНО          06 / 18\nДОП. ЗАДАНИЯ             09 / 36\nСЛОЖНОСТЬ                ВЕТЕРАН"
+msgstr "МИССИИ ПРОЙДЕНО          06 / 18\nДОП. ЗАДАНИЯ             09 / 36\nСЛОЖНОСТЬ                ВЕТЕРАН"
+
+#. Key:	AllianceProgress
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(491)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(491)
+msgctxt "RA4CampaignSelect,AllianceProgress"
+msgid "МИССИИ ПРОЙДЕНО          02 / 16\nДОП. ЗАДАНИЯ             03 / 28\nСЛОЖНОСТЬ                ОФИЦЕР"
+msgstr "МИССИИ ПРОЙДЕНО          02 / 16\nДОП. ЗАДАНИЯ             03 / 28\nСЛОЖНОСТЬ                ОФИЦЕР"
+
+#. Key:	EasternProgress
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(492)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(492)
+msgctxt "RA4CampaignSelect,EasternProgress"
+msgid "МИССИИ ПРОЙДЕНО          00 / 15\nДОП. ЗАДАНИЯ             00 / 30\nСЛОЖНОСТЬ                НЕ ВЫБРАНА"
+msgstr "МИССИИ ПРОЙДЕНО          00 / 15\nДОП. ЗАДАНИЯ             00 / 30\nСЛОЖНОСТЬ                НЕ ВЫБРАНА"
+
+#. Key:	ChronoProgress
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(493)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(493)
+msgctxt "RA4CampaignSelect,ChronoProgress"
+msgid "МИССИИ ПРОЙДЕНО          00 / 12\nВРЕМЕННЫЕ УЗЛЫ           00 / 24\nСЛОЖНОСТЬ                НЕ ВЫБРАНА"
+msgstr "МИССИИ ПРОЙДЕНО          00 / 12\nВРЕМЕННЫЕ УЗЛЫ           00 / 24\nСЛОЖНОСТЬ                НЕ ВЫБРАНА"
+
+#. Key:	ContinueCampaign
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(515)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(515)
+msgctxt "RA4CampaignSelect,ContinueCampaign"
+msgid "ПРОДОЛЖИТЬ КАМПАНИЮ"
+msgstr "ПРОДОЛЖИТЬ КАМПАНИЮ"
+
+#. Key:	StartCampaign
+#. SourceLocation:	Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(516)
+#: Source/RA4UI/Private/RA4CampaignSelectWidget.cpp(516)
+msgctxt "RA4CampaignSelect,StartCampaign"
+msgid "НАЧАТЬ КАМПАНИЮ"
+msgstr "НАЧАТЬ КАМПАНИЮ"
+
+#. Key:	Crest
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(237)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(237)
+msgctxt "RA4MainMenuWidget,Crest"
+msgid "V"
+msgstr "V"
+
+#. Key:	Logo
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(240)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(240)
+msgctxt "RA4MainMenuWidget,Logo"
+msgid "RED ALERT 4"
+msgstr "RED ALERT 4"
+
+#. Key:	LogoRule
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(250)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(250)
+msgctxt "RA4MainMenuWidget,LogoRule"
+msgid "==========  V  =========="
+msgstr "==========  V  =========="
+
+#. Key:	FactionLabel
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(279)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(279)
+msgctxt "RA4MainMenuWidget,FactionLabel"
+msgid "СОВЕТСКОЕ ВЕРХОВНОЕ КОМАНДОВАНИЕ"
+msgstr "СОВЕТСКОЕ ВЕРХОВНОЕ КОМАНДОВАНИЕ"
+
+#. Key:	Campaign
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(373)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(373)
+msgctxt "RA4MainMenuWidget,Campaign"
+msgid "КАМПАНИЯ"
+msgstr "КАМПАНИЯ"
+
+#. Key:	Network
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(377)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(377)
+msgctxt "RA4MainMenuWidget,Network"
+msgid "СЕТЕВАЯ ИГРА"
+msgstr "СЕТЕВАЯ ИГРА"
+
+#. Key:	Skirmish
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(381)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(381)
+msgctxt "RA4MainMenuWidget,Skirmish"
+msgid "СХВАТКА"
+msgstr "СХВАТКА"
+
+#. Key:	Editor
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(385)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(385)
+msgctxt "RA4MainMenuWidget,Editor"
+msgid "РЕДАКТОР"
+msgstr "РЕДАКТОР"
+
+#. Key:	Codex
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(389)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(389)
+msgctxt "RA4MainMenuWidget,Codex"
+msgid "ЭНЦИКЛОПЕДИЯ"
+msgstr "ЭНЦИКЛОПЕДИЯ"
+
+#. Key:	Modifications
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(393)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(393)
+msgctxt "RA4MainMenuWidget,Modifications"
+msgid "МОДИФИКАЦИИ"
+msgstr "МОДИФИКАЦИИ"
+
+#. Key:	Settings
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(397)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(397)
+msgctxt "RA4MainMenuWidget,Settings"
+msgid "НАСТРОЙКИ"
+msgstr "НАСТРОЙКИ"
+
+#. Key:	Exit
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(401)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(401)
+msgctxt "RA4MainMenuWidget,Exit"
+msgid "ВЫХОД"
+msgstr "ВЫХОД"
+
+#. Key:	CommanderHeader
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(413)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(413)
+msgctxt "RA4MainMenuWidget,CommanderHeader"
+msgid "КОМАНДУЮЩИЙ"
+msgstr "КОМАНДУЮЩИЙ"
+
+#. Key:	CommanderStats
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(432)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(432)
+msgctxt "RA4MainMenuWidget,CommanderStats"
+msgid "РАНГ\nРЕПУТАЦИЯ\nПОБЕДЫ\nПОРАЖЕНИЯ"
+msgstr "РАНГ\nРЕПУТАЦИЯ\nПОБЕДЫ\nПОРАЖЕНИЯ"
+
+#. Key:	CommanderStatValues
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(439)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(439)
+msgctxt "RA4MainMenuWidget,CommanderStatValues"
+msgid "ГЕНЕРАЛ-МАЙОР\n12 450\n87\n19"
+msgstr "ГЕНЕРАЛ-МАЙОР\n12 450\n87\n19"
+
+#. Key:	Level
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(451)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(451)
+msgctxt "RA4MainMenuWidget,Level"
+msgid "УРОВЕНЬ 27"
+msgstr "УРОВЕНЬ 27"
+
+#. Key:	Experience
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(453)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(453)
+msgctxt "RA4MainMenuWidget,Experience"
+msgid "28 750 / 34 000 ОП"
+msgstr "28 750 / 34 000 ОП"
+
+#. Key:	NewsHeader
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(469)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(469)
+msgctxt "RA4MainMenuWidget,NewsHeader"
+msgid "СВОДКА НОВОСТЕЙ"
+msgstr "СВОДКА НОВОСТЕЙ"
+
+#. Key:	NewsOne
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(494)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(494)
+msgctxt "RA4MainMenuWidget,NewsOne"
+msgid "НОВАЯ ФРАКЦИЯ: АВАНГАРД"
+msgstr "НОВАЯ ФРАКЦИЯ: АВАНГАРД"
+
+#. Key:	NewsOneCopy
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(495)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(495)
+msgctxt "RA4MainMenuWidget,NewsOneCopy"
+msgid "Технологическое превосходство.\nТактическое устрашение."
+msgstr "Технологическое превосходство.\nТактическое устрашение."
+
+#. Key:	NewsTwo
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(498)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(498)
+msgctxt "RA4MainMenuWidget,NewsTwo"
+msgid "ОБНОВЛЕНИЕ БАЛАНСА 1.2"
+msgstr "ОБНОВЛЕНИЕ БАЛАНСА 1.2"
+
+#. Key:	NewsTwoCopy
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(499)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(499)
+msgctxt "RA4MainMenuWidget,NewsTwoCopy"
+msgid "Корректировка юнитов,\nулучшения и исправления."
+msgstr "Корректировка юнитов,\nулучшения и исправления."
+
+#. Key:	NewsThree
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(502)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(502)
+msgctxt "RA4MainMenuWidget,NewsThree"
+msgid "СЕЗОННЫЙ ПРОПУСК"
+msgstr "СЕЗОННЫЙ ПРОПУСК"
+
+#. Key:	NewsThreeCopy
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(503)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(503)
+msgctxt "RA4MainMenuWidget,NewsThreeCopy"
+msgid "Эксклюзивные награды\nи ранний доступ к контенту."
+msgstr "Эксклюзивные награды\nи ранний доступ к контенту."
+
+#. Key:	Pager
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(507)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(507)
+msgctxt "RA4MainMenuWidget,Pager"
+msgid "=======   ==   ==   =="
+msgstr "=======   ==   ==   =="
+
+#. Key:	Version
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(515)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(515)
+msgctxt "RA4MainMenuWidget,Version"
+msgid "v1.0.0  //  RU"
+msgstr "v1.0.0  //  RU"
+
+#. Key:	ExitTitle
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(547)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(547)
+msgctxt "RA4MainMenuWidget,ExitTitle"
+msgid "ЗАВЕРШИТЬ СЕАНС?"
+msgstr "ЗАВЕРШИТЬ СЕАНС?"
+
+#. Key:	ExitCopy
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(552)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(552)
+msgctxt "RA4MainMenuWidget,ExitCopy"
+msgid "Соединение с командным центром будет разорвано.\nНесохранённые данные текущей операции будут потеряны."
+msgstr "Соединение с командным центром будет разорвано.\nНесохранённые данные текущей операции будут потеряны."
+
+#. Key:	CancelExit
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(559)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(559)
+msgctxt "RA4MainMenuWidget,CancelExit"
+msgid "ОТМЕНА"
+msgstr "ОТМЕНА"
+
+#. Key:	ConfirmExit
+#. SourceLocation:	Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(566)
+#: Source/RA4UI/Private/RA4CommandCentreMenuWidget.cpp(566)
+msgctxt "RA4MainMenuWidget,ConfirmExit"
+msgid "ВЫЙТИ"
+msgstr "ВЫЙТИ"
+
+#. Key:	DefaultCommander
+#. SourceLocation:	Source/RA4UI/Private/RA4MainMenuViewModel.cpp(9)
+#: Source/RA4UI/Private/RA4MainMenuViewModel.cpp(9)
+msgctxt "RA4MainMenuViewModel,DefaultCommander"
+msgid "КОМАНДУЮЩИЙ"
+msgstr "КОМАНДУЮЩИЙ"
+
+#. Key:	MatchResultVictory
+#. SourceLocation:	Source/RA4UI/Private/RA4MatchResultOverlayWidget.cpp(165)
+#: Source/RA4UI/Private/RA4MatchResultOverlayWidget.cpp(165)
+msgctxt "RA4,MatchResultVictory"
+msgid "ПОБЕДА"
+msgstr "ПОБЕДА"
+
+#. Key:	MatchResultDefeat
+#. SourceLocation:	Source/RA4UI/Private/RA4MatchResultOverlayWidget.cpp(166)
+#: Source/RA4UI/Private/RA4MatchResultOverlayWidget.cpp(166)
+msgctxt "RA4,MatchResultDefeat"
+msgid "ПОРАЖЕНИЕ"
+msgstr "ПОРАЖЕНИЕ"
+
+#. Key:	MatchResultVictoryBody
+#. SourceLocation:	Source/RA4UI/Private/RA4MatchResultOverlayWidget.cpp(174)
+#: Source/RA4UI/Private/RA4MatchResultOverlayWidget.cpp(174)
+msgctxt "RA4,MatchResultVictoryBody"
+msgid "Операция завершена успешно. Можно сразу начать матч заново или безопасно выйти."
+msgstr "Операция завершена успешно. Можно сразу начать матч заново или безопасно выйти."
+
+#. Key:	MatchResultDefeatBody
+#. SourceLocation:	Source/RA4UI/Private/RA4MatchResultOverlayWidget.cpp(176)
+#: Source/RA4UI/Private/RA4MatchResultOverlayWidget.cpp(176)
+msgctxt "RA4,MatchResultDefeatBody"
+msgid "База потеряна. Попробуйте еще раз или завершите текущую демо-сессию."
+msgstr "База потеряна. Попробуйте еще раз или завершите текущую демо-сессию."
+
+#. Key:	MatchResultRetry
+#. SourceLocation:	Source/RA4UI/Private/RA4MatchResultOverlayWidget.cpp(182)
+#: Source/RA4UI/Private/RA4MatchResultOverlayWidget.cpp(182)
+msgctxt "RA4,MatchResultRetry"
+msgid "ПОВТОРИТЬ"
+msgstr "ПОВТОРИТЬ"
+
+#. Key:	MatchResultExitToMenu
+#. SourceLocation:	Source/RA4UI/Private/RA4MatchResultOverlayWidget.cpp(188)
+#: Source/RA4UI/Private/RA4MatchResultOverlayWidget.cpp(188)
+msgctxt "RA4,MatchResultExitToMenu"
+msgid "ВЫЙТИ В МЕНЮ"
+msgstr "ВЫЙТИ В МЕНЮ"
+
+#. Key:	MatchResultExit
+#. SourceLocation:	Source/RA4UI/Private/RA4MatchResultOverlayWidget.cpp(189)
+#: Source/RA4UI/Private/RA4MatchResultOverlayWidget.cpp(189)
+msgctxt "RA4,MatchResultExit"
+msgid "ВЫЙТИ"
+msgstr "ВЫЙТИ"
+
+#. Key:	PowerFormat
+#. SourceLocation:	Source/RA4UI/Private/RA4ResourceBarWidget.cpp(130)
+#: Source/RA4UI/Private/RA4ResourceBarWidget.cpp(130)
+msgctxt "RA4,PowerFormat"
+msgid "{0} / {1}"
+msgstr "{0} / {1}"
+
+#. Key:	SupplyFormat
+#. SourceLocation:	Source/RA4UI/Private/RA4ResourceBarWidget.cpp(144)
+#: Source/RA4UI/Private/RA4ResourceBarWidget.cpp(144)
+msgctxt "RA4,SupplyFormat"
+msgid "{0} / {1}"
+msgstr "{0} / {1}"
+
+#. Key:	Res_Credits
+#. SourceLocation:	Source/RA4UI/Private/RA4ResourceBarWidget.cpp(69)
+#: Source/RA4UI/Private/RA4ResourceBarWidget.cpp(69)
+msgctxt "RA4,Res_Credits"
+msgid "КРЕДИТЫ"
+msgstr "КРЕДИТЫ"
+
+#. Key:	Res_Power
+#. SourceLocation:	Source/RA4UI/Private/RA4ResourceBarWidget.cpp(70)
+#: Source/RA4UI/Private/RA4ResourceBarWidget.cpp(70)
+msgctxt "RA4,Res_Power"
+msgid "ЭНЕРГИЯ"
+msgstr "ЭНЕРГИЯ"
+
+#. Key:	Res_Supply
+#. SourceLocation:	Source/RA4UI/Private/RA4ResourceBarWidget.cpp(71)
+#: Source/RA4UI/Private/RA4ResourceBarWidget.cpp(71)
+msgctxt "RA4,Res_Supply"
+msgid "ВОЙСКА"
+msgstr "ВОЙСКА"
+
+#. Key:	Res_Timer
+#. SourceLocation:	Source/RA4UI/Private/RA4ResourceBarWidget.cpp(72)
+#: Source/RA4UI/Private/RA4ResourceBarWidget.cpp(72)
+msgctxt "RA4,Res_Timer"
+msgid "ВРЕМЯ"
+msgstr "ВРЕМЯ"
+
+#. Key:	Back
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(205)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(205)
+msgctxt "RA4ShowcaseWidget,Back"
+msgid "‹  НАЗАД"
+msgstr "‹  НАЗАД"
+
+#. Key:	Title
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(213)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(213)
+msgctxt "RA4ShowcaseWidget,Title"
+msgid "RED ALERT 4"
+msgstr "RED ALERT 4"
+
+#. Key:	CommandLink
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(216)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(216)
+msgctxt "RA4ShowcaseWidget,CommandLink"
+msgid "ЗАЩИЩЁННАЯ СЕТЬ КОМАНДОВАНИЯ  //  КАНАЛ 04"
+msgstr "ЗАЩИЩЁННАЯ СЕТЬ КОМАНДОВАНИЯ  //  КАНАЛ 04"
+
+#. Key:	SecurityStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(224)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(224)
+msgctxt "RA4ShowcaseWidget,SecurityStatus"
+msgid "СВЯЗЬ: СТАБИЛЬНАЯ\nШИФРОВАНИЕ: АКТИВНО"
+msgstr "СВЯЗЬ: СТАБИЛЬНАЯ\nШИФРОВАНИЕ: АКТИВНО"
+
+#. Key:	RailMark
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(234)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(234)
+msgctxt "RA4ShowcaseWidget,RailMark"
+msgid "RA4"
+msgstr "RA4"
+
+#. Key:	RailCode
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(238)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(238)
+msgctxt "RA4ShowcaseWidget,RailCode"
+msgid "04\n\n17\n\n26\n\n49"
+msgstr "04\n\n17\n\n26\n\n49"
+
+#. Key:	SectionRule
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(251)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(251)
+msgctxt "RA4ShowcaseWidget,SectionRule"
+msgid "================================================"
+msgstr "================================================"
+
+#. Key:	VideoTab
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(265)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(265)
+msgctxt "RA4ShowcaseWidget,VideoTab"
+msgid "ИЗОБРАЖЕНИЕ"
+msgstr "ИЗОБРАЖЕНИЕ"
+
+#. Key:	AudioTab
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(266)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(266)
+msgctxt "RA4ShowcaseWidget,AudioTab"
+msgid "ЗВУК"
+msgstr "ЗВУК"
+
+#. Key:	ControlsTab
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(267)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(267)
+msgctxt "RA4ShowcaseWidget,ControlsTab"
+msgid "УПРАВЛЕНИЕ"
+msgstr "УПРАВЛЕНИЕ"
+
+#. Key:	GameTab
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(268)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(268)
+msgctxt "RA4ShowcaseWidget,GameTab"
+msgid "ИГРА"
+msgstr "ИГРА"
+
+#. Key:	Brightness
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(311)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(311)
+msgctxt "RA4ShowcaseWidget,Brightness"
+msgid "ЯРКОСТЬ  54%"
+msgstr "ЯРКОСТЬ  54%"
+
+#. Key:	InterfaceScale
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(312)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(312)
+msgctxt "RA4ShowcaseWidget,InterfaceScale"
+msgid "МАСШТАБ ИНТЕРФЕЙСА  100%"
+msgstr "МАСШТАБ ИНТЕРФЕЙСА  100%"
+
+#. Key:	MusicVolume
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(313)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(313)
+msgctxt "RA4ShowcaseWidget,MusicVolume"
+msgid "МУЗЫКА  80%"
+msgstr "МУЗЫКА  80%"
+
+#. Key:	EffectsVolume
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(314)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(314)
+msgctxt "RA4ShowcaseWidget,EffectsVolume"
+msgid "ЭФФЕКТЫ  90%"
+msgstr "ЭФФЕКТЫ  90%"
+
+#. Key:	StatusHeader
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(344)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(344)
+msgctxt "RA4ShowcaseWidget,StatusHeader"
+msgid "ОПЕРАТИВНЫЕ ДАННЫЕ"
+msgstr "ОПЕРАТИВНЫЕ ДАННЫЕ"
+
+#. Key:	StatusRule
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(347)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(347)
+msgctxt "RA4ShowcaseWidget,StatusRule"
+msgid "================"
+msgstr "================"
+
+#. Key:	Access
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(355)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(355)
+msgctxt "RA4ShowcaseWidget,Access"
+msgid "ДОПУСК: АЛЬФА\nСЕАНС: ЗАШИФРОВАН"
+msgstr "ДОПУСК: АЛЬФА\nСЕАНС: ЗАШИФРОВАН"
+
+#. Key:	Footer
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(365)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(365)
+msgctxt "RA4ShowcaseWidget,Footer"
+msgid "СИСТЕМА ГОТОВА  ·  НАВИГАЦИЯ АКТИВНА  ·  РУССКИЙ"
+msgstr "СИСТЕМА ГОТОВА  ·  НАВИГАЦИЯ АКТИВНА  ·  РУССКИЙ"
+
+#. Key:	Build
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(369)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(369)
+msgctxt "RA4ShowcaseWidget,Build"
+msgid "RA4 // BUILD 1.0.0"
+msgstr "RA4 // BUILD 1.0.0"
+
+#. Key:	HudTitle
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(405)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(405)
+msgctxt "RA4ShowcaseWidget,HudTitle"
+msgid "СССР // ОПЕРАЦИЯ"
+msgstr "СССР // ОПЕРАЦИЯ"
+
+#. Key:	HudCredits
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(407)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(407)
+msgctxt "RA4ShowcaseWidget,HudCredits"
+msgid "КРЕДИТЫ  12 450"
+msgstr "КРЕДИТЫ  12 450"
+
+#. Key:	HudPower
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(409)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(409)
+msgctxt "RA4ShowcaseWidget,HudPower"
+msgid "ЭНЕРГИЯ  780 / 920"
+msgstr "ЭНЕРГИЯ  780 / 920"
+
+#. Key:	HudClock
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(411)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(411)
+msgctxt "RA4ShowcaseWidget,HudClock"
+msgid "00:18:42"
+msgstr "00:18:42"
+
+#. Key:	ProductionHeader
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(450)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(450)
+msgctxt "RA4ShowcaseWidget,ProductionHeader"
+msgid "ПРОИЗВОДСТВО"
+msgstr "ПРОИЗВОДСТВО"
+
+#. Key:	QueueOne
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(452)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(452)
+msgctxt "RA4ShowcaseWidget,QueueOne"
+msgid "ТЕСЛА-ТАНК\nТяжёлая броня  ·  очередь 01"
+msgstr "ТЕСЛА-ТАНК\nТяжёлая броня  ·  очередь 01"
+
+#. Key:	QueueTwo
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(458)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(458)
+msgctxt "RA4ShowcaseWidget,QueueTwo"
+msgid "ПРИЗЫВНИК ×5\nКазармы  ·  очередь 02\n\nМИГ «КУЗНЕЦ»\nАэродром  ·  ожидание"
+msgstr "ПРИЗЫВНИК ×5\nКазармы  ·  очередь 02\n\nМИГ «КУЗНЕЦ»\nАэродром  ·  ожидание"
+
+#. Key:	Intel
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(462)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(462)
+msgctxt "RA4ShowcaseWidget,Intel"
+msgid "РАЗВЕДКА // ЮЖНЫЙ МОСТ\nКОНТАКТЫ: 12  ·  УГРОЗА: ВЫСОКАЯ"
+msgstr "РАЗВЕДКА // ЮЖНЫЙ МОСТ\nКОНТАКТЫ: 12  ·  УГРОЗА: ВЫСОКАЯ"
+
+#. Key:	HudCommands
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(471)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(471)
+msgctxt "RA4ShowcaseWidget,HudCommands"
+msgid "ОТРЯД: 3 × ТЕСЛА-ТАНК   ·   12 × ПРИЗЫВНИК   ·   ПРИКАЗ: УДЕРЖИВАТЬ ПОЗИЦИЮ   ·   СИЛЫ СПЕЦНАЗНАЧЕНИЯ: ГОТОВЫ"
+msgstr "ОТРЯД: 3 × ТЕСЛА-ТАНК   ·   12 × ПРИЗЫВНИК   ·   ПРИКАЗ: УДЕРЖИВАТЬ ПОЗИЦИЮ   ·   СИЛЫ СПЕЦНАЗНАЧЕНИЯ: ГОТОВЫ"
+
+#. Key:	MainHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(481)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(481)
+msgctxt "RA4ShowcaseWidget,MainHeading"
+msgid "ГЛАВНОЕ КОМАНДОВАНИЕ"
+msgstr "ГЛАВНОЕ КОМАНДОВАНИЕ"
+
+#. Key:	MainBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(482)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(482)
+msgctxt "RA4ShowcaseWidget,MainBody"
+msgid "Выберите направление операции. Кампания, сетевой бой и системные параметры доступны из защищённого командного центра."
+msgstr "Выберите направление операции. Кампания, сетевой бой и системные параметры доступны из защищённого командного центра."
+
+#. Key:	MainStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(483)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(483)
+msgctxt "RA4ShowcaseWidget,MainStatus"
+msgid "КОМАНДУЮЩИЙ\nГотов к операции\n\nСОСТОЯНИЕ СЕТИ\nСтабильное\n\nТЕАТР ВОЙНЫ\nЕвропа // 2049"
+msgstr "КОМАНДУЮЩИЙ\nГотов к операции\n\nСОСТОЯНИЕ СЕТИ\nСтабильное\n\nТЕАТР ВОЙНЫ\nЕвропа // 2049"
+
+#. Key:	CampaignHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(490)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(490)
+msgctxt "RA4ShowcaseWidget,CampaignHeading"
+msgid "ВЫБОР КАМПАНИИ"
+msgstr "ВЫБОР КАМПАНИИ"
+
+#. Key:	CampaignBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(491)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(491)
+msgctxt "RA4ShowcaseWidget,CampaignBody"
+msgid "СССР — красно-чёрная доктрина подавления. Альянс — сине-стальная мобильность. Восточная коалиция — нефрит и золото. Хронолегион — технологии вне времени."
+msgstr "СССР — красно-чёрная доктрина подавления. Альянс — сине-стальная мобильность. Восточная коалиция — нефрит и золото. Хронолегион — технологии вне времени."
+
+#. Key:	CampaignStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(492)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(492)
+msgctxt "RA4ShowcaseWidget,CampaignStatus"
+msgid "ОПЕРАЦИЯ 01\nПепел столицы\n\nСЛОЖНОСТЬ\nВетеран\n\nВЫБРАНА ФРАКЦИЯ\nСССР"
+msgstr "ОПЕРАЦИЯ 01\nПепел столицы\n\nСЛОЖНОСТЬ\nВетеран\n\nВЫБРАНА ФРАКЦИЯ\nСССР"
+
+#. Key:	HudHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(497)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(497)
+msgctxt "RA4ShowcaseWidget,HudHeading"
+msgid "ОПЕРАЦИЯ: ПЕПЕЛ СТОЛИЦЫ"
+msgstr "ОПЕРАЦИЯ: ПЕПЕЛ СТОЛИЦЫ"
+
+#. Key:	HudBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(498)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(498)
+msgctxt "RA4ShowcaseWidget,HudBody"
+msgid "БОЕВОЙ HUD СССР\n\nКРЕДИТЫ 12 450     ЭНЕРГИЯ 780 / 920\n\nОЧЕРЕДЬ ПРОИЗВОДСТВА\nТесла-танк — 72%\nПризывник ×5\n\nЗАДАЧА: удержать плацдарм и уничтожить командный узел противника."
+msgstr "БОЕВОЙ HUD СССР\n\nКРЕДИТЫ 12 450     ЭНЕРГИЯ 780 / 920\n\nОЧЕРЕДЬ ПРОИЗВОДСТВА\nТесла-танк — 72%\nПризывник ×5\n\nЗАДАЧА: удержать плацдарм и уничтожить командный узел противника."
+
+#. Key:	HudStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(499)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(499)
+msgctxt "RA4ShowcaseWidget,HudStatus"
+msgid "МИНИ-КАРТА\nСектор: М-14\n\nВЫДЕЛЕНО\n3 × Тесла-танк\n12 × Призывник\n\nТРЕВОГА\nНизкая"
+msgstr "МИНИ-КАРТА\nСектор: М-14\n\nВЫДЕЛЕНО\n3 × Тесла-танк\n12 × Призывник\n\nТРЕВОГА\nНизкая"
+
+#. Key:	LobbyHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(504)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(504)
+msgctxt "RA4ShowcaseWidget,LobbyHeading"
+msgid "СЕТЕВОЕ ЛОББИ"
+msgstr "СЕТЕВОЕ ЛОББИ"
+
+#. Key:	LobbyBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(505)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(505)
+msgctxt "RA4ShowcaseWidget,LobbyBody"
+msgid "КАРТА: КРАСНЫЙ ПЕРЕВАЛ\nРЕЖИМ: СТАНДАРТНЫЙ БОЙ\n\nКОМАНДУЮЩИЙ — СССР — ГОТОВ\nАДМИРАЛ ВАРД — АЛЬЯНС — ГОТОВ\nГЕНЕРАЛ ГАО — ВОСТОЧНАЯ КОАЛИЦИЯ — ОЖИДАНИЕ\nХРОНОС-07 — ХРОНОЛЕГИОН — ОЖИДАНИЕ"
+msgstr "КАРТА: КРАСНЫЙ ПЕРЕВАЛ\nРЕЖИМ: СТАНДАРТНЫЙ БОЙ\n\nКОМАНДУЮЩИЙ — СССР — ГОТОВ\nАДМИРАЛ ВАРД — АЛЬЯНС — ГОТОВ\nГЕНЕРАЛ ГАО — ВОСТОЧНАЯ КОАЛИЦИЯ — ОЖИДАНИЕ\nХРОНОС-07 — ХРОНОЛЕГИОН — ОЖИДАНИЕ"
+
+#. Key:	LobbyStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(506)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(506)
+msgctxt "RA4ShowcaseWidget,LobbyStatus"
+msgid "ЧАТ КОМАНДОВАНИЯ\n[20:49] Вард: Готов.\n[20:49] Гао: Проверяю связь.\n\nПИНГ\n34 мс"
+msgstr "ЧАТ КОМАНДОВАНИЯ\n[20:49] Вард: Готов.\n[20:49] Гао: Проверяю связь.\n\nПИНГ\n34 мс"
+
+#. Key:	SettingsHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(511)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(511)
+msgctxt "RA4ShowcaseWidget,SettingsHeading"
+msgid "НАСТРОЙКИ СИСТЕМЫ"
+msgstr "НАСТРОЙКИ СИСТЕМЫ"
+
+#. Key:	SettingsBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(512)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(512)
+msgctxt "RA4ShowcaseWidget,SettingsBody"
+msgid "ИЗОБРАЖЕНИЕ\nРазрешение: 1920×1080\nМасштаб интерфейса: автоматически\n\nЗВУК\nМузыка: 80%\nЭффекты: 90%\n\nУПРАВЛЕНИЕ\nEnhanced Input: активно"
+msgstr "ИЗОБРАЖЕНИЕ\nРазрешение: 1920×1080\nМасштаб интерфейса: автоматически\n\nЗВУК\nМузыка: 80%\nЭффекты: 90%\n\nУПРАВЛЕНИЕ\nEnhanced Input: активно"
+
+#. Key:	SettingsStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(513)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(513)
+msgctxt "RA4ShowcaseWidget,SettingsStatus"
+msgid "ПРОФИЛЬ\nКомандующий\n\nЛОКАЛИЗАЦИЯ\nРусский\n\nВЕРСИЯ\n0.1.0"
+msgstr "ПРОФИЛЬ\nКомандующий\n\nЛОКАЛИЗАЦИЯ\nРусский\n\nВЕРСИЯ\n0.1.0"
+
+#. Key:	SplashHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(518)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(518)
+msgctxt "RA4ShowcaseWidget,SplashHeading"
+msgid "RED ALERT 4"
+msgstr "RED ALERT 4"
+
+#. Key:	SplashBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(519)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(519)
+msgctxt "RA4ShowcaseWidget,SplashBody"
+msgid "СИСТЕМА КОМАНДОВАНИЯ И СВЯЗИ\n\nНажмите любую клавишу, чтобы войти в защищённую сеть."
+msgstr "СИСТЕМА КОМАНДОВАНИЯ И СВЯЗИ\n\nНажмите любую клавишу, чтобы войти в защищённую сеть."
+
+#. Key:	SplashStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(520)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(520)
+msgctxt "RA4ShowcaseWidget,SplashStatus"
+msgid "СТАТУС СИСТЕМ\nВсе контуры готовы\n\nСЕАНС\nЗашифрован"
+msgstr "СТАТУС СИСТЕМ\nВсе контуры готовы\n\nСЕАНС\nЗашифрован"
+
+#. Key:	FactionHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(525)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(525)
+msgctxt "RA4ShowcaseWidget,FactionHeading"
+msgid "ВЫБОР ФРАКЦИИ"
+msgstr "ВЫБОР ФРАКЦИИ"
+
+#. Key:	FactionBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(526)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(526)
+msgctxt "RA4ShowcaseWidget,FactionBody"
+msgid "СССР — тяжёлая броня и подавление.\nАЛЬЯНС — мобильность и точные удары.\nВОСТОЧНАЯ КОАЛИЦИЯ — массовое производство.\nХРОНОЛЕГИОН — технологии вне времени."
+msgstr "СССР — тяжёлая броня и подавление.\nАЛЬЯНС — мобильность и точные удары.\nВОСТОЧНАЯ КОАЛИЦИЯ — массовое производство.\nХРОНОЛЕГИОН — технологии вне времени."
+
+#. Key:	FactionStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(527)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(527)
+msgctxt "RA4ShowcaseWidget,FactionStatus"
+msgid "ВЫБРАНО\nСССР\n\nДОКТРИНА\nШтурм\n\nТЕХНОЛОГИИ\nУровень 1"
+msgstr "ВЫБРАНО\nСССР\n\nДОКТРИНА\nШтурм\n\nТЕХНОЛОГИИ\nУровень 1"
+
+#. Key:	AlliesCampaignHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(532)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(532)
+msgctxt "RA4ShowcaseWidget,AlliesCampaignHeading"
+msgid "КАМПАНИЯ АЛЬЯНСА"
+msgstr "КАМПАНИЯ АЛЬЯНСА"
+
+#. Key:	AlliesCampaignBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(533)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(533)
+msgctxt "RA4ShowcaseWidget,AlliesCampaignBody"
+msgid "Операция «Северный щит». Сдержите наступление СССР, верните контроль над портами и откройте маршрут для флота."
+msgstr "Операция «Северный щит». Сдержите наступление СССР, верните контроль над портами и откройте маршрут для флота."
+
+#. Key:	AlliesCampaignStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(534)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(534)
+msgctxt "RA4ShowcaseWidget,AlliesCampaignStatus"
+msgid "КОМАНДУЮЩИЙ\nАдмирал Вард\n\nТЕАТР\nСеверная Атлантика\n\nМИССИЯ\n01 / 09"
+msgstr "КОМАНДУЮЩИЙ\nАдмирал Вард\n\nТЕАТР\nСеверная Атлантика\n\nМИССИЯ\n01 / 09"
+
+#. Key:	EasternCampaignHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(539)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(539)
+msgctxt "RA4ShowcaseWidget,EasternCampaignHeading"
+msgid "КАМПАНИЯ ВОСТОЧНОЙ КОАЛИЦИИ"
+msgstr "КАМПАНИЯ ВОСТОЧНОЙ КОАЛИЦИИ"
+
+#. Key:	EasternCampaignBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(540)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(540)
+msgctxt "RA4ShowcaseWidget,EasternCampaignBody"
+msgid "Операция «Золотой рассвет». Захватите энергетические узлы и превратите вражеский плацдарм в опорную базу коалиции."
+msgstr "Операция «Золотой рассвет». Захватите энергетические узлы и превратите вражеский плацдарм в опорную базу коалиции."
+
+#. Key:	EasternCampaignStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(541)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(541)
+msgctxt "RA4ShowcaseWidget,EasternCampaignStatus"
+msgid "КОМАНДУЮЩИЙ\nГенерал Гао\n\nТЕАТР\nТихоокеанский пояс\n\nМИССИЯ\n01 / 08"
+msgstr "КОМАНДУЮЩИЙ\nГенерал Гао\n\nТЕАТР\nТихоокеанский пояс\n\nМИССИЯ\n01 / 08"
+
+#. Key:	ChronoCampaignHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(546)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(546)
+msgctxt "RA4ShowcaseWidget,ChronoCampaignHeading"
+msgid "КАМПАНИЯ ХРОНОЛЕГИОНА"
+msgstr "КАМПАНИЯ ХРОНОЛЕГИОНА"
+
+#. Key:	ChronoCampaignBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(547)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(547)
+msgctxt "RA4ShowcaseWidget,ChronoCampaignBody"
+msgid "Операция «Парадокс». Восстановите временной коридор до того, как противник закрепится в ключевых точках хронолинии."
+msgstr "Операция «Парадокс». Восстановите временной коридор до того, как противник закрепится в ключевых точках хронолинии."
+
+#. Key:	ChronoCampaignStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(548)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(548)
+msgctxt "RA4ShowcaseWidget,ChronoCampaignStatus"
+msgid "КООРДИНАТОР\nХронос-07\n\nВРЕМЕННОЙ СЛОЙ\nНестабилен\n\nМИССИЯ\n01 / 07"
+msgstr "КООРДИНАТОР\nХронос-07\n\nВРЕМЕННОЙ СЛОЙ\nНестабилен\n\nМИССИЯ\n01 / 07"
+
+#. Key:	MissionMapHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(553)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(553)
+msgctxt "RA4ShowcaseWidget,MissionMapHeading"
+msgid "КАРТА ОПЕРАЦИЙ: ЕВРОПА"
+msgstr "КАРТА ОПЕРАЦИЙ: ЕВРОПА"
+
+#. Key:	MissionMapBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(554)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(554)
+msgctxt "RA4ShowcaseWidget,MissionMapBody"
+msgid "МИССИЯ 01 — ПЕПЕЛ СТОЛИЦЫ\nУдержите мост через Рейн.\n\nМИССИЯ 02 — ЖЕЛЕЗНЫЙ КОРИДОР\nПерережьте линию снабжения Альянса.\n\nМИССИЯ 03 — ПОЛЯРНАЯ НОЧЬ\nЗахватите станцию раннего предупреждения."
+msgstr "МИССИЯ 01 — ПЕПЕЛ СТОЛИЦЫ\nУдержите мост через Рейн.\n\nМИССИЯ 02 — ЖЕЛЕЗНЫЙ КОРИДОР\nПерережьте линию снабжения Альянса.\n\nМИССИЯ 03 — ПОЛЯРНАЯ НОЧЬ\nЗахватите станцию раннего предупреждения."
+
+#. Key:	MissionMapStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(555)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(555)
+msgctxt "RA4ShowcaseWidget,MissionMapStatus"
+msgid "ВЫБРАННАЯ МИССИЯ\nПепел столицы\n\nСЛОЖНОСТЬ\nВетеран\n\nНАГРАДА\nТесла-танк"
+msgstr "ВЫБРАННАЯ МИССИЯ\nПепел столицы\n\nСЛОЖНОСТЬ\nВетеран\n\nНАГРАДА\nТесла-танк"
+
+#. Key:	BriefingHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(560)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(560)
+msgctxt "RA4ShowcaseWidget,BriefingHeading"
+msgid "БРИФИНГ: ПЕПЕЛ СТОЛИЦЫ"
+msgstr "БРИФИНГ: ПЕПЕЛ СТОЛИЦЫ"
+
+#. Key:	BriefingBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(561)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(561)
+msgctxt "RA4ShowcaseWidget,BriefingBody"
+msgid "Войска Альянса удерживают городской командный узел. Разверните базу на восточном берегу, обеспечьте энергоснабжение и уничтожьте узел до прибытия подкрепления."
+msgstr "Войска Альянса удерживают городской командный узел. Разверните базу на восточном берегу, обеспечьте энергоснабжение и уничтожьте узел до прибытия подкрепления."
+
+#. Key:	BriefingStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(562)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(562)
+msgctxt "RA4ShowcaseWidget,BriefingStatus"
+msgid "ОСНОВНАЯ ЦЕЛЬ\nУничтожить командный узел\n\nДОПОЛНИТЕЛЬНАЯ\nСохранить мост\n\nВРЕМЯ\n06:30"
+msgstr "ОСНОВНАЯ ЦЕЛЬ\nУничтожить командный узел\n\nДОПОЛНИТЕЛЬНАЯ\nСохранить мост\n\nВРЕМЯ\n06:30"
+
+#. Key:	VideoHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(567)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(567)
+msgctxt "RA4ShowcaseWidget,VideoHeading"
+msgid "ЗАЩИЩЁННЫЙ ВИДЕОКАНАЛ"
+msgstr "ЗАЩИЩЁННЫЙ ВИДЕОКАНАЛ"
+
+#. Key:	VideoBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(568)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(568)
+msgctxt "RA4ShowcaseWidget,VideoBody"
+msgid "АДМИРАЛ ВАРД:\n«Командующий, сканеры фиксируют движение бронеколонн. Не давайте им закрепиться у моста. Воздушный коридор будет открыт на три минуты.»"
+msgstr "АДМИРАЛ ВАРД:\n«Командующий, сканеры фиксируют движение бронеколонн. Не давайте им закрепиться у моста. Воздушный коридор будет открыт на три минуты.»"
+
+#. Key:	VideoStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(569)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(569)
+msgctxt "RA4ShowcaseWidget,VideoStatus"
+msgid "КАНАЛ\nВаршава-01\n\nШИФРОВАНИЕ\nАктивно\n\nЗАДЕРЖКА\n18 мс"
+msgstr "КАНАЛ\nВаршава-01\n\nШИФРОВАНИЕ\nАктивно\n\nЗАДЕРЖКА\n18 мс"
+
+#. Key:	LoadingHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(574)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(574)
+msgctxt "RA4ShowcaseWidget,LoadingHeading"
+msgid "ПОДГОТОВКА ОПЕРАЦИИ"
+msgstr "ПОДГОТОВКА ОПЕРАЦИИ"
+
+#. Key:	LoadingBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(575)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(575)
+msgctxt "RA4ShowcaseWidget,LoadingBody"
+msgid "Загрузка театра боевых действий. Синхронизация данных командования, маршрутов снабжения и тактической разведки."
+msgstr "Загрузка театра боевых действий. Синхронизация данных командования, маршрутов снабжения и тактической разведки."
+
+#. Key:	LoadingStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(576)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(576)
+msgctxt "RA4ShowcaseWidget,LoadingStatus"
+msgid "КАРТА\nПепел столицы\n\nФРАКЦИЯ\nСССР\n\nСОСТОЯНИЕ\nСинхронизация"
+msgstr "КАРТА\nПепел столицы\n\nФРАКЦИЯ\nСССР\n\nСОСТОЯНИЕ\nСинхронизация"
+
+#. Key:	AlliesHudHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(581)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(581)
+msgctxt "RA4ShowcaseWidget,AlliesHudHeading"
+msgid "ОПЕРАЦИЯ: СЕВЕРНЫЙ ЩИТ"
+msgstr "ОПЕРАЦИЯ: СЕВЕРНЫЙ ЩИТ"
+
+#. Key:	AlliesHudBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(582)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(582)
+msgctxt "RA4ShowcaseWidget,AlliesHudBody"
+msgid "БОЕВОЙ HUD АЛЬЯНСА\n\nКРЕДИТЫ 10 280     ЭНЕРГИЯ 640 / 760\n\nОЧЕРЕДЬ ПРОИЗВОДСТВА\nСтраж — 54%\nАвиакрыло «Копьё» ×2\n\nЗАДАЧА: удержать гавань и защитить конвой."
+msgstr "БОЕВОЙ HUD АЛЬЯНСА\n\nКРЕДИТЫ 10 280     ЭНЕРГИЯ 640 / 760\n\nОЧЕРЕДЬ ПРОИЗВОДСТВА\nСтраж — 54%\nАвиакрыло «Копьё» ×2\n\nЗАДАЧА: удержать гавань и защитить конвой."
+
+#. Key:	AlliesHudStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(583)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(583)
+msgctxt "RA4ShowcaseWidget,AlliesHudStatus"
+msgid "МИНИ-КАРТА\nСектор: N-07\n\nВЫДЕЛЕНО\n2 × Страж\n4 × Ракетчик\n\nФЛОТ\nГотов"
+msgstr "МИНИ-КАРТА\nСектор: N-07\n\nВЫДЕЛЕНО\n2 × Страж\n4 × Ракетчик\n\nФЛОТ\nГотов"
+
+#. Key:	EasternHudHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(588)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(588)
+msgctxt "RA4ShowcaseWidget,EasternHudHeading"
+msgid "ОПЕРАЦИЯ: ЗОЛОТОЙ РАССВЕТ"
+msgstr "ОПЕРАЦИЯ: ЗОЛОТОЙ РАССВЕТ"
+
+#. Key:	EasternHudBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(589)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(589)
+msgctxt "RA4ShowcaseWidget,EasternHudBody"
+msgid "БОЕВОЙ HUD ВОСТОЧНОЙ КОАЛИЦИИ\n\nКРЕДИТЫ 15 600     ЭНЕРГИЯ 850 / 940\n\nОЧЕРЕДЬ ПРОИЗВОДСТВА\nШтурмовой мех — 43%\nДрон «Хуан» ×3\n\nЗАДАЧА: удержать энергетические узлы."
+msgstr "БОЕВОЙ HUD ВОСТОЧНОЙ КОАЛИЦИИ\n\nКРЕДИТЫ 15 600     ЭНЕРГИЯ 850 / 940\n\nОЧЕРЕДЬ ПРОИЗВОДСТВА\nШтурмовой мех — 43%\nДрон «Хуан» ×3\n\nЗАДАЧА: удержать энергетические узлы."
+
+#. Key:	EasternHudStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(590)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(590)
+msgctxt "RA4ShowcaseWidget,EasternHudStatus"
+msgid "МИНИ-КАРТА\nСектор: P-21\n\nВЫДЕЛЕНО\n1 × Штурмовой мех\n8 × Пехота\n\nРЕЗЕРВ\nГотов"
+msgstr "МИНИ-КАРТА\nСектор: P-21\n\nВЫДЕЛЕНО\n1 × Штурмовой мех\n8 × Пехота\n\nРЕЗЕРВ\nГотов"
+
+#. Key:	ChronoHudHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(595)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(595)
+msgctxt "RA4ShowcaseWidget,ChronoHudHeading"
+msgid "ОПЕРАЦИЯ: ПАРАДОКС"
+msgstr "ОПЕРАЦИЯ: ПАРАДОКС"
+
+#. Key:	ChronoHudBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(596)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(596)
+msgctxt "RA4ShowcaseWidget,ChronoHudBody"
+msgid "БОЕВОЙ HUD ХРОНОЛЕГИОНА\n\nКРЕДИТЫ 13 040     ХРОНОЭНЕРГИЯ 72 / 100\n\nОЧЕРЕДЬ ПРОИЗВОДСТВА\nТемпоральный страж — 68%\nРазведчик «Эхо» ×2\n\nЗАДАЧА: стабилизировать временной якорь."
+msgstr "БОЕВОЙ HUD ХРОНОЛЕГИОНА\n\nКРЕДИТЫ 13 040     ХРОНОЭНЕРГИЯ 72 / 100\n\nОЧЕРЕДЬ ПРОИЗВОДСТВА\nТемпоральный страж — 68%\nРазведчик «Эхо» ×2\n\nЗАДАЧА: стабилизировать временной якорь."
+
+#. Key:	ChronoHudStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(597)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(597)
+msgctxt "RA4ShowcaseWidget,ChronoHudStatus"
+msgid "ХРОНО-КАРТА\nСлой: 3-А\n\nВЫДЕЛЕНО\n2 × Страж\n1 × Якорь\n\nРАЗРЫВ\nСдержан"
+msgstr "ХРОНО-КАРТА\nСлой: 3-А\n\nВЫДЕЛЕНО\n2 × Страж\n1 × Якорь\n\nРАЗРЫВ\nСдержан"
+
+#. Key:	PauseHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(602)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(602)
+msgctxt "RA4ShowcaseWidget,PauseHeading"
+msgid "ПАУЗА"
+msgstr "ПАУЗА"
+
+#. Key:	PauseBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(603)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(603)
+msgctxt "RA4ShowcaseWidget,PauseBody"
+msgid "Операция приостановлена. Продолжите бой, откройте настройки, сохраните прогресс или вернитесь в командный центр."
+msgstr "Операция приостановлена. Продолжите бой, откройте настройки, сохраните прогресс или вернитесь в командный центр."
+
+#. Key:	PauseStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(604)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(604)
+msgctxt "RA4ShowcaseWidget,PauseStatus"
+msgid "ОПЕРАЦИЯ\nПепел столицы\n\nВРЕМЯ БОЯ\n18:42\n\nСОХРАНЕНИЕ\nАвтоматическое"
+msgstr "ОПЕРАЦИЯ\nПепел столицы\n\nВРЕМЯ БОЯ\n18:42\n\nСОХРАНЕНИЕ\nАвтоматическое"
+
+#. Key:	VictoryHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(609)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(609)
+msgctxt "RA4ShowcaseWidget,VictoryHeading"
+msgid "ПОБЕДА"
+msgstr "ПОБЕДА"
+
+#. Key:	VictoryBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(610)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(610)
+msgctxt "RA4ShowcaseWidget,VictoryBody"
+msgid "Командный узел противника уничтожен. Мост и плацдарм удержаны. Театр операций открыт для следующей фазы наступления."
+msgstr "Командный узел противника уничтожен. Мост и плацдарм удержаны. Театр операций открыт для следующей фазы наступления."
+
+#. Key:	VictoryStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(611)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(611)
+msgctxt "RA4ShowcaseWidget,VictoryStatus"
+msgid "РЕЗУЛЬТАТ\nПобеда СССР\n\nВРЕМЯ\n24:18\n\nПОТЕРИ\nПриемлемые"
+msgstr "РЕЗУЛЬТАТ\nПобеда СССР\n\nВРЕМЯ\n24:18\n\nПОТЕРИ\nПриемлемые"
+
+#. Key:	EncyclopediaHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(616)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(616)
+msgctxt "RA4ShowcaseWidget,EncyclopediaHeading"
+msgid "ЭНЦИКЛОПЕДИЯ ВОЙНЫ"
+msgstr "ЭНЦИКЛОПЕДИЯ ВОЙНЫ"
+
+#. Key:	EncyclopediaBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(617)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(617)
+msgctxt "RA4ShowcaseWidget,EncyclopediaBody"
+msgid "ТЕСЛА-ТАНК\nТяжёлая бронированная единица СССР с цепной электрической пушкой.\n\nСТРАЖ\nУниверсальная боевая машина Альянса с модульной защитой.\n\nТЕМПОРАЛЬНЫЙ СТРАЖ\nПередовая единица Хронолегиона."
+msgstr "ТЕСЛА-ТАНК\nТяжёлая бронированная единица СССР с цепной электрической пушкой.\n\nСТРАЖ\nУниверсальная боевая машина Альянса с модульной защитой.\n\nТЕМПОРАЛЬНЫЙ СТРАЖ\nПередовая единица Хронолегиона."
+
+#. Key:	EncyclopediaStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(618)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(618)
+msgctxt "RA4ShowcaseWidget,EncyclopediaStatus"
+msgid "КАТЕГОРИЯ\nБоевые единицы\n\nЗАПИСЕЙ\n128\n\nФИЛЬТР\nВсе фракции"
+msgstr "КАТЕГОРИЯ\nБоевые единицы\n\nЗАПИСЕЙ\n128\n\nФИЛЬТР\nВсе фракции"
+
+#. Key:	TechTreeHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(623)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(623)
+msgctxt "RA4ShowcaseWidget,TechTreeHeading"
+msgid "ТЕХНОЛОГИЧЕСКОЕ ДЕРЕВО"
+msgstr "ТЕХНОЛОГИЧЕСКОЕ ДЕРЕВО"
+
+#. Key:	TechTreeBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(624)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(624)
+msgctxt "RA4ShowcaseWidget,TechTreeBody"
+msgid "КОМАНДНЫЙ ЦЕНТР → БАРАКИ → ВОЕННЫЙ ЗАВОД\n\nВОЕННЫЙ ЗАВОД → ТЕСЛА-ЛАБОРАТОРИЯ → ТЕСЛА-ТАНК\n\nЭЛЕКТРОСТАНЦИЯ → РАДАР → СПУТНИКОВАЯ СВЯЗЬ"
+msgstr "КОМАНДНЫЙ ЦЕНТР → БАРАКИ → ВОЕННЫЙ ЗАВОД\n\nВОЕННЫЙ ЗАВОД → ТЕСЛА-ЛАБОРАТОРИЯ → ТЕСЛА-ТАНК\n\nЭЛЕКТРОСТАНЦИЯ → РАДАР → СПУТНИКОВАЯ СВЯЗЬ"
+
+#. Key:	TechTreeStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(625)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(625)
+msgctxt "RA4ShowcaseWidget,TechTreeStatus"
+msgid "ФРАКЦИЯ\nСССР\n\nОТКРЫТО\n18 / 46\n\nОЧКИ\n3"
+msgstr "ФРАКЦИЯ\nСССР\n\nОТКРЫТО\n18 / 46\n\nОЧКИ\n3"
+
+#. Key:	ModsHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(630)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(630)
+msgctxt "RA4ShowcaseWidget,ModsHeading"
+msgid "МОДИФИКАЦИИ"
+msgstr "МОДИФИКАЦИИ"
+
+#. Key:	ModsBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(631)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(631)
+msgctxt "RA4ShowcaseWidget,ModsBody"
+msgid "РАСШИРЕННЫЕ КАРТЫ — включено\nНовые сценарии и таблицы баланса.\n\nТАКТИЧЕСКИЕ ПОРТРЕТЫ — включено\nДополнительные портреты командующих.\n\nЭКСПЕРИМЕНТАЛЬНЫЙ БАЛАНС — выключено"
+msgstr "РАСШИРЕННЫЕ КАРТЫ — включено\nНовые сценарии и таблицы баланса.\n\nТАКТИЧЕСКИЕ ПОРТРЕТЫ — включено\nДополнительные портреты командующих.\n\nЭКСПЕРИМЕНТАЛЬНЫЙ БАЛАНС — выключено"
+
+#. Key:	ModsStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(632)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(632)
+msgctxt "RA4ShowcaseWidget,ModsStatus"
+msgid "АКТИВНЫХ МОДОВ\n2\n\nСОВМЕСТИМОСТЬ\nПроверена\n\nПЕРЕЗАПУСК\nНе требуется"
+msgstr "АКТИВНЫХ МОДОВ\n2\n\nСОВМЕСТИМОСТЬ\nПроверена\n\nПЕРЕЗАПУСК\nНе требуется"
+
+#. Key:	EasternDetailHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(637)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(637)
+msgctxt "RA4ShowcaseWidget,EasternDetailHeading"
+msgid "ВОСТОЧНАЯ КОАЛИЦИЯ: ГЕНЕРАЛ ГАО"
+msgstr "ВОСТОЧНАЯ КОАЛИЦИЯ: ГЕНЕРАЛ ГАО"
+
+#. Key:	EasternDetailBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(638)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(638)
+msgctxt "RA4ShowcaseWidget,EasternDetailBody"
+msgid "Гао строит войну на дисциплине, темпе производства и контроле узлов снабжения. Его штаб ведёт наступление от тихоокеанского побережья к промышленному сердцу Европы."
+msgstr "Гао строит войну на дисциплине, темпе производства и контроле узлов снабжения. Его штаб ведёт наступление от тихоокеанского побережья к промышленному сердцу Европы."
+
+#. Key:	EasternDetailStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(639)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(639)
+msgctxt "RA4ShowcaseWidget,EasternDetailStatus"
+msgid "ДОКТРИНА\nНефритовый молот\n\nБОНУС\nУскоренное производство\n\nКАМПАНИЯ\n01 / 08"
+msgstr "ДОКТРИНА\nНефритовый молот\n\nБОНУС\nУскоренное производство\n\nКАМПАНИЯ\n01 / 08"
+
+#. Key:	BattleHudHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(644)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(644)
+msgctxt "RA4ShowcaseWidget,BattleHudHeading"
+msgid "ТРЕВОГА: БРОНЕКОЛОННА"
+msgstr "ТРЕВОГА: БРОНЕКОЛОННА"
+
+#. Key:	BattleHudBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(645)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(645)
+msgctxt "RA4ShowcaseWidget,BattleHudBody"
+msgid "КРЕДИТЫ 18 300     ЭНЕРГИЯ 1020 / 1180\n\nПРОИЗВОДСТВО\nАпокалипсис — 89%\nМиГ «Кузнец» — 31%\n\nТАКТИЧЕСКОЕ СОБЫТИЕ\nВраг атакует южный мост. Активируйте заградительный огонь."
+msgstr "КРЕДИТЫ 18 300     ЭНЕРГИЯ 1020 / 1180\n\nПРОИЗВОДСТВО\nАпокалипсис — 89%\nМиГ «Кузнец» — 31%\n\nТАКТИЧЕСКОЕ СОБЫТИЕ\nВраг атакует южный мост. Активируйте заградительный огонь."
+
+#. Key:	BattleHudStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(646)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(646)
+msgctxt "RA4ShowcaseWidget,BattleHudStatus"
+msgid "МИНИ-КАРТА\nЮг: красный контакт\n\nВЫДЕЛЕНО\n4 × Тесла-танк\n\nУГРОЗА\nВысокая"
+msgstr "МИНИ-КАРТА\nЮг: красный контакт\n\nВЫДЕЛЕНО\n4 × Тесла-танк\n\nУГРОЗА\nВысокая"
+
+#. Key:	AlertHudHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(651)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(651)
+msgctxt "RA4ShowcaseWidget,AlertHudHeading"
+msgid "ПРЕДУПРЕЖДЕНИЕ: АВИАНАЛЁТ"
+msgstr "ПРЕДУПРЕЖДЕНИЕ: АВИАНАЛЁТ"
+
+#. Key:	AlertHudBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(652)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(652)
+msgctxt "RA4ShowcaseWidget,AlertHudBody"
+msgid "Обнаружены самолёты Альянса. Разверните ПВО, переместите мобильные генераторы и защитите Тесла-лабораторию."
+msgstr "Обнаружены самолёты Альянса. Разверните ПВО, переместите мобильные генераторы и защитите Тесла-лабораторию."
+
+#. Key:	AlertHudStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(653)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(653)
+msgctxt "RA4ShowcaseWidget,AlertHudStatus"
+msgid "КОНТАКТОВ\n12\n\nДО ПОДЛЁТА\n00:32\n\nПВО\n4 батареи"
+msgstr "КОНТАКТОВ\n12\n\nДО ПОДЛЁТА\n00:32\n\nПВО\n4 батареи"
+
+#. Key:	NavalHudHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(658)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(658)
+msgctxt "RA4ShowcaseWidget,NavalHudHeading"
+msgid "МОРСКАЯ ОПЕРАЦИЯ: ЛЕДЯНОЙ ПРОЛИВ"
+msgstr "МОРСКАЯ ОПЕРАЦИЯ: ЛЕДЯНОЙ ПРОЛИВ"
+
+#. Key:	NavalHudBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(659)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(659)
+msgctxt "RA4ShowcaseWidget,NavalHudBody"
+msgid "КРЕДИТЫ 16 800     ЭНЕРГИЯ 720 / 840\n\nФЛОТ\nАвианосец «Свобода» — готов\nЭсминец ×3\n\nЗАДАЧА: провести конвой через пролив и подавить береговые батареи."
+msgstr "КРЕДИТЫ 16 800     ЭНЕРГИЯ 720 / 840\n\nФЛОТ\nАвианосец «Свобода» — готов\nЭсминец ×3\n\nЗАДАЧА: провести конвой через пролив и подавить береговые батареи."
+
+#. Key:	NavalHudStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(660)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(660)
+msgctxt "RA4ShowcaseWidget,NavalHudStatus"
+msgid "МОРСКАЯ КАРТА\nКвадрат D-4\n\nКОНВОЙ\n5 / 6 кораблей\n\nПОГОДА\nШторм"
+msgstr "МОРСКАЯ КАРТА\nКвадрат D-4\n\nКОНВОЙ\n5 / 6 кораблей\n\nПОГОДА\nШторм"
+
+#. Key:	AirHudHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(665)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(665)
+msgctxt "RA4ShowcaseWidget,AirHudHeading"
+msgid "ВОЗДУШНАЯ ОПЕРАЦИЯ: ЧИСТОЕ НЕБО"
+msgstr "ВОЗДУШНАЯ ОПЕРАЦИЯ: ЧИСТОЕ НЕБО"
+
+#. Key:	AirHudBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(666)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(666)
+msgctxt "RA4ShowcaseWidget,AirHudBody"
+msgid "КРЕДИТЫ 11 900     ЭНЕРГИЯ 680 / 820\n\nАВИАКРЫЛО\nИстребитель «Копьё» ×6\nБомбардировщик «Гром» ×2\n\nЗАДАЧА: уничтожить радар противника и удержать воздушный коридор."
+msgstr "КРЕДИТЫ 11 900     ЭНЕРГИЯ 680 / 820\n\nАВИАКРЫЛО\nИстребитель «Копьё» ×6\nБомбардировщик «Гром» ×2\n\nЗАДАЧА: уничтожить радар противника и удержать воздушный коридор."
+
+#. Key:	AirHudStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(667)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(667)
+msgctxt "RA4ShowcaseWidget,AirHudStatus"
+msgid "ВОЗДУШНАЯ КАРТА\nВысота 8 000 м\n\nТОПЛИВО\n76%\n\nКОНТАКТЫ\n3 эскадрильи"
+msgstr "ВОЗДУШНАЯ КАРТА\nВысота 8 000 м\n\nТОПЛИВО\n76%\n\nКОНТАКТЫ\n3 эскадрильи"
+
+#. Key:	SuperweaponHudHeading
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(672)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(672)
+msgctxt "RA4ShowcaseWidget,SuperweaponHudHeading"
+msgid "ХРОНО-ОРУЖИЕ: ГОТОВНОСТЬ 94%"
+msgstr "ХРОНО-ОРУЖИЕ: ГОТОВНОСТЬ 94%"
+
+#. Key:	SuperweaponHudBody
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(673)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(673)
+msgctxt "RA4ShowcaseWidget,SuperweaponHudBody"
+msgid "ХРОНОЭНЕРГИЯ 94 / 100\n\nВРЕМЕННОЙ ЯКОРЬ\nСтабилен\n\nВЫБЕРИТЕ ЗОНУ НАЗНАЧЕНИЯ\nПосле активации цель будет выведена из текущей временной линии на 12 секунд."
+msgstr "ХРОНОЭНЕРГИЯ 94 / 100\n\nВРЕМЕННОЙ ЯКОРЬ\nСтабилен\n\nВЫБЕРИТЕ ЗОНУ НАЗНАЧЕНИЯ\nПосле активации цель будет выведена из текущей временной линии на 12 секунд."
+
+#. Key:	SuperweaponHudStatus
+#. SourceLocation:	Source/RA4UI/Private/RA4ShowcaseWidget.cpp(674)
+#: Source/RA4UI/Private/RA4ShowcaseWidget.cpp(674)
+msgctxt "RA4ShowcaseWidget,SuperweaponHudStatus"
+msgid "РАДИУС\n420 м\n\nПЕРЕЗАРЯДКА\n00:18\n\nРИСК ПАРАДОКСА\nУмеренный"
+msgstr "РАДИУС\n420 м\n\nПЕРЕЗАРЯДКА\n00:18\n\nРИСК ПАРАДОКСА\nУмеренный"
+
+#. Key:	Sidebar_Radar
+#. SourceLocation:	Source/RA4UI/Private/RA4SidebarWidget.cpp(143)
+#: Source/RA4UI/Private/RA4SidebarWidget.cpp(143)
+msgctxt "RA4,Sidebar_Radar"
+msgid "РАДАР"
+msgstr "РАДАР"
+
+#. Key:	Sidebar_SelHeader
+#. SourceLocation:	Source/RA4UI/Private/RA4SidebarWidget.cpp(181)
+#: Source/RA4UI/Private/RA4SidebarWidget.cpp(181)
+msgctxt "RA4,Sidebar_SelHeader"
+msgid "СПРАВКА ОБ ОБЪЕКТЕ"
+msgstr "СПРАВКА ОБ ОБЪЕКТЕ"
+
+#. Key:	Sidebar_NoSelection
+#. SourceLocation:	Source/RA4UI/Private/RA4SidebarWidget.cpp(185)
+#: Source/RA4UI/Private/RA4SidebarWidget.cpp(185)
+msgctxt "RA4,Sidebar_NoSelection"
+msgid "ОБЪЕКТ НЕ ВЫБРАН"
+msgstr "ОБЪЕКТ НЕ ВЫБРАН"
+
+#. Key:	Sidebar_SelectionHint
+#. SourceLocation:	Source/RA4UI/Private/RA4SidebarWidget.cpp(201)
+#: Source/RA4UI/Private/RA4SidebarWidget.cpp(201)
+msgctxt "RA4,Sidebar_SelectionHint"
+msgid "Кликните по юниту или зданию"
+msgstr "Кликните по юниту или зданию"
+
+#. Key:	Sidebar_HPFormat
+#. SourceLocation:	Source/RA4UI/Private/RA4SidebarWidget.cpp(333)
+#: Source/RA4UI/Private/RA4SidebarWidget.cpp(333)
+msgctxt "RA4,Sidebar_HPFormat"
+msgid "ЗДОРОВЬЕ: {0}%"
+msgstr "ЗДОРОВЬЕ: {0}%"
+
+#. Key:	Sidebar_MultiSelFormat
+#. SourceLocation:	Source/RA4UI/Private/RA4SidebarWidget.cpp(339)
+#: Source/RA4UI/Private/RA4SidebarWidget.cpp(339)
+msgctxt "RA4,Sidebar_MultiSelFormat"
+msgid "Выбрано объектов: {0}"
+msgstr "Выбрано объектов: {0}"
+
+#. Key:	Sidebar_Enemy
+#. SourceLocation:	Source/RA4UI/Private/RA4SidebarWidget.cpp(343)
+#: Source/RA4UI/Private/RA4SidebarWidget.cpp(343)
+msgctxt "RA4,Sidebar_Enemy"
+msgid "Вражеский объект"
+msgstr "Вражеский объект"
+
+#. Key:	Sidebar_Owned
+#. SourceLocation:	Source/RA4UI/Private/RA4SidebarWidget.cpp(343)
+#: Source/RA4UI/Private/RA4SidebarWidget.cpp(343)
+msgctxt "RA4,Sidebar_Owned"
+msgid "Союзный объект"
+msgstr "Союзный объект"
+
+#. Key:	Sidebar_PowerFormat
+#. SourceLocation:	Source/RA4UI/Private/RA4SidebarWidget.cpp(403)
+#: Source/RA4UI/Private/RA4SidebarWidget.cpp(403)
+msgctxt "RA4,Sidebar_PowerFormat"
+msgid "ЭНЕРГИЯ  {0} / {1}"
+msgstr "ЭНЕРГИЯ  {0} / {1}"
+
+#. Key:	Sidebar_QueueIdle
+#. SourceLocation:	Source/RA4UI/Private/RA4SidebarWidget.cpp(510)
+#: Source/RA4UI/Private/RA4SidebarWidget.cpp(510)
+msgctxt "RA4,Sidebar_QueueIdle"
+msgid "ОЧЕРЕДЬ ПУСТА"
+msgstr "ОЧЕРЕДЬ ПУСТА"
+
+#. Key:	Sidebar_QueuePlace
+#. SourceLocation:	Source/RA4UI/Private/RA4SidebarWidget.cpp(524)
+#: Source/RA4UI/Private/RA4SidebarWidget.cpp(524)
+msgctxt "RA4,Sidebar_QueuePlace"
+msgid "{0} — ВЫБЕРИТЕ МЕСТО"
+msgstr "{0} — ВЫБЕРИТЕ МЕСТО"
+
+#. Key:	Sidebar_QueuePaused
+#. SourceLocation:	Source/RA4UI/Private/RA4SidebarWidget.cpp(530)
+#: Source/RA4UI/Private/RA4SidebarWidget.cpp(530)
+msgctxt "RA4,Sidebar_QueuePaused"
+msgid "{0} — ПАУЗА"
+msgstr "{0} — ПАУЗА"
+
+#. Key:	Sidebar_QueueLine
+#. SourceLocation:	Source/RA4UI/Private/RA4SidebarWidget.cpp(535)
+#: Source/RA4UI/Private/RA4SidebarWidget.cpp(535)
+msgctxt "RA4,Sidebar_QueueLine"
+msgid "{0}  {1}%"
+msgstr "{0}  {1}%"
+
+#. Key:	Block_Credits
+#. SourceLocation:	Source/RA4UI/Private/RA4SidebarWidget.cpp(81)
+#: Source/RA4UI/Private/RA4SidebarWidget.cpp(81)
+msgctxt "RA4,Block_Credits"
+msgid "нет средств"
+msgstr "нет средств"
+
+#. Key:	Block_Prereq
+#. SourceLocation:	Source/RA4UI/Private/RA4SidebarWidget.cpp(83)
+#: Source/RA4UI/Private/RA4SidebarWidget.cpp(83)
+msgctxt "RA4,Block_Prereq"
+msgid "нет здания"
+msgstr "нет здания"
+
+#. Key:	Block_Producer
+#. SourceLocation:	Source/RA4UI/Private/RA4SidebarWidget.cpp(85)
+#: Source/RA4UI/Private/RA4SidebarWidget.cpp(85)
+msgctxt "RA4,Block_Producer"
+msgid "нет завода"
+msgstr "нет завода"
+
+#. Key:	Block_Queue
+#. SourceLocation:	Source/RA4UI/Private/RA4SidebarWidget.cpp(87)
+#: Source/RA4UI/Private/RA4SidebarWidget.cpp(87)
+msgctxt "RA4,Block_Queue"
+msgid "очередь полна"
+msgstr "очередь полна"
+
+#. Key:	Block_Over
+#. SourceLocation:	Source/RA4UI/Private/RA4SidebarWidget.cpp(89)
+#: Source/RA4UI/Private/RA4SidebarWidget.cpp(89)
+msgctxt "RA4,Block_Over"
+msgid "матч окончен"
+msgstr "матч окончен"
+
+#. Key:	headquarters_generic
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(100)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(100)
+msgctxt "RA4,headquarters_generic"
+msgid "Штаб-квартира"
+msgstr "Штаб-квартира"
+
+#. Key:	power_generic
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(101)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(101)
+msgctxt "RA4,power_generic"
+msgid "Электростанция"
+msgstr "Электростанция"
+
+#. Key:	refinery_generic
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(102)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(102)
+msgctxt "RA4,refinery_generic"
+msgid "Переработчик руды"
+msgstr "Переработчик руды"
+
+#. Key:	barracks_generic
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(103)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(103)
+msgctxt "RA4,barracks_generic"
+msgid "Казармы"
+msgstr "Казармы"
+
+#. Key:	factory_generic
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(104)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(104)
+msgctxt "RA4,factory_generic"
+msgid "Завод техники"
+msgstr "Завод техники"
+
+#. Key:	radar_generic
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(105)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(105)
+msgctxt "RA4,radar_generic"
+msgid "Радарный комплекс"
+msgstr "Радарный комплекс"
+
+#. Key:	Alert_LowPower
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(122)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(122)
+msgctxt "RA4,Alert_LowPower"
+msgid "Недостаточно энергии"
+msgstr "Недостаточно энергии"
+
+#. Key:	Alert_NoFunds
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(123)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(123)
+msgctxt "RA4,Alert_NoFunds"
+msgid "Недостаточно средств"
+msgstr "Недостаточно средств"
+
+#. Key:	Alert_BaseAttack
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(124)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(124)
+msgctxt "RA4,Alert_BaseAttack"
+msgid "База атакована"
+msgstr "База атакована"
+
+#. Key:	Alert_UnitsAttack
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(125)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(125)
+msgctxt "RA4,Alert_UnitsAttack"
+msgid "Наши войска атакованы"
+msgstr "Наши войска атакованы"
+
+#. Key:	Alert_BuildingLost
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(126)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(126)
+msgctxt "RA4,Alert_BuildingLost"
+msgid "Здание потеряно"
+msgstr "Здание потеряно"
+
+#. Key:	Alert_UnitLost
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(127)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(127)
+msgctxt "RA4,Alert_UnitLost"
+msgid "Юнит потерян"
+msgstr "Юнит потерян"
+
+#. Key:	Alert_Built
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(128)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(128)
+msgctxt "RA4,Alert_Built"
+msgid "Строительство завершено"
+msgstr "Строительство завершено"
+
+#. Key:	Alert_UnitReady
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(129)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(129)
+msgctxt "RA4,Alert_UnitReady"
+msgid "Юнит готов"
+msgstr "Юнит готов"
+
+#. Key:	Alert_NoOre
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(130)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(130)
+msgctxt "RA4,Alert_NoOre"
+msgid "Месторождение исчерпано"
+msgstr "Месторождение исчерпано"
+
+#. Key:	headquarters_su
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(72)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(72)
+msgctxt "RA4,headquarters_su"
+msgid "Штаб-квартира СССР"
+msgstr "Штаб-квартира СССР"
+
+#. Key:	power_plant_su
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(73)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(73)
+msgctxt "RA4,power_plant_su"
+msgid "Электростанция"
+msgstr "Электростанция"
+
+#. Key:	refinery_su
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(74)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(74)
+msgctxt "RA4,refinery_su"
+msgid "Переработчик руды"
+msgstr "Переработчик руды"
+
+#. Key:	barracks_su
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(75)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(75)
+msgctxt "RA4,barracks_su"
+msgid "Казармы СССР"
+msgstr "Казармы СССР"
+
+#. Key:	war_factory_su
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(76)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(76)
+msgctxt "RA4,war_factory_su"
+msgid "Завод техники СССР"
+msgstr "Завод техники СССР"
+
+#. Key:	radar_su
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(77)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(77)
+msgctxt "RA4,radar_su"
+msgid "Радарный комплекс"
+msgstr "Радарный комплекс"
+
+#. Key:	turret_ai_su
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(78)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(78)
+msgctxt "RA4,turret_ai_su"
+msgid "Пулеметная турель"
+msgstr "Пулеметная турель"
+
+#. Key:	turret_aa_su
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(79)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(79)
+msgctxt "RA4,turret_aa_su"
+msgid "ПВО турель"
+msgstr "ПВО турель"
+
+#. Key:	rubezh_rifleman
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(80)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(80)
+msgctxt "RA4,rubezh_rifleman"
+msgid "Стрелок «Рубеж»"
+msgstr "Стрелок «Рубеж»"
+
+#. Key:	zaslon_aa
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(81)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(81)
+msgctxt "RA4,zaslon_aa"
+msgid "ПВО команда «Заслон»"
+msgstr "ПВО команда «Заслон»"
+
+#. Key:	master_engineer
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(82)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(82)
+msgctxt "RA4,master_engineer"
+msgid "Мастер-инженер"
+msgstr "Мастер-инженер"
+
+#. Key:	rys_scout
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(83)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(83)
+msgctxt "RA4,rys_scout"
+msgid "Разведчик «Рысь»"
+msgstr "Разведчик «Рысь»"
+
+#. Key:	granit_mbt
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(84)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(84)
+msgctxt "RA4,granit_mbt"
+msgid "Основной танк «Гранит»"
+msgstr "Основной танк «Гранит»"
+
+#. Key:	zarevo_mlrs
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(85)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(85)
+msgctxt "RA4,zarevo_mlrs"
+msgid "РСЗО «Зарево»"
+msgstr "РСЗО «Зарево»"
+
+#. Key:	headquarters_al
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(87)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(87)
+msgctxt "RA4,headquarters_al"
+msgid "Штаб-квартира Альянса"
+msgstr "Штаб-квартира Альянса"
+
+#. Key:	power_plant_al
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(88)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(88)
+msgctxt "RA4,power_plant_al"
+msgid "Электростанция Альянса"
+msgstr "Электростанция Альянса"
+
+#. Key:	refinery_al
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(89)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(89)
+msgctxt "RA4,refinery_al"
+msgid "Переработчик руды"
+msgstr "Переработчик руды"
+
+#. Key:	barracks_al
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(90)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(90)
+msgctxt "RA4,barracks_al"
+msgid "Казармы Альянса"
+msgstr "Казармы Альянса"
+
+#. Key:	war_factory_al
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(91)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(91)
+msgctxt "RA4,war_factory_al"
+msgid "Завод техники Альянса"
+msgstr "Завод техники Альянса"
+
+#. Key:	radar_al
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(92)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(92)
+msgctxt "RA4,radar_al"
+msgid "Радарный комплекс"
+msgstr "Радарный комплекс"
+
+#. Key:	sentinel_rifleman
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(93)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(93)
+msgctxt "RA4,sentinel_rifleman"
+msgid "Пехотинец «Страж»"
+msgstr "Пехотинец «Страж»"
+
+#. Key:	lancer_team
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(94)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(94)
+msgctxt "RA4,lancer_team"
+msgid "Ракетчик «Лансер»"
+msgstr "Ракетчик «Лансер»"
+
+#. Key:	field_engineer
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(95)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(95)
+msgctxt "RA4,field_engineer"
+msgid "Полевой инженер"
+msgstr "Полевой инженер"
+
+#. Key:	kestrel_scout
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(96)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(96)
+msgctxt "RA4,kestrel_scout"
+msgid "Разведчик «Пустельга»"
+msgstr "Разведчик «Пустельга»"
+
+#. Key:	bulwark_mbt
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(97)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(97)
+msgctxt "RA4,bulwark_mbt"
+msgid "Танк «Оплот»"
+msgstr "Танк «Оплот»"
+
+#. Key:	oracle_artillery
+#. SourceLocation:	Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(98)
+#: Source/RA4UI/Private/RA4UIDataProviderSubsystem.cpp(98)
+msgctxt "RA4,oracle_artillery"
+msgid "Артиллерия «Оракул»"
+msgstr "Артиллерия «Оракул»"
+
+#. Key:	QueueTeslaTank
+#. SourceLocation:	Source/RA4UI/Private/RA4UIScreenViewModel.cpp(12)
+#: Source/RA4UI/Private/RA4UIScreenViewModel.cpp(12)
+msgctxt "RA4UIScreenViewModel,QueueTeslaTank"
+msgid "Тесла-танк"
+msgstr "Тесла-танк"
+
+#. Key:	QueueConscript
+#. SourceLocation:	Source/RA4UI/Private/RA4UIScreenViewModel.cpp(13)
+#: Source/RA4UI/Private/RA4UIScreenViewModel.cpp(13)
+msgctxt "RA4UIScreenViewModel,QueueConscript"
+msgid "Призывник"
+msgstr "Призывник"
+
+#. Key:	LobbyCommander
+#. SourceLocation:	Source/RA4UI/Private/RA4UIScreenViewModel.cpp(17)
+#: Source/RA4UI/Private/RA4UIScreenViewModel.cpp(17)
+msgctxt "RA4UIScreenViewModel,LobbyCommander"
+msgid "КОМАНДУЮЩИЙ"
+msgstr "КОМАНДУЮЩИЙ"
+
+#. Key:	LobbyWard
+#. SourceLocation:	Source/RA4UI/Private/RA4UIScreenViewModel.cpp(18)
+#: Source/RA4UI/Private/RA4UIScreenViewModel.cpp(18)
+msgctxt "RA4UIScreenViewModel,LobbyWard"
+msgid "АДМИРАЛ ВАРД"
+msgstr "АДМИРАЛ ВАРД"
+
+#. Key:	LobbyGao
+#. SourceLocation:	Source/RA4UI/Private/RA4UIScreenViewModel.cpp(19)
+#: Source/RA4UI/Private/RA4UIScreenViewModel.cpp(19)
+msgctxt "RA4UIScreenViewModel,LobbyGao"
+msgid "ГЕНЕРАЛ ГАО"
+msgstr "ГЕНЕРАЛ ГАО"
+
+#. Key:	LobbyChronos
+#. SourceLocation:	Source/RA4UI/Private/RA4UIScreenViewModel.cpp(20)
+#: Source/RA4UI/Private/RA4UIScreenViewModel.cpp(20)
+msgctxt "RA4UIScreenViewModel,LobbyChronos"
+msgid "ХРОНОС-07"
+msgstr "ХРОНОС-07"
+
+#. Key:	DefaultModalTitle
+#. SourceLocation:	Source/RA4UI/Private/RA4UIScreenViewModel.cpp(8)
+#: Source/RA4UI/Private/RA4UIScreenViewModel.cpp(8)
+msgctxt "RA4UIScreenViewModel,DefaultModalTitle"
+msgid "СИСТЕМНОЕ СООБЩЕНИЕ"
+msgstr "СИСТЕМНОЕ СООБЩЕНИЕ"
+
+#. Key:	DefaultModalBody
+#. SourceLocation:	Source/RA4UI/Private/RA4UIScreenViewModel.cpp(9)
+#: Source/RA4UI/Private/RA4UIScreenViewModel.cpp(9)
+msgctxt "RA4UIScreenViewModel,DefaultModalBody"
+msgid "Ожидание приказа командующего."
+msgstr "Ожидание приказа командующего."
+

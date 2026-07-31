@@ -100,6 +100,8 @@ private:
     // Shared by both buttons: the scheme decides which one gets here.
     void HandleClick(bool bLeftButton, const FVector2D& EndScreen, bool bWasDrag);
     void PerformSelection(const FVector2D& EndScreen, const RA4::Vec2& EndGround, bool bWasDrag);
+    // Speaks the newly selected unit's line, if its faction has a recorded pack.
+    void PlaySelectionVoice(const RA4::SimWorld& World);
     void ApplyCursorShape();
 
     // --- helpers -------------------------------------------------------------

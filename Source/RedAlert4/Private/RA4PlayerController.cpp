@@ -9,6 +9,7 @@
 #include "RA4SimWorldSubsystem.h"
 #include "RA4HUDWidget.h"
 #include "RA4MatchResultOverlayWidget.h"
+#include "RA4AudioSubsystem.h"
 #include "RA4SidebarWidget.h"
 #include "RA4UIDataProviderSubsystem.h"
 #include "Blueprint/UserWidget.h"
@@ -78,6 +79,18 @@ void ARA4PlayerController::BeginPlay()
     SetInputMode(InputMode);
     
     BindMatchResultEvents();
+
+    if (IsLocalController())
+    {
+        if (UWorld* UnrealWorld = GetWorld())
+        {
+            if (URA4AudioSubsystem* Audio = UnrealWorld->GetSubsystem<URA4AudioSubsystem>())
+            {
+                Audio->StartMusic();
+            }
+        }
+    }
+
     TryInitializeCamera();
 }
 
@@ -703,6 +716,40 @@ void ARA4PlayerController::PerformSelection(const FVector2D& EndScreen, const Ve
         LastPrimaryClickTime = Now;
     }
     LastClickedEntity = Clicked;
+
+    PlaySelectionVoice(*World);
+}
+
+void ARA4PlayerController::PlaySelectionVoice(const SimWorld& World)
+{
+    // The primary is what the HUD shows a portrait for, so it is the one that speaks.
+    const EntityId Primary = Selection.GetPrimary();
+    if (!Primary.IsValid())
+    {
+        return;
+    }
+
+    const EntityCore* Core = World.GetCore(Primary);
+    if (Core == nullptr || Core->Owner != Selection.GetLocalPlayer() || World.GetContent() == nullptr)
+    {
+        return;   // enemy units do not answer to this player
+    }
+
+    // The voice pack is keyed by the unit's Stable ID, which the content database
+    // stores alongside the unit rather than on the entity definition itself.
+    const VoiceSetDef* VoiceSet = World.GetContent()->FindVoiceSet(Core->Def);
+    if (VoiceSet == nullptr || VoiceSet->VoiceId.empty())
+    {
+        return;   // no recorded voice for this unit yet
+    }
+
+    if (UWorld* UnrealWorld = GetWorld())
+    {
+        if (URA4AudioSubsystem* Audio = UnrealWorld->GetSubsystem<URA4AudioSubsystem>())
+        {
+            Audio->PlayUnitVoice(FString(VoiceSet->VoiceId.c_str()), ERA4VoiceEvent::Selected);
+        }
+    }
 }
 
 void ARA4PlayerController::OnSecondaryPressed()
