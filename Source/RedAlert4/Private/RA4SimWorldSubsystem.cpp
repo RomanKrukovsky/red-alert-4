@@ -361,7 +361,21 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
         case RA4::SimEventType::EntityDestroyed:
             if (Event.Player == LocalPlayer)
             {
-                PlayVoiceForContent(Event.Content, ERA4VoiceEvent::Death, true);
+                const RA4::EntityDef* Def = Content->FindEntity(Event.Content);
+                if (Def != nullptr && Def->Kind == RA4::EntityKind::Building)
+                {
+                    Audio->PlayEVA(Faction, ERA4EVAEvent::BuildingLost);
+                }
+                else
+                {
+                    PlayVoiceForContent(Event.Content, ERA4VoiceEvent::Death, true);
+                }
+            }
+            if (UnrealWorld)
+            {
+                FVector ImpactPoint = RA4Coords::ToUnreal(Event.Location);
+                ImpactPoint.Z = SampleGroundHeight(ImpactPoint.X, ImpactPoint.Y) + 40.0f;
+                DrawDebugPoint(UnrealWorld, ImpactPoint, 35.0f, FColor::Red, false, 0.4f);
             }
             break;
 
@@ -402,7 +416,7 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
             break;
 
         case RA4::SimEventType::WeaponFired:
-            if (UnrealWorld && CVarRA4DebugCombatDraw.GetValueOnGameThread() != 0)
+            if (UnrealWorld)
             {
                 FVector Start = RA4Coords::ToUnreal(Event.Location);
                 Start.Z = SampleGroundHeight(Start.X, Start.Y) + 20.0f;
@@ -412,12 +426,21 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
                 {
                     End = RA4Coords::ToUnreal(Transforms[Event.Other.Index].Position);
                     End.Z = SampleGroundHeight(End.X, End.Y) + 20.0f;
-                    DrawDebugLine(UnrealWorld, Start, End, FColor::Yellow, false, 0.2f, 0, 3.0f);
+                    DrawDebugLine(UnrealWorld, Start, End, FColor::Yellow, false, 0.15f, 0, 2.5f);
                 }
                 else
                 {
-                    DrawDebugPoint(UnrealWorld, Start, 15.0f, FColor::Yellow, false, 0.2f);
+                    DrawDebugPoint(UnrealWorld, Start, 15.0f, FColor::Yellow, false, 0.15f);
                 }
+            }
+            break;
+
+        case RA4::SimEventType::ProjectileImpact:
+            if (UnrealWorld)
+            {
+                FVector ImpactPoint = RA4Coords::ToUnreal(Event.Location);
+                ImpactPoint.Z = SampleGroundHeight(ImpactPoint.X, ImpactPoint.Y) + 30.0f;
+                DrawDebugPoint(UnrealWorld, ImpactPoint, 25.0f, FColor::Orange, false, 0.25f);
             }
             break;
 

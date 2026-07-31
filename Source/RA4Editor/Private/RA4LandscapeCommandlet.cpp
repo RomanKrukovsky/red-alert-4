@@ -66,135 +66,146 @@ URA4LandscapeCommandlet::URA4LandscapeCommandlet()
 
 int32 URA4LandscapeCommandlet::Main(const FString& Params)
 {
-    // Deliberately not GEditor->GetEditorWorldContext().World(): a commandlet's
-    // ambient editor world is whatever EditorStartupMap says (Entry, in this
-    // project), never the map passed on the command line. Loading the target level's
-    // package directly is the reliable way a commandlet gets hold of a specific map.
-    const FString MapPackageName = TEXT("/Game/Maps/RA4_Skirmish");
-    UPackage* MapPackage = LoadPackage(nullptr, *MapPackageName, LOAD_None);
-    UWorld* World = MapPackage != nullptr ? UWorld::FindWorldInPackage(MapPackage) : nullptr;
-    if (World == nullptr)
-    {
-        UE_LOG(LogTemp, Error, TEXT("RA4Landscape: failed to load %s"), *MapPackageName);
-        return 1;
-    }
+    const TArray<FString> MapPackagesToBuild = {
+        TEXT("/Game/Maps/RA4_Skirmish_Production"),
+        TEXT("/Game/Maps/RA4_Skirmish"),
+        TEXT("/Game/Maps/RA4_Skirmish_Hills"),
+        TEXT("/Game/Maps/RA4_Skirmish_Canyon")
+    };
 
-    World->WorldType = EWorldType::Editor;
-    GWorld = World;
-    if (!World->bIsWorldInitialized)
-    {
-        World->InitWorld();
-    }
-    World->PersistentLevel->UpdateModelComponents();
-    World->UpdateWorldComponents(/*bRerunConstructionScripts*/ true, /*bCurrentLevelOnly*/ false);
-
-    // Mirrors FRA4MatchBootstrap::BuildSkirmish: 64 tiles at 200 units each. Kept in
-    // sync manually rather than linked against RA4Core, since a commandlet has no
-    // reason to depend on the simulation module just to read two constants.
-    constexpr int32 MapTiles = 64;
-    constexpr int32 TileSizeUnits = 200;
-    constexpr double SpanUnits = double(MapTiles) * double(TileSizeUnits);   // 12800
-
-    constexpr int32 SectionsPerComponent = 1;
-    constexpr int32 QuadsPerSection = 63;   // one of the landscape's fixed valid sizes
-    constexpr int32 ComponentCount = 4;
-    constexpr int32 QuadsPerComponent = SectionsPerComponent * QuadsPerSection;
-    const int32 SizeX = ComponentCount * QuadsPerComponent + 1;   // 253 verts/side
-    const int32 SizeY = SizeX;
-
-    const double ScaleXY = SpanUnits / double(SizeX - 1);
-    constexpr double ScaleZ = 100.0;
-    // How many world units one step of raw heightmap data is worth at ScaleZ: fixed
-    // by the landscape format (LANDSCAPE_ZSCALE = 1/128), not something to tune.
-    constexpr double LandscapeZScale = 1.0 / 128.0;
-
-    // Gentle rolling terrain, not mountains: the simulation is flat and 2D, and units
-    // only get their visual Z lifted to follow the surface (a separate, later piece
-    // of work) -- a steep slope would still let a tank drive through what looks like
-    // a cliff face, so the relief here is kept modest on purpose.
-    constexpr float AmplitudeUnits = 220.0f;
-    const float AmplitudeRaw = AmplitudeUnits / float(ScaleZ * LandscapeZScale);
-
-    TArray<uint16> HeightData;
-    HeightData.SetNumUninitialized(SizeX * SizeY);
-    for (int32 Y = 0; Y < SizeY; ++Y)
-    {
-        for (int32 X = 0; X < SizeX; ++X)
-        {
-            const float WorldX = float(double(X) * ScaleXY);
-            const float WorldY = float(double(Y) * ScaleXY);
-            const float Height = RollingHills(WorldX, WorldY, 20260730u);
-            const int32 Raw = FMath::Clamp(int32(32768.0f + Height * AmplitudeRaw), 0, 65535);
-            HeightData[Y * SizeX + X] = uint16(Raw);
-        }
-    }
-
-    RemovePlaceholderGroundPlane(World);
-
-    // The landscape's own origin is its corner, not its centre, so it is offset back
-    // by half its footprint to land exactly on the map's (0,0)-(Span,Span) rectangle
-    // -- the same rectangle every other system (camera bounds, ground picking,
-    // minimap) already agrees on.
-    const FVector Centre(SpanUnits * 0.5, SpanUnits * 0.5, 0.0);
-    const FVector Origin =
-        Centre - FVector(double(SizeX - 1) * ScaleXY * 0.5, double(SizeY - 1) * ScaleXY * 0.5, 0.0);
-
-    ALandscape* Landscape = World->SpawnActor<ALandscape>(Origin, FRotator::ZeroRotator);
-    if (Landscape == nullptr)
-    {
-        UE_LOG(LogTemp, Error, TEXT("RA4Landscape: SpawnActor<ALandscape> failed"));
-        return 1;
-    }
-    Landscape->SetActorRelativeScale3D(FVector(ScaleXY, ScaleXY, ScaleZ));
-    Landscape->SetActorLabel(TEXT("RA4_Landscape"));
-
-    // Reuses the project's own ground material rather than inventing a new one blind:
-    // it already exposes a GroundColor parameter and was clearly authored for this
-    // purpose, just never assigned to anything before now.
     UMaterialInterface* GroundMaterial =
-        LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/RA4/Materials/M_RA4Ground_Lit.M_RA4Ground_Lit"));
+        LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/RA4/Presentation/Materials/Environment/Ground039.Ground039"));
     if (GroundMaterial == nullptr)
     {
-        UE_LOG(LogTemp, Warning, TEXT("RA4Landscape: M_RA4Ground_Lit not found, landscape will use the engine default material"));
+        GroundMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/RA4/Materials/M_RA4Ground_Lit.M_RA4Ground_Lit"));
     }
-    Landscape->LandscapeMaterial = GroundMaterial;
 
-    TMap<FGuid, TArray<uint16>> HeightDataPerLayers;
-    HeightDataPerLayers.Add(FGuid(), HeightData);
-    // No paintable material layers: the ground material colours by parameter, not by
-    // landscape weightmap, so there is nothing to import here.
-    TMap<FGuid, TArray<FLandscapeImportLayerInfo>> MaterialLayerDataPerLayers;
-    MaterialLayerDataPerLayers.Add(FGuid(), TArray<FLandscapeImportLayerInfo>());
-
-    Landscape->Import(FGuid::NewGuid(), 0, 0, SizeX - 1, SizeY - 1, SectionsPerComponent, QuadsPerSection,
-                      HeightDataPerLayers, nullptr, MaterialLayerDataPerLayers,
-                      ELandscapeImportAlphamapType::Additive, TArrayView<const FLandscapeLayer>());
-
-    ULandscapeInfo* LandscapeInfo = Landscape->GetLandscapeInfo();
-    if (LandscapeInfo == nullptr)
+    for (int32 MapIndex = 0; MapIndex < MapPackagesToBuild.Num(); ++MapIndex)
     {
-        UE_LOG(LogTemp, Error, TEXT("RA4Landscape: Import() did not produce a LandscapeInfo"));
-        return 1;
+        const FString& MapPackageName = MapPackagesToBuild[MapIndex];
+        UPackage* MapPackage = LoadPackage(nullptr, *MapPackageName, LOAD_None);
+        if (MapPackage == nullptr)
+        {
+            MapPackage = CreatePackage(*MapPackageName);
+        }
+
+        UWorld* World = MapPackage != nullptr ? UWorld::FindWorldInPackage(MapPackage) : nullptr;
+        if (World == nullptr && MapPackage != nullptr)
+        {
+            World = UWorld::CreateWorld(EWorldType::Editor, false, FName(*FPaths::GetBaseFilename(MapPackageName)), MapPackage);
+        }
+
+        if (World == nullptr)
+        {
+            UE_LOG(LogTemp, Error, TEXT("RA4Landscape: failed to load or create %s"), *MapPackageName);
+            continue;
+        }
+
+        World->WorldType = EWorldType::Editor;
+        GWorld = World;
+        if (!World->bIsWorldInitialized)
+        {
+            World->InitWorld();
+        }
+        World->PersistentLevel->UpdateModelComponents();
+        World->UpdateWorldComponents(/*bRerunConstructionScripts*/ true, /*bCurrentLevelOnly*/ false);
+
+        constexpr int32 MapTiles = 64;
+        constexpr int32 TileSizeUnits = 200;
+        constexpr double SpanUnits = double(MapTiles) * double(TileSizeUnits);   // 12800
+
+        constexpr int32 SectionsPerComponent = 1;
+        constexpr int32 QuadsPerSection = 63;
+        constexpr int32 ComponentCount = 4;
+        constexpr int32 QuadsPerComponent = SectionsPerComponent * QuadsPerSection;
+        const int32 SizeX = ComponentCount * QuadsPerComponent + 1;   // 253 verts/side
+        const int32 SizeY = SizeX;
+
+        const double ScaleXY = SpanUnits / double(SizeX - 1);
+        constexpr double ScaleZ = 100.0;
+        constexpr double LandscapeZScale = 1.0 / 128.0;
+
+        constexpr float AmplitudeUnits = 220.0f;
+        const float AmplitudeRaw = AmplitudeUnits / float(ScaleZ * LandscapeZScale);
+
+        TArray<uint16> HeightData;
+        HeightData.SetNumUninitialized(SizeX * SizeY);
+        const uint32 Seed = 20260730u + uint32(MapIndex) * 7777u;
+        for (int32 Y = 0; Y < SizeY; ++Y)
+        {
+            for (int32 X = 0; X < SizeX; ++X)
+            {
+                const float WorldX = float(double(X) * ScaleXY);
+                const float WorldY = float(double(Y) * ScaleXY);
+                const float Height = RollingHills(WorldX, WorldY, Seed);
+                const int32 Raw = FMath::Clamp(int32(32768.0f + Height * AmplitudeRaw), 0, 65535);
+                HeightData[Y * SizeX + X] = uint16(Raw);
+            }
+        }
+
+        RemovePlaceholderGroundPlane(World);
+
+        const FVector Centre(SpanUnits * 0.5, SpanUnits * 0.5, 0.0);
+        const FVector Origin =
+            Centre - FVector(double(SizeX - 1) * ScaleXY * 0.5, double(SizeY - 1) * ScaleXY * 0.5, 0.0);
+
+        ALandscape* Landscape = nullptr;
+        TActorIterator<ALandscape> LandscapeIt(World);
+        if (LandscapeIt)
+        {
+            Landscape = *LandscapeIt;
+        }
+
+        if (Landscape == nullptr)
+        {
+            FActorSpawnParameters ActorSpawnParams;
+            ActorSpawnParams.Name = FName(*FString::Printf(TEXT("RA4_Landscape_%d"), MapIndex));
+            Landscape = World->SpawnActor<ALandscape>(Origin, FRotator::ZeroRotator, ActorSpawnParams);
+        }
+
+        if (Landscape == nullptr)
+        {
+            UE_LOG(LogTemp, Error, TEXT("RA4Landscape: failed to spawn ALandscape for %s"), *MapPackageName);
+            continue;
+        }
+
+        Landscape->SetActorLocation(Origin);
+        Landscape->SetActorScale3D(FVector(ScaleXY, ScaleXY, ScaleZ));
+
+        if (GroundMaterial != nullptr)
+        {
+            Landscape->LandscapeMaterial = GroundMaterial;
+        }
+
+        TMap<FGuid, TArray<uint16>> HeightmapDataPerLayers;
+        HeightmapDataPerLayers.Add(FGuid(), HeightData);
+        TMap<FGuid, TArray<FLandscapeImportLayerInfo>> MaterialLayerDataPerLayers;
+        MaterialLayerDataPerLayers.Add(FGuid(), TArray<FLandscapeImportLayerInfo>());
+
+        Landscape->Import(FGuid::NewGuid(), 0, 0, SizeX - 1, SizeY - 1, SectionsPerComponent, QuadsPerSection,
+                          HeightmapDataPerLayers, nullptr, MaterialLayerDataPerLayers,
+                          ELandscapeImportAlphamapType::Additive, TArrayView<const FLandscapeLayer>());
+
+        Landscape->PostEditChange();
+
+        UE_LOG(LogTemp, Display,
+               TEXT("RA4Landscape: created landscape covering %.0f x %.0f units for %s"),
+               SpanUnits, SpanUnits, *MapPackageName);
+
+        MapPackage->MarkPackageDirty();
+        const FString PackageFileName =
+            FPackageName::LongPackageNameToFilename(MapPackage->GetName(), FPackageName::GetMapPackageExtension());
+
+        FSavePackageArgs SaveArgs;
+        SaveArgs.TopLevelFlags = RF_Public | RF_Standalone;
+        if (!UPackage::SavePackage(MapPackage, World, *PackageFileName, SaveArgs))
+        {
+            UE_LOG(LogTemp, Error, TEXT("RA4Landscape: failed to save %s"), *PackageFileName);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Display, TEXT("RA4Landscape: level saved to %s"), *PackageFileName);
+        }
     }
-    LandscapeInfo->UpdateLayerInfoMap(Landscape);
-    Landscape->PostEditChange();
-
-    UE_LOG(LogTemp, Display,
-           TEXT("RA4Landscape: created a %d x %d landscape covering %.0f x %.0f units, centred at (%.0f, %.0f)"),
-           SizeX, SizeY, SpanUnits, SpanUnits, Centre.X, Centre.Y);
-
-    MapPackage->MarkPackageDirty();
-    const FString PackageFileName =
-        FPackageName::LongPackageNameToFilename(MapPackage->GetName(), FPackageName::GetMapPackageExtension());
-
-    FSavePackageArgs SaveArgs;
-    SaveArgs.TopLevelFlags = RF_Public | RF_Standalone;
-    if (!UPackage::SavePackage(MapPackage, World, *PackageFileName, SaveArgs))
-    {
-        UE_LOG(LogTemp, Error, TEXT("RA4Landscape: failed to save %s"), *PackageFileName);
-        return 1;
-    }
-
-    UE_LOG(LogTemp, Display, TEXT("RA4Landscape: level saved to %s"), *PackageFileName);
     return 0;
 }

@@ -40,7 +40,9 @@ enum class ERA4EVAEvent : uint8
     InsufficientFunds,
     PowerLow,
     Victory,
-    Defeat
+    Defeat,
+    BuildingLost,
+    UnitLost
 };
 
 UCLASS()

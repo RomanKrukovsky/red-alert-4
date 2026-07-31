@@ -44,6 +44,8 @@ const TCHAR* ToEvaEventName(ERA4EVAEvent Event)
     case ERA4EVAEvent::PowerLow:              return TEXT("POWER_LOW");
     case ERA4EVAEvent::Victory:               return TEXT("MATCH_VICTORY");
     case ERA4EVAEvent::Defeat:                return TEXT("MATCH_DEFEAT");
+    case ERA4EVAEvent::BuildingLost:          return TEXT("BUILDING_LOST");
+    case ERA4EVAEvent::UnitLost:              return TEXT("UNIT_LOST");
     default:                                  return TEXT("UNIT_READY_GENERIC");
     }
 }
@@ -138,7 +140,7 @@ USoundBase* URA4AudioSubsystem::FindEVAClip(uint8 Faction, ERA4EVAEvent Event)
     }
 
     const FString AssetName = FString::Printf(
-        TEXT("VO_EVA_%s_%s_01"), Code, ToEvaEventName(Event));
+        TEXT("VO_RU_%s_EVA_%s_01"), Code, ToEvaEventName(Event));
     const FString ObjectPath = FString::Printf(
         TEXT("/Game/RA4/Audio/Generated/EVA/%s/%s.%s"),
         Folder, *AssetName, *AssetName);
@@ -161,6 +163,8 @@ USoundBase* URA4AudioSubsystem::FindEVAClip(uint8 Faction, ERA4EVAEvent Event)
         case ERA4EVAEvent::PowerLow: AltEventName = TEXT("PowerLow"); break;
         case ERA4EVAEvent::Victory: AltEventName = TEXT("PlayerVictory"); break;
         case ERA4EVAEvent::Defeat: AltEventName = TEXT("PlayerDefeat"); break;
+        case ERA4EVAEvent::BuildingLost: AltEventName = TEXT("BuildingLost"); break;
+        case ERA4EVAEvent::UnitLost: AltEventName = TEXT("UnitLost"); break;
         }
         if (!AltEventName.IsEmpty())
         {
