@@ -69,10 +69,23 @@ int main(int argc, char** argv)
     }
     World.ClearEvents();
 
+    AIProfile Profile0 = AIProfile::Aggressive;
+    AIProfile Profile1 = AIProfile::Balanced;
+    if (argc > 3)
+    {
+        const int P0 = std::atoi(argv[3]);
+        if (P0 >= 0 && P0 <= 4) { Profile0 = static_cast<AIProfile>(P0); }
+    }
+    if (argc > 4)
+    {
+        const int P1 = std::atoi(argv[4]);
+        if (P1 >= 0 && P1 <= 4) { Profile1 = static_cast<AIProfile>(P1); }
+    }
+
     AICommander Red;
     AICommander Blue;
-    Red.Initialize(0, AIProfile::Aggressive, Seed);
-    Blue.Initialize(1, AIProfile::Balanced, Seed ^ 0xABCDEF);
+    Red.Initialize(0, Profile0, Seed);
+    Blue.Initialize(1, Profile1, Seed ^ 0xABCDEF);
 
     std::FILE* Out = std::fopen(OutPath, "wb");
     if (Out == nullptr)
