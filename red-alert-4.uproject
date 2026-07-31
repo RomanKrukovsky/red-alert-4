@@ -39,6 +39,18 @@
         {
             "Name": "StructUtils",
             "Enabled": true
+        },
+        {
+            "Name": "ModelContextProtocol",
+            "Enabled": true
+        },
+        {
+            "Name": "AllToolsets",
+            "Enabled": true
+        },
+        {
+            "Name": "ToolsetRegistry",
+            "Enabled": true
         }
     ]
 }
