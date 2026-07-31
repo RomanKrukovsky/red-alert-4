@@ -137,6 +137,7 @@ add_executable(RA4Tests
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/Test_RA3PipelineAndCommandBus.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/Test_HUDIntegrationAndGameState.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestProvingGround.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestUI.cpp
 )
 
 target_link_libraries(RA4Tests PRIVATE RA4Replay RA4Campaign RA4Input RA4Presentation RA4AI RA4FogOfWar)

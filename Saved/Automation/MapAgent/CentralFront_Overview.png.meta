@@ -1,0 +1,5 @@
+Map View: CentralFront_Overview
+Location: <Struct 'Vector' (0x39f2d9190) {x: 6400.000000, y: 6400.000000, z: 2800.000000}>
+Rotation: <Struct 'Rotator' (0x39f2d9140) {pitch: 30.000000, yaw: 0.000000, roll: -55.000000}>
+Map: /Game/Maps/RA4_Skirmish_Production
+Status: Captured

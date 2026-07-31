@@ -61,12 +61,18 @@ public:
     RA4::ContentId GetPlacementContent() const { return PlacementContent; }
     bool GetCursorGroundPosition(RA4::Vec2& OutPosition) const;
 
+    // Checks whether pointer sits over an interactive Slate UI element
+    bool IsPointerOverUI() const;
+
     // Armed by the production sidebar once a structure has finished building.
     UFUNCTION(BlueprintCallable, Category = "RA4|Input")
     void BeginPlacement(int64 ContentIdValue);
 
     UFUNCTION(BlueprintCallable, Category = "RA4|Input")
     void CancelPendingAction();
+
+    UFUNCTION(BlueprintCallable, Category = "RA4|UI")
+    void TogglePauseMenu();
 
 protected:
     // Drag shorter than this on the ground plane counts as a click. Measured in
@@ -198,6 +204,9 @@ private:
 
     UPROPERTY(Transient)
     TObjectPtr<URA4MatchResultOverlayWidget> MatchResultOverlay;
+
+    UPROPERTY(Transient)
+    TObjectPtr<class UUserWidget> PauseMenuOverlay;
 
     UPROPERTY(Transient)
     TObjectPtr<class URA4HoverTooltipWidget> HoverTooltip;

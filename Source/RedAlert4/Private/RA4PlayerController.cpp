@@ -15,7 +15,9 @@
 #include "RA4UIDataProviderSubsystem.h"
 #include "Blueprint/GameViewportSubsystem.h"
 #include "Blueprint/UserWidget.h"
+#include "Framework/Application/SlateApplication.h"
 #include "Kismet/GameplayStatics.h"
+#include "Layout/WidgetPath.h"
 #include "Misc/PackageName.h"
 #include "UnrealClient.h"
 
@@ -665,15 +667,42 @@ OrderContext ARA4PlayerController::MakeOrderContext(const Vec2& GroundPosition) 
     return Context;
 }
 
+bool ARA4PlayerController::IsPointerOverUI() const
+{
+    float MouseX = 0.0f;
+    float MouseY = 0.0f;
+    if (GetMousePosition(MouseX, MouseY))
+    {
+        if (FSlateApplication::IsInitialized())
+        {
+            const FVector2D ScreenPos(MouseX, MouseY);
+            FWidgetPath WidgetPath = FSlateApplication::Get().LocateWindowUnderMouse(
+                ScreenPos, FSlateApplication::Get().GetInteractiveTopLevelWindows());
+            if (WidgetPath.IsValid())
+            {
+                const TSharedRef<SWidget> LastWidget = WidgetPath.GetLastWidget();
+                const FName WidgetType = LastWidget->GetType();
+                if (WidgetType != FName(TEXT("SViewport")) && WidgetType != FName(TEXT("SGameLayerManager")))
+                {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return (Sidebar != nullptr && Sidebar->IsHovered()) ||
+           (ResourceBar != nullptr && ResourceBar->IsHovered()) ||
+           (MatchResultOverlay != nullptr && MatchResultOverlay->IsHovered()) ||
+           (PauseMenuOverlay != nullptr && PauseMenuOverlay->IsHovered());
+}
+
 // ---------------------------------------------------------------------------
 // Mouse handling
 // ---------------------------------------------------------------------------
 
 void ARA4PlayerController::OnPrimaryPressed()
 {
-    bPrimaryConsumedByUI =
-        (Sidebar != nullptr && Sidebar->IsHovered()) ||
-        (ResourceBar != nullptr && ResourceBar->IsHovered());
+    bPrimaryConsumedByUI = IsPointerOverUI();
     if (bPrimaryConsumedByUI)
     {
         bMarqueeActive = false;
@@ -939,8 +968,7 @@ void ARA4PlayerController::PlayVoiceForPrimary(const SimWorld& World, ERA4VoiceE
 
 void ARA4PlayerController::OnSecondaryPressed()
 {
-    if ((Sidebar != nullptr && Sidebar->IsHovered()) ||
-        (ResourceBar != nullptr && ResourceBar->IsHovered()))
+    if (IsPointerOverUI())
     {
         return;
     }
@@ -1202,9 +1230,54 @@ void ARA4PlayerController::HandleBuildCardClicked(int64 ContentIdValue)
 
 void ARA4PlayerController::CancelPendingAction()
 {
-    bAttackMoveArmed = false;
-    bPlacementArmed = false;
-    PlacementContent = ContentId();
+    if (bAttackMoveArmed || bPlacementArmed)
+    {
+        bAttackMoveArmed = false;
+        bPlacementArmed = false;
+        PlacementContent = ContentId();
+        return;
+    }
+
+    TogglePauseMenu();
+}
+
+void ARA4PlayerController::TogglePauseMenu()
+{
+    if (PauseMenuOverlay != nullptr && PauseMenuOverlay->IsVisible())
+    {
+        PauseMenuOverlay->SetVisibility(ESlateVisibility::Collapsed);
+        FInputModeGameAndUI InputMode;
+        InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+        InputMode.SetHideCursorDuringCapture(false);
+        SetInputMode(InputMode);
+        bShowMouseCursor = true;
+        UGameplayStatics::SetGamePaused(this, false);
+    }
+    else
+    {
+        if (PauseMenuOverlay == nullptr)
+        {
+            if (URA4MatchResultOverlayWidget* MenuWidget = CreateWidget<URA4MatchResultOverlayWidget>(
+                this, URA4MatchResultOverlayWidget::StaticClass()))
+            {
+                MenuWidget->Configure(/*bLocalPlayerWon*/ true, HasMainMenuMap());
+                MenuWidget->OnRetryRequested.AddUObject(this, &ARA4PlayerController::HandleRetryRequested);
+                MenuWidget->OnExitRequested.AddUObject(this, &ARA4PlayerController::HandleExitRequested);
+                PauseMenuOverlay = MenuWidget;
+                PauseMenuOverlay->AddToViewport(90);
+            }
+        }
+        if (PauseMenuOverlay != nullptr)
+        {
+            PauseMenuOverlay->SetVisibility(ESlateVisibility::Visible);
+            FInputModeGameAndUI InputMode;
+            InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+            InputMode.SetHideCursorDuringCapture(false);
+            SetInputMode(InputMode);
+            bShowMouseCursor = true;
+            UGameplayStatics::SetGamePaused(this, true);
+        }
+    }
 }
 
 void ARA4PlayerController::HandleRadarClicked(FVector2D WorldPosition)

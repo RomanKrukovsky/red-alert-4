@@ -35,9 +35,43 @@ const char* ToString(AIProfile Profile)
     return "Invalid";
 }
 
-AIConfig MakeProfileConfig(AIProfile Profile)
+const char* ToString(AIDifficulty Difficulty)
+{
+    switch (Difficulty)
+    {
+        case AIDifficulty::Easy: return "Easy";
+        case AIDifficulty::Normal: return "Normal";
+        case AIDifficulty::Hard: return "Hard";
+    }
+    return "Normal";
+}
+
+AIConfig MakeProfileConfig(AIProfile Profile, AIDifficulty Difficulty)
 {
     AIConfig Config;
+    Config.Difficulty = Difficulty;
+
+    // Difficulty tuning
+    switch (Difficulty)
+    {
+        case AIDifficulty::Easy:
+            Config.DecisionIntervalTicks = 20;
+            Config.MemoryUpdateIntervalTicks = 10;
+            Config.CreditBonusMultiplier = 1.0f;
+            break;
+        case AIDifficulty::Normal:
+            Config.DecisionIntervalTicks = 10;
+            Config.MemoryUpdateIntervalTicks = 5;
+            Config.CreditBonusMultiplier = 1.0f;
+            break;
+        case AIDifficulty::Hard:
+            Config.DecisionIntervalTicks = 5;
+            Config.MemoryUpdateIntervalTicks = 2;
+            Config.CreditBonusMultiplier = 1.20f; // Bounded +20% income bonus for Hard AI
+            break;
+    }
+
+    // Profile tuning
     switch (Profile)
     {
         case AIProfile::Aggressive:
@@ -84,12 +118,15 @@ const char* ToString(AIStrategy Strategy)
 {
     switch (Strategy)
     {
+        case AIStrategy::Opening: return "Opening";
         case AIStrategy::ExpandEconomy: return "ExpandEconomy";
+        case AIStrategy::Expansion: return "Expansion";
         case AIStrategy::TechUp: return "TechUp";
         case AIStrategy::Fortify: return "Fortify";
         case AIStrategy::AssembleArmy: return "AssembleArmy";
         case AIStrategy::Assault: return "Assault";
         case AIStrategy::Recover: return "Recover";
+        case AIStrategy::FinalAssault: return "FinalAssault";
     }
     return "Invalid";
 }
@@ -108,6 +145,12 @@ std::vector<AIStrategyScore> ScoreStrategies(
             : 0;
     const int32_t EconomyScore =
         std::max({PowerScore, RefineryScore, HarvesterScore});
+
+    const int32_t OpeningScore =
+        (!Assessment.bHasConstructionYard) ? 950 : 0;
+
+    const int32_t ExpansionScore =
+        (Assessment.Refineries >= 1 && Assessment.Harvesters >= 3 && Assessment.Credits >= 2000) ? 500 : 0;
 
     const int32_t MinimumReadyHarvesters =
         std::min(Config.TargetHarvesters, 1);
@@ -145,16 +188,25 @@ std::vector<AIStrategyScore> ScoreStrategies(
         AssaultScore = 700;
     }
 
+    const int32_t FinalAssaultScore =
+        (Assessment.bHasEnemyTarget && Assessment.ArmedUnits >= Config.AttackArmySize * 2) ? 920 : 0;
+
     const int32_t RecoveryScore =
         Assessment.TotalHarvested > 0 &&
                 (Assessment.Refineries == 0 || Assessment.PowerPlants == 0)
-            ? 950
+            ? 980
             : 0;
 
     return {
+        {AIStrategy::Opening,
+         ApplyWeight(OpeningScore, Config.EconomyWeight),
+         "opening build sequence"},
         {AIStrategy::ExpandEconomy,
          ApplyWeight(EconomyScore, Config.EconomyWeight),
          "economy needs investment"},
+        {AIStrategy::Expansion,
+         ApplyWeight(ExpansionScore, Config.EconomyWeight),
+         "expanding to secondary ore node"},
         {AIStrategy::TechUp,
          ApplyWeight(TechScore, Config.TechWeight),
          "production technology is missing"},
@@ -164,13 +216,16 @@ std::vector<AIStrategyScore> ScoreStrategies(
                                  : "defences are below target"},
         {AIStrategy::AssembleArmy,
          ApplyWeight(ArmyScore, Config.ArmyWeight),
-         "army is below attack strength"},
+         "assembling assault force"},
         {AIStrategy::Assault,
          ApplyWeight(AssaultScore, Config.AssaultWeight),
-         "army is ready to assault"},
+         "launching assault on known enemy"},
         {AIStrategy::Recover,
          ApplyWeight(RecoveryScore, Config.RecoveryWeight),
          "established economy lost critical infrastructure"},
+        {AIStrategy::FinalAssault,
+         ApplyWeight(FinalAssaultScore, Config.AssaultWeight),
+         "overwhelming force pushing for victory"}
     };
 }
 

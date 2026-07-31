@@ -296,6 +296,17 @@ void HudSnapshotBuilder::BuildProduction(const SimWorld& World, const SelectionS
         Option.Category = Def.Production.Category;
         Option.Cost = Def.Production.Cost;
         Option.BuildTimeTicks = Def.Production.BuildTimeTicks;
+        if (Def.Kind == EntityKind::Building)
+        {
+            Option.PowerDelta = Def.Building.PowerProduced - Def.Building.PowerConsumed;
+        }
+        if (!Def.Production.Prerequisites.empty())
+        {
+            if (const EntityDef* PrereqDef = Content->FindEntity(Def.Production.Prerequisites[0]))
+            {
+                Option.PrerequisiteKey = PrereqDef->DisplayNameKey;
+            }
+        }
 
         for (const EntityId& Id : CompletedBuildings)
         {
