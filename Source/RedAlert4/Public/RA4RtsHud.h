@@ -50,10 +50,14 @@ protected:
     UPROPERTY(EditAnywhere, Category = "RA4|HUD")
     float MoveTargetRingRadiusUnits = 90.0f;
 
+    // How long the confirmation ping lives after the order is given.
+    UPROPERTY(EditAnywhere, Category = "RA4|HUD")
+    float MoveTargetRingDurationSeconds = 0.55f;
+
 private:
     void DrawMarquee(const class ARA4PlayerController* Controller);
     void DrawSelectionBrackets(const class ARA4PlayerController* Controller);
     void DrawPlacementFootprint(const class ARA4PlayerController* Controller);
-    // Ring under the cursor showing where a move order would land.
+    // One-shot ping at the spot a move order was just issued.
     void DrawMoveTargetRing(const class ARA4PlayerController* Controller);
 };

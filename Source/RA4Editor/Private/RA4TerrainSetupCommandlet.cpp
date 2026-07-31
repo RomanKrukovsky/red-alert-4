@@ -224,7 +224,7 @@ int32 URA4TerrainSetupCommandlet::Main(const FString& Params)
         Sun->SetActorRotation(FRotator(-38.0f, 125.0f, 0.0f));
         if (UDirectionalLightComponent* Comp = Cast<UDirectionalLightComponent>(Sun->GetLightComponent()))
         {
-            Comp->SetIntensity(6.0f);
+            Comp->SetIntensity(3.2f);
             Comp->SetLightColor(FLinearColor(1.0f, 0.94f, 0.82f));
             Comp->SetDynamicShadowDistanceMovableLight(30000.0f);
             Comp->SetDynamicShadowCascades(4);
@@ -239,7 +239,7 @@ int32 URA4TerrainSetupCommandlet::Main(const FString& Params)
         if (USkyLightComponent* Comp = It->GetLightComponent())
         {
             Comp->SetMobility(EComponentMobility::Movable);
-            Comp->SetIntensity(1.15f);
+            Comp->SetIntensity(1.0f);
             Comp->SetLightColor(FLinearColor(0.72f, 0.80f, 0.95f));
             Comp->PostEditChange();
         }
@@ -247,27 +247,38 @@ int32 URA4TerrainSetupCommandlet::Main(const FString& Params)
 
     // A little haze gives the map depth; without it distant terrain has exactly the
     // same contrast as near terrain and the scene looks flat regardless of the sun.
-    bool bHasFog = false;
+    // Find-or-spawn, then always configure: a rerun must be able to correct settings
+    // it got wrong the first time, not skip because an actor happens to exist.
+    AExponentialHeightFog* Fog = nullptr;
     for (TActorIterator<AExponentialHeightFog> It(World); It; ++It)
     {
-        bHasFog = true;
+        Fog = *It;
         break;
     }
-    if (!bHasFog)
+    if (Fog == nullptr)
     {
-        if (AExponentialHeightFog* Fog = World->SpawnActor<AExponentialHeightFog>())
+        Fog = World->SpawnActor<AExponentialHeightFog>();
+    }
+    {
         {
-            Fog->SetActorLabel(TEXT("RA4_HeightFog"));
-            if (UExponentialHeightFogComponent* Comp = Fog->GetComponent())
+            if (Fog != nullptr)
+            {
+                Fog->SetActorLabel(TEXT("RA4_HeightFog"));
+            }
+            if (UExponentialHeightFogComponent* Comp = Fog != nullptr ? Fog->GetComponent() : nullptr)
             {
                 Comp->SetMobility(EComponentMobility::Movable);
-                Comp->SetFogDensity(0.015f);
-                Comp->SetFogHeightFalloff(0.15f);
+                // Deliberately faint. An RTS camera looks *down* through the fog
+                // column, so density that would be subtle in a first-person scene
+                // washes the whole battlefield out to flat grey. This is only meant to
+                // soften the far edge of the map, not to be visible on the playfield.
+                Comp->SetFogDensity(0.0015f);
+                Comp->SetFogHeightFalloff(0.5f);
                 Comp->SetFogInscatteringColor(FLinearColor(0.42f, 0.50f, 0.62f));
-                Comp->SetStartDistance(2000.0f);
+                Comp->SetStartDistance(9000.0f);
                 Comp->PostEditChange();
             }
-            UE_LOG(LogTemp, Display, TEXT("RA4TerrainSetup: height fog added"));
+            UE_LOG(LogTemp, Display, TEXT("RA4TerrainSetup: height fog configured"));
         }
     }
 

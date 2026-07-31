@@ -21,7 +21,7 @@ namespace
 {
 // The sidebar is a fixed-width column, as in the originals: it does not reflow with
 // resolution, it stays the same slice of screen so the cards keep their positions.
-constexpr float kSidebarWidth = 232.0f;
+constexpr float kSidebarWidth = URA4SidebarWidget::SidebarWidth;
 constexpr float kMinimapHeight = 208.0f;
 constexpr int32 kCardColumns = 2;
 

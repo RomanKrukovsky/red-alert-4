@@ -70,10 +70,15 @@ void ARA4PlayerController::BeginPlay()
         {
             Sidebar->OnBuildCardClicked.AddUObject(this, &ARA4PlayerController::HandleBuildCardClicked);
             Sidebar->AddToViewport(/*ZOrder*/ 10);
-            // Anchored to the right edge and stretched over the full height. The
-            // widget sets its own width, so no desired size is forced here.
+            // Anchored to the right edge, stretched over the full height.
             Sidebar->SetAnchorsInViewport(FAnchors(1.0f, 0.0f, 1.0f, 1.0f));
             Sidebar->SetAlignmentInViewport(FVector2D(1.0f, 0.0f));
+            // Required, not cosmetic: FGameViewportWidgetSlot has no auto-size, and on
+            // a non-stretched axis the extent comes from Offsets.Right, which only
+            // SetDesiredSizeInViewport writes. Without it the width is 0 and the panel
+            // renders as nothing at all. The height is ignored here because Y is
+            // stretched by the anchors above.
+            Sidebar->SetDesiredSizeInViewport(FVector2D(URA4SidebarWidget::SidebarWidth, 0.0f));
             UE_LOG(LogTemp, Display, TEXT("RA4 HUD: production sidebar added to viewport"));
         }
         else
@@ -97,7 +102,9 @@ void ARA4PlayerController::BeginPlay()
     
     BindMatchResultEvents();
 
-    if (IsLocalController())
+    // Only in an actual match. The menu world has no simulation subsystem, and
+    // starting battle music over the main menu is not what the track is for.
+    if (IsLocalController() && GetSimSubsystem() != nullptr)
     {
         if (UWorld* UnrealWorld = GetWorld())
         {
@@ -732,7 +739,17 @@ void ARA4PlayerController::HandleClick(bool bLeftButton, const FVector2D& EndScr
         // acknowledges what it is actually about to do.
         if (!Orders.empty() && !bPlacementArmed)
         {
-            PlayOrderVoice(*World, ResolveCursorHint(*World, Selection, Context));
+            const CursorHint Hint = ResolveCursorHint(*World, Selection, Context);
+            PlayOrderVoice(*World, Hint);
+
+            // Ping the destination once, at the moment the order is given. A marker
+            // that tracked the cursor would just be clutter the rest of the time.
+            if (Hint == CursorHint::Move || Hint == CursorHint::SetRallyPoint)
+            {
+                MoveOrderPingLocation = EndGround;
+                MoveOrderPingSeconds = GetWorld() != nullptr ? GetWorld()->GetTimeSeconds() : 0.0;
+                bHasMoveOrderPing = true;
+            }
         }
         // An armed mode is spent by the click that used it, successful or not: the
         // alternative is a player who keeps placing buildings they thought they had

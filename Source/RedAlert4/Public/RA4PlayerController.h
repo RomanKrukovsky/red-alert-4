@@ -42,6 +42,15 @@ public:
     FVector2D GetMarqueeStartScreen() const { return MarqueeStartScreen; }
     FVector2D GetMarqueeCurrentScreen() const { return MarqueeCurrentScreen; }
     RA4::Input::CursorHint GetCursorHint() const { return CurrentCursorHint; }
+
+    // Where the last move/rally order landed and when, so the HUD can ping it once
+    // instead of drawing a marker that follows the cursor forever.
+    bool GetMoveOrderPing(RA4::Vec2& OutLocation, double& OutIssuedSeconds) const
+    {
+        OutLocation = MoveOrderPingLocation;
+        OutIssuedSeconds = MoveOrderPingSeconds;
+        return bHasMoveOrderPing;
+    }
     const RA4::Input::SelectionModel& GetSelection() const { return Selection; }
 
     // Armed by pressing A; the next click becomes an attack-move.
@@ -169,6 +178,10 @@ private:
     // keeps its normal job (deselect, in the classic scheme) when pressed alone.
     bool bRotatingCamera = false;
     FVector2D RotateAnchorScreen = FVector2D::ZeroVector;
+
+    RA4::Vec2 MoveOrderPingLocation;
+    double MoveOrderPingSeconds = 0.0;
+    bool bHasMoveOrderPing = false;
 
     double LastPrimaryClickTime = -1.0;
     RA4::EntityId LastClickedEntity;

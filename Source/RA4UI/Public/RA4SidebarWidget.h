@@ -67,6 +67,9 @@ class RA4UI_API URA4SidebarWidget : public UUserWidget
     GENERATED_BODY()
 
 public:
+    /** Fixed column width in slate units; the viewport slot needs it to size itself. */
+    static constexpr float SidebarWidth = 232.0f;
+
     virtual TSharedRef<SWidget> RebuildWidget() override;
     virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;

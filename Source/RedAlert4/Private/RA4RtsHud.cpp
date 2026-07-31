@@ -159,40 +159,33 @@ void ARA4RtsHud::DrawSelectionBrackets(const ARA4PlayerController* Controller)
 
 void ARA4RtsHud::DrawMoveTargetRing(const ARA4PlayerController* Controller)
 {
-    // Only meaningful while something of the player's is selected and able to be
-    // ordered; otherwise the cursor is a selection tool and a move marker would lie.
-    const RA4::Input::SelectionModel& Selection = Controller->GetSelection();
-    if (Selection.IsEmpty())
+    // A one-shot confirmation at the ordered spot, not a marker that follows the
+    // pointer: the player already knows where the cursor is.
+    RA4::Vec2 Ground;
+    double IssuedSeconds = 0.0;
+    if (!Controller->GetMoveOrderPing(Ground, IssuedSeconds))
     {
         return;
     }
 
     UWorld* World = GetWorld();
-    const URA4SimWorldSubsystem* Subsystem = World != nullptr ? World->GetSubsystem<URA4SimWorldSubsystem>() : nullptr;
-    const RA4::SimWorld* Sim = Subsystem != nullptr ? Subsystem->GetSimWorld() : nullptr;
-    if (Sim == nullptr || !Selection.HasOwnedEntities(*Sim))
+    if (World == nullptr || MoveTargetRingDurationSeconds <= 0.0f)
     {
         return;
     }
 
-    // Placement has its own footprint preview; two overlapping markers is noise.
-    if (Controller->IsPlacementArmed())
+    const double Elapsed = World->GetTimeSeconds() - IssuedSeconds;
+    if (Elapsed < 0.0 || Elapsed > double(MoveTargetRingDurationSeconds))
     {
         return;
     }
 
-    // The ring only makes sense where the click would actually be a move order.
-    const RA4::Input::CursorHint Hint = Controller->GetCursorHint();
-    if (Hint != RA4::Input::CursorHint::Move && Hint != RA4::Input::CursorHint::SetRallyPoint)
-    {
-        return;
-    }
-
-    RA4::Vec2 Ground;
-    if (!Controller->GetCursorGroundPosition(Ground))
-    {
-        return;
-    }
+    // A single outward pulse that fades as it expands, so the eye is drawn to the
+    // spot once and then left alone.
+    const float Alpha = float(Elapsed / double(MoveTargetRingDurationSeconds));
+    const float Radius = MoveTargetRingRadiusUnits * (0.45f + 0.55f * Alpha);
+    FLinearColor Colour = MoveTargetRingColor;
+    Colour.A *= (1.0f - Alpha);
 
     // Projected per segment so the ring lies flat on the ground and follows the
     // terrain's perspective instead of being a flat screen-space circle.
@@ -204,15 +197,14 @@ void ARA4RtsHud::DrawMoveTargetRing(const ARA4PlayerController* Controller)
     for (int32 Segment = 0; Segment <= SegmentCount; ++Segment)
     {
         const double Angle = (double(Segment) / double(SegmentCount)) * 2.0 * PI;
-        const FVector WorldPoint = Centre + FVector(FMath::Cos(Angle) * MoveTargetRingRadiusUnits,
-                                                    FMath::Sin(Angle) * MoveTargetRingRadiusUnits, 0.0);
+        const FVector WorldPoint =
+            Centre + FVector(FMath::Cos(Angle) * Radius, FMath::Sin(Angle) * Radius, 0.0);
         FVector2D Screen;
         if (Controller->ProjectWorldLocationToScreen(WorldPoint, Screen))
         {
             if (bHasPrevious)
             {
-                DrawLine(float(Previous.X), float(Previous.Y), float(Screen.X), float(Screen.Y),
-                         MoveTargetRingColor, 2.0f);
+                DrawLine(float(Previous.X), float(Previous.Y), float(Screen.X), float(Screen.Y), Colour, 2.5f);
             }
             Previous = Screen;
             bHasPrevious = true;
