@@ -24,7 +24,8 @@ public class RA4Editor : ModuleRules
 			"JsonUtilities",
 			"GameplayTags",
 			"Landscape",
-			"AudioEditor"
+			"AudioEditor",
+			"MaterialEditor"
 		});
 	}
 }

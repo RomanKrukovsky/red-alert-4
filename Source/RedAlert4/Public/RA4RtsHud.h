@@ -42,8 +42,18 @@ protected:
     UPROPERTY(EditAnywhere, Category = "RA4|HUD")
     FLinearColor PlacementInvalidColor = FLinearColor(0.9f, 0.1f, 0.1f, 0.5f);
 
+    // Outline only, per the request: a filled disc hides the ground the player is
+    // trying to aim at.
+    UPROPERTY(EditAnywhere, Category = "RA4|HUD")
+    FLinearColor MoveTargetRingColor = FLinearColor(0.25f, 0.95f, 0.35f, 0.9f);
+
+    UPROPERTY(EditAnywhere, Category = "RA4|HUD")
+    float MoveTargetRingRadiusUnits = 90.0f;
+
 private:
     void DrawMarquee(const class ARA4PlayerController* Controller);
     void DrawSelectionBrackets(const class ARA4PlayerController* Controller);
     void DrawPlacementFootprint(const class ARA4PlayerController* Controller);
+    // Ring under the cursor showing where a move order would land.
+    void DrawMoveTargetRing(const class ARA4PlayerController* Controller);
 };

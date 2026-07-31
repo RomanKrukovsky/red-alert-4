@@ -20,6 +20,7 @@ void ARA4RtsHud::DrawHUD()
     }
     DrawSelectionBrackets(Controller);
     DrawMarquee(Controller);
+    DrawMoveTargetRing(Controller);
 
     if (Controller->IsPlacementArmed())
     {
@@ -153,6 +154,73 @@ void ARA4RtsHud::DrawSelectionBrackets(const ARA4PlayerController* Controller)
 
         DrawRect(FLinearColor(0.02f, 0.02f, 0.03f, 0.75f), L, BarY, BarWidth, 3.0f);
         DrawRect(BarColour, L, BarY, BarWidth * Fraction, 3.0f);
+    }
+}
+
+void ARA4RtsHud::DrawMoveTargetRing(const ARA4PlayerController* Controller)
+{
+    // Only meaningful while something of the player's is selected and able to be
+    // ordered; otherwise the cursor is a selection tool and a move marker would lie.
+    const RA4::Input::SelectionModel& Selection = Controller->GetSelection();
+    if (Selection.IsEmpty())
+    {
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    const URA4SimWorldSubsystem* Subsystem = World != nullptr ? World->GetSubsystem<URA4SimWorldSubsystem>() : nullptr;
+    const RA4::SimWorld* Sim = Subsystem != nullptr ? Subsystem->GetSimWorld() : nullptr;
+    if (Sim == nullptr || !Selection.HasOwnedEntities(*Sim))
+    {
+        return;
+    }
+
+    // Placement has its own footprint preview; two overlapping markers is noise.
+    if (Controller->IsPlacementArmed())
+    {
+        return;
+    }
+
+    // The ring only makes sense where the click would actually be a move order.
+    const RA4::Input::CursorHint Hint = Controller->GetCursorHint();
+    if (Hint != RA4::Input::CursorHint::Move && Hint != RA4::Input::CursorHint::SetRallyPoint)
+    {
+        return;
+    }
+
+    RA4::Vec2 Ground;
+    if (!Controller->GetCursorGroundPosition(Ground))
+    {
+        return;
+    }
+
+    // Projected per segment so the ring lies flat on the ground and follows the
+    // terrain's perspective instead of being a flat screen-space circle.
+    constexpr int32 SegmentCount = 28;
+    const FVector Centre = RA4Coords::ToUnreal(Ground);
+    FVector2D Previous = FVector2D::ZeroVector;
+    bool bHasPrevious = false;
+
+    for (int32 Segment = 0; Segment <= SegmentCount; ++Segment)
+    {
+        const double Angle = (double(Segment) / double(SegmentCount)) * 2.0 * PI;
+        const FVector WorldPoint = Centre + FVector(FMath::Cos(Angle) * MoveTargetRingRadiusUnits,
+                                                    FMath::Sin(Angle) * MoveTargetRingRadiusUnits, 0.0);
+        FVector2D Screen;
+        if (Controller->ProjectWorldLocationToScreen(WorldPoint, Screen))
+        {
+            if (bHasPrevious)
+            {
+                DrawLine(float(Previous.X), float(Previous.Y), float(Screen.X), float(Screen.Y),
+                         MoveTargetRingColor, 2.0f);
+            }
+            Previous = Screen;
+            bHasPrevious = true;
+        }
+        else
+        {
+            bHasPrevious = false;
+        }
     }
 }
 

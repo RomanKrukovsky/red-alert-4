@@ -36,3 +36,4 @@ __pycache__/
 # ~590 binary assets that would otherwise be committed twice, once as source
 # audio and once as engine assets.
 /Content/RA4/Audio/Generated/
+/Content/RA4/Generated/

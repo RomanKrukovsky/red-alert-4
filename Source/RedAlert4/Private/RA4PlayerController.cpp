@@ -42,14 +42,21 @@ void ARA4PlayerController::BeginPlay()
 
     if (IsLocalController())
     {
+        // AddToViewport MUST come before the slot setters. Until the widget is
+        // managed by the game viewport subsystem, each of SetDesiredSizeInViewport /
+        // SetAnchorsInViewport / SetAlignmentInViewport builds a *fresh default* slot
+        // and writes only its own field, silently discarding whatever the previous
+        // call set. Called in the old order only the last one survived, which left
+        // the sidebar on default top-left anchors with right-edge alignment -- parked
+        // entirely off the left of the screen, which is why it was invisible.
         ResourceBar = CreateWidget<URA4ResourceBarWidget>(this, URA4ResourceBarWidget::StaticClass());
         if (ResourceBar != nullptr)
         {
-            ResourceBar->SetDesiredSizeInViewport(FVector2D(1400.0f, 46.0f));
+            ResourceBar->AddToViewport(/*ZOrder*/ 10);
             ResourceBar->SetAnchorsInViewport(FAnchors(0.0f, 0.0f, 0.0f, 0.0f));
             ResourceBar->SetAlignmentInViewport(FVector2D(0.0f, 0.0f));
+            ResourceBar->SetDesiredSizeInViewport(FVector2D(1400.0f, 46.0f));
             ResourceBar->SetPositionInViewport(FVector2D(16.0f, 16.0f));
-            ResourceBar->AddToViewport(/*ZOrder*/ 10);
             UE_LOG(LogTemp, Display, TEXT("RA4 HUD: resource bar added to viewport"));
         }
         else
@@ -60,11 +67,12 @@ void ARA4PlayerController::BeginPlay()
         Sidebar = CreateWidget<URA4SidebarWidget>(this, URA4SidebarWidget::StaticClass());
         if (Sidebar != nullptr)
         {
-            Sidebar->SetDesiredSizeInViewport(FVector2D(250.0f, 1080.0f));
-            Sidebar->SetAnchorsInViewport(FAnchors(1.0f, 0.0f, 1.0f, 1.0f));
-            Sidebar->SetAlignmentInViewport(FVector2D(1.0f, 0.0f));
             Sidebar->OnBuildCardClicked.AddUObject(this, &ARA4PlayerController::HandleBuildCardClicked);
             Sidebar->AddToViewport(/*ZOrder*/ 10);
+            // Anchored to the right edge and stretched over the full height. The
+            // widget sets its own width, so no desired size is forced here.
+            Sidebar->SetAnchorsInViewport(FAnchors(1.0f, 0.0f, 1.0f, 1.0f));
+            Sidebar->SetAlignmentInViewport(FVector2D(1.0f, 0.0f));
             UE_LOG(LogTemp, Display, TEXT("RA4 HUD: production sidebar added to viewport"));
         }
         else

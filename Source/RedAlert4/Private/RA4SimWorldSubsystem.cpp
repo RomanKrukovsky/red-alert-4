@@ -18,6 +18,15 @@
 #include "Engine/StaticMeshActor.h"
 #include "Components/StaticMeshComponent.h"
 #include "LandscapeProxy.h"
+#include "HAL/IConsoleManager.h"
+
+// Off by default: this is a debugging aid, and with it on every shot draws a bright
+// yellow tracer over the battlefield.
+static TAutoConsoleVariable<int32> CVarRA4DebugCombatDraw(
+    TEXT("ra4.DebugCombatDraw"),
+    0,
+    TEXT("Draw debug lines for weapon fire and impacts (0 = off, 1 = on)."),
+    ECVF_Cheat);
 
 URA4SimWorldSubsystem::URA4SimWorldSubsystem()
     : SimWorld(nullptr)
@@ -491,8 +500,11 @@ void URA4SimWorldSubsystem::SyncPresentation()
         }
     }
     
-    // Simple visual feedback for combat events
-    if (World)
+    // Combat feedback was drawn with DrawDebugLine/Point, which is a diagnostic tool,
+    // not a game effect: it produced bright yellow tracers and orange dots on screen
+    // during normal play. Kept behind a console variable so it is still available for
+    // debugging combat, but off by default.
+    if (World && CVarRA4DebugCombatDraw.GetValueOnGameThread() != 0)
     {
         for (const RA4::SimEvent& Event : SimWorld->GetEvents())
         {
@@ -500,7 +512,7 @@ void URA4SimWorldSubsystem::SyncPresentation()
             {
                 FVector Start = RA4Coords::ToUnreal(Event.Location);
                 Start.Z = SampleGroundHeight(Start.X, Start.Y) + 20.0f;
-                
+
                 FVector End = Start;
                 if (Event.Other.IsValid() && SimWorld->IsAlive(Event.Other))
                 {
