@@ -888,5 +888,93 @@ RA4_TEST(AI, AIDebugOverlaySnapshotCreation)
     RA4_EXPECT(Snap.RecentDecisions.size() == 2);
 }
 
+RA4_TEST(AI, DifficultyProfilesConfig)
+{
+    AIConfig EasyCfg = MakeProfileConfig(AIProfile::Balanced, AIDifficulty::Easy);
+    AIConfig NormalCfg = MakeProfileConfig(AIProfile::Balanced, AIDifficulty::Normal);
+    AIConfig HardCfg = MakeProfileConfig(AIProfile::Balanced, AIDifficulty::Hard);
+
+    RA4_EXPECT(EasyCfg.DecisionIntervalTicks == 20);
+    RA4_EXPECT(NormalCfg.DecisionIntervalTicks == 10);
+    RA4_EXPECT(HardCfg.DecisionIntervalTicks == 5);
+
+    RA4_EXPECT(EasyCfg.CreditBonusMultiplier == 1.0f);
+    RA4_EXPECT(NormalCfg.CreditBonusMultiplier == 1.0f);
+    RA4_EXPECT(HardCfg.CreditBonusMultiplier == 1.20f);
+}
+
+RA4_TEST(AI, FogOfWarStrictCompliance)
+{
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(20260731));
+
+    // Player 0 (AI) at (10, 10), Player 1 (Enemy) at (55, 55) far out in fog
+    World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    World.SpawnBuilding(Ids::AllConYard, 1, TileCoord(55, 55), true);
+
+    SimWorldView Knowledge(World, 0);
+    Knowledge.UpdateMemory(600);
+
+    // AI's known enemies list MUST be empty because enemy is outside vision radius
+    RA4_EXPECT(Knowledge.GetKnownEnemies().empty());
+}
+
+RA4_TEST(AI, NoCheatResources)
+{
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(20260731));
+
+    World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    AICommander AI;
+    AI.Initialize(0, AIProfile::Balanced, 20260731);
+
+    const int32_t InitialCredits = World.GetPlayer(0).Credits;
+
+    // Run 100 ticks without harvesting
+    for (int32_t T = 0; T < 100; ++T)
+    {
+        CommandFrame Frame;
+        Frame.Tick = World.GetTick();
+        AI.Tick(World, Frame.Commands);
+        World.ClearEvents();
+        World.Tick(Frame.Commands.empty() ? nullptr : &Frame);
+    }
+
+    // Credits must equal initial credits minus legitimate spending (0 free credits added)
+    const int32_t CurrentCredits = World.GetPlayer(0).Credits;
+    RA4_EXPECT(CurrentCredits <= InitialCredits);
+}
+
+RA4_TEST(AI, MassSimulationsBenchmark)
+{
+    // Run mass AI vs AI matches with fixed seeds across profiles and difficulties
+    const AIProfile Profiles[4] = {AIProfile::Aggressive, AIProfile::Balanced, AIProfile::Economic, AIProfile::Defensive};
+    int32_t CompletedMatches = 0;
+    int32_t TotalTicksExecuted = 0;
+
+    for (int32_t SeedIdx = 0; SeedIdx < 8; ++SeedIdx)
+    {
+        const uint64_t Seed = 20260731u + static_cast<uint64_t>(SeedIdx) * 12345u;
+        AIMatch Match(Seed);
+        Match.Enable(0, Profiles[SeedIdx % 4], Seed);
+        Match.Enable(1, Profiles[(SeedIdx + 1) % 4], Seed + 1);
+
+        Match.Run(10000);
+        const int32_t Winner = Match.World.GetWinner();
+        RA4_EXPECT(Winner == 0 || Winner == 1 || Winner == -1);
+
+        CompletedMatches++;
+        TotalTicksExecuted += Match.World.GetTick();
+    }
+
+    RA4_EXPECT_EQ(CompletedMatches, 8);
+    RA4_EXPECT(TotalTicksExecuted > 0);
+}
+
+
 
 

@@ -218,11 +218,33 @@ ContentId AICommander::FindCombatUnit(const SimWorld& World) const
     const FactionId Faction = World.GetPlayer(Player).Faction;
     const PlayerState& State = World.GetPlayer(Player);
 
-    // Prefer the most expensive armed unit the tech tree and the treasury currently
-    // allow: a commander that always buys the cheapest thing available never fields
-    // anything that can break a base.
+    // Determine observed enemy composition from Knowledge to select counter-units
+    bool bEnemyHasArmored = false;
+    bool bEnemyHasAir = false;
+    if (Knowledge != nullptr)
+    {
+        for (const EnemyMemory& Mem : Knowledge->GetKnownEnemies())
+        {
+            if (Mem.Kind == EntityKind::Unit && Content != nullptr)
+            {
+                const EntityDef* EnemyDef = Content->FindEntity(Mem.DefId);
+                if (EnemyDef != nullptr)
+                {
+                    if (HasRole(EnemyDef->Roles, EntityRole::Combat) || HasRole(EnemyDef->Roles, EntityRole::AntiArmor))
+                    {
+                        bEnemyHasArmored = true;
+                    }
+                    if (HasRole(EnemyDef->Roles, EntityRole::AntiAir))
+                    {
+                        bEnemyHasAir = true;
+                    }
+                }
+            }
+        }
+    }
+
     ContentId Best;
-    int32_t BestCost = -1;
+    int32_t BestScore = -1;
     for (const EntityDef& Def : Content->GetEntities())
     {
         if (Def.Faction != Faction || Def.Kind != EntityKind::Unit || !Def.Weapon.IsValid())
@@ -243,9 +265,20 @@ ContentId AICommander::FindCombatUnit(const SimWorld& World) const
         {
             continue;
         }
-        if (Def.Production.Cost > BestCost)
+
+        int32_t Score = Def.Production.Cost;
+        if (bEnemyHasArmored && HasRole(Def.Roles, EntityRole::AntiArmor))
         {
-            BestCost = Def.Production.Cost;
+            Score += 150;
+        }
+        if (bEnemyHasAir && HasRole(Def.Roles, EntityRole::AntiAir))
+        {
+            Score += 150;
+        }
+
+        if (Score > BestScore)
+        {
+            BestScore = Score;
             Best = Def.Id;
         }
     }
@@ -1467,7 +1500,9 @@ bool AICommander::ExecuteStrategy(AIStrategy Strategy,
 {
     switch (Strategy)
     {
+        case AIStrategy::Opening:
         case AIStrategy::ExpandEconomy:
+        case AIStrategy::Expansion:
         case AIStrategy::Recover:
             return TryBuildEconomy(World, Out);
         case AIStrategy::TechUp:
@@ -1481,6 +1516,7 @@ bool AICommander::ExecuteStrategy(AIStrategy Strategy,
         case AIStrategy::AssembleArmy:
             return TryTrainArmy(World, Out);
         case AIStrategy::Assault:
+        case AIStrategy::FinalAssault:
         {
             const size_t CommandCountBefore = Out.size();
             CommandArmy(World, Out);
@@ -1519,8 +1555,7 @@ void AICommander::Tick(const SimWorld& World, std::vector<Command>& OutCommands)
     // be remembered.
     UpdateKnowledge(World);
 
-    ++TicksSinceDecision;
-    if (TicksSinceDecision < Config.DecisionIntervalTicks)
+    if (++TicksSinceDecision < Config.DecisionIntervalTicks)
     {
         return;
     }
@@ -1553,6 +1588,7 @@ void AICommander::Tick(const SimWorld& World, std::vector<Command>& OutCommands)
     {
         const bool bCanActWithoutYard =
             ActiveStrategy == AIStrategy::Assault ||
+            ActiveStrategy == AIStrategy::FinalAssault ||
             ActiveStrategy == AIStrategy::AssembleArmy;
         if (FindOwnConstructionYard(World).IsValid() ||
             bCanActWithoutYard)

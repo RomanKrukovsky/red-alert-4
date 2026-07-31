@@ -22,8 +22,16 @@ enum class AIProfile : uint8_t
     Economic,
 };
 
+enum class AIDifficulty : uint8_t
+{
+    Easy = 0,
+    Normal,
+    Hard
+};
+
 struct AIConfig
 {
+    AIDifficulty Difficulty = AIDifficulty::Normal;
     int32_t DecisionIntervalTicks = 10;
 
     // How often the commander re-observes the world through its fog-limited view, and
@@ -39,6 +47,9 @@ struct AIConfig
     int32_t TargetDefences = 2;
     int32_t CreditReserve = 300;
 
+    // Explicit bounded bonus for Hard difficulty (e.g. 1.20 = +20% income). Normal & Easy are 1.0.
+    float CreditBonusMultiplier = 1.0f;
+
     int32_t StrategySwitchMargin = 100;
     int32_t EmergencyStrategyScore = 900;
     int32_t UnderAttackMemoryTicks = 100;
@@ -53,12 +64,15 @@ struct AIConfig
 
 enum class AIStrategy : uint8_t
 {
-    ExpandEconomy = 0,
+    Opening = 0,
+    ExpandEconomy,
+    Expansion,
     TechUp,
     Fortify,
     AssembleArmy,
     Assault,
     Recover,
+    FinalAssault,
 };
 
 struct AIWorldAssessment
@@ -87,8 +101,9 @@ struct AIStrategyScore
     const char* Reason = "";
 };
 
-RA4AI_API AIConfig MakeProfileConfig(AIProfile Profile);
+RA4AI_API AIConfig MakeProfileConfig(AIProfile Profile, AIDifficulty Difficulty = AIDifficulty::Normal);
 const char* RA4AI_API ToString(AIProfile Profile);
+const char* RA4AI_API ToString(AIDifficulty Difficulty);
 
 RA4AI_API std::vector<AIStrategyScore> ScoreStrategies(
     const AIWorldAssessment& Assessment, const AIConfig& Config);
