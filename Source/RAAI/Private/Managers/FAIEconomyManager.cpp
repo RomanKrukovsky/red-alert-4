@@ -1,23 +1,13 @@
-#include "Managers/FAIEconomyManager.h"
-#include "AI/AAIDirector.h"
+#include "FAIEconomyManager.h"
+#include "AAIDirector.h"
 
 FAIEconomyManager::FAIEconomyManager()
 {
-    ResourceAmounts.Add(FGameplayTag::RequestGameplayTag("Resource.Credits"), 5000.0f);
-    ResourceAmounts.Add(FGameplayTag::RequestGameplayTag("Resource.Ore"), 0.0f);
-    ResourceAmounts.Add(FGameplayTag::RequestGameplayTag("Resource.Power"), 0.0f);
-    ResourceAmounts.Add(FGameplayTag::RequestGameplayTag("Resource.PowerCapacity"), 0.0f);
-
-    IncomeRates.Add(FGameplayTag::RequestGameplayTag("Resource.Credits"), 0.0f);
-    IncomeRates.Add(FGameplayTag::RequestGameplayTag("Resource.Ore"), 0.0f);
-    IncomeRates.Add(FGameplayTag::RequestGameplayTag("Resource.Power"), 0.0f);
-
-    ExpenseRates.Add(FGameplayTag::RequestGameplayTag("Resource.Credits"), 0.0f);
-    ExpenseRates.Add(FGameplayTag::RequestGameplayTag("Resource.Power"), 0.0f);
-
-    HarvesterCount = 0;
-    RefineryCount = 0;
-    PowerPlantCount = 0;
+    FResourceInfo CreditsInfo;
+    CreditsInfo.ResourceTag = FGameplayTag::RequestGameplayTag("Resource.Credits");
+    CreditsInfo.CurrentAmount = 5000.0f;
+    CreditsInfo.MaxStorage = 100000.0f;
+    Resources.Add(CreditsInfo.ResourceTag, CreditsInfo);
 }
 
 void FAIEconomyManager::Initialize(AAIDirector* InDirector)
@@ -33,224 +23,167 @@ void FAIEconomyManager::Shutdown()
 void FAIEconomyManager::Update(float DeltaTime)
 {
     UpdateTimer += DeltaTime;
-
     if (UpdateTimer >= UpdateInterval)
     {
         UpdateTimer = 0.0f;
-
-        RecalculateIncome();
-        RecalculateExpenses();
-
-        float NetIncome = TotalIncome - TotalExpenses;
-        ResourceAmounts.FindOrAdd(FGameplayTag::RequestGameplayTag("Resource.Credits")) += NetIncome * UpdateInterval;
-
-        float Credits = ResourceAmounts.FindRef(FGameplayTag::RequestGameplayTag("Resource.Credits"));
-        if (Credits < 0.0f)
-        {
-            Credits = 0.0f;
-            ResourceAmounts[FGameplayTag::RequestGameplayTag("Resource.Credits")] = 0.0f;
-        }
+        CalculateRates();
+        UpdateResourceFlow(UpdateInterval);
+        UpdateExpansions();
     }
-}
-
-void FAIEconomyManager::AddIncome(const FGameplayTag& ResourceType, float Amount)
-{
-    IncomeRates.FindOrAdd(ResourceType) += Amount;
-}
-
-void FAIEconomyManager::AddExpense(const FGameplayTag& ResourceType, float Amount)
-{
-    ExpenseRates.FindOrAdd(ResourceType) += Amount;
-}
-
-bool FAIEconomyManager::CanAfford(const FGameplayTag& ResourceType, float Amount) const
-{
-    float Available = ResourceAmounts.FindRef(ResourceType);
-    return Available >= Amount;
-}
-
-bool FAIEconomyManager::Spend(const FGameplayTag& ResourceType, float Amount)
-{
-    float& Available = ResourceAmounts.FindOrAdd(ResourceType);
-    if (Available >= Amount)
-    {
-        Available -= Amount;
-        return true;
-    }
-    return false;
-}
-
-void FAIEconomyManager::Earn(const FGameplayTag& ResourceType, float Amount)
-{
-    ResourceAmounts.FindOrAdd(ResourceType) += Amount;
 }
 
 float FAIEconomyManager::GetResourceAmount(const FGameplayTag& ResourceType) const
 {
-    return ResourceAmounts.FindRef(ResourceType);
+    if (const FResourceInfo* Info = Resources.Find(ResourceType))
+    {
+        return Info->CurrentAmount;
+    }
+    return 0.0f;
+}
+
+void FAIEconomyManager::AddResource(const FGameplayTag& ResourceType, float Amount)
+{
+    FResourceInfo& Info = Resources.FindOrAdd(ResourceType);
+    Info.ResourceTag = ResourceType;
+    Info.CurrentAmount = FMath::Clamp(Info.CurrentAmount + Amount, 0.0f, Info.MaxStorage);
+}
+
+void FAIEconomyManager::SpendResource(const FGameplayTag& ResourceType, float Amount)
+{
+    if (FResourceInfo* Info = Resources.Find(ResourceType))
+    {
+        Info->CurrentAmount = FMath::Max(0.0f, Info->CurrentAmount - Amount);
+    }
+}
+
+bool FAIEconomyManager::CanAfford(const FGameplayTag& ResourceType, float Amount) const
+{
+    return GetResourceAmount(ResourceType) >= Amount;
 }
 
 float FAIEconomyManager::GetIncomeRate(const FGameplayTag& ResourceType) const
 {
-    return IncomeRates.FindRef(ResourceType);
+    if (const FResourceInfo* Info = Resources.Find(ResourceType))
+    {
+        return Info->IncomeRate;
+    }
+    return 0.0f;
 }
 
 float FAIEconomyManager::GetExpenseRate(const FGameplayTag& ResourceType) const
 {
-    return ExpenseRates.FindRef(ResourceType);
-}
-
-float FAIEconomyManager::GetNetIncome(const FGameplayTag& ResourceType) const
-{
-    return IncomeRates.FindRef(ResourceType) - ExpenseRates.FindRef(ResourceType);
-}
-
-int32 FAIEconomyManager::GetHarvesterCount() const
-{
-    return HarvesterCount;
-}
-
-int32 FAIEconomyManager::GetRefineryCount() const
-{
-    return RefineryCount;
-}
-
-int32 FAIEconomyManager::GetPowerPlantCount() const
-{
-    return PowerPlantCount;
-}
-
-bool FAIEconomyManager::IsPowerPositive() const
-{
-    float Power = ResourceAmounts.FindRef(FGameplayTag::RequestGameplayTag("Resource.Power"));
-    float PowerCapacity = ResourceAmounts.FindRef(FGameplayTag::RequestGameplayTag("Resource.PowerCapacity"));
-    return Power < PowerCapacity;
-}
-
-float FAIEconomyManager::GetPowerRatio() const
-{
-    float Power = ResourceAmounts.FindRef(FGameplayTag::RequestGameplayTag("Resource.Power"));
-    float PowerCapacity = ResourceAmounts.FindRef(FGameplayTag::RequestGameplayTag("Resource.PowerCapacity"));
-    if (PowerCapacity <= 0.0f) return 1.0f;
-    return Power / PowerCapacity;
-}
-
-void FAIEconomyManager::OnHarvesterBuilt()
-{
-    HarvesterCount++;
-    RecalculateIncome();
-}
-
-void FAIEconomyManager::OnHarvesterLost()
-{
-    HarvesterCount = FMath::Max(0, HarvesterCount - 1);
-    RecalculateIncome();
-}
-
-void FAIEconomyManager::OnRefineryBuilt()
-{
-    RefineryCount++;
-    RecalculateIncome();
-}
-
-void FAIEconomyManager::OnRefineryLost()
-{
-    RefineryCount = FMath::Max(0, RefineryCount - 1);
-    RecalculateIncome();
-}
-
-void FAIEconomyManager::OnPowerPlantBuilt()
-{
-    PowerPlantCount++;
-    float PowerPerPlant = 100.0f;
-    float& Capacity = ResourceAmounts.FindOrAdd(FGameplayTag::RequestGameplayTag("Resource.PowerCapacity"));
-    Capacity += PowerPerPlant;
-}
-
-void FAIEconomyManager::OnPowerPlantLost()
-{
-    PowerPlantCount = FMath::Max(0, PowerPlantCount - 1);
-    float PowerPerPlant = 100.0f;
-    float& Capacity = ResourceAmounts.FindOrAdd(FGameplayTag::RequestGameplayTag("Resource.PowerCapacity"));
-    Capacity = FMath::Max(0.0f, Capacity - PowerPerPlant);
-}
-
-void FAIEconomyManager::OnStructureBuilt(const FGameplayTag& StructureTag)
-{
-    if (StructureTag.MatchesTag(FGameplayTag::RequestGameplayTag("Structure.Refinery")))
+    if (const FResourceInfo* Info = Resources.Find(ResourceType))
     {
-        OnRefineryBuilt();
+        return Info->ExpenseRate;
     }
-    else if (StructureTag.MatchesTag(FGameplayTag::RequestGameplayTag("Structure.PowerPlant")))
-    {
-        OnPowerPlantBuilt();
-    }
-    else if (StructureTag.MatchesTag(FGameplayTag::RequestGameplayTag("Structure.Barracks")) ||
-             StructureTag.MatchesTag(FGameplayTag::RequestGameplayTag("Structure.WarFactory")) ||
-             StructureTag.MatchesTag(FGameplayTag::RequestGameplayTag("Structure.Airfield")) ||
-             StructureTag.MatchesTag(FGameplayTag::RequestGameplayTag("Structure.TechCenter")))
-    {
-        AddExpense(FGameplayTag::RequestGameplayTag("Resource.Power"), 50.0f);
-    }
+    return 0.0f;
 }
 
-void FAIEconomyManager::OnStructureDestroyed(const FGameplayTag& StructureTag)
+void FAIEconomyManager::RegisterProducer(const FGameplayTag& ProducerTag, float ProductionRate)
 {
-    if (StructureTag.MatchesTag(FGameplayTag::RequestGameplayTag("Structure.Refinery")))
+    ProducerRates.Add(ProducerTag, ProductionRate);
+}
+
+void FAIEconomyManager::UnregisterProducer(const FGameplayTag& ProducerTag)
+{
+    ProducerRates.Remove(ProducerTag);
+}
+
+void FAIEconomyManager::RegisterConsumer(const FGameplayTag& ConsumerTag, float ConsumptionRate)
+{
+    ConsumerRates.Add(ConsumerTag, ConsumptionRate);
+}
+
+void FAIEconomyManager::UnregisterConsumer(const FGameplayTag& ConsumerTag)
+{
+    ConsumerRates.Remove(ConsumerTag);
+}
+
+void FAIEconomyManager::RequestExpansion(const FVector& PreferredLocation, float Priority)
+{
+    ExpansionLocations.Add(PreferredLocation);
+    ExpansionPriorities.Add(Priority);
+}
+
+bool FAIEconomyManager::ShouldExpand() const
+{
+    return GetResourceAmount(FGameplayTag::RequestGameplayTag("Resource.Credits")) > 10000.0f;
+}
+
+void FAIEconomyManager::SetResourceTarget(const FGameplayTag& ResourceType, float TargetAmount)
+{
+    ResourceTargets.Add(ResourceType, TargetAmount);
+}
+
+float FAIEconomyManager::GetResourceTarget(const FGameplayTag& ResourceType) const
+{
+    return ResourceTargets.FindRef(ResourceType);
+}
+
+float FAIEconomyManager::GetTotalIncome() const
+{
+    float Total = 0.0f;
+    for (const auto& Pair : ProducerRates)
     {
-        OnRefineryLost();
+        Total += Pair.Value;
     }
-    else if (StructureTag.MatchesTag(FGameplayTag::RequestGameplayTag("Structure.PowerPlant")))
+    return Total;
+}
+
+float FAIEconomyManager::GetTotalExpenses() const
+{
+    float Total = 0.0f;
+    for (const auto& Pair : ConsumerRates)
     {
-        OnPowerPlantLost();
+        Total += Pair.Value;
     }
-    else if (StructureTag.MatchesTag(FGameplayTag::RequestGameplayTag("Structure.Barracks")) ||
-             StructureTag.MatchesTag(FGameplayTag::RequestGameplayTag("Structure.WarFactory")) ||
-             StructureTag.MatchesTag(FGameplayTag::RequestGameplayTag("Structure.Airfield")) ||
-             StructureTag.MatchesTag(FGameplayTag::RequestGameplayTag("Structure.TechCenter")))
+    return Total;
+}
+
+float FAIEconomyManager::GetNetIncome() const
+{
+    return GetTotalIncome() - GetTotalExpenses();
+}
+
+TArray<FResourceInfo> FAIEconomyManager::GetAllResources() const
+{
+    TArray<FResourceInfo> Result;
+    Resources.GenerateValueArray(Result);
+    return Result;
+}
+
+void FAIEconomyManager::EmergencyEconomyMode(bool bEnable)
+{
+    bEmergencyMode = bEnable;
+}
+
+void FAIEconomyManager::UpdateResourceFlow(float DeltaTime)
+{
+    FGameplayTag CreditsTag = FGameplayTag::RequestGameplayTag("Resource.Credits");
+    float NetDelta = GetNetIncome() * DeltaTime;
+    AddResource(CreditsTag, NetDelta);
+}
+
+void FAIEconomyManager::UpdateExpansions()
+{
+}
+
+void FAIEconomyManager::CalculateRates()
+{
+    FGameplayTag CreditsTag = FGameplayTag::RequestGameplayTag("Resource.Credits");
+    if (FResourceInfo* Info = Resources.Find(CreditsTag))
     {
-        AddExpense(FGameplayTag::RequestGameplayTag("Resource.Power"), -50.0f);
+        Info->IncomeRate = GetTotalIncome();
+        Info->ExpenseRate = GetTotalExpenses();
     }
 }
 
-void FAIEconomyManager::RecalculateIncome()
+FVector FAIEconomyManager::FindBestExpansionLocation() const
 {
-    float OrePerHarvesterPerSecond = 25.0f;
-    float RefineryEfficiency = FMath::Min(1.0f, float(HarvesterCount) / FMath::Max(1, RefineryCount * 2));
-    IncomeRates[FGameplayTag::RequestGameplayTag("Resource.Ore")] = HarvesterCount * OrePerHarvesterPerSecond * RefineryEfficiency;
-    IncomeRates[FGameplayTag::RequestGameplayTag("Resource.Credits")] = IncomeRates.FindRef(FGameplayTag::RequestGameplayTag("Resource.Ore")) * 0.5f;
+    return ExpansionLocations.Num() > 0 ? ExpansionLocations[0] : FVector::ZeroVector;
 }
 
-void FAIEconomyManager::RecalculateExpenses()
+float FAIEconomyManager::EvaluateExpansionLocation(const FVector& Location) const
 {
-    TotalExpenses = 0.0f;
-    for (auto& Pair : ExpenseRates)
-    {
-        TotalExpenses += Pair.Value;
-    }
-}
-
-void FAIEconomyManager::RequestExpansion(const FVector& Location, float Priority)
-{
-    PendingExpansions.Add(Location);
-    UE_LOG(LogTemp, Log, TEXT("RAAI Economy: Expansion requested at %s (Priority: %.1f)"), *Location.ToString(), Priority);
-}
-
-bool FAIEconomyManager::HasPendingExpansion() const
-{
-    return PendingExpansions.Num() > 0;
-}
-
-FVector FAIEconomyManager::GetNextExpansionLocation() const
-{
-    if (PendingExpansions.Num() > 0)
-    {
-        return PendingExpansions[0];
-    }
-    return FVector::ZeroVector;
-}
-
-void FAIEconomyManager::OnExpansionCompleted(const FVector& Location)
-{
-    PendingExpansions.Remove(Location);
+    return 1.0f;
 }

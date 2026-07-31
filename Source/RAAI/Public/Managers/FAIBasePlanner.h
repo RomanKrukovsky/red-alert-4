@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTags.h"
-#include "Managers/FAIBasePlanner.generated.h"
+#include "FAIBasePlanner.generated.h"
 
 class AAIDirector;
 class AActor;
@@ -29,6 +29,17 @@ struct FBuildSpot
 
     UPROPERTY()
     float SuitabilityScore = 0.0f;
+
+    UPROPERTY()
+    TArray<FGameplayTag> SuitableFor;
+
+    UPROPERTY()
+    float Score = 1.0f;
+
+    bool operator==(const FBuildSpot& Other) const
+    {
+        return Location.Equals(Other.Location);
+    }
 };
 
 USTRUCT(BlueprintType)
@@ -41,6 +52,9 @@ struct FBuildOrder
 
     UPROPERTY()
     FVector Location;
+
+    UPROPERTY()
+    FVector PreferredLocation;
 
     UPROPERTY()
     float Priority = 1.0f;
@@ -68,6 +82,7 @@ public:
 
     bool HasStructure(const FGameplayTag& StructureTag) const;
     int32 GetStructureCount(const FGameplayTag& StructureTag) const;
+    float GetStructureCost(const FGameplayTag& StructureTag) const;
     TArray<AActor*> GetStructures(const FGameplayTag& StructureTag) const;
 
     TArray<FBuildSpot> GetAvailableBuildSpots(const FGameplayTag& StructureTag) const;

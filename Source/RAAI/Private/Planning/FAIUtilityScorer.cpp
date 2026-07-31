@@ -145,7 +145,7 @@ float FAIUtilityScorer::ScoreGoal(const FStrategicGoal& Goal, AAIDirector* InDir
         }
         else if (Goal.GoalTag.MatchesTag(FGameplayTag::RequestGameplayTag("Strategic.Goal.DestroyEnemyPower")))
         {
-            Score += InDirector->IntelManager.GetKnownEnemyStructures(FGameplayTag::RequestGameplayTag("Structure.PowerPlant")).Num() > 0 ? 0.5f : 0.0f;
+            Score += InDirector->IntelManager.GetKnownEnemyStructures().Num() > 0 ? 0.5f : 0.0f;
         }
     }
 

@@ -88,7 +88,7 @@ bool FAIBasePlanner::HasStructure(const FGameplayTag& StructureTag) const
 
 int32 FAIBasePlanner::GetStructureCount(const FGameplayTag& StructureTag) const
 {
-    return StructureCounts.FindRef(StructureTag);
+    return GetStructures(StructureTag).Num();
 }
 
 TArray<AActor*> FAIBasePlanner::GetStructures(const FGameplayTag& StructureTag) const
@@ -247,7 +247,7 @@ void FAIBasePlanner::ProcessBuildQueue(float DeltaTime)
 
             if (!BuildLocation.IsZero())
             {
-                Director->EconomyManager.Spend(FGameplayTag::RequestGameplayTag("Resource.Credits"), Cost);
+                Director->EconomyManager.SpendResource(FGameplayTag::RequestGameplayTag("Resource.Credits"), Cost);
                 BuildQueue.RemoveAt(i);
                 i--;
 

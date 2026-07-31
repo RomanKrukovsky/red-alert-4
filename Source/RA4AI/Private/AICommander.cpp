@@ -595,7 +595,6 @@ bool AICommander::FindKnownEnemyTarget(KnownTarget& Out) const
     Out.Tile = BestTarget->Position;
     Out.Kind = BestTarget->Kind;
     return true;
-    return true;
 }
 
 bool AICommander::IsUnderAttack(const SimWorld& World) const

@@ -9,8 +9,8 @@ public class RedAlert4ServerTarget : TargetRules
 	public RedAlert4ServerTarget(TargetInfo Target) : base(Target)
 	{
 		Type = TargetType.Server;
-		DefaultBuildSettings = BuildSettingsVersion.V5;
-		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_6;
+		DefaultBuildSettings = BuildSettingsVersion.V7;
+		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_8;
 		ExtraModuleNames.AddRange(new string[] { "RedAlert4" });
 
 		bUseLoggingInShipping = true;

@@ -1,12 +1,14 @@
-#include "AI/AAIDirector.h"
+#include "AAIDirector.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "GameFramework/PlayerController.h"
-#include "AI/Planning/FAIHTNPlanner.h"
-#include "AI/Planning/FAIUtilityScorer.h"
-#include "Managers/FAIEconomyManager.h"
-#include "Managers/FAIBasePlanner.h"
-#include "Managers/FAIProductionManager.h"
-#include "Intelligence/FAIIntelManager.h"
+#include "BehaviorTree/BlackboardComponent.h"
+#include "FAIHTNPlanner.h"
+#include "FAIUtilityScorer.h"
+#include "FAIEconomyManager.h"
+#include "FAIBasePlanner.h"
+#include "FAIProductionManager.h"
+#include "FAIIntelManager.h"
 
 AAIDirector::AAIDirector()
 {
@@ -182,7 +184,7 @@ void AAIDirector::UpdatePhase()
 
 void AAIDirector::EvaluateGoals()
 {
-    TArray<FStrategicGoal> GoalsToRemove;
+    TArray<FGameplayTag> GoalsToRemove;
 
     for (auto& Pair : ActiveGoals)
     {
@@ -270,7 +272,7 @@ void AAIDirector::UpdateArmyGroups(float DeltaTime)
         TArray<AActor*> DeadUnits;
         for (AActor* Unit : Group.Units)
         {
-            if (!Unit || Unit->IsPendingKill())
+            if (!IsValid(Unit))
             {
                 DeadUnits.Add(Unit);
             }
@@ -305,7 +307,7 @@ void AAIDirector::DistributeOrders(float DeltaTime)
             {
                 if (Group.CurrentOrder.IsValid())
                 {
-                    UnitBB->SetValueAsEnum("CurrentOrder", (uint8)Group.CurrentOrder);
+                    UnitBB->SetValueAsString("CurrentOrder", Group.CurrentOrder.ToString());
                 }
 
                 if (!Group.OrderTargetLocation.IsZero())

@@ -16,10 +16,11 @@ public class RAAI : ModuleRules
             "NavigationSystem",
             "GameplayAbilities",
             "GameplayTags",
-            "MassEntity",
-            "MassAI",
+            "MassCommon",
+            "MassSimulation",
+            "MassAIBehavior",
             "StateTreeModule",
-            "StateTreeAI",
+            "GameplayStateTreeModule",
             "StructUtils",
             "Projects"
         });
@@ -49,6 +50,6 @@ public class RAAI : ModuleRules
         }
 
         // Enable C++17 features
-        CppStandard = CppStandardVersion.Cpp17;
+        CppStandard = CppStandardVersion.Cpp20;
     }
 }

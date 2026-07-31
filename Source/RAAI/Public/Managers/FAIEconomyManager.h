@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTags.h"
-#include "Managers/FAIEconomyManager.generated.h"
+#include "FAIEconomyManager.generated.h"
 
 class AAIDirector;
 
@@ -28,7 +28,7 @@ struct FResourceInfo
 };
 
 USTRUCT(BlueprintType)
-struct FProductionQueueItem
+struct FAIEconomyQueueItem
 {
     GENERATED_BODY()
 
@@ -75,6 +75,9 @@ public:
     void UnregisterProducer(const FGameplayTag& ProducerTag);
     void RegisterConsumer(const FGameplayTag& ConsumerTag, float ConsumptionRate);
     void UnregisterConsumer(const FGameplayTag& ConsumerTag);
+
+    void OnStructureBuilt(const FGameplayTag& StructureTag) {}
+    void OnStructureDestroyed(const FGameplayTag& StructureTag) {}
 
     void RequestExpansion(const FVector& PreferredLocation, float Priority);
     bool ShouldExpand() const;

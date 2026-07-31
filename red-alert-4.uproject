@@ -11,17 +11,13 @@
             "AdditionalDependencies": [
                 "AIModule",
                 "GameplayTasks",
-                "NavigationSystem",
-                "MassEntity",
-                "MassAI",
-                "StateTreeModule",
-                "StateTreeAI"
+                "NavigationSystem"
             ]
         }
     ],
     "Plugins": [
         {
-            "Name": "MassEntity",
+            "Name": "MassGameplay",
             "Enabled": true
         },
         {
@@ -30,6 +26,18 @@
         },
         {
             "Name": "StateTree",
+            "Enabled": true
+        },
+        {
+            "Name": "GameplayStateTree",
+            "Enabled": true
+        },
+        {
+            "Name": "GameplayAbilities",
+            "Enabled": true
+        },
+        {
+            "Name": "StructUtils",
             "Enabled": true
         }
     ]

@@ -193,7 +193,7 @@ void FAIProductionManager::ProcessQueue(float DeltaTime)
     {
         if (Director->EconomyManager.CanAfford(FGameplayTag::RequestGameplayTag("Resource.Credits"), Item.Cost))
         {
-            Director->EconomyManager.Spend(FGameplayTag::RequestGameplayTag("Resource.Credits"), Item.Cost);
+            Director->EconomyManager.SpendResource(FGameplayTag::RequestGameplayTag("Resource.Credits"), Item.Cost);
 
             Item.Progress += DeltaTime / Item.BuildTime;
 

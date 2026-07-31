@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTags.h"
-#include "AI/Planning/FAIHTNPlanner.generated.h"
+#include "FAIHTNPlanner.generated.h"
 
 class AAIDirector;
 
@@ -54,7 +54,6 @@ struct FHTNTask
     UPROPERTY()
     TArray<FGameplayTag> Prerequisites;
 
-    UPROPERTY()
     TArray<FHTNTask> SubTasks;
 };
 
@@ -113,14 +112,14 @@ public:
     float EstimateTaskTime(const FHTNTask& Task, AAIDirector* Director) const;
 
 private:
-    TArray<FHTNMethod> Methods;
-    TMap<EHTNTaskType, TMap<FGameplayTag, FPrimitiveTaskInfo>> PrimitiveTasks;
-
     struct FPrimitiveTaskInfo
     {
         float BaseCost = 1.0f;
         float BaseTime = 1.0f;
     };
+
+    TArray<FHTNMethod> Methods;
+    TMap<EHTNTaskType, TMap<FGameplayTag, FPrimitiveTaskInfo>> PrimitiveTasks;
 
     AAIDirector* Director = nullptr;
 

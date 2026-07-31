@@ -2,7 +2,10 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTags.h"
-#include "AI/Planning/FAIUtilityScorer.generated.h"
+struct FStrategicGoal;
+class AAIDirector;
+
+#include "FAIUtilityScorer.generated.h"
 
 class AAIDirector;
 

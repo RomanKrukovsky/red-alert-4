@@ -113,7 +113,8 @@ void URA4SimWorldSubsystem::FitGroundPlaneToMap()
     // ground once one has been baked into the level; the flat cube plane is only a
     // stand-in for maps that have neither, and must not be added on top of a
     // landscape that already covers the same area.
-    for (TActorIterator<ALandscapeProxy> It(World); It; ++It)
+    TActorIterator<ALandscapeProxy> LandscapeIt(World);
+    if (LandscapeIt)
     {
         return;
     }
@@ -439,10 +440,10 @@ float URA4SimWorldSubsystem::SampleGroundHeight(double WorldX, double WorldY)
         bLandscapeSearched = true;
         if (UWorld* World = GetWorld())
         {
-            for (TActorIterator<ALandscapeProxy> It(World); It; ++It)
+            TActorIterator<ALandscapeProxy> It(World);
+            if (It)
             {
                 CachedLandscape = *It;
-                break;
             }
         }
     }
@@ -630,7 +631,7 @@ void URA4SimWorldSubsystem::SyncPresentation()
             }
         }
     }
-}
+
     if (!bReportedPresentationState)
     {
         bReportedPresentationState = true;

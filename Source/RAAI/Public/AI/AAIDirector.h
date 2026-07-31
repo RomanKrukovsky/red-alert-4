@@ -2,12 +2,12 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTags.h"
-#include "AI/Planning/FAIHTNPlanner.h"
-#include "AI/Planning/FAIUtilityScorer.h"
-#include "Managers/FAIEconomyManager.h"
-#include "Managers/FAIBasePlanner.h"
-#include "Managers/FAIProductionManager.h"
-#include "Intelligence/FAIIntelManager.h"
+#include "FAIHTNPlanner.h"
+#include "FAIUtilityScorer.h"
+#include "FAIEconomyManager.h"
+#include "FAIBasePlanner.h"
+#include "FAIProductionManager.h"
+#include "FAIIntelManager.h"
 #include "GameFramework/Actor.h"
 #include "AAIDirector.generated.h"
 
@@ -174,7 +174,9 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "RAAI|Events")
     FOnArmyGroupCreated OnArmyGroupCreated;
 
-protected:
+public:
+    void ProcessHTNTask(const FHTNTask& Task);
+
     virtual void UpdateStrategicAI(float DeltaTime);
     virtual void UpdatePhase();
     virtual void EvaluateGoals();
@@ -185,6 +187,9 @@ protected:
     void InitializeArchetypeData();
     void CreateDefaultArmyGroups();
     FArmyGroup CreateArmyGroup(const FGameplayTag& GroupType, const FVector& RallyPoint);
+    void CreateAttackGroup(const FVector& TargetLocation, float Priority);
+    void CreateDefenseGroup(const FVector& TargetLocation, float Priority);
+    void CreateScoutGroup(const FVector& TargetLocation, float Priority);
     void AssignUnitsToGroups();
     void UpdateGroupStrength(FArmyGroup& Group);
 
@@ -215,10 +220,8 @@ protected:
     UPROPERTY()
     TMap<FGameplayTag, int32> StructureCounts;
 
-    UPROPERTY()
     TMap<FGameplayTag, TArray<AActor*>> UnitsByType;
 
-    UPROPERTY()
     TMap<FGameplayTag, TArray<AActor*>> StructuresByType;
 
     UPROPERTY()
@@ -236,21 +239,15 @@ protected:
     UPROPERTY()
     TObjectPtr<UBlackboardComponent> SharedBlackboard;
 
-    UPROPERTY()
     FAIHTNPlanner HTNPlanner;
 
-    UPROPERTY()
     FAIUtilityScorer UtilityScorer;
 
-    UPROPERTY()
     FAIEconomyManager EconomyManager;
 
-    UPROPERTY()
     FAIBasePlanner BasePlanner;
 
-    UPROPERTY()
     FAIProductionManager ProductionManager;
 
-    UPROPERTY()
     FAIIntelManager IntelManager;
 };

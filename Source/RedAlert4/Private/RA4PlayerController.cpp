@@ -48,7 +48,11 @@ void ARA4PlayerController::BeginPlay()
         // UUserWidget convenience setters each rewrite part of the slot, and the size
         // helper also resets its anchors to top-left. Supplying one complete slot is
         // both simpler and immune to setter ordering.
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8
+        UGameViewportSubsystem* ViewportSubsystem = UGameViewportSubsystem::Get();
+#else
         UGameViewportSubsystem* ViewportSubsystem = UGameViewportSubsystem::Get(GetWorld());
+#endif
 
         ResourceBar = CreateWidget<URA4ResourceBarWidget>(this, URA4ResourceBarWidget::StaticClass());
         if (ResourceBar != nullptr)

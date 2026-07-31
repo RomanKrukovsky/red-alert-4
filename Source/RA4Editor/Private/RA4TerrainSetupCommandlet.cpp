@@ -250,10 +250,10 @@ int32 URA4TerrainSetupCommandlet::Main(const FString& Params)
     // Find-or-spawn, then always configure: a rerun must be able to correct settings
     // it got wrong the first time, not skip because an actor happens to exist.
     AExponentialHeightFog* Fog = nullptr;
-    for (TActorIterator<AExponentialHeightFog> It(World); It; ++It)
+    TActorIterator<AExponentialHeightFog> It(World);
+    if (It)
     {
         Fog = *It;
-        break;
     }
     if (Fog == nullptr)
     {

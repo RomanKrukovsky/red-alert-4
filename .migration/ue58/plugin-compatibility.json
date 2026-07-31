@@ -1,0 +1,50 @@
+[
+  {
+    "name": "GameplayAbilities",
+    "source": "Engine Built-in",
+    "enabled_in_56": true,
+    "compatible_with_58": true,
+    "action": "keep_enabled",
+    "evidence": "Official Unreal Engine core plugin."
+  },
+  {
+    "name": "CommonUI",
+    "source": "Engine Built-in",
+    "enabled_in_56": true,
+    "compatible_with_58": true,
+    "action": "keep_enabled",
+    "evidence": "Official Unreal Engine UI plugin."
+  },
+  {
+    "name": "ModelViewViewModel",
+    "source": "Engine Built-in",
+    "enabled_in_56": true,
+    "compatible_with_58": true,
+    "action": "keep_enabled",
+    "evidence": "Official Unreal Engine MVVM plugin."
+  },
+  {
+    "name": "EnhancedInput",
+    "source": "Engine Built-in",
+    "enabled_in_56": true,
+    "compatible_with_58": true,
+    "action": "keep_enabled",
+    "evidence": "Official Unreal Engine input plugin."
+  },
+  {
+    "name": "FunctionalTestingEditor",
+    "source": "Engine Built-in",
+    "enabled_in_56": true,
+    "compatible_with_58": true,
+    "action": "keep_enabled",
+    "evidence": "Official Unreal Engine editor testing plugin."
+  },
+  {
+    "name": "PythonScriptPlugin",
+    "source": "Engine Built-in",
+    "enabled_in_56": true,
+    "compatible_with_58": true,
+    "action": "keep_enabled",
+    "evidence": "Official Unreal Engine Python automation plugin."
+  }
+]

@@ -1,0 +1,25 @@
+=== GIT STATUS ===
+?? .migration/
+
+=== CURRENT BRANCH ===
+main
+
+=== HEAD REVISION ===
+7330da727a3430828e81708c2013906e45f2c664
+
+=== RECENT LOG (10) ===
+7330da7 fix(audio): clear simulation events in RA4SimWorldSubsystem to prevent infinite EVA sound loop
+2a6c3ab fix(match,ai,tools): enable profile argument parsing in dump_match for telemetry benchmarking
+4d53f83 fix(hud,visual,audio): fix sidebar viewport fallback, lighting, PBR floor texture, EVA fallback and prop scattering
+1446932 kj
+f56a728 feat: make skirmish radar reflect fogged world state
+749f8a3 fix: restore playable skirmish HUD and faction defaults
+f2421a6 fix: sidebar width, fog washout, infantry animations, one-shot move ping
+4c59ef4 feat(hud,audio): hover tooltips and voice lines for orders
+e0455d6 fix(hud,visual): show the sidebar, drop debug tracers, real terrain and lighting
+15e4b3f feat(audio,loc): import the audio pack, play it, and set up localisation
+
+=== DIFF STAT ===
+
+=== SUBMODULE STATUS ===
+fatal: no submodule mapping found in .gitmodules for path 'Tools/ContentImport/RA3_Mod_Files'

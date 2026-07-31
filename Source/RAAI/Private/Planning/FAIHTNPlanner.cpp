@@ -35,7 +35,7 @@ void FAIHTNPlanner::Initialize(AAIDirector* InDirector)
         FGameplayTag::RequestGameplayTag("Strategic.Goal.BuildHeavyArmor"),
         {
             FHTNTask{EHTNTaskType::BuildStructure, FGameplayTag::RequestGameplayTag("Structure.WarFactory")},
-            FHTNTask{EHTNTaskType::TrainUnits, FGameplayTag::RequestGameplayTag("Unit.Tank.Heavy"), 4, 8.0f},
+            FHTNTask{EHTNTaskType::TrainUnits, FGameplayTag::RequestGameplayTag("Unit.Tank.Heavy"), FVector::ZeroVector, nullptr, 4, 8.0f},
             FHTNTask{EHTNTaskType::AttackTarget, FGameplayTag(), FVector::ZeroVector, nullptr, 0, 9.0f}
         },
         2500.0f,
@@ -45,7 +45,7 @@ void FAIHTNPlanner::Initialize(AAIDirector* InDirector)
     RegisterMethod(FHTNMethod{
         FGameplayTag::RequestGameplayTag("Strategic.Goal.ControlOreFields"),
         {
-            FHTNTask{EHTNTaskType::TrainUnits, FGameplayTag::RequestGameplayTag("Unit.Harvester"), 2, 7.0f},
+            FHTNTask{EHTNTaskType::TrainUnits, FGameplayTag::RequestGameplayTag("Unit.Harvester"), FVector::ZeroVector, nullptr, 2, 7.0f},
             FHTNTask{EHTNTaskType::BuildStructure, FGameplayTag::RequestGameplayTag("Structure.Refinery")},
             FHTNTask{EHTNTaskType::DefendPosition, FGameplayTag(), FVector::ZeroVector, nullptr, 0, 6.0f}
         },
@@ -57,7 +57,7 @@ void FAIHTNPlanner::Initialize(AAIDirector* InDirector)
         FGameplayTag::RequestGameplayTag("Strategic.Goal.DestroyEnemyPower"),
         {
             FHTNTask{EHTNTaskType::ScoutArea, FGameplayTag(), FVector::ZeroVector, nullptr, 0, 5.0f},
-            FHTNTask{EHTNTaskType::TrainUnits, FGameplayTag::RequestGameplayTag("Unit.Aircraft"), 3, 8.0f},
+            FHTNTask{EHTNTaskType::TrainUnits, FGameplayTag::RequestGameplayTag("Unit.Aircraft"), FVector::ZeroVector, nullptr, 3, 8.0f},
             FHTNTask{EHTNTaskType::AttackTarget, FGameplayTag::RequestGameplayTag("Structure.PowerPlant"), FVector::ZeroVector, nullptr, 0, 9.0f}
         },
         4000.0f,
@@ -68,7 +68,7 @@ void FAIHTNPlanner::Initialize(AAIDirector* InDirector)
         FGameplayTag::RequestGameplayTag("Strategic.Goal.BuildAirForce"),
         {
             FHTNTask{EHTNTaskType::BuildStructure, FGameplayTag::RequestGameplayTag("Structure.Airfield")},
-            FHTNTask{EHTNTaskType::TrainUnits, FGameplayTag::RequestGameplayTag("Unit.Aircraft"), 4, 8.0f},
+            FHTNTask{EHTNTaskType::TrainUnits, FGameplayTag::RequestGameplayTag("Unit.Aircraft"), FVector::ZeroVector, nullptr, 4, 8.0f},
             FHTNTask{EHTNTaskType::AttackTarget, FGameplayTag(), FVector::ZeroVector, nullptr, 0, 7.0f}
         },
         3500.0f,
@@ -79,7 +79,7 @@ void FAIHTNPlanner::Initialize(AAIDirector* InDirector)
         FGameplayTag::RequestGameplayTag("Strategic.Goal.TechUpFast"),
         {
             FHTNTask{EHTNTaskType::BuildStructure, FGameplayTag::RequestGameplayTag("Structure.TechCenter")},
-            FHTNTask{EHTNTaskType::TrainUnits, FGameplayTag::RequestGameplayTag("Unit.Transform"), 3, 9.0f}
+            FHTNTask{EHTNTaskType::TrainUnits, FGameplayTag::RequestGameplayTag("Unit.Transform"), FVector::ZeroVector, nullptr, 3, 9.0f}
         },
         3000.0f,
         {FGameplayTag::RequestGameplayTag("Structure.TechCenter")}
@@ -88,7 +88,7 @@ void FAIHTNPlanner::Initialize(AAIDirector* InDirector)
     RegisterMethod(FHTNMethod{
         FGameplayTag::RequestGameplayTag("Strategic.Goal.EarlyRush"),
         {
-            FHTNTask{EHTNTaskType::TrainUnits, FGameplayTag::RequestGameplayTag("Unit.Tank.Light"), 4, 9.0f},
+            FHTNTask{EHTNTaskType::TrainUnits, FGameplayTag::RequestGameplayTag("Unit.Tank.Light"), FVector::ZeroVector, nullptr, 4, 9.0f},
             FHTNTask{EHTNTaskType::AttackTarget, FGameplayTag(), FVector::ZeroVector, nullptr, 0, 10.0f}
         },
         2000.0f,
@@ -98,7 +98,7 @@ void FAIHTNPlanner::Initialize(AAIDirector* InDirector)
     RegisterMethod(FHTNMethod{
         FGameplayTag::RequestGameplayTag("Strategic.Goal.Harassment"),
         {
-            FHTNTask{EHTNTaskType::TrainUnits, FGameplayTag::RequestGameplayTag("Unit.Fast"), 3, 7.0f},
+            FHTNTask{EHTNTaskType::TrainUnits, FGameplayTag::RequestGameplayTag("Unit.Fast"), FVector::ZeroVector, nullptr, 3, 7.0f},
             FHTNTask{EHTNTaskType::ScoutArea, FGameplayTag(), FVector::ZeroVector, nullptr, 0, 5.0f},
             FHTNTask{EHTNTaskType::AttackTarget, FGameplayTag::RequestGameplayTag("Unit.Harvester"), FVector::ZeroVector, nullptr, 0, 8.0f}
         },
@@ -316,14 +316,14 @@ TArray<FHTNMethod> FAIHTNPlanner::FindMethodsForGoal(const FGameplayTag& GoalTag
     return FoundMethods;
 }
 
-FHTNMethod FAIHTNPlanner::SelectBestMethod(const TArray<FHTNMethod>& Methods, AAIDirector* InDirector) const
+FHTNMethod FAIHTNPlanner::SelectBestMethod(const TArray<FHTNMethod>& InMethods, AAIDirector* InDirector) const
 {
-    if (Methods.Num() == 0) return FHTNMethod{};
+    if (InMethods.Num() == 0) return FHTNMethod{};
 
     float BestScore = -1.0f;
-    FHTNMethod BestMethod = Methods[0];
+    FHTNMethod BestMethod = InMethods[0];
 
-    for (const FHTNMethod& Method : Methods)
+    for (const FHTNMethod& Method : InMethods)
     {
         float Score = 1.0f / FMath::Max(1.0f, Method.Cost);
 

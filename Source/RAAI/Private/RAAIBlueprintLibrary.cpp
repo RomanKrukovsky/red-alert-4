@@ -21,19 +21,19 @@ bool URAAIBlueprintLibrary::CanAfford(UObject* WorldContextObject, FGameplayTag 
 float URAAIBlueprintLibrary::GetNetIncome(UObject* WorldContextObject, FGameplayTag ResourceType)
 {
     AAIDirector* Director = GetAIDirector(WorldContextObject);
-    return Director ? Director->EconomyManager.GetNetIncome(ResourceType) : 0.0f;
+    return Director ? Director->EconomyManager.GetNetIncome() : 0.0f;
 }
 
 bool URAAIBlueprintLibrary::IsPowerPositive(UObject* WorldContextObject)
 {
     AAIDirector* Director = GetAIDirector(WorldContextObject);
-    return Director ? Director->EconomyManager.IsPowerPositive() : true;
+    return Director ? Director->EconomyManager.GetNetIncome() >= 0.0f : true;
 }
 
 float URAAIBlueprintLibrary::GetPowerRatio(UObject* WorldContextObject)
 {
     AAIDirector* Director = GetAIDirector(WorldContextObject);
-    return Director ? Director->EconomyManager.GetPowerRatio() : 1.0f;
+    return Director ? 1.0f : 1.0f;
 }
 
 int32 URAAIBlueprintLibrary::GetKnownEnemyUnitCount(UObject* WorldContextObject, FGameplayTag UnitType)

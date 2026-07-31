@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTags.h"
-#include "Intelligence/FAIIntelManager.generated.h"
+#include "FAIIntelManager.generated.h"
 
 class AAIDirector;
 

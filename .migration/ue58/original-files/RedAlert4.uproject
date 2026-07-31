@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "5.8",
+	"EngineAssociation": "5.6",
 	"Category": "Strategy",
 	"Description": "Red Alert 4 - real-time strategy on a deterministic C++ core.",
 	"Modules": [
@@ -107,10 +107,6 @@
 		},
 		{
 			"Name": "PythonScriptPlugin",
-			"Enabled": true
-		},
-		{
-			"Name": "EditorScriptingUtilities",
 			"Enabled": true
 		}
 	],
