@@ -1,0 +1,1851 @@
+{
+  "total_mappings": 142,
+  "mappings": [
+    {
+      "bible_id": "SU_MCV_MobileYard",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_MCV_MobileYard_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "SU_ConYard",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_ConYard_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "SU_PowerPlant",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_PowerPlant_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "SU_Refinery",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Refinery_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "SU_Barracks",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Barracks_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "SU_WarFactory",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_WarFactory_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "SU_Airfield",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Airfield_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "SU_NavalYard",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_NavalYard_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "SU_Radar",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Radar_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "SU_TechCenter",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_TechCenter_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "SU_GunTurret",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_GunTurret_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "SU_AATurret",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_AATurret_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "SU_TeslaTower",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_TeslaTower_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "SU_Bunker",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Bunker_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "SU_SuperweaponDome",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_SuperweaponDome_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "SU_SuperweaponSilo",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_SuperweaponSilo_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "SU_RubezhRifleman",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_RubezhRifleman_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "SU_ZapalGrenadier",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_ZapalGrenadier_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "SU_ZaslonAATeam",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_ZaslonAATeam_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "SU_MasterEngineer",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_MasterEngineer_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "SU_RazryadTrooper",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_RazryadTrooper_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "SU_VektorOfficer",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_VektorOfficer_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "SU_BogatyrOreCarrier",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_BogatyrOreCarrier_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "SU_RysScout",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_RysScout_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "SU_GranitMBT",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_GranitMBT_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "SU_ZarevoMLRS",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_ZarevoMLRS_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "SU_GromoboyRam",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_GromoboyRam_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "SU_VoevodaHeavyTank",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_VoevodaHeavyTank_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "SU_KrechetInterceptor",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_KrechetInterceptor_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "SU_KorshunGunship",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_KorshunGunship_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "SU_GromadaAirship",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_GromadaAirship_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "SU_BuranPatrolBoat",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_BuranPatrolBoat_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "SU_MorokSubmarine",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_MorokSubmarine_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "SU_SvyatogorCruiser",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_SvyatogorCruiser_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "SU_Hero_Morozova",
+      "faction": "Soviet",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Hero_Morozova_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "AL_MCV_MobileNode",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_MCV_MobileNode_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "AL_ConYard",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_ConYard_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "AL_PowerPlant",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_PowerPlant_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "AL_Refinery",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_Refinery_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "AL_Barracks",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_Barracks_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "AL_WarFactory",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_WarFactory_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "AL_Airfield",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_Airfield_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "AL_NavalYard",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_NavalYard_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "AL_Radar",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_Radar_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "AL_TechCenter",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_TechCenter_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "AL_GunTurret",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_GunTurret_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "AL_AATurret",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_AATurret_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "AL_PrismTower",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_PrismTower_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "AL_ShieldProjectorBuilding",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_ShieldProjectorBuilding_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "AL_SuperweaponChrono",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_SuperweaponChrono_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "AL_SuperweaponOrbital",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_SuperweaponOrbital_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "AL_SentinelRifleman",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_SentinelRifleman_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "AL_LancerTeam",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_LancerTeam_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "AL_FieldEngineer",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_FieldEngineer_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "AL_LongwatchSniper",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_LongwatchSniper_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "AL_LifelineMedic",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_LifelineMedic_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "AL_FrostlineSpecialist",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_FrostlineSpecialist_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "AL_PioneerHarvester",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_PioneerHarvester_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "AL_KestrelScout",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_KestrelScout_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "AL_BulwarkMBT",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_BulwarkMBT_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "AL_OracleArtillery",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_OracleArtillery_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "AL_RefractionTank",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_RefractionTank_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "AL_WardShieldCarrier",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_WardShieldCarrier_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "AL_CitadelTank",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_CitadelTank_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "AL_ShrikeInterceptor",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_ShrikeInterceptor_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "AL_VectorVTOL",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_VectorVTOL_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "AL_NightveilBomber",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_NightveilBomber_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "AL_MantaPatrolCraft",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_MantaPatrolCraft_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "AL_ResoluteDestroyer",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_ResoluteDestroyer_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "AL_HorizonCarrier",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_HorizonCarrier_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "AL_Hero_Hart",
+      "faction": "Alliance",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Alliance/SM_Alliance_AL_Hero_Hart_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CO_MCV_MobileNode",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_MCV_MobileNode_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CO_ConYard",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_ConYard_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CO_PowerPlant",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_PowerPlant_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CO_Refinery",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_Refinery_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CO_Barracks",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_Barracks_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CO_WarFactory",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_WarFactory_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CO_Airfield",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_Airfield_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CO_NavalYard",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_NavalYard_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CO_Radar",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_Radar_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CO_TechCenter",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_TechCenter_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CO_GunTurret",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_GunTurret_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CO_AATurret",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_AATurret_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CO_RailTower",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_RailTower_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CO_ShieldHub",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_ShieldHub_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CO_SuperweaponMatrix",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_SuperweaponMatrix_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CO_SuperweaponSeismic",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_SuperweaponSeismic_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CO_QianweiRifleman",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_QianweiRifleman_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CO_VajraLancer",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_VajraLancer_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CO_JieTechnician",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_JieTechnician_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CO_ShengongMarksman",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_ShengongMarksman_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CO_SanjivaniMedic",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_SanjivaniMedic_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CO_RakshaGuard",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_RakshaGuard_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CO_YuanCollector",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_YuanCollector_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CO_KamakiriWalker",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_KamakiriWalker_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CO_QinglongMBT",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_QinglongMBT_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CO_MonsoonArtillery",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_MonsoonArtillery_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CO_SeimonShieldCarrier",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_SeimonShieldCarrier_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CO_AiravataWalker",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_AiravataWalker_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CO_TianmenFortress",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_TianmenFortress_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CO_KawasemiDrone",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_KawasemiDrone_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CO_LeiheGunship",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_LeiheGunship_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CO_AgnipakshaBomber",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_AgnipakshaBomber_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CO_KazekiriCorvette",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_KazekiriCorvette_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CO_XuanwuCruiser",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_XuanwuCruiser_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CO_SamudraCarrier",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_SamudraCarrier_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CO_Hero_Mei",
+      "faction": "Coalition",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Coalition/SM_Coalition_CO_Hero_Mei_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CH_MCV_MobileArk",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_MCV_MobileArk_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CH_ConYard",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_ConYard_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CH_PowerPlant",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_PowerPlant_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CH_Refinery",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_Refinery_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CH_Barracks",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_Barracks_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CH_WarFactory",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_WarFactory_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CH_Airfield",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_Airfield_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CH_NavalYard",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_NavalYard_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CH_Radar",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_Radar_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CH_TechCenter",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_TechCenter_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CH_EchoTurret",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_EchoTurret_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CH_AATurret",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_AATurret_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CH_StasisProjectorBuilding",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_StasisProjectorBuilding_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CH_CausalityAnchor",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_CausalityAnchor_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CH_SuperweaponRewind",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_SuperweaponRewind_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CH_SuperweaponSingularity",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_SuperweaponSingularity_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 150.0
+    },
+    {
+      "bible_id": "CH_ResonanceRifleman",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_ResonanceRifleman_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CH_PunctureLancer",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_PunctureLancer_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CH_CausalityEngineer",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_CausalityEngineer_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CH_ReversalMedic",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_ReversalMedic_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CH_AporiaSniper",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_AporiaSniper_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CH_CensorOperative",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_CensorOperative_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CH_ProbabilistHarvester",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_ProbabilistHarvester_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CH_ParallaxScout",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_ParallaxScout_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CH_TimelineTank",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_TimelineTank_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CH_DeltaDelayArtillery",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_DeltaDelayArtillery_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CH_PauseProjector",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_PauseProjector_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CH_EraEngine",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_EraEngine_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CH_GapInterceptor",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_GapInterceptor_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CH_TrailGunship",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_TrailGunship_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CH_CriticalPointBomber",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_CriticalPointBomber_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CH_IsobathFrigate",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_IsobathFrigate_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CH_BathysSubmarine",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_BathysSubmarine_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CH_AttractorArk",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_AttractorArk_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    },
+    {
+      "bible_id": "CH_Hero_Voss",
+      "faction": "Chronolegion",
+      "mesh": "/Game/RA4/Art/Blockout/Content/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_Hero_Voss_Blockout",
+      "material": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006.PaintedMetal006",
+      "team_color_supported": true,
+      "visual_scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "selection_bounds_radius": 60.0
+    }
+  ]
+}

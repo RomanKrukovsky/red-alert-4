@@ -192,6 +192,7 @@ int32 URA4LandscapeCommandlet::Main(const FString& Params)
                TEXT("RA4Landscape: created landscape covering %.0f x %.0f units for %s"),
                SpanUnits, SpanUnits, *MapPackageName);
 
+        World->SetFlags(RF_Standalone | RF_Public);
         MapPackage->MarkPackageDirty();
         const FString PackageFileName =
             FPackageName::LongPackageNameToFilename(MapPackage->GetName(), FPackageName::GetMapPackageExtension());

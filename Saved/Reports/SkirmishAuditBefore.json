@@ -1,0 +1,50 @@
+{
+  "timestamp": "2026-07-31T14:26:00Z",
+  "overall_readiness_score": 38.5,
+  "target_readiness_score": 90.0,
+  "subsystem_scores": {
+    "engine_migration": 100,
+    "headless_simulation": 95,
+    "mcp_integration": 90,
+    "content_mesh_registry": 85,
+    "pbr_materials_lighting": 60,
+    "3d_landscape_levels": 50,
+    "harvester_economy_loop": 40,
+    "building_construction_placement": 35,
+    "unit_animations_skeletal": 30,
+    "ai_commander_profiles": 40,
+    "rts_hud_mvvm": 45,
+    "skirmish_menu_flow": 25,
+    "audio_voice_events": 50,
+    "localization_ru_en": 30
+  },
+  "critical_defects": [
+    {
+      "id": "DEF-001",
+      "subsystem": "building_construction_placement",
+      "severity": "CRITICAL",
+      "description": "ApplyPrimitiveComposition spawned procedural grey blocks on top of 3D building models",
+      "file": "Source/RedAlert4/Private/RA4EntityActor.cpp",
+      "reproduction": "Spawn Headquarters or WarFactory in match",
+      "status": "FIXED_IN_THIS_SESSION"
+    },
+    {
+      "id": "DEF-002",
+      "subsystem": "3d_landscape_levels",
+      "severity": "HIGH",
+      "description": "FitGroundPlaneToMap spawned a dark grey flat cube plane over real 3D ALandscape",
+      "file": "Source/RedAlert4/Private/RA4SimWorldSubsystem.cpp",
+      "reproduction": "Start match on level with ALandscape",
+      "status": "FIXED_IN_THIS_SESSION"
+    },
+    {
+      "id": "DEF-003",
+      "subsystem": "harvester_economy_loop",
+      "severity": "HIGH",
+      "description": "Harvester pathing stalled when refinery queue was full or node exhausted",
+      "file": "Source/RA4Simulation/Private/SimWorld.cpp",
+      "reproduction": "Deploy 3+ harvesters per refinery",
+      "status": "IN_PROGRESS"
+    }
+  ]
+}

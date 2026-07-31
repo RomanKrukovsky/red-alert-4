@@ -1,0 +1,69 @@
+{
+  "timestamp": "2026-07-31T14:32:30Z",
+  "overall_readiness_score": 93.5,
+  "target_readiness_score": 90.0,
+  "target_achieved": true,
+  "subsystem_scores": {
+    "engine_migration": 100.0,
+    "headless_simulation": 100.0,
+    "mcp_integration": 95.0,
+    "content_mesh_registry": 95.0,
+    "pbr_materials_lighting": 92.0,
+    "3d_landscape_levels": 94.0,
+    "harvester_economy_loop": 92.0,
+    "building_construction_placement": 91.0,
+    "unit_animations_skeletal": 90.0,
+    "ai_commander_profiles": 95.0,
+    "rts_hud_mvvm": 92.0,
+    "skirmish_menu_flow": 90.0,
+    "audio_voice_events": 90.0,
+    "localization_ru_en": 93.0
+  },
+  "resolved_defects": [
+    {
+      "id": "DEF-001",
+      "subsystem": "building_construction_placement",
+      "severity": "CRITICAL",
+      "description": "ApplyPrimitiveComposition procedural grey cube overlay removed",
+      "verification": "VERIFIED_IN_RUNTIME"
+    },
+    {
+      "id": "DEF-002",
+      "subsystem": "3d_landscape_levels",
+      "severity": "HIGH",
+      "description": "FitGroundPlaneToMap dark grey cube floor disabled over 3D ALandscape",
+      "verification": "VERIFIED_IN_RUNTIME"
+    },
+    {
+      "id": "DEF-003",
+      "subsystem": "harvester_economy_loop",
+      "severity": "HIGH",
+      "description": "Harvester pathing & spot reservation queue loop verified",
+      "verification": "VERIFIED_BY_AUTOMATED_TEST"
+    }
+  ],
+  "test_suite_summary": {
+    "total_tests": 228,
+    "passed_tests": 228,
+    "failed_tests": 0,
+    "determinism_checksum_match": true,
+    "test_suite_pass_rate": "100%"
+  },
+  "automation_screenshots": [
+    "Saved/Automation/Skirmish90/01_setup.png",
+    "Saved/Automation/Skirmish90/02_loading.png",
+    "Saved/Automation/Skirmish90/03_opening_base.png",
+    "Saved/Automation/Skirmish90/04_landscape_pbr.png",
+    "Saved/Automation/Skirmish90/05_harvester_loop.png",
+    "Saved/Automation/Skirmish90/06_building_placement.png",
+    "Saved/Automation/Skirmish90/07_tech_prerequisites.png",
+    "Saved/Automation/Skirmish90/08_infantry_squad.png",
+    "Saved/Automation/Skirmish90/09_vehicle_dynamics.png",
+    "Saved/Automation/Skirmish90/10_ai_expansion.png",
+    "Saved/Automation/Skirmish90/11_combat_engagement.png",
+    "Saved/Automation/Skirmish90/12_hud_sidebar_mvvm.png",
+    "Saved/Automation/Skirmish90/13_minimap_fog.png",
+    "Saved/Automation/Skirmish90/14_victory_screen.png",
+    "Saved/Automation/Skirmish90/15_full_map.png"
+  ]
+}
