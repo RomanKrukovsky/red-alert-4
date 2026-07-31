@@ -302,6 +302,8 @@ void URA4SimWorldSubsystem::TickSimulation()
             }
         }
     }
+
+    SimWorld->ClearEvents();
 }
 
 void URA4SimWorldSubsystem::ProcessPresentationEvents()
@@ -394,6 +396,26 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
                 Faction,
                 Event.Player == LocalPlayer ? ERA4EVAEvent::Victory : ERA4EVAEvent::Defeat,
                 true);
+            break;
+
+        case RA4::SimEventType::WeaponFired:
+            if (UnrealWorld && CVarRA4DebugCombatDraw.GetValueOnGameThread() != 0)
+            {
+                FVector Start = RA4Coords::ToUnreal(Event.Location);
+                Start.Z = SampleGroundHeight(Start.X, Start.Y) + 20.0f;
+                FVector End = Start;
+                const auto& Transforms = SimWorld->GetAllTransforms();
+                if (Event.Other.IsValid() && SimWorld->IsAlive(Event.Other) && Event.Other.Index < Transforms.size())
+                {
+                    End = RA4Coords::ToUnreal(Transforms[Event.Other.Index].Position);
+                    End.Z = SampleGroundHeight(End.X, End.Y) + 20.0f;
+                    DrawDebugLine(UnrealWorld, Start, End, FColor::Yellow, false, 0.2f, 0, 3.0f);
+                }
+                else
+                {
+                    DrawDebugPoint(UnrealWorld, Start, 15.0f, FColor::Yellow, false, 0.2f);
+                }
+            }
             break;
 
         default:
@@ -608,41 +630,7 @@ void URA4SimWorldSubsystem::SyncPresentation()
             }
         }
     }
-    
-    // Combat feedback was drawn with DrawDebugLine/Point, which is a diagnostic tool,
-    // not a game effect: it produced bright yellow tracers and orange dots on screen
-    // during normal play. Kept behind a console variable so it is still available for
-    // debugging combat, but off by default.
-    if (World && CVarRA4DebugCombatDraw.GetValueOnGameThread() != 0)
-    {
-        for (const RA4::SimEvent& Event : SimWorld->GetEvents())
-        {
-            if (Event.Type == RA4::SimEventType::WeaponFired)
-            {
-                FVector Start = RA4Coords::ToUnreal(Event.Location);
-                Start.Z = SampleGroundHeight(Start.X, Start.Y) + 20.0f;
-
-                FVector End = Start;
-                if (Event.Other.IsValid() && SimWorld->IsAlive(Event.Other))
-                {
-                    End = RA4Coords::ToUnreal(Transforms[Event.Other.Index].Position);
-                    End.Z = SampleGroundHeight(End.X, End.Y) + 20.0f;
-                    DrawDebugLine(World, Start, End, FColor::Yellow, false, 0.2f, 0, 3.0f);
-                }
-                else
-                {
-                    DrawDebugPoint(World, Start, 15.0f, FColor::Yellow, false, 0.2f);
-                }
-            }
-            else if (Event.Type == RA4::SimEventType::DamageApplied || Event.Type == RA4::SimEventType::ProjectileImpact)
-            {
-                FVector ImpactPoint = RA4Coords::ToUnreal(Event.Location);
-                ImpactPoint.Z = SampleGroundHeight(ImpactPoint.X, ImpactPoint.Y) + 30.0f;
-                DrawDebugPoint(World, ImpactPoint, 25.0f, FColor::Orange, false, 0.3f);
-            }
-        }
-    }
-
+}
     if (!bReportedPresentationState)
     {
         bReportedPresentationState = true;
