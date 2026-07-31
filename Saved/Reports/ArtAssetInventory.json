@@ -1,0 +1,3624 @@
+{
+  "scan_time": "2026-07-31T16:24:00Z",
+  "project": "RedAlert4",
+  "total_assets": 565,
+  "categories": {
+    "StaticMesh": [],
+    "SkeletalMesh": [
+      {
+        "name": "SK_Military_Character_Skeleton",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Mesh/SK_Military_Character_Skeleton",
+        "file_size": 162742,
+        "type": "SkeletalMesh"
+      }
+    ],
+    "Skeleton": [],
+    "AnimationSequence": [
+      {
+        "name": "DA_Building_EA_Building_17",
+        "game_path": "/Game/RA4/Data/Generated/Buildings/DA_Building_EA_Building_17",
+        "file_size": 1591,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_Building_AL_Building_15",
+        "game_path": "/Game/RA4/Data/Generated/Buildings/DA_Building_AL_Building_15",
+        "file_size": 1575,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_Building_CH_Building_22",
+        "game_path": "/Game/RA4/Data/Generated/Buildings/DA_Building_CH_Building_22",
+        "file_size": 1579,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_Building_SO_Building_2",
+        "game_path": "/Game/RA4/Data/Generated/Buildings/DA_Building_SO_Building_2",
+        "file_size": 1566,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_Building_EA_Building_19",
+        "game_path": "/Game/RA4/Data/Generated/Buildings/DA_Building_EA_Building_19",
+        "file_size": 1605,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_Building_AL_Building_13",
+        "game_path": "/Game/RA4/Data/Generated/Buildings/DA_Building_AL_Building_13",
+        "file_size": 1601,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_Building_SO_Building_11",
+        "game_path": "/Game/RA4/Data/Generated/Buildings/DA_Building_SO_Building_11",
+        "file_size": 1595,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_Building_SO_Building_6",
+        "game_path": "/Game/RA4/Data/Generated/Buildings/DA_Building_SO_Building_6",
+        "file_size": 1578,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_Building_SO_Building_8",
+        "game_path": "/Game/RA4/Data/Generated/Buildings/DA_Building_SO_Building_8",
+        "file_size": 1588,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_Building_SO_Building_4",
+        "game_path": "/Game/RA4/Data/Generated/Buildings/DA_Building_SO_Building_4",
+        "file_size": 1572,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_Building_AL_Building_14",
+        "game_path": "/Game/RA4/Data/Generated/Buildings/DA_Building_AL_Building_14",
+        "file_size": 1583,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_Building_SO_Building_1",
+        "game_path": "/Game/RA4/Data/Generated/Buildings/DA_Building_SO_Building_1",
+        "file_size": 1594,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_Building_EA_Building_20",
+        "game_path": "/Game/RA4/Data/Generated/Buildings/DA_Building_EA_Building_20",
+        "file_size": 1617,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_Building_CH_Building_21",
+        "game_path": "/Game/RA4/Data/Generated/Buildings/DA_Building_CH_Building_21",
+        "file_size": 1581,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_Building_EA_Building_18",
+        "game_path": "/Game/RA4/Data/Generated/Buildings/DA_Building_EA_Building_18",
+        "file_size": 1571,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_Building_SO_Building_3",
+        "game_path": "/Game/RA4/Data/Generated/Buildings/DA_Building_SO_Building_3",
+        "file_size": 1588,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_Building_AL_Building_16",
+        "game_path": "/Game/RA4/Data/Generated/Buildings/DA_Building_AL_Building_16",
+        "file_size": 1577,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_Building_SO_Building_7",
+        "game_path": "/Game/RA4/Data/Generated/Buildings/DA_Building_SO_Building_7",
+        "file_size": 1572,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_Building_SO_Building_10",
+        "game_path": "/Game/RA4/Data/Generated/Buildings/DA_Building_SO_Building_10",
+        "file_size": 1589,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_Building_SO_Building_9",
+        "game_path": "/Game/RA4/Data/Generated/Buildings/DA_Building_SO_Building_9",
+        "file_size": 1570,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_Building_SO_Building_5",
+        "game_path": "/Game/RA4/Data/Generated/Buildings/DA_Building_SO_Building_5",
+        "file_size": 1568,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_Building_SO_Building_12",
+        "game_path": "/Game/RA4/Data/Generated/Buildings/DA_Building_SO_Building_12",
+        "file_size": 1595,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "PA_QuantumCharacter",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Mesh/PA_QuantumCharacter",
+        "file_size": 33830,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "PA_Head_PhysicsAsset",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Mesh/Modules/PA_Head_PhysicsAsset",
+        "file_size": 11148,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "PA_Bulletproof_Physics",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Mesh/Modules/PA_Bulletproof_Physics",
+        "file_size": 10852,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "PA_Arms",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Mesh/Modules/PA_Arms",
+        "file_size": 16625,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "PA_Patch_Back_Physics",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Mesh/Modules/PA_Patch_Back_Physics",
+        "file_size": 7090,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "PA_Holster_Hard_Bege_Physics",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Mesh/Modules/PA_Holster_Hard_Bege_Physics",
+        "file_size": 8590,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "PA_Jeans",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Mesh/Modules/PA_Jeans",
+        "file_size": 18556,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "PA_Drops_1_Physics",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Mesh/Modules/PA_Drops_1_Physics",
+        "file_size": 10343,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "A_MF_Walk_Fwd",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Demo/Animations/A_MF_Walk_Fwd",
+        "file_size": 954109,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "A_MF_Run_Fwd",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Demo/Animations/A_MF_Run_Fwd",
+        "file_size": 919354,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_RA4_Theme_Allies",
+        "game_path": "/Game/RA4UI/Themes/DA_RA4_Theme_Allies",
+        "file_size": 2051,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_RA4_Theme_Chrono",
+        "game_path": "/Game/RA4UI/Themes/DA_RA4_Theme_Chrono",
+        "file_size": 2065,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_RA4_Theme_Eastern",
+        "game_path": "/Game/RA4UI/Themes/DA_RA4_Theme_Eastern",
+        "file_size": 2076,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_RA4_Theme_USSR",
+        "game_path": "/Game/RA4UI/Themes/DA_RA4_Theme_USSR",
+        "file_size": 1856,
+        "type": "AnimationSequence"
+      }
+    ],
+    "AnimBlueprint": [],
+    "Material": [
+      {
+        "name": "M_RA4EntityPlaceholder_Lit",
+        "game_path": "/Game/RA4/Materials/M_RA4EntityPlaceholder_Lit",
+        "file_size": 7995,
+        "type": "Material"
+      },
+      {
+        "name": "M_RA4Ground_Lit",
+        "game_path": "/Game/RA4/Materials/M_RA4Ground_Lit",
+        "file_size": 8896,
+        "type": "Material"
+      },
+      {
+        "name": "M_RA4Ground",
+        "game_path": "/Game/RA4/Materials/M_RA4Ground",
+        "file_size": 8771,
+        "type": "Material"
+      },
+      {
+        "name": "M_RA4EntityPlaceholder",
+        "game_path": "/Game/RA4/Materials/M_RA4EntityPlaceholder",
+        "file_size": 7422,
+        "type": "Material"
+      },
+      {
+        "name": "M_RA4_BlockoutStructure",
+        "game_path": "/Game/RA4/Presentation/Materials/Blockout/M_RA4_BlockoutStructure",
+        "file_size": 9143,
+        "type": "Material"
+      },
+      {
+        "name": "M_RA4_BlockoutGround",
+        "game_path": "/Game/RA4/Presentation/Materials/Blockout/M_RA4_BlockoutGround",
+        "file_size": 9127,
+        "type": "Material"
+      },
+      {
+        "name": "Metal022_2K-JPG_Displacement",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Metal022_2K-JPG_Displacement",
+        "file_size": 3361442,
+        "type": "Material"
+      },
+      {
+        "name": "Asphalt024B_2K-JPG_AmbientOcclusion",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Asphalt024B_2K-JPG_AmbientOcclusion",
+        "file_size": 3045085,
+        "type": "Material"
+      },
+      {
+        "name": "Concrete003_2K-JPG_NormalDX",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Concrete003_2K-JPG_NormalDX",
+        "file_size": 7518642,
+        "type": "Material"
+      },
+      {
+        "name": "PaintedMetal006_2K-JPG_Color",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006_2K-JPG_Color",
+        "file_size": 6364989,
+        "type": "Material"
+      },
+      {
+        "name": "Concrete003_2K-JPG_AmbientOcclusion",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Concrete003_2K-JPG_AmbientOcclusion",
+        "file_size": 1690429,
+        "type": "Material"
+      },
+      {
+        "name": "Asphalt024B_2K-JPG_NormalDX",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Asphalt024B_2K-JPG_NormalDX",
+        "file_size": 9698261,
+        "type": "Material"
+      },
+      {
+        "name": "Concrete003_2K-JPG_Color",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Concrete003_2K-JPG_Color",
+        "file_size": 3925205,
+        "type": "Material"
+      },
+      {
+        "name": "Metal022",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Metal022",
+        "file_size": 438234,
+        "type": "Material"
+      },
+      {
+        "name": "Ground039_2K-JPG_Color",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Ground039_2K-JPG_Color",
+        "file_size": 7475108,
+        "type": "Material"
+      },
+      {
+        "name": "Concrete003_2K-JPG_Displacement",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Concrete003_2K-JPG_Displacement",
+        "file_size": 935966,
+        "type": "Material"
+      },
+      {
+        "name": "Concrete003_2K-JPG_NormalGL",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Concrete003_2K-JPG_NormalGL",
+        "file_size": 7515340,
+        "type": "Material"
+      },
+      {
+        "name": "Concrete003_2K-JPG_Roughness",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Concrete003_2K-JPG_Roughness",
+        "file_size": 2462213,
+        "type": "Material"
+      },
+      {
+        "name": "Ground039_2K-JPG_Displacement",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Ground039_2K-JPG_Displacement",
+        "file_size": 2043285,
+        "type": "Material"
+      },
+      {
+        "name": "Asphalt024B_2K-JPG_Roughness",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Asphalt024B_2K-JPG_Roughness",
+        "file_size": 2834756,
+        "type": "Material"
+      },
+      {
+        "name": "Ground039_2K-JPG_AmbientOcclusion",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Ground039_2K-JPG_AmbientOcclusion",
+        "file_size": 1915848,
+        "type": "Material"
+      },
+      {
+        "name": "Asphalt024B_2K-JPG_NormalGL",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Asphalt024B_2K-JPG_NormalGL",
+        "file_size": 9699198,
+        "type": "Material"
+      },
+      {
+        "name": "Asphalt024B_2K-JPG_Displacement",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Asphalt024B_2K-JPG_Displacement",
+        "file_size": 2848963,
+        "type": "Material"
+      },
+      {
+        "name": "Ground039_2K-JPG_Roughness",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Ground039_2K-JPG_Roughness",
+        "file_size": 2986016,
+        "type": "Material"
+      },
+      {
+        "name": "Asphalt024B",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Asphalt024B",
+        "file_size": 347968,
+        "type": "Material"
+      },
+      {
+        "name": "Ground039",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Ground039",
+        "file_size": 448397,
+        "type": "Material"
+      },
+      {
+        "name": "PaintedMetal006_2K-JPG_NormalGL",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006_2K-JPG_NormalGL",
+        "file_size": 8738775,
+        "type": "Material"
+      },
+      {
+        "name": "Concrete003",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Concrete003",
+        "file_size": 313977,
+        "type": "Material"
+      },
+      {
+        "name": "PaintedMetal006_2K-JPG_AmbientOcclusion",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006_2K-JPG_AmbientOcclusion",
+        "file_size": 3415725,
+        "type": "Material"
+      },
+      {
+        "name": "Metal022_2K-JPG_Roughness",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Metal022_2K-JPG_Roughness",
+        "file_size": 3105740,
+        "type": "Material"
+      },
+      {
+        "name": "PaintedMetal006_2K-JPG_Displacement",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006_2K-JPG_Displacement",
+        "file_size": 2155860,
+        "type": "Material"
+      },
+      {
+        "name": "Metal022_2K-JPG_Metalness",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Metal022_2K-JPG_Metalness",
+        "file_size": 3582615,
+        "type": "Material"
+      },
+      {
+        "name": "Metal022_2K-JPG_NormalGL",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Metal022_2K-JPG_NormalGL",
+        "file_size": 7190597,
+        "type": "Material"
+      },
+      {
+        "name": "Ground039_2K-JPG_NormalDX",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Ground039_2K-JPG_NormalDX",
+        "file_size": 9078207,
+        "type": "Material"
+      },
+      {
+        "name": "Asphalt024B_2K-JPG_Color",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Asphalt024B_2K-JPG_Color",
+        "file_size": 4550039,
+        "type": "Material"
+      },
+      {
+        "name": "PaintedMetal006_2K-JPG_Metalness",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006_2K-JPG_Metalness",
+        "file_size": 1746666,
+        "type": "Material"
+      },
+      {
+        "name": "PaintedMetal006_2K-JPG_NormalDX",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006_2K-JPG_NormalDX",
+        "file_size": 8742933,
+        "type": "Material"
+      },
+      {
+        "name": "Metal022_2K-JPG_Color",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Metal022_2K-JPG_Color",
+        "file_size": 7069201,
+        "type": "Material"
+      },
+      {
+        "name": "Ground039_2K-JPG_NormalGL",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Ground039_2K-JPG_NormalGL",
+        "file_size": 9077593,
+        "type": "Material"
+      },
+      {
+        "name": "Metal022_2K-JPG_NormalDX",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/Metal022_2K-JPG_NormalDX",
+        "file_size": 7207663,
+        "type": "Material"
+      },
+      {
+        "name": "PaintedMetal006",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006",
+        "file_size": 343355,
+        "type": "Material"
+      },
+      {
+        "name": "PaintedMetal006_2K-JPG_Roughness",
+        "game_path": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006_2K-JPG_Roughness",
+        "file_size": 2664687,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_DeltaDelayArtillery_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_DeltaDelayArtillery_Blockout",
+        "file_size": 64366,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_EchoTurret_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_EchoTurret_Blockout",
+        "file_size": 64250,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_TimelineTank_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_TimelineTank_Blockout",
+        "file_size": 64290,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_BathysSubmarine_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_BathysSubmarine_Blockout",
+        "file_size": 64273,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_CausalityAnchor_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_CausalityAnchor_Blockout",
+        "file_size": 64306,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_AttractorArk_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_AttractorArk_Blockout",
+        "file_size": 64280,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_Airfield_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_Airfield_Blockout",
+        "file_size": 64211,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_ProbabilistHarvester_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_ProbabilistHarvester_Blockout",
+        "file_size": 64382,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_Barracks_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_Barracks_Blockout",
+        "file_size": 64239,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_ParallaxScout_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_ParallaxScout_Blockout",
+        "file_size": 69273,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_PunctureLancer_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_PunctureLancer_Blockout",
+        "file_size": 90956,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_SuperweaponSingularity_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_SuperweaponSingularity_Blockout",
+        "file_size": 64396,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_ResonanceRifleman_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_ResonanceRifleman_Blockout",
+        "file_size": 91133,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_MCV_MobileArk_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_MCV_MobileArk_Blockout",
+        "file_size": 64267,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_Radar_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_Radar_Blockout",
+        "file_size": 66744,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_SuperweaponRewind_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_SuperweaponRewind_Blockout",
+        "file_size": 64334,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_StasisProjectorBuilding_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_StasisProjectorBuilding_Blockout",
+        "file_size": 64430,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_Hero_Voss_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_Hero_Voss_Blockout",
+        "file_size": 91068,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_PowerPlant_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_PowerPlant_Blockout",
+        "file_size": 64253,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_Refinery_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_Refinery_Blockout",
+        "file_size": 64211,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_WarFactory_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_WarFactory_Blockout",
+        "file_size": 64228,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_EraEngine_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_EraEngine_Blockout",
+        "file_size": 64245,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_ConYard_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_ConYard_Blockout",
+        "file_size": 64196,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_TrailGunship_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_TrailGunship_Blockout",
+        "file_size": 64271,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_CausalityEngineer_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_CausalityEngineer_Blockout",
+        "file_size": 90952,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_AATurret_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_AATurret_Blockout",
+        "file_size": 66796,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_TechCenter_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_TechCenter_Blockout",
+        "file_size": 64233,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_GapInterceptor_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_GapInterceptor_Blockout",
+        "file_size": 64497,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_AporiaSniper_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_AporiaSniper_Blockout",
+        "file_size": 91089,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_ReversalMedic_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_ReversalMedic_Blockout",
+        "file_size": 91078,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_NavalYard_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_NavalYard_Blockout",
+        "file_size": 64217,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_CriticalPointBomber_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_CriticalPointBomber_Blockout",
+        "file_size": 64355,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_CensorOperative_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_CensorOperative_Blockout",
+        "file_size": 90969,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_IsobathFrigate_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_IsobathFrigate_Blockout",
+        "file_size": 64301,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Chronolegion_CH_PauseProjector_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_PauseProjector_Blockout",
+        "file_size": 64313,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_PowerPlant_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_PowerPlant_Blockout",
+        "file_size": 64183,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_VectorVTOL_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_VectorVTOL_Blockout",
+        "file_size": 64182,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_WarFactory_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_WarFactory_Blockout",
+        "file_size": 64156,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_RefractionTank_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_RefractionTank_Blockout",
+        "file_size": 64251,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_NavalYard_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_NavalYard_Blockout",
+        "file_size": 64145,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_ShieldProjectorBuilding_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_ShieldProjectorBuilding_Blockout",
+        "file_size": 64355,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_OracleArtillery_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_OracleArtillery_Blockout",
+        "file_size": 64252,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_GunTurret_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_GunTurret_Blockout",
+        "file_size": 64174,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_SuperweaponChrono_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_SuperweaponChrono_Blockout",
+        "file_size": 64262,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_AATurret_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_AATurret_Blockout",
+        "file_size": 64166,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_LongwatchSniper_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_LongwatchSniper_Blockout",
+        "file_size": 91045,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_KestrelScout_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_KestrelScout_Blockout",
+        "file_size": 69164,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_MCV_MobileNode_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_MCV_MobileNode_Blockout",
+        "file_size": 64208,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_ConYard_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_ConYard_Blockout",
+        "file_size": 64130,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_FieldEngineer_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_FieldEngineer_Blockout",
+        "file_size": 91006,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_BulwarkMBT_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_BulwarkMBT_Blockout",
+        "file_size": 64192,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_Refinery_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_Refinery_Blockout",
+        "file_size": 64149,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_HorizonCarrier_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_HorizonCarrier_Blockout",
+        "file_size": 64209,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_MantaPatrolCraft_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_MantaPatrolCraft_Blockout",
+        "file_size": 64260,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_ResoluteDestroyer_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_ResoluteDestroyer_Blockout",
+        "file_size": 64280,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_Barracks_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_Barracks_Blockout",
+        "file_size": 64167,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_Hero_Hart_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_Hero_Hart_Blockout",
+        "file_size": 91003,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_WardShieldCarrier_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_WardShieldCarrier_Blockout",
+        "file_size": 64274,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_FrostlineSpecialist_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_FrostlineSpecialist_Blockout",
+        "file_size": 91114,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_TechCenter_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_TechCenter_Blockout",
+        "file_size": 64161,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_Airfield_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_Airfield_Blockout",
+        "file_size": 64149,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_PrismTower_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_PrismTower_Blockout",
+        "file_size": 64172,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_PioneerHarvester_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_PioneerHarvester_Blockout",
+        "file_size": 64253,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_LifelineMedic_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_LifelineMedic_Blockout",
+        "file_size": 90945,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_LancerTeam_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_LancerTeam_Blockout",
+        "file_size": 90997,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_SentinelRifleman_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_SentinelRifleman_Blockout",
+        "file_size": 91058,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_Radar_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_Radar_Blockout",
+        "file_size": 64104,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_SuperweaponOrbital_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_SuperweaponOrbital_Blockout",
+        "file_size": 64271,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_NightveilBomber_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_NightveilBomber_Blockout",
+        "file_size": 64237,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_ShrikeInterceptor_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_ShrikeInterceptor_Blockout",
+        "file_size": 64462,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Alliance_AL_CitadelTank_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Alliance/SM_Alliance_AL_CitadelTank_Blockout",
+        "file_size": 64199,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_Radar_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_Radar_Blockout",
+        "file_size": 66705,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_QinglongMBT_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_QinglongMBT_Blockout",
+        "file_size": 64221,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_SuperweaponMatrix_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_SuperweaponMatrix_Blockout",
+        "file_size": 64279,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_GunTurret_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_GunTurret_Blockout",
+        "file_size": 64193,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_TianmenFortress_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_TianmenFortress_Blockout",
+        "file_size": 64263,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_SanjivaniMedic_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_SanjivaniMedic_Blockout",
+        "file_size": 90733,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_SuperweaponSeismic_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_SuperweaponSeismic_Blockout",
+        "file_size": 66866,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_LeiheGunship_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_LeiheGunship_Blockout",
+        "file_size": 64229,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_AATurret_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_AATurret_Blockout",
+        "file_size": 66747,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_VajraLancer_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_VajraLancer_Blockout",
+        "file_size": 91047,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_AiravataWalker_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_AiravataWalker_Blockout",
+        "file_size": 64262,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_MonsoonArtillery_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_MonsoonArtillery_Blockout",
+        "file_size": 64290,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_ConYard_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_ConYard_Blockout",
+        "file_size": 64148,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_RailTower_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_RailTower_Blockout",
+        "file_size": 64174,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_Hero_Mei_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_Hero_Mei_Blockout",
+        "file_size": 90989,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_NavalYard_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_NavalYard_Blockout",
+        "file_size": 64163,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_TechCenter_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_TechCenter_Blockout",
+        "file_size": 64182,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_KazekiriCorvette_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_KazekiriCorvette_Blockout",
+        "file_size": 64275,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_KawasemiDrone_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_KawasemiDrone_Blockout",
+        "file_size": 90555,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_JieTechnician_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_JieTechnician_Blockout",
+        "file_size": 91036,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_KamakiriWalker_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_KamakiriWalker_Blockout",
+        "file_size": 69204,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_MCV_MobileNode_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_MCV_MobileNode_Blockout",
+        "file_size": 64226,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_PowerPlant_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_PowerPlant_Blockout",
+        "file_size": 64198,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_RakshaGuard_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_RakshaGuard_Blockout",
+        "file_size": 90701,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_Airfield_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_Airfield_Blockout",
+        "file_size": 64168,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_WarFactory_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_WarFactory_Blockout",
+        "file_size": 64179,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_Barracks_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_Barracks_Blockout",
+        "file_size": 64185,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_SeimonShieldCarrier_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_SeimonShieldCarrier_Blockout",
+        "file_size": 64319,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_ShieldHub_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_ShieldHub_Blockout",
+        "file_size": 64193,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_ShengongMarksman_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_ShengongMarksman_Blockout",
+        "file_size": 91097,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_XuanwuCruiser_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_XuanwuCruiser_Blockout",
+        "file_size": 64251,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_AgnipakshaBomber_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_AgnipakshaBomber_Blockout",
+        "file_size": 64273,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_SamudraCarrier_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_SamudraCarrier_Blockout",
+        "file_size": 64259,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_YuanCollector_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_YuanCollector_Blockout",
+        "file_size": 64232,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_QianweiRifleman_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_QianweiRifleman_Blockout",
+        "file_size": 90753,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Coalition_CO_Refinery_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Coalition/SM_Coalition_CO_Refinery_Blockout",
+        "file_size": 64167,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_BuranPatrolBoat_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_BuranPatrolBoat_Blockout",
+        "file_size": 64212,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_SuperweaponSilo_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_SuperweaponSilo_Blockout",
+        "file_size": 66787,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_Refinery_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Refinery_Blockout",
+        "file_size": 64123,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_GromoboyRam_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_GromoboyRam_Blockout",
+        "file_size": 64173,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_ConYard_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_ConYard_Blockout",
+        "file_size": 64104,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_SvyatogorCruiser_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_SvyatogorCruiser_Blockout",
+        "file_size": 64211,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_VoevodaHeavyTank_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_VoevodaHeavyTank_Blockout",
+        "file_size": 64239,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_MorokSubmarine_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_MorokSubmarine_Blockout",
+        "file_size": 64211,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_ZaslonAATeam_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_ZaslonAATeam_Blockout",
+        "file_size": 91009,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_TeslaTower_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_TeslaTower_Blockout",
+        "file_size": 64143,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_RubezhRifleman_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_RubezhRifleman_Blockout",
+        "file_size": 91011,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_ZapalGrenadier_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_ZapalGrenadier_Blockout",
+        "file_size": 91017,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_PowerPlant_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_PowerPlant_Blockout",
+        "file_size": 64129,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_Barracks_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Barracks_Blockout",
+        "file_size": 64135,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_BogatyrOreCarrier_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_BogatyrOreCarrier_Blockout",
+        "file_size": 64237,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_Airfield_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Airfield_Blockout",
+        "file_size": 64123,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_RysScout_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_RysScout_Blockout",
+        "file_size": 69149,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_WarFactory_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_WarFactory_Blockout",
+        "file_size": 64124,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_Bunker_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Bunker_Blockout",
+        "file_size": 64098,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_GromadaAirship_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_GromadaAirship_Blockout",
+        "file_size": 64207,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_ZarevoMLRS_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_ZarevoMLRS_Blockout",
+        "file_size": 64152,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_KrechetInterceptor_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_KrechetInterceptor_Blockout",
+        "file_size": 64449,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_TechCenter_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_TechCenter_Blockout",
+        "file_size": 64129,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_MCV_MobileYard_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_MCV_MobileYard_Blockout",
+        "file_size": 64176,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_GunTurret_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_GunTurret_Blockout",
+        "file_size": 64142,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_RazryadTrooper_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_RazryadTrooper_Blockout",
+        "file_size": 91011,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_NavalYard_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_NavalYard_Blockout",
+        "file_size": 64113,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_Hero_Morozova_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Hero_Morozova_Blockout",
+        "file_size": 90667,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_MasterEngineer_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_MasterEngineer_Blockout",
+        "file_size": 91005,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_AATurret_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_AATurret_Blockout",
+        "file_size": 66682,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_KorshunGunship_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_KorshunGunship_Blockout",
+        "file_size": 64201,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_VektorOfficer_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_VektorOfficer_Blockout",
+        "file_size": 90998,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_GranitMBT_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_GranitMBT_Blockout",
+        "file_size": 64146,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_Radar_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Radar_Blockout",
+        "file_size": 66656,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Soviet_SU_SuperweaponDome_Blockout",
+        "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_SuperweaponDome_Blockout",
+        "file_size": 64210,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Tarp01",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_Tarp01",
+        "file_size": 269220,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Box03",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_Box03",
+        "file_size": 772602,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Rack01",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_Rack01",
+        "file_size": 275915,
+        "type": "Material"
+      },
+      {
+        "name": "SM_CartonGarbage01",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_CartonGarbage01",
+        "file_size": 111587,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Barrel04",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_Barrel04",
+        "file_size": 1009388,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Pallet01",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_Pallet01",
+        "file_size": 214138,
+        "type": "Material"
+      },
+      {
+        "name": "SM_CartonGarbage03",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_CartonGarbage03",
+        "file_size": 107027,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Newspaper02",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_Newspaper02",
+        "file_size": 136764,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Box01",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_Box01",
+        "file_size": 476672,
+        "type": "Material"
+      },
+      {
+        "name": "SM_CartonBox03",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_CartonBox03",
+        "file_size": 112764,
+        "type": "Material"
+      },
+      {
+        "name": "SM_CartonGarbage07",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_CartonGarbage07",
+        "file_size": 145357,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Barrel02",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_Barrel02",
+        "file_size": 267344,
+        "type": "Material"
+      },
+      {
+        "name": "SM_WaterTank01",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_WaterTank01",
+        "file_size": 514590,
+        "type": "Material"
+      },
+      {
+        "name": "SM_TrafficBarrel01",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_TrafficBarrel01",
+        "file_size": 215027,
+        "type": "Material"
+      },
+      {
+        "name": "SM_CartonBox01",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_CartonBox01",
+        "file_size": 105896,
+        "type": "Material"
+      },
+      {
+        "name": "SM_CartonGarbage09",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_CartonGarbage09",
+        "file_size": 203040,
+        "type": "Material"
+      },
+      {
+        "name": "SM_CartonGarbage05",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_CartonGarbage05",
+        "file_size": 121207,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Newspaper01",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_Newspaper01",
+        "file_size": 107930,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Box02",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_Box02",
+        "file_size": 427670,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Rack02",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_Rack02",
+        "file_size": 140905,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Newspaper03",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_Newspaper03",
+        "file_size": 153256,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Tarp02",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_Tarp02",
+        "file_size": 232643,
+        "type": "Material"
+      },
+      {
+        "name": "SM_CartonGarbage02",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_CartonGarbage02",
+        "file_size": 111446,
+        "type": "Material"
+      },
+      {
+        "name": "SM_CartonGarbage06",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_CartonGarbage06",
+        "file_size": 118433,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Barrel03",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_Barrel03",
+        "file_size": 265831,
+        "type": "Material"
+      },
+      {
+        "name": "SM_CartonBox02",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_CartonBox02",
+        "file_size": 109574,
+        "type": "Material"
+      },
+      {
+        "name": "SM_CartonGarbage08",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_CartonGarbage08",
+        "file_size": 134480,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Hose01",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_Hose01",
+        "file_size": 261395,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Barrel01",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_Barrel01",
+        "file_size": 304472,
+        "type": "Material"
+      },
+      {
+        "name": "SM_CartonGarbage04",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Meshes/SM_CartonGarbage04",
+        "file_size": 101491,
+        "type": "Material"
+      },
+      {
+        "name": "M_base",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Materials/BaseMaterial/M_base",
+        "file_size": 285659,
+        "type": "Material"
+      },
+      {
+        "name": "SKM_QuantumCharacter",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Mesh/SKM_QuantumCharacter",
+        "file_size": 28710215,
+        "type": "Material"
+      },
+      {
+        "name": "SKM_QuantumCharacter_NoHead",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Mesh/SKM_QuantumCharacter_NoHead",
+        "file_size": 25101650,
+        "type": "Material"
+      },
+      {
+        "name": "M_Body",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Materials/M_Body",
+        "file_size": 11161,
+        "type": "Material"
+      },
+      {
+        "name": "M_Arms",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Materials/M_Arms",
+        "file_size": 11396,
+        "type": "Material"
+      },
+      {
+        "name": "M_Bulletproof_Bege",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Materials/M_Bulletproof_Bege",
+        "file_size": 11501,
+        "type": "Material"
+      },
+      {
+        "name": "M_Teeth",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Materials/M_Teeth",
+        "file_size": 12190,
+        "type": "Material"
+      },
+      {
+        "name": "M_Eyeball",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Materials/M_Eyeball",
+        "file_size": 11887,
+        "type": "Material"
+      },
+      {
+        "name": "M_Head",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Materials/M_Head",
+        "file_size": 11478,
+        "type": "Material"
+      },
+      {
+        "name": "M_Jeasn",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Materials/M_Jeasn",
+        "file_size": 13621,
+        "type": "Material"
+      },
+      {
+        "name": "M_Holster_Hard_Bege",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Materials/M_Holster_Hard_Bege",
+        "file_size": 11218,
+        "type": "Material"
+      },
+      {
+        "name": "M_Rifle_Olive",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Materials/M_Rifle_Olive",
+        "file_size": 15360,
+        "type": "Material"
+      },
+      {
+        "name": "M_Eye_Sclera",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Materials/M_Eye_Sclera",
+        "file_size": 10394,
+        "type": "Material"
+      },
+      {
+        "name": "M_Pistol",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Materials/M_Pistol",
+        "file_size": 11351,
+        "type": "Material"
+      },
+      {
+        "name": "M_Eyelashesh",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Materials/M_Eyelashesh",
+        "file_size": 10257,
+        "type": "Material"
+      },
+      {
+        "name": "M_Cap_Bege",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Materials/M_Cap_Bege",
+        "file_size": 11277,
+        "type": "Material"
+      },
+      {
+        "name": "M_Patches",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Materials/M_Patches",
+        "file_size": 16062,
+        "type": "Material"
+      },
+      {
+        "name": "M_Drops_Tactical_Bege",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Materials/M_Drops_Tactical_Bege",
+        "file_size": 11378,
+        "type": "Material"
+      },
+      {
+        "name": "M_Shirt_RolledUp_Blue",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Materials/M_Shirt_RolledUp_Blue",
+        "file_size": 14655,
+        "type": "Material"
+      },
+      {
+        "name": "ML_EyeRefraction",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Materials/Eye/ML_EyeRefraction",
+        "file_size": 132188,
+        "type": "Material"
+      },
+      {
+        "name": "M_Eye",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Materials/Eye/M_Eye",
+        "file_size": 74929,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Rifle_Olive",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Mesh/Rifle/SM_Rifle_Olive",
+        "file_size": 610761,
+        "type": "Material"
+      },
+      {
+        "name": "SKM_Drops_1_Bege",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Mesh/Modules/SKM_Drops_1_Bege",
+        "file_size": 4529051,
+        "type": "Material"
+      },
+      {
+        "name": "SKM_Shirt_RolledUp_Blue",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Mesh/Modules/SKM_Shirt_RolledUp_Blue",
+        "file_size": 1311104,
+        "type": "Material"
+      },
+      {
+        "name": "SKM_Jeans",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Mesh/Modules/SKM_Jeans",
+        "file_size": 2562596,
+        "type": "Material"
+      },
+      {
+        "name": "SKM_Holster_Hard_Bege",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Mesh/Modules/SKM_Holster_Hard_Bege",
+        "file_size": 2721055,
+        "type": "Material"
+      },
+      {
+        "name": "SM_Cap_Bege",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Mesh/Modules/SM_Cap_Bege",
+        "file_size": 50695,
+        "type": "Material"
+      },
+      {
+        "name": "SKM_Head",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Mesh/Modules/SKM_Head",
+        "file_size": 3715682,
+        "type": "Material"
+      },
+      {
+        "name": "SKM_Patch_Back",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Mesh/Modules/SKM_Patch_Back",
+        "file_size": 266432,
+        "type": "Material"
+      },
+      {
+        "name": "SKM_Bulletproof_Bege",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Mesh/Modules/SKM_Bulletproof_Bege",
+        "file_size": 9523573,
+        "type": "Material"
+      },
+      {
+        "name": "SKM_Arms",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Mesh/Modules/SKM_Arms",
+        "file_size": 3801797,
+        "type": "Material"
+      },
+      {
+        "name": "A_MM_Jump",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Demo/Animations/A_MM_Jump",
+        "file_size": 532375,
+        "type": "Material"
+      },
+      {
+        "name": "A_MM_Land",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Demo/Animations/A_MM_Land",
+        "file_size": 532878,
+        "type": "Material"
+      },
+      {
+        "name": "A_MM_Fall_Loop",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Demo/Animations/A_MM_Fall_Loop",
+        "file_size": 1431112,
+        "type": "Material"
+      },
+      {
+        "name": "A_MM_Walk_InPlace",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Demo/Animations/A_MM_Walk_InPlace",
+        "file_size": 1319120,
+        "type": "Material"
+      },
+      {
+        "name": "A_MM_Idle",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Demo/Animations/A_MM_Idle",
+        "file_size": 3354711,
+        "type": "Material"
+      },
+      {
+        "name": "A_MM_Walk_Fwd",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Demo/Animations/A_MM_Walk_Fwd",
+        "file_size": 1319169,
+        "type": "Material"
+      },
+      {
+        "name": "A_MM_Run_Fwd",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Demo/Animations/A_MM_Run_Fwd",
+        "file_size": 975032,
+        "type": "Material"
+      },
+      {
+        "name": "M_UI_AngularPanel",
+        "game_path": "/Game/RA4UI/Materials/M_UI_AngularPanel",
+        "file_size": 4927,
+        "type": "Material"
+      }
+    ],
+    "MaterialInstance": [
+      {
+        "name": "MI_RA4_Blockout_Neutral",
+        "game_path": "/Game/RA4/Presentation/Materials/Blockout/MI_RA4_Blockout_Neutral",
+        "file_size": 7701,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_RA4_Blockout_Disabled",
+        "game_path": "/Game/RA4/Presentation/Materials/Blockout/MI_RA4_Blockout_Disabled",
+        "file_size": 7707,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_RA4_Blockout_UnderConstruction",
+        "game_path": "/Game/RA4/Presentation/Materials/Blockout/MI_RA4_Blockout_UnderConstruction",
+        "file_size": 7761,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_RA4_Blockout_AL",
+        "game_path": "/Game/RA4/Presentation/Materials/Blockout/MI_RA4_Blockout_AL",
+        "file_size": 8369,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_RA4_Blockout_SU",
+        "game_path": "/Game/RA4/Presentation/Materials/Blockout/MI_RA4_Blockout_SU",
+        "file_size": 8490,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_Barrel01_1",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Materials/MI_Barrel01_1",
+        "file_size": 117487,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_Box01_2",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Materials/MI_Box01_2",
+        "file_size": 109070,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_Barrel01_3",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Materials/MI_Barrel01_3",
+        "file_size": 99599,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "Mi_Tarp01_2",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Materials/Mi_Tarp01_2",
+        "file_size": 119125,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_Box01_4",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Materials/MI_Box01_4",
+        "file_size": 109408,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_Cartonbox01_2",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Materials/MI_Cartonbox01_2",
+        "file_size": 114768,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_Newspaper01_2",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Materials/MI_Newspaper01_2",
+        "file_size": 121948,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_Hose01_1",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Materials/MI_Hose01_1",
+        "file_size": 108852,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_Barrel01_5",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Materials/MI_Barrel01_5",
+        "file_size": 118001,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_Gray",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Materials/MI_Gray",
+        "file_size": 75964,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_Box01_3",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Materials/MI_Box01_3",
+        "file_size": 104296,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_WaterTank01",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Materials/MI_WaterTank01",
+        "file_size": 104585,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_Box01_1",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Materials/MI_Box01_1",
+        "file_size": 110199,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_Barrel01_2",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Materials/MI_Barrel01_2",
+        "file_size": 114376,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_Newspaper01_1",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Materials/MI_Newspaper01_1",
+        "file_size": 123500,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_Barrel01_6",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Materials/MI_Barrel01_6",
+        "file_size": 122192,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_Hose01_2",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Materials/MI_Hose01_2",
+        "file_size": 129120,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_Barrel01_4",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Materials/MI_Barrel01_4",
+        "file_size": 116750,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_Rack01_1",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Materials/MI_Rack01_1",
+        "file_size": 112220,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_Tarp01_1",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Materials/MI_Tarp01_1",
+        "file_size": 119722,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_TrafficBarrel01_1",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Materials/MI_TrafficBarrel01_1",
+        "file_size": 103140,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_Cartonbox01_1",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Materials/MI_Cartonbox01_1",
+        "file_size": 106419,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_EyeRefractive_Inst",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Materials/Eye/MI_EyeRefractive_Inst",
+        "file_size": 15331,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_UI_Chrono",
+        "game_path": "/Game/RA4UI/Materials/MI_UI_Chrono",
+        "file_size": 3344,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_UI_Allies",
+        "game_path": "/Game/RA4UI/Materials/MI_UI_Allies",
+        "file_size": 3344,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_UI_USSR",
+        "game_path": "/Game/RA4UI/Materials/MI_UI_USSR",
+        "file_size": 3334,
+        "type": "MaterialInstance"
+      },
+      {
+        "name": "MI_UI_Eastern",
+        "game_path": "/Game/RA4UI/Materials/MI_UI_Eastern",
+        "file_size": 3349,
+        "type": "MaterialInstance"
+      }
+    ],
+    "Texture": [
+      {
+        "name": "DA_Unit_AL_Falcon",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_AL_Falcon",
+        "file_size": 1685,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_SU_StingrayBoat",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_SU_StingrayBoat",
+        "file_size": 1697,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_AL_Javelin",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_AL_Javelin",
+        "file_size": 1682,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_AL_Hero_Hart",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_AL_Hero_Hart",
+        "file_size": 1692,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_AL_Hydrofoil",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_AL_Hydrofoil",
+        "file_size": 1696,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_SU_Hero_Morozova",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_SU_Hero_Morozova",
+        "file_size": 1718,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_SU_Harvester",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_SU_Harvester",
+        "file_size": 1696,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_AL_CryoSpecialist",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_AL_CryoSpecialist",
+        "file_size": 1711,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_AL_Pathfinder",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_AL_Pathfinder",
+        "file_size": 1679,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CH_DelayArtillery",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CH_DelayArtillery",
+        "file_size": 1721,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_SU_Hind",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_SU_Hind",
+        "file_size": 1669,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_SU_SickleScout",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_SU_SickleScout",
+        "file_size": 1706,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CH_QuantumHarvester",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CH_QuantumHarvester",
+        "file_size": 1729,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CO_Swordfish",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CO_Swordfish",
+        "file_size": 1692,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_SU_Grenadier",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_SU_Grenadier",
+        "file_size": 1624,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_SU_TeslaRam",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_SU_TeslaRam",
+        "file_size": 1691,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_AL_Specter",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_AL_Specter",
+        "file_size": 1706,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CH_ContinuumTank",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CH_ContinuumTank",
+        "file_size": 1710,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CO_Collector",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CO_Collector",
+        "file_size": 1700,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CH_RiftInterceptor",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CH_RiftInterceptor",
+        "file_size": 1730,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CH_SingularityArk",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CH_SingularityArk",
+        "file_size": 1723,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CH_EventHorizon",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CH_EventHorizon",
+        "file_size": 1739,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_AL_Guardian",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_AL_Guardian",
+        "file_size": 1681,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CH_ParadoxSniper",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CH_ParadoxSniper",
+        "file_size": 1712,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_AL_Peacekeeper",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_AL_Peacekeeper",
+        "file_size": 1638,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CH_EchoRifleman",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CH_EchoRifleman",
+        "file_size": 1645,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_AL_Prospector",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_AL_Prospector",
+        "file_size": 1705,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CO_Vanguard",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CO_Vanguard",
+        "file_size": 1619,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_SU_Buratino",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_SU_Buratino",
+        "file_size": 1683,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CO_CelestialFortress",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CO_CelestialFortress",
+        "file_size": 1770,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CH_Rewinder",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CH_Rewinder",
+        "file_size": 1673,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_SU_MiG41",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_SU_MiG41",
+        "file_size": 1674,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_SU_Kirov",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_SU_Kirov",
+        "file_size": 1676,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_SU_HammerTank",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_SU_HammerTank",
+        "file_size": 1687,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CH_NullOperative",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CH_NullOperative",
+        "file_size": 1716,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_AL_Athena",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_AL_Athena",
+        "file_size": 1685,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_AL_Medic",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_AL_Medic",
+        "file_size": 1614,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_AL_Paladin",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_AL_Paladin",
+        "file_size": 1676,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CO_SwiftDrone",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CO_SwiftDrone",
+        "file_size": 1687,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CO_Hero_Mei",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CO_Hero_Mei",
+        "file_size": 1689,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_AL_AegisShield",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_AL_AegisShield",
+        "file_size": 1710,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CH_Hero_Voss",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CH_Hero_Voss",
+        "file_size": 1698,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CO_ThunderCrane",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CO_ThunderCrane",
+        "file_size": 1729,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_SU_Conscript",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_SU_Conscript",
+        "file_size": 1626,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_SU_Engineer",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_SU_Engineer",
+        "file_size": 1631,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_AL_Poseidon",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_AL_Poseidon",
+        "file_size": 1693,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CO_NaniteMedic",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CO_NaniteMedic",
+        "file_size": 1646,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CO_Leviathan",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CO_Leviathan",
+        "file_size": 1714,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CH_Engineer",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CH_Engineer",
+        "file_size": 1643,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CH_BlinkScout",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CH_BlinkScout",
+        "file_size": 1703,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_AL_Mirage",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_AL_Mirage",
+        "file_size": 1667,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CO_StormLancer",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CO_StormLancer",
+        "file_size": 1694,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_AL_Engineer",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_AL_Engineer",
+        "file_size": 1633,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_SU_Apocalypse",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_SU_Apocalypse",
+        "file_size": 1699,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_AL_Jackal",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_AL_Jackal",
+        "file_size": 1677,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CH_Tidemark",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CH_Tidemark",
+        "file_size": 1701,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_SU_Dreadnought",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_SU_Dreadnought",
+        "file_size": 1722,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CO_LotusArtillery",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CO_LotusArtillery",
+        "file_size": 1719,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CO_HonorGuard",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CO_HonorGuard",
+        "file_size": 1691,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_SU_Commissar",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_SU_Commissar",
+        "file_size": 1686,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_AL_Harrier",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_AL_Harrier",
+        "file_size": 1676,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CO_DragonPalace",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CO_DragonPalace",
+        "file_size": 1745,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CO_Vermilion",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CO_Vermilion",
+        "file_size": 1714,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CH_PhaseLancer",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CH_PhaseLancer",
+        "file_size": 1700,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CO_Technician",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CO_Technician",
+        "file_size": 1635,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CO_JadeTank",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CO_JadeTank",
+        "file_size": 1679,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CH_EpochEngine",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CH_EpochEngine",
+        "file_size": 1698,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_SU_ShockTrooper",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_SU_ShockTrooper",
+        "file_size": 1705,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CH_AfterimageGunship",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CH_AfterimageGunship",
+        "file_size": 1742,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CO_Mantis",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CO_Mantis",
+        "file_size": 1677,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CH_StasisProjector",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CH_StasisProjector",
+        "file_size": 1720,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CO_PhaseArcher",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CO_PhaseArcher",
+        "file_size": 1698,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_SU_FlakTrooper",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_SU_FlakTrooper",
+        "file_size": 1684,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CO_Kirin",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CO_Kirin",
+        "file_size": 1688,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CH_AbyssWalker",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CH_AbyssWalker",
+        "file_size": 1702,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_AL_Triton",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_AL_Triton",
+        "file_size": 1675,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_SU_TyphoonSub",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_SU_TyphoonSub",
+        "file_size": 1697,
+        "type": "Texture"
+      },
+      {
+        "name": "DA_Unit_CO_Bastion",
+        "game_path": "/Game/RA4/Data/Generated/Units/DA_Unit_CO_Bastion",
+        "file_size": 1700,
+        "type": "Texture"
+      },
+      {
+        "name": "T_WaterTank01_SRM",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_WaterTank01_SRM",
+        "file_size": 6422131,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Newspaper01_N",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_Newspaper01_N",
+        "file_size": 2017666,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Box01_D",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_Box01_D",
+        "file_size": 10158190,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Tarp01_N",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_Tarp01_N",
+        "file_size": 9762299,
+        "type": "Texture"
+      },
+      {
+        "name": "T_WaterTank01_N",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_WaterTank01_N",
+        "file_size": 3785855,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Barrel01_D",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_Barrel01_D",
+        "file_size": 8625891,
+        "type": "Texture"
+      },
+      {
+        "name": "T_TrafficBarrel01_SRM",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_TrafficBarrel01_SRM",
+        "file_size": 4871373,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Rack_N",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_Rack_N",
+        "file_size": 863757,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Cartonbox01_N",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_Cartonbox01_N",
+        "file_size": 7831109,
+        "type": "Texture"
+      },
+      {
+        "name": "T_WaterTank01_D",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_WaterTank01_D",
+        "file_size": 4940341,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Box01_N",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_Box01_N",
+        "file_size": 8114831,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Tarp01_D",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_Tarp01_D",
+        "file_size": 13328728,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Newspaper01_D",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_Newspaper01_D",
+        "file_size": 2179626,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Cartonbox01_D",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_Cartonbox01_D",
+        "file_size": 8103628,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Rack_D",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_Rack_D",
+        "file_size": 1564374,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Hose_SRM",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_Hose_SRM",
+        "file_size": 194965,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Barrel01_N",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_Barrel01_N",
+        "file_size": 7028207,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Box01_SRM",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_Box01_SRM",
+        "file_size": 6304317,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Hose_D",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_Hose_D",
+        "file_size": 170141,
+        "type": "Texture"
+      },
+      {
+        "name": "T_TrafficBarrel01_N",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_TrafficBarrel01_N",
+        "file_size": 476538,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Cartonbox01_SRM",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_Cartonbox01_SRM",
+        "file_size": 10285801,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Tarp02_N",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_Tarp02_N",
+        "file_size": 8895417,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Tarp01_SRM",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_Tarp01_SRM",
+        "file_size": 8654762,
+        "type": "Texture"
+      },
+      {
+        "name": "T_TrafficBarrel01_D",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_TrafficBarrel01_D",
+        "file_size": 3489800,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Hose_N",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_Hose_N",
+        "file_size": 239557,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Barrel01_SRM",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_Barrel01_SRM",
+        "file_size": 9324400,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Tarp02_D",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_Tarp02_D",
+        "file_size": 12128865,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Rack_SRM",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_Rack_SRM",
+        "file_size": 1283215,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Newspaper01_SRM",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_Newspaper01_SRM",
+        "file_size": 1850644,
+        "type": "Texture"
+      },
+      {
+        "name": "T_MASK2",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/BaseTextures/T_MASK2",
+        "file_size": 13417254,
+        "type": "Texture"
+      },
+      {
+        "name": "T_gradient_D",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/BaseTextures/T_gradient_D",
+        "file_size": 92451,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Dirt_N",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/BaseTextures/T_Dirt_N",
+        "file_size": 2561485,
+        "type": "Texture"
+      },
+      {
+        "name": "T_MASK1",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/BaseTextures/T_MASK1",
+        "file_size": 110290,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Eye_Wet_N",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Eye/T_Eye_Wet_N",
+        "file_size": 1025756,
+        "type": "Texture"
+      },
+      {
+        "name": "T_EyeMidPlaneDisplacement_Example",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Eye/T_EyeMidPlaneDisplacement_Example",
+        "file_size": 169378,
+        "type": "Texture"
+      },
+      {
+        "name": "T_EYE_N",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Eye/T_EYE_N",
+        "file_size": 220337,
+        "type": "Texture"
+      },
+      {
+        "name": "T_EyeScleraBC",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Eye/T_EyeScleraBC",
+        "file_size": 3982661,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Sphere_EYE_N",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Eye/T_Sphere_EYE_N",
+        "file_size": 774494,
+        "type": "Texture"
+      },
+      {
+        "name": "T_EyeIriBC",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Eye/T_EyeIriBC",
+        "file_size": 340237,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Shirt_RolledUp_Normal",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Shirt_RolledUp/T_Shirt_RolledUp_Normal",
+        "file_size": 31228444,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Shirt_RolledUp_OcclusionRoughnessMetallic",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Shirt_RolledUp/T_Shirt_RolledUp_OcclusionRoughnessMetallic",
+        "file_size": 16267988,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Shirt_RolledUp_Blue_BaseColor",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Shirt_RolledUp/T_Shirt_RolledUp_Blue_BaseColor",
+        "file_size": 22448099,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Rifle_Olive_OcclusionRoughnessMetallic",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Rifle/T_Rifle_Olive_OcclusionRoughnessMetallic",
+        "file_size": 22193559,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Rifle_Olive_BaseColor",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Rifle/T_Rifle_Olive_BaseColor",
+        "file_size": 19835865,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Rifle_Olive_Normal",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Rifle/T_Rifle_Olive_Normal",
+        "file_size": 21139635,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Patches_N",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Patches/T_Patches_N",
+        "file_size": 18823846,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Patches_ORM",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Patches/T_Patches_ORM",
+        "file_size": 14696225,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Patches_BaseColor",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Patches/T_Patches_BaseColor",
+        "file_size": 1999705,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Pistol_ORM",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Pistol/T_Pistol_ORM",
+        "file_size": 15458237,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Pistol_BC",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Pistol/T_Pistol_BC",
+        "file_size": 16667587,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Pistol_N",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Pistol/T_Pistol_N",
+        "file_size": 24712709,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Drops_Tactical_ORM",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Drops/T_Drops_Tactical_ORM",
+        "file_size": 12386764,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Drops_Tactical_N",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Drops/T_Drops_Tactical_N",
+        "file_size": 22607885,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Drops_Tactical_Bege_BC",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Drops/T_Drops_Tactical_Bege_BC",
+        "file_size": 16521457,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Teeth_N",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Body/T_Teeth_N",
+        "file_size": 18098878,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Teeth_ORM",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Body/T_Teeth_ORM",
+        "file_size": 2340015,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Head_Unity_N",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Body/T_Head_Unity_N",
+        "file_size": 20121632,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Eyelashesh_BC",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Body/T_Eyelashesh_BC",
+        "file_size": 1540562,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Head_BC",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Body/T_Head_BC",
+        "file_size": 22153215,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Eyelashesh_ORM",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Body/T_Eyelashesh_ORM",
+        "file_size": 156529,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Eyeball_",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Body/T_Eyeball_",
+        "file_size": 156545,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Body_ORM",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Body/T_Body_ORM",
+        "file_size": 14191013,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Eyeball_N",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Body/T_Eyeball_N",
+        "file_size": 4174923,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Teeth_BC",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Body/T_Teeth_BC",
+        "file_size": 5601492,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Eyelashesh_N",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Body/T_Eyelashesh_N",
+        "file_size": 262914,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Head_ORM",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Body/T_Head_ORM",
+        "file_size": 17146921,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Body_N",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Body/T_Body_N",
+        "file_size": 71539586,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Eyeball_BC",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Body/T_Eyeball_BC",
+        "file_size": 13464724,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Body_BC",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Body/T_Body_BC",
+        "file_size": 16547128,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Jeans_OcclusionRoughnessMetallic",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Jeans/T_Jeans_OcclusionRoughnessMetallic",
+        "file_size": 17584596,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Jeans_Normal",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Jeans/T_Jeans_Normal",
+        "file_size": 33941556,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Jeans_Beje_BaseColor",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Jeans/T_Jeans_Beje_BaseColor",
+        "file_size": 20975298,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Holster_Hard_Bege_BC",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Holster_Hard/T_Holster_Hard_Bege_BC",
+        "file_size": 18002797,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Holster_Hard_N",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Holster_Hard/T_Holster_Hard_N",
+        "file_size": 30399564,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Holster_Hard_ORM",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Holster_Hard/T_Holster_Hard_ORM",
+        "file_size": 15006184,
+        "type": "Texture"
+      },
+      {
+        "name": "T_MetaHuman_Body_Arms_Long_Msk",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/MetaHuman_Msk/T_MetaHuman_Body_Arms_Long_Msk",
+        "file_size": 188792,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Metahuman_Head_Msk",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/MetaHuman_Msk/T_Metahuman_Head_Msk",
+        "file_size": 144360,
+        "type": "Texture"
+      },
+      {
+        "name": "T_MetaHuman_Body_Wirst_Msk",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/MetaHuman_Msk/T_MetaHuman_Body_Wirst_Msk",
+        "file_size": 199975,
+        "type": "Texture"
+      },
+      {
+        "name": "T_MetaHuman_Body_Arms_Short_Msk",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/MetaHuman_Msk/T_MetaHuman_Body_Arms_Short_Msk",
+        "file_size": 210533,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Cap_Bege_BC",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Cap/T_Cap_Bege_BC",
+        "file_size": 18771599,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Cap_N",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Cap/T_Cap_N",
+        "file_size": 30153444,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Cap_ORM",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Cap/T_Cap_ORM",
+        "file_size": 11455826,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Bulletproof_Bege_BC",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Bulletproof/T_Bulletproof_Bege_BC",
+        "file_size": 30239933,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Bulletproof_ORM",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Bulletproof/T_Bulletproof_ORM",
+        "file_size": 16618469,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Bulletproof_N",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Bulletproof/T_Bulletproof_N",
+        "file_size": 33526859,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Arms_BC",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Arms/T_Arms_BC",
+        "file_size": 16434313,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Arms_N",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Arms/T_Arms_N",
+        "file_size": 10815001,
+        "type": "Texture"
+      },
+      {
+        "name": "T_Arms_ORM",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Arms/T_Arms_ORM",
+        "file_size": 11233845,
+        "type": "Texture"
+      },
+      {
+        "name": "PA_Shirt_RolledUp",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Mesh/Modules/PA_Shirt_RolledUp",
+        "file_size": 18759,
+        "type": "Texture"
+      },
+      {
+        "name": "A_Preset_Pose_0",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Demo/Animations/A_Preset_Pose_0",
+        "file_size": 3393938,
+        "type": "Texture"
+      },
+      {
+        "name": "T_RA4_Button_Normal",
+        "game_path": "/Game/RA4UI/Art/T_RA4_Button_Normal",
+        "file_size": 96849,
+        "type": "Texture"
+      },
+      {
+        "name": "T_RA4_Button_Disabled",
+        "game_path": "/Game/RA4UI/Art/T_RA4_Button_Disabled",
+        "file_size": 94391,
+        "type": "Texture"
+      },
+      {
+        "name": "T_RA4_MenuIcons",
+        "game_path": "/Game/RA4UI/Art/T_RA4_MenuIcons",
+        "file_size": 1934136,
+        "type": "Texture"
+      },
+      {
+        "name": "T_RA4_USSR_MainMenuBackground",
+        "game_path": "/Game/RA4UI/Art/T_RA4_USSR_MainMenuBackground",
+        "file_size": 2756142,
+        "type": "Texture"
+      },
+      {
+        "name": "T_RA4_USSR_CommandCenter",
+        "game_path": "/Game/RA4UI/Art/T_RA4_USSR_CommandCenter",
+        "file_size": 2431409,
+        "type": "Texture"
+      },
+      {
+        "name": "T_RA4_Eastern_CommandFortress",
+        "game_path": "/Game/RA4UI/Art/T_RA4_Eastern_CommandFortress",
+        "file_size": 2302381,
+        "type": "Texture"
+      },
+      {
+        "name": "T_RA4_Button_Pressed",
+        "game_path": "/Game/RA4UI/Art/T_RA4_Button_Pressed",
+        "file_size": 97327,
+        "type": "Texture"
+      },
+      {
+        "name": "T_RA4_Button_Hovered",
+        "game_path": "/Game/RA4UI/Art/T_RA4_Button_Hovered",
+        "file_size": 98184,
+        "type": "Texture"
+      },
+      {
+        "name": "T_RA4_Logo",
+        "game_path": "/Game/RA4UI/Art/T_RA4_Logo",
+        "file_size": 1148200,
+        "type": "Texture"
+      },
+      {
+        "name": "T_RA4_CampaignReference",
+        "game_path": "/Game/RA4UI/Art/T_RA4_CampaignReference",
+        "file_size": 2948317,
+        "type": "Texture"
+      },
+      {
+        "name": "T_RA4_Allies_ArcticFleet",
+        "game_path": "/Game/RA4UI/Art/T_RA4_Allies_ArcticFleet",
+        "file_size": 2356186,
+        "type": "Texture"
+      },
+      {
+        "name": "T_RA4_Chrono_TemporalCitadel",
+        "game_path": "/Game/RA4UI/Art/T_RA4_Chrono_TemporalCitadel",
+        "file_size": 2578277,
+        "type": "Texture"
+      },
+      {
+        "name": "T_RA4_PanelGradient_USSR",
+        "game_path": "/Game/RA4UI/Art/T_RA4_PanelGradient_USSR",
+        "file_size": 2374663,
+        "type": "Texture"
+      },
+      {
+        "name": "T_RA4_USSR_MainMenuChrome",
+        "game_path": "/Game/RA4UI/Art/T_RA4_USSR_MainMenuChrome",
+        "file_size": 423700,
+        "type": "Texture"
+      }
+    ],
+    "Niagara": [],
+    "SoundWave": [
+      {
+        "name": "S_RA4_MainMenu_Theme",
+        "game_path": "/Game/RA4UI/Audio/S_RA4_MainMenu_Theme",
+        "file_size": 44931666,
+        "type": "SoundWave"
+      },
+      {
+        "name": "WBP_RA4_HUD_Allies_Air",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_HUD_Allies_Air",
+        "file_size": 22097,
+        "type": "SoundWave"
+      },
+      {
+        "name": "WBP_RA4_HUD_Allies_Naval",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_HUD_Allies_Naval",
+        "file_size": 22121,
+        "type": "SoundWave"
+      }
+    ],
+    "SoundCue": [],
+    "MetaSound": [],
+    "DataAsset": [],
+    "Map": [
+      {
+        "name": "Overview",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Maps/Overview",
+        "file_size": 202519,
+        "type": "Map"
+      },
+      {
+        "name": "Showcase",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Maps/Showcase",
+        "file_size": 915680,
+        "type": "Map"
+      }
+    ],
+    "Other": [
+      {
+        "name": "RA4_Skirmish_VisualIntegration",
+        "game_path": "/Game/Maps/RA4_Skirmish_VisualIntegration",
+        "file_size": 274787,
+        "type": "UnknownAsset"
+      },
+      {
+        "name": "RA4_Skirmish_Hills",
+        "game_path": "/Game/Maps/RA4_Skirmish_Hills",
+        "file_size": 316207,
+        "type": "UnknownAsset"
+      },
+      {
+        "name": "RA4_Skirmish_Production",
+        "game_path": "/Game/Maps/RA4_Skirmish_Production",
+        "file_size": 316207,
+        "type": "UnknownAsset"
+      },
+      {
+        "name": "RA4_Skirmish_Canyon",
+        "game_path": "/Game/Maps/RA4_Skirmish_Canyon",
+        "file_size": 316207,
+        "type": "UnknownAsset"
+      },
+      {
+        "name": "RA4_Skirmish",
+        "game_path": "/Game/Maps/RA4_Skirmish",
+        "file_size": 519541,
+        "type": "UnknownAsset"
+      },
+      {
+        "name": "BG_D",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/BaseTextures/BG_D",
+        "file_size": 2919,
+        "type": "UnknownAsset"
+      },
+      {
+        "name": "TC_HDR02",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/BaseTextures/TC_HDR02",
+        "file_size": 2169032,
+        "type": "UnknownAsset"
+      },
+      {
+        "name": "BB_D",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/BaseTextures/BB_D",
+        "file_size": 2922,
+        "type": "UnknownAsset"
+      },
+      {
+        "name": "BW_D",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/BaseTextures/BW_D",
+        "file_size": 2920,
+        "type": "UnknownAsset"
+      },
+      {
+        "name": "TC_HDR01",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/BaseTextures/TC_HDR01",
+        "file_size": 306438,
+        "type": "UnknownAsset"
+      },
+      {
+        "name": "B_N",
+        "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/BaseTextures/B_N",
+        "file_size": 3206,
+        "type": "UnknownAsset"
+      },
+      {
+        "name": "CBP_QuantumCharacter",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Demo/CBP_QuantumCharacter",
+        "file_size": 65008,
+        "type": "UnknownAsset"
+      },
+      {
+        "name": "Map",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Map/Map",
+        "file_size": 28494,
+        "type": "UnknownAsset"
+      },
+      {
+        "name": "Map_HLOD0_Instancing",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Map/Map_HLOD0_Instancing",
+        "file_size": 1510,
+        "type": "UnknownAsset"
+      },
+      {
+        "name": "SSP_EyeInner_Profile",
+        "game_path": "/Game/ThirdParty/QuantumCharacter/Textures/Eye/SSP_EyeInner_Profile",
+        "file_size": 2862,
+        "type": "UnknownAsset"
+      },
+      {
+        "name": "WBP_Objectives",
+        "game_path": "/Game/RA4UI/Components/WBP_Objectives",
+        "file_size": 21966,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_ProductionTabs",
+        "game_path": "/Game/RA4UI/Components/WBP_ProductionTabs",
+        "file_size": 22038,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_NotificationFeed",
+        "game_path": "/Game/RA4UI/Components/WBP_NotificationFeed",
+        "file_size": 22074,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_EVAAlert",
+        "game_path": "/Game/RA4UI/Components/WBP_EVAAlert",
+        "file_size": 21930,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_CommandGrid",
+        "game_path": "/Game/RA4UI/Components/WBP_CommandGrid",
+        "file_size": 21984,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_ResourceBar",
+        "game_path": "/Game/RA4UI/Components/WBP_ResourceBar",
+        "file_size": 21984,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_SelectionPanel",
+        "game_path": "/Game/RA4UI/Components/WBP_SelectionPanel",
+        "file_size": 22038,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_ProductionCard",
+        "game_path": "/Game/RA4UI/Components/WBP_ProductionCard",
+        "file_size": 22038,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RTSHUD",
+        "game_path": "/Game/RA4UI/Components/WBP_RTSHUD",
+        "file_size": 21876,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_Minimap",
+        "game_path": "/Game/RA4UI/Components/WBP_Minimap",
+        "file_size": 21912,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "RA4_RobotoCondensedSemiBold_Font",
+        "game_path": "/Game/RA4UI/Fonts/RA4_RobotoCondensedSemiBold_Font",
+        "file_size": 7201,
+        "type": "UnknownAsset"
+      },
+      {
+        "name": "RA4_RobotoCondensedRegular",
+        "game_path": "/Game/RA4UI/Fonts/RA4_RobotoCondensedRegular",
+        "file_size": 147451,
+        "type": "UnknownAsset"
+      },
+      {
+        "name": "RA4_RobotoCondensedSemiBold",
+        "game_path": "/Game/RA4UI/Fonts/RA4_RobotoCondensedSemiBold",
+        "file_size": 148066,
+        "type": "UnknownAsset"
+      },
+      {
+        "name": "RA4_RobotoCondensedRegular_Font",
+        "game_path": "/Game/RA4UI/Fonts/RA4_RobotoCondensedRegular_Font",
+        "file_size": 7153,
+        "type": "UnknownAsset"
+      },
+      {
+        "name": "WBP_RA4_FactionSelect",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_FactionSelect",
+        "file_size": 22085,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_TechTree",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_TechTree",
+        "file_size": 22025,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_MainMenu",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_MainMenu",
+        "file_size": 21969,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_Briefing_USSR",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_Briefing_USSR",
+        "file_size": 22085,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_MultiplayerLobby",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_MultiplayerLobby",
+        "file_size": 22121,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_HUD_Eastern",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_HUD_Eastern",
+        "file_size": 22061,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_HUD_USSR",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_HUD_USSR",
+        "file_size": 22025,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_Loading_USSR",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_Loading_USSR",
+        "file_size": 22073,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_VideoComms",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_VideoComms",
+        "file_size": 22049,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_HUD_USSR_Battle",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_HUD_USSR_Battle",
+        "file_size": 22109,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_Showcase",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_Showcase",
+        "file_size": 21969,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_Campaign_Eastern",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_Campaign_Eastern",
+        "file_size": 22121,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_Mods",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_Mods",
+        "file_size": 21977,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_Campaign_Chrono",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_Campaign_Chrono",
+        "file_size": 22109,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_MissionMap_USSR",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_MissionMap_USSR",
+        "file_size": 22109,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_Campaign_Allies",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_Campaign_Allies",
+        "file_size": 22109,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_Splash",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_Splash",
+        "file_size": 22001,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_HUD_Chrono_Superweapon",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_HUD_Chrono_Superweapon",
+        "file_size": 22193,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_Pause",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_Pause",
+        "file_size": 21989,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_Campaign_USSR",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_Campaign_USSR",
+        "file_size": 22085,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_HUD_USSR_Alert",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_HUD_USSR_Alert",
+        "file_size": 22097,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_Encyclopedia",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_Encyclopedia",
+        "file_size": 22073,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_HUD_Chrono",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_HUD_Chrono",
+        "file_size": 22049,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_Campaign_EasternDetail",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_Campaign_EasternDetail",
+        "file_size": 22193,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_HUD_Allies",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_HUD_Allies",
+        "file_size": 22049,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_Settings",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_Settings",
+        "file_size": 22025,
+        "type": "WidgetBlueprint"
+      },
+      {
+        "name": "WBP_RA4_Victory",
+        "game_path": "/Game/RA4UI/Widgets/WBP_RA4_Victory",
+        "file_size": 22013,
+        "type": "WidgetBlueprint"
+      }
+    ]
+  },
+  "role_coverage": {
+    "USSR": {
+      "HQ": false,
+      "PowerPlant": false,
+      "Refinery": false,
+      "Barracks": false,
+      "WarFactory": false,
+      "Turret": false,
+      "Harvester": false,
+      "Conscript": false,
+      "AntiTankInfantry": false,
+      "CommissarSupport": false,
+      "SickleScout": false,
+      "HammerTank": false,
+      "FlakAA": false,
+      "BuratinoArtillery": false
+    },
+    "Alliance": {
+      "HQ": false,
+      "PowerPlant": false,
+      "Refinery": false,
+      "Barracks": false,
+      "WarFactory": false,
+      "Turret": false,
+      "ProspectorHarvester": false,
+      "Peacekeeper": false,
+      "JavelinAntiTank": false,
+      "MedicSupport": false,
+      "JackalScout": false,
+      "GuardianTank": false,
+      "AegisAA": false,
+      "AthenaArtillery": false
+    }
+  },
+  "visual_audit": [
+    {
+      "faction": "USSR",
+      "role": "HQ",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "USSR",
+      "role": "PowerPlant",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "USSR",
+      "role": "Refinery",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "USSR",
+      "role": "Barracks",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "USSR",
+      "role": "WarFactory",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "USSR",
+      "role": "Turret",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "USSR",
+      "role": "Harvester",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "USSR",
+      "role": "Conscript",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "USSR",
+      "role": "AntiTankInfantry",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "USSR",
+      "role": "CommissarSupport",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "USSR",
+      "role": "SickleScout",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "USSR",
+      "role": "HammerTank",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "USSR",
+      "role": "FlakAA",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "USSR",
+      "role": "BuratinoArtillery",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "Alliance",
+      "role": "HQ",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "Alliance",
+      "role": "PowerPlant",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "Alliance",
+      "role": "Refinery",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "Alliance",
+      "role": "Barracks",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "Alliance",
+      "role": "WarFactory",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "Alliance",
+      "role": "Turret",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "Alliance",
+      "role": "ProspectorHarvester",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "Alliance",
+      "role": "Peacekeeper",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "Alliance",
+      "role": "JavelinAntiTank",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "Alliance",
+      "role": "MedicSupport",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "Alliance",
+      "role": "JackalScout",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "Alliance",
+      "role": "GuardianTank",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "Alliance",
+      "role": "AegisAA",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    },
+    {
+      "faction": "Alliance",
+      "role": "AthenaArtillery",
+      "status": "MissingOrPlaceholder",
+      "requires_blockout": true
+    }
+  ]
+}
