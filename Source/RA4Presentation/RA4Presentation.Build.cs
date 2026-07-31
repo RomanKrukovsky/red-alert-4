@@ -19,6 +19,8 @@ public class RA4Presentation : ModuleRules
 
 		PublicDependencyModuleNames.AddRange(new string[] {
 			"Core",
+			"CoreUObject",
+			"Engine",
 			"RA4Core",
 			"RA4Content",
 			"RA4Simulation",
