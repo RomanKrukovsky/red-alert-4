@@ -222,10 +222,13 @@ void ARA4EntityActor::Tick(float DeltaTime)
     {
         bool bIsMoving = Speed > 20.0f;
         
-        static UAnimSequence* IdleAnim = LoadObject<UAnimSequence>(nullptr, TEXT("/Game/ThirdParty/QuantumCharacter/Demo/Animations/A_MM_Idle.A_MM_Idle"));
-        static UAnimSequence* RunAnim = LoadObject<UAnimSequence>(nullptr, TEXT("/Game/ThirdParty/QuantumCharacter/Demo/Animations/A_MM_Run_Fwd.A_MM_Run_Fwd"));
+        static UAnimSequence* DefaultIdleAnim = LoadObject<UAnimSequence>(nullptr, TEXT("/Game/ThirdParty/QuantumCharacter/Demo/Animations/A_MM_Idle.A_MM_Idle"));
+        static UAnimSequence* DefaultRunAnim = LoadObject<UAnimSequence>(nullptr, TEXT("/Game/ThirdParty/QuantumCharacter/Demo/Animations/A_MM_Run_Fwd.A_MM_Run_Fwd"));
         
+        UAnimSequence* IdleAnim = CachedIdleAnim ? CachedIdleAnim : DefaultIdleAnim;
+        UAnimSequence* RunAnim = CachedRunAnim ? CachedRunAnim : DefaultRunAnim;
         UAnimSequence* TargetAnim = bIsMoving ? RunAnim : IdleAnim;
+
         if (TargetAnim && SkeletalMeshComponent->GetAnimationMode() != EAnimationMode::AnimationSingleNode)
         {
             SkeletalMeshComponent->SetAnimationMode(EAnimationMode::AnimationSingleNode);
@@ -374,6 +377,34 @@ void ARA4EntityActor::ApplyPrimitiveComposition(const FString& EntityId)
                         !LowerId.Contains(TEXT("building")) &&
                         !LowerId.Contains(TEXT("tank")) &&
                         !LowerId.Contains(TEXT("harvester"));
+
+    // Query DataAsset ArtMapping for custom SkeletalMesh or StaticMesh overrides
+    const URA4ArtMappingDataAsset* ArtData = LoadObject<URA4ArtMappingDataAsset>(nullptr, TEXT("/Game/RA4/Art/Generated/DA_RA4_ArtMappings.DA_RA4_ArtMappings"));
+    if (ArtData)
+    {
+        FRA4UnitArtDefinition UnitArt;
+        if (ArtData->FindUnitArt(FName(*EntityId), UnitArt))
+        {
+            if (!UnitArt.IdleAnim.IsNull()) CachedIdleAnim = UnitArt.IdleAnim.LoadSynchronous();
+            if (!UnitArt.RunAnim.IsNull()) CachedRunAnim = UnitArt.RunAnim.LoadSynchronous();
+            if (!UnitArt.AttackAnim.IsNull()) CachedAttackAnim = UnitArt.AttackAnim.LoadSynchronous();
+
+            if (!UnitArt.SkeletalMesh.IsNull() && SkeletalMeshComponent)
+            {
+                USkeletalMesh* SkelMesh = UnitArt.SkeletalMesh.LoadSynchronous();
+                if (SkelMesh)
+                {
+                    MeshComponent->SetVisibility(false, true);
+                    SkeletalMeshComponent->SetSkeletalMesh(SkelMesh);
+                    SkeletalMeshComponent->SetVisibility(true);
+                    SkeletalMeshComponent->SetRelativeLocation(UnitArt.MeshOffset);
+                    SkeletalMeshComponent->SetRelativeRotation(UnitArt.MeshRotation);
+                    SkeletalMeshComponent->SetWorldScale3D(UnitArt.MeshScale);
+                    return;
+                }
+            }
+        }
+    }
 
     if (bIsInfantry)
     {

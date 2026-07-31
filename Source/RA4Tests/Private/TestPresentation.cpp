@@ -4,6 +4,7 @@
 
 #include "RA4Core/SimConfig.h"
 #include "RA4Presentation/HudSnapshot.h"
+#include "RA4Presentation/RA4ArtMapping.h"
 
 using namespace RA4;
 using namespace RA4::Presentation;
@@ -535,3 +536,20 @@ RA4_TEST(Hud, ElapsedTimeTracksTheSimulationClock)
     RA4_EXPECT_EQ(F.Snapshot.Match.ElapsedSeconds, 7);
     RA4_EXPECT_EQ(int32_t(F.Snapshot.Match.Tick), SecondsToTicks(7));
 }
+
+RA4_TEST(ArtMapping, UnitArtDefinitionSupportsAnimationProperties)
+{
+    FRA4UnitArtDefinition Def;
+    Def.UnitId = FName("SU_Conscript");
+    Def.MeshScale = FVector(1.0f, 1.0f, 1.0f);
+    Def.MeshOffset = FVector(0.0f, 0.0f, -90.0f);
+    Def.MeshRotation = FRotator(0.0f, -90.0f, 0.0f);
+
+    RA4_EXPECT(Def.UnitId == FName("SU_Conscript"));
+    RA4_EXPECT_EQ(Def.MeshScale.X, 1.0f);
+    RA4_EXPECT_EQ(Def.MeshOffset.Z, -90.0f);
+    RA4_EXPECT_EQ(Def.MeshRotation.Yaw, -90.0f);
+    RA4_EXPECT(Def.IdleAnim.IsNull());
+    RA4_EXPECT(Def.RunAnim.IsNull());
+}
+

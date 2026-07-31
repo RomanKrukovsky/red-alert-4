@@ -61,6 +61,15 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     TObjectPtr<class UNiagaraComponent> VFXComponent;
 
+    UPROPERTY(Transient)
+    TObjectPtr<class UAnimSequence> CachedIdleAnim;
+
+    UPROPERTY(Transient)
+    TObjectPtr<class UAnimSequence> CachedRunAnim;
+
+    UPROPERTY(Transient)
+    TObjectPtr<class UAnimSequence> CachedAttackAnim;
+
     // Smooth interpolation targets
     FVector TargetPosition;
     float TargetRotationZ;

@@ -99,7 +99,23 @@ def create_art_mappings_and_map():
                 unit_def.set_editor_property("static_mesh", mesh_obj)
             elif mesh_obj and isinstance(mesh_obj, unreal.SkeletalMesh):
                 unit_def.set_editor_property("skeletal_mesh", mesh_obj)
-            
+
+            # Map SkeletalMesh and Animations for Infantry Units
+            if bible_id in ["SU_Conscript", "SU_ShockTrooper", "SU_Commissar", "SU_Flak", "AL_Peacekeeper", "AL_Javelin", "AL_Medic"]:
+                skel_path = "/Game/ThirdParty/QuantumCharacter/Mesh/SKM_QuantumCharacter"
+                idle_path = "/Game/ThirdParty/QuantumCharacter/Demo/Animations/A_MM_Idle"
+                run_path = "/Game/ThirdParty/QuantumCharacter/Demo/Animations/A_MM_Run_Fwd"
+                walk_path = "/Game/ThirdParty/QuantumCharacter/Demo/Animations/A_MM_Walk_Fwd"
+
+                if editor_asset_subsystem.does_asset_exist(skel_path):
+                    unit_def.set_editor_property("skeletal_mesh", editor_asset_subsystem.load_asset(skel_path))
+                if editor_asset_subsystem.does_asset_exist(idle_path):
+                    unit_def.set_editor_property("idle_anim", editor_asset_subsystem.load_asset(idle_path))
+                if editor_asset_subsystem.does_asset_exist(run_path):
+                    unit_def.set_editor_property("run_anim", editor_asset_subsystem.load_asset(run_path))
+                if editor_asset_subsystem.does_asset_exist(walk_path):
+                    unit_def.set_editor_property("walk_anim", editor_asset_subsystem.load_asset(walk_path))
+
             unit_def.set_editor_property("turret_socket_name", "Socket_Turret")
             unit_def.set_editor_property("muzzle_socket_name", "Socket_Muzzle")
             unit_def.set_editor_property("engine_socket_name", "Socket_Engine")
