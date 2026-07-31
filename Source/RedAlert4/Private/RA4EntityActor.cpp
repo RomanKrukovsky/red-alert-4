@@ -110,6 +110,9 @@ void ARA4EntityActor::SetTeamColor(const FLinearColor& TeamColor)
             {
                 DynamicMaterial->SetVectorParameterValue(TEXT("TeamColor"), TeamColor);
                 DynamicMaterial->SetVectorParameterValue(TEXT("Color"), TeamColor);
+                DynamicMaterial->SetScalarParameterValue(TEXT("Metallic"), 0.85f);
+                DynamicMaterial->SetScalarParameterValue(TEXT("Roughness"), 0.35f);
+                DynamicMaterial->SetScalarParameterValue(TEXT("Specular"), 0.6f);
             }
         }
     };

@@ -82,35 +82,61 @@ void ARA4SkirmishGameMode::BeginPlay()
     AStaticMeshActor* LargestFloorActor = nullptr;
     double LargestFloorArea = 0.0;
 
-    // Directional light tuned to 3.2f
+    // Directional light tuned for RTS sunlight
+    bool bFoundSun = false;
     for (TActorIterator<ADirectionalLight> It(GetWorld()); It; ++It)
     {
+        bFoundSun = true;
         if (UDirectionalLightComponent* Light = Cast<UDirectionalLightComponent>(It->GetLightComponent()))
         {
             Light->SetMobility(EComponentMobility::Movable);
-            Light->SetIntensity(3.2f);
+            Light->SetIntensity(4.5f);
+            Light->SetLightColor(FLinearColor(1.0f, 0.96f, 0.88f));
+        }
+    }
+    if (!bFoundSun && GetWorld() != nullptr)
+    {
+        ADirectionalLight* SunActor = GetWorld()->SpawnActor<ADirectionalLight>(ADirectionalLight::StaticClass(), FVector(0,0,500), FRotator(-52.0f, 38.0f, 0.0f));
+        if (SunActor && SunActor->GetLightComponent())
+        {
+            SunActor->GetLightComponent()->SetMobility(EComponentMobility::Movable);
+            SunActor->GetLightComponent()->SetIntensity(4.5f);
+            SunActor->GetLightComponent()->SetLightColor(FLinearColor(1.0f, 0.96f, 0.88f));
         }
     }
 
-    // Sky light tuned to 1.0f
+    // Sky light for ambient shadow fill
+    bool bFoundSky = false;
     for (TActorIterator<ASkyLight> It(GetWorld()); It; ++It)
     {
+        bFoundSky = true;
         if (USkyLightComponent* Sky = It->GetLightComponent())
         {
             Sky->SetMobility(EComponentMobility::Movable);
-            Sky->SetIntensity(1.0f);
+            Sky->SetIntensity(2.0f);
+            Sky->SetLightColor(FLinearColor(0.65f, 0.82f, 1.0f));
+        }
+    }
+    if (!bFoundSky && GetWorld() != nullptr)
+    {
+        ASkyLight* SkyActor = GetWorld()->SpawnActor<ASkyLight>(ASkyLight::StaticClass());
+        if (SkyActor && SkyActor->GetLightComponent())
+        {
+            SkyActor->GetLightComponent()->SetMobility(EComponentMobility::Movable);
+            SkyActor->GetLightComponent()->SetIntensity(2.0f);
+            SkyActor->GetLightComponent()->SetLightColor(FLinearColor(0.65f, 0.82f, 1.0f));
         }
     }
 
-    // Configure ExponentialHeightFog density 0.0015 and start distance 9000
+    // Configure ExponentialHeightFog
     bool bFoundFog = false;
     for (TActorIterator<AExponentialHeightFog> It(GetWorld()); It; ++It)
     {
         bFoundFog = true;
         if (UExponentialHeightFogComponent* Fog = It->GetComponent())
         {
-            Fog->SetFogDensity(0.0015f);
-            Fog->SetStartDistance(9000.0f);
+            Fog->SetFogDensity(0.0012f);
+            Fog->SetStartDistance(6000.0f);
         }
     }
     if (!bFoundFog && GetWorld() != nullptr)
@@ -118,20 +144,20 @@ void ARA4SkirmishGameMode::BeginPlay()
         AExponentialHeightFog* FogActor = GetWorld()->SpawnActor<AExponentialHeightFog>(AExponentialHeightFog::StaticClass());
         if (FogActor && FogActor->GetComponent())
         {
-            FogActor->GetComponent()->SetFogDensity(0.0015f);
-            FogActor->GetComponent()->SetStartDistance(9000.0f);
+            FogActor->GetComponent()->SetFogDensity(0.0012f);
+            FogActor->GetComponent()->SetStartDistance(6000.0f);
         }
     }
 
-    // Load PBR ground material with terrain textures for skirmish floor
+    // Load PBR Ground039 dirt/gravel material for terrain floor
     UMaterialInterface* GroundMaterial = LoadObject<UMaterialInterface>(
         nullptr,
-        TEXT("/Game/RA4/Presentation/Materials/Blockout/M_RA4_BlockoutGround.M_RA4_BlockoutGround"));
+        TEXT("/Game/RA4/Presentation/Materials/Environment/Ground039.Ground039"));
     if (GroundMaterial == nullptr)
     {
         GroundMaterial = LoadObject<UMaterialInterface>(
             nullptr,
-            TEXT("/Game/RA4/Presentation/Materials/Environment/Ground039.Ground039"));
+            TEXT("/Game/RA4/Presentation/Materials/Blockout/M_RA4_BlockoutGround.M_RA4_BlockoutGround"));
     }
 
     for (TActorIterator<AStaticMeshActor> It(GetWorld()); It; ++It)
