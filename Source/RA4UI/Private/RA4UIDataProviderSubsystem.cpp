@@ -314,6 +314,8 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
         Out.DisplayName = KeyToText(Option.DisplayNameKey);
         Out.Cost = Option.Cost;
         Out.BuildSeconds = TicksToSeconds(Option.BuildTimeTicks);
+        Out.PowerDelta = Option.PowerDelta;
+        Out.PrerequisiteText = KeyToText(Option.PrerequisiteKey);
         Out.Category = int32(Option.Category);
         Out.bAvailable = Option.bAvailable;
         Out.BlockReason = ToBlueprint(Option.BlockReason);

@@ -140,6 +140,12 @@ struct FRA4BuildOption
     UPROPERTY(BlueprintReadOnly, Category = "RA4|Production")
     float BuildSeconds = 0.0f;
 
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|Production")
+    int32 PowerDelta = 0;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|Production")
+    FText PrerequisiteText;
+
     /** Matches ProductionCategory: 0 structure, 1 defence, 2 infantry, 3 vehicle... */
     UPROPERTY(BlueprintReadOnly, Category = "RA4|Production")
     int32 Category = 0;

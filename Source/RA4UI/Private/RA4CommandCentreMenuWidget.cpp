@@ -607,11 +607,18 @@ void URA4CommandCentreMenuWidget::OpenCampaign()
     }
 }
 void URA4CommandCentreMenuWidget::OpenMultiplayer() { NavigateToScreen(3); }
+#include "RA4SkirmishSetupWidget.h"
+
 void URA4CommandCentreMenuWidget::OpenSkirmish()
 {
-    if (UWorld* World = GetWorld())
+    if (APlayerController* PlayerController = GetOwningPlayer())
     {
-        UGameplayStatics::OpenLevel(World, TEXT("/Game/Maps/RA4_Skirmish"), true, TEXT("?PlayerFaction=0?EnemyFaction=1"));
+        if (URA4SkirmishSetupWidget* Setup = CreateWidget<URA4SkirmishSetupWidget>(
+            PlayerController, URA4SkirmishSetupWidget::StaticClass()))
+        {
+            Setup->AddToViewport(0);
+            RemoveFromParent();
+        }
     }
 }
 void URA4CommandCentreMenuWidget::OpenEditor() { NavigateToScreen(20); }
