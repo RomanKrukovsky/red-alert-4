@@ -1,7 +1,7 @@
 {
   "scan_time": "2026-07-31T16:24:00Z",
   "project": "RedAlert4",
-  "total_assets": 565,
+  "total_assets": 1166,
   "categories": {
     "StaticMesh": [],
     "SkeletalMesh": [
@@ -147,6 +147,1944 @@
         "type": "AnimationSequence"
       },
       {
+        "name": "VO_RU_SU_Hero_Morozova_Selected_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_Hero_Morozova/VO_RU_SU_Hero_Morozova_Selected_01",
+        "file_size": 121466,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_RU_SU_Hero_Morozova_Damaged_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_Hero_Morozova/VO_RU_SU_Hero_Morozova_Damaged_01",
+        "file_size": 120364,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_RU_SU_Hero_Morozova_Death_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_Hero_Morozova/VO_RU_SU_Hero_Morozova_Death_01",
+        "file_size": 108340,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_RU_SU_Hero_Morozova_Move_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_Hero_Morozova/VO_RU_SU_Hero_Morozova_Move_01",
+        "file_size": 71977,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_RU_SU_Hero_Morozova_Elite_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_Hero_Morozova/VO_RU_SU_Hero_Morozova_Elite_01",
+        "file_size": 139806,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_RU_SU_Hero_Morozova_Ability_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_Hero_Morozova/VO_RU_SU_Hero_Morozova_Ability_01",
+        "file_size": 105279,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_RU_SU_Hero_Morozova_Attack_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_Hero_Morozova/VO_RU_SU_Hero_Morozova_Attack_01",
+        "file_size": 154782,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_RU_SU_Hero_Morozova_Idle_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_Hero_Morozova/VO_RU_SU_Hero_Morozova_Idle_01",
+        "file_size": 178042,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_COMMAND_CAP_REACHED_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_COMMAND_CAP_REACHED_04",
+        "file_size": 114026,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_CONSTRUCTION_CANCELLED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_CONSTRUCTION_CANCELLED_01",
+        "file_size": 159338,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_UPGRADE_COMPLETE_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_UPGRADE_COMPLETE_02",
+        "file_size": 183359,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_ALLIED_BASE_UNDER_ATTACK_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_ALLIED_BASE_UNDER_ATTACK_03",
+        "file_size": 227475,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_BUILDING_UNDER_ATTACK_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_BUILDING_UNDER_ATTACK_02",
+        "file_size": 192949,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_FACTION_ABILITY_ACTIVATED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_FACTION_ABILITY_ACTIVATED_01",
+        "file_size": 143135,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_INFANTRY_READY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_INFANTRY_READY_01",
+        "file_size": 187629,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_POWER_LOW_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_POWER_LOW_02",
+        "file_size": 256980,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_CONSTRUCTION_COMPLETE_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_CONSTRUCTION_COMPLETE_03",
+        "file_size": 192113,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_INFANTRY_READY_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_INFANTRY_READY_03",
+        "file_size": 205524,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Chrono_EVA_NuclearLaunchDetected",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_Chrono_EVA_NuclearLaunchDetected",
+        "file_size": 196378,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_FACTION_ABILITY_ACTIVATED_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_FACTION_ABILITY_ACTIVATED_03",
+        "file_size": 173559,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_ALLIED_BASE_UNDER_ATTACK_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_ALLIED_BASE_UNDER_ATTACK_01",
+        "file_size": 206946,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_CONSTRUCTION_COMPLETE_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_CONSTRUCTION_COMPLETE_01",
+        "file_size": 159459,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Chrono_EVA_BaseUnderAttack",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_Chrono_EVA_BaseUnderAttack",
+        "file_size": 233036,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_OWN_SUPERWEAPON_FIRED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_OWN_SUPERWEAPON_FIRED_01",
+        "file_size": 198358,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_CONSTRUCTION_CANCELLED_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_CONSTRUCTION_CANCELLED_03",
+        "file_size": 129137,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_COMMAND_CENTER_DESTROYED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_COMMAND_CENTER_DESTROYED_02",
+        "file_size": 128565,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_MATCH_VICTORY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_MATCH_VICTORY_02",
+        "file_size": 310257,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_SUPERWEAPON_COUNTDOWN_STARTED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_SUPERWEAPON_COUNTDOWN_STARTED_02",
+        "file_size": 285748,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_VEHICLE_READY_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_VEHICLE_READY_03",
+        "file_size": 154042,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_POWER_LOW_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_POWER_LOW_04",
+        "file_size": 211630,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_FACTION_ABILITY_READY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_FACTION_ABILITY_READY_01",
+        "file_size": 164675,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_STRUCTURE_SOLD_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_STRUCTURE_SOLD_02",
+        "file_size": 174957,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_BASE_UNDER_ATTACK_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_BASE_UNDER_ATTACK_01",
+        "file_size": 220879,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_COMMAND_CAP_REACHED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_COMMAND_CAP_REACHED_02",
+        "file_size": 275917,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_RADAR_OFFLINE_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_RADAR_OFFLINE_02",
+        "file_size": 147150,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_SUPERWEAPON_READY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_SUPERWEAPON_READY_01",
+        "file_size": 162517,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_ENEMY_SUPERWEAPON_FIRED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_ENEMY_SUPERWEAPON_FIRED_01",
+        "file_size": 317748,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_HARVESTER_UNDER_ATTACK_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_HARVESTER_UNDER_ATTACK_03",
+        "file_size": 201520,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Chrono_EVA_ResourcesLow",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_Chrono_EVA_ResourcesLow",
+        "file_size": 231066,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Chrono_EVA_PlayerVictory",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_Chrono_EVA_PlayerVictory",
+        "file_size": 196459,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_RESOURCES_DEPLETED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_RESOURCES_DEPLETED_01",
+        "file_size": 211657,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Chrono_EVA_GameStart",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_Chrono_EVA_GameStart",
+        "file_size": 233192,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Chrono_EVA_BuildingConstructionComplete",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_Chrono_EVA_BuildingConstructionComplete",
+        "file_size": 211888,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_HARVESTER_UNDER_ATTACK_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_HARVESTER_UNDER_ATTACK_01",
+        "file_size": 124755,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_SUPERWEAPON_READY_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_SUPERWEAPON_READY_03",
+        "file_size": 210853,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_FACTION_RESOURCE_CRITICAL_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_FACTION_RESOURCE_CRITICAL_01",
+        "file_size": 195768,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_RESOURCES_DEPLETED_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_RESOURCES_DEPLETED_03",
+        "file_size": 194214,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Chrono_EVA_SuperweaponReady",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_Chrono_EVA_SuperweaponReady",
+        "file_size": 211905,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_VEHICLE_READY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_VEHICLE_READY_01",
+        "file_size": 201966,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_BASE_UNDER_ATTACK_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_BASE_UNDER_ATTACK_03",
+        "file_size": 220044,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_FACTION_ABILITY_READY_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_FACTION_ABILITY_READY_03",
+        "file_size": 158181,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_VEHICLE_READY_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_VEHICLE_READY_04",
+        "file_size": 167399,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_CONSTRUCTION_COMPLETE_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_CONSTRUCTION_COMPLETE_02",
+        "file_size": 152803,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_POWER_LOW_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_POWER_LOW_03",
+        "file_size": 217747,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_ALLIED_BASE_UNDER_ATTACK_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_ALLIED_BASE_UNDER_ATTACK_02",
+        "file_size": 215857,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_UPGRADE_COMPLETE_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_UPGRADE_COMPLETE_03",
+        "file_size": 144645,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_BUILDING_UNDER_ATTACK_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_BUILDING_UNDER_ATTACK_03",
+        "file_size": 184586,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_MATCH_VICTORY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_MATCH_VICTORY_01",
+        "file_size": 158045,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_COMMAND_CENTER_DESTROYED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_COMMAND_CENTER_DESTROYED_01",
+        "file_size": 210024,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_HARVESTER_UNDER_ATTACK_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_HARVESTER_UNDER_ATTACK_04",
+        "file_size": 233175,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_OWN_SUPERWEAPON_FIRED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_OWN_SUPERWEAPON_FIRED_02",
+        "file_size": 209152,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Chrono_EVA_PlayerDefeat",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_Chrono_EVA_PlayerDefeat",
+        "file_size": 181278,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_CONSTRUCTION_CANCELLED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_CONSTRUCTION_CANCELLED_02",
+        "file_size": 147806,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_POWER_LOW_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_POWER_LOW_01",
+        "file_size": 212959,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_FACTION_ABILITY_ACTIVATED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_FACTION_ABILITY_ACTIVATED_02",
+        "file_size": 163044,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_BASE_UNDER_ATTACK_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_BASE_UNDER_ATTACK_04",
+        "file_size": 192512,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_BUILDING_UNDER_ATTACK_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_BUILDING_UNDER_ATTACK_01",
+        "file_size": 175391,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_INFANTRY_READY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_INFANTRY_READY_02",
+        "file_size": 217879,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_UPGRADE_COMPLETE_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_UPGRADE_COMPLETE_01",
+        "file_size": 131179,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Chrono_EVA_UnitReady",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_Chrono_EVA_UnitReady",
+        "file_size": 222831,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_COMMAND_CAP_REACHED_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_COMMAND_CAP_REACHED_03",
+        "file_size": 214113,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_FACTION_RESOURCE_CRITICAL_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_FACTION_RESOURCE_CRITICAL_02",
+        "file_size": 328556,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_RADAR_OFFLINE_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_RADAR_OFFLINE_03",
+        "file_size": 142938,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_HARVESTER_UNDER_ATTACK_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_HARVESTER_UNDER_ATTACK_02",
+        "file_size": 210306,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_STRUCTURE_SOLD_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_STRUCTURE_SOLD_03",
+        "file_size": 165610,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_SUPERWEAPON_COUNTDOWN_STARTED_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_SUPERWEAPON_COUNTDOWN_STARTED_03",
+        "file_size": 170099,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_CONSTRUCTION_COMPLETE_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_CONSTRUCTION_COMPLETE_04",
+        "file_size": 138920,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_VEHICLE_READY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_VEHICLE_READY_02",
+        "file_size": 200528,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_INFANTRY_READY_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_INFANTRY_READY_04",
+        "file_size": 118493,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_STRUCTURE_SOLD_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_STRUCTURE_SOLD_01",
+        "file_size": 117886,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_BASE_UNDER_ATTACK_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_BASE_UNDER_ATTACK_02",
+        "file_size": 231245,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_FACTION_ABILITY_READY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_FACTION_ABILITY_READY_02",
+        "file_size": 157987,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Chrono_EVA_ChronoRiftDetected",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_Chrono_EVA_ChronoRiftDetected",
+        "file_size": 200912,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_SUPERWEAPON_COUNTDOWN_STARTED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_SUPERWEAPON_COUNTDOWN_STARTED_01",
+        "file_size": 230178,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_RESOURCES_DEPLETED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_RESOURCES_DEPLETED_02",
+        "file_size": 159062,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_ENEMY_SUPERWEAPON_FIRED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_ENEMY_SUPERWEAPON_FIRED_02",
+        "file_size": 247633,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_SUPERWEAPON_READY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_SUPERWEAPON_READY_02",
+        "file_size": 183175,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_RADAR_OFFLINE_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_RADAR_OFFLINE_01",
+        "file_size": 270601,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CH_COMMAND_CAP_REACHED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_COMMAND_CAP_REACHED_01",
+        "file_size": 219742,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_CONSTRUCTION_COMPLETE_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_CONSTRUCTION_COMPLETE_03",
+        "file_size": 164733,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_POWER_LOW_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_POWER_LOW_03",
+        "file_size": 240987,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_ALLIED_BASE_UNDER_ATTACK_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_ALLIED_BASE_UNDER_ATTACK_03",
+        "file_size": 173885,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_STRUCTURE_SOLD_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_STRUCTURE_SOLD_02",
+        "file_size": 164047,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_COMMAND_CAP_REACHED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_COMMAND_CAP_REACHED_02",
+        "file_size": 201618,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_BUILDING_UNDER_ATTACK_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_BUILDING_UNDER_ATTACK_02",
+        "file_size": 150980,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_RADAR_OFFLINE_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_RADAR_OFFLINE_01",
+        "file_size": 223938,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_FACTION_ABILITY_ACTIVATED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_FACTION_ABILITY_ACTIVATED_01",
+        "file_size": 154459,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_CONSTRUCTION_CANCELLED_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_CONSTRUCTION_CANCELLED_03",
+        "file_size": 119202,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_ENEMY_SUPERWEAPON_FIRED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_ENEMY_SUPERWEAPON_FIRED_01",
+        "file_size": 242201,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_UPGRADE_COMPLETE_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_UPGRADE_COMPLETE_02",
+        "file_size": 174438,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_FACTION_RESOURCE_MAX_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_FACTION_RESOURCE_MAX_01",
+        "file_size": 129194,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_BASE_UNDER_ATTACK_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_BASE_UNDER_ATTACK_04",
+        "file_size": 135536,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_VEHICLE_READY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_VEHICLE_READY_02",
+        "file_size": 121760,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_COMMAND_CENTER_DESTROYED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_COMMAND_CENTER_DESTROYED_02",
+        "file_size": 163899,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_OWN_SUPERWEAPON_FIRED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_OWN_SUPERWEAPON_FIRED_01",
+        "file_size": 159392,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_FACTION_ABILITY_ACTIVATED_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_FACTION_ABILITY_ACTIVATED_03",
+        "file_size": 161024,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_CONSTRUCTION_CANCELLED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_CONSTRUCTION_CANCELLED_01",
+        "file_size": 114108,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_ALLIED_BASE_UNDER_ATTACK_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_ALLIED_BASE_UNDER_ATTACK_01",
+        "file_size": 171027,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_POWER_LOW_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_POWER_LOW_01",
+        "file_size": 186100,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_CONSTRUCTION_COMPLETE_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_CONSTRUCTION_COMPLETE_01",
+        "file_size": 141343,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Alliance_EVA_PlayerVictory",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_Alliance_EVA_PlayerVictory",
+        "file_size": 191450,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_RADAR_OFFLINE_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_RADAR_OFFLINE_03",
+        "file_size": 207058,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_HARVESTER_UNDER_ATTACK_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_HARVESTER_UNDER_ATTACK_01",
+        "file_size": 216939,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_SUPERWEAPON_COUNTDOWN_STARTED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_SUPERWEAPON_COUNTDOWN_STARTED_01",
+        "file_size": 184687,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Alliance_EVA_ResourcesLow",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_Alliance_EVA_ResourcesLow",
+        "file_size": 231790,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_RESOURCES_DEPLETED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_RESOURCES_DEPLETED_01",
+        "file_size": 145033,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_FACTION_ABILITY_READY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_FACTION_ABILITY_READY_01",
+        "file_size": 138505,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_COMMAND_CAP_REACHED_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_COMMAND_CAP_REACHED_04",
+        "file_size": 198027,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_INFANTRY_READY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_INFANTRY_READY_01",
+        "file_size": 151734,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_FACTION_ABILITY_READY_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_FACTION_ABILITY_READY_03",
+        "file_size": 161707,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_RESOURCES_DEPLETED_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_RESOURCES_DEPLETED_03",
+        "file_size": 195738,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_MATCH_VICTORY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_MATCH_VICTORY_01",
+        "file_size": 233560,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_SUPERWEAPON_READY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_SUPERWEAPON_READY_02",
+        "file_size": 156763,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Alliance_EVA_UnitReady",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_Alliance_EVA_UnitReady",
+        "file_size": 176193,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_INFANTRY_READY_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_INFANTRY_READY_03",
+        "file_size": 103776,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_VEHICLE_READY_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_VEHICLE_READY_04",
+        "file_size": 200870,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_SUPERWEAPON_COUNTDOWN_STARTED_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_SUPERWEAPON_COUNTDOWN_STARTED_03",
+        "file_size": 183554,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_HARVESTER_UNDER_ATTACK_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_HARVESTER_UNDER_ATTACK_03",
+        "file_size": 143370,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_BASE_UNDER_ATTACK_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_BASE_UNDER_ATTACK_02",
+        "file_size": 139162,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_CONSTRUCTION_CANCELLED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_CONSTRUCTION_CANCELLED_02",
+        "file_size": 108679,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_OWN_SUPERWEAPON_FIRED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_OWN_SUPERWEAPON_FIRED_02",
+        "file_size": 182571,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_VEHICLE_READY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_VEHICLE_READY_01",
+        "file_size": 166189,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_COMMAND_CENTER_DESTROYED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_COMMAND_CENTER_DESTROYED_01",
+        "file_size": 248056,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_UPGRADE_COMPLETE_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_UPGRADE_COMPLETE_01",
+        "file_size": 150034,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_FACTION_RESOURCE_MAX_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_FACTION_RESOURCE_MAX_02",
+        "file_size": 275434,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_BUILDING_UNDER_ATTACK_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_BUILDING_UNDER_ATTACK_03",
+        "file_size": 139821,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Alliance_EVA_ChronoRiftDetected",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_Alliance_EVA_ChronoRiftDetected",
+        "file_size": 193795,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_CONSTRUCTION_COMPLETE_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_CONSTRUCTION_COMPLETE_02",
+        "file_size": 104911,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_STRUCTURE_SOLD_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_STRUCTURE_SOLD_03",
+        "file_size": 125084,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_COMMAND_CAP_REACHED_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_COMMAND_CAP_REACHED_03",
+        "file_size": 161467,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_ALLIED_BASE_UNDER_ATTACK_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_ALLIED_BASE_UNDER_ATTACK_02",
+        "file_size": 143473,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_POWER_LOW_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_POWER_LOW_02",
+        "file_size": 171078,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_BUILDING_UNDER_ATTACK_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_BUILDING_UNDER_ATTACK_01",
+        "file_size": 152149,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_RADAR_OFFLINE_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_RADAR_OFFLINE_02",
+        "file_size": 141233,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_COMMAND_CAP_REACHED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_COMMAND_CAP_REACHED_01",
+        "file_size": 220437,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_STRUCTURE_SOLD_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_STRUCTURE_SOLD_01",
+        "file_size": 107375,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_INFANTRY_READY_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_INFANTRY_READY_04",
+        "file_size": 153784,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_VEHICLE_READY_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_VEHICLE_READY_03",
+        "file_size": 130640,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_FACTION_ABILITY_ACTIVATED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_FACTION_ABILITY_ACTIVATED_02",
+        "file_size": 105913,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_HARVESTER_UNDER_ATTACK_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_HARVESTER_UNDER_ATTACK_04",
+        "file_size": 173305,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_ENEMY_SUPERWEAPON_FIRED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_ENEMY_SUPERWEAPON_FIRED_02",
+        "file_size": 247189,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_UPGRADE_COMPLETE_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_UPGRADE_COMPLETE_03",
+        "file_size": 183778,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Alliance_EVA_PlayerDefeat",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_Alliance_EVA_PlayerDefeat",
+        "file_size": 169167,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Alliance_EVA_NuclearLaunchDetected",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_Alliance_EVA_NuclearLaunchDetected",
+        "file_size": 206421,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_CONSTRUCTION_COMPLETE_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_CONSTRUCTION_COMPLETE_04",
+        "file_size": 135348,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Alliance_EVA_BuildingConstructionComplete",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_Alliance_EVA_BuildingConstructionComplete",
+        "file_size": 199204,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_POWER_LOW_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_POWER_LOW_04",
+        "file_size": 275741,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_SUPERWEAPON_READY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_SUPERWEAPON_READY_01",
+        "file_size": 158982,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Alliance_EVA_GameStart",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_Alliance_EVA_GameStart",
+        "file_size": 206276,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_MATCH_VICTORY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_MATCH_VICTORY_02",
+        "file_size": 230338,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Alliance_EVA_SuperweaponReady",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_Alliance_EVA_SuperweaponReady",
+        "file_size": 173865,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_BASE_UNDER_ATTACK_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_BASE_UNDER_ATTACK_01",
+        "file_size": 180547,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Alliance_EVA_BaseUnderAttack",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_Alliance_EVA_BaseUnderAttack",
+        "file_size": 193390,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_BASE_UNDER_ATTACK_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_BASE_UNDER_ATTACK_03",
+        "file_size": 191675,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_HARVESTER_UNDER_ATTACK_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_HARVESTER_UNDER_ATTACK_02",
+        "file_size": 135584,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_SUPERWEAPON_COUNTDOWN_STARTED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_SUPERWEAPON_COUNTDOWN_STARTED_02",
+        "file_size": 165358,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_INFANTRY_READY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_INFANTRY_READY_02",
+        "file_size": 130883,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_FACTION_ABILITY_READY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_FACTION_ABILITY_READY_02",
+        "file_size": 138737,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_SUPERWEAPON_READY_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_SUPERWEAPON_READY_03",
+        "file_size": 164731,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_AL_RESOURCES_DEPLETED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_RESOURCES_DEPLETED_02",
+        "file_size": 192498,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_INFANTRY_READY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_INFANTRY_READY_02",
+        "file_size": 111456,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_RADAR_OFFLINE_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_RADAR_OFFLINE_02",
+        "file_size": 121264,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_BASE_UNDER_ATTACK_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_BASE_UNDER_ATTACK_04",
+        "file_size": 183300,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_BUILDING_UNDER_ATTACK_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_BUILDING_UNDER_ATTACK_01",
+        "file_size": 121010,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Coalition_EVA_PlayerVictory",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_Coalition_EVA_PlayerVictory",
+        "file_size": 202528,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_HARVESTER_UNDER_ATTACK_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_HARVESTER_UNDER_ATTACK_01",
+        "file_size": 173194,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_SUPERWEAPON_COUNTDOWN_STARTED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_SUPERWEAPON_COUNTDOWN_STARTED_02",
+        "file_size": 178173,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_VEHICLE_READY_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_VEHICLE_READY_03",
+        "file_size": 166891,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Coalition_EVA_PlayerDefeat",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_Coalition_EVA_PlayerDefeat",
+        "file_size": 179420,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_BUILDING_UNDER_ATTACK_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_BUILDING_UNDER_ATTACK_03",
+        "file_size": 149646,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Coalition_EVA_ChronoRiftDetected",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_Coalition_EVA_ChronoRiftDetected",
+        "file_size": 209447,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_VEHICLE_READY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_VEHICLE_READY_01",
+        "file_size": 158326,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_POWER_LOW_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_POWER_LOW_02",
+        "file_size": 167726,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_UPGRADE_COMPLETE_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_UPGRADE_COMPLETE_02",
+        "file_size": 109831,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_HARVESTER_UNDER_ATTACK_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_HARVESTER_UNDER_ATTACK_03",
+        "file_size": 132850,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_COMMAND_CAP_REACHED_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_COMMAND_CAP_REACHED_04",
+        "file_size": 79255,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_CONSTRUCTION_COMPLETE_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_CONSTRUCTION_COMPLETE_02",
+        "file_size": 141899,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_OWN_SUPERWEAPON_FIRED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_OWN_SUPERWEAPON_FIRED_02",
+        "file_size": 165756,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_CONSTRUCTION_CANCELLED_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_CONSTRUCTION_CANCELLED_03",
+        "file_size": 85414,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_COMMAND_CENTER_DESTROYED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_COMMAND_CENTER_DESTROYED_02",
+        "file_size": 145666,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_FACTION_RESOURCE_MAX_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_FACTION_RESOURCE_MAX_01",
+        "file_size": 151819,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_ENEMY_SUPERWEAPON_FIRED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_ENEMY_SUPERWEAPON_FIRED_02",
+        "file_size": 231426,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_FACTION_ABILITY_READY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_FACTION_ABILITY_READY_02",
+        "file_size": 123499,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_SUPERWEAPON_READY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_SUPERWEAPON_READY_02",
+        "file_size": 143277,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_BASE_UNDER_ATTACK_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_BASE_UNDER_ATTACK_02",
+        "file_size": 184846,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_STRUCTURE_SOLD_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_STRUCTURE_SOLD_01",
+        "file_size": 105248,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_ALLIED_BASE_UNDER_ATTACK_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_ALLIED_BASE_UNDER_ATTACK_01",
+        "file_size": 150066,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_INFANTRY_READY_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_INFANTRY_READY_04",
+        "file_size": 188576,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Coalition_EVA_GameStart",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_Coalition_EVA_GameStart",
+        "file_size": 223846,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_MATCH_VICTORY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_MATCH_VICTORY_02",
+        "file_size": 226364,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_STRUCTURE_SOLD_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_STRUCTURE_SOLD_03",
+        "file_size": 126374,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_ALLIED_BASE_UNDER_ATTACK_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_ALLIED_BASE_UNDER_ATTACK_03",
+        "file_size": 175825,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Coalition_EVA_BuildingConstructionComplete",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_Coalition_EVA_BuildingConstructionComplete",
+        "file_size": 199100,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_RESOURCES_DEPLETED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_RESOURCES_DEPLETED_02",
+        "file_size": 197935,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_FACTION_ABILITY_ACTIVATED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_FACTION_ABILITY_ACTIVATED_02",
+        "file_size": 180839,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_CONSTRUCTION_COMPLETE_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_CONSTRUCTION_COMPLETE_04",
+        "file_size": 126225,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_COMMAND_CAP_REACHED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_COMMAND_CAP_REACHED_02",
+        "file_size": 141713,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_CONSTRUCTION_CANCELLED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_CONSTRUCTION_CANCELLED_01",
+        "file_size": 116166,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_POWER_LOW_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_POWER_LOW_04",
+        "file_size": 157227,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_UPGRADE_COMPLETE_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_UPGRADE_COMPLETE_01",
+        "file_size": 150846,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_POWER_LOW_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_POWER_LOW_01",
+        "file_size": 137031,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_SUPERWEAPON_COUNTDOWN_STARTED_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_SUPERWEAPON_COUNTDOWN_STARTED_03",
+        "file_size": 165188,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_CONSTRUCTION_COMPLETE_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_CONSTRUCTION_COMPLETE_01",
+        "file_size": 128144,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_VEHICLE_READY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_VEHICLE_READY_02",
+        "file_size": 163001,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_RADAR_OFFLINE_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_RADAR_OFFLINE_03",
+        "file_size": 141875,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Coalition_EVA_SuperweaponReady",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_Coalition_EVA_SuperweaponReady",
+        "file_size": 183968,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_OWN_SUPERWEAPON_FIRED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_OWN_SUPERWEAPON_FIRED_01",
+        "file_size": 142009,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_INFANTRY_READY_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_INFANTRY_READY_03",
+        "file_size": 159020,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_RADAR_OFFLINE_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_RADAR_OFFLINE_01",
+        "file_size": 154915,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Coalition_EVA_NuclearLaunchDetected",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_Coalition_EVA_NuclearLaunchDetected",
+        "file_size": 238361,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_INFANTRY_READY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_INFANTRY_READY_01",
+        "file_size": 141380,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_CONSTRUCTION_COMPLETE_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_CONSTRUCTION_COMPLETE_03",
+        "file_size": 149740,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_HARVESTER_UNDER_ATTACK_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_HARVESTER_UNDER_ATTACK_02",
+        "file_size": 161997,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_UPGRADE_COMPLETE_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_UPGRADE_COMPLETE_03",
+        "file_size": 123090,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_POWER_LOW_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_POWER_LOW_03",
+        "file_size": 171533,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_SUPERWEAPON_COUNTDOWN_STARTED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_SUPERWEAPON_COUNTDOWN_STARTED_01",
+        "file_size": 206279,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_BUILDING_UNDER_ATTACK_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_BUILDING_UNDER_ATTACK_02",
+        "file_size": 107688,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Coalition_EVA_UnitReady",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_Coalition_EVA_UnitReady",
+        "file_size": 165256,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Coalition_EVA_BaseUnderAttack",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_Coalition_EVA_BaseUnderAttack",
+        "file_size": 221196,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_MATCH_VICTORY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_MATCH_VICTORY_01",
+        "file_size": 208439,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_BASE_UNDER_ATTACK_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_BASE_UNDER_ATTACK_03",
+        "file_size": 168272,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_FACTION_ABILITY_READY_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_FACTION_ABILITY_READY_03",
+        "file_size": 149639,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_SUPERWEAPON_READY_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_SUPERWEAPON_READY_03",
+        "file_size": 168276,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_COMMAND_CAP_REACHED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_COMMAND_CAP_REACHED_01",
+        "file_size": 178024,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_Coalition_EVA_ResourcesLow",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_Coalition_EVA_ResourcesLow",
+        "file_size": 177714,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_CONSTRUCTION_CANCELLED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_CONSTRUCTION_CANCELLED_02",
+        "file_size": 130972,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_RESOURCES_DEPLETED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_RESOURCES_DEPLETED_01",
+        "file_size": 122685,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_VEHICLE_READY_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_VEHICLE_READY_04",
+        "file_size": 143401,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_FACTION_ABILITY_ACTIVATED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_FACTION_ABILITY_ACTIVATED_01",
+        "file_size": 123844,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_SUPERWEAPON_READY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_SUPERWEAPON_READY_01",
+        "file_size": 165912,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_FACTION_ABILITY_READY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_FACTION_ABILITY_READY_01",
+        "file_size": 151399,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_ENEMY_SUPERWEAPON_FIRED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_ENEMY_SUPERWEAPON_FIRED_01",
+        "file_size": 151427,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_FACTION_ABILITY_ACTIVATED_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_FACTION_ABILITY_ACTIVATED_03",
+        "file_size": 143036,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_RESOURCES_DEPLETED_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_RESOURCES_DEPLETED_03",
+        "file_size": 149067,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_COMMAND_CENTER_DESTROYED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_COMMAND_CENTER_DESTROYED_01",
+        "file_size": 206432,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_COMMAND_CAP_REACHED_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_COMMAND_CAP_REACHED_03",
+        "file_size": 243804,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_HARVESTER_UNDER_ATTACK_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_HARVESTER_UNDER_ATTACK_04",
+        "file_size": 163347,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_FACTION_RESOURCE_MAX_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_FACTION_RESOURCE_MAX_02",
+        "file_size": 306268,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_ALLIED_BASE_UNDER_ATTACK_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_ALLIED_BASE_UNDER_ATTACK_02",
+        "file_size": 144157,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_STRUCTURE_SOLD_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_STRUCTURE_SOLD_02",
+        "file_size": 100687,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_CO_BASE_UNDER_ATTACK_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_BASE_UNDER_ATTACK_01",
+        "file_size": 182121,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_FACTION_RESOURCE_MAX_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_FACTION_RESOURCE_MAX_01",
+        "file_size": 237691,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_HARVESTER_UNDER_ATTACK_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_HARVESTER_UNDER_ATTACK_02",
+        "file_size": 133217,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_SUPERWEAPON_COUNTDOWN_STARTED_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_SUPERWEAPON_COUNTDOWN_STARTED_03",
+        "file_size": 210325,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_VEHICLE_READY_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_VEHICLE_READY_03",
+        "file_size": 175650,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_BASE_UNDER_ATTACK_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_BASE_UNDER_ATTACK_02",
+        "file_size": 187653,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_CONSTRUCTION_COMPLETE_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_CONSTRUCTION_COMPLETE_03",
+        "file_size": 178878,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_INFANTRY_READY_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_INFANTRY_READY_04",
+        "file_size": 136578,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_SUPERWEAPON_READY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_SUPERWEAPON_READY_02",
+        "file_size": 127696,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_STRUCTURE_SOLD_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_STRUCTURE_SOLD_01",
+        "file_size": 204539,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_POWER_LOW_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_POWER_LOW_02",
+        "file_size": 298328,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_BUILDING_UNDER_ATTACK_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_BUILDING_UNDER_ATTACK_02",
+        "file_size": 118280,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_RADAR_OFFLINE_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_RADAR_OFFLINE_02",
+        "file_size": 239346,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_FACTION_ABILITY_ACTIVATED_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_FACTION_ABILITY_ACTIVATED_03",
+        "file_size": 217077,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_STRUCTURE_SOLD_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_STRUCTURE_SOLD_03",
+        "file_size": 101265,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_CONSTRUCTION_COMPLETE_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_CONSTRUCTION_COMPLETE_01",
+        "file_size": 145445,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_ALLIED_BASE_UNDER_ATTACK_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_ALLIED_BASE_UNDER_ATTACK_02",
+        "file_size": 174679,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_FACTION_ABILITY_ACTIVATED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_FACTION_ABILITY_ACTIVATED_01",
+        "file_size": 160448,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_SUPERWEAPON_COUNTDOWN_STARTED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_SUPERWEAPON_COUNTDOWN_STARTED_01",
+        "file_size": 235716,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_VEHICLE_READY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_VEHICLE_READY_01",
+        "file_size": 166845,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_COMMAND_CAP_REACHED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_COMMAND_CAP_REACHED_02",
+        "file_size": 243492,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_OWN_SUPERWEAPON_FIRED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_OWN_SUPERWEAPON_FIRED_01",
+        "file_size": 180537,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_COMMAND_CENTER_DESTROYED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_COMMAND_CENTER_DESTROYED_01",
+        "file_size": 199870,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_FACTION_ABILITY_READY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_FACTION_ABILITY_READY_01",
+        "file_size": 124041,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_POWER_LOW_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_POWER_LOW_04",
+        "file_size": 222492,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_INFANTRY_READY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_INFANTRY_READY_02",
+        "file_size": 110593,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_UPGRADE_COMPLETE_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_UPGRADE_COMPLETE_01",
+        "file_size": 220947,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_BASE_UNDER_ATTACK_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_BASE_UNDER_ATTACK_04",
+        "file_size": 134542,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_RESOURCES_DEPLETED_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_RESOURCES_DEPLETED_03",
+        "file_size": 189833,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_ENEMY_SUPERWEAPON_FIRED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_ENEMY_SUPERWEAPON_FIRED_01",
+        "file_size": 192754,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_HARVESTER_UNDER_ATTACK_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_HARVESTER_UNDER_ATTACK_04",
+        "file_size": 138270,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_COMMAND_CAP_REACHED_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_COMMAND_CAP_REACHED_04",
+        "file_size": 254110,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_RESOURCES_DEPLETED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_RESOURCES_DEPLETED_01",
+        "file_size": 158613,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_UPGRADE_COMPLETE_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_UPGRADE_COMPLETE_03",
+        "file_size": 139451,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_CONSTRUCTION_CANCELLED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_CONSTRUCTION_CANCELLED_02",
+        "file_size": 115891,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_FACTION_ABILITY_READY_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_FACTION_ABILITY_READY_03",
+        "file_size": 189358,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_MATCH_VICTORY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_MATCH_VICTORY_02",
+        "file_size": 224885,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_RADAR_OFFLINE_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_RADAR_OFFLINE_03",
+        "file_size": 160048,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_BUILDING_UNDER_ATTACK_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_BUILDING_UNDER_ATTACK_03",
+        "file_size": 195133,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_FACTION_ABILITY_ACTIVATED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_FACTION_ABILITY_ACTIVATED_02",
+        "file_size": 150786,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_CONSTRUCTION_COMPLETE_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_CONSTRUCTION_COMPLETE_02",
+        "file_size": 154656,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_ALLIED_BASE_UNDER_ATTACK_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_ALLIED_BASE_UNDER_ATTACK_01",
+        "file_size": 154981,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_POWER_LOW_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_POWER_LOW_03",
+        "file_size": 275893,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_SUPERWEAPON_READY_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_SUPERWEAPON_READY_03",
+        "file_size": 176106,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_COMMAND_CENTER_DESTROYED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_COMMAND_CENTER_DESTROYED_02",
+        "file_size": 180633,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_OWN_SUPERWEAPON_FIRED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_OWN_SUPERWEAPON_FIRED_02",
+        "file_size": 188129,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_VEHICLE_READY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_VEHICLE_READY_02",
+        "file_size": 142953,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_BASE_UNDER_ATTACK_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_BASE_UNDER_ATTACK_03",
+        "file_size": 206248,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_COMMAND_CAP_REACHED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_COMMAND_CAP_REACHED_01",
+        "file_size": 275569,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_HARVESTER_UNDER_ATTACK_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_HARVESTER_UNDER_ATTACK_03",
+        "file_size": 145514,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_SUPERWEAPON_COUNTDOWN_STARTED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_SUPERWEAPON_COUNTDOWN_STARTED_02",
+        "file_size": 173960,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_COMMAND_CAP_REACHED_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_COMMAND_CAP_REACHED_03",
+        "file_size": 151433,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_BASE_UNDER_ATTACK_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_BASE_UNDER_ATTACK_01",
+        "file_size": 189111,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_FACTION_RESOURCE_MAX_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_FACTION_RESOURCE_MAX_02",
+        "file_size": 251365,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_HARVESTER_UNDER_ATTACK_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_HARVESTER_UNDER_ATTACK_01",
+        "file_size": 139296,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_RADAR_OFFLINE_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_RADAR_OFFLINE_01",
+        "file_size": 136830,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_BUILDING_UNDER_ATTACK_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_BUILDING_UNDER_ATTACK_01",
+        "file_size": 147878,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_POWER_LOW_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_POWER_LOW_01",
+        "file_size": 235960,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_STRUCTURE_SOLD_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_STRUCTURE_SOLD_02",
+        "file_size": 85119,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_SUPERWEAPON_READY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_SUPERWEAPON_READY_01",
+        "file_size": 175862,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_ALLIED_BASE_UNDER_ATTACK_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_ALLIED_BASE_UNDER_ATTACK_03",
+        "file_size": 183303,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_CONSTRUCTION_CANCELLED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_CONSTRUCTION_CANCELLED_01",
+        "file_size": 115611,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_RESOURCES_DEPLETED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_RESOURCES_DEPLETED_02",
+        "file_size": 209336,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_VEHICLE_READY_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_VEHICLE_READY_04",
+        "file_size": 140966,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_CONSTRUCTION_COMPLETE_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_CONSTRUCTION_COMPLETE_04",
+        "file_size": 125283,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_INFANTRY_READY_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_INFANTRY_READY_03",
+        "file_size": 107338,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_MATCH_VICTORY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_MATCH_VICTORY_01",
+        "file_size": 252960,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_INFANTRY_READY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_INFANTRY_READY_01",
+        "file_size": 148116,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_FACTION_ABILITY_READY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_FACTION_ABILITY_READY_02",
+        "file_size": 206179,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_CONSTRUCTION_CANCELLED_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_CONSTRUCTION_CANCELLED_03",
+        "file_size": 155964,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_ENEMY_SUPERWEAPON_FIRED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_ENEMY_SUPERWEAPON_FIRED_02",
+        "file_size": 249367,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "VO_EVA_SU_UPGRADE_COMPLETE_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_UPGRADE_COMPLETE_02",
+        "file_size": 193587,
+        "type": "AnimationSequence"
+      },
+      {
+        "name": "DA_RA4_ArtMappings",
+        "game_path": "/Game/RA4/Art/Generated/DA_RA4_ArtMappings",
+        "file_size": 18873,
+        "type": "AnimationSequence"
+      },
+      {
         "name": "PA_QuantumCharacter",
         "game_path": "/Game/ThirdParty/QuantumCharacter/Mesh/PA_QuantumCharacter",
         "file_size": 33830,
@@ -234,6 +2172,12 @@
     "AnimBlueprint": [],
     "Material": [
       {
+        "name": "M_RA4Landscape_Ground",
+        "game_path": "/Game/RA4/Materials/M_RA4Landscape_Ground",
+        "file_size": 5583,
+        "type": "Material"
+      },
+      {
         "name": "M_RA4EntityPlaceholder_Lit",
         "game_path": "/Game/RA4/Materials/M_RA4EntityPlaceholder_Lit",
         "file_size": 7995,
@@ -252,9 +2196,33 @@
         "type": "Material"
       },
       {
+        "name": "M_RA4Landscape_RockCliff",
+        "game_path": "/Game/RA4/Materials/M_RA4Landscape_RockCliff",
+        "file_size": 5598,
+        "type": "Material"
+      },
+      {
+        "name": "M_RA4Landscape_Road",
+        "game_path": "/Game/RA4/Materials/M_RA4Landscape_Road",
+        "file_size": 5573,
+        "type": "Material"
+      },
+      {
+        "name": "M_RA4Landscape_BasePlateau",
+        "game_path": "/Game/RA4/Materials/M_RA4Landscape_BasePlateau",
+        "file_size": 5608,
+        "type": "Material"
+      },
+      {
         "name": "M_RA4EntityPlaceholder",
         "game_path": "/Game/RA4/Materials/M_RA4EntityPlaceholder",
         "file_size": 7422,
+        "type": "Material"
+      },
+      {
+        "name": "M_RA4OreField_Glow",
+        "game_path": "/Game/RA4/Materials/M_RA4OreField_Glow",
+        "file_size": 5568,
         "type": "Material"
       },
       {
@@ -483,6 +2451,102 @@
         "name": "PaintedMetal006_2K-JPG_Roughness",
         "game_path": "/Game/RA4/Presentation/Materials/Environment/PaintedMetal006_2K-JPG_Roughness",
         "file_size": 2664687,
+        "type": "Material"
+      },
+      {
+        "name": "VO_RU_SU_GromoboyRam_Idle_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_GromoboyRam/VO_RU_SU_GromoboyRam_Idle_01",
+        "file_size": 127494,
+        "type": "Material"
+      },
+      {
+        "name": "VO_RU_SU_GromoboyRam_Damaged_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_GromoboyRam/VO_RU_SU_GromoboyRam_Damaged_01",
+        "file_size": 86572,
+        "type": "Material"
+      },
+      {
+        "name": "VO_RU_SU_GromoboyRam_Attack_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_GromoboyRam/VO_RU_SU_GromoboyRam_Attack_01",
+        "file_size": 55358,
+        "type": "Material"
+      },
+      {
+        "name": "VO_RU_SU_GromoboyRam_Elite_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_GromoboyRam/VO_RU_SU_GromoboyRam_Elite_01",
+        "file_size": 93237,
+        "type": "Material"
+      },
+      {
+        "name": "VO_RU_SU_GromoboyRam_Selected_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_GromoboyRam/VO_RU_SU_GromoboyRam_Selected_01",
+        "file_size": 82752,
+        "type": "Material"
+      },
+      {
+        "name": "VO_RU_SU_GromoboyRam_Death_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_GromoboyRam/VO_RU_SU_GromoboyRam_Death_01",
+        "file_size": 72302,
+        "type": "Material"
+      },
+      {
+        "name": "VO_RU_SU_GromoboyRam_Ability_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_GromoboyRam/VO_RU_SU_GromoboyRam_Ability_01",
+        "file_size": 54738,
+        "type": "Material"
+      },
+      {
+        "name": "VO_RU_SU_GromoboyRam_Move_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_GromoboyRam/VO_RU_SU_GromoboyRam_Move_01",
+        "file_size": 43463,
+        "type": "Material"
+      },
+      {
+        "name": "VO_RU_SU_ZaslonAATeam_Selected_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_ZaslonAATeam/VO_RU_SU_ZaslonAATeam_Selected_01",
+        "file_size": 55330,
+        "type": "Material"
+      },
+      {
+        "name": "VO_RU_SU_ZaslonAATeam_Elite_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_ZaslonAATeam/VO_RU_SU_ZaslonAATeam_Elite_01",
+        "file_size": 60999,
+        "type": "Material"
+      },
+      {
+        "name": "VO_RU_SU_ZaslonAATeam_Damaged_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_ZaslonAATeam/VO_RU_SU_ZaslonAATeam_Damaged_01",
+        "file_size": 87263,
+        "type": "Material"
+      },
+      {
+        "name": "VO_RU_SU_ZaslonAATeam_Idle_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_ZaslonAATeam/VO_RU_SU_ZaslonAATeam_Idle_01",
+        "file_size": 113976,
+        "type": "Material"
+      },
+      {
+        "name": "VO_RU_SU_ZaslonAATeam_Attack_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_ZaslonAATeam/VO_RU_SU_ZaslonAATeam_Attack_01",
+        "file_size": 110551,
+        "type": "Material"
+      },
+      {
+        "name": "VO_RU_SU_ZaslonAATeam_Ability_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_ZaslonAATeam/VO_RU_SU_ZaslonAATeam_Ability_01",
+        "file_size": 105575,
+        "type": "Material"
+      },
+      {
+        "name": "VO_RU_SU_ZaslonAATeam_Death_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_ZaslonAATeam/VO_RU_SU_ZaslonAATeam_Death_01",
+        "file_size": 47754,
+        "type": "Material"
+      },
+      {
+        "name": "VO_RU_SU_ZaslonAATeam_Move_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_ZaslonAATeam/VO_RU_SU_ZaslonAATeam_Move_01",
+        "file_size": 72182,
         "type": "Material"
       },
       {
@@ -1335,6 +3399,12 @@
         "name": "SM_Soviet_SU_SuperweaponDome_Blockout",
         "game_path": "/Game/RA4/Art/Blockout/Soviet/SM_Soviet_SU_SuperweaponDome_Blockout",
         "file_size": 64210,
+        "type": "Material"
+      },
+      {
+        "name": "M_RA4_Terrain",
+        "game_path": "/Game/RA4/Generated/Terrain/M_RA4_Terrain",
+        "file_size": 6869,
         "type": "Material"
       },
       {
@@ -2416,6 +4486,900 @@
         "type": "Texture"
       },
       {
+        "name": "VO_RU_SU_RysScout_Elite_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_RysScout/VO_RU_SU_RysScout_Elite_01",
+        "file_size": 106287,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_RU_SU_RysScout_Damaged_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_RysScout/VO_RU_SU_RysScout_Damaged_01",
+        "file_size": 102656,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_RU_SU_RysScout_Attack_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_RysScout/VO_RU_SU_RysScout_Attack_01",
+        "file_size": 94777,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_RU_SU_RysScout_Move_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_RysScout/VO_RU_SU_RysScout_Move_01",
+        "file_size": 42594,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_RU_SU_RysScout_Selected_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_RysScout/VO_RU_SU_RysScout_Selected_01",
+        "file_size": 82222,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_RU_SU_RysScout_Ability_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_RysScout/VO_RU_SU_RysScout_Ability_01",
+        "file_size": 46207,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_RU_SU_RysScout_Death_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_RysScout/VO_RU_SU_RysScout_Death_01",
+        "file_size": 90783,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_RU_SU_RysScout_Idle_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_RysScout/VO_RU_SU_RysScout_Idle_01",
+        "file_size": 136853,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_RU_SU_GranitMBT_Ability_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_GranitMBT/VO_RU_SU_GranitMBT_Ability_01",
+        "file_size": 36745,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_RU_SU_GranitMBT_Death_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_GranitMBT/VO_RU_SU_GranitMBT_Death_01",
+        "file_size": 84933,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_RU_SU_GranitMBT_Move_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_GranitMBT/VO_RU_SU_GranitMBT_Move_01",
+        "file_size": 82902,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_RU_SU_GranitMBT_Damaged_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_GranitMBT/VO_RU_SU_GranitMBT_Damaged_01",
+        "file_size": 107895,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_RU_SU_GranitMBT_Selected_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_GranitMBT/VO_RU_SU_GranitMBT_Selected_01",
+        "file_size": 52642,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_RU_SU_GranitMBT_Attack_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_GranitMBT/VO_RU_SU_GranitMBT_Attack_01",
+        "file_size": 59304,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_RU_SU_GranitMBT_Elite_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_GranitMBT/VO_RU_SU_GranitMBT_Elite_01",
+        "file_size": 93987,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_RU_SU_GranitMBT_Idle_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_GranitMBT/VO_RU_SU_GranitMBT_Idle_01",
+        "file_size": 132205,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_RU_SU_BuranPatrolBoat_Elite_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_BuranPatrolBoat/VO_RU_SU_BuranPatrolBoat_Elite_01",
+        "file_size": 86760,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_RU_SU_BuranPatrolBoat_Idle_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_BuranPatrolBoat/VO_RU_SU_BuranPatrolBoat_Idle_01",
+        "file_size": 97914,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_RU_SU_BuranPatrolBoat_Attack_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_BuranPatrolBoat/VO_RU_SU_BuranPatrolBoat_Attack_01",
+        "file_size": 74860,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_RU_SU_BuranPatrolBoat_Damaged_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_BuranPatrolBoat/VO_RU_SU_BuranPatrolBoat_Damaged_01",
+        "file_size": 76886,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_RU_SU_BuranPatrolBoat_Move_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_BuranPatrolBoat/VO_RU_SU_BuranPatrolBoat_Move_01",
+        "file_size": 46873,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_RU_SU_BuranPatrolBoat_Selected_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_BuranPatrolBoat/VO_RU_SU_BuranPatrolBoat_Selected_01",
+        "file_size": 52684,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_RU_SU_BuranPatrolBoat_Ability_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_BuranPatrolBoat/VO_RU_SU_BuranPatrolBoat_Ability_01",
+        "file_size": 49933,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_RU_SU_BuranPatrolBoat_Death_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_BuranPatrolBoat/VO_RU_SU_BuranPatrolBoat_Death_01",
+        "file_size": 64299,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_MATCH_DEFEAT_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_MATCH_DEFEAT_02",
+        "file_size": 260123,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_INSUFFICIENT_FUNDS_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_INSUFFICIENT_FUNDS_03",
+        "file_size": 230653,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_HERO_LOST_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_HERO_LOST_02",
+        "file_size": 218543,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_STEALTH_UNIT_DETECTED_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_STEALTH_UNIT_DETECTED_04",
+        "file_size": 187037,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_AIRCRAFT_READY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_AIRCRAFT_READY_02",
+        "file_size": 198824,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_INSUFFICIENT_FUNDS_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_INSUFFICIENT_FUNDS_01",
+        "file_size": 199327,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_MOBILE_COMMAND_UNIT_DESTROYED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_MOBILE_COMMAND_UNIT_DESTROYED_01",
+        "file_size": 219022,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_NAVAL_UNIT_READY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_NAVAL_UNIT_READY_01",
+        "file_size": 189840,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_UNIT_READY_GENERIC_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_UNIT_READY_GENERIC_03",
+        "file_size": 200037,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_UNIT_READY_GENERIC_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_UNIT_READY_GENERIC_01",
+        "file_size": 186537,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_AIRCRAFT_READY_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_AIRCRAFT_READY_04",
+        "file_size": 212107,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_NAVAL_UNIT_READY_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_NAVAL_UNIT_READY_03",
+        "file_size": 203132,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_MATCH_START_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_MATCH_START_01",
+        "file_size": 313289,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_STEALTH_UNIT_DETECTED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_STEALTH_UNIT_DETECTED_02",
+        "file_size": 211546,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_INSUFFICIENT_FUNDS_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_INSUFFICIENT_FUNDS_02",
+        "file_size": 226495,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_AIRCRAFT_READY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_AIRCRAFT_READY_01",
+        "file_size": 214228,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_UNIT_READY_GENERIC_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_UNIT_READY_GENERIC_04",
+        "file_size": 163115,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_AIRCRAFT_READY_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_AIRCRAFT_READY_03",
+        "file_size": 192097,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_NAVAL_UNIT_READY_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_NAVAL_UNIT_READY_04",
+        "file_size": 136836,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_MATCH_DEFEAT_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_MATCH_DEFEAT_01",
+        "file_size": 190101,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_HERO_LOST_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_HERO_LOST_01",
+        "file_size": 187258,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_INSUFFICIENT_FUNDS_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_INSUFFICIENT_FUNDS_04",
+        "file_size": 227817,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_UNIT_READY_GENERIC_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_UNIT_READY_GENERIC_02",
+        "file_size": 151595,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_STEALTH_UNIT_DETECTED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_STEALTH_UNIT_DETECTED_01",
+        "file_size": 189144,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_MATCH_START_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_MATCH_START_02",
+        "file_size": 262480,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_MOBILE_COMMAND_UNIT_DESTROYED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_MOBILE_COMMAND_UNIT_DESTROYED_02",
+        "file_size": 155223,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_STEALTH_UNIT_DETECTED_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_STEALTH_UNIT_DETECTED_03",
+        "file_size": 250343,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CH_NAVAL_UNIT_READY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Chrono/VO_EVA_CH_NAVAL_UNIT_READY_02",
+        "file_size": 138924,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_INSUFFICIENT_FUNDS_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_INSUFFICIENT_FUNDS_03",
+        "file_size": 167933,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_AIRCRAFT_READY_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_AIRCRAFT_READY_04",
+        "file_size": 154111,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_INSUFFICIENT_FUNDS_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_INSUFFICIENT_FUNDS_01",
+        "file_size": 148817,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_HERO_LOST_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_HERO_LOST_01",
+        "file_size": 144036,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_STEALTH_UNIT_DETECTED_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_STEALTH_UNIT_DETECTED_04",
+        "file_size": 170079,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_MATCH_DEFEAT_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_MATCH_DEFEAT_01",
+        "file_size": 209612,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_MOBILE_COMMAND_UNIT_DESTROYED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_MOBILE_COMMAND_UNIT_DESTROYED_02",
+        "file_size": 239357,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_NAVAL_UNIT_READY_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_NAVAL_UNIT_READY_03",
+        "file_size": 150403,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_UNIT_READY_GENERIC_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_UNIT_READY_GENERIC_03",
+        "file_size": 153900,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_NAVAL_UNIT_READY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_NAVAL_UNIT_READY_01",
+        "file_size": 147864,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_MATCH_START_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_MATCH_START_01",
+        "file_size": 221762,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_STEALTH_UNIT_DETECTED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_STEALTH_UNIT_DETECTED_02",
+        "file_size": 158145,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_UNIT_READY_GENERIC_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_UNIT_READY_GENERIC_01",
+        "file_size": 122339,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_AIRCRAFT_READY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_AIRCRAFT_READY_02",
+        "file_size": 159285,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_NAVAL_UNIT_READY_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_NAVAL_UNIT_READY_04",
+        "file_size": 122283,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_UNIT_READY_GENERIC_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_UNIT_READY_GENERIC_04",
+        "file_size": 147222,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_INSUFFICIENT_FUNDS_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_INSUFFICIENT_FUNDS_02",
+        "file_size": 149189,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_HERO_LOST_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_HERO_LOST_02",
+        "file_size": 200677,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_UNIT_READY_GENERIC_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_UNIT_READY_GENERIC_02",
+        "file_size": 124825,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_INSUFFICIENT_FUNDS_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_INSUFFICIENT_FUNDS_04",
+        "file_size": 150967,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_NAVAL_UNIT_READY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_NAVAL_UNIT_READY_02",
+        "file_size": 161275,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_STEALTH_UNIT_DETECTED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_STEALTH_UNIT_DETECTED_01",
+        "file_size": 185321,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_MATCH_START_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_MATCH_START_02",
+        "file_size": 224669,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_AIRCRAFT_READY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_AIRCRAFT_READY_01",
+        "file_size": 124657,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_MOBILE_COMMAND_UNIT_DESTROYED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_MOBILE_COMMAND_UNIT_DESTROYED_01",
+        "file_size": 113326,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_MATCH_DEFEAT_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_MATCH_DEFEAT_02",
+        "file_size": 246834,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_AIRCRAFT_READY_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_AIRCRAFT_READY_03",
+        "file_size": 176310,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_AL_STEALTH_UNIT_DETECTED_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Alliance/VO_EVA_AL_STEALTH_UNIT_DETECTED_03",
+        "file_size": 147293,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_MATCH_DEFEAT_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_MATCH_DEFEAT_02",
+        "file_size": 245553,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_INSUFFICIENT_FUNDS_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_INSUFFICIENT_FUNDS_02",
+        "file_size": 216027,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_UNIT_READY_GENERIC_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_UNIT_READY_GENERIC_04",
+        "file_size": 143529,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_MOBILE_COMMAND_UNIT_DESTROYED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_MOBILE_COMMAND_UNIT_DESTROYED_01",
+        "file_size": 129607,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_AIRCRAFT_READY_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_AIRCRAFT_READY_03",
+        "file_size": 168351,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_AIRCRAFT_READY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_AIRCRAFT_READY_01",
+        "file_size": 162180,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_HERO_LOST_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_HERO_LOST_02",
+        "file_size": 156146,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_MATCH_START_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_MATCH_START_02",
+        "file_size": 235904,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_INSUFFICIENT_FUNDS_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_INSUFFICIENT_FUNDS_04",
+        "file_size": 176207,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_STEALTH_UNIT_DETECTED_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_STEALTH_UNIT_DETECTED_03",
+        "file_size": 151803,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_UNIT_READY_GENERIC_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_UNIT_READY_GENERIC_02",
+        "file_size": 185709,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_NAVAL_UNIT_READY_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_NAVAL_UNIT_READY_03",
+        "file_size": 161180,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_NAVAL_UNIT_READY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_NAVAL_UNIT_READY_01",
+        "file_size": 132806,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_STEALTH_UNIT_DETECTED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_STEALTH_UNIT_DETECTED_01",
+        "file_size": 181596,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_HERO_LOST_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_HERO_LOST_01",
+        "file_size": 122856,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_AIRCRAFT_READY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_AIRCRAFT_READY_02",
+        "file_size": 153163,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_INSUFFICIENT_FUNDS_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_INSUFFICIENT_FUNDS_03",
+        "file_size": 169281,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_STEALTH_UNIT_DETECTED_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_STEALTH_UNIT_DETECTED_04",
+        "file_size": 140492,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_MATCH_START_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_MATCH_START_01",
+        "file_size": 247281,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_NAVAL_UNIT_READY_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_NAVAL_UNIT_READY_04",
+        "file_size": 142900,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_MOBILE_COMMAND_UNIT_DESTROYED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_MOBILE_COMMAND_UNIT_DESTROYED_02",
+        "file_size": 141032,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_MATCH_DEFEAT_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_MATCH_DEFEAT_01",
+        "file_size": 220437,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_INSUFFICIENT_FUNDS_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_INSUFFICIENT_FUNDS_01",
+        "file_size": 181735,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_NAVAL_UNIT_READY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_NAVAL_UNIT_READY_02",
+        "file_size": 156579,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_UNIT_READY_GENERIC_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_UNIT_READY_GENERIC_03",
+        "file_size": 119591,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_STEALTH_UNIT_DETECTED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_STEALTH_UNIT_DETECTED_02",
+        "file_size": 186588,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_AIRCRAFT_READY_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_AIRCRAFT_READY_04",
+        "file_size": 165720,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_CO_UNIT_READY_GENERIC_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Coalition/VO_EVA_CO_UNIT_READY_GENERIC_01",
+        "file_size": 116626,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_INSUFFICIENT_FUNDS_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_INSUFFICIENT_FUNDS_01",
+        "file_size": 185821,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_MATCH_START_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_MATCH_START_02",
+        "file_size": 242777,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_Soviet_EVA_UnitReady",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_Soviet_EVA_UnitReady",
+        "file_size": 188451,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_NAVAL_UNIT_READY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_NAVAL_UNIT_READY_02",
+        "file_size": 144930,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_Soviet_EVA_BuildingConstructionComplete",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_Soviet_EVA_BuildingConstructionComplete",
+        "file_size": 193810,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_HERO_LOST_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_HERO_LOST_02",
+        "file_size": 215331,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_MATCH_DEFEAT_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_MATCH_DEFEAT_02",
+        "file_size": 224893,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_Soviet_EVA_PlayerVictory",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_Soviet_EVA_PlayerVictory",
+        "file_size": 193779,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_STEALTH_UNIT_DETECTED_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_STEALTH_UNIT_DETECTED_04",
+        "file_size": 168865,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_INSUFFICIENT_FUNDS_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_INSUFFICIENT_FUNDS_03",
+        "file_size": 169869,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_MOBILE_COMMAND_UNIT_DESTROYED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_MOBILE_COMMAND_UNIT_DESTROYED_02",
+        "file_size": 250083,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_Soviet_EVA_ResourcesLow",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_Soviet_EVA_ResourcesLow",
+        "file_size": 213682,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_NAVAL_UNIT_READY_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_NAVAL_UNIT_READY_04",
+        "file_size": 139535,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_AIRCRAFT_READY_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_AIRCRAFT_READY_03",
+        "file_size": 115517,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_Soviet_EVA_ChronoRiftDetected",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_Soviet_EVA_ChronoRiftDetected",
+        "file_size": 221968,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_UNIT_READY_GENERIC_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_UNIT_READY_GENERIC_01",
+        "file_size": 143316,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_AIRCRAFT_READY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_AIRCRAFT_READY_01",
+        "file_size": 185712,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_UNIT_READY_GENERIC_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_UNIT_READY_GENERIC_03",
+        "file_size": 125078,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_STEALTH_UNIT_DETECTED_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_STEALTH_UNIT_DETECTED_02",
+        "file_size": 137774,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_NAVAL_UNIT_READY_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_NAVAL_UNIT_READY_03",
+        "file_size": 170965,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_MATCH_DEFEAT_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_MATCH_DEFEAT_01",
+        "file_size": 285763,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_AIRCRAFT_READY_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_AIRCRAFT_READY_04",
+        "file_size": 162477,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_MOBILE_COMMAND_UNIT_DESTROYED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_MOBILE_COMMAND_UNIT_DESTROYED_01",
+        "file_size": 137981,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_Soviet_EVA_GameStart",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_Soviet_EVA_GameStart",
+        "file_size": 243539,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_UNIT_READY_GENERIC_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_UNIT_READY_GENERIC_04",
+        "file_size": 108426,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_INSUFFICIENT_FUNDS_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_INSUFFICIENT_FUNDS_02",
+        "file_size": 140167,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_MATCH_START_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_MATCH_START_01",
+        "file_size": 233205,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_Soviet_EVA_PlayerDefeat",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_Soviet_EVA_PlayerDefeat",
+        "file_size": 223076,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_HERO_LOST_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_HERO_LOST_01",
+        "file_size": 212953,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_Soviet_EVA_NuclearLaunchDetected",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_Soviet_EVA_NuclearLaunchDetected",
+        "file_size": 188204,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_NAVAL_UNIT_READY_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_NAVAL_UNIT_READY_01",
+        "file_size": 150832,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_Soviet_EVA_SuperweaponReady",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_Soviet_EVA_SuperweaponReady",
+        "file_size": 176057,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_AIRCRAFT_READY_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_AIRCRAFT_READY_02",
+        "file_size": 156482,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_STEALTH_UNIT_DETECTED_01",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_STEALTH_UNIT_DETECTED_01",
+        "file_size": 182760,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_STEALTH_UNIT_DETECTED_03",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_STEALTH_UNIT_DETECTED_03",
+        "file_size": 133692,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_Soviet_EVA_BaseUnderAttack",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_Soviet_EVA_BaseUnderAttack",
+        "file_size": 221676,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_UNIT_READY_GENERIC_02",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_UNIT_READY_GENERIC_02",
+        "file_size": 110748,
+        "type": "Texture"
+      },
+      {
+        "name": "VO_EVA_SU_INSUFFICIENT_FUNDS_04",
+        "game_path": "/Game/RA4/Audio/Generated/EVA/Soviet/VO_EVA_SU_INSUFFICIENT_FUNDS_04",
+        "file_size": 222248,
+        "type": "Texture"
+      },
+      {
+        "name": "T_RA4_Ground_Normal",
+        "game_path": "/Game/RA4/Generated/Terrain/T_RA4_Ground_Normal",
+        "file_size": 9067046,
+        "type": "Texture"
+      },
+      {
+        "name": "T_RA4_Ground_Color",
+        "game_path": "/Game/RA4/Generated/Terrain/T_RA4_Ground_Color",
+        "file_size": 7460180,
+        "type": "Texture"
+      },
+      {
+        "name": "T_RA4_Ground_Roughness",
+        "game_path": "/Game/RA4/Generated/Terrain/T_RA4_Ground_Roughness",
+        "file_size": 2970964,
+        "type": "Texture"
+      },
+      {
         "name": "T_WaterTank01_SRM",
         "game_path": "/Game/ThirdParty/IndustryPropsPack6/Textures/T_WaterTank01_SRM",
         "file_size": 6422131,
@@ -3040,8 +6004,645 @@
         "type": "Texture"
       }
     ],
-    "Niagara": [],
+    "Niagara": [
+      {
+        "name": "VO_RU_SU_MorokSubmarine_Selected_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_MorokSubmarine/VO_RU_SU_MorokSubmarine_Selected_01",
+        "file_size": 80082,
+        "type": "Niagara"
+      },
+      {
+        "name": "VO_RU_SU_MorokSubmarine_Idle_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_MorokSubmarine/VO_RU_SU_MorokSubmarine_Idle_01",
+        "file_size": 107685,
+        "type": "Niagara"
+      },
+      {
+        "name": "VO_RU_SU_MorokSubmarine_Ability_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_MorokSubmarine/VO_RU_SU_MorokSubmarine_Ability_01",
+        "file_size": 60016,
+        "type": "Niagara"
+      },
+      {
+        "name": "VO_RU_SU_MorokSubmarine_Death_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_MorokSubmarine/VO_RU_SU_MorokSubmarine_Death_01",
+        "file_size": 68836,
+        "type": "Niagara"
+      },
+      {
+        "name": "VO_RU_SU_MorokSubmarine_Move_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_MorokSubmarine/VO_RU_SU_MorokSubmarine_Move_01",
+        "file_size": 57386,
+        "type": "Niagara"
+      },
+      {
+        "name": "VO_RU_SU_MorokSubmarine_Damaged_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_MorokSubmarine/VO_RU_SU_MorokSubmarine_Damaged_01",
+        "file_size": 92493,
+        "type": "Niagara"
+      },
+      {
+        "name": "VO_RU_SU_MorokSubmarine_Attack_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_MorokSubmarine/VO_RU_SU_MorokSubmarine_Attack_01",
+        "file_size": 74460,
+        "type": "Niagara"
+      },
+      {
+        "name": "VO_RU_SU_MorokSubmarine_Elite_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_MorokSubmarine/VO_RU_SU_MorokSubmarine_Elite_01",
+        "file_size": 121280,
+        "type": "Niagara"
+      }
+    ],
     "SoundWave": [
+      {
+        "name": "Iron_Parade",
+        "game_path": "/Game/RA4/Audio/Generated/Music/Iron_Parade",
+        "file_size": 22306733,
+        "type": "SoundWave"
+      },
+      {
+        "name": "Steel_Horizon_Pact",
+        "game_path": "/Game/RA4/Audio/Generated/Music/Steel_Horizon_Pact",
+        "file_size": 38068178,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_KorshunGunship_Selected_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_KorshunGunship/VO_RU_SU_KorshunGunship_Selected_01",
+        "file_size": 76338,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_KorshunGunship_Move_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_KorshunGunship/VO_RU_SU_KorshunGunship_Move_01",
+        "file_size": 81512,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_KorshunGunship_Attack_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_KorshunGunship/VO_RU_SU_KorshunGunship_Attack_01",
+        "file_size": 62679,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_KorshunGunship_Elite_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_KorshunGunship/VO_RU_SU_KorshunGunship_Elite_01",
+        "file_size": 100755,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_KorshunGunship_Ability_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_KorshunGunship/VO_RU_SU_KorshunGunship_Ability_01",
+        "file_size": 58216,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_KorshunGunship_Death_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_KorshunGunship/VO_RU_SU_KorshunGunship_Death_01",
+        "file_size": 45739,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_KorshunGunship_Idle_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_KorshunGunship/VO_RU_SU_KorshunGunship_Idle_01",
+        "file_size": 109862,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_KorshunGunship_Damaged_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_KorshunGunship/VO_RU_SU_KorshunGunship_Damaged_01",
+        "file_size": 104343,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_ZarevoMLRS_Idle_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_ZarevoMLRS/VO_RU_SU_ZarevoMLRS_Idle_01",
+        "file_size": 101002,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_ZarevoMLRS_Ability_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_ZarevoMLRS/VO_RU_SU_ZarevoMLRS_Ability_01",
+        "file_size": 78579,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_ZarevoMLRS_Selected_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_ZarevoMLRS/VO_RU_SU_ZarevoMLRS_Selected_01",
+        "file_size": 77568,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_ZarevoMLRS_Death_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_ZarevoMLRS/VO_RU_SU_ZarevoMLRS_Death_01",
+        "file_size": 103808,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_ZarevoMLRS_Move_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_ZarevoMLRS/VO_RU_SU_ZarevoMLRS_Move_01",
+        "file_size": 80070,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_ZarevoMLRS_Attack_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_ZarevoMLRS/VO_RU_SU_ZarevoMLRS_Attack_01",
+        "file_size": 105472,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_ZarevoMLRS_Damaged_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_ZarevoMLRS/VO_RU_SU_ZarevoMLRS_Damaged_01",
+        "file_size": 67701,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_ZarevoMLRS_Elite_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_ZarevoMLRS/VO_RU_SU_ZarevoMLRS_Elite_01",
+        "file_size": 113322,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_SvyatogorCruiser_Move_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_SvyatogorCruiser/VO_RU_SU_SvyatogorCruiser_Move_01",
+        "file_size": 90542,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_SvyatogorCruiser_Selected_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_SvyatogorCruiser/VO_RU_SU_SvyatogorCruiser_Selected_01",
+        "file_size": 95080,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_SvyatogorCruiser_Elite_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_SvyatogorCruiser/VO_RU_SU_SvyatogorCruiser_Elite_01",
+        "file_size": 202208,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_SvyatogorCruiser_Ability_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_SvyatogorCruiser/VO_RU_SU_SvyatogorCruiser_Ability_01",
+        "file_size": 105461,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_SvyatogorCruiser_Idle_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_SvyatogorCruiser/VO_RU_SU_SvyatogorCruiser_Idle_01",
+        "file_size": 118099,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_SvyatogorCruiser_Attack_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_SvyatogorCruiser/VO_RU_SU_SvyatogorCruiser_Attack_01",
+        "file_size": 53092,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_SvyatogorCruiser_Damaged_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_SvyatogorCruiser/VO_RU_SU_SvyatogorCruiser_Damaged_01",
+        "file_size": 53705,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_SvyatogorCruiser_Death_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_SvyatogorCruiser/VO_RU_SU_SvyatogorCruiser_Death_01",
+        "file_size": 75176,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_KrechetInterceptor_Damaged_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_KrechetInterceptor/VO_RU_SU_KrechetInterceptor_Damaged_01",
+        "file_size": 65770,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_KrechetInterceptor_Elite_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_KrechetInterceptor/VO_RU_SU_KrechetInterceptor_Elite_01",
+        "file_size": 75613,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_KrechetInterceptor_Idle_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_KrechetInterceptor/VO_RU_SU_KrechetInterceptor_Idle_01",
+        "file_size": 89211,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_KrechetInterceptor_Selected_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_KrechetInterceptor/VO_RU_SU_KrechetInterceptor_Selected_01",
+        "file_size": 63740,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_KrechetInterceptor_Attack_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_KrechetInterceptor/VO_RU_SU_KrechetInterceptor_Attack_01",
+        "file_size": 66273,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_KrechetInterceptor_Ability_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_KrechetInterceptor/VO_RU_SU_KrechetInterceptor_Ability_01",
+        "file_size": 46991,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_KrechetInterceptor_Move_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_KrechetInterceptor/VO_RU_SU_KrechetInterceptor_Move_01",
+        "file_size": 42998,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_KrechetInterceptor_Death_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_KrechetInterceptor/VO_RU_SU_KrechetInterceptor_Death_01",
+        "file_size": 78433,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_RubezhRifleman_Idle_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_RubezhRifleman/VO_RU_SU_RubezhRifleman_Idle_01",
+        "file_size": 108050,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_RubezhRifleman_Death_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_RubezhRifleman/VO_RU_SU_RubezhRifleman_Death_01",
+        "file_size": 135137,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_RubezhRifleman_Damaged_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_RubezhRifleman/VO_RU_SU_RubezhRifleman_Damaged_01",
+        "file_size": 75530,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_RubezhRifleman_Attack_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_RubezhRifleman/VO_RU_SU_RubezhRifleman_Attack_01",
+        "file_size": 115844,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_RubezhRifleman_Move_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_RubezhRifleman/VO_RU_SU_RubezhRifleman_Move_01",
+        "file_size": 130799,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_RubezhRifleman_Ability_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_RubezhRifleman/VO_RU_SU_RubezhRifleman_Ability_01",
+        "file_size": 140317,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_RubezhRifleman_Elite_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_RubezhRifleman/VO_RU_SU_RubezhRifleman_Elite_01",
+        "file_size": 124978,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_RubezhRifleman_Selected_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_RubezhRifleman/VO_RU_SU_RubezhRifleman_Selected_01",
+        "file_size": 246412,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_MasterEngineer_Move_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_MasterEngineer/VO_RU_SU_MasterEngineer_Move_01",
+        "file_size": 77442,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_MasterEngineer_Ability_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_MasterEngineer/VO_RU_SU_MasterEngineer_Ability_01",
+        "file_size": 96554,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_MasterEngineer_Elite_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_MasterEngineer/VO_RU_SU_MasterEngineer_Elite_01",
+        "file_size": 121571,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_MasterEngineer_Selected_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_MasterEngineer/VO_RU_SU_MasterEngineer_Selected_01",
+        "file_size": 100678,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_MasterEngineer_Attack_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_MasterEngineer/VO_RU_SU_MasterEngineer_Attack_01",
+        "file_size": 86387,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_MasterEngineer_Death_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_MasterEngineer/VO_RU_SU_MasterEngineer_Death_01",
+        "file_size": 103882,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_MasterEngineer_Idle_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_MasterEngineer/VO_RU_SU_MasterEngineer_Idle_01",
+        "file_size": 97369,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_MasterEngineer_Damaged_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_MasterEngineer/VO_RU_SU_MasterEngineer_Damaged_01",
+        "file_size": 86101,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_VektorOfficer_Damaged_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_VektorOfficer/VO_RU_SU_VektorOfficer_Damaged_01",
+        "file_size": 52371,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_VektorOfficer_Idle_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_VektorOfficer/VO_RU_SU_VektorOfficer_Idle_01",
+        "file_size": 124890,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_VektorOfficer_Death_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_VektorOfficer/VO_RU_SU_VektorOfficer_Death_01",
+        "file_size": 78053,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_VektorOfficer_Ability_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_VektorOfficer/VO_RU_SU_VektorOfficer_Ability_01",
+        "file_size": 95799,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_VektorOfficer_Selected_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_VektorOfficer/VO_RU_SU_VektorOfficer_Selected_01",
+        "file_size": 70711,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_VektorOfficer_Move_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_VektorOfficer/VO_RU_SU_VektorOfficer_Move_01",
+        "file_size": 65953,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_VektorOfficer_Elite_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_VektorOfficer/VO_RU_SU_VektorOfficer_Elite_01",
+        "file_size": 86404,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_VektorOfficer_Attack_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_VektorOfficer/VO_RU_SU_VektorOfficer_Attack_01",
+        "file_size": 100658,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_RazryadTrooper_Attack_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_RazryadTrooper/VO_RU_SU_RazryadTrooper_Attack_01",
+        "file_size": 61711,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_RazryadTrooper_Move_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_RazryadTrooper/VO_RU_SU_RazryadTrooper_Move_01",
+        "file_size": 69853,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_RazryadTrooper_Elite_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_RazryadTrooper/VO_RU_SU_RazryadTrooper_Elite_01",
+        "file_size": 92790,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_RazryadTrooper_Ability_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_RazryadTrooper/VO_RU_SU_RazryadTrooper_Ability_01",
+        "file_size": 76421,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_RazryadTrooper_Death_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_RazryadTrooper/VO_RU_SU_RazryadTrooper_Death_01",
+        "file_size": 109881,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_RazryadTrooper_Idle_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_RazryadTrooper/VO_RU_SU_RazryadTrooper_Idle_01",
+        "file_size": 164412,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_RazryadTrooper_Damaged_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_RazryadTrooper/VO_RU_SU_RazryadTrooper_Damaged_01",
+        "file_size": 73944,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_RazryadTrooper_Selected_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_RazryadTrooper/VO_RU_SU_RazryadTrooper_Selected_01",
+        "file_size": 62558,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_ZapalGrenadier_Death_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_ZapalGrenadier/VO_RU_SU_ZapalGrenadier_Death_01",
+        "file_size": 91379,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_ZapalGrenadier_Idle_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_ZapalGrenadier/VO_RU_SU_ZapalGrenadier_Idle_01",
+        "file_size": 93200,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_ZapalGrenadier_Ability_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_ZapalGrenadier/VO_RU_SU_ZapalGrenadier_Ability_01",
+        "file_size": 92301,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_ZapalGrenadier_Move_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_ZapalGrenadier/VO_RU_SU_ZapalGrenadier_Move_01",
+        "file_size": 65040,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_ZapalGrenadier_Selected_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_ZapalGrenadier/VO_RU_SU_ZapalGrenadier_Selected_01",
+        "file_size": 72093,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_ZapalGrenadier_Damaged_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_ZapalGrenadier/VO_RU_SU_ZapalGrenadier_Damaged_01",
+        "file_size": 84852,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_ZapalGrenadier_Elite_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_ZapalGrenadier/VO_RU_SU_ZapalGrenadier_Elite_01",
+        "file_size": 88048,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_ZapalGrenadier_Attack_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_ZapalGrenadier/VO_RU_SU_ZapalGrenadier_Attack_01",
+        "file_size": 64897,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_VoevodaHeavyTank_Elite_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_VoevodaHeavyTank/VO_RU_SU_VoevodaHeavyTank_Elite_01",
+        "file_size": 149553,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_VoevodaHeavyTank_Move_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_VoevodaHeavyTank/VO_RU_SU_VoevodaHeavyTank_Move_01",
+        "file_size": 58197,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_VoevodaHeavyTank_Damaged_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_VoevodaHeavyTank/VO_RU_SU_VoevodaHeavyTank_Damaged_01",
+        "file_size": 122801,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_VoevodaHeavyTank_Idle_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_VoevodaHeavyTank/VO_RU_SU_VoevodaHeavyTank_Idle_01",
+        "file_size": 96742,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_VoevodaHeavyTank_Attack_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_VoevodaHeavyTank/VO_RU_SU_VoevodaHeavyTank_Attack_01",
+        "file_size": 72649,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_VoevodaHeavyTank_Selected_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_VoevodaHeavyTank/VO_RU_SU_VoevodaHeavyTank_Selected_01",
+        "file_size": 82088,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_VoevodaHeavyTank_Ability_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_VoevodaHeavyTank/VO_RU_SU_VoevodaHeavyTank_Ability_01",
+        "file_size": 86457,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_VoevodaHeavyTank_Death_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_VoevodaHeavyTank/VO_RU_SU_VoevodaHeavyTank_Death_01",
+        "file_size": 94603,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_GromadaAirship_Attack_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_GromadaAirship/VO_RU_SU_GromadaAirship_Attack_01",
+        "file_size": 65886,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_GromadaAirship_Elite_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_GromadaAirship/VO_RU_SU_GromadaAirship_Elite_01",
+        "file_size": 99594,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_GromadaAirship_Selected_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_GromadaAirship/VO_RU_SU_GromadaAirship_Selected_01",
+        "file_size": 73848,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_GromadaAirship_Damaged_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_GromadaAirship/VO_RU_SU_GromadaAirship_Damaged_01",
+        "file_size": 107193,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_GromadaAirship_Idle_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_GromadaAirship/VO_RU_SU_GromadaAirship_Idle_01",
+        "file_size": 149084,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_GromadaAirship_Death_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_GromadaAirship/VO_RU_SU_GromadaAirship_Death_01",
+        "file_size": 95179,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_GromadaAirship_Move_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_GromadaAirship/VO_RU_SU_GromadaAirship_Move_01",
+        "file_size": 89097,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_GromadaAirship_Ability_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_GromadaAirship/VO_RU_SU_GromadaAirship_Ability_01",
+        "file_size": 116547,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_BogatyrOreCarrier_Ability_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_BogatyrOreCarrier/VO_RU_SU_BogatyrOreCarrier_Ability_01",
+        "file_size": 97203,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_BogatyrOreCarrier_Death_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_BogatyrOreCarrier/VO_RU_SU_BogatyrOreCarrier_Death_01",
+        "file_size": 83886,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_BogatyrOreCarrier_Idle_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_BogatyrOreCarrier/VO_RU_SU_BogatyrOreCarrier_Idle_01",
+        "file_size": 96299,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_BogatyrOreCarrier_Damaged_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_BogatyrOreCarrier/VO_RU_SU_BogatyrOreCarrier_Damaged_01",
+        "file_size": 60900,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_BogatyrOreCarrier_Elite_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_BogatyrOreCarrier/VO_RU_SU_BogatyrOreCarrier_Elite_01",
+        "file_size": 107049,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_BogatyrOreCarrier_Attack_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_BogatyrOreCarrier/VO_RU_SU_BogatyrOreCarrier_Attack_01",
+        "file_size": 105166,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_BogatyrOreCarrier_Move_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_BogatyrOreCarrier/VO_RU_SU_BogatyrOreCarrier_Move_01",
+        "file_size": 69684,
+        "type": "SoundWave"
+      },
+      {
+        "name": "VO_RU_SU_BogatyrOreCarrier_Selected_01",
+        "game_path": "/Game/RA4/Audio/Generated/Voice/Soviet/SU_BogatyrOreCarrier/VO_RU_SU_BogatyrOreCarrier_Selected_01",
+        "file_size": 80165,
+        "type": "SoundWave"
+      },
       {
         "name": "S_RA4_MainMenu_Theme",
         "game_path": "/Game/RA4UI/Audio/S_RA4_MainMenu_Theme",
@@ -3094,13 +6695,19 @@
       {
         "name": "RA4_Skirmish_Production",
         "game_path": "/Game/Maps/RA4_Skirmish_Production",
-        "file_size": 316207,
+        "file_size": 53436,
         "type": "UnknownAsset"
       },
       {
         "name": "RA4_Skirmish_Canyon",
         "game_path": "/Game/Maps/RA4_Skirmish_Canyon",
         "file_size": 316207,
+        "type": "UnknownAsset"
+      },
+      {
+        "name": "RA4_ArtLab",
+        "game_path": "/Game/Maps/RA4_ArtLab",
+        "file_size": 42884,
         "type": "UnknownAsset"
       },
       {
