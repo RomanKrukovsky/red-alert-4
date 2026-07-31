@@ -15,6 +15,8 @@
 #include "RA4Input/OrderResolver.h"
 #include "RA4Input/SelectionModel.h"
 
+#include "RA4AudioSubsystem.h"
+
 #include "RA4PlayerController.generated.h"
 
 class ARA4CameraPawn;
@@ -78,6 +80,10 @@ protected:
     UPROPERTY(EditAnywhere, Category = "RA4|Input")
     float CameraRotateDegreesPerPixel = 0.35f;
 
+    // How long the cursor must rest on something before its name appears.
+    UPROPERTY(EditAnywhere, Category = "RA4|HUD")
+    float TooltipDelaySeconds = 0.45f;
+
 private:
     // --- input handlers ------------------------------------------------------
     void OnPrimaryPressed();
@@ -102,6 +108,12 @@ private:
     void PerformSelection(const FVector2D& EndScreen, const RA4::Vec2& EndGround, bool bWasDrag);
     // Speaks the newly selected unit's line, if its faction has a recorded pack.
     void PlaySelectionVoice(const RA4::SimWorld& World);
+    // Acknowledges an order, choosing the line from what the order will actually do.
+    void PlayOrderVoice(const RA4::SimWorld& World, RA4::Input::CursorHint Hint);
+    void PlayVoiceForPrimary(const RA4::SimWorld& World, ERA4VoiceEvent Event);
+
+    // Name card shown once the cursor has rested on something for a moment.
+    void UpdateHoverTooltip(const RA4::SimWorld& World);
     void ApplyCursorShape();
 
     // --- helpers -------------------------------------------------------------
@@ -168,6 +180,15 @@ private:
 
     UPROPERTY(Transient)
     TObjectPtr<URA4MatchResultOverlayWidget> MatchResultOverlay;
+
+    UPROPERTY(Transient)
+    TObjectPtr<class URA4HoverTooltipWidget> HoverTooltip;
+
+    // Which entity the cursor is resting on, and since when. The delay is what stops
+    // the card flickering while the pointer sweeps across a crowded battlefield.
+    RA4::EntityId HoveredEntity;
+    double HoverStartedSeconds = 0.0;
+    bool bTooltipVisible = false;
 
     FDelegateHandle MatchEndedHandle;
 };

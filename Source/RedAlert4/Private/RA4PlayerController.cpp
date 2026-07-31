@@ -10,6 +10,7 @@
 #include "RA4HUDWidget.h"
 #include "RA4MatchResultOverlayWidget.h"
 #include "RA4AudioSubsystem.h"
+#include "RA4HoverTooltipWidget.h"
 #include "RA4SidebarWidget.h"
 #include "RA4UIDataProviderSubsystem.h"
 #include "Blueprint/UserWidget.h"
@@ -78,6 +79,14 @@ void ARA4PlayerController::BeginPlay()
         else
         {
             UE_LOG(LogTemp, Error, TEXT("RA4 HUD: failed to create the sidebar"));
+        }
+
+        HoverTooltip = CreateWidget<URA4HoverTooltipWidget>(this, URA4HoverTooltipWidget::StaticClass());
+        if (HoverTooltip != nullptr)
+        {
+            HoverTooltip->AddToViewport(/*ZOrder*/ 20);   // above the HUD panels
+            HoverTooltip->SetAlignmentInViewport(FVector2D(0.0f, 0.0f));
+            HoverTooltip->SetVisibility(ESlateVisibility::Collapsed);
         }
     }
     
@@ -304,6 +313,90 @@ void ARA4PlayerController::PlayerTick(float DeltaTime)
         CurrentCursorHint =
             Intent == ClickIntent::IssueOrder ? ResolveCursorHint(*World, Selection, Context) : CursorHint::Select;
         ApplyCursorShape();
+
+        UpdateHoverTooltip(*World);
+    }
+}
+
+void ARA4PlayerController::UpdateHoverTooltip(const SimWorld& World)
+{
+    if (!IsLocalController() || HoverTooltip == nullptr)
+    {
+        return;
+    }
+
+    float MouseX = 0.0f;
+    float MouseY = 0.0f;
+    Vec2 Ground;
+    const bool bHaveCursor = GetMousePosition(MouseX, MouseY) && GetCursorGroundPosition(Ground);
+
+    const EntityId Under = bHaveCursor ? FindHoveredEntity(Ground) : EntityId::Invalid();
+    const double Now = GetWorld() != nullptr ? GetWorld()->GetTimeSeconds() : 0.0;
+
+    // Moving to a different thing restarts the dwell timer, so sweeping the cursor
+    // across a crowded base does not flash a card per unit passed over.
+    if (Under != HoveredEntity)
+    {
+        HoveredEntity = Under;
+        HoverStartedSeconds = Now;
+        if (bTooltipVisible)
+        {
+            HoverTooltip->SetVisibility(ESlateVisibility::Collapsed);
+            bTooltipVisible = false;
+        }
+    }
+
+    const EntityCore* Core = Under.IsValid() ? World.GetCore(Under) : nullptr;
+    if (Core == nullptr || !Core->bAlive || World.GetContent() == nullptr ||
+        Now - HoverStartedSeconds < double(TooltipDelaySeconds))
+    {
+        return;
+    }
+
+    const EntityDef* Def = World.GetContent()->FindEntity(Core->Def);
+    if (Def == nullptr)
+    {
+        return;
+    }
+
+    // DisplayNameKey is a localisation key; falling back to the stable content name
+    // keeps something readable on screen for entries that have not been localised.
+    FText Title = FText::FromString(FString(Def->Name.c_str()));
+    if (!Def->DisplayNameKey.empty())
+    {
+        const FString Key(Def->DisplayNameKey.c_str());
+        Title = FText::AsCultureInvariant(Key);
+        FText Localised;
+        if (FText::FindTextInLiveTable_Advanced(TEXT("RA4"), *Key, Localised))
+        {
+            Title = Localised;
+        }
+    }
+
+    // Second line: health for anything damaged, plus whose it is, because "what is
+    // that and is it mine" is the actual question a hover answers.
+    FText Subtitle = FText::GetEmpty();
+    const HealthComp* Health = World.GetHealth(Under);
+    const bool bMine = Core->Owner == Selection.GetLocalPlayer();
+    const FText Ownership = bMine ? NSLOCTEXT("RA4", "Tooltip_Own", "своё")
+                                  : NSLOCTEXT("RA4", "Tooltip_Enemy", "противник");
+    if (Health != nullptr && Health->Max > 0)
+    {
+        Subtitle = FText::Format(NSLOCTEXT("RA4", "Tooltip_HealthLine", "{0}  —  {1} / {2}"), Ownership,
+                                 FText::AsNumber(Health->Current), FText::AsNumber(Health->Max));
+    }
+    else
+    {
+        Subtitle = Ownership;
+    }
+
+    HoverTooltip->SetContent(Title, Subtitle);
+    // Offset so the card sits clear of the pointer instead of under it.
+    HoverTooltip->SetPositionInViewport(FVector2D(MouseX + 18.0f, MouseY + 18.0f), /*bRemoveDPIScale*/ false);
+    if (!bTooltipVisible)
+    {
+        HoverTooltip->SetVisibility(ESlateVisibility::HitTestInvisible);
+        bTooltipVisible = true;
     }
 }
 
@@ -631,7 +724,16 @@ void ARA4PlayerController::HandleClick(bool bLeftButton, const FVector2D& EndScr
     switch (Intent)
     {
     case ClickIntent::IssueOrder:
-        SubmitOrders(ResolveOrder(*World, Selection, MakeOrderContext(EndGround)));
+    {
+        const OrderContext Context = MakeOrderContext(EndGround);
+        const std::vector<Command> Orders = ResolveOrder(*World, Selection, Context);
+        SubmitOrders(Orders);
+        // Voiced from the resolved hint rather than the button pressed, so the unit
+        // acknowledges what it is actually about to do.
+        if (!Orders.empty() && !bPlacementArmed)
+        {
+            PlayOrderVoice(*World, ResolveCursorHint(*World, Selection, Context));
+        }
         // An armed mode is spent by the click that used it, successful or not: the
         // alternative is a player who keeps placing buildings they thought they had
         // already placed.
@@ -639,6 +741,7 @@ void ARA4PlayerController::HandleClick(bool bLeftButton, const FVector2D& EndScr
         bPlacementArmed = false;
         PlacementContent = ContentId();
         break;
+    }
 
     case ClickIntent::SelectAtPoint:
     case ClickIntent::SelectInMarquee:
@@ -728,7 +831,36 @@ void ARA4PlayerController::PerformSelection(const FVector2D& EndScreen, const Ve
     PlaySelectionVoice(*World);
 }
 
+void ARA4PlayerController::PlayOrderVoice(const SimWorld& World, RA4::Input::CursorHint Hint)
+{
+    ERA4VoiceEvent Event = ERA4VoiceEvent::Move;
+    switch (Hint)
+    {
+    case CursorHint::Attack:
+    case CursorHint::ForceAttack:
+        Event = ERA4VoiceEvent::Attack;
+        break;
+    case CursorHint::Harvest:
+    case CursorHint::Deliver:
+    case CursorHint::Repair:
+    case CursorHint::Capture:
+        // These are all "going to do a job somewhere", which the Ability line covers
+        // better than a plain movement acknowledgement.
+        Event = ERA4VoiceEvent::Ability;
+        break;
+    default:
+        Event = ERA4VoiceEvent::Move;
+        break;
+    }
+    PlayVoiceForPrimary(World, Event);
+}
+
 void ARA4PlayerController::PlaySelectionVoice(const SimWorld& World)
+{
+    PlayVoiceForPrimary(World, ERA4VoiceEvent::Selected);
+}
+
+void ARA4PlayerController::PlayVoiceForPrimary(const SimWorld& World, ERA4VoiceEvent Event)
 {
     // The primary is what the HUD shows a portrait for, so it is the one that speaks.
     const EntityId Primary = Selection.GetPrimary();
@@ -755,7 +887,7 @@ void ARA4PlayerController::PlaySelectionVoice(const SimWorld& World)
     {
         if (URA4AudioSubsystem* Audio = UnrealWorld->GetSubsystem<URA4AudioSubsystem>())
         {
-            Audio->PlayUnitVoice(FString(VoiceSet->VoiceId.c_str()), ERA4VoiceEvent::Selected);
+            Audio->PlayUnitVoice(FString(VoiceSet->VoiceId.c_str()), Event);
         }
     }
 }
