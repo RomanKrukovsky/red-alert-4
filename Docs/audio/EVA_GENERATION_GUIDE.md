@@ -123,8 +123,7 @@ The generator reads from and validates against the following JSON schema files:
    Contains event priority mappings (100–35), cooldown timers (e.g. `BASE_UNDER_ATTACK: 12.0s`), concurrency groups, and aggregation parameters.
 
 2. **`Content/RA4/Audio/Generated/eva_pronunciation_ru.json`**  
-   Contains phonetic mappings for technical codes (`T1` -> `Тир один`), callsigns (`Alpha-1` -> `А́льфа оди́н`), and acronyms (`MCV` -> `Эм-Си-Ви`).
-
+Contains phonetic mappings for technical codes (`T1` -> `Tier One`), callsigns (`Alpha-1` -> `Alpha One`), and acronyms (`MCV` -> `MCV`).
 3. **`GeneratedVO/voice_bible.json`**  
    Defines prompt control instructions for each VoiceId.
 
@@ -182,11 +181,9 @@ Every generated WAV file must pass automated validation in `qc.py`:
   4. Regenerate anchor if artifacts persist across all lines of a VoiceId.
 
 ### Issue 2: Mangled Pronunciation of Tech Codes or Numbers
-* **Symptom:** VoxCPM spells out "Т-1" as "Тэ-один" or stutters on "MCV".
-* **Solution:**  
+* **Symptom:** VoxCPM spells out "T-1" as "Te-one" or stutters on "MCV".* **Solution:**  
   1. Inspect `Content/RA4/Audio/Generated/eva_pronunciation_ru.json`.
-  2. Add explicit stress marks (`́`) or phonetic spelling to `spoken` field (e.g., `"spoken": "Эм-Си-Ви"`).
-  3. Run script with `--normalize`.
+2. Add explicit stress marks (`́`) or phonetic spelling to `spoken` field (e.g., `"spoken": "MCV"`).  3. Run script with `--normalize`.
 
 ### Issue 3: Dynamic Range Clipping & Distortion
 * **Symptom:** Audio clips when imported into MetaSounds or played back on high volume.
@@ -207,6 +204,5 @@ Every generated WAV file must pass automated validation in `qc.py`:
      ```
 
 ### Issue 5: Truncated Audio / Early Cutoff
-* **Symptom:** Voice line cuts off the last syllable (e.g. "База под ата...").
-* **Solution:**  
+* **Symptom:** Voice line cuts off the last syllable (e.g. "Base under ata...").* **Solution:**  
   * Increase silence trimming threshold from `top_db=30` to `top_db=35` or `40` in `qc.py`.

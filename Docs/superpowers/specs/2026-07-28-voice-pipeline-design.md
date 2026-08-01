@@ -6,7 +6,7 @@
 
 ## Purpose
 
-Generate original Russian voice-over package for Red Alert 4 (industrial RTS) using openbmb/VoxCPM2. Four factions: СССР, Альянс, Восточная коалиция, Хронолегион. All voices must be original (no imitation of real actors or existing Command & Conquer voice actors). Pipeline produces WAV files at 48 kHz mono PCM 16-bit, ready for direct import into Unreal Engine MetaSounds.
+Generate original Russian voice-over package for Red Alert 4 (industrial RTS) using openbmb/VoxCPM2. Four factions: Soviet Union, Alliance, Vostochnaya Coalition, Khronolegion. All voices must be original (no imitation of real actors or existing Command & Conquer voice actors). Pipeline produces WAV files at 48 kHz mono PCM 16-bit, ready for direct import into Unreal Engine MetaSounds.
 
 ## Scope
 
@@ -52,9 +52,9 @@ Full VoiceId naming: `<FactionTag>_<RoleTag>` where RoleTag matches EVA archetyp
 
 Each VoiceId gets 3 anchors of different semantic context:
 
-1. **anchor_01** — Identity: "Я — [роль фракции]. Готов к работе."
-2. **anchor_02** — Command: "Подразделение, слушать мою команду. Выполнять."
-3. **anchor_03** — Combat report: "Контакт с противником. Запрашиваю поддержку."
+1. **anchor_01** — Identity: "Ya — [rol Factions]. Gotov k rabote."
+2. **anchor_02** — Command: "Podrazdelenie, slushat moyu komandu. Vypolnyat."
+3. **anchor_03** — Combat report: "Kontakt s protivnikom. Zaprashivayu podderzhku."
 
 Selection scoring (auto, before any human review):
 
@@ -73,7 +73,7 @@ Selected anchor used as `reference_wav_path` for all subsequent line generation 
 - **Lines (finals):** if draft passes QC, can regenerate with steps=15–20 for better quality. Only applied if it improves without instability.
 - **Device:** `mps` (M4 Max confirmed). VoxCPM auto-downgrades bf16 → float32 on MPS.
 - **Flags:** `--normalize` (Russian text normalization for numbers/abbreviations), `--no-denoiser` (clean dry voice, no baked effects).
-- **Emotion prefix:** for emotional lines, wrap style in parens before text: `(urgent command)Тревога. База под атакой.`
+- **Emotion prefix:** for emotional lines, wrap style in parens before text: `(urgent command)Trevoga. Baza under atakoy.`
 
 ## File Format
 
@@ -118,7 +118,7 @@ Retry escalation:
 **unreal_voice_import.csv** columns:
 `SoundWaveName, SourceFile, FactionTag, UnitTag, EventTag, SubtitleKey, Priority, CooldownSeconds, Weight, ConcurrencyGroup`
 
-Priority defaults (from ТЗ):
+Priority defaults (from TZ):
 - EVA.EnemySuperweapon: 100
 - EVA.Objective: 90
 - EVA.BaseUnderAttack: 80
@@ -200,7 +200,7 @@ Only after user approves test package → proceed to full generation.
 }
 ```
 
-Pipeline reads state, skips `completed`, continues from `last_processed`. Accepted files are never overwritten (per ТЗ).
+Pipeline reads state, skips `completed`, continues from `last_processed`. Accepted files are never overwritten (per TZ).
 
 ## Rerun Commands
 
@@ -212,7 +212,7 @@ python3 -m pipeline.anchor_generator --factions Soviet --output GeneratedVO/Anch
 python3 -m pipeline.clip_generator --factions Soviet --voices MainTank --events Selected Move Attack
 
 # Dry-run with new text:
-python3 -m pipeline.clip_generator --voices EVA_Alliance --text "Новая реплика." --output /tmp/test.wav
+python3 -m pipeline.clip_generator --voices EVA_Alliance --text "Novaya replika." --output /tmp/test.wav
 
 # QC + regenerate manifests only:
 python3 -m pipeline.qc --regenerate-manifests
@@ -250,7 +250,7 @@ Before final delivery:
 ## Risks
 
 1. **Voice drift across lines:** VoxCPM2 Hi-Fi Cloning is reasonably stable but ~5% of lines may drift in timbre. Mitigated by 3 anchors + auto-selection + retry on artifacts.
-2. **Russian pronunciation errors:** VoxCPM2 sometimes misplaces stress. Mitigated by writing test phrases first, using ё where ambiguous, listening to anchor picks before committing.
+2. **Russian pronunciation errors:** VoxCPM2 sometimes misplaces stress. Mitigated by writing test phrases first, using yo where ambiguous, listening to anchor picks before committing.
 3. **Long generation time:** ~24h for full package. Mitigated by resume + parallel review during generation.
 
 ## Approval

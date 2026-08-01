@@ -154,7 +154,7 @@
       "window_seconds": 1.5,
       "max_individual": 3,
       "fallback_event": "UNITS_READY_MULTIPLE",
-      "fallback_text": "Подразделения готовы."
+      "fallback_text": "Podrazdeleniya gotovy."
     },
     "repeated_combat_warning": {
       "enabled": true,
@@ -167,7 +167,7 @@
       "window_seconds": 1.0,
       "max_individual": 2,
       "fallback_event": "BUILDINGS_COMPLETE_MULTIPLE",
-      "fallback_text": "Строительство завершено."
+      "fallback_text": "Construction zaversheno."
     },
     "insufficient_funds_throttling": {
       "enabled": true,

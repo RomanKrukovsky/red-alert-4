@@ -87,6 +87,8 @@ public:
     // RotateSteps this is not quantised, and it is not gated by bRotationEnabled --
     // the caller decides when a rotate gesture is active.
     void AddYawDegrees(float Delta);
+    void AddPitchDegrees(float Delta);
+    float GetPitchDegrees() const { return PitchDegrees; }
 
     void BeginMiddleDrag(float PixelX, float PixelY);
     void UpdateMiddleDrag(float PixelX, float PixelY);
@@ -138,6 +140,7 @@ private:
     float Height = 2500.0f;
     float TargetHeight = 2500.0f;
     float YawDegrees = 0.0f;
+    float PitchDegrees = -55.0f;
 };
 
 } // namespace Input

@@ -276,7 +276,7 @@ void URA4CommandCentreMenuWidget::BuildLayout()
         FVector2D(0.0f, 0.0f), FVector2D(0.25f, 0.5f)));
     MenuContent->AddChildToVerticalBox(FactionMarkSize)->SetPadding(FMargin(0.0f, 4.0f, 0.0f, 0.0f));
     UTextBlock* FactionLabel = MakeText(
-        WidgetTree, LOCTEXT("FactionLabel", "СОВЕТСКОЕ ВЕРХОВНОЕ КОМАНДОВАНИЕ"), 12, Muted, TEXT("FactionLabel"));
+        WidgetTree, LOCTEXT("FactionLabel", "SOVETSKOE VERKhOVNOE KOMANDOVANIE"), 12, Muted, TEXT("FactionLabel"));
     FactionLabel->SetJustification(ETextJustify::Center);
     MenuContent->AddChildToVerticalBox(FactionLabel)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 14.0f));
 
@@ -370,35 +370,35 @@ void URA4CommandCentreMenuWidget::BuildLayout()
 
     AddMenuButton(
         FVector2D(0.0f, 0.0f), FVector2D(0.25f, 0.5f),
-        LOCTEXT("Campaign", "КАМПАНИЯ"), TEXT("CampaignButton"), true)
+        LOCTEXT("Campaign", "KAMPANIYa"), TEXT("CampaignButton"), true)
         ->OnClicked.AddDynamic(this, &URA4CommandCentreMenuWidget::OpenCampaign);
     AddMenuButton(
         FVector2D(0.25f, 0.0f), FVector2D(0.5f, 0.5f),
-        LOCTEXT("Network", "СЕТЕВАЯ ИГРА"), TEXT("NetworkButton"), false)
+        LOCTEXT("Network", "SETEVAYa IGRA"), TEXT("NetworkButton"), false)
         ->OnClicked.AddDynamic(this, &URA4CommandCentreMenuWidget::OpenMultiplayer);
     AddMenuButton(
         FVector2D(0.5f, 0.0f), FVector2D(0.75f, 0.5f),
-        LOCTEXT("Skirmish", "СХВАТКА"), TEXT("SkirmishButton"), false)
+        LOCTEXT("Skirmish", "SKhVATKA"), TEXT("SkirmishButton"), false)
         ->OnClicked.AddDynamic(this, &URA4CommandCentreMenuWidget::OpenSkirmish);
     AddMenuButton(
         FVector2D(0.75f, 0.0f), FVector2D(1.0f, 0.5f),
-        LOCTEXT("Editor", "РЕДАКТОР"), TEXT("EditorButton"), false)
+        LOCTEXT("Editor", "REDAKTOR"), TEXT("EditorButton"), false)
         ->OnClicked.AddDynamic(this, &URA4CommandCentreMenuWidget::OpenEditor);
     AddMenuButton(
         FVector2D(0.0f, 0.5f), FVector2D(0.25f, 1.0f),
-        LOCTEXT("Codex", "ЭНЦИКЛОПЕДИЯ"), TEXT("CodexButton"), false)
+        LOCTEXT("Codex", "ENTsIKLOPEDIYa"), TEXT("CodexButton"), false)
         ->OnClicked.AddDynamic(this, &URA4CommandCentreMenuWidget::OpenEncyclopedia);
     AddMenuButton(
         FVector2D(0.25f, 0.5f), FVector2D(0.5f, 1.0f),
-        LOCTEXT("Modifications", "МОДИФИКАЦИИ"), TEXT("ModificationsButton"), false)
+        LOCTEXT("Modifications", "MODIFIKATsII"), TEXT("ModificationsButton"), false)
         ->OnClicked.AddDynamic(this, &URA4CommandCentreMenuWidget::OpenModifications);
     AddMenuButton(
         FVector2D(0.5f, 0.5f), FVector2D(0.75f, 1.0f),
-        LOCTEXT("Settings", "НАСТРОЙКИ"), TEXT("SettingsButton"), false)
+        LOCTEXT("Settings", "NASTROYKI"), TEXT("SettingsButton"), false)
         ->OnClicked.AddDynamic(this, &URA4CommandCentreMenuWidget::OpenSettings);
     AddMenuButton(
         FVector2D(0.75f, 0.5f), FVector2D(1.0f, 1.0f),
-        LOCTEXT("Exit", "ВЫХОД"), TEXT("ExitButton"), false)
+        LOCTEXT("Exit", "VYKhOD"), TEXT("ExitButton"), false)
         ->OnClicked.AddDynamic(this, &URA4CommandCentreMenuWidget::RequestExit);
 
     UBorder* MenuPanel = WidgetTree->ConstructWidget<UBorder>(
@@ -410,7 +410,7 @@ void URA4CommandCentreMenuWidget::BuildLayout()
 
     UVerticalBox* Commander = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("Commander"));
     UTextBlock* CommanderHeader = MakeText(
-        WidgetTree, LOCTEXT("CommanderHeader", "КОМАНДУЮЩИЙ"), 16, Text, TEXT("CommanderHeader"));
+        WidgetTree, LOCTEXT("CommanderHeader", "COMMANDER"), 16, Text, TEXT("CommanderHeader"));
     CommanderHeader->SetJustification(ETextJustify::Center);
     Commander->AddChildToVerticalBox(CommanderHeader)->SetPadding(FMargin(0.0f, 4.0f, 0.0f, 6.0f));
 
@@ -429,14 +429,14 @@ void URA4CommandCentreMenuWidget::BuildLayout()
     RankSlot->SetPadding(FMargin(18.0f, 0.0f, 18.0f, 0.0f));
     UTextBlock* Stats = MakeText(
         WidgetTree,
-        LOCTEXT("CommanderStats", "РАНГ\nРЕПУТАЦИЯ\nПОБЕДЫ\nПОРАЖЕНИЯ"),
+        LOCTEXT("CommanderStats", "RANG\nREPUTATsIYa\nPOBEDY\nPORAZhENIYa"),
         12, Text, TEXT("CommanderStats"), false);
     UHorizontalBoxSlot* StatsSlot = CommanderRow->AddChildToHorizontalBox(Stats);
     StatsSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
     StatsSlot->SetPadding(FMargin(0.0f, 2.0f, 10.0f, 2.0f));
     UTextBlock* StatValues = MakeText(
         WidgetTree,
-        LOCTEXT("CommanderStatValues", "ГЕНЕРАЛ-МАЙОР\n12 450\n87\n19"),
+        LOCTEXT("CommanderStatValues", "GENERAL-MAYOR\n12 450\n87\n19"),
         12, Text, TEXT("CommanderStatValues"), false);
     StatValues->SetJustification(ETextJustify::Right);
     UHorizontalBoxSlot* ValuesSlot = CommanderRow->AddChildToHorizontalBox(StatValues);
@@ -448,9 +448,9 @@ void URA4CommandCentreMenuWidget::BuildLayout()
     UHorizontalBox* LevelRow = WidgetTree->ConstructWidget<UHorizontalBox>(
         UHorizontalBox::StaticClass(), TEXT("LevelRow"));
     LevelRow->AddChildToHorizontalBox(
-        MakeText(WidgetTree, LOCTEXT("Level", "УРОВЕНЬ 27"), 15, Text, TEXT("Level")));
+        MakeText(WidgetTree, LOCTEXT("Level", "UROVEN 27"), 15, Text, TEXT("Level")));
     UTextBlock* Experience = MakeText(
-        WidgetTree, LOCTEXT("Experience", "28 750 / 34 000 ОП"), 14, Text, TEXT("Experience"));
+        WidgetTree, LOCTEXT("Experience", "28 750 / 34 000 OP"), 14, Text, TEXT("Experience"));
     UHorizontalBoxSlot* ExperienceSlot = LevelRow->AddChildToHorizontalBox(Experience);
     ExperienceSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
     ExperienceSlot->SetHorizontalAlignment(HAlign_Right);
@@ -466,7 +466,7 @@ void URA4CommandCentreMenuWidget::BuildLayout()
 
     UVerticalBox* News = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("News"));
     UTextBlock* NewsHeader = MakeText(
-        WidgetTree, LOCTEXT("NewsHeader", "СВОДКА НОВОСТЕЙ"), 16, Text, TEXT("NewsHeader"));
+        WidgetTree, LOCTEXT("NewsHeader", "SVODKA NOVOSTEY"), 16, Text, TEXT("NewsHeader"));
     News->AddChildToVerticalBox(NewsHeader)->SetPadding(FMargin(16.0f, 4.0f, 0.0f, 6.0f));
 
     UHorizontalBox* NewsCards = WidgetTree->ConstructWidget<UHorizontalBox>(
@@ -491,16 +491,16 @@ void URA4CommandCentreMenuWidget::BuildLayout()
     };
 
     AddNewsCard(
-        LOCTEXT("NewsOne", "НОВАЯ ФРАКЦИЯ: АВАНГАРД"),
-        LOCTEXT("NewsOneCopy", "Технологическое превосходство.\nТактическое устрашение."),
+        LOCTEXT("NewsOne", "NOVAYa FACTION: AVANGARD"),
+        LOCTEXT("NewsOneCopy", "Tekhnologicheskoe prevoskhodstvo.\nTakticheskoe ustrashenie."),
         FVector2D(0.53f, 0.49f), FVector2D(0.86f, 0.72f), TEXT("NewsCardOne"));
     AddNewsCard(
-        LOCTEXT("NewsTwo", "ОБНОВЛЕНИЕ БАЛАНСА 1.2"),
-        LOCTEXT("NewsTwoCopy", "Корректировка юнитов,\nулучшения и исправления."),
+        LOCTEXT("NewsTwo", "OBNOVLENIE BALANSA 1.2"),
+        LOCTEXT("NewsTwoCopy", "Korrektirovka yunitov,\nuluchsheniya i ispravleniya."),
         FVector2D(0.62f, 0.05f), FVector2D(0.96f, 0.32f), TEXT("NewsCardTwo"));
     AddNewsCard(
-        LOCTEXT("NewsThree", "СЕЗОННЫЙ ПРОПУСК"),
-        LOCTEXT("NewsThreeCopy", "Эксклюзивные награды\nи ранний доступ к контенту."),
+        LOCTEXT("NewsThree", "SEZONNYY PROPUSK"),
+        LOCTEXT("NewsThreeCopy", "Eksklyuzivnye nagrady\ni ranniy dostup k kontentu."),
         FVector2D(0.40f, 0.54f), FVector2D(0.74f, 0.82f), TEXT("NewsCardThree"));
     News->AddChildToVerticalBox(NewsCards)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
     UTextBlock* Pager = MakeText(
@@ -544,26 +544,26 @@ void URA4CommandCentreMenuWidget::BuildLayout()
 
     UVerticalBox* Dialog = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("ExitDialog"));
     UTextBlock* DialogTitle = MakeText(
-        WidgetTree, LOCTEXT("ExitTitle", "ЗАВЕРШИТЬ СЕАНС?"), 28, Red, TEXT("ExitTitle"));
+        WidgetTree, LOCTEXT("ExitTitle", "ZAVERShIT SEANS?"), 28, Red, TEXT("ExitTitle"));
     DialogTitle->SetJustification(ETextJustify::Center);
     Dialog->AddChildToVerticalBox(DialogTitle)->SetPadding(FMargin(24.0f, 24.0f, 24.0f, 12.0f));
     UTextBlock* DialogCopy = MakeText(
         WidgetTree,
-        LOCTEXT("ExitCopy", "Соединение с командным центром будет разорвано.\nНесохранённые данные текущей операции будут потеряны."),
+        LOCTEXT("ExitCopy", "Soedinenie s komandnym tsentrom budet razorvano.\nNesokhranyonnye dannye tekushchey operatsii budut poteryany."),
         16, Text, TEXT("ExitCopy"), false);
     DialogCopy->SetJustification(ETextJustify::Center);
     Dialog->AddChildToVerticalBox(DialogCopy)->SetPadding(FMargin(24.0f, 0.0f, 24.0f, 22.0f));
     UHorizontalBox* DialogActions = WidgetTree->ConstructWidget<UHorizontalBox>(
         UHorizontalBox::StaticClass(), TEXT("ExitActions"));
     UButton* CancelButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("CancelExitButton"));
-    CancelButton->AddChild(MakeText(WidgetTree, LOCTEXT("CancelExit", "ОТМЕНА"), 18, Text, TEXT("CancelExitLabel")));
+    CancelButton->AddChild(MakeText(WidgetTree, LOCTEXT("CancelExit", "OTMENA"), 18, Text, TEXT("CancelExitLabel")));
     CancelButton->OnClicked.AddDynamic(this, &URA4CommandCentreMenuWidget::CancelExit);
     UHorizontalBoxSlot* CancelSlot = DialogActions->AddChildToHorizontalBox(CancelButton);
     CancelSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
     CancelSlot->SetPadding(FMargin(18.0f, 0.0f, 8.0f, 18.0f));
     UButton* ConfirmButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("ConfirmExitButton"));
     ConfirmButton->SetBackgroundColor(RedDim);
-    ConfirmButton->AddChild(MakeText(WidgetTree, LOCTEXT("ConfirmExit", "ВЫЙТИ"), 18, Text, TEXT("ConfirmExitLabel")));
+    ConfirmButton->AddChild(MakeText(WidgetTree, LOCTEXT("ConfirmExit", "VYYTI"), 18, Text, TEXT("ConfirmExitLabel")));
     ConfirmButton->OnClicked.AddDynamic(this, &URA4CommandCentreMenuWidget::ConfirmExit);
     UHorizontalBoxSlot* ConfirmSlot = DialogActions->AddChildToHorizontalBox(ConfirmButton);
     ConfirmSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));

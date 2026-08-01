@@ -9,7 +9,7 @@
       "faction": "Soviet",
       "event": "Game.Start",
       "variant": 1,
-      "text": "Внимание. Штаб фронта к работе приступил.",
+      "text": "Vnimanie. HQ fronta k rabote pristupil.",
       "style_prefix": "(calm command announcement) ",
       "control_style": "calm command announcement"
     },
@@ -18,7 +18,7 @@
       "faction": "Soviet",
       "event": "Base.UnderAttack",
       "variant": 1,
-      "text": "Тревога. База под огнём противника.",
+      "text": "Trevoga. Baza pod ognyom protivnika.",
       "style_prefix": "(urgent command) ",
       "control_style": "urgent command"
     },
@@ -27,7 +27,7 @@
       "faction": "Soviet",
       "event": "Unit.Ready",
       "variant": 1,
-      "text": "Подразделение готово к выдвижению.",
+      "text": "Podrazdelenie gotovo k vydvizheniyu.",
       "style_prefix": "(alert ready) ",
       "control_style": "alert ready"
     },
@@ -36,7 +36,7 @@
       "faction": "Soviet",
       "event": "Player.Victory",
       "variant": 1,
-      "text": "Операция выполнена. Победа за нами.",
+      "text": "Operatsiya vypolnena. Victory za nami.",
       "style_prefix": "(restrained triumph) ",
       "control_style": "restrained triumph"
     },
@@ -45,7 +45,7 @@
       "faction": "Soviet",
       "event": "Resources.Low",
       "variant": 1,
-      "text": "Ресурсы на исходе. Сократите расход.",
+      "text": "Resursy na iskhode. Sokratite raskhod.",
       "style_prefix": "(measured warning) ",
       "control_style": "measured warning"
     },
@@ -54,7 +54,7 @@
       "faction": "Alliance",
       "event": "Game.Start",
       "variant": 1,
-      "text": "Командная сеть активирована. Готова к работе.",
+      "text": "Komandnaya set aktivirovana. Gotova k rabote.",
       "style_prefix": "(calm command announcement) ",
       "control_style": "calm command announcement"
     },
@@ -63,7 +63,7 @@
       "faction": "Alliance",
       "event": "Base.UnderAttack",
       "variant": 1,
-      "text": "Тревога. Наша база под ударом.",
+      "text": "Trevoga. Nasha baza pod udarom.",
       "style_prefix": "(urgent command) ",
       "control_style": "urgent command"
     },
@@ -72,7 +72,7 @@
       "faction": "Alliance",
       "event": "Unit.Ready",
       "variant": 1,
-      "text": "Боевая единица готова к развёртыванию.",
+      "text": "Boevaya edinitsa gotova k razvyortyvaniyu.",
       "style_prefix": "(alert ready) ",
       "control_style": "alert ready"
     },
@@ -81,7 +81,7 @@
       "faction": "Alliance",
       "event": "Player.Victory",
       "variant": 1,
-      "text": "Миссия завершена. Превосходство подтверждено.",
+      "text": "Missiya zavershena. Prevoskhodstvo podtverzhdeno.",
       "style_prefix": "(restrained triumph) ",
       "control_style": "restrained triumph"
     },
@@ -90,7 +90,7 @@
       "faction": "Alliance",
       "event": "Resources.Low",
       "variant": 1,
-      "text": "Внимание. Запас ресурсов снижается.",
+      "text": "Vnimanie. Zapas resursov snizhaetsya.",
       "style_prefix": "(measured warning) ",
       "control_style": "measured warning"
     },
@@ -99,7 +99,7 @@
       "faction": "Coalition",
       "event": "Game.Start",
       "variant": 1,
-      "text": "Центр командования на связи. Операция начата.",
+      "text": "Tsentr komandovaniya na svyazi. Operatsiya nachata.",
       "style_prefix": "(calm command announcement) ",
       "control_style": "calm command announcement"
     },
@@ -108,7 +108,7 @@
       "faction": "Coalition",
       "event": "Base.UnderAttack",
       "variant": 1,
-      "text": "Тревога. Объект под огнём противника.",
+      "text": "Trevoga. Obekt pod ognyom protivnika.",
       "style_prefix": "(urgent command) ",
       "control_style": "urgent command"
     },
@@ -117,7 +117,7 @@
       "faction": "Coalition",
       "event": "Unit.Ready",
       "variant": 1,
-      "text": "Подразделение в полной готовности.",
+      "text": "Podrazdelenie v polnoy gotovnosti.",
       "style_prefix": "(alert ready) ",
       "control_style": "alert ready"
     },
@@ -126,7 +126,7 @@
       "faction": "Coalition",
       "event": "Player.Victory",
       "variant": 1,
-      "text": "Стратегическая цель достигнута.",
+      "text": "Strategicheskaya tsel dostignuta.",
       "style_prefix": "(restrained triumph) ",
       "control_style": "restrained triumph"
     },
@@ -135,7 +135,7 @@
       "faction": "Coalition",
       "event": "Resources.Low",
       "variant": 1,
-      "text": "Ресурсы ограничены. Координируйте расход.",
+      "text": "Resursy ogranicheny. Koordiniruyte raskhod.",
       "style_prefix": "(measured warning) ",
       "control_style": "measured warning"
     },
@@ -144,7 +144,7 @@
       "faction": "Chrono",
       "event": "Game.Start",
       "variant": 1,
-      "text": "Цикл инициализирован. Координатор на связи.",
+      "text": "Tsikl initsializirovan. Koordinator na svyazi.",
       "style_prefix": "(calm command announcement) ",
       "control_style": "calm command announcement"
     },
@@ -153,7 +153,7 @@
       "faction": "Chrono",
       "event": "Base.UnderAttack",
       "variant": 1,
-      "text": "Аномалия. Объект под воздействием.",
+      "text": "Anomaliya. Obekt pod vozdeystviem.",
       "style_prefix": "(urgent command) ",
       "control_style": "urgent command"
     },
@@ -162,7 +162,7 @@
       "faction": "Chrono",
       "event": "Unit.Ready",
       "variant": 1,
-      "text": "Структура развёрнута. Готова к координации.",
+      "text": "Struktura razvyornuta. Gotova k koordinatsii.",
       "style_prefix": "(alert ready) ",
       "control_style": "alert ready"
     },
@@ -171,7 +171,7 @@
       "faction": "Chrono",
       "event": "Player.Victory",
       "variant": 1,
-      "text": "Временная линия зафиксирована. Успех подтверждён.",
+      "text": "Vremennaya liniya zafiksirovana. Uspekh podtverzhdyon.",
       "style_prefix": "(restrained triumph) ",
       "control_style": "restrained triumph"
     },
@@ -180,7 +180,7 @@
       "faction": "Chrono",
       "event": "Resources.Low",
       "variant": 1,
-      "text": "Ресурс исчерпывается. Замедление процессов.",
+      "text": "Resurs ischerpyvaetsya. Zamedlenie protsessov.",
       "style_prefix": "(measured warning) ",
       "control_style": "measured warning"
     },
@@ -189,7 +189,7 @@
       "faction": "Soviet",
       "event": "Selected",
       "variant": 1,
-      "text": "Пехота на позиции.",
+      "text": "Infantry na pozitsii.",
       "style_prefix": "(alert ready concise) ",
       "control_style": "alert ready concise"
     },
@@ -198,7 +198,7 @@
       "faction": "Soviet",
       "event": "Move",
       "variant": 1,
-      "text": "Выдвигаюсь.",
+      "text": "Vydvigayus.",
       "style_prefix": "(confident acknowledgement focused) ",
       "control_style": "confident acknowledgement focused"
     },
@@ -207,7 +207,7 @@
       "faction": "Soviet",
       "event": "Attack",
       "variant": 1,
-      "text": "Огонь по противнику.",
+      "text": "Ogon po protivniku.",
       "style_prefix": "(controlled aggression combat) ",
       "control_style": "controlled aggression combat"
     },
@@ -216,7 +216,7 @@
       "faction": "Soviet",
       "event": "EnemyDestroyed",
       "variant": 1,
-      "text": "Цель нейтрализована.",
+      "text": "Tsel neytralizovana.",
       "style_prefix": "(controlled satisfaction) ",
       "control_style": "controlled satisfaction"
     },
@@ -225,7 +225,7 @@
       "faction": "Soviet",
       "event": "Idle",
       "variant": 1,
-      "text": "Жду приказа.",
+      "text": "Zhdu prikaza.",
       "style_prefix": "(relaxed in character) ",
       "control_style": "relaxed in character"
     },
@@ -234,7 +234,7 @@
       "faction": "Alliance",
       "event": "Selected",
       "variant": 1,
-      "text": "Пехота на позиции.",
+      "text": "Infantry na pozitsii.",
       "style_prefix": "(alert ready concise) ",
       "control_style": "alert ready concise"
     },
@@ -243,7 +243,7 @@
       "faction": "Alliance",
       "event": "Move",
       "variant": 1,
-      "text": "Выдвигаюсь.",
+      "text": "Vydvigayus.",
       "style_prefix": "(confident acknowledgement focused) ",
       "control_style": "confident acknowledgement focused"
     },
@@ -252,7 +252,7 @@
       "faction": "Alliance",
       "event": "Attack",
       "variant": 1,
-      "text": "Огонь по противнику.",
+      "text": "Ogon po protivniku.",
       "style_prefix": "(controlled aggression combat) ",
       "control_style": "controlled aggression combat"
     },
@@ -261,7 +261,7 @@
       "faction": "Alliance",
       "event": "EnemyDestroyed",
       "variant": 1,
-      "text": "Цель нейтрализована.",
+      "text": "Tsel neytralizovana.",
       "style_prefix": "(controlled satisfaction) ",
       "control_style": "controlled satisfaction"
     },
@@ -270,7 +270,7 @@
       "faction": "Alliance",
       "event": "Idle",
       "variant": 1,
-      "text": "Жду приказа.",
+      "text": "Zhdu prikaza.",
       "style_prefix": "(relaxed in character) ",
       "control_style": "relaxed in character"
     },
@@ -279,7 +279,7 @@
       "faction": "Coalition",
       "event": "Selected",
       "variant": 1,
-      "text": "Пехота на позиции.",
+      "text": "Infantry na pozitsii.",
       "style_prefix": "(alert ready concise) ",
       "control_style": "alert ready concise"
     },
@@ -288,7 +288,7 @@
       "faction": "Coalition",
       "event": "Move",
       "variant": 1,
-      "text": "Выдвигаюсь.",
+      "text": "Vydvigayus.",
       "style_prefix": "(confident acknowledgement focused) ",
       "control_style": "confident acknowledgement focused"
     },
@@ -297,7 +297,7 @@
       "faction": "Coalition",
       "event": "Attack",
       "variant": 1,
-      "text": "Огонь по противнику.",
+      "text": "Ogon po protivniku.",
       "style_prefix": "(controlled aggression combat) ",
       "control_style": "controlled aggression combat"
     },
@@ -306,7 +306,7 @@
       "faction": "Coalition",
       "event": "EnemyDestroyed",
       "variant": 1,
-      "text": "Цель нейтрализована.",
+      "text": "Tsel neytralizovana.",
       "style_prefix": "(controlled satisfaction) ",
       "control_style": "controlled satisfaction"
     },
@@ -315,7 +315,7 @@
       "faction": "Coalition",
       "event": "Idle",
       "variant": 1,
-      "text": "Жду приказа.",
+      "text": "Zhdu prikaza.",
       "style_prefix": "(relaxed in character) ",
       "control_style": "relaxed in character"
     },
@@ -324,7 +324,7 @@
       "faction": "Chrono",
       "event": "Selected",
       "variant": 1,
-      "text": "Пехота на позиции.",
+      "text": "Infantry na pozitsii.",
       "style_prefix": "(alert ready concise) ",
       "control_style": "alert ready concise"
     },
@@ -333,7 +333,7 @@
       "faction": "Chrono",
       "event": "Move",
       "variant": 1,
-      "text": "Выдвигаюсь.",
+      "text": "Vydvigayus.",
       "style_prefix": "(confident acknowledgement focused) ",
       "control_style": "confident acknowledgement focused"
     },
@@ -342,7 +342,7 @@
       "faction": "Chrono",
       "event": "Attack",
       "variant": 1,
-      "text": "Огонь по противнику.",
+      "text": "Ogon po protivniku.",
       "style_prefix": "(controlled aggression combat) ",
       "control_style": "controlled aggression combat"
     },
@@ -351,7 +351,7 @@
       "faction": "Chrono",
       "event": "EnemyDestroyed",
       "variant": 1,
-      "text": "Цель нейтрализована.",
+      "text": "Tsel neytralizovana.",
       "style_prefix": "(controlled satisfaction) ",
       "control_style": "controlled satisfaction"
     },
@@ -360,7 +360,7 @@
       "faction": "Chrono",
       "event": "Idle",
       "variant": 1,
-      "text": "Жду приказа.",
+      "text": "Zhdu prikaza.",
       "style_prefix": "(relaxed in character) ",
       "control_style": "relaxed in character"
     },
@@ -369,7 +369,7 @@
       "faction": "Soviet",
       "event": "Selected",
       "variant": 1,
-      "text": "Танк в строю.",
+      "text": "Tank v stroyu.",
       "style_prefix": "(alert ready concise) ",
       "control_style": "alert ready concise"
     },
@@ -378,7 +378,7 @@
       "faction": "Soviet",
       "event": "Attack",
       "variant": 1,
-      "text": "Орудие к бою. Огонь.",
+      "text": "Orudie k boyu. Ogon.",
       "style_prefix": "(controlled aggression combat) ",
       "control_style": "controlled aggression combat"
     },
@@ -387,7 +387,7 @@
       "faction": "Soviet",
       "event": "Attack.Building",
       "variant": 1,
-      "text": "Заградительный огонь по укреплениям.",
+      "text": "Zagraditelnyy ogon po ukrepleniyam.",
       "style_prefix": "(controlled aggression combat) ",
       "control_style": "controlled aggression combat"
     },
@@ -396,7 +396,7 @@
       "faction": "Soviet",
       "event": "Damaged",
       "variant": 1,
-      "text": "Попадание. Маневрирую.",
+      "text": "Popadanie. Manevriruyu.",
       "style_prefix": "(strained but intelligible urgent) ",
       "control_style": "strained but intelligible urgent"
     },
@@ -405,7 +405,7 @@
       "faction": "Soviet",
       "event": "CriticalDamage",
       "variant": 1,
-      "text": "Броня пробита. Аварийный режим.",
+      "text": "Bronya probita. Avariynyy rezhim.",
       "style_prefix": "(severe urgency controlled panic) ",
       "control_style": "severe urgency controlled panic"
     },
@@ -414,7 +414,7 @@
       "faction": "Alliance",
       "event": "Selected",
       "variant": 1,
-      "text": "Танк в строю.",
+      "text": "Tank v stroyu.",
       "style_prefix": "(alert ready concise) ",
       "control_style": "alert ready concise"
     },
@@ -423,7 +423,7 @@
       "faction": "Alliance",
       "event": "Attack",
       "variant": 1,
-      "text": "Орудие к бою. Огонь.",
+      "text": "Orudie k boyu. Ogon.",
       "style_prefix": "(controlled aggression combat) ",
       "control_style": "controlled aggression combat"
     },
@@ -432,7 +432,7 @@
       "faction": "Alliance",
       "event": "Attack.Building",
       "variant": 1,
-      "text": "Заградительный огонь по укреплениям.",
+      "text": "Zagraditelnyy ogon po ukrepleniyam.",
       "style_prefix": "(controlled aggression combat) ",
       "control_style": "controlled aggression combat"
     },
@@ -441,7 +441,7 @@
       "faction": "Alliance",
       "event": "Damaged",
       "variant": 1,
-      "text": "Попадание. Маневрирую.",
+      "text": "Popadanie. Manevriruyu.",
       "style_prefix": "(strained but intelligible urgent) ",
       "control_style": "strained but intelligible urgent"
     },
@@ -450,7 +450,7 @@
       "faction": "Alliance",
       "event": "CriticalDamage",
       "variant": 1,
-      "text": "Броня пробита. Аварийный режим.",
+      "text": "Bronya probita. Avariynyy rezhim.",
       "style_prefix": "(severe urgency controlled panic) ",
       "control_style": "severe urgency controlled panic"
     },
@@ -459,7 +459,7 @@
       "faction": "Coalition",
       "event": "Selected",
       "variant": 1,
-      "text": "Танк в строю.",
+      "text": "Tank v stroyu.",
       "style_prefix": "(alert ready concise) ",
       "control_style": "alert ready concise"
     },
@@ -468,7 +468,7 @@
       "faction": "Coalition",
       "event": "Attack",
       "variant": 1,
-      "text": "Орудие к бою. Огонь.",
+      "text": "Orudie k boyu. Ogon.",
       "style_prefix": "(controlled aggression combat) ",
       "control_style": "controlled aggression combat"
     },
@@ -477,7 +477,7 @@
       "faction": "Coalition",
       "event": "Attack.Building",
       "variant": 1,
-      "text": "Заградительный огонь по укреплениям.",
+      "text": "Zagraditelnyy ogon po ukrepleniyam.",
       "style_prefix": "(controlled aggression combat) ",
       "control_style": "controlled aggression combat"
     },
@@ -486,7 +486,7 @@
       "faction": "Coalition",
       "event": "Damaged",
       "variant": 1,
-      "text": "Попадание. Маневрирую.",
+      "text": "Popadanie. Manevriruyu.",
       "style_prefix": "(strained but intelligible urgent) ",
       "control_style": "strained but intelligible urgent"
     },
@@ -495,7 +495,7 @@
       "faction": "Coalition",
       "event": "CriticalDamage",
       "variant": 1,
-      "text": "Броня пробита. Аварийный режим.",
+      "text": "Bronya probita. Avariynyy rezhim.",
       "style_prefix": "(severe urgency controlled panic) ",
       "control_style": "severe urgency controlled panic"
     },
@@ -504,7 +504,7 @@
       "faction": "Chrono",
       "event": "Selected",
       "variant": 1,
-      "text": "Танк в строю.",
+      "text": "Tank v stroyu.",
       "style_prefix": "(alert ready concise) ",
       "control_style": "alert ready concise"
     },
@@ -513,7 +513,7 @@
       "faction": "Chrono",
       "event": "Attack",
       "variant": 1,
-      "text": "Орудие к бою. Огонь.",
+      "text": "Orudie k boyu. Ogon.",
       "style_prefix": "(controlled aggression combat) ",
       "control_style": "controlled aggression combat"
     },
@@ -522,7 +522,7 @@
       "faction": "Chrono",
       "event": "Attack.Building",
       "variant": 1,
-      "text": "Заградительный огонь по укреплениям.",
+      "text": "Zagraditelnyy ogon po ukrepleniyam.",
       "style_prefix": "(controlled aggression combat) ",
       "control_style": "controlled aggression combat"
     },
@@ -531,7 +531,7 @@
       "faction": "Chrono",
       "event": "Damaged",
       "variant": 1,
-      "text": "Попадание. Маневрирую.",
+      "text": "Popadanie. Manevriruyu.",
       "style_prefix": "(strained but intelligible urgent) ",
       "control_style": "strained but intelligible urgent"
     },
@@ -540,7 +540,7 @@
       "faction": "Chrono",
       "event": "CriticalDamage",
       "variant": 1,
-      "text": "Броня пробита. Аварийный режим.",
+      "text": "Bronya probita. Avariynyy rezhim.",
       "style_prefix": "(severe urgency controlled panic) ",
       "control_style": "severe urgency controlled panic"
     },
@@ -549,7 +549,7 @@
       "faction": "Soviet",
       "event": "Selected",
       "variant": 1,
-      "text": "Пилот в кабине.",
+      "text": "Pilot v kabine.",
       "style_prefix": "(alert ready concise) ",
       "control_style": "alert ready concise"
     },
@@ -558,7 +558,7 @@
       "faction": "Soviet",
       "event": "Attack.Air",
       "variant": 1,
-      "text": "Воздушный бой. Атакую ведущего.",
+      "text": "Vozdushnyy boy. Atakuyu vedushchego.",
       "style_prefix": "(focused combat intensity) ",
       "control_style": "focused combat intensity"
     },
@@ -567,7 +567,7 @@
       "faction": "Soviet",
       "event": "Ability.Activate",
       "variant": 1,
-      "text": "Активирую систему.",
+      "text": "Aktiviruyu sistemu.",
       "style_prefix": "(sharp focused) ",
       "control_style": "sharp focused"
     },
@@ -576,7 +576,7 @@
       "faction": "Soviet",
       "event": "EnemyDestroyed",
       "variant": 1,
-      "text": "Цель сбита.",
+      "text": "Tsel sbita.",
       "style_prefix": "(controlled satisfaction) ",
       "control_style": "controlled satisfaction"
     },
@@ -585,7 +585,7 @@
       "faction": "Soviet",
       "event": "Death",
       "variant": 1,
-      "text": "Катапультируюсь.",
+      "text": "Katapultiruyus.",
       "style_prefix": "(short final reaction) ",
       "control_style": "short final reaction"
     },
@@ -594,7 +594,7 @@
       "faction": "Alliance",
       "event": "Selected",
       "variant": 1,
-      "text": "Пилот в кабине.",
+      "text": "Pilot v kabine.",
       "style_prefix": "(alert ready concise) ",
       "control_style": "alert ready concise"
     },
@@ -603,7 +603,7 @@
       "faction": "Alliance",
       "event": "Attack.Air",
       "variant": 1,
-      "text": "Воздушный бой. Атакую ведущего.",
+      "text": "Vozdushnyy boy. Atakuyu vedushchego.",
       "style_prefix": "(focused combat intensity) ",
       "control_style": "focused combat intensity"
     },
@@ -612,7 +612,7 @@
       "faction": "Alliance",
       "event": "Ability.Activate",
       "variant": 1,
-      "text": "Активирую систему.",
+      "text": "Aktiviruyu sistemu.",
       "style_prefix": "(sharp focused) ",
       "control_style": "sharp focused"
     },
@@ -621,7 +621,7 @@
       "faction": "Alliance",
       "event": "EnemyDestroyed",
       "variant": 1,
-      "text": "Цель сбита.",
+      "text": "Tsel sbita.",
       "style_prefix": "(controlled satisfaction) ",
       "control_style": "controlled satisfaction"
     },
@@ -630,7 +630,7 @@
       "faction": "Alliance",
       "event": "Death",
       "variant": 1,
-      "text": "Катапультируюсь.",
+      "text": "Katapultiruyus.",
       "style_prefix": "(short final reaction) ",
       "control_style": "short final reaction"
     },
@@ -639,7 +639,7 @@
       "faction": "Coalition",
       "event": "Selected",
       "variant": 1,
-      "text": "Пилот в кабине.",
+      "text": "Pilot v kabine.",
       "style_prefix": "(alert ready concise) ",
       "control_style": "alert ready concise"
     },
@@ -648,7 +648,7 @@
       "faction": "Coalition",
       "event": "Attack.Air",
       "variant": 1,
-      "text": "Воздушный бой. Атакую ведущего.",
+      "text": "Vozdushnyy boy. Atakuyu vedushchego.",
       "style_prefix": "(focused combat intensity) ",
       "control_style": "focused combat intensity"
     },
@@ -657,7 +657,7 @@
       "faction": "Coalition",
       "event": "Ability.Activate",
       "variant": 1,
-      "text": "Активирую систему.",
+      "text": "Aktiviruyu sistemu.",
       "style_prefix": "(sharp focused) ",
       "control_style": "sharp focused"
     },
@@ -666,7 +666,7 @@
       "faction": "Coalition",
       "event": "EnemyDestroyed",
       "variant": 1,
-      "text": "Цель сбита.",
+      "text": "Tsel sbita.",
       "style_prefix": "(controlled satisfaction) ",
       "control_style": "controlled satisfaction"
     },
@@ -675,7 +675,7 @@
       "faction": "Coalition",
       "event": "Death",
       "variant": 1,
-      "text": "Катапультируюсь.",
+      "text": "Katapultiruyus.",
       "style_prefix": "(short final reaction) ",
       "control_style": "short final reaction"
     },
@@ -684,7 +684,7 @@
       "faction": "Chrono",
       "event": "Selected",
       "variant": 1,
-      "text": "Пилот в кабине.",
+      "text": "Pilot v kabine.",
       "style_prefix": "(alert ready concise) ",
       "control_style": "alert ready concise"
     },
@@ -693,7 +693,7 @@
       "faction": "Chrono",
       "event": "Attack.Air",
       "variant": 1,
-      "text": "Воздушный бой. Атакую ведущего.",
+      "text": "Vozdushnyy boy. Atakuyu vedushchego.",
       "style_prefix": "(focused combat intensity) ",
       "control_style": "focused combat intensity"
     },
@@ -702,7 +702,7 @@
       "faction": "Chrono",
       "event": "Ability.Activate",
       "variant": 1,
-      "text": "Активирую систему.",
+      "text": "Aktiviruyu sistemu.",
       "style_prefix": "(sharp focused) ",
       "control_style": "sharp focused"
     },
@@ -711,7 +711,7 @@
       "faction": "Chrono",
       "event": "EnemyDestroyed",
       "variant": 1,
-      "text": "Цель сбита.",
+      "text": "Tsel sbita.",
       "style_prefix": "(controlled satisfaction) ",
       "control_style": "controlled satisfaction"
     },
@@ -720,7 +720,7 @@
       "faction": "Chrono",
       "event": "Death",
       "variant": 1,
-      "text": "Катапультируюсь.",
+      "text": "Katapultiruyus.",
       "style_prefix": "(short final reaction) ",
       "control_style": "short final reaction"
     },
@@ -729,7 +729,7 @@
       "faction": "Soviet",
       "event": "Selected",
       "variant": 1,
-      "text": "Капитан на мостике.",
+      "text": "Kapitan na mostike.",
       "style_prefix": "(alert ready concise) ",
       "control_style": "alert ready concise"
     },
@@ -738,7 +738,7 @@
       "faction": "Soviet",
       "event": "Move",
       "variant": 1,
-      "text": "Курс на позицию.",
+      "text": "Kurs na pozitsiyu.",
       "style_prefix": "(confident acknowledgement focused) ",
       "control_style": "confident acknowledgement focused"
     },
@@ -747,7 +747,7 @@
       "faction": "Soviet",
       "event": "Attack",
       "variant": 1,
-      "text": "Огонь по кораблю противника.",
+      "text": "Ogon po korablyu protivnika.",
       "style_prefix": "(controlled aggression combat) ",
       "control_style": "controlled aggression combat"
     },
@@ -756,7 +756,7 @@
       "faction": "Soviet",
       "event": "CannotComply",
       "variant": 1,
-      "text": "Приказ невыполним.",
+      "text": "Prikaz nevypolnim.",
       "style_prefix": "(firm concise refusal) ",
       "control_style": "firm concise refusal"
     },
@@ -765,7 +765,7 @@
       "faction": "Soviet",
       "event": "Death",
       "variant": 1,
-      "text": "Корабль теряем.",
+      "text": "Korabl teryaem.",
       "style_prefix": "(short final reaction) ",
       "control_style": "short final reaction"
     },
@@ -774,7 +774,7 @@
       "faction": "Alliance",
       "event": "Selected",
       "variant": 1,
-      "text": "Капитан на мостике.",
+      "text": "Kapitan na mostike.",
       "style_prefix": "(alert ready concise) ",
       "control_style": "alert ready concise"
     },
@@ -783,7 +783,7 @@
       "faction": "Alliance",
       "event": "Move",
       "variant": 1,
-      "text": "Курс на позицию.",
+      "text": "Kurs na pozitsiyu.",
       "style_prefix": "(confident acknowledgement focused) ",
       "control_style": "confident acknowledgement focused"
     },
@@ -792,7 +792,7 @@
       "faction": "Alliance",
       "event": "Attack",
       "variant": 1,
-      "text": "Огонь по кораблю противника.",
+      "text": "Ogon po korablyu protivnika.",
       "style_prefix": "(controlled aggression combat) ",
       "control_style": "controlled aggression combat"
     },
@@ -801,7 +801,7 @@
       "faction": "Alliance",
       "event": "CannotComply",
       "variant": 1,
-      "text": "Приказ невыполним.",
+      "text": "Prikaz nevypolnim.",
       "style_prefix": "(firm concise refusal) ",
       "control_style": "firm concise refusal"
     },
@@ -810,7 +810,7 @@
       "faction": "Alliance",
       "event": "Death",
       "variant": 1,
-      "text": "Корабль теряем.",
+      "text": "Korabl teryaem.",
       "style_prefix": "(short final reaction) ",
       "control_style": "short final reaction"
     },
@@ -819,7 +819,7 @@
       "faction": "Coalition",
       "event": "Selected",
       "variant": 1,
-      "text": "Капитан на мостике.",
+      "text": "Kapitan na mostike.",
       "style_prefix": "(alert ready concise) ",
       "control_style": "alert ready concise"
     },
@@ -828,7 +828,7 @@
       "faction": "Coalition",
       "event": "Move",
       "variant": 1,
-      "text": "Курс на позицию.",
+      "text": "Kurs na pozitsiyu.",
       "style_prefix": "(confident acknowledgement focused) ",
       "control_style": "confident acknowledgement focused"
     },
@@ -837,7 +837,7 @@
       "faction": "Coalition",
       "event": "Attack",
       "variant": 1,
-      "text": "Огонь по кораблю противника.",
+      "text": "Ogon po korablyu protivnika.",
       "style_prefix": "(controlled aggression combat) ",
       "control_style": "controlled aggression combat"
     },
@@ -846,7 +846,7 @@
       "faction": "Coalition",
       "event": "CannotComply",
       "variant": 1,
-      "text": "Приказ невыполним.",
+      "text": "Prikaz nevypolnim.",
       "style_prefix": "(firm concise refusal) ",
       "control_style": "firm concise refusal"
     },
@@ -855,7 +855,7 @@
       "faction": "Coalition",
       "event": "Death",
       "variant": 1,
-      "text": "Корабль теряем.",
+      "text": "Korabl teryaem.",
       "style_prefix": "(short final reaction) ",
       "control_style": "short final reaction"
     },
@@ -864,7 +864,7 @@
       "faction": "Chrono",
       "event": "Selected",
       "variant": 1,
-      "text": "Капитан на мостике.",
+      "text": "Kapitan na mostike.",
       "style_prefix": "(alert ready concise) ",
       "control_style": "alert ready concise"
     },
@@ -873,7 +873,7 @@
       "faction": "Chrono",
       "event": "Move",
       "variant": 1,
-      "text": "Курс на позицию.",
+      "text": "Kurs na pozitsiyu.",
       "style_prefix": "(confident acknowledgement focused) ",
       "control_style": "confident acknowledgement focused"
     },
@@ -882,7 +882,7 @@
       "faction": "Chrono",
       "event": "Attack",
       "variant": 1,
-      "text": "Огонь по кораблю противника.",
+      "text": "Ogon po korablyu protivnika.",
       "style_prefix": "(controlled aggression combat) ",
       "control_style": "controlled aggression combat"
     },
@@ -891,7 +891,7 @@
       "faction": "Chrono",
       "event": "CannotComply",
       "variant": 1,
-      "text": "Приказ невыполним.",
+      "text": "Prikaz nevypolnim.",
       "style_prefix": "(firm concise refusal) ",
       "control_style": "firm concise refusal"
     },
@@ -900,7 +900,7 @@
       "faction": "Chrono",
       "event": "Death",
       "variant": 1,
-      "text": "Корабль теряем.",
+      "text": "Korabl teryaem.",
       "style_prefix": "(short final reaction) ",
       "control_style": "short final reaction"
     }

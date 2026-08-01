@@ -1,68 +1,48 @@
-# 04. Clean-room policy для коммерческого проекта
-
-> Это инженерная политика снижения риска, а не юридическое заключение. Перед коммерческим релизом нужна проверка юристом по интеллектуальной собственности.
-
-## 4.1. Запрещённые действия
-
-В production-репозиторий нельзя помещать:
-
-- EA C++ source files или их почти буквальный перевод;
-- RA3 XML как runtime data;
-- EA XSD, shaders, W3X, TGA, 3ds Max files;
-- оригинальные названия юнитов, фракций, abilities, персонажей и миссий;
-- оригинальные числовые таблицы баланса;
-- EA-аудио, музыку, voice lines, UI sprites, logos;
-- generated assets, построенные как производная копия конкретного EA-ресурса;
-- слово `Red Alert` в коммерческом названии без лицензии.
-
-## 4.2. Разрешённый результат исследования
-
-Можно сохранять самостоятельно написанные документы, содержащие:
-
-- общие архитектурные границы;
-- перечни требований к подсистемам;
-- абстрактные диаграммы потоков;
-- независимые интерфейсы;
-- тестовые инварианты;
-- собственную таксономию игровых ролей;
-- сравнительные таблицы без копирования значимых массивов значений;
-- ссылки и provenance metadata.
-
-## 4.3. Разделение ролей
-
-Рекомендуемый процесс:
-
+# 04. Clean-room policy for a commercial project
+> This is an engineering risk mitigation policy, not a legal opinion. Review by an intellectual property lawyer is required before commercial release.
+## 4.1. Prohibited actions
+The following cannot be placed in the production repository:
+- EA C++ source files or their almost literal translation;
+- RA3 XML as runtime data;- EA XSD, shaders, W3X, TGA, 3ds Max files;
+- original names of units, factions, abilities, characters and missions;
+- original numerical balance tables;
+- EA audio, music, voice lines, UI sprites, logos;
+- generated assets, built as a derivative copy of a specific EA resource;
+- the word `Red Alert` in the commercial name without a license.
+## 4.2. Permitted research result
+You can save documents you write yourself that contain:
+- general architectural boundaries;
+- lists of requirements for subsystems;
+- abstract flow diagrams;
+- independent interfaces;
+- test invariants;
+- own taxonomy of game roles;
+- comparison tables without copying significant arrays of values;
+- links and provenance metadata.
+## 4.3. Separation of roles
+Recommended process:
 ```text
 Researcher
-  читает EA-материалы
-  → пишет нейтральную спецификацию поведения и ограничений
-
+reads EA materials
+  → writes a neutral specification of behavior and restrictions
 Clean-room implementer
-  получает только спецификацию
-  → пишет Unreal-код самостоятельно
-
+receives only the specification
+  → writes Unreal code independently
 Reviewer
-  проверяет отсутствие literal similarity, EA identifiers и запрещённых файлов
-```
+checks for the absence of literal similarity, EA identifiers and prohibited files```
 
-На маленькой команде физическое разделение людей может быть невозможно. Тогда применяются отдельные ветки, контексты и обязательный review журнала происхождения.
-
-## 4.4. Структура каталогов
-
+On a small team, physically separating people may not be possible. Then separate branches, contexts and a mandatory review of the origin log are applied.
+## 4.4. Directory structure
 ```text
-Research/RA3_SAGE_Study/          только самостоятельные заметки
-ExternalResearch/                 gitignored, локальные копии источников
-Source/                           только оригинальный код проекта
-Content/                          только оригинальные/лицензированные assets
-Build/Compliance/                 scanners и allow/deny lists
-```
+Research/RA3_SAGE_Study/ self-notes only
+ExternalResearch/ gitignored, local copies of sources
+Source/ only original project code
+Content/ only original/licensed assets
+Build/Compliance/scanners and allow/deny lists```
 
-`ExternalResearch/` не должен попадать в Git, CI artifacts, packaged builds или резервные публичные архивы.
-
-## 4.5. Provenance для каждого production asset
-
-Минимальные поля:
-
+`ExternalResearch/` should not end up in Git, CI artifacts, packaged builds or public backup archives.
+## 4.5. Provenance for each production asset
+Minimum fields:
 ```text
 asset_id
 path
@@ -78,27 +58,20 @@ reviewer
 notes
 ```
 
-## 4.6. Автоматические проверки CI
-
-Добавить job `compliance-scan`:
-
-- запрещённые расширения и каталоги;
-- known EA filenames;
+## 4.6. Automated CI checks
+Add job `compliance-scan`:
+- prohibited extensions and directories;- known EA filenames;
 - C&C faction/unit/person names;
 - EA copyright headers;
-- подозрительные XML namespaces и path prefixes;
-- shader signatures/filenames;
-- asset manifest без provenance;
-- binary files без allowlist.
+- suspicious XML namespaces and path prefixes;- shader signatures/filenames;
+- asset manifest without provenance;
+- binary files without allowlist.
 
-Результат — блокирующий, а не advisory.
-
-## 4.7. Правило для AI-кодогенерации
-
-Промты для кодовых агентов должны явно говорить:
-
-- не копировать и не переводить EA-код;
-- не генерировать API по конкретным EA class names;
-- работать по независимой спецификации RA4;
-- указывать происхождение любых внешних фрагментов;
-- помечать сомнительные места для legal/compliance review.
+The result is blocking, not advisory.
+## 4.7. Rule for AI code generation
+Prompts for code agents must explicitly say:
+- do not copy or translate the EA code;
+- do not generate APIs based on specific EA class names;
+- work according to independent specification RA4;
+- indicate the origin of any external fragments;
+- mark questionable places for legal/compliance review.

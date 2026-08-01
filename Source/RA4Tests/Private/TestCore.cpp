@@ -160,7 +160,7 @@ RA4_TEST(ByteStream, RoundTripsEveryType)
     W.WriteUInt64(0x0123456789ABCDEFull);
     W.WriteInt64(-9007199254740993ll);
     W.WriteBool(true);
-    W.WriteString("Красная тревога");
+    W.WriteString("Krasnaya trevoga");
 
     ByteReader R(W.GetBuffer());
     RA4_EXPECT_EQ(R.ReadUInt8(), uint8_t(0xAB));
@@ -170,7 +170,7 @@ RA4_TEST(ByteStream, RoundTripsEveryType)
     RA4_EXPECT(R.ReadUInt64() == 0x0123456789ABCDEFull);
     RA4_EXPECT(R.ReadInt64() == -9007199254740993ll);
     RA4_EXPECT(R.ReadBool());
-    RA4_EXPECT(R.ReadString() == "Красная тревога");
+    RA4_EXPECT(R.ReadString() == "Krasnaya trevoga");
     RA4_EXPECT(!R.HasError());
 }
 

@@ -69,64 +69,64 @@ FText KeyToText(const std::string& Key)
 
     // Russian Localization dictionary for unit & structure IDs
     static const std::unordered_map<std::string, FText> LocMap = {
-        {"faction.soviet.building.construction_yard", NSLOCTEXT("RA4", "headquarters_su", "Штаб-квартира СССР")},
-        {"faction.soviet.building.power_plant", NSLOCTEXT("RA4", "power_plant_su", "Электростанция")},
-        {"faction.soviet.building.refinery", NSLOCTEXT("RA4", "refinery_su", "Переработчик руды")},
-        {"faction.soviet.building.barracks", NSLOCTEXT("RA4", "barracks_su", "Казармы СССР")},
-        {"faction.soviet.building.war_factory", NSLOCTEXT("RA4", "war_factory_su", "Завод техники СССР")},
-        {"faction.soviet.building.turret", NSLOCTEXT("RA4", "turret_ai_su", "Пулеметная турель")},
-        {"faction.soviet.unit.mcv", NSLOCTEXT("RA4", "mcv_su", "Мобильная база")},
-        {"faction.soviet.unit.harvester", NSLOCTEXT("RA4", "harvester_su", "Рудосборщик «Богатырь»")},
-        {"faction.soviet.unit.basic_infantry", NSLOCTEXT("RA4", "rubezh_rifleman", "Стрелок «Рубеж»")},
-        {"faction.soviet.unit.antiarmor_infantry", NSLOCTEXT("RA4", "zaslon_aa", "Расчёт «Заслон»")},
-        {"faction.soviet.unit.main_tank", NSLOCTEXT("RA4", "granit_mbt", "Танк «Гранит»")},
+        {"faction.soviet.building.construction_yard", NSLOCTEXT("RA4", "headquarters_su", "Command Center-kvartira Soviet")},
+        {"faction.soviet.building.power_plant", NSLOCTEXT("RA4", "power_plant_su", "Elektrostantsiya")},
+        {"faction.soviet.building.refinery", NSLOCTEXT("RA4", "refinery_su", "Pererabotchik rudy")},
+        {"faction.soviet.building.barracks", NSLOCTEXT("RA4", "barracks_su", "Barracks Soviet")},
+        {"faction.soviet.building.war_factory", NSLOCTEXT("RA4", "war_factory_su", "War Factory Soviet")},
+        {"faction.soviet.building.turret", NSLOCTEXT("RA4", "turret_ai_su", "Pulemetnaya turel")},
+        {"faction.soviet.unit.mcv", NSLOCTEXT("RA4", "mcv_su", "Mobilnaya baza")},
+        {"faction.soviet.unit.harvester", NSLOCTEXT("RA4", "harvester_su", "Rudosborshchik «Bogatyr»")},
+        {"faction.soviet.unit.basic_infantry", NSLOCTEXT("RA4", "rubezh_rifleman", "Strelok «Rubezh»")},
+        {"faction.soviet.unit.antiarmor_infantry", NSLOCTEXT("RA4", "zaslon_aa", "Raschyot «Zaslon»")},
+        {"faction.soviet.unit.main_tank", NSLOCTEXT("RA4", "granit_mbt", "Tank «Granit»")},
 
-        {"faction.alliance.building.construction_yard", NSLOCTEXT("RA4", "headquarters_al", "Штаб-квартира Альянса")},
-        {"faction.alliance.building.power_plant", NSLOCTEXT("RA4", "power_plant_al", "Электростанция Альянса")},
-        {"faction.alliance.building.refinery", NSLOCTEXT("RA4", "refinery_al", "Переработчик руды")},
-        {"faction.alliance.building.barracks", NSLOCTEXT("RA4", "barracks_al", "Казармы Альянса")},
-        {"faction.alliance.building.war_factory", NSLOCTEXT("RA4", "war_factory_al", "Завод техники Альянса")},
-        {"faction.alliance.building.turret", NSLOCTEXT("RA4", "turret_ai_al", "Пулемётный ДОТ")},
-        {"faction.alliance.unit.mcv", NSLOCTEXT("RA4", "mcv_al", "Мобильная база")},
-        {"faction.alliance.unit.harvester", NSLOCTEXT("RA4", "harvester_al", "Рудосборщик «Пионер»")},
-        {"faction.alliance.unit.basic_infantry", NSLOCTEXT("RA4", "sentinel_rifleman", "Пехотинец «Страж»")},
-        {"faction.alliance.unit.antiarmor_infantry", NSLOCTEXT("RA4", "lancer_team", "Ракетчик «Лансер»")},
-        {"faction.alliance.unit.main_tank", NSLOCTEXT("RA4", "bulwark_mbt", "Танк «Оплот»")},
+        {"faction.alliance.building.construction_yard", NSLOCTEXT("RA4", "headquarters_al", "Command Center-kvartira Alliancea")},
+        {"faction.alliance.building.power_plant", NSLOCTEXT("RA4", "power_plant_al", "Elektrostantsiya Alliancea")},
+        {"faction.alliance.building.refinery", NSLOCTEXT("RA4", "refinery_al", "Pererabotchik rudy")},
+        {"faction.alliance.building.barracks", NSLOCTEXT("RA4", "barracks_al", "Barracks Alliancea")},
+        {"faction.alliance.building.war_factory", NSLOCTEXT("RA4", "war_factory_al", "War Factory Alliancea")},
+        {"faction.alliance.building.turret", NSLOCTEXT("RA4", "turret_ai_al", "Pulemyotnyy DOT")},
+        {"faction.alliance.unit.mcv", NSLOCTEXT("RA4", "mcv_al", "Mobilnaya baza")},
+        {"faction.alliance.unit.harvester", NSLOCTEXT("RA4", "harvester_al", "Rudosborshchik «Pioner»")},
+        {"faction.alliance.unit.basic_infantry", NSLOCTEXT("RA4", "sentinel_rifleman", "Infantryman «Strazh»")},
+        {"faction.alliance.unit.antiarmor_infantry", NSLOCTEXT("RA4", "lancer_team", "Raketchik «Lanser»")},
+        {"faction.alliance.unit.main_tank", NSLOCTEXT("RA4", "bulwark_mbt", "Tank «Oplot»")},
 
-        {"unit.sov.headquarters", NSLOCTEXT("RA4", "headquarters_su", "Штаб-квартира СССР")},
-        {"unit.sov.power_plant", NSLOCTEXT("RA4", "power_plant_su", "Электростанция")},
-        {"unit.sov.refinery", NSLOCTEXT("RA4", "refinery_su", "Переработчик руды")},
-        {"unit.sov.barracks", NSLOCTEXT("RA4", "barracks_su", "Казармы СССР")},
-        {"unit.sov.war_factory", NSLOCTEXT("RA4", "war_factory_su", "Завод техники СССР")},
-        {"unit.sov.radar", NSLOCTEXT("RA4", "radar_su", "Радарный комплекс")},
-        {"unit.sov.turret_ai", NSLOCTEXT("RA4", "turret_ai_su", "Пулеметная турель")},
-        {"unit.sov.turret_aa", NSLOCTEXT("RA4", "turret_aa_su", "ПВО турель")},
-        {"unit.sov.rubezh_rifleman", NSLOCTEXT("RA4", "rubezh_rifleman", "Стрелок «Рубеж»")},
-        {"unit.sov.zaslon_aa_team", NSLOCTEXT("RA4", "zaslon_aa", "ПВО команда «Заслон»")},
-        {"unit.sov.master_engineer", NSLOCTEXT("RA4", "master_engineer", "Мастер-инженер")},
-        {"unit.sov.rys_scout", NSLOCTEXT("RA4", "rys_scout", "Разведчик «Рысь»")},
-        {"unit.sov.granit_mbt", NSLOCTEXT("RA4", "granit_mbt", "Основной танк «Гранит»")},
-        {"unit.sov.zarevo_mlrs", NSLOCTEXT("RA4", "zarevo_mlrs", "РСЗО «Зарево»")},
+        {"unit.sov.headquarters", NSLOCTEXT("RA4", "headquarters_su", "Command Center-kvartira Soviet")},
+        {"unit.sov.power_plant", NSLOCTEXT("RA4", "power_plant_su", "Elektrostantsiya")},
+        {"unit.sov.refinery", NSLOCTEXT("RA4", "refinery_su", "Pererabotchik rudy")},
+        {"unit.sov.barracks", NSLOCTEXT("RA4", "barracks_su", "Barracks Soviet")},
+        {"unit.sov.war_factory", NSLOCTEXT("RA4", "war_factory_su", "War Factory Soviet")},
+        {"unit.sov.radar", NSLOCTEXT("RA4", "radar_su", "Radar Complex")},
+        {"unit.sov.turret_ai", NSLOCTEXT("RA4", "turret_ai_su", "Pulemetnaya turel")},
+        {"unit.sov.turret_aa", NSLOCTEXT("RA4", "turret_aa_su", "Anti-Air turel")},
+        {"unit.sov.rubezh_rifleman", NSLOCTEXT("RA4", "rubezh_rifleman", "Strelok «Rubezh»")},
+        {"unit.sov.zaslon_aa_team", NSLOCTEXT("RA4", "zaslon_aa", "Anti-Air komanda «Zaslon»")},
+        {"unit.sov.master_engineer", NSLOCTEXT("RA4", "master_engineer", "Master-inzhener")},
+        {"unit.sov.rys_scout", NSLOCTEXT("RA4", "rys_scout", "Razvedchik «Rys»")},
+        {"unit.sov.granit_mbt", NSLOCTEXT("RA4", "granit_mbt", "Osnovnoy tank «Granit»")},
+        {"unit.sov.zarevo_mlrs", NSLOCTEXT("RA4", "zarevo_mlrs", "RSZO «Zarevo»")},
 
-        {"unit.al.headquarters", NSLOCTEXT("RA4", "headquarters_al", "Штаб-квартира Альянса")},
-        {"unit.al.power_plant", NSLOCTEXT("RA4", "power_plant_al", "Электростанция Альянса")},
-        {"unit.al.refinery", NSLOCTEXT("RA4", "refinery_al", "Переработчик руды")},
-        {"unit.al.barracks", NSLOCTEXT("RA4", "barracks_al", "Казармы Альянса")},
-        {"unit.al.war_factory", NSLOCTEXT("RA4", "war_factory_al", "Завод техники Альянса")},
-        {"unit.al.radar", NSLOCTEXT("RA4", "radar_al", "Радарный комплекс")},
-        {"unit.al.sentinel_rifleman", NSLOCTEXT("RA4", "sentinel_rifleman", "Пехотинец «Страж»")},
-        {"unit.al.lancer_team", NSLOCTEXT("RA4", "lancer_team", "Ракетчик «Лансер»")},
-        {"unit.al.field_engineer", NSLOCTEXT("RA4", "field_engineer", "Полевой инженер")},
-        {"unit.al.kestrel_scout", NSLOCTEXT("RA4", "kestrel_scout", "Разведчик «Пустельга»")},
-        {"unit.al.bulwark_mbt", NSLOCTEXT("RA4", "bulwark_mbt", "Танк «Оплот»")},
-        {"unit.al.oracle_artillery", NSLOCTEXT("RA4", "oracle_artillery", "Артиллерия «Оракул»")},
+        {"unit.al.headquarters", NSLOCTEXT("RA4", "headquarters_al", "Command Center-kvartira Alliancea")},
+        {"unit.al.power_plant", NSLOCTEXT("RA4", "power_plant_al", "Elektrostantsiya Alliancea")},
+        {"unit.al.refinery", NSLOCTEXT("RA4", "refinery_al", "Pererabotchik rudy")},
+        {"unit.al.barracks", NSLOCTEXT("RA4", "barracks_al", "Barracks Alliancea")},
+        {"unit.al.war_factory", NSLOCTEXT("RA4", "war_factory_al", "War Factory Alliancea")},
+        {"unit.al.radar", NSLOCTEXT("RA4", "radar_al", "Radar Complex")},
+        {"unit.al.sentinel_rifleman", NSLOCTEXT("RA4", "sentinel_rifleman", "Infantryman «Strazh»")},
+        {"unit.al.lancer_team", NSLOCTEXT("RA4", "lancer_team", "Raketchik «Lanser»")},
+        {"unit.al.field_engineer", NSLOCTEXT("RA4", "field_engineer", "Polevoy inzhener")},
+        {"unit.al.kestrel_scout", NSLOCTEXT("RA4", "kestrel_scout", "Razvedchik «Pustelga»")},
+        {"unit.al.bulwark_mbt", NSLOCTEXT("RA4", "bulwark_mbt", "Tank «Oplot»")},
+        {"unit.al.oracle_artillery", NSLOCTEXT("RA4", "oracle_artillery", "Artilleriya «Orakul»")},
         
-        {"headquarters", NSLOCTEXT("RA4", "headquarters_generic", "Штаб-квартира")},
-        {"power_plant", NSLOCTEXT("RA4", "power_generic", "Электростанция")},
-        {"refinery", NSLOCTEXT("RA4", "refinery_generic", "Переработчик руды")},
-        {"barracks", NSLOCTEXT("RA4", "barracks_generic", "Казармы")},
-        {"war_factory", NSLOCTEXT("RA4", "factory_generic", "Завод техники")},
-        {"radar", NSLOCTEXT("RA4", "radar_generic", "Радарный комплекс")}
+        {"headquarters", NSLOCTEXT("RA4", "headquarters_generic", "Command Center-kvartira")},
+        {"power_plant", NSLOCTEXT("RA4", "power_generic", "Elektrostantsiya")},
+        {"refinery", NSLOCTEXT("RA4", "refinery_generic", "Pererabotchik rudy")},
+        {"barracks", NSLOCTEXT("RA4", "barracks_generic", "Barracks")},
+        {"war_factory", NSLOCTEXT("RA4", "factory_generic", "War Factory")},
+        {"radar", NSLOCTEXT("RA4", "radar_generic", "Radar Complex")}
     };
 
     auto It = LocMap.find(Key);
@@ -143,15 +143,15 @@ FText AlertToText(RP::AlertType Type)
 {
     switch (Type)
     {
-        case RP::AlertType::LowPower: return NSLOCTEXT("RA4", "Alert_LowPower", "Недостаточно энергии");
-        case RP::AlertType::InsufficientFunds: return NSLOCTEXT("RA4", "Alert_NoFunds", "Недостаточно средств");
-        case RP::AlertType::BaseUnderAttack: return NSLOCTEXT("RA4", "Alert_BaseAttack", "База атакована");
-        case RP::AlertType::UnitsUnderAttack: return NSLOCTEXT("RA4", "Alert_UnitsAttack", "Наши войска атакованы");
-        case RP::AlertType::BuildingLost: return NSLOCTEXT("RA4", "Alert_BuildingLost", "Здание потеряно");
-        case RP::AlertType::UnitLost: return NSLOCTEXT("RA4", "Alert_UnitLost", "Юнит потерян");
-        case RP::AlertType::ConstructionComplete: return NSLOCTEXT("RA4", "Alert_Built", "Строительство завершено");
-        case RP::AlertType::UnitReady: return NSLOCTEXT("RA4", "Alert_UnitReady", "Юнит готов");
-        case RP::AlertType::ResourcesDepleted: return NSLOCTEXT("RA4", "Alert_NoOre", "Месторождение исчерпано");
+        case RP::AlertType::LowPower: return NSLOCTEXT("RA4", "Alert_LowPower", "Low Power");
+        case RP::AlertType::InsufficientFunds: return NSLOCTEXT("RA4", "Alert_NoFunds", "Insufficient Funds");
+        case RP::AlertType::BaseUnderAttack: return NSLOCTEXT("RA4", "Alert_BaseAttack", "Base Under Attack");
+        case RP::AlertType::UnitsUnderAttack: return NSLOCTEXT("RA4", "Alert_UnitsAttack", "Units Under Attack");
+        case RP::AlertType::BuildingLost: return NSLOCTEXT("RA4", "Alert_BuildingLost", "Building Lost");
+        case RP::AlertType::UnitLost: return NSLOCTEXT("RA4", "Alert_UnitLost", "Unit Lost");
+        case RP::AlertType::ConstructionComplete: return NSLOCTEXT("RA4", "Alert_Built", "Construction Complete");
+        case RP::AlertType::UnitReady: return NSLOCTEXT("RA4", "Alert_UnitReady", "Unit Ready");
+        case RP::AlertType::ResourcesDepleted: return NSLOCTEXT("RA4", "Alert_NoOre", "Ore Mine Depleted");
         default: return FText::GetEmpty();
     }
 }

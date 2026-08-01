@@ -5,19 +5,19 @@
 #define LOCTEXT_NAMESPACE "RA4UIScreenViewModel"
 
 URA4UIScreenViewModel::URA4UIScreenViewModel()
-    : ModalTitle(LOCTEXT("DefaultModalTitle", "СИСТЕМНОЕ СООБЩЕНИЕ"))
-    , ModalBody(LOCTEXT("DefaultModalBody", "Ожидание приказа командующего."))
+    : ModalTitle(LOCTEXT("DefaultModalTitle", "SYSTEM MESSAGE"))
+    , ModalBody(LOCTEXT("DefaultModalBody", "Awaiting commander orders."))
 {
     ProductionQueue = {
-        {LOCTEXT("QueueTeslaTank", "Тесла-танк"), 1400, 0.62f, 1},
-        {LOCTEXT("QueueConscript", "Призывник"), 100, 0.0f, 5},
+        {LOCTEXT("QueueTeslaTank", "Tesla Tank"), 1400, 0.62f, 1},
+        {LOCTEXT("QueueConscript", "Conscript"), 100, 0.0f, 5},
     };
 
     LobbySlots = {
-        {LOCTEXT("LobbyCommander", "КОМАНДУЮЩИЙ"), ERA4FactionTheme::USSR, true},
-        {LOCTEXT("LobbyWard", "АДМИРАЛ ВАРД"), ERA4FactionTheme::Allies, true},
-        {LOCTEXT("LobbyGao", "ГЕНЕРАЛ ГАО"), ERA4FactionTheme::EasternCoalition, false},
-        {LOCTEXT("LobbyChronos", "ХРОНОС-07"), ERA4FactionTheme::Chronolegion, false},
+        {LOCTEXT("LobbyCommander", "COMMANDER"), ERA4FactionTheme::USSR, true},
+        {LOCTEXT("LobbyWard", "ADMIRAL WARD"), ERA4FactionTheme::Allies, true},
+        {LOCTEXT("LobbyGao", "GENERAL GAO"), ERA4FactionTheme::EasternCoalition, false},
+        {LOCTEXT("LobbyChronos", "CHRONOS-07"), ERA4FactionTheme::Chronolegion, false},
     };
 }
 

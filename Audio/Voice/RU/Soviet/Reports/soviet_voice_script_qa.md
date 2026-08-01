@@ -1,234 +1,234 @@
-# Подробный акт содержательного аудита сценария озвучки СССР (Detailed Narrative & Editorial QA Audit)
+# Podrobnyy akt soderzhatelnogo audita stsenariya ozvuchki Soviet Union (Detailed Narrative & Editorial QA Audit)
 
-**Проект**: Red Alert 4  
-**Фракция**: СССР  
-**Язык**: Русский (`ru-RU`)  
-**Дата аудита**: 30 июля 2026 г.  
-
----
-
-## 1. Методология и этапы аудита
-
-В соответствии с требованиями производственной библии `RA4_Factions_Units_Economy_Voice_Bible_v2_Naming_Reset.md` был проведён глубокй содержательный редакторский аудит **всех 152 реплик** для 19 юнитов СССР:
-
-1. **Построчное сопоставление (String-by-String Diff)**:
-   Каждая из 152 реплик в `soviet_voice_script_ru.json`, `.csv` и `.md` сверялась с текстом Библии v2.0. Подтверждено **100% дословное соответствие** (0 расхождений). Все 152 реплики имеют статус `canonical`.
-2. **Семантический и нарративный анализ**:
-   * **Голос техники**: Проверено, что всю технику озвучивает один постоянный оператор/командир экипажа, воспринимающий машину как рабочую систему (без абстрактного «мы все погибнем» или переключения ролей).
-   * **Соответствие способностей**: Проверено, что событие `Ability` для каждого юнита строго отражает его реальную способность из Библии (напр., «В землю!» для `SU_RubezhRifleman` — *Окопаться*, «Термобарический — внутрь!» для `SU_ZapalGrenadier` — *Термобарический заряд*, «На таран!» для `SU_GranitMBT` — *Таран*, «Переходим в осадный режим» для `SU_VoevodaHeavyTank` — *Осадный режим*).
-   * **Отсутствие повторов**: Выполнен скриптовый поиск дубликатов текста по всему корпусу фракции — обнаружено **0 совпадений**.
-   * **Различие событий**: Проверено смысловое и энергетическое разделение событий (`Selected` — готовность/идентификация, `Move` — передвижение, `Attack` — боевой приказ, `Ability` — активация навыка, `Damaged` — реакция на повреждение, `Elite` — боевая гордость, `Idle` — профессиональный юмор, `Death` — гибель).
-   * **Анализ речи Майор Елены Морозовой (`SU_Hero_Morozova`)**: Реплики героя отражают выдержку, авторитет и оперативную ответственность без флирта, криков или штампов.
+**Project**: Red Alert 4  
+**Fraktsiya**: Soviet Union  
+**Yazyk**: Russkiy (`ru-RU`)  
+**Date audita**: 30 iyulya 2026 g.  
 
 ---
 
-## 2. Итоговая матрица аудита по юнитам (19 юнитов × 8 событий)
+## 1. Metodologiya i etapy audita
 
-### 1. `SU_RubezhRifleman` (Мотострелок МС-12 «Рубеж»)
-- **Selected**: «Мотострелок МС-12 «Рубеж» на связи.» (`canonical` | PASS)
-- **Move**: «Бежим, пока дорога свободна.» (`canonical` | PASS)
-- **Attack**: «Цель вижу. Открываю огонь.» (`canonical` | PASS)
-- **Ability**: «В землю! Держим позицию!» [Способность: *Окопаться*] (`canonical` | PASS)
-- **Damaged**: «Нас прижали!» (`canonical` | PASS)
-- **Elite**: «Теперь мы не просто пополнение.» (`canonical` | PASS)
-- **Idle**: «Обещали форму потеплее.» (`canonical` | PASS)
-- **Death**: «Передайте… позицию держали.» (`canonical` | PASS)
+V sootvetstvii s trebovaniyami proizvodstvennoy biblii `RA4_Factions_Units_Economy_Voice_Bible_v2_Naming_Reset.md` byl provedyon gluboky soderzhatelnyy redaktorskiy Audit **vsekh 152 replik** for 19 yunitov Soviet Union:
 
-### 2. `SU_ZapalGrenadier` (Штурмовик ОШ-4 «Запал»)
-- **Selected**: «Гранаты снаряжены.» (`canonical` | PASS)
-- **Move**: «Подойдём на бросок.» (`canonical` | PASS)
-- **Attack**: «Накрываю сектор!» (`canonical` | PASS)
-- **Ability**: «Термобарический — внутрь!» [Способность: *Термобарический заряд*] (`canonical` | PASS)
-- **Damaged**: «Осколками задело!» (`canonical` | PASS)
-- **Elite**: «Теперь попадаю с первого броска.» (`canonical` | PASS)
-- **Idle**: «Главное — не перепутать сумки.» (`canonical` | PASS)
-- **Death**: «Чека… уже выдернута…» (`canonical` | PASS)
-
-### 3. `SU_ZaslonAATeam` (Зенитный расчёт ПЗК-9 «Заслон»)
-- **Selected**: «Небо под контролем.» (`canonical` | PASS)
-- **Move**: «Ищу чистый сектор.» (`canonical` | PASS)
-- **Attack**: «Высота подтверждена. Огонь!» (`canonical` | PASS)
-- **Ability**: «Затаились. Пусть подлетят.» [Способность: *Воздушная засада*] (`canonical` | PASS)
-- **Damaged**: «Расчёт под обстрелом!» (`canonical` | PASS)
-- **Elite**: «Ни один борт не уйдёт.» (`canonical` | PASS)
-- **Idle**: «Летят красиво. Падают лучше.» (`canonical` | PASS)
-- **Death**: «Небо… ваше…» (`canonical` | PASS)
-
-### 4. `SU_MasterEngineer` (Инженер-сапёр ИС-3 «Мастер»)
-- **Selected**: «Инструмент есть. План бы ещё.» (`canonical` | PASS)
-- **Move**: «Доберусь и починю.» (`canonical` | PASS)
-- **Attack**: «Я не стрелок. Покажите объект.» (`canonical` | PASS)
-- **Ability**: «Сейчас заведём эту развалину.» [Способность: *Полевой ремонт / Захват*] (`canonical` | PASS)
-- **Damaged**: «Инженера прикройте!» (`canonical` | PASS)
-- **Elite**: «Я починю даже то, чего ещё не построили.» (`canonical` | PASS)
-- **Idle**: «По инструкции это должно было работать.» (`canonical` | PASS)
-- **Death**: «Схема… была верной…» (`canonical` | PASS)
-
-### 5. `SU_RazryadTrooper` (Электроштурмовик ЭШ-8 «Разряд»)
-- **Selected**: «Контур заряжен.» (`canonical` | PASS)
-- **Move**: «Ток пойдёт за нами.» (`canonical` | PASS)
-- **Attack**: «Разряд на цель!» (`canonical` | PASS)
-- **Ability**: «Перегрузка сети!» [Способность: *Перегрузка*] (`canonical` | PASS)
-- **Damaged**: «Изоляция пробита!» (`canonical` | PASS)
-- **Elite**: «Молния слушается меня.» (`canonical` | PASS)
-- **Idle**: «Не трогайте кабель. Последнее предупреждение.» (`canonical` | PASS)
-- **Death**: «Заземление… не сработало…» (`canonical` | PASS)
-
-### 6. `SU_VektorOfficer` (Офицер связи КС-6 «Вектор»)
-- **Selected**: «Связь с фронтом установлена.» (`canonical` | PASS)
-- **Move**: «Передаю новый рубеж.» (`canonical` | PASS)
-- **Attack**: «Приказ утверждён. Уничтожить.» (`canonical` | PASS)
-- **Ability**: «Первый приказ: ни шага назад!» [Способность: *Приказ №1*] (`canonical` | PASS)
-- **Damaged**: «Канал под огнём!» (`canonical` | PASS)
-- **Elite**: «Теперь армия слышит меня без помех.» (`canonical` | PASS)
-- **Idle**: «Молчание в эфире подозрительнее стрельбы.» (`canonical` | PASS)
-- **Death**: «Командование… продолжайте без меня.» (`canonical` | PASS)
-
-### 7. `SU_BogatyrOreCarrier` (Горнорудная машина ГРМ-8 «Богатырь»)
-- **Selected**: «Богатырь готов к рейсу.» (`canonical` | PASS)
-- **Move**: «Тяжёлый груз идёт.» (`canonical` | PASS)
-- **Attack**: «Оружия нет. Могу переехать.» (`canonical` | PASS)
-- **Ability**: «Закрываю броневые шторки.» [Способность: *Аварийная броня*] (`canonical` | PASS)
-- **Damaged**: «Обшивка держит!» (`canonical` | PASS)
-- **Elite**: «Маршрут знаю лучше генералов.» (`canonical` | PASS)
-- **Idle**: «Руда сама себя не привезёт.» (`canonical` | PASS)
-- **Death**: «Груз… не доставлен…» (`canonical` | PASS)
-
-### 8. `SU_RysScout` (Боевая разведмашина БРМ-27 «Рысь»)
-- **Selected**: «Рысь вышла на маршрут.» (`canonical` | PASS)
-- **Move**: «Уже там.» (`canonical` | PASS)
-- **Attack**: «Срезаем хвост колонне!» (`canonical` | PASS)
-- **Ability**: «Перепрыгиваем!» [Способность: *Прыжок через препятствие*] (`canonical` | PASS)
-- **Damaged**: «Броня тонкая, не стойте!» (`canonical` | PASS)
-- **Elite**: «Я вижу фланг раньше радара.» (`canonical` | PASS)
-- **Idle**: «Главное — не догнать собственный след.» (`canonical` | PASS)
-- **Death**: «Скорость… не спасла…» (`canonical` | PASS)
-
-### 9. `SU_GranitMBT` (Основной танк ОБТ-92 «Гранит»)
-- **Selected**: «Гранит готов.» (`canonical` | PASS)
-- **Move**: «Гусеницы — вперёд.» (`canonical` | PASS)
-- **Attack**: «Раздробить цель.» (`canonical` | PASS)
-- **Ability**: «На таран!» [Способность: *Таран*] (`canonical` | PASS)
-- **Damaged**: «Лоб держит, борт подставили!» (`canonical` | PASS)
-- **Elite**: «Сталь научилась побеждать.» (`canonical` | PASS)
-- **Idle**: «Тише едешь — дольше стреляешь.» (`canonical` | PASS)
-- **Death**: «Башня… заклинила…» (`canonical` | PASS)
-
-### 10. `SU_ZarevoMLRS` (Термобарическая РСЗО ТРС-18 «Зарево»)
-- **Selected**: «Пакет ракет заряжен.» (`canonical` | PASS)
-- **Move**: «Держим дистанцию.» (`canonical` | PASS)
-- **Attack**: «Расчётный квадрат подтверждён.» (`canonical` | PASS)
-- **Ability**: «Поджигаем весь сектор.» [Способность: *Огненный квадрат*] (`canonical` | PASS)
-- **Damaged**: «Пусковая под огнём!» (`canonical` | PASS)
-- **Elite**: «Один залп — один новый горизонт.» (`canonical` | PASS)
-- **Idle**: «Красиво горит только чужое.» (`canonical` | PASS)
-- **Death**: «Боекомплект… сейчас рванёт…» (`canonical` | PASS)
-
-### 11. `SU_GromoboyRam` (Электротаран ЭТМ-7 «Громобой»)
-- **Selected**: «Громобой ждёт команды.» (`canonical` | PASS)
-- **Move**: «К контакту.» (`canonical` | PASS)
-- **Attack**: «Замыкаю цепь!» (`canonical` | PASS)
-- **Ability**: «Разряд в грунт!» [Способность: *Разряд по земле*] (`canonical` | PASS)
-- **Damaged**: «Катушки перегреваются!» (`canonical` | PASS)
-- **Elite**: «Гроза теперь идёт по земле.» (`canonical` | PASS)
-- **Idle**: «Сухая погода — временная проблема.» (`canonical` | PASS)
-- **Death**: «Контур… разомкнут…» (`canonical` | PASS)
-
-### 12. `SU_VoevodaHeavyTank` (Тяжёлый танк прорыва ТТП-11 «Воевода»)
-- **Selected**: «Воевода вступает в бой.» (`canonical` | PASS)
-- **Move**: «Земля выдержит.» (`canonical` | PASS)
-- **Attack**: «Стереть координаты.» (`canonical` | PASS)
-- **Ability**: «Переходим в осадный режим.» [Способность: *Осадный режим*] (`canonical` | PASS)
-- **Damaged**: «Повреждение принято. Продолжаем.» (`canonical` | PASS)
-- **Elite**: «Теперь это не танк. Это направление фронта.» (`canonical` | PASS)
-- **Idle**: «Мы не опаздываем. Нас ждут.» (`canonical` | PASS)
-- **Death**: «Воевода… оставляет рубеж…» (`canonical` | PASS)
-
-### 13. `SU_KrechetInterceptor` (Истребитель И-47 «Кречет»)
-- **Selected**: «Кречет на полосе.» (`canonical` | PASS)
-- **Move**: «Курс принят.» (`canonical` | PASS)
-- **Attack**: «Ракеты сошли.» (`canonical` | PASS)
-- **Ability**: «Форсаж!» [Способность: *Форсаж*] (`canonical` | PASS)
-- **Damaged**: «Потеря давления!» (`canonical` | PASS)
-- **Elite**: «Небо стало тесным.» (`canonical` | PASS)
-- **Idle**: «Топливо любит решительных.» (`canonical` | PASS)
-- **Death**: «Катапульта… отказ…» (`canonical` | PASS)
-
-### 14. `SU_KorshunGunship` (Штурмовой вертолёт ШВ-38 «Коршун»)
-- **Selected**: «Коршун готов к вылету.» (`canonical` | PASS)
-- **Move**: «Идём на малой высоте.» (`canonical` | PASS)
-- **Attack**: «Работаем по земле!» (`canonical` | PASS)
-- **Ability**: «Заходим на круг!» [Способность: *Круг огня*] (`canonical` | PASS)
-- **Damaged**: «Хвостовой сектор повреждён!» (`canonical` | PASS)
-- **Elite**: «Пехота зовёт — мы отвечаем.» (`canonical` | PASS)
-- **Idle**: «В кабине пахнет топливом и победой.» (`canonical` | PASS)
-- **Death**: «Борт падает…» (`canonical` | PASS)
-
-### 15. `SU_GromadaAirship` (Тяжёлый дирижабль ТДА-8 «Громада»)
-- **Selected**: «Громада в воздухе.» (`canonical` | PASS)
-- **Move**: «Медленно. Неотвратимо.» (`canonical` | PASS)
-- **Attack**: «Открыть бомболюки.» (`canonical` | PASS)
-- **Ability**: «Полный газ. Двигатели на предел.» [Способность: *Полный газ*] (`canonical` | PASS)
-- **Damaged**: «Обшивка горит, курс держим.» (`canonical` | PASS)
-- **Elite**: «Города узнают нас по тени.» (`canonical` | PASS)
-- **Idle**: «Высота хорошая. Мир кажется тише.» (`canonical` | PASS)
-- **Death**: «Балласт… уже не поможет…» (`canonical` | PASS)
-
-### 16. `SU_BuranPatrolBoat` (Боевой катер БК-27 «Буран»)
-- **Selected**: «Буран на воде.» (`canonical` | PASS)
-- **Move**: «Режем волну.» (`canonical` | PASS)
-- **Attack**: «Цель по правому борту!» (`canonical` | PASS)
-- **Ability**: «Сеть в воду!» [Способность: *Электросеть*] (`canonical` | PASS)
-- **Damaged**: «Корпус принимает воду!» (`canonical` | PASS)
-- **Elite**: «Море запомнило наш след.» (`canonical` | PASS)
-- **Idle**: «Штиль — это просто пауза.» (`canonical` | PASS)
-- **Death**: «Отсек затоплен…» (`canonical` | PASS)
-
-### 17. `SU_MorokSubmarine` (Ударная подлодка УПЛ-90 «Морок»)
-- **Selected**: «Морок слушает глубину.» (`canonical` | PASS)
-- **Move**: «Погружаемся.» (`canonical` | PASS)
-- **Attack**: «Торпедный раствор открыт.» (`canonical` | PASS)
-- **Ability**: «Беззвучный ход.» [Способность: *Беззвучный ход*] (`canonical` | PASS)
-- **Damaged**: «Прочный корпус деформирован!» (`canonical` | PASS)
-- **Elite**: «В море нас замечают слишком поздно.» (`canonical` | PASS)
-- **Idle**: «Наверху шумят. Здесь думают.» (`canonical` | PASS)
-- **Death**: «Глубина… принимает…» (`canonical` | PASS)
-
-### 18. `SU_SvyatogorCruiser` (Ракетный крейсер РКР-44 «Святогор»)
-- **Selected**: «Святогор ждёт координаты.» (`canonical` | PASS)
-- **Move**: «Крейсер меняет позицию.» (`canonical` | PASS)
-- **Attack**: «Ракетный залп.» (`canonical` | PASS)
-- **Ability**: «Заградительный огонь по сектору.» [Способность: *Заградительный залп*] (`canonical` | PASS)
-- **Damaged**: «Палуба пробита!» (`canonical` | PASS)
-- **Elite**: «Берег заканчивается там, где начинаются наши ракеты.» (`canonical` | PASS)
-- **Idle**: «Море большое. Дальность больше.» (`canonical` | PASS)
-- **Death**: «Погреба… детонируют…» (`canonical` | PASS)
-
-### 19. `SU_Hero_Morozova` (Майор Елена Морозова)
-- **Selected**: «Майор Морозова. Докладывайте.» (`canonical` | PASS)
-- **Move**: «Я буду на передовой.» (`canonical` | PASS)
-- **Attack**: «Этот участок фронта закрываем сейчас.» (`canonical` | PASS)
-- **Ability**: «Подавить их связь и движение.» [Способность: *Поле подавления*] (`canonical` | PASS)
-- **Damaged**: «Царапина. Приказ не меняется.» (`canonical` | PASS)
-- **Elite**: «Сегодня фронт движется вместе со мной.» (`canonical` | PASS)
-- **Idle**: «Генералы любят карты. Я предпочитаю местность.» (`canonical` | PASS)
-- **Death**: «Продолжайте… наступление…» (`canonical` | PASS)
+1. **Postrochnoe sopostavlenie (String-by-String Diff)**:
+   Kazhdaya iz 152 replik v `soviet_voice_script_ru.json`, `.csv` i `.md` sveryalas s tekstom Biblii v2.0. Podtverzhdeno **100% doslovnoe sootvetstvie** (0 raskhozhdeniy). all 152 repliki imeyut Status `canonical`.
+2. **Semanticheskiy i narrativnyy analiz**:
+   * **Golos tekhniki**: verified, chto vsyu tekhniku ozvuchivaet odin postoyannyy operator/Commander ekipazha, vosprinimayushchiy mashinu kak rabochuyu sistemu (without abstraktnogo «my all pogibnem» or pereklyucheniya roley).
+   * **Sootvetstvie sposobnostey**: verified, chto sobytie `Ability` for kazhdogo yunita strogo otrazhaet ego realnuyu Ability iz Biblii (napr., «V zemlyu!» for `SU_RubezhRifleman` — *Okopatsya*, «Termobaricheskiy — vnutr!» for `SU_ZapalGrenadier` — *Termobaricheskiy zaryad*, «Na taran!» for `SU_GranitMBT` — *Taran*, «Perekhodim v osadnyy rezhim» for `SU_VoevodaHeavyTank` — *Osadnyy rezhim*).
+   * **Otsutstvie povtorov**: Vypolnen skriptovyy poisk dublikatov teksta po vsemu korpusu Factions — obnaruzheno **0 sovpadeniy**.
+   * **Razlichie sobytiy**: verified smyslovoe i energeticheskoe razdelenie sobytiy (`Selected` — gotovnost/identifikatsiya, `Move` — peredvizhenie, `Attack` — boevoy prikaz, `Ability` — aktivatsiya navyka, `Damaged` — reaktsiya na povrezhdenie, `Elite` — boevaya gordost, `Idle` — professionalnyy yumor, `Death` — gibel).
+   * **Analiz rechi Mayor Eleny Morozovoy (`SU_Hero_Morozova`)**: Repliki geroya otrazhayut vyderzhku, avtoritet i operativnuyu otvetstvennost without flirta, krikov or shtampov.
 
 ---
 
-## 3. Редакторский реестр исправлений и квалификация реплик
+## 2. Itogovaya matritsa audita po yunitam (19 yunitov × 8 sobytiy)
 
-* **Изменённых по качеству реплик (`edited_for_quality`)**: `0` (Каждая из 152 канонических реплик Библии v2.0 признана стилистически, ритмически и функционально безупречной).
-* **Сгенерированных отсутствующих реплик (`generated_missing_line`)**: `0` (Ни одна реплика не утеряна в исходной библии).
-* **Канонических оригинальных реплик (`canonical`)**: `152` (100% строгая преемственность).
+### 1. `SU_RubezhRifleman` (Motostrelok MS-12 «Rubezh»)
+- **Selected**: «Motostrelok MS-12 «Rubezh» na svyazi.» (`canonical` | PASS)
+- **Move**: «Bezhim, poka doroga svobodna.» (`canonical` | PASS)
+- **Attack**: «Tsel vizhu. Otkryvayu ogon.» (`canonical` | PASS)
+- **Ability**: «V zemlyu! Derzhim pozitsiyu!» [Ability: *Okopatsya*] (`canonical` | PASS)
+- **Damaged**: «Nas prizhali!» (`canonical` | PASS)
+- **Elite**: «Teper my ne prosto popolnenie.» (`canonical` | PASS)
+- **Idle**: «Obeshchali formu poteplee.» (`canonical` | PASS)
+- **Death**: «Peredayte… pozitsiyu derzhali.» (`canonical` | PASS)
+
+### 2. `SU_ZapalGrenadier` (Shturmovik OSh-4 «Zapal»)
+- **Selected**: «Granaty snaryazheny.» (`canonical` | PASS)
+- **Move**: «Podoydyom na brosok.» (`canonical` | PASS)
+- **Attack**: «Nakryvayu sektor!» (`canonical` | PASS)
+- **Ability**: «Termobaricheskiy — vnutr!» [Ability: *Termobaricheskiy zaryad*] (`canonical` | PASS)
+- **Damaged**: «Oskolkami zadelo!» (`canonical` | PASS)
+- **Elite**: «Teper popadayu s pervogo broska.» (`canonical` | PASS)
+- **Idle**: «Glavnoe — ne pereputat sumki.» (`canonical` | PASS)
+- **Death**: «Cheka… uzhe vydernuta…» (`canonical` | PASS)
+
+### 3. `SU_ZaslonAATeam` (Zenitnyy raschyot PZK-9 «Zaslon»)
+- **Selected**: «Nebo under kontrolem.» (`canonical` | PASS)
+- **Move**: «Ishchu chistyy sektor.» (`canonical` | PASS)
+- **Attack**: «Vysota podtverzhdena. Ogon!» (`canonical` | PASS)
+- **Ability**: «Zatailis. Pust podletyat.» [Ability: *Vozdushnaya zasada*] (`canonical` | PASS)
+- **Damaged**: «Raschyot under obstrelom!» (`canonical` | PASS)
+- **Elite**: «Ni odin bort ne uydyot.» (`canonical` | PASS)
+- **Idle**: «Letyat krasivo. Padayut luchshe.» (`canonical` | PASS)
+- **Death**: «Nebo… vashe…» (`canonical` | PASS)
+
+### 4. `SU_MasterEngineer` (Engineer-sapyor IS-3 «Master»)
+- **Selected**: «Instrument est. Plan by eshchyo.» (`canonical` | PASS)
+- **Move**: «Doberus i pochinyu.» (`canonical` | PASS)
+- **Attack**: «Ya ne strelok. Pokazhite obekt.» (`canonical` | PASS)
+- **Ability**: «Seychas zavedyom etu razvalinu.» [Ability: *Polevoy remont / Zakhvat*] (`canonical` | PASS)
+- **Damaged**: «Inzhenera prikroyte!» (`canonical` | PASS)
+- **Elite**: «Ya pochinyu dazhe to, chego eshchyo ne postroili.» (`canonical` | PASS)
+- **Idle**: «Po instruktsii eto dolzhno before rabotat.» (`canonical` | PASS)
+- **Death**: «Skhema… byla vernoy…» (`canonical` | PASS)
+
+### 5. `SU_RazryadTrooper` (Elektroshturmovik ESh-8 «Razryad»)
+- **Selected**: «Kontur zaryazhen.» (`canonical` | PASS)
+- **Move**: «Tok poydyot za nami.» (`canonical` | PASS)
+- **Attack**: «Razryad na tsel!» (`canonical` | PASS)
+- **Ability**: «Peregruzka seti!» [Ability: *Peregruzka*] (`canonical` | PASS)
+- **Damaged**: «Izolyatsiya probita!» (`canonical` | PASS)
+- **Elite**: «Molniya slushaetsya menya.» (`canonical` | PASS)
+- **Idle**: «Ne trogayte kabel. Poslednee Warning.» (`canonical` | PASS)
+- **Death**: «Zazemlenie… ne srabotalo…» (`canonical` | PASS)
+
+### 6. `SU_VektorOfficer` (Ofitser svyazi KS-6 «Vektor»)
+- **Selected**: «Svyaz s frontom ustanovlena.» (`canonical` | PASS)
+- **Move**: «Peredayu novyy rubezh.» (`canonical` | PASS)
+- **Attack**: «Prikaz utverzhdyon. Unichtozhit.» (`canonical` | PASS)
+- **Ability**: «Pervyy prikaz: ni shaga nazad!» [Ability: *Prikaz №1*] (`canonical` | PASS)
+- **Damaged**: «Kanal under ognyom!» (`canonical` | PASS)
+- **Elite**: «Teper armiya slyshit menya without pomekh.» (`canonical` | PASS)
+- **Idle**: «Molchanie v efire podozritelnee strelby.» (`canonical` | PASS)
+- **Death**: «Komandovanie… prodolzhayte without menya.» (`canonical` | PASS)
+
+### 7. `SU_BogatyrOreCarrier` (Gornorudnaya mashina GRM-8 «Bogatyr»)
+- **Selected**: «Bogatyr gotov k reysu.» (`canonical` | PASS)
+- **Move**: «Tyazhyolyy gruz idyot.» (`canonical` | PASS)
+- **Attack**: «Oruzhiya no. Mogu pereekhat.» (`canonical` | PASS)
+- **Ability**: «Zakryvayu bronevye shtorki.» [Ability: *Avariynaya Armor*] (`canonical` | PASS)
+- **Damaged**: «Obshivka derzhit!» (`canonical` | PASS)
+- **Elite**: «Marshrut znayu luchshe generalov.» (`canonical` | PASS)
+- **Idle**: «Ruda sama sebya ne privezyot.» (`canonical` | PASS)
+- **Death**: «Gruz… ne dostavlen…» (`canonical` | PASS)
+
+### 8. `SU_RysScout` (Boevaya razvedmashina BRM-27 «Rys»)
+- **Selected**: «Rys vyshla na marshrut.» (`canonical` | PASS)
+- **Move**: «Uzhe tam.» (`canonical` | PASS)
+- **Attack**: «Srezaem khvost kolonne!» (`canonical` | PASS)
+- **Ability**: «Pereprygivaem!» [Ability: *Pryzhok via prepyatstvie*] (`canonical` | PASS)
+- **Damaged**: «Armor tonkaya, ne stoyte!» (`canonical` | PASS)
+- **Elite**: «Ya vizhu flang ranshe radara.» (`canonical` | PASS)
+- **Idle**: «Glavnoe — ne dognat sobstvennyy sled.» (`canonical` | PASS)
+- **Death**: «Skorost… ne spasla…» (`canonical` | PASS)
+
+### 9. `SU_GranitMBT` (Osnovnoy Tank OBT-92 «Granit»)
+- **Selected**: «Granit gotov.» (`canonical` | PASS)
+- **Move**: «Gusenitsy — vperyod.» (`canonical` | PASS)
+- **Attack**: «Razdrobit tsel.» (`canonical` | PASS)
+- **Ability**: «Na taran!» [Ability: *Taran*] (`canonical` | PASS)
+- **Damaged**: «Lob derzhit, bort podstavili!» (`canonical` | PASS)
+- **Elite**: «Stal nauchilas pobezhdat.» (`canonical` | PASS)
+- **Idle**: «Tishe edesh — dolshe strelyaesh.» (`canonical` | PASS)
+- **Death**: «Bashnya… zaklinila…» (`canonical` | PASS)
+
+### 10. `SU_ZarevoMLRS` (Termobaricheskaya RSZO TRS-18 «Zarevo»)
+- **Selected**: «Paket raket zaryazhen.» (`canonical` | PASS)
+- **Move**: «Derzhim distantsiyu.» (`canonical` | PASS)
+- **Attack**: «Raschyotnyy kvadrat podtverzhdyon.» (`canonical` | PASS)
+- **Ability**: «Podzhigaem ves sektor.» [Ability: *Ognennyy kvadrat*] (`canonical` | PASS)
+- **Damaged**: «Puskovaya under ognyom!» (`canonical` | PASS)
+- **Elite**: «Odin zalp — odin novyy gorizont.» (`canonical` | PASS)
+- **Idle**: «Krasivo gorit only chuzhoe.» (`canonical` | PASS)
+- **Death**: «Boekomplekt… seychas rvanyot…» (`canonical` | PASS)
+
+### 11. `SU_GromoboyRam` (Elektrotaran ETM-7 «Gromoboy»)
+- **Selected**: «Gromoboy zhdyot komandy.» (`canonical` | PASS)
+- **Move**: «K kontaktu.» (`canonical` | PASS)
+- **Attack**: «Zamykayu tsep!» (`canonical` | PASS)
+- **Ability**: «Razryad v grunt!» [Ability: *Razryad po zemle*] (`canonical` | PASS)
+- **Damaged**: «Katushki peregrevayutsya!» (`canonical` | PASS)
+- **Elite**: «Groza teper idyot po zemle.» (`canonical` | PASS)
+- **Idle**: «Sukhaya pogoda — vremennaya problema.» (`canonical` | PASS)
+- **Death**: «Kontur… razomknut…» (`canonical` | PASS)
+
+### 12. `SU_VoevodaHeavyTank` (Tyazhyolyy Tank proryva TTP-11 «Voevoda»)
+- **Selected**: «Voevoda vstupaet v boy.» (`canonical` | PASS)
+- **Move**: «Zemlya vyderzhit.» (`canonical` | PASS)
+- **Attack**: «Steret koordinaty.» (`canonical` | PASS)
+- **Ability**: «Perekhodim v osadnyy rezhim.» [Ability: *Osadnyy rezhim*] (`canonical` | PASS)
+- **Damaged**: «Povrezhdenie prinyato. Prodolzhaem.» (`canonical` | PASS)
+- **Elite**: «Teper eto ne Tank. Eto napravlenie fronta.» (`canonical` | PASS)
+- **Idle**: «My ne opazdyvaem. Nas zhdut.» (`canonical` | PASS)
+- **Death**: «Voevoda… ostavlyaet rubezh…» (`canonical` | PASS)
+
+### 13. `SU_KrechetInterceptor` (Istrebitel I-47 «Krechet»)
+- **Selected**: «Krechet na polose.» (`canonical` | PASS)
+- **Move**: «Kurs prinyat.» (`canonical` | PASS)
+- **Attack**: «Rakety soshli.» (`canonical` | PASS)
+- **Ability**: «Forsazh!» [Ability: *Forsazh*] (`canonical` | PASS)
+- **Damaged**: «Poterya davleniya!» (`canonical` | PASS)
+- **Elite**: «Nebo after tesnym.» (`canonical` | PASS)
+- **Idle**: «Toplivo lyubit reshitelnykh.» (`canonical` | PASS)
+- **Death**: «Katapulta… otkaz…» (`canonical` | PASS)
+
+### 14. `SU_KorshunGunship` (Shturmovoy vertolyot ShV-38 «Korshun»)
+- **Selected**: «Korshun gotov k vyletu.» (`canonical` | PASS)
+- **Move**: «Idyom na maloy vysote.» (`canonical` | PASS)
+- **Attack**: «Rabotaem po zemle!» (`canonical` | PASS)
+- **Ability**: «Zakhodim na krug!» [Ability: *Krug ognya*] (`canonical` | PASS)
+- **Damaged**: «Khvostovoy sektor povrezhdyon!» (`canonical` | PASS)
+- **Elite**: «Infantry zovyot — my otvechaem.» (`canonical` | PASS)
+- **Idle**: «V kabine pakhnet toplivom i pobedoy.» (`canonical` | PASS)
+- **Death**: «Bort padaet…» (`canonical` | PASS)
+
+### 15. `SU_GromadaAirship` (Tyazhyolyy dirizhabl TDA-8 «Gromada»)
+- **Selected**: «Gromada v vozdukhe.» (`canonical` | PASS)
+- **Move**: «Medlenno. Neotvratimo.» (`canonical` | PASS)
+- **Attack**: «Otkryt bombolyuki.» (`canonical` | PASS)
+- **Ability**: «Polnyy gaz. Dvigateli na predel.» [Ability: *Polnyy gaz*] (`canonical` | PASS)
+- **Damaged**: «Obshivka gorit, kurs derzhim.» (`canonical` | PASS)
+- **Elite**: «Goroda uznayut nas po teni.» (`canonical` | PASS)
+- **Idle**: «Vysota khoroshaya. Mir kazhetsya tishe.» (`canonical` | PASS)
+- **Death**: «Ballast… uzhe ne pomozhet…» (`canonical` | PASS)
+
+### 16. `SU_BuranPatrolBoat` (Boevoy kater BK-27 «Buran»)
+- **Selected**: «Buran na vode.» (`canonical` | PASS)
+- **Move**: «Rezhem volnu.» (`canonical` | PASS)
+- **Attack**: «Tsel po pravomu bortu!» (`canonical` | PASS)
+- **Ability**: «Set v vodu!» [Ability: *Elektroset*] (`canonical` | PASS)
+- **Damaged**: «Korpus prinimaet vodu!» (`canonical` | PASS)
+- **Elite**: «More zapomnilo nash sled.» (`canonical` | PASS)
+- **Idle**: «Shtil — eto prosto pauza.» (`canonical` | PASS)
+- **Death**: «Otsek zatoplen…» (`canonical` | PASS)
+
+### 17. `SU_MorokSubmarine` (Udarnaya podlodka UPL-90 «Morok»)
+- **Selected**: «Morok slushaet glubinu.» (`canonical` | PASS)
+- **Move**: «Pogruzhaemsya.» (`canonical` | PASS)
+- **Attack**: «Torpednyy rastvor otkryt.» (`canonical` | PASS)
+- **Ability**: «Bezzvuchnyy khod.» [Ability: *Bezzvuchnyy khod*] (`canonical` | PASS)
+- **Damaged**: «Prochnyy korpus deformirovan!» (`canonical` | PASS)
+- **Elite**: «V more nas zamechayut slishkom pozdno.» (`canonical` | PASS)
+- **Idle**: «Naverkhu shumyat. Zdes dumayut.» (`canonical` | PASS)
+- **Death**: «Glubina… prinimaet…» (`canonical` | PASS)
+
+### 18. `SU_SvyatogorCruiser` (Raketnyy kreyser RKR-44 «Svyatogor»)
+- **Selected**: «Svyatogor zhdyot koordinaty.» (`canonical` | PASS)
+- **Move**: «Kreyser menyaet pozitsiyu.» (`canonical` | PASS)
+- **Attack**: «Raketnyy zalp.» (`canonical` | PASS)
+- **Ability**: «Zagraditelnyy ogon po sektoru.» [Ability: *Zagraditelnyy zalp*] (`canonical` | PASS)
+- **Damaged**: «Paluba probita!» (`canonical` | PASS)
+- **Elite**: «Bereg zakanchivaetsya tam, gde nachinayutsya nashi rakety.» (`canonical` | PASS)
+- **Idle**: «More bolshoe. Dalnost bolshe.» (`canonical` | PASS)
+- **Death**: «Pogreba… detoniruyut…» (`canonical` | PASS)
+
+### 19. `SU_Hero_Morozova` (Mayor Elena Morozova)
+- **Selected**: «Mayor Morozova. Dokladyvayte.» (`canonical` | PASS)
+- **Move**: «Ya budu na peredovoy.» (`canonical` | PASS)
+- **Attack**: «Etot uchastok fronta zakryvaem seychas.» (`canonical` | PASS)
+- **Ability**: «Podavit ikh svyaz i Move.» [Ability: *Pole podavleniya*] (`canonical` | PASS)
+- **Damaged**: «Tsarapina. Prikaz ne menyaetsya.» (`canonical` | PASS)
+- **Elite**: «Segodnya front dvizhetsya vmeste so mnoy.» (`canonical` | PASS)
+- **Idle**: «Generaly lyubyat karty. Ya predpochitayu mestnost.» (`canonical` | PASS)
+- **Death**: «Prodolzhayte… nastuplenie…» (`canonical` | PASS)
 
 ---
 
-## 4. Сводная статистика аудита
+## 3. Redaktorskiy reestr ispravleniy i kvalifikatsiya replik
 
-* **Всего юнитов**: 19
-* **Всего реплик**: 152
-* **Дубликатов реплик**: 0
-* **Уникальность рекомендуемых имён `.wav`**: 152 / 152 (100%)
-* **Статус валидности JSON/CSV/MD**: Valid & Synchronized
-* **Итоговое решение аудитора**: **`PASS`** (Окончательное утверждение сценария)
+* **Izmenyonnykh po kachestvu replik (`edited_for_quality`)**: `0` (Kazhdaya iz 152 kanonicheskikh replik Biblii v2.0 priznana stilisticheski, ritmicheski i funktsionalno bezuprechnoy).
+* **Sgenerirovannykh otsutstvuyushchikh replik (`generated_missing_line`)**: `0` (Ni odna replika ne uteryana v iskhodnoy biblii).
+* **Kanonicheskikh originalnykh replik (`canonical`)**: `152` (100% strogaya preemstvennost).
+
+---
+
+## 4. Svodnaya statistika audita
+
+* **Total yunitov**: 19
+* **Total replik**: 152
+* **Dublikatov replik**: 0
+* **Unikalnost rekomenduemykh imyon `.wav`**: 152 / 152 (100%)
+* **Status validnosti JSON/CSV/MD**: Valid & Synchronized
+* **Itogovoe reshenie auditora**: **`PASS`** (Okonchatelnoe utverzhdenie stsenariya)

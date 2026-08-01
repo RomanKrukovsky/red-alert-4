@@ -21,7 +21,7 @@
   "faction_profiles": {
     "Soviet": {
       "faction": "Soviet",
-      "system_name": "КОНТУР",
+      "system_name": "KONTUR",
       "eq": {
         "high_pass_hz": 80,
         "low_shelf_hz": 180,
@@ -50,7 +50,7 @@
     },
     "Alliance": {
       "faction": "Alliance",
-      "system_name": "АСТРА",
+      "system_name": "ASTRA",
       "eq": {
         "high_pass_hz": 100,
         "low_shelf_hz": 200,
@@ -82,7 +82,7 @@
     },
     "Coalition": {
       "faction": "Coalition",
-      "system_name": "ГАРМОНИЯ",
+      "system_name": "GARMONIYa",
       "eq": {
         "high_pass_hz": 90,
         "low_shelf_hz": 160,
@@ -109,7 +109,7 @@
     },
     "Chrono": {
       "faction": "Chrono",
-      "system_name": "МОЙРА",
+      "system_name": "MOYRA",
       "eq": {
         "high_pass_hz": 120,
         "low_shelf_hz": 220,

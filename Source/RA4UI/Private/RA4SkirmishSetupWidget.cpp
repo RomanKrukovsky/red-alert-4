@@ -103,47 +103,47 @@ void URA4SkirmishSetupWidget::BuildLayout()
     CanvasSlot->SetVerticalAlignment(VAlign_Fill);
 
     // Title Header
-    UTextBlock* Title = MakeSetupText(WidgetTree, LOCTEXT("Title", "НАСТРОЙКА СХВАТКИ (SKIRMISH)"), 36, Red, TEXT("TitleText"));
+    UTextBlock* Title = MakeSetupText(WidgetTree, LOCTEXT("Title", "NASTROYKA SKhVATKI (SKIRMISH)"), 36, Red, TEXT("TitleText"));
     PlaceSetupWidget(MainCanvas, Title, FVector2D(80.0f, 40.0f), FVector2D(800.0f, 60.0f), 2);
 
     UTextBlock* Subtitle = MakeSetupText(
-        WidgetTree, LOCTEXT("Subtitle", "Параметры сражения, выбор фракций, стартовых позиций и правил"), 14, Muted, TEXT("SubtitleText"), false);
+        WidgetTree, LOCTEXT("Subtitle", "Parametry srazheniya, vybor fraktsiy, startovykh pozitsiy i pravil"), 14, Muted, TEXT("SubtitleText"), false);
     PlaceSetupWidget(MainCanvas, Subtitle, FVector2D(82.0f, 95.0f), FVector2D(800.0f, 30.0f), 2);
 
     // Left Column: Map & Game Options
     UVerticalBox* LeftBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("LeftBox"));
 
     // Map Selection
-    UTextBlock* MapLabel = MakeSetupText(WidgetTree, LOCTEXT("MapLabel", "КАРТА СРАЖЕНИЯ"), 16, TextColor, TEXT("MapLabelText"));
+    UTextBlock* MapLabel = MakeSetupText(WidgetTree, LOCTEXT("MapLabel", "MAP SRAZhENIYa"), 16, TextColor, TEXT("MapLabelText"));
     LeftBox->AddChildToVerticalBox(MapLabel)->SetPadding(FMargin(0.0f, 10.0f, 0.0f, 4.0f));
 
     MapCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("MapCombo"));
-    MapCombo->AddOption(TEXT("RA4_Skirmish — Равнина Колымы (2 игрока)"));
+    MapCombo->AddOption(TEXT("RA4_Skirmish — Ravnina Kolymy (2 igroka)"));
     MapCombo->SetSelectedIndex(0);
     MapCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
     LeftBox->AddChildToVerticalBox(MapCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 16.0f));
 
     // Starting Credits
-    UTextBlock* CreditsLabel = MakeSetupText(WidgetTree, LOCTEXT("CreditsLabel", "СТАРТОВЫЙ БЮДЖЕТ (КРЕДИТЫ)"), 16, TextColor, TEXT("CreditsLabelText"));
+    UTextBlock* CreditsLabel = MakeSetupText(WidgetTree, LOCTEXT("CreditsLabel", "STARTOVYY BYuDZhET (KREDITY)"), 16, TextColor, TEXT("CreditsLabelText"));
     LeftBox->AddChildToVerticalBox(CreditsLabel)->SetPadding(FMargin(0.0f, 10.0f, 0.0f, 4.0f));
 
     CreditsCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("CreditsCombo"));
-    CreditsCombo->AddOption(TEXT("5 000 Кредитов (Малый)"));
-    CreditsCombo->AddOption(TEXT("10 000 Кредитов (Стандарт)"));
-    CreditsCombo->AddOption(TEXT("20 000 Кредитов (Большой)"));
+    CreditsCombo->AddOption(TEXT("5 000 Kreditov (Malyy)"));
+    CreditsCombo->AddOption(TEXT("10 000 Kreditov (Standart)"));
+    CreditsCombo->AddOption(TEXT("20 000 Kreditov (Bolshoy)"));
     CreditsCombo->SetSelectedIndex(1);
     CreditsCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
     LeftBox->AddChildToVerticalBox(CreditsCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 16.0f));
 
     // AI Difficulty
-    UTextBlock* DiffLabel = MakeSetupText(WidgetTree, LOCTEXT("DiffLabel", "СЛОЖНОСТЬ ИИ"), 16, TextColor, TEXT("DiffLabelText"));
+    UTextBlock* DiffLabel = MakeSetupText(WidgetTree, LOCTEXT("DiffLabel", "DIFFICULTY II"), 16, TextColor, TEXT("DiffLabelText"));
     LeftBox->AddChildToVerticalBox(DiffLabel)->SetPadding(FMargin(0.0f, 10.0f, 0.0f, 4.0f));
 
     DifficultyCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("DifficultyCombo"));
-    DifficultyCombo->AddOption(TEXT("Легкий (Easy)"));
-    DifficultyCombo->AddOption(TEXT("Средний (Medium)"));
-    DifficultyCombo->AddOption(TEXT("Тяжёлый (Hard)"));
-    DifficultyCombo->AddOption(TEXT("Безумный (Brutal)"));
+    DifficultyCombo->AddOption(TEXT("Legkiy (Easy)"));
+    DifficultyCombo->AddOption(TEXT("Sredniy (Medium)"));
+    DifficultyCombo->AddOption(TEXT("Tyazhyolyy (Hard)"));
+    DifficultyCombo->AddOption(TEXT("Bezumnyy (Brutal)"));
     DifficultyCombo->SetSelectedIndex(1);
     DifficultyCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
     LeftBox->AddChildToVerticalBox(DifficultyCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 16.0f));
@@ -158,59 +158,59 @@ void URA4SkirmishSetupWidget::BuildLayout()
     UVerticalBox* RightBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("RightBox"));
 
     // Player Setup
-    UTextBlock* PlayerHeader = MakeSetupText(WidgetTree, LOCTEXT("PlayerHeader", "ИГРОК 1 (HUMAN)"), 18, Red, TEXT("PlayerHeader"));
+    UTextBlock* PlayerHeader = MakeSetupText(WidgetTree, LOCTEXT("PlayerHeader", "IGROK 1 (HUMAN)"), 18, Red, TEXT("PlayerHeader"));
     RightBox->AddChildToVerticalBox(PlayerHeader)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
 
     PlayerFactionCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("PlayerFactionCombo"));
-    PlayerFactionCombo->AddOption(TEXT("Фракция: СССР (Soviet Union)"));
-    PlayerFactionCombo->AddOption(TEXT("Фракция: Альянс (Alliance)"));
-    PlayerFactionCombo->AddOption(TEXT("Фракция: Коалиция (Coalition)"));
-    PlayerFactionCombo->AddOption(TEXT("Фракция: Хроно (Chrono)"));
+    PlayerFactionCombo->AddOption(TEXT("Fraktsiya: Soviet (Soviet Union)"));
+    PlayerFactionCombo->AddOption(TEXT("Fraktsiya: Alliance (Alliance)"));
+    PlayerFactionCombo->AddOption(TEXT("Fraktsiya: Koalitsiya (Coalition)"));
+    PlayerFactionCombo->AddOption(TEXT("Fraktsiya: Khrono (Chrono)"));
     PlayerFactionCombo->SetSelectedIndex(0);
     PlayerFactionCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
     RightBox->AddChildToVerticalBox(PlayerFactionCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
 
     PlayerColorCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("PlayerColorCombo"));
-    PlayerColorCombo->AddOption(TEXT("Цвет: Красный"));
-    PlayerColorCombo->AddOption(TEXT("Цвет: Синий"));
-    PlayerColorCombo->AddOption(TEXT("Цвет: Зелёный"));
-    PlayerColorCombo->AddOption(TEXT("Цвет: Жёлтый"));
+    PlayerColorCombo->AddOption(TEXT("Tsvet: Krasnyy"));
+    PlayerColorCombo->AddOption(TEXT("Tsvet: Siniy"));
+    PlayerColorCombo->AddOption(TEXT("Tsvet: Zelyonyy"));
+    PlayerColorCombo->AddOption(TEXT("Tsvet: Zhyoltyy"));
     PlayerColorCombo->SetSelectedIndex(0);
     PlayerColorCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
     RightBox->AddChildToVerticalBox(PlayerColorCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
 
     PlayerSpotCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("PlayerSpotCombo"));
-    PlayerSpotCombo->AddOption(TEXT("Старт: Позиция 1 (Запад)"));
-    PlayerSpotCombo->AddOption(TEXT("Старт: Позиция 2 (Восток)"));
+    PlayerSpotCombo->AddOption(TEXT("Start: Pozitsiya 1 (Zapad)"));
+    PlayerSpotCombo->AddOption(TEXT("Start: Pozitsiya 2 (Vostok)"));
     PlayerSpotCombo->SetSelectedIndex(0);
     PlayerSpotCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
     RightBox->AddChildToVerticalBox(PlayerSpotCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 24.0f));
 
     // AI Setup
-    UTextBlock* AIHeader = MakeSetupText(WidgetTree, LOCTEXT("AIHeader", "ИГРОК 2 (AI COMMANDER)"), 18, Red, TEXT("AIHeader"));
+    UTextBlock* AIHeader = MakeSetupText(WidgetTree, LOCTEXT("AIHeader", "IGROK 2 (AI COMMANDER)"), 18, Red, TEXT("AIHeader"));
     RightBox->AddChildToVerticalBox(AIHeader)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
 
     AIFactionCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("AIFactionCombo"));
-    AIFactionCombo->AddOption(TEXT("Фракция: СССР (Soviet Union)"));
-    AIFactionCombo->AddOption(TEXT("Фракция: Альянс (Alliance)"));
-    AIFactionCombo->AddOption(TEXT("Фракция: Коалиция (Coalition)"));
-    AIFactionCombo->AddOption(TEXT("Фракция: Хроно (Chrono)"));
+    AIFactionCombo->AddOption(TEXT("Fraktsiya: Soviet (Soviet Union)"));
+    AIFactionCombo->AddOption(TEXT("Fraktsiya: Alliance (Alliance)"));
+    AIFactionCombo->AddOption(TEXT("Fraktsiya: Koalitsiya (Coalition)"));
+    AIFactionCombo->AddOption(TEXT("Fraktsiya: Khrono (Chrono)"));
     AIFactionCombo->SetSelectedIndex(1);
     AIFactionCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
     RightBox->AddChildToVerticalBox(AIFactionCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
 
     AIColorCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("AIColorCombo"));
-    AIColorCombo->AddOption(TEXT("Цвет: Красный"));
-    AIColorCombo->AddOption(TEXT("Цвет: Синий"));
-    AIColorCombo->AddOption(TEXT("Цвет: Зелёный"));
-    AIColorCombo->AddOption(TEXT("Цвет: Жёлтый"));
+    AIColorCombo->AddOption(TEXT("Tsvet: Krasnyy"));
+    AIColorCombo->AddOption(TEXT("Tsvet: Siniy"));
+    AIColorCombo->AddOption(TEXT("Tsvet: Zelyonyy"));
+    AIColorCombo->AddOption(TEXT("Tsvet: Zhyoltyy"));
     AIColorCombo->SetSelectedIndex(1);
     AIColorCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
     RightBox->AddChildToVerticalBox(AIColorCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
 
     AISpotCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("AISpotCombo"));
-    AISpotCombo->AddOption(TEXT("Старт: Позиция 1 (Запад)"));
-    AISpotCombo->AddOption(TEXT("Старт: Позиция 2 (Восток)"));
+    AISpotCombo->AddOption(TEXT("Start: Pozitsiya 1 (Zapad)"));
+    AISpotCombo->AddOption(TEXT("Start: Pozitsiya 2 (Vostok)"));
     AISpotCombo->SetSelectedIndex(1);
     AISpotCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
     RightBox->AddChildToVerticalBox(AISpotCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 16.0f));
@@ -229,19 +229,19 @@ void URA4SkirmishSetupWidget::BuildLayout()
     UVerticalBox* BannerStack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("BannerStack"));
 
     ValidationWarningText = MakeSetupText(
-        WidgetTree, LOCTEXT("ValidationOk", "Параметры матча корректны."), 15, GreenOk, TEXT("ValidationWarningText"));
+        WidgetTree, LOCTEXT("ValidationOk", "Parametry matcha korrektny."), 15, GreenOk, TEXT("ValidationWarningText"));
     BannerStack->AddChildToVerticalBox(ValidationWarningText)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 12.0f));
 
     UHorizontalBox* ActionRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("ActionRow"));
 
     UButton* BackButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("BackButton"));
-    BackButton->AddChild(MakeSetupText(WidgetTree, LOCTEXT("Back", "НАЗАД В МЕНЮ"), 18, TextColor, TEXT("BackLabel")));
+    BackButton->AddChild(MakeSetupText(WidgetTree, LOCTEXT("Back", "BACK V MENYu"), 18, TextColor, TEXT("BackLabel")));
     BackButton->OnClicked.AddDynamic(this, &URA4SkirmishSetupWidget::HandleBackClicked);
     ActionRow->AddChildToHorizontalBox(BackButton)->SetPadding(FMargin(0.0f, 0.0f, 16.0f, 0.0f));
 
     StartButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("StartButton"));
     StartButton->SetBackgroundColor(RedDim);
-    StartButton->AddChild(MakeSetupText(WidgetTree, LOCTEXT("StartMatch", "НАЧАТЬ МАТЧ"), 20, TextColor, TEXT("StartMatchLabel")));
+    StartButton->AddChild(MakeSetupText(WidgetTree, LOCTEXT("StartMatch", "NAChAT MATCh"), 20, TextColor, TEXT("StartMatchLabel")));
     StartButton->OnClicked.AddDynamic(this, &URA4SkirmishSetupWidget::HandleStartMatchClicked);
     ActionRow->AddChildToHorizontalBox(StartButton);
 
@@ -280,16 +280,16 @@ void URA4SkirmishSetupWidget::UpdateConflictValidation()
     if (PlayerColorIndex == AIColorIndex)
     {
         bHasConflict = true;
-        Message = LOCTEXT("ColorConflict", "ОШИБКА: Игрок и ИИ выставили одинаковый цвет! Выберите разные цвета.");
+        Message = LOCTEXT("ColorConflict", "OShIBKA: Igrok i II vystavili odinakovyy tsvet! Vyberite raznye tsveta.");
     }
     else if (PlayerSpotIndex == AISpotIndex)
     {
         bHasConflict = true;
-        Message = LOCTEXT("SpotConflict", "ОШИБКА: Конфликт стартовых позиций! Игроки не могут стартовать на одном спавне.");
+        Message = LOCTEXT("SpotConflict", "OShIBKA: Konflikt startovykh pozitsiy! Igroki ne mogut startovat na odnom spavne.");
     }
     else
     {
-        Message = LOCTEXT("ValidationOk", "Параметры матча проверены. Нажмите «НАЧАТЬ МАТЧ» для загрузки.");
+        Message = LOCTEXT("ValidationOk", "Parametry matcha provereny. Nazhmite «NAChAT MATCh» dlya zagruzki.");
     }
 
     if (bHasConflict)

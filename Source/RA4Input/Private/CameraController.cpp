@@ -62,6 +62,15 @@ void CameraController::AddYawDegrees(float Delta)
     }
 }
 
+void CameraController::AddPitchDegrees(float Delta)
+{
+    if (Delta == 0.0f)
+    {
+        return;
+    }
+    PitchDegrees = Clamp(PitchDegrees + Delta, -85.0f, -20.0f);
+}
+
 void CameraController::BeginMiddleDrag(float PixelX, float PixelY)
 {
     bMiddleDragging = true;

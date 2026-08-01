@@ -26,22 +26,22 @@ This document summarizes the technical implementation of the **Skirmish UI, Play
 - **Selection Details**:
   - Displays unit/structure name, HP bar, HP percentage, ownership, harvester cargo load (`HarvesterCargo` / `CargoCapacity`), and current task status.
 - **Build Cards**:
-  - Shows cost (`Cost`), build time (`BuildSeconds`), power delta (`PowerDelta` e.g., `+50 Энергии` or `-20 Энергии`), prerequisites (`PrerequisiteText` e.g., `Требуется: Казармы`), and exact block reasons (`MissingPrerequisite`, `InsufficientCredits`, `NoProducer`, `QueueFull`).
+  - Shows cost (`Cost`), build time (`BuildSeconds`), power delta (`PowerDelta` e.g., `+50 Energii` or `-20 Energii`), prerequisites (`PrerequisiteText` e.g., `Trebuetsya: Kazarmy`), and exact block reasons (`MissingPrerequisite`, `InsufficientCredits`, `NoProducer`, `QueueFull`).
 
 ### D. Skirmish Setup Screen & Match Flow
 - **Location**: `Source/RA4UI/Public/RA4SkirmishSetupWidget.h`, `Source/RA4UI/Private/RA4SkirmishSetupWidget.cpp`
 - **Configuration Options**:
-  - Map choice (`RA4_Skirmish — Равнина Колымы (2 игрока)`).
-  - Player & AI Faction selection (СССР, Альянс, Коалиция, Хроно).
+  - Map choice (`RA4_Skirmish — Ravnina Kolymy (2 igroka)`).
+  - Player & AI Faction selection (Soviet Union, Alliance, Coalition, Chrono).
   - Player & AI Color selection.
   - Player & AI Start Spots (Position 1, Position 2).
   - AI Difficulty (Easy, Medium, Hard, Brutal).
   - Starting Credits (5 000, 10 000, 20 000).
 - **Conflict Validation**:
-  - Validates color collisions (`PlayerColor == AIColor`) and start spot collisions (`PlayerSpot == AISpot`). Displays warning banner and disables `НАЧАТЬ МАТЧ` button until conflicts are resolved.
+  - Validates color collisions (`PlayerColor == AIColor`) and start spot collisions (`PlayerSpot == AISpot`). Displays warning banner and disables `NAChAT MATCh` button until conflicts are resolved.
 - **Match Navigation & Pause/Restart**:
   - Toggling `Escape` arms pause overlay (`TogglePauseMenu()`).
-  - Victory/Defeat overlays (`URA4MatchResultOverlayWidget`) present `ПЕРЕЗАПУСК (RESTART)` and `В ГЛАВНОЕ МЕНЮ` options.
+  - Victory/Defeat overlays (`URA4MatchResultOverlayWidget`) present `PEREZAPUSK (RESTART)` and `V GLAVNOE MENYu` options.
 
 ### E. Localization & Settings
 - **Location**: `Source/RA4UI/Private/RA4SettingsWidget.cpp`, `Source/RA4UI/Private/RA4SkirmishSetupWidget.cpp`

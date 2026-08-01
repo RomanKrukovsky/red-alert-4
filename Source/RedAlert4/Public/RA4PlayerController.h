@@ -169,6 +169,7 @@ private:
     void SubmitOrders(const std::vector<RA4::Command>& Commands);
 
     void UpdateCameraInput(float DeltaTime);
+    void OnDummyPanKey();
 
     // The in-match HUD. Created here because the controller is what knows this is a
     // local player; the widget itself pulls everything it shows from the UI data
@@ -227,7 +228,7 @@ private:
     TObjectPtr<URA4MatchResultOverlayWidget> MatchResultOverlay;
 
     bool bDirectControlActive = false;
-    RA4::EntityId DirectControlEntityId = 0;
+    RA4::EntityId DirectControlEntityId{};
     FRotator DirectControlCameraRotation = FRotator::ZeroRotator;
 
     UPROPERTY(Transient)

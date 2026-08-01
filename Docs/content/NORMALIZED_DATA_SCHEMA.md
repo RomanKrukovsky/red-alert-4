@@ -15,7 +15,7 @@ Documentation for `Content/RA4/Data/Generated/ra4_content.normalized.json` struc
   "units": [
     {
       "id": "SU_Conscript",
-      "name_ru": "Призывник",
+      "name_ru": "Conscript",
       "faction": "Soviet",
       "category": "Infantry",
       "tier": 1,
@@ -27,12 +27,10 @@ Documentation for `Content/RA4/Data/Generated/ra4_content.normalized.json` struc
       "speed": 90,
       "range": 250,
       "dps": 18,
-      "role": "Легкая пехота",
-      "primary_weapon": "Автомат АК-74",
-      "requirements": ["SU_Barracks"],
-      "abilities": ["Молотов", "Укрытие"],
-      "voice_lines": { "Selected": "Призывник готов!", ... }
-    }
+"role": "Easy Infantry",
+      "primary_weapon": "AK-74 assault rifle",      "requirements": ["SU_Barracks"],
+"abilities": ["Molotov", "Shelter"],
+      "voice_lines": { "Selected": "Conscript ready!", ... }    }
   ]
 }
 ```

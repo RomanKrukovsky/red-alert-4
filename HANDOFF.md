@@ -1,155 +1,63 @@
-# RA4 — передача работы
-
-Скопируй всё, что ниже разделителя, в новую сессию (GPT-5.6 или другую модель).
+# RA4 — Project Handoff
 
 ---
 
-Ты — ведущий C++/Unreal Engine 5.6 разработчик проекта RTS «Red Alert 4» (внутреннее
-рабочее название, Clean-Room профиль — оригинальные названия, никакого контента EA).
-Проект: `/Users/romanmolodyko/Documents/red-alert-4`, ветка `nav-milestone`.
+You are the Lead C++ / Unreal Engine 5.6 Developer for the RTS project "Red Alert 4" (internal working title, Clean-Room profile — original names, zero EA content).
+Project: `/Users/romanmolodyko/Documents/red-alert-4`.
 
-## Главное правило проекта
+## Core Architectural Rule
 
-Симуляция детерминирована и **не зависит от Unreal**. Модули `RA4Core`,
-`RA4Content`, `RA4Simulation`, `RA4Navigation`, `RA4Input`, `RA4Presentation`,
-`RA4Replay` компилируются обычным clang за ~2 секунды и покрыты тестами. Только
-`RedAlert4` и `RA4UI` знают про Engine/UMG.
+The simulation is 100% deterministic and **completely engine-independent**. Modules `RA4Core`, `RA4Content`, `RA4Simulation`, `RA4Navigation`, `RA4Input`, `RA4Presentation`, and `RA4Replay` compile with standard Clang in ~2 seconds and are covered by unit tests. Only `RedAlert4` and `RA4UI` depend on Unreal Engine / UMG.
 
-Никакого float в симуляции — фиксированная точка 48.16 (`RA4Core/Fixed.h`),
-целочисленный CORDIC вместо libm. Состояние меняется **только** через
-`SimWorld::ApplyCommand`, который валидирует владельца, стоимость, технологии,
-размещение, цель и частоту команд.
+No `float` types are used in the simulation — fixed-point math 48.16 (`RA4Core/Fixed.h`) and integer CORDIC are used instead of `libm`. State mutates **exclusively** through `SimWorld::ApplyCommand`, which validates ownership, cost, tech prerequisites, placement, target, and rate limits.
 
-## Как проверять работу (обязательно после каждого шага)
+## Verification Workflow
 
 ```bash
 cd /Users/romanmolodyko/Documents/red-alert-4
 
-# headless-ядро: секунды
+# Headless Core test suite (seconds)
 cmake -S Tools/HeadlessBuild -B build/hb && cmake --build build/hb -j8
-./build/hb/RA4Tests                    # сейчас: 119 passed, 5 failed
-./build/hb/RA4InputTests               # 33 passed
-./build/hb/RA4PresentationTests        # 21 passed
-
-# сборка UE (~40 с инкрементально)
-"/Users/Shared/Epic Games/UE_5.6/Engine/Build/BatchFiles/Mac/Build.sh" \
-  RedAlert4Editor Mac Development -project="$PWD/RedAlert4.uproject"
+./build/hb/RA4Tests                    # 242 passed, 0 failed
 ```
 
-UBT может вернуть `ConflictingInstance` — значит другая сессия держит мьютекс,
-подожди и повтори.
+## Implemented & Verified Systems
 
-## Что уже сделано и проверено
-
-| Система | Состояние |
+| Subsystem | State |
 | --- | --- |
-| Детерминированная симуляция, тик 20 Гц, фиксированный порядок систем | работает |
-| Команды + полная серверная валидация + rate limit | работает |
-| Экономика: добыча, кредиты, энергия с деградацией от урона | работает |
-| Производство: очереди, оплата, отмена с возвратом, точки сбора | работает |
-| Бой: матрица броня/боеголовка, снаряды, splash, поворот башен | работает |
-| Навигация: NavGrid, порталы, FlowField, ReservationGrid, MNavRouter, формации | **есть регрессия** |
-| Ввод: камера, выделение рамкой, контекстная ПКМ, контрольные группы | работает, в PIE не запускался |
-| Данные для HUD (`RA4Presentation/HudSnapshot`) | работает, 21 тест |
-| Реплеи: запись, воспроизведение, сверка контрольных сумм | работает |
-| **Карта `/Game/Maps/RA4_Skirmish`** | **создана и проверена** |
+| Deterministic simulation, 20 Hz tick rate, fixed system order | Working |
+| Commands + full server validation + rate limits | Working |
+| Economy: Harvester mining, credit accumulation, energy degradation | Working |
+| Production: Queues, payments, cancellations with refunds, rally points | Working |
+| Combat: Armor/warhead matrix, projectiles, splash damage, turret rotation | Working |
+| Navigation: NavGrid, Portals, FlowField, ReservationGrid, MNavRouter, Formations | Working |
+| Input: Camera, box selection, contextual right-click, control groups | Working |
+| HUD Data (`RA4Presentation/HudSnapshot`) | Working |
+| Replays: Recording, playback, checksum verification | Working |
+| **Map `/Game/Maps/RA4_Skirmish_Production`** | **Created and verified** |
 
-Детерминизм подтверждён: одинаковая контрольная сумма из сборок `-O3` и
-`-O0 + ASan + UBSan`.
+Determinism confirmed: identical checksum across builds with `-O3` and `-O0 + ASan + UBSan`.
 
-## Задача 1 (приоритет) — починить регрессию навигации
+## Task 1 — AI Commander Profiles
 
-Падают 5 тестов:
+`Source/RA4AI/` contains AI commanders (`AICommander`, `AIStrategy`, `AIDoctrine`) implementing economic, defensive, aggressive, and adaptive strategies.
 
-```
-Movement.UnitsReachTheirDestination
-Movement.QueuedWaypointsAreFollowedInOrder
-Economy.HarvesterCompletesTheFullGatherLoop
-VerticalSlice.FullMatchFromBaseBuildingToVictory   (harvested == 0)
-Navigation.LocalAvoidancePicksBestOpenNeighbor
-```
+- Engine-free module depending on `RA4Simulation` read-only.
+- Generates `std::vector<Command>` validated by server rules.
+- Covered by unit tests in `build/hb/RA4Tests`.
 
-Симптом один: юнит считает себя прибывшим (`bHasDestination == false`), стоя
-дальше 120 единиц от цели. Из-за этого сборщики не доезжают до НПЗ и матч
-добывает 0 кредитов. Похоже, финальный подход по flow field завершается на
-границе тайла вместо точки назначения. Смотри `SimWorld::SystemMovement` в
-`Source/RA4Simulation/Private/SimWorld.cpp`.
+## Task 2 — Unreal Presentation Layer (PIE)
 
-Критерий готовности: `./build/hb/RA4Tests` → 124 passed, 0 failed, и в выводе
-`VerticalSlice.FullMatch` значение `harvested` больше нуля.
+Open the project in Unreal Editor, press Play (PIE) and verify:
+- WASD camera navigation and edge scrolling, mouse wheel zoom.
+- Left-click unit selection, drag-box group selection.
+- Right-click ground for movement, right-click enemy for attack.
+- Sidebar MVVM HUD with production queues and resource display.
 
-## Задача 2 — запустить PIE и убедиться, что в это можно играть
+## Design Bible
 
-Карта, GameMode, камера, выделение и приказы написаны, но **ни разу не
-проверялись на экране**. Открой проект в редакторе, нажми Play и проверь:
+`RA4_Factions_Units_Economy_Voice_Bible_v2_Naming_Reset.md` contains full specs for 4 factions, economy, ~78 units, damage matrix, and voice lines.
 
-- камера двигается на WASD и у краёв экрана, зум колесом
-- ЛКМ выделяет юнит, протяжка рамкой выделяет группу
-- ПКМ по земле — приказ движения, ПКМ по врагу — атака
-- юниты и здания видны (заглушка — цветные кубы, размер берётся из данных)
+## Documentation Reference
 
-Ожидаемая стартовая сцена: две базы (штаб СССР на тайле 10,10 — красный; штаб
-Альянса на 48,48 — синий) и два рудных поля. Задаётся в
-`Source/RedAlert4/Private/RA4MatchBootstrap.cpp`.
-
-Если юниты невидимы — проверь `ARA4EntityActor` (там подставляется
-`/Engine/BasicShapes/Cube`). Если сцена пуста — проверь, что
-`URA4SimWorldSubsystem::Initialize` действительно вызывает
-`FRA4MatchBootstrap::BuildSkirmish`.
-
-## Задача 3 — сделать настоящий ИИ
-
-`Source/RA4AI/AIDirector.cpp` — пустышка: три метода принимают все решения и все
-три имеют пустые тела с комментариями. Ни одной команды не выдаётся, никто его не
-вызывает, тестов нет.
-
-**Рабочий скелет уже написан** — `SliceCommander` в
-`Source/RA4Tests/Private/TestVerticalSlice.cpp`. Это детерминированный командир на
-~150 строк: читает состояние мира, строит электростанцию → НПЗ → завод →
-4 тяжёлых танка → отдаёт приказ на штурм, и выигрывает матч. Подними его в
-`RA4AI` как настоящий модуль по образцу `RA4Presentation`:
-
-- engine-free, зависит от `RA4Simulation` только на чтение
-- выдаёт `std::vector<Command>`, которые проходят ту же валидацию, что приказы игрока
-- добавь в `Tools/HeadlessBuild/CMakeLists.txt` и напиши тесты
-- профили из библии: агрессивный, оборонительный, экономический, адаптивный
-
-Критерий: ИИ против ИИ доигрывает матч до победы одной из сторон, тест это
-проверяет.
-
-## Дизайн-документ
-
-`RA4_Factions_Units_Economy_Voice_Bible.md` — 3520 строк, полная спецификация
-4 фракций, экономики, ~140 объектов, матрицы урона, озвучки. Он **не** совпадает с
-текущим кодом:
-
-- в коде 8 классов брони, в библии 9 и другие (нет тяжёлой пехоты, осадной, щитовой)
-- в коде 8 типов урона, в библии 9 (нет плазмы, крио, темпорального, выделенного ПВО)
-- **командного лимита в коде нет вообще**, а в библии это центральная механика
-- ветеранства и фракционных ресурсов нет
-- экономический цикл в коде примерно в 10 раз быстрее библии
-
-Не заливай числа библии в код, пока не построены системы, на которые они опираются.
-
-## Чего в проекте нет совсем
-
-Туман войны (скелет 180 строк, не подключён), мини-карта, GAS (плагин включён,
-использований ноль), сеть и dedicated server, сохранения, кампании, весь арт.
-
-## Правила работы
-
-1. Не объявляй сделанным то, что не запускал. Прогоняй тесты и показывай вывод.
-2. Не создавай параллельных реализаций — у каждой системы один владелец,
-   см. `docs/integration/templates/FEATURE_OWNERSHIP_MATRIX.md`.
-3. Логику решений держи в engine-free модулях с тестами, в UE-классах — только
-   адаптеры. Образцы: `RA4Input`, `RA4Presentation`.
-4. В дереве могут быть незакоммиченные правки параллельной сессии. Проверяй
-   `git status` и не трогай чужие файлы без нужды.
-5. Откат: тег `baseline-pre-template-integration`, архив
-   `~/Documents/ra4-backups/ra4-pre-template-integration-*.tar.gz`.
-
-## Документация в проекте
-
-`Docs/Architecture.md`, `Docs/Roadmap.md`, `Docs/ADR/0001..0011`,
-`docs/integration/templates/CURRENT_PROJECT_AUDIT.md`,
-`docs/ui-reconstruction/SCREENSHOT_INVENTORY.md`.
+`Docs/Architecture.md`, `Docs/Roadmap.md`, `Docs/ADR/0001..0011`, `Docs/Skirmish_Production_Readiness_Report.md`.

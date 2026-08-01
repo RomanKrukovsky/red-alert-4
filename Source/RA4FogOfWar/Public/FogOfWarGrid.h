@@ -6,9 +6,7 @@
 #include <cstdint>
 #include <vector>
 
-#if __has_include("CoreMinimal.h")
-#include "CoreMinimal.h"
-#else
+#if defined(RA4_HEADLESS)
 struct FIntRect
 {
     int32_t MinX = 0;
@@ -19,6 +17,8 @@ struct FIntRect
     FIntRect(int32_t InMinX, int32_t InMinY, int32_t InMaxX, int32_t InMaxY)
         : MinX(InMinX), MinY(InMinY), MaxX(InMaxX), MaxY(InMaxY) {}
 };
+#else
+#include "CoreMinimal.h"
 #endif
 
 #ifndef RA4FOGOFWAR_API

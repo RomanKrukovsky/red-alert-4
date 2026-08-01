@@ -1,19 +1,12 @@
-# 03. От SAGE к самостоятельной Unreal-архитектуре
-
-## 3.1. Наблюдаемое разделение в Generals / Zero Hour
-
-Официальное дерево SAGE разделяет код на:
-
-- `Common` — общая инфраструктура, данные, файловая система, состояние, аудио-описания, shared definitions;
-- `GameClient` — drawable/presentation, UI, selection, input translation, camera/view, локализация и shell;
-- `GameLogic` — object model, AI, pathfinding, locomotion, weapons, armor, scripts, terrain logic, powers и victory;
-- `GameNetwork` — connections, frame data, command messages, packets, LAN/NAT/transport;
-- `GameEngineDevice` — rendering, audio, video и platform adapters.
-
-Это полезная граница, но переносить старые классы один к одному нельзя.
-
-## 3.2. Предлагаемые Unreal modules
-
+# 03. From SAGE to independent Unreal architecture
+## 3.1. Observed division in Generals/Zero Hour
+The official SAGE tree divides the code into:
+- `Common` - common infrastructure, data, file system, State, audio descriptions, shared definitions;
+- `GameClient` - drawable/presentation, UI, selection, input translation, camera/view, localization and shell;
+- `GameLogic` - object model, AI, pathfinding, locomotion, weapons, armor, scripts, terrain logic, powers and victory;- `GameNetwork` — connections, frame data, command messages, packets, LAN/NAT/transport;
+- `GameEngineDevice` - rendering, audio, video and platform adapters.
+This is a useful boundary, but you can't carry over old classes one-to-one.
+## 3.2. Suggested Unreal modules
 ```text
 Source/
   RA4Core/
@@ -134,8 +127,7 @@ Source/
 - fog-visible representation;
 - visual state must not mutate authoritative simulation.
 
-## 3.3. Ключевой архитектурный инвариант
-
+## 3.3. Key architectural invariant
 ```text
 Input / AI decision
   → validated command
@@ -144,40 +136,28 @@ Input / AI decision
   → Unreal visual/audio response
 ```
 
-Ни Niagara, ни Animation Blueprint, ни Slate, ни client-only audio callback не должны напрямую менять деньги, здоровье, position-in-simulation, cooldown или tech state.
-
-## 3.4. Сеть
-
-Имена `FrameData`, `NetCommand*`, `GameMessageParser` и инфраструктура CRC/state в Generals указывают на command/frame-oriented deterministic architecture. Это сильный референс, но не причина слепо повторять P2P lockstep.
-
-Для RA4 следует сравнить три режима:
-
-1. **Deterministic peer lockstep** — низкий трафик, тяжёлые требования к детерминизму и защите от desync.
-2. **Server-authoritative deterministic simulation** — команды проходят через сервер; проще контроль честности, дороже инфраструктура.
-3. **Hybrid command stream + snapshots** — основной поток команд, периодические authoritative snapshots/recovery.
-
-Предварительная рекомендация: проектировать simulation/commands/replay так, чтобы они поддерживали deterministic command stream, а конкретный transport выбрать после нагрузочного прототипа на целевом количестве юнитов.
-
-## 3.5. Что не копировать из SAGE
-
-- глобальные singleton-подобные подсистемы;
-- тесную связанность renderer/platform с simulation;
-- старые Win32/GameSpy/DirectX adapters;
-- огромные наследуемые object/module trees без строгих ownership rules;
-- floating-point assumptions старого x86;
-- UI, который напрямую знает внутренности simulation objects;
-- сетевой протокол без versioned schemas и diagnostics.
-
-## 3.6. Минимальный вертикальный архитектурный тест
-
-Не MVP продукта, а инженерный proving ground:
-
-- 2 игрока;
-- 500–1000 simulation entities;
+Neither Niagara, nor Animation Blueprint, nor Slate, nor the client-only audio callback should directly change money, health, position-in-simulation, cooldown or tech state.
+## 3.4. Net
+The names `FrameData`, `NetCommand*`, `GameMessageParser` and the CRC/state framework in Generals indicate a command/frame-oriented deterministic architecture. This is a strong reference, but there is no reason to blindly repeat P2P lockstep.
+for RA4 there are three modes to compare:
+1. **Deterministic peer lockstep** - low traffic, heavy Requirements for determinism and protection against desync.
+2. **Server-authoritative deterministic simulation** - commands pass via the server; integrity control is simpler, infrastructure is more expensive.
+3. **Hybrid command stream + snapshots** - main command stream, periodic authoritative snapshots/recovery.
+Preliminary recommendation: design simulation/commands/replay so that they support deterministic command stream, and select a specific transport after the load prototype on the target number of units.
+## 3.5. What not to copy from SAGE
+- global singleton-like subsystems;
+- close connection between renderer/platform and simulation;
+- old Win32/GameSpy/DirectX adapters;
+- huge inherited object/module trees without strict ownership rules;
+- floating-point assumptions of the old x86;
+- UI that directly knows the internals of simulation objects;
+- network protocol without versioned schemas and diagnostics.
+## 3.6. Minimum Vertical Architectural Test
+Not a product MVP, but an engineering proving ground:
+- 2 players;- 500–1000 simulation entities;
 - selection + move + attack + production;
-- одна ground navigation domain;
-- command recording/replay;
-- hash состояния каждые N кадров;
-- принудительное внесение расхождения и понятный desync report;
-- headless запуск двух симуляций на одинаковом command stream;
-- одинаковый финальный hash на Windows/macOS/Linux либо документированная граница платформ.
+- one ground navigation domain;- command recording/replay;
+- hash state every N frames;
+- forced entry of discrepancies and clear desync report;
+- headless launch of two simulations on the same command stream;
+- the same final hash on Windows/macOS/Linux or a documented platform boundary.

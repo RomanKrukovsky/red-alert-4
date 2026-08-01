@@ -9,8 +9,7 @@
 
 ## 1. Executive Summary & Vision
 
-The **EVA (Electronic Video Assistant / Бортовой ИИ Коммуникации)** voiceover system in *Red Alert 4* provides high-clarity tactical situational awareness to the player during high-intensity RTS gameplay. 
-
+The **EVA (Electronic Video Assistant/Onboard AI Communications)** voiceover system in *Red Alert 4* provides high-clarity tactical situational awareness to the player during high-intensity RTS gameplay.
 Key audio design goals:
 * **Instant Information Transfer:** Clear, unambiguous Russian vocal delivery capable of cutting through dense combat noise (explosions, gunfire, engine roars).
 * **Faction Identity:** Each faction features a unique EVA persona reflecting its ideological, technological, and aesthetic character (Soviet industrial authority, Allied high-tech precision, Coalition strategic honor, Chronolegion quantum detachment).
@@ -31,10 +30,8 @@ Key audio design goals:
 | Parameter | Specification |
 |---|---|
 | **Vocal Range / Pitch** | Low Contralto (160 Hz – 185 Hz fundamental pitch) |
-| **Diction & Cadence** | Deliberate, crisp articulation, strict military cadence, firm stops on consonants (`т`, `к`, `р`) |
-| **Forbidden Styles** | High-pitched squeaks, panicky shouting, casual slang, warm maternal tone, theatrical anime exaggeration |
-| **Pronunciation Nuances** | Formal Soviet military Russian, clear stress on command verbs (`Строительство завершено`, `База под атакой`) |
-
+| **Diction & Cadence** | Deliberate, crisp articulation, strict military cadence, firm stops on consonants (`t`, `k`, `r`) || **Forbidden Styles** | High-pitched squeaks, panicky shouting, casual slang, warm maternal tone, theatrical anime exaggeration |
+| **Pronunciation Nuances** | Formal Soviet military Russian, clear stress on command verbs (`Construction completed`, `Base under attack`) |
 #### DSP Processing Chain (MetaSounds)
 1. **High-Pass Filter:** 100 Hz Butterworth 2nd order (cuts low rumble).
 2. **Parametric EQ:** +2.0 dB shelf at 4.5 kHz for speech clarity; sharp -3.0 dB notch at 3.2 kHz to avoid harshness.
@@ -121,12 +118,11 @@ Key audio design goals:
 To maintain absolute voice continuity across synthesized assets, all script inputs must comply with `Content/RA4/Audio/Generated/eva_pronunciation_ru.json`.
 
 ### Key Dictionary Rules:
-1. **Tech Tiers:** `T1`, `T2`, `T3` expanded to `"Тир один"`, `"Тир два"`, `"Тир три"`.
-2. **Acronyms:** `MCV` expanded to `"Эм-Си-Ви"`, `EMP` to `"Электро-магнитный импульс"`, `GPS` to `"Джи-Пи-Эс"`.
-3. **Numbers & Quantities:** `100%` expanded to `"сто процентов"`, `15s` expanded to `"пятнадцать секунд"`.
-4. **Callsigns:** `Alpha-1` pronounced as `"А́льфа оди́н"`, `Bravo-2` as `"Бра́во два"`.
-5. **Faction Names:** `СССР` spoken as `"Советский Союз"` (or `"Эс-Эс-Эс-Эр"` in shorthand tactical alerts).
-
+1. **Tech Tiers:** `T1`, `T2`, `T3` ​​expanded to `"Tier one"`, `"Tier two"`, `"Tier three"`.
+2. **Acronyms:** `MCV` expanded to `"MCV"`, `EMP` to `"Electromagnetic pulse"`, `GPS` to `"GPS"`.
+3. **Numbers & Quantities:** `100%` expanded to `"one hundred percent"`, `15s` expanded to `"fifteen seconds"`.
+4. **Callsigns:** `Alpha-1` pronounced as `"Alpha one"`, `Bravo-2` as `"Bravo two"`.
+5. **Faction Names:** `USSR` spoken as `"Soviet Union"` (or `"SS-SR"` in shorthand tactical alerts).
 ---
 
 ## 4. MetaSounds Integration & Dynamic Priority

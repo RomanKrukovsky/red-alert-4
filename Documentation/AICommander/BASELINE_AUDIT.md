@@ -70,8 +70,7 @@ Instead `AICommander::Tick(const SimWorld& World, ...)` takes the full authorita
 world, and `FindEnemyTarget()` (`AICommander.cpp:297-322`) iterates **every** core in
 the world and returns the first living enemy building regardless of visibility.
 
-This directly violates the brief ("AI не видит юниты под fog of war"). The fix is not
-to write a knowledge model — one already exists and is tested — but to route the
+This directly violates the brief ("AI does not see Units under fog of war"). The fix is ​​notto write a knowledge model — one already exists and is tested — but to route the
 commander through it and remove the direct-world escape hatch.
 
 ### F-2 — three competing AI frameworks in-tree

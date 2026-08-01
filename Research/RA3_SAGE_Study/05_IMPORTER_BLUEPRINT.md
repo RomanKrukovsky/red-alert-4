@@ -1,20 +1,14 @@
-# 05. Research importer: безопасный blueprint
-
-## 5.1. Назначение
-
-Importer нужен не для переноса RA3 в Unreal, а для автоматического анализа формы данных:
-
-- какие типы сущностей существуют;
-- какие связи встречаются;
-- насколько глубоко наследование;
-- какие модули комбинируются;
-- какие категории полей повторяются;
-- где циклы, dangling references и high-coupling areas.
-
-## 5.2. Жёсткое ограничение
-
-Выход importer по умолчанию не содержит исходные names, strings, numbers, art paths или shader code. Он производит только агрегаты и анонимизированную структуру.
-
+#05. Research importer: secure blueprint
+## 5.1. Purpose
+Importer is needed not for transferring RA3 to Unreal, but for automatic analysis of the data form:
+- what types of entities exist;
+- what connections are found;
+- how deep is the inheritance;
+- which modules are combined;
+- what categories of fields are repeated;
+- where are the cycles, dangling references and high-coupling areas.
+## 5.2. Hard limit
+The default importer output does not contain the original names, strings, numbers, art paths or shader code. It produces only aggregates and an anonymized structure.
 ## 5.3. Pipeline
 
 ```text
@@ -27,14 +21,12 @@ ExternalResearch/EA_RA3
   → Research/RA3_SAGE_Study/GeneratedReports
 ```
 
-Не использовать:
-
+Do not use:
 ```text
 EA XML → Unreal DataAsset → packaged game
 ```
 
-## 5.4. Этапы
-
+## 5.4. Stages
 ### A. Discovery
 
 - enumerate XML/XSD;
@@ -65,20 +57,17 @@ EA XML → Unreal DataAsset → packaged game
 
 ### D. Anonymization
 
-Вместо оригинала:
-
+Instead of the original:
 ```text
 AlliedAntiVehicleVehicleTech1
 ```
 
-сохранять:
-
+save:
 ```text
 FactionA.Vehicle.RoleAntiArmor.Tier2.Object_017
 ```
 
-Числа заменять статистиками:
-
+Replace numbers with statistics:
 ```text
 build_cost_percentile = 0.61
 health_percentile = 0.54
@@ -98,10 +87,8 @@ speed_bucket = medium
 - UI-command-ability link graph;
 - visual state taxonomy.
 
-## 5.5. Независимая промежуточная модель RA4
-
-После исследования вручную создаётся своя schema:
-
+## 5.5. Independent intermediate model RA4
+After research, your own schema is manually created:
 ```text
 RA4Schema v1
   UnitDefinition
@@ -116,12 +103,10 @@ RA4Schema v1
   PresentationProfile
 ```
 
-Она не должна сохранять EA identifiers и обязана иметь собственные semantics/versioning.
-
+It should not save EA identifiers and must have its own semantics/versioning.
 ## 5.6. Security
 
-- XML parser с отключёнными external entities;
-- maximum file/depth/node limits;
+- XML ​​parser with external entities disabled;- maximum file/depth/node limits;
 - no code generation from untrusted element names;
 - path canonicalization;
 - no writes outside report directory;
@@ -132,9 +117,9 @@ RA4Schema v1
 
 ## 5.7. Acceptance criteria
 
-- ни один EA XML/XSD/shader не попадает в Git index;
-- generated report не позволяет восстановить существенную часть исходных данных;
-- повторный запуск даёт одинаковый manifest;
-- malicious XML corpus не читает локальные файлы и не делает network calls;
-- CI проверяет отсутствие forbidden identifiers;
-- RA4 production schema создаётся отдельным ручным решением.
+- not a single EA XML/XSD/shader is included in the Git index;
+- generated report does not allow you to restore a significant part of the original data;
+- repeated launch gives the same manifest;
+- malicious XML corpus does not read local files and does not make network calls;
+- CI checks for the absence of forbidden identifiers;
+- RA4 production schema is created by a separate manual solution.

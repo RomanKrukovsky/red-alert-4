@@ -1,98 +1,98 @@
-# RA4 — Отчёт о генерации комплекта blockout-моделей (v2.0 Production Blockout)
+# RA4 — Report on the generation of a set of blockout models (v2.0 Production Blockout)
 
-**Дата:** 2026-07-29  
-**Статус:** Полный комплект из 140 оригинальных blockout-моделей успешно сгенерирован, экспортирован в FBX и привязан к реестру ассетов.  
-**Соблюдение правил Naming Reset:** 100% (использованы только новые Stable ID из библии v2.0).
-
----
-
-## 1. Общий обзор выполненной работы
-
-Создан полный функциональный комплект **140 3D blockout-моделей** для 4 фракций:
-- **СССР (`Soviet`)**: 16 зданий + 19 юнитов/техники = 35 объектов
-- **Альянс (`Alliance`)**: 16 зданий + 19 юнитов/техники = 35 объектов
-- **Восточная коалиция (`Coalition`)**: 16 зданий + 19 юнитов/техники = 35 объектов
-- **Хронолегион (`Chronolegion`)**: 16 зданий + 19 юнитов/техники = 35 объектов
-
-Все объекты выполнены в точном масштабе Unreal Engine 5 (1 единица = 1 см), с опорными точками (Pivot) по центру основания на уровне земли `(0,0,0)`, правильными габаритами Footprint (в сетке клеток 200x200 см) и сокетами для башен, орудий, спавна, эффектов и входов.
+**Date:** 2026-07-29  
+**Status:** A complete set of 140 original Success blockout models has been generated, exported to FBX and linked to the asset registry.  
+**Compliance with Naming Reset rules:** 100% (only new Stable IDs from the bible v2.0 were used).
 
 ---
 
-## 2. Фракционная визуальная идентичность
+## 1. General overview of the work performed
 
-### 2.1. СССР (`Soviet`)
-- **Стиль:** Тяжёлая советско-российская индустриальная школа. Броневые плиты с винтами, монументальные формы, реакторные трубы, гусеничные траки, прямоугольные силуэты.
-- **Цветовая палитра:** Тёмно-серый базовый металл (`#4D5966`) с яркими ало-красными маркерами (`#D62828`).
+A complete functional set has been created **140 3D blockout models** for 4 factions:
+- **USSR (`Soviet`)**: 16 buildings + 19 units/equipment = 35 objects
+- **Alliance (`Alliance`)**: 16 buildings + 19 units/equipment = 35 objects
+- **Eastern Coalition (`Coalition`)**: 16 buildings + 19 units/equipment = 35 objects
+- **Chronolegion**: 16 buildings + 19 units/vehicles = 35 objects
 
-### 2.2. Альянс (`Alliance`)
-- **Стиль:** Модульная американско-натовская военная техника. Острые углы скоса брони, композитные материалы, призматические излучатели, модульные навесы.
-- **Цветовая палитра:** Светлый сине-серый корпус (`#5C6B73`) с кобальтово-синими элементами (`#0077B6`).
-
-### 2.3. Восточная коалиция (`Coalition`)
-- **Стиль:** Синтез китайской, японской и индийской инженерных школ. Восьмиугольные и пагодообразные элементы, многоногие шагоходы, приподнятые носы кораблей.
-- **Цветовая палитра:** Бронзово-сланцевый базовый металл (`#3D4A41`) с нефритово-зелеными маркерами (`#2A9D8F`).
-
-### 2.4. Хронолегион (`Chronolegion`)
-- **Стиль:** Экспериментальные темпоральные конструкции. Парящие кольца стазиса, квантовые кристаллы, асимметричные призматические корпуса.
-- **Цветовая палитра:** Тёмно-фиолетовый сланцевый корпус (`#3A1240`) с маджентово-голубыми свечениями (`#7209B7` / `#4CC9F0`).
+all objects are made to the exact scale of Unreal Engine 5 (1 unit = 1 cm), with reference points (Pivot) in the center of the base at ground level `(0,0,0)`, correct Footprint dimensions (in a grid of cells 200x200 cm) and sockets for towers, guns, spawn, effects and inputs.
 
 ---
 
-## 3. Сводный реестр сгенерированных объектов
+## 2. Factional visual identity
 
-### 3.1. СССР (`Soviet`)
-| Stable ID | Класс | Размеры (ШхДхВ, см) | Footprint | Подвижные части / Сокеты | Путь к FBX |
+### 2.1. USSR (`Soviet`)
+- **Style:** Heavy Soviet-Russian industrial school. Armor plates with screws, monumental shapes, reactor tubes, caterpillar tracks, rectangular silhouettes.
+- **Color Palette:** Dark gray base metal (`#4D5966`) with bright scarlet red markers (`#D62828`).
+
+### 2.2. Alliance (`Alliance`)
+- **Style:** Modular US-NATO military Vehicles. Sharp armor bevel angles, composite materials, prismatic emitters, modular canopies.
+- **Color palette:** Light blue-gray body (`#5C6B73`) with cobalt blue elements (`#0077B6`).
+
+### 2.3. Eastern Coalition (`Coalition`)
+- **Style:** Synthesis of Chinese, Japanese and Indian engineering schools. Octagonal and pagoda-shaped elements, multi-legged walkers, raised bows of ships.
+- **Color Palette:** Bronze slate base metal (`#3D4A41`) with jade green markers (`#2A9D8F`).
+
+### 2.4. Chronolegion
+- **Style:** Experimental temporal constructions. Floating stasis rings, quantum crystals, asymmetrical prismatic bodies.
+- **Color Palette:** Dark purple slate body (`#3A1240`) with magenta blue highlights (`#7209B7` / `#4CC9F0`).
+
+---
+
+## 3. Summary register of generated objects
+
+### 3.1. USSR (`Soviet`)
+| Stable ID | Class | Dimensions (WxLxH, cm) | Footprint | Moving Parts / Sockets | Path to FBX |
 | --- | --- | --- | --- | --- | --- |
-| `SU_MCV_MobileYard` | Здание | 800x700x500 | 4x4 | Корпус, Антенны / `SOCKET_Spawn`, `SOCKET_Entrance` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_MCV_MobileYard_Blockout.fbx` |
-| `SU_ConYard` | Здание | 800x800x600 | 4x4 | Штабной замок, Вышка / `SOCKET_Spawn` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_ConYard_Blockout.fbx` |
-| `SU_PowerPlant` | Здание | 600x600x500 | 3x3 | Градирни, ТЭЦ / `SOCKET_VFX` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_PowerPlant_Blockout.fbx` |
-| `SU_Refinery` | Здание | 800x800x450 | 4x4 | Загрузочная рампа, Силос / `SOCKET_Entrance` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Refinery_Blockout.fbx` |
-| `SU_Barracks` | Здание | 600x600x400 | 3x3 | Ворота, Тир / `SOCKET_Spawn` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Barracks_Blockout.fbx` |
-| `SU_WarFactory` | Здание | 800x800x500 | 4x4 | Ангар, Кран / `SOCKET_Spawn` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_WarFactory_Blockout.fbx` |
-| `SU_Airfield` | Здание | 800x800x450 | 4x4 | ВПП, Вышка / `SOCKET_Spawn` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Airfield_Blockout.fbx` |
-| `SU_NavalYard` | Здание | 1000x1000x500 | 5x5 | Док, Пирс / `SOCKET_Spawn` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_NavalYard_Blockout.fbx` |
-| `SU_Radar` | Здание | 400x400x700 | 2x2 | Радарная тарелка / `SOCKET_VFX` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Radar_Blockout.fbx` |
-| `SU_TechCenter` | Здание | 600x600x550 | 3x3 | Энергокупол / `SOCKET_VFX` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_TechCenter_Blockout.fbx` |
-| `SU_GunTurret` | Здание | 400x400x300 | 2x2 | Башня, Ствол / `SOCKET_Turret`, `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_GunTurret_Blockout.fbx` |
-| `SU_AATurret` | Здание | 400x400x350 | 2x2 | Ракетный блок / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_AATurret_Blockout.fbx` |
-| `SU_TeslaTower` | Здание | 400x400x550 | 2x2 | Катушка Перун / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_TeslaTower_Blockout.fbx` |
-| `SU_Bunker` | Здание | 400x400x250 | 2x2 | Амбразура / `SOCKET_Entrance` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Bunker_Blockout.fbx` |
-| `SU_SuperweaponDome` | Здание | 1000x1000x850 | 5x5 | Купол генератора / `SOCKET_VFX` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_SuperweaponDome_Blockout.fbx` |
-| `SU_SuperweaponSilo` | Здание | 1000x1000x950 | 5x5 | Шахта ракеты / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_SuperweaponSilo_Blockout.fbx` |
-| `SU_RubezhRifleman` | Пехота | 60x60x180 | 1x1 | Торс, АК / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_RubezhRifleman_Blockout.fbx` |
-| `SU_ZapalGrenadier` | Пехота | 70x70x185 | 1x1 | Рюкзак, Гранатомёт / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_ZapalGrenadier_Blockout.fbx` |
-| `SU_ZaslonAATeam` | Пехота | 65x65x180 | 1x1 | ПЗРК / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_ZaslonAATeam_Blockout.fbx` |
-| `SU_MasterEngineer` | Пехота | 60x60x175 | 1x1 | Рюкзак сапёра / `SOCKET_VFX` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_MasterEngineer_Blockout.fbx` |
-| `SU_RazryadTrooper` | Пехота | 80x80x195 | 1x1 | Тесла-костюм / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_RazryadTrooper_Blockout.fbx` |
-| `SU_VektorOfficer` | Пехота | 60x60x180 | 1x1 | Радиостанция / `SOCKET_VFX` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_VektorOfficer_Blockout.fbx` |
-| `SU_BogatyrOreCarrier` | Сборщик | 600x360x280 | 1x1 | Ковш, Колёса / `SOCKET_VFX` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_BogatyrOreCarrier_Blockout.fbx` |
-| `SU_RysScout` | Лёгкая техника | 380x220x180 | 1x1 | Колёса, Пулемёт / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_RysScout_Blockout.fbx` |
-| `SU_GranitMBT` | Танк | 550x330x220 | 1x1 | Башня, Ствол, Гусеницы / `SOCKET_Turret`, `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_GranitMBT_Blockout.fbx` |
-| `SU_ZarevoMLRS` | Артиллерия | 600x320x250 | 1x1 | Пакет ракет, Кабина / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_ZarevoMLRS_Blockout.fbx` |
-| `SU_GromoboyRam` | Спецтехника | 580x340x240 | 1x1 | Электротаран / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_GromoboyRam_Blockout.fbx` |
-| `SU_VoevodaHeavyTank` | Тяжёлый танк | 720x460x350 | 1x1 | Две башни, Стволы / `SOCKET_Turret`, `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_VoevodaHeavyTank_Blockout.fbx` |
-| `SU_KrechetInterceptor` | Авиация | 650x500x180 | 1x1 | Крылья, Сопла / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_KrechetInterceptor_Blockout.fbx` |
-| `SU_KorshunGunship` | Авиация | 700x550x250 | 1x1 | Винт, Турель / `SOCKET_Turret`, `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_KorshunGunship_Blockout.fbx` |
-| `SU_GromadaAirship` | Авиация | 1300x600x450 | 1x1 | Корпус дирижабля, Бомболюк / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_GromadaAirship_Blockout.fbx` |
-| `SU_BuranPatrolBoat` | Флот | 1000x350x280 | 1x1 | Корпус, Башня / `SOCKET_Turret`, `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_BuranPatrolBoat_Blockout.fbx` |
-| `SU_MorokSubmarine` | Флот | 1400x350x320 | 1x1 | Рубка, Торпедный аппарат / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_MorokSubmarine_Blockout.fbx` |
-| `SU_SvyatogorCruiser` | Флот | 2000x600x500 | 1x1 | Рубка, Ракетные шахты / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_SvyatogorCruiser_Blockout.fbx` |
-| `SU_Hero_Morozova` | Герой | 70x70x185 | 1x1 | Винтовка, Костюм / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Hero_Morozova_Blockout.fbx` |
+| `SU_MCV_MobileYard` | Building | 800x700x500 | 4x4 | Housing, Antennas / `SOCKET_Spawn`, `SOCKET_Entrance` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_MCV_MobileYard_Blockout.fbx` |
+| `SU_ConYard` | Building | 800x800x600 | 4x4 | Headquarters Castle, Tower / `SOCKET_Spawn` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_ConYard_Blockout.fbx` |
+| `SU_PowerPlant` | Building | 600x600x500 | 3x3 | Cooling towers, thermal power plants / `SOCKET_VFX` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_PowerPlant_Blockout.fbx` |
+| `SU_Refinery` | Building | 800x800x450 | 4x4 | Loading ramp, Silo / `SOCKET_Entrance` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Refinery_Blockout.fbx` |
+| `SU_Barracks` | Building | 600x600x400 | 3x3 | Gate, Shooting Range / `SOCKET_Spawn` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Barracks_Blockout.fbx` |
+| `SU_WarFactory` | Building | 800x800x500 | 4x4 | Hangar, Crane / `SOCKET_Spawn` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_WarFactory_Blockout.fbx` |
+| `SU_Airfield` | Building | 800x800x450 | 4x4 | Runway, Tower / `SOCKET_Spawn` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Airfield_Blockout.fbx` |
+| `SU_NavalYard` | Building | 1000x1000x500 | 5x5 | Doc, Pierce / `SOCKET_Spawn` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_NavalYard_Blockout.fbx` |
+| `SU_Radar` | Building | 400x400x700 | 2x2 | Radar dish / `SOCKET_VFX` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Radar_Blockout.fbx` |
+| `SU_TechCenter` | Building | 600x600x550 | 3x3 | Energokupol / `SOCKET_VFX` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_TechCenter_Blockout.fbx` |
+| `SU_GunTurret` | Building | 400x400x300 | 2x2 | Turret, Barrel / `SOCKET_Turret`, `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_GunTurret_Blockout.fbx` |
+| `SU_AATurret` | Building | 400x400x350 | 2x2 | Missile block / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_AATurret_Blockout.fbx` |
+| `SU_TeslaTower` | Building | 400x400x550 | 2x2 | Reel Perun / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_TeslaTower_Blockout.fbx` |
+| `SU_Bunker` | Building | 400x400x250 | 2x2 | Embrasure / `SOCKET_Entrance` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Bunker_Blockout.fbx` |
+| `SU_SuperweaponDome` | Building | 1000x1000x850 | 5x5 | Generator dome / `SOCKET_VFX` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_SuperweaponDome_Blockout.fbx` |
+| `SU_SuperweaponSilo` | Building | 1000x1000x950 | 5x5 | Rocket mine / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_SuperweaponSilo_Blockout.fbx` |
+| `SU_RubezhRifleman` | Infantry | 60x60x180 | 1x1 | Torso, AK / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_RubezhRifleman_Blockout.fbx` |
+| `SU_ZapalGrenadier` | Infantry | 70x70x185 | 1x1 | Backpack, Grenade Launcher / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_ZapalGrenadier_Blockout.fbx` |
+| `SU_ZaslonAATeam` | Infantry | 65x65x180 | 1x1 | MANPADS / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_ZaslonAATeam_Blockout.fbx` |
+| `SU_MasterEngineer` | Infantry | 60x60x175 | 1x1 | Sapper's Backpack / `SOCKET_VFX` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_MasterEngineer_Blockout.fbx` |
+| `SU_RazryadTrooper` | Infantry | 80x80x195 | 1x1 | Tesla suit / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_RazryadTrooper_Blockout.fbx` |
+| `SU_VektorOfficer` | Infantry | 60x60x180 | 1x1 | Radio station / `SOCKET_VFX` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_VektorOfficer_Blockout.fbx` |
+| `SU_BogatyrOreCarrier` | Collector | 600x360x280 | 1x1 | Bucket, Wheels / `SOCKET_VFX` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_BogatyrOreCarrier_Blockout.fbx` |
+| `SU_RysScout` | Light Vehicles | 380x220x180 | 1x1 | Wheels, Machine Gun / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_RysScout_Blockout.fbx` |
+| `SU_GranitMBT` | Tank | 550x330x220 | 1x1 | Turret, Barrel, Tracks / `SOCKET_Turret`, `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_GranitMBT_Blockout.fbx` |
+| `SU_ZarevoMLRS` | Artillery | 600x320x250 | 1x1 | Missile Pack, Cabin / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_ZarevoMLRS_Blockout.fbx` |
+| `SU_GromoboyRam` | Special equipment | 580x340x240 | 1x1 | Electric ram / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_GromoboyRam_Blockout.fbx` |
+| `SU_VoevodaHeavyTank` | Heavy Tank | 720x460x350 | 1x1 | Two towers, Trunks / `SOCKET_Turret`, `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_VoevodaHeavyTank_Blockout.fbx` |
+| `SU_KrechetInterceptor` | Aviation | 650x500x180 | 1x1 | Wings, Nozzles / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_KrechetInterceptor_Blockout.fbx` |
+| `SU_KorshunGunship` | Aviation | 700x550x250 | 1x1 | Screw, Turret / `SOCKET_Turret`, `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_KorshunGunship_Blockout.fbx` |
+| `SU_GromadaAirship` | Aviation | 1300x600x450 | 1x1 | Airship Hull, Bomb Bay / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_GromadaAirship_Blockout.fbx` |
+| `SU_BuranPatrolBoat` | Naval | 1000x350x280 | 1x1 | Hull, Tower / `SOCKET_Turret`, `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_BuranPatrolBoat_Blockout.fbx` |
+| `SU_MorokSubmarine` | Naval | 1400x350x320 | 1x1 | Cabin, Torpedo tube / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_MorokSubmarine_Blockout.fbx` |
+| `SU_SvyatogorCruiser` | Naval | 2000x600x500 | 1x1 | Chopping, Missile silos / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_SvyatogorCruiser_Blockout.fbx` |
+| `SU_Hero_Morozova` | Hero | 70x70x185 | 1x1 | Rifle, Suit / `SOCKET_Muzzle` | `Content/RA4/Art/Blockout/Soviet/SM_Soviet_SU_Hero_Morozova_Blockout.fbx` |
 
-*(Таблицы для `Alliance`, `Coalition` и `Chronolegion` выполнены аналогичным образом и зафиксированы в CSV-манифесте `Content/RA4/Art/Blockout/Blockout_Manifest.csv`)*.
-
----
-
-## 4. Качество и проверка готовых FBX-ассетов
-1. **Pivot & Transforms:** Все ассеты имеют единичный масштаб (Scale = 1.0, 1.0, 1.0) и обнулённое вращение.
-2. **Габариты UE5:**
-   - Пехота: ~180 см в высоту, ширина 60–80 см.
-   - Танки: ~500–700 см в длину, 320–460 см в ширину, 220–350 см в высоту.
-   - Здания: от 400x400 см (2x2) до 1000x1000 см (5x5).
-3. **Коллизии:** Настройки простых хитбоксов и меш-коллизий сохранены в манифесте.
+*(Tables for `Alliance`, `Coalition` and `Chronolegion` are done in a similar way and are recorded in the CSV manifest `Content/RA4/Art/Blockout/Blockout_Manifest.csv`)*.
 
 ---
 
-## 5. Заключение
+## 4. Quality and verification of finished FBX assets
+1. **Pivot & Transforms:** all assets have unit scale (Scale = 1.0, 1.0, 1.0) and zero rotation.
+2. **UE5 dimensions:**
+   - Infantry: ~180 cm in height, width 60–80 cm.
+   - Tanks: ~500–700 cm long, 320–460 cm wide, 220–350 cm high.
+   - Buildings: from 400x400 cm (2x2) to 1000x1000 cm (5x5).
+3. **Collisions:** Settings for simple hitboxes and mesh collisions are saved in the manifest.
 
-Сгенерированные ассеты полностью заменяют встроенные примитивы `Cube` и готовы к использованию в подсистеме `RA4SimWorldSubsystem` и тестовых картах.
+---
+
+## 5. Conclusion
+
+The generated assets completely replace the built-in `Cube` primitives and are ready for use in the `RA4SimWorldSubsystem` and test cards.

@@ -2,83 +2,76 @@
 
 | ID | Faction | Category | Tier | Cost | HP | Armor | Voice | Test |
 |----|---------|----------|------|------|-----|-------|-------|------|
-| SU_RubezhRifleman | СССР | Пехота | T1 | 150 | 110 | Лёгкая пехота | 8/8 | PASS |
-| SU_ZapalGrenadier | СССР | Пехота | T1 | 350 | 150 | Тяжёлая пехота | 8/8 | PASS |
-| SU_ZaslonAATeam | СССР | Пехота | T1 | 450 | 170 | Тяжёлая пехота | 8/8 | PASS |
-| SU_MasterEngineer | СССР | Пехота | T1 | 500 | 100 | Лёгкая пехота | 8/8 | PASS |
-| SU_RazryadTrooper | СССР | Пехота | T2 | 850 | 260 | Тяжёлая пехота | 8/8 | PASS |
-| SU_VektorOfficer | СССР | Пехота | T2 | 900 | 210 | Тяжёлая пехота | 8/8 | PASS |
-| SU_BogatyrOreCarrier | СССР | Техника | T1 | 1400 | 1600 | Тяжёлая техника | 8/8 | PASS |
-| SU_RysScout | СССР | Техника | T1 | 600 | 520 | Лёгкая техника | 8/8 | PASS |
-| SU_GranitMBT | СССР | Техника | T2 | 1200 | 1650 | Тяжёлая техника | 8/8 | PASS |
-| SU_ZarevoMLRS | СССР | Техника | T2 | 1600 | 900 | Осадная техника | 8/8 | PASS |
-| SU_GromoboyRam | СССР | Техника | T3 | 2200 | 2100 | Тяжёлая техника | 8/8 | PASS |
-| SU_VoevodaHeavyTank | СССР | Техника | T3 | 3200 | 4200 | Тяжёлая техника | 8/8 | PASS |
-| SU_KrechetInterceptor | СССР | Авиация | T2 | 1100 | 700 | Воздушная | 8/8 | PASS |
-| SU_KorshunGunship | СССР | Авиация | T2 | 1500 | 1300 | Воздушная | 8/8 | PASS |
-| SU_GromadaAirship | СССР | Авиация | T3 | 3000 | 5000 | Воздушная | 8/8 | PASS |
-| SU_BuranPatrolBoat | СССР | Флот | T1 | 750 | 700 | Морская | 8/8 | PASS |
-| SU_MorokSubmarine | СССР | Флот | T2 | 1700 | 1800 | Морская | 8/8 | PASS |
-| SU_SvyatogorCruiser | СССР | Флот | T3 | 3400 | 4600 | Морская | 8/8 | PASS |
-| SU_Hero_Morozova | СССР | Герой | T3 | 2600 | 900 | Тяжёлая пехота | 8/8 | PASS |
-| AL_SentinelRifleman | Альянс | Пехота | T1 | 220 | 120 | Лёгкая пехота | 8/8 | PASS |
-| AL_LancerTeam | Альянс | Пехота | T1 | 450 | 145 | Тяжёлая пехота | 8/8 | PASS |
-| AL_FieldEngineer | Альянс | Пехота | T1 | 550 | 105 | Лёгкая пехота | 8/8 | PASS |
-| AL_LongwatchSniper | Альянс | Пехота | T2 | 750 | 135 | Лёгкая пехота | 8/8 | PASS |
-| AL_LifelineMedic | Альянс | Пехота | T2 | 650 | 150 | Лёгкая пехота | 8/8 | PASS |
-| AL_FrostlineSpecialist | Альянс | Пехота | T3 | 1000 | 240 | Тяжёлая пехота | 8/8 | PASS |
-| AL_PioneerHarvester | Альянс | Техника | T1 | 1450 | 1200 | Лёгкая техника | 8/8 | PASS |
-| AL_KestrelScout | Альянс | Техника | T1 | 700 | 430 | Лёгкая техника | 8/8 | PASS |
-| AL_BulwarkMBT | Альянс | Техника | T2 | 1250 | 1350 | Тяжёлая техника | 8/8 | PASS |
-| AL_OracleArtillery | Альянс | Техника | T2 | 1750 | 850 | Осадная техника | 8/8 | PASS |
-| AL_RefractionTank | Альянс | Техника | T3 | 1900 | 1200 | Тяжёлая техника | 8/8 | PASS |
-| AL_WardShieldCarrier | Альянс | Техника | T2 | 1600 | 1050 | Лёгкая техника | 8/8 | PASS |
-| AL_CitadelTank | Альянс | Техника | T3 | 2800 | 3000 | Тяжёлая техника | 8/8 | PASS |
-| AL_ShrikeInterceptor | Альянс | Авиация | T2 | 1050 | 600 | Воздушная | 8/8 | PASS |
-| AL_VectorVTOL | Альянс | Авиация | T2 | 1450 | 950 | Воздушная | 8/8 | PASS |
-| AL_NightveilBomber | Альянс | Авиация | T3 | 2600 | 1500 | Воздушная | 8/8 | PASS |
-| AL_MantaPatrolCraft | Альянс | Флот | T1 | 850 | 650 | Морская | 8/8 | PASS |
-| AL_ResoluteDestroyer | Альянс | Флот | T2 | 1900 | 2100 | Морская | 8/8 | PASS |
-| AL_HorizonCarrier | Альянс | Флот | T3 | 3600 | 3800 | Морская | 8/8 | PASS |
-| AL_Hero_Hart | Альянс | Герой | T3 | 2500 | 750 | Лёгкая пехота | 8/8 | PASS |
-| CO_QianweiRifleman | Восточная коалиция | Пехота | T1 | 200 | 125 | Лёгкая пехота | 8/8 | PASS |
-| CO_VajraLancer | Восточная коалиция | Пехота | T1 | 420 | 170 | Тяжёлая пехота | 8/8 | PASS |
-| CO_JieTechnician | Восточная коалиция | Пехота | T1 | 520 | 105 | Лёгкая пехота | 8/8 | PASS |
-| CO_ShengongMarksman | Восточная коалиция | Пехота | T2 | 720 | 140 | Лёгкая пехота | 8/8 | PASS |
-| CO_SanjivaniMedic | Восточная коалиция | Пехота | T2 | 700 | 155 | Лёгкая пехота | 8/8 | PASS |
-| CO_RakshaGuard | Восточная коалиция | Пехота | T3 | 1050 | 300 | Тяжёлая пехота | 8/8 | PASS |
-| CO_YuanCollector | Восточная коалиция | Техника | T1 | 1425 | 1350 | Тяжёлая техника | 8/8 | PASS |
-| CO_KamakiriWalker | Восточная коалиция | Техника | T1 | 750 | 560 | Лёгкая техника | 8/8 | PASS |
-| CO_QinglongMBT | Восточная коалиция | Техника | T2 | 1300 | 1500 | Тяжёлая техника | 8/8 | PASS |
-| CO_MonsoonArtillery | Восточная коалиция | Техника | T2 | 1650 | 900 | Осадная техника | 8/8 | PASS |
-| CO_SeimonShieldCarrier | Восточная коалиция | Техника | T2 | 1700 | 1800 | Тяжёлая техника | 8/8 | PASS |
-| CO_AiravataWalker | Восточная коалиция | Техника | T3 | 2500 | 2700 | Тяжёлая техника | 8/8 | PASS |
-| CO_TianmenFortress | Восточная коалиция | Техника | T3 | 3300 | 3900 | Тяжёлая техника | 8/8 | PASS |
-| CO_KawasemiDrone | Восточная коалиция | Авиация | T1 | 700 | 360 | Воздушная | 8/8 | PASS |
-| CO_LeiheGunship | Восточная коалиция | Авиация | T2 | 1550 | 1150 | Воздушная | 8/8 | PASS |
-| CO_AgnipakshaBomber | Восточная коалиция | Авиация | T3 | 2550 | 1650 | Воздушная | 8/8 | PASS |
-| CO_KazekiriCorvette | Восточная коалиция | Флот | T1 | 900 | 780 | Морская | 8/8 | PASS |
-| CO_XuanwuCruiser | Восточная коалиция | Флот | T2 | 2200 | 2600 | Морская | 8/8 | PASS |
-| CO_SamudraCarrier | Восточная коалиция | Флот | T3 | 3700 | 4200 | Морская | 8/8 | PASS |
-| CO_Hero_Mei | Восточная коалиция | Герой | T3 | 2550 | 820 | Тяжёлая пехота | 8/8 | PASS |
-| CH_ResonanceRifleman | Хронолегион | Пехота | T1 | 260 | 105 | Лёгкая пехота | 8/8 | PASS |
-| CH_PunctureLancer | Хронолегион | Пехота | T1 | 480 | 155 | Тяжёлая пехота | 8/8 | PASS |
-| CH_CausalityEngineer | Хронолегион | Пехота | T1 | 600 | 95 | Лёгкая пехота | 8/8 | PASS |
-| CH_ReversalMedic | Хронолегион | Пехота | T2 | 780 | 160 | Лёгкая пехота | 8/8 | PASS |
-| CH_AporiaSniper | Хронолегион | Пехота | T2 | 850 | 120 | Лёгкая пехота | 8/8 | PASS |
-| CH_CensorOperative | Хронолегион | Пехота | T3 | 1150 | 230 | Тяжёлая пехота | 8/8 | PASS |
-| CH_ProbabilistHarvester | Хронолегион | Техника | T1 | 1550 | 1100 | Лёгкая техника | 8/8 | PASS |
-| CH_ParallaxScout | Хронолегион | Техника | T1 | 800 | 400 | Лёгкая техника | 8/8 | PASS |
-| CH_TimelineTank | Хронолегион | Техника | T2 | 1450 | 1250 | Тяжёлая техника | 8/8 | PASS |
-| CH_DeltaDelayArtillery | Хронолегион | Техника | T2 | 1800 | 800 | Осадная техника | 8/8 | PASS |
-| CH_PauseProjector | Хронолегион | Техника | T2 | 1900 | 1400 | Тяжёлая техника | 8/8 | PASS |
-| CH_EraEngine | Хронолегион | Техника | T3 | 3100 | 3200 | Тяжёлая техника | 8/8 | PASS |
-| CH_GapInterceptor | Хронолегион | Авиация | T2 | 1200 | 580 | Воздушная | 8/8 | PASS |
-| CH_TrailGunship | Хронолегион | Авиация | T2 | 1600 | 1000 | Воздушная | 8/8 | PASS |
-| CH_CriticalPointBomber | Хронолегион | Авиация | T3 | 2800 | 1500 | Воздушная | 8/8 | PASS |
-| CH_IsobathFrigate | Хронолегион | Флот | T1 | 950 | 760 | Морская | 8/8 | PASS |
-| CH_BathysSubmarine | Хронолегион | Флот | T2 | 2000 | 2000 | Морская | 8/8 | PASS |
-| CH_AttractorArk | Хронолегион | Флот | T3 | 3900 | 4000 | Морская | 8/8 | PASS |
-| CH_Hero_Voss | Хронолегион | Герой | T3 | 2700 | 700 | Лёгкая пехота | 8/8 | PASS |
-
+| SU_RubezhRifleman | USSR | Infantry | T1 | 150 | 110 | Light Infantry | 8/8 | PASS |
+| SU_ZapalGrenadier | USSR | Infantry | T1 | 350 | 150 | Heavy Infantry | 8/8 | PASS |
+| SU_ZaslonAATeam | USSR | Infantry | T1 | 450 | 170 | Heavy Infantry | 8/8 | PASS |
+| SU_MasterEngineer | USSR | Infantry | T1 | 500 | 100 | Light Infantry | 8/8 | PASS |
+| SU_RazryadTrooper | USSR | Infantry | T2 | 850 | 260 | Heavy Infantry | 8/8 | PASS |
+| SU_VektorOfficer | USSR | Infantry | T2 | 900 | 210 | Heavy Infantry | 8/8 | PASS |
+| SU_BogatyrOreCarrier | USSR | Vehicles | T1 | 1400 | 1600 | Heavy Vehicles | 8/8 | PASS |
+| SU_RysScout | USSR | Vehicles | T1 | 600 | 520 | Light Vehicles | 8/8 | PASS |
+| SU_GranitMBT | USSR | Vehicles | T2 | 1200 | 1650 | Heavy Vehicles | 8/8 | PASS |
+| SU_ZarevoMLRS | USSR | Vehicles | T2 | 1600 | 900 | Siege Vehicles | 8/8 | PASS |
+| SU_GromoboyRam | USSR | Vehicles | T3 | 2200 | 2100 | Heavy Vehicles | 8/8 | PASS |
+| SU_VoevodaHeavyTank | USSR | Vehicles | T3 | 3200 | 4200 | Heavy Vehicles | 8/8 | PASS || SU_KrechetInterceptor | USSR | Aviation | T2 | 1100 | 700 | Air | 8/8 | PASS |
+| SU_KorshunGunship | USSR | Aviation | T2 | 1500 | 1300 | Air | 8/8 | PASS |
+| SU_GromadaAirship | USSR | Aviation | T3 | 3000 | 5000 | Air | 8/8 | PASS |
+| SU_BuranPatrolBoat | USSR | Naval | T1 | 750 | 700 | Marine | 8/8 | PASS |
+| SU_MorokSubmarine | USSR | Naval | T2 | 1700 | 1800 | Marine | 8/8 | PASS |
+| SU_SvyatogorCruiser | USSR | Naval | T3 | 3400 | 4600 | Marine | 8/8 | PASS |
+| SU_Hero_Morozova | USSR | Hero | T3 | 2600 | 900 | Heavy Infantry | 8/8 | PASS |
+| AL_SentinelRifleman | Alliance | Infantry | T1 | 220 | 120 | Light Infantry | 8/8 | PASS |
+| AL_LancerTeam | Alliance | Infantry | T1 | 450 | 145 | Heavy Infantry | 8/8 | PASS |
+| AL_FieldEngineer | Alliance | Infantry | T1 | 550 | 105 | Light Infantry | 8/8 | PASS |
+| AL_LongwatchSniper | Alliance | Infantry | T2 | 750 | 135 | Light Infantry | 8/8 | PASS |
+| AL_LifelineMedic | Alliance | Infantry | T2 | 650 | 150 | Light Infantry | 8/8 | PASS || AL_FrostlineSpecialist | Alliance | Infantry | T3 | 1000 | 240 | Heavy Infantry | 8/8 | PASS |
+| AL_PioneerHarvester | Alliance | Vehicles | T1 | 1450 | 1200 | Light Vehicles | 8/8 | PASS |
+| AL_KestrelScout | Alliance | Vehicles | T1 | 700 | 430 | Light Vehicles | 8/8 | PASS |
+| AL_BulwarkMBT | Alliance | Vehicles | T2 | 1250 | 1350 | Heavy Vehicles | 8/8 | PASS |
+| AL_OracleArtillery | Alliance | Vehicles | T2 | 1750 | 850 | Siege Vehicles | 8/8 | PASS |
+| AL_RefractionTank | Alliance | Vehicles | T3 | 1900 | 1200 | Heavy Vehicles | 8/8 | PASS |
+| AL_WardShieldCarrier | Alliance | Vehicles | T2 | 1600 | 1050 | Light Vehicles | 8/8 | PASS |
+| AL_CitadelTank | Alliance | Vehicles | T3 | 2800 | 3000 | Heavy Vehicles | 8/8 | PASS |
+| AL_ShrikeInterceptor | Alliance | Aviation | T2 | 1050 | 600 | Air | 8/8 | PASS |
+| AL_VectorVTOL | Alliance | Aviation | T2 | 1450 | 950 | Air | 8/8 | PASS |
+| AL_NightveilBomber | Alliance | Aviation | T3 | 2600 | 1500 | Air | 8/8 | PASS || AL_MantaPatrolCraft | Alliance | Naval | T1 | 850 | 650 | Marine | 8/8 | PASS |
+| AL_ResoluteDestroyer | Alliance | Naval | T2 | 1900 | 2100 | Marine | 8/8 | PASS |
+| AL_HorizonCarrier | Alliance | Naval | T3 | 3600 | 3800 | Marine | 8/8 | PASS |
+| AL_Hero_Hart | Alliance | Hero | T3 | 2500 | 750 | Light Infantry | 8/8 | PASS |
+| CO_QianweiRifleman | Eastern Coalition | Infantry | T1 | 200 | 125 | Light Infantry | 8/8 | PASS |
+| CO_VajraLancer | Eastern Coalition | Infantry | T1 | 420 | 170 | Heavy Infantry | 8/8 | PASS |
+| CO_JieTechnician | Eastern Coalition | Infantry | T1 | 520 | 105 | Light Infantry | 8/8 | PASS |
+| CO_ShengongMarksman | Eastern Coalition | Infantry | T2 | 720 | 140 | Light Infantry | 8/8 | PASS |
+| CO_SanjivaniMedic | Eastern Coalition | Infantry | T2 | 700 | 155 | Light Infantry | 8/8 | PASS |
+| CO_RakshaGuard | Eastern Coalition | Infantry | T3 | 1050 | 300 | Heavy Infantry | 8/8 | PASS |
+| CO_YuanCollector | Eastern Coalition | Vehicles | T1 | 1425 | 1350 | Heavy Vehicles | 8/8 | PASS || CO_KamakiriWalker | Eastern Coalition | Vehicles | T1 | 750 | 560 | Light Vehicles | 8/8 | PASS |
+| CO_QinglongMBT | Eastern Coalition | Vehicles | T2 | 1300 | 1500 | Heavy Vehicles | 8/8 | PASS |
+| CO_MonsoonArtillery | Eastern Coalition | Vehicles | T2 | 1650 | 900 | Siege Vehicles | 8/8 | PASS |
+| CO_SeimonShieldCarrier | Eastern Coalition | Vehicles | T2 | 1700 | 1800 | Heavy Vehicles | 8/8 | PASS |
+| CO_AiravataWalker | Eastern Coalition | Vehicles | T3 | 2500 | 2700 | Heavy Vehicles | 8/8 | PASS |
+| CO_TianmenFortress | Eastern Coalition | Vehicles | T3 | 3300 | 3900 | Heavy Vehicles | 8/8 | PASS |
+| CO_KawasemiDrone | Eastern Coalition | Aviation | T1 | 700 | 360 | Air | 8/8 | PASS |
+| CO_LeiheGunship | Eastern Coalition | Aviation | T2 | 1550 | 1150 | Air | 8/8 | PASS |
+| CO_AgnipakshaBomber | Eastern Coalition | Aviation | T3 | 2550 | 1650 | Air | 8/8 | PASS |
+| CO_KazekiriCorvette | Eastern Coalition | Naval | T1 | 900 | 780 | Marine | 8/8 | PASS || CO_XuanwuCruiser | Eastern Coalition | Naval | T2 | 2200 | 2600 | Marine | 8/8 | PASS |
+| CO_SamudraCarrier | Eastern Coalition | Naval | T3 | 3700 | 4200 | Marine | 8/8 | PASS |
+| CO_Hero_Mei | Eastern Coalition | Hero | T3 | 2550 | 820 | Heavy Infantry | 8/8 | PASS |
+| CH_ResonanceRifleman | Chronolegion | Infantry | T1 | 260 | 105 | Light Infantry | 8/8 | PASS |
+| CH_PunctureLancer | Chronolegion | Infantry | T1 | 480 | 155 | Heavy Infantry | 8/8 | PASS |
+| CH_CausalityEngineer | Chronolegion | Infantry | T1 | 600 | 95 | Light Infantry | 8/8 | PASS |
+| CH_ReversalMedic | Chronolegion | Infantry | T2 | 780 | 160 | Light Infantry | 8/8 | PASS |
+| CH_AporiaSniper | Chronolegion | Infantry | T2 | 850 | 120 | Light Infantry | 8/8 | PASS |
+| CH_CensorOperative | Chronolegion | Infantry | T3 | 1150 | 230 | Heavy Infantry | 8/8 | PASS |
+| CH_ProbabilistHarvester | Chronolegion | Vehicles | T1 | 1550 | 1100 | Light Vehicles | 8/8 | PASS |
+| CH_ParallaxScout | Chronolegion | Vehicles | T1 | 800 | 400 | Light Vehicles | 8/8 | PASS || CH_TimelineTank | Chronolegion | Vehicles | T2 | 1450 | 1250 | Heavy Vehicles | 8/8 | PASS |
+| CH_DeltaDelayArtillery | Chronolegion | Vehicles | T2 | 1800 | 800 | Siege Vehicles | 8/8 | PASS |
+| CH_PauseProjector | Chronolegion | Vehicles | T2 | 1900 | 1400 | Heavy Vehicles | 8/8 | PASS |
+| CH_EraEngine | Chronolegion | Vehicles | T3 | 3100 | 3200 | Heavy Vehicles | 8/8 | PASS |
+| CH_GapInterceptor | Chronolegion | Aviation | T2 | 1200 | 580 | Air | 8/8 | PASS |
+| CH_TrailGunship | Chronolegion | Aviation | T2 | 1600 | 1000 | Air | 8/8 | PASS |
+| CH_CriticalPointBomber | Chronolegion | Aviation | T3 | 2800 | 1500 | Air | 8/8 | PASS |
+| CH_IsobathFrigate | Chronolegion | Naval | T1 | 950 | 760 | Marine | 8/8 | PASS |
+| CH_BathysSubmarine | Chronolegion | Naval | T2 | 2000 | 2000 | Marine | 8/8 | PASS |
+| CH_AttractorArk | Chronolegion | Naval | T3 | 3900 | 4000 | Marine | 8/8 | PASS |
+| CH_Hero_Voss | Chronolegion | Hero | T3 | 2700 | 700 | Light Infantry | 8/8 | PASS |
 **Total: 78 units**

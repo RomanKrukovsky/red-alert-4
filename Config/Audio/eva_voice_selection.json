@@ -4,7 +4,7 @@
     "Soviet": {
       "profile_id": "EVA_SU_KONTUR",
       "selected_candidate_id": "EVA_SU_KONTUR_C2",
-      "candidate_name": "Контур Бета (Стандартное командное контральто)",
+      "candidate_name": "Kontur Beta (Standartnoe komandnoe kontralto)",
       "anchor_file_path": "GeneratedVO/Anchors/Soviet/EVA_Soviet/anchor_02.wav",
       "backup_anchor_paths": [
         "GeneratedVO/Anchors/Soviet/EVA_Soviet/anchor_01.wav",
@@ -18,7 +18,7 @@
     "Alliance": {
       "profile_id": "EVA_AL_ASTRA",
       "selected_candidate_id": "EVA_AL_ASTRA_C2",
-      "candidate_name": "Астра 2 (Стандартный тактический интерфейс)",
+      "candidate_name": "Astra 2 (Standartnyy takticheskiy interfeys)",
       "anchor_file_path": "GeneratedVO/Anchors/Alliance/EVA_Alliance/anchor_02.wav",
       "backup_anchor_paths": [
         "GeneratedVO/Anchors/Alliance/EVA_Alliance/anchor_01.wav",
@@ -32,7 +32,7 @@
     "Coalition": {
       "profile_id": "EVA_CO_HARMONIA",
       "selected_candidate_id": "EVA_CO_HARMONIA_C2",
-      "candidate_name": "Гармония 2 (Стандартный стратегический ИИ)",
+      "candidate_name": "Garmoniya 2 (Standartnyy strategicheskiy II)",
       "anchor_file_path": "GeneratedVO/Anchors/Coalition/EVA_Coalition/anchor_02.wav",
       "backup_anchor_paths": [
         "GeneratedVO/Anchors/Coalition/EVA_Coalition/anchor_01.wav",
@@ -46,7 +46,7 @@
     "Chrono": {
       "profile_id": "EVA_CH_MOIRA",
       "selected_candidate_id": "EVA_CH_MOIRA_C2",
-      "candidate_name": "Мойра 2 (Стандартный хроно-интерфейс)",
+      "candidate_name": "Moyra 2 (Standartnyy khrono-interfeys)",
       "anchor_file_path": "GeneratedVO/Anchors/Chrono/EVA_Chrono/anchor_02.wav",
       "backup_anchor_paths": [
         "GeneratedVO/Anchors/Chrono/EVA_Chrono/anchor_01.wav",

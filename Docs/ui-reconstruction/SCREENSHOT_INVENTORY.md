@@ -34,12 +34,11 @@ Six of 24 examined. Identification is from direct inspection, not inference.
 
 | ID | File | Screen | Notable functional content |
 | --- | --- | --- | --- |
-| SC-01 | `1.png` | Title / attract screen | Centred logo lockup, "НАЖМИТЕ ЛЮБУЮ КЛАВИШУ" prompt, animated storm background |
-| SC-02 | `2.png` | Main menu | Left vertical nav (8 items: Кампания, Сетевая игра, Схватка, Редактор, Энциклопедия, Модификации, Настройки, Выход), commander profile card with XP bar (45 780 / 75 000, «Уровень 25»), news panel with carousel dots, operations summary panel, footer status strip (сеть/сервисы/версия) |
-| SC-03 | `3.png` | Campaign select | Top tab bar (6 tabs), 4 faction cards (СССР, Альянс, Восточная коалиция, Хронолегион), right detail panel with description + progress (миссии 06/18, доп. задания 09/36, сложность), bottom action bar |
-| SC-04 | `4.png` | Campaign detail (Soviet) | Left faction rail, large faction title, progress block (58 %, миссий 14/24, сложность), 3 primary actions (Новая игра / Продолжить / Выбор главы), commander portrait, quote block |
-| SC-13 | `13.png` | In-match HUD — base building | Top resource bar (4 resources + supply 88/200), minimap panel with 6 tool buttons, right production panel with 4 tabs (Строить/Войска/Улучшения/Доктрины) and collapsible category sections, production cards with icon + name + cost, build queue with per-item timer and cancel, selection panel (portrait, HP 5000/5000, description), control-group strip 1–0, bottom command bar |
-| SC-20 | `20.png` | In-match HUD — large battle | Objectives panel with checkable list + optional objective, EVA alert block, resource bar with warning + mute icons, minimap with faction-coloured blips and camera viewport frame, production panel with sub-tab row, multi-selection grid with per-unit counts and health bars, unit detail card (role, description, prochnost bar, sub-group counts), command grid with visible hotkeys Q/W/E/R/T and A/S/D/F |
+| SC-01 | `1.png` | Title / attract screen | Centred logo lockup, "PRESS ANY KEY" prompt, animated storm background |
+| SC-02 | `2.png` | Main menu | Left vertical nav (8 items: Campaign, Multiplayer, Skirmish, Editor, Encyclopedia, Modifications, Settings, Exit), commander profile card with XP bar (45,780 / 75,000, “Level 25”), news panel with carousel dots, operations summary panel, footer status strip (network/services/Version) |
+| SC-03 | `3.png` | Campaign select | Top tab bar (6 tabs), 4 faction cards (USSR, Alliance, Eastern Coalition, Chronolegion), right detail panel with description + progress (missions 06/18, additional tasks 09/36, difficulty), bottom action bar |
+| SC-04 | `4.png` | Campaign detail (Soviet) | Left faction rail, large faction title, progress block (58%, missions 14/24, difficulty), 3 primary actions (New game / Continue / Chapter selection), commander portrait, quote block |
+| SC-13 | `13.png` | In-match HUD - base building | Top resource bar (4 resources + supply 88/200), minimap panel with 6 tool buttons, right production panel with 4 tabs (Build/Troops/Upgrades/Doctrines) and collapsible category sections, production cards with icon + name + cost, build queue with per-item timer and cancel, selection panel (portrait, HP 5000/5000, description), control-group strip 1–0, bottom command bar || SC-20 | `20.png` | In-match HUD — large battle | Objectives panel with checkable list + optional objective, EVA alert block, resource bar with warning + mute icons, minimap with faction-coloured blips and camera viewport frame, production panel with sub-tab row, multi-selection grid with per-unit counts and health bars, unit detail card (role, description, prochnost bar, sub-group counts), command grid with visible hotkeys Q/W/E/R/T and A/S/D/F |
 
 Remaining, not yet examined: `5–12.png`, `14–19.png`, `21–24.png` (18 files).
 
@@ -54,8 +53,7 @@ Command & Conquer intellectual property:
 | SC-01, SC-02, SC-03, SC-04 | The **"RED ALERT 4"** logo lockup in the franchise's typographic style |
 | SC-02 | The literal footer line **"© 2024 ELECTRONIC ARTS INC."** |
 | SC-02, SC-03, SC-04 | Franchise-styled faction insignia (Soviet star-and-wings emblem; Allied eagle) |
-| SC-04 | **"ИМПЕРИЯ ВОСХОДЯЩЕГО СОЛНЦА"** with rising-sun insignia — the Empire of the Rising Sun, a faction from *Command & Conquer: Red Alert 3* |
-
+| SC-04 | **"EMPIRE OF THE RISING SUN"** with rising-sun insignia — the Empire of the Rising Sun, a faction from *Command & Conquer: Red Alert 3* |
 This directly contradicts the project's own founding constraint, recorded at project
 start and formalised in `Docs/ADR/0004-content-lives-in-data-not-code.md`:
 
@@ -70,9 +68,8 @@ into the shipping product. `Content/AssetRegistry/ThirdPartyAssets.json` current
 lists zero acquired assets and no EA licence.
 
 **Finding S-4 (medium, consistency).** SC-04 shows the faction roster as
-СССР / Альянс / **Империя восходящего солнца**, while SC-03 shows
-СССР / Альянс / **Восточная коалиция** / **Хронолегион** — which is the project's
-actual roster in `RA4Content` and the campaign brief. Per the brief's own tie-break
+USSR / Alliance / **Empire of the Rising Sun**, while SC-03 shows
+USSR / Alliance / **Eastern Coalition** / **Chronolegion** — which is the project'sactual roster in `RA4Content` and the campaign brief. Per the brief's own tie-break
 rule (the more detailed reference wins), **SC-03 is authoritative** and SC-04's third
 faction is treated as an artefact of the reference generation. To be recorded in an ADR.
 

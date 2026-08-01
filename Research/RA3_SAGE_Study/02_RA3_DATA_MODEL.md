@@ -1,72 +1,48 @@
-# 02. Что реально даёт модель данных RA3
-
-## 2.1. Верхнеуровневое устройство
-
-RA3 XML разбит не только по фракциям. В официальном дереве присутствуют:
-
-- faction units и structures;
-- `BaseObjects`;
+# 02. What the RA3 data model really provides
+## 2.1. Top-level device
+RA3 XML is not only divided into factions. The official tree contains:
+- faction units and structures;- `BaseObjects`;
 - `GlobalData`;
-- `Includes` и `Templates`;
-- `SkirmishAI`;
+- `Includes` and `Templates`;- `SkirmishAI`;
 - `Multiplayer`;
 - `Maps`, `MapSpecific`, `Terrain`;
 - `UI`, `UIInGame`, `Shell`;
 - `Sounds`, `Cinematics`, `IntelDB`, `WorldBuilder`.
 
-Следствие: data layer современной C&C — это не каталог статов, а декларативный граф ресурсов и поведений.
-
-## 2.2. Анатомия одного боевого юнита
-
-На примере официального XML наземной противотанковой машины видны отдельные блоки:
-
-1. **Identity и наследование**
-   - уникальный asset id;
-   - `inheritFrom` базового транспортного объекта;
-   - сторона, роль редактора, портрет, кнопка, локализованные строки.
-
-2. **Производство и экономика**
-   - build time;
-   - стоимость по account/resource;
-   - обязательный upgrade/tech dependency.
-
-3. **Классификация**
-   - набор признаков наподобие selectable, vehicle, can attack, tier;
-   - weapon category;
+Corollary: the data layer of modern C&C is not a catalog of stats, but a declarative graph of resources and behaviors.
+## 2.2. Anatomy of one combat unit
+Using the example of the official XML of a ground anti-tank vehicle, individual blocks are visible:
+1. **Identity and inheritance**
+   - unique asset id;
+   - `inheritFrom` of the underlying transport object;
+   - side, editor role, portrait, button, localized strings.
+2. **Production and Economy**   - build time;
+- cost by account/resource;
+   - mandatory upgrade/tech dependency.
+3. **Classification**
+   - a set of features like selectable, vehicle, can attack, tier;   - weapon category;
    - subgroup priority.
 
-4. **Выживаемость и движение**
-   - armor definition;
+4. **Survivability and Move**   - armor definition;
    - damage FX profile;
-   - locomotor template, condition и speed;
-   - body/max health;
+- locomotor template, condition and speed;   - body/max health;
    - collision geometry.
 
-5. **Представление**
-   - model condition states;
-   - bones для muzzle, recoil, launch и turret;
-   - damage textures и particles;
-   - animation states;
-   - faction coloring и tracks.
-
-6. **Runtime-модули**
-   - weapon-set update;
-   - turret settings и target chooser data;
-   - physics;
+5. **Performance**   - model condition states;
+- bones for muzzle, recoil, launch and turret;
+   - damage textures and particles;   - animation states;
+- faction coloring and tracks.
+6. **Runtime modules**   - weapon-set update;
+- turret settings and target chooser data;   - physics;
    - death modules;
-   - toggle state и special powers;
-   - status upgrades.
+- toggle state and special powers;   - status upgrades.
 
-7. **AI и client-only behavior**
-   - unit AI state machine;
+7. **AI and client-only behavior**   - unit AI state machine;
    - auto-acquire settings;
    - target chooser policy;
-   - отдельные клиентские звуковые реакции.
-
-## 2.3. Что из этого должно появиться в Unreal
-
-Не следует делать монолитный `URA4UnitDataAsset` на сотни полей. Рекомендуемая композиция:
-
+- individual client sound reactions.
+## 2.3. Which of these should appear in Unreal?
+You should not make a monolithic `URA4UnitDataAsset` for hundreds of fields. Recommended composition:
 ```text
 URA4UnitDefinition
   IdentityRef
@@ -83,28 +59,22 @@ URA4UnitDefinition
   CollisionProfileRef
 ```
 
-Предлагаемые типы:
-
+Suggested types:
 ```text
-URA4UnitDefinition                основной immutable descriptor
-URA4EconomyDefinition             стоимость, время, refund, queue rules
-URA4TechRequirementSet            AND/OR-граф требований
-URA4MovementProfile               domain, speed, acceleration, turn, avoidance
-URA4ArmorProfile                  категории входящего урона и modifiers
-URA4WeaponDefinition              fire model, target filter, projectile/effect
+URA4UnitDefinition main immutable descriptor
+URA4EconomyDefinition cost, time, refund, queue rules
+URA4TechRequirementSet AND/OR requirements graphURA4MovementProfile               domain, speed, acceleration, turn, avoidance
+URA4ArmorProfile incoming damage categories and modifiersURA4WeaponDefinition              fire model, target filter, projectile/effect
 URA4WeaponLoadout                 slots, modes, turrets, switching conditions
 URA4AbilityDefinition             activation, target mode, costs, cooldown
 URA4AIProfile                     role, targeting, micro policy, strategic hints
 URA4PresentationProfile           mesh/anim/FX state mapping
-URA4AudioProfile                  semantic events без привязки к EA-аудио
-```
+URA4AudioProfile semantic events without binding to EA audio```
 
 ## 2.4. Gameplay Tags
 
-RA3 `KindOf`, object/model/status conditions и категории нельзя копировать как готовый словарь, но сама идея полезна.
-
-Пример независимой таксономии:
-
+RA3 `KindOf`, object/model/status conditions and categories cannot be copied as a ready-made dictionary, but the idea itself is useful.
+Example of an independent taxonomy:
 ```text
 Unit.Domain.Ground
 Unit.Class.Vehicle
@@ -120,12 +90,9 @@ Weapon.Damage.Kinetic
 Production.Factory.Vehicle
 ```
 
-Теги должны быть семантическими. Не следует превращать их в свалку произвольных булевых флагов.
-
-## 2.5. Технологический граф
-
-RA3 связывает объект с upgrade dependencies. В RA4 нужен нормальный граф, поддерживающий:
-
+Tags must be semantic. They should not be turned into a dump of arbitrary boolean flags.
+## 2.5. Technology graph
+RA3 associates the object with upgrade dependencies. RA4 needs a normal graph that supports:
 - `AllOf`;
 - `AnyOf`;
 - `NoneOf`;
@@ -137,22 +104,17 @@ RA3 связывает объект с upgrade dependencies. В RA4 нужен �
 - temporary unlock;
 - campaign override.
 
-Граф должен валидироваться на циклы и недостижимые узлы ещё при cook/CI.
-
-## 2.6. AI-структура
-
-В RA3 skirmish AI отдельно хранятся:
-
+The graph must be validated for cycles and unreachable nodes even with cook/CI.
+## 2.6. AI structure
+RA3 skirmish AI stores separately:
 - opening moves;
 - personalities;
 - states;
 - micro manager library;
 - target heuristic library;
-- army definitions по фракциям;
-- общая AI data/configuration.
-
-Для RA4 это даёт пятислойную модель:
-
+- army definitions by faction;
+- general AI data/configuration.
+for RA4 this gives a five-layer model:
 ```text
 StrategicDirector
   → EconomyPlanner
@@ -162,14 +124,10 @@ StrategicDirector
   → UnitMicroController
 ```
 
-Target scoring должен быть отдельным сервисом, а не зашитым условием в каждом юните.
-
-## 2.7. Визуальные состояния
-
-Набор RA3 shaders показывает feature taxonomy: faction materials, damaged/frozen states, particles, distortion, lightning, lasers, water/ocean, rain, outlines, bloom и lookup-table post-processing.
-
-Для RA4 полезно составить собственную матрицу визуальных функций, но создавать материалы заново в Unreal:
-
+Target scoring should be a separate service, not a hard-wired condition in each unit.
+## 2.7. Visual states
+The RA3 shaders set shows feature taxonomy: faction materials, damaged/frozen states, particles, distortion, lightning, lasers, water/ocean, rain, outlines, bloom and lookup-table post-processing.
+for RA4 it is useful to create your own matrix of visual features, but create the materials again in Unreal:
 ```text
 Surface faction tint
 Damage stages

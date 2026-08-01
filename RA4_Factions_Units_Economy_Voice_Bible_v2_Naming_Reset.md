@@ -1,3639 +1,3639 @@
-# RA4 — полный дизайн фракций, экономики, юнитов и озвучки
-**Статус документа:** базовая production-библия для реализации в Unreal Engine 5.  
-**Версия:** 2.0 — Naming Reset  
-**Язык:** русский  
-**Назначение:** единый источник истины для геймдизайна, Data Assets, баланса, UI, AI, озвучки EVA и юнитов.  
-**Рабочие фракции:** СССР, Альянс, Восточная коалиция, Хронолегион.  
-**Примечание по IP:** версия 2.0 проводит полный naming reset ростера: прямые и слишком узнаваемые названия из Command & Conquer: Red Alert и Generals удалены из отображаемых имён и Stable ID. Новые обозначения вдохновлены реальными российско-советскими, американскими/натовскими, китайскими, японскими и индийскими традициями военной номенклатуры, но не копируют конкретные серийные образцы один в один. Старые ID сохранены только в таблице LegacyAliases для миграции.
+# RA4 — polnyy dizayn fraktsiy, ekonomiki, yunitov i ozvuchki
+**Status dokumenta:** bazovaya production-bibliya for realizatsii v Unreal Engine 5.  
+**Version:** 2.0 — Naming Reset  
+**Yazyk:** russkiy  
+**Naznachenie:** edinyy istochnik istiny for geymdizayna, Data Assets, balansa, UI, AI, ozvuchki EVA i yunitov.  
+**Rabochie Factions:** Soviet Union, Alliance, Vostochnaya Coalition, Khronolegion.  
+**Primechanie po IP:** Version 2.0 provodit polnyy naming reset rostera: pryamye i slishkom uznavaemye nazvaniya iz Command & Conquer: Red Alert i Generals udaleny iz otobrazhaemykh imyon i Stable ID. Novye oboznacheniya vdokhnovleny realnymi rossiysko-sovetskimi, amerikanskimi/natovskimi, kitayskimi, yaponskimi i indiyskimi traditsiyami voennoy nomenklatury, no ne kopiruyut konkretnye seriynye obraztsy odin v odin. Starye ID sokhraneny only v tablitse LegacyAliases for migratsii.
 
-## 0. Краткая идея игры
-RA4 — быстрая асимметричная RTS о глобальной войне четырёх технологических блоков. Матч строится вокруг классической формулы: развернуть базу, захватить экономику карты, разведать противника, перейти в T2, сорвать его технологический скачок, а затем закончить игру комбинированным ударом армии, авиации, флота и стратегических способностей. Каждая фракция обязана иметь понятную сильную сторону, реальную слабость и собственный ритм экономики. Ни одна фракция не должна выигрывать только за счёт более высоких чисел.
+## 0. Kratkaya ideya igry
+RA4 — bystraya asimmetrichnaya RTS o globalnoy voyne chetyryokh tekhnologicheskikh blokov. Match stroitsya vokrug klassicheskoy formuly: razvernut bazu, zakhvatit ekonomiku karty, razvedat protivnika, pereyti v T2, sorvat ego tekhnologicheskiy skachok, a zatem zakonchit igru kombinirovannym udarom armii, aviatsii, flota i strategicheskikh sposobnostey. Kazhdaya fraktsiya obyazana imet ponyatnuyu silnuyu storonu, realnuyu slabost i sobstvennyy ritm ekonomiki. Ni odna fraktsiya ne dolzhna vyigryvat only za schyot bolee vysokikh chisel.
 
-## 0.1. Система именования версии 2.0
-Новая номенклатура отделяет проект от старых ростеров Command & Conquer и одновременно делает армии похожими на продукцию разных военно-промышленных школ. СССР использует русскоязычные индексы и войсковые прозвища; Альянс — американские и натовские буквенно-цифровые обозначения с короткими англоязычными callsign; Восточная коалиция — смешанную китайско-японско-индийскую систему программ и культурных имён; Хронолегион — коды закрытых темпоральных проектов. Внутренний Stable ID больше не должен содержать старое рабочее имя. Старые ID допустимы только как `LegacyAliases` для одноразовой миграции уже созданных ассетов, ссылок, тестов, реплеев и SaveGame.
+## 0.1. Sistema imenovaniya versii 2.0
+Novaya nomenklatura otdelyaet Project ot starykh rosterov Command & Conquer i odnovremenno delaet armii pokhozhimi na produktsiyu raznykh voenno-promyshlennykh shkol. Soviet Union ispolzuet russkoyazychnye indeksy i voyskovye prozvishcha; Alliance — amerikanskie i natovskie bukvenno-tsifrovye oboznacheniya s korotkimi angloyazychnymi callsign; Vostochnaya Coalition — smeshannuyu kitaysko-yaponsko-indiyskuyu sistemu programm i kulturnykh imyon; Khronolegion — kody zakrytykh temporalnykh proektov. Vnutrenniy Stable ID bolshe ne dolzhen soderzhat staroe rabochee imya. Starye ID dopustimy only kak `LegacyAliases` for odnorazovoy migratsii uzhe sozdannykh assetov, ssylok, testov, repleev i SaveGame.
 
-### 0.1.1. Правила
-1. Одно боевое имя принадлежит только одному юниту.
-2. Название не должно совпадать с юнитом Command & Conquer в той же роли.
-3. Реальные индексы и названия используются лишь как принцип построения; конкретный реальный образец не копируется один в один.
-4. `UnitId`, `VoiceId`, имя Primary Data Asset и Gameplay Tags строятся от нового Stable ID.
-5. Русская локализация может произносить транслитерированный callsign Альянса, но исходное латинское имя сохраняется в UI и энциклопедии.
-6. После миграции старые имена не отображаются игроку и не используются при создании нового контента.
+### 0.1.1. Pravila
+1. Odno boevoe imya prinadlezhit only odnomu yunitu.
+2. Nazvanie ne dolzhno sovpadat s yunitom Command & Conquer v toy zhe roli.
+3. Realnye indeksy i nazvaniya ispolzuyutsya lish kak printsip postroeniya; konkretnyy realnyy obrazets ne kopiruetsya odin v odin.
+4. `UnitId`, `VoiceId`, imya Primary Data Asset i Gameplay Tags stroyatsya ot novogo Stable ID.
+5. Russkaya lokalizatsiya mozhet proiznosit transliterirovannyy callsign Alyansa, no iskhodnoe latinskoe imya sokhranyaetsya v UI i entsiklopedii.
+6. after migratsii starye imena ne otobrazhayutsya igroku i ne ispolzuyutsya with sozdanii novogo kontenta.
 
-## 0.2. Карта миграции LegacyAliases
-| Фракция | Старое рабочее имя | Старый Stable ID | Новое полное имя | Новый Stable ID |
+## 0.2. Karta migratsii LegacyAliases
+| Fraktsiya | Staroe rabochee imya | Staryy Stable ID | Novoe polnoe imya | Novyy Stable ID |
 | --- | --- | --- | --- | --- |
-| СССР | Призывник | `SU_Conscript` | Мотострелок МС-12 «Рубеж» | `SU_RubezhRifleman` |
-| СССР | Гренадёр | `SU_Grenadier` | Штурмовик ОШ-4 «Запал» | `SU_ZapalGrenadier` |
-| СССР | Зенитчик | `SU_FlakTrooper` | Зенитный расчёт ПЗК-9 «Заслон» | `SU_ZaslonAATeam` |
-| СССР | Боевой инженер | `SU_Engineer` | Инженер-сапёр ИС-3 «Мастер» | `SU_MasterEngineer` |
-| СССР | Штурмовик «Гром» | `SU_ShockTrooper` | Электроштурмовик ЭШ-8 «Разряд» | `SU_RazryadTrooper` |
-| СССР | Комиссар связи | `SU_Commissar` | Офицер связи КС-6 «Вектор» | `SU_VektorOfficer` |
-| СССР | Добытчик «Богатырь» | `SU_Harvester` | Горнорудная машина ГРМ-8 «Богатырь» | `SU_BogatyrOreCarrier` |
-| СССР | Разведмашина «Серп» | `SU_SickleScout` | Боевая разведмашина БРМ-27 «Рысь» | `SU_RysScout` |
-| СССР | Танк «Молот» | `SU_HammerTank` | Основной танк ОБТ-92 «Гранит» | `SU_GranitMBT` |
-| СССР | РСЗО «Буратино» | `SU_Buratino` | Термобарическая РСЗО ТРС-18 «Зарево» | `SU_ZarevoMLRS` |
-| СССР | Тесла-таран «Перун» | `SU_TeslaRam` | Электротаран ЭТМ-7 «Громобой» | `SU_GromoboyRam` |
-| СССР | Танк «Апокалипсис» | `SU_Apocalypse` | Тяжёлый танк прорыва ТТП-11 «Воевода» | `SU_VoevodaHeavyTank` |
-| СССР | Истребитель МиГ-41 | `SU_MiG41` | Истребитель И-47 «Кречет» | `SU_KrechetInterceptor` |
-| СССР | Штурмовик «Хинд-М» | `SU_Hind` | Штурмовой вертолёт ШВ-38 «Коршун» | `SU_KorshunGunship` |
-| СССР | Дирижабль «Кировец» | `SU_Kirov` | Тяжёлый дирижабль ТДА-8 «Громада» | `SU_GromadaAirship` |
-| СССР | Катер «Скат» | `SU_StingrayBoat` | Боевой катер БК-27 «Буран» | `SU_BuranPatrolBoat` |
-| СССР | Подлодка «Тайфун» | `SU_TyphoonSub` | Ударная подлодка УПЛ-90 «Морок» | `SU_MorokSubmarine` |
-| СССР | Ракетный крейсер «Дредноут» | `SU_Dreadnought` | Ракетный крейсер РКР-44 «Святогор» | `SU_SvyatogorCruiser` |
-| СССР | Майор Елена Морозова | `SU_Hero_Morozova` | Майор Елена Морозова | `SU_Hero_Morozova` |
-| Альянс | Миротворец | `AL_Peacekeeper` | Стрелок M6 «Sentinel» | `AL_SentinelRifleman` |
-| Альянс | Расчёт «Джавелин» | `AL_Javelin` | Ракетный расчёт FGM-31 «Lancer» | `AL_LancerTeam` |
-| Альянс | Полевой инженер | `AL_Engineer` | Полевой инженер E-4 | `AL_FieldEngineer` |
-| Альянс | Следопыт | `AL_Pathfinder` | Снайпер R-9 «Longwatch» | `AL_LongwatchSniper` |
-| Альянс | Полевой медик | `AL_Medic` | Полевой медик M-12 «Lifeline» | `AL_LifelineMedic` |
-| Альянс | Криоспециалист | `AL_CryoSpecialist` | Специалист C-7 «Frostline» | `AL_FrostlineSpecialist` |
-| Альянс | Добытчик «Проспектор» | `AL_Prospector` | Добывающая платформа M88 «Pioneer» | `AL_PioneerHarvester` |
-| Альянс | Разведчик «Шакал» | `AL_Jackal` | Разведмашина LAV-41 «Kestrel» | `AL_KestrelScout` |
-| Альянс | Танк «Гардиан» | `AL_Guardian` | Основной танк M14 «Bulwark» | `AL_BulwarkMBT` |
-| Альянс | Рельсовая САУ «Афина» | `AL_Athena` | Рельсовая САУ XM190 «Oracle» | `AL_OracleArtillery` |
-| Альянс | Танк «Мираж» | `AL_Mirage` | Маскировочный танк XM27 «Refraction» | `AL_RefractionTank` |
-| Альянс | Мобильный щит «Эгида» | `AL_AegisShield` | Мобильный щит M46 «Ward» | `AL_WardShieldCarrier` |
-| Альянс | Танк «Паладин» | `AL_Paladin` | Тяжёлый танк M70 «Citadel» | `AL_CitadelTank` |
-| Альянс | Истребитель «Фалькон» | `AL_Falcon` | Истребитель F/A-48 «Shrike» | `AL_ShrikeInterceptor` |
-| Альянс | VTOL «Харриер» | `AL_Harrier` | VTOL AV-27 «Vector» | `AL_VectorVTOL` |
-| Альянс | Стелс-бомбардировщик «Спектр» | `AL_Specter` | Стелс-бомбардировщик B-39 «Nightveil» | `AL_NightveilBomber` |
-| Альянс | Гидрофойл «Риптайд» | `AL_Hydrofoil` | Гидрофойл PHM-22 «Manta» | `AL_MantaPatrolCraft` |
-| Альянс | Эсминец «Тритон» | `AL_Triton` | Эсминец DDG-31 «Resolute» | `AL_ResoluteDestroyer` |
-| Альянс | Авианосец «Посейдон» | `AL_Poseidon` | Авианосец CVX-90 «Horizon» | `AL_HorizonCarrier` |
-| Альянс | Агент Эвелин Харт | `AL_Hero_Hart` | Агент Эвелин Харт | `AL_Hero_Hart` |
-| Восточная коалиция | Авангард | `CO_Vanguard` | Стрелок Тип 21 «Цяньвэй» | `CO_QianweiRifleman` |
-| Восточная коалиция | Копейщик бури | `CO_StormLancer` | Противотанковый расчёт AT-8 «Ваджра» | `CO_VajraLancer` |
-| Восточная коалиция | Техник сети | `CO_Technician` | Техник сети Тип 06 «Цзе» | `CO_JieTechnician` |
-| Восточная коалиция | Фазовый стрелок | `CO_PhaseArcher` | Фазовый стрелок QBS-19 «Шэньгун» | `CO_ShengongMarksman` |
-| Восточная коалиция | Нанитный медик | `CO_NaniteMedic` | Нанитный медик NM-7 «Сандживани» | `CO_SanjivaniMedic` |
-| Восточная коалиция | Почётный страж | `CO_HonorGuard` | Почётный страж HG-33 «Ракша» | `CO_RakshaGuard` |
-| Восточная коалиция | Добытчик «Собиратель» | `CO_Collector` | Добывающая платформа GRP-12 «Юань» | `CO_YuanCollector` |
-| Восточная коалиция | Шагоход «Богомол» | `CO_Mantis` | Разведшагоход Тип 17 «Камакири» | `CO_KamakiriWalker` |
-| Восточная коалиция | Танк «Нефрит» | `CO_JadeTank` | Основной танк ZTZ-61 «Цинлун» | `CO_QinglongMBT` |
-| Восточная коалиция | Артиллерия «Лотос» | `CO_LotusArtillery` | Артиллерия PHL-29 «Муссон» | `CO_MonsoonArtillery` |
-| Восточная коалиция | Щитовой носитель «Бастион» | `CO_Bastion` | Щитовой носитель Тип 42 «Сэймон» | `CO_SeimonShieldCarrier` |
-| Восточная коалиция | Штурмовой шагоход «Кирин» | `CO_Kirin` | Штурмовой шагоход MBT-X «Айравата» | `CO_AiravataWalker` |
-| Восточная коалиция | Мобильная крепость «Небесный дворец» | `CO_CelestialFortress` | Мобильная крепость ZTD-90 «Тяньмэнь» | `CO_TianmenFortress` |
-| Восточная коалиция | Дрон «Стриж» | `CO_SwiftDrone` | Разведдрон UAV-12 «Кавасэми» | `CO_KawasemiDrone` |
-| Восточная коалиция | Штурмовик «Громовой журавль» | `CO_ThunderCrane` | Штурмовик Z-28 «Лэйхэ» | `CO_LeiheGunship` |
-| Восточная коалиция | Бомбардировщик «Алый феникс» | `CO_Vermilion` | Бомбардировщик H-26 «Агнипакша» | `CO_AgnipakshaBomber` |
-| Восточная коалиция | Корвет «Меч-рыба» | `CO_Swordfish` | Корвет Тип 32 «Кадзэкири» | `CO_KazekiriCorvette` |
-| Восточная коалиция | Рельсовый крейсер «Левиафан» | `CO_Leviathan` | Рельсовый крейсер Тип 81 «Сюаньу» | `CO_XuanwuCruiser` |
-| Восточная коалиция | Подводный авианосец «Дворец дракона» | `CO_DragonPalace` | Подводный авианосец SSGN-18 «Самудра» | `CO_SamudraCarrier` |
-| Восточная коалиция | Командир Мэй Цзянь | `CO_Hero_Mei` | Командир Мэй Цзянь | `CO_Hero_Mei` |
-| Хронолегион | Стрелок эха | `CH_EchoRifleman` | Стрелок ECHO-7 «Резонанс» | `CH_ResonanceRifleman` |
-| Хронолегион | Фазовый копейщик | `CH_PhaseLancer` | Копейщик PHASE-L9 «Прокол» | `CH_PunctureLancer` |
-| Хронолегион | Темпоральный инженер | `CH_Engineer` | Инженер CSE-2 «Редактор» | `CH_CausalityEngineer` |
-| Хронолегион | Перемотчик | `CH_Rewinder` | Оператор RWD-3 «Реверс» | `CH_ReversalMedic` |
-| Хронолегион | Снайпер парадокса | `CH_ParadoxSniper` | Снайпер PDX-12 «Апория» | `CH_AporiaSniper` |
-| Хронолегион | Нулевой оперативник | `CH_NullOperative` | Оперативник NULL-12 «Цензор» | `CH_CensorOperative` |
-| Хронолегион | Квантовый добытчик | `CH_QuantumHarvester` | Добытчик QH-4 «Вероятник» | `CH_ProbabilistHarvester` |
-| Хронолегион | Разведчик «Мерцание» | `CH_BlinkScout` | Разведчик BLK-8 «Параллакс» | `CH_ParallaxScout` |
-| Хронолегион | Танк «Континуум» | `CH_ContinuumTank` | Танк CT-21 «Линия» | `CH_TimelineTank` |
-| Хронолегион | Артиллерия задержки | `CH_DelayArtillery` | Артиллерия LAG-16 «Дельта» | `CH_DeltaDelayArtillery` |
-| Хронолегион | Проектор стазиса | `CH_StasisProjector` | Проектор STS-5 «Пауза» | `CH_PauseProjector` |
-| Хронолегион | Двигатель эпохи | `CH_EpochEngine` | Тяжёлый танк EPC-0 «Эра» | `CH_EraEngine` |
-| Хронолегион | Разломный перехватчик | `CH_RiftInterceptor` | Перехватчик RFT-31 «Разрыв» | `CH_GapInterceptor` |
-| Хронолегион | Штурмовик «Послеобраз» | `CH_AfterimageGunship` | Штурмовик AFG-6 «Шлейф» | `CH_TrailGunship` |
-| Хронолегион | Бомбардировщик «Горизонт событий» | `CH_EventHorizon` | Бомбардировщик CRV-9 «Критическая точка» | `CH_CriticalPointBomber` |
-| Хронолегион | Фрегат «Отметка прилива» | `CH_Tidemark` | Фрегат TMK-9 «Изобата» | `CH_IsobathFrigate` |
-| Хронолегион | Подлодка «Бездна» | `CH_AbyssWalker` | Подлодка ABY-14 «Батис» | `CH_BathysSubmarine` |
-| Хронолегион | Ковчег сингулярности | `CH_SingularityArk` | Ковчег SGA-1 «Аттрактор» | `CH_AttractorArk` |
-| Хронолегион | Архивист Селена Восс | `CH_Hero_Voss` | Архивист Селена Восс | `CH_Hero_Voss` |
+| Soviet Union | Conscript | `SU_Conscript` | Motostrelok MS-12 «Rubezh» | `SU_RubezhRifleman` |
+| Soviet Union | Grenadyor | `SU_Grenadier` | Shturmovik OSh-4 «Zapal» | `SU_ZapalGrenadier` |
+| Soviet Union | Zenitchik | `SU_FlakTrooper` | Zenitnyy raschyot PZK-9 «Zaslon» | `SU_ZaslonAATeam` |
+| Soviet Union | Boevoy Engineer | `SU_Engineer` | Engineer-sapyor IS-3 «Master» | `SU_MasterEngineer` |
+| Soviet Union | Shturmovik «Grom» | `SU_ShockTrooper` | Elektroshturmovik ESh-8 «Razryad» | `SU_RazryadTrooper` |
+| Soviet Union | Komissar svyazi | `SU_Commissar` | Ofitser svyazi KS-6 «Vektor» | `SU_VektorOfficer` |
+| Soviet Union | Harvester «Bogatyr» | `SU_Harvester` | Gornorudnaya mashina GRM-8 «Bogatyr» | `SU_BogatyrOreCarrier` |
+| Soviet Union | Razvedmashina «Serp» | `SU_SickleScout` | Boevaya razvedmashina BRM-27 «Rys» | `SU_RysScout` |
+| Soviet Union | Tank «Molot» | `SU_HammerTank` | Osnovnoy Tank OBT-92 «Granit» | `SU_GranitMBT` |
+| Soviet Union | RSZO «Buratino» | `SU_Buratino` | Termobaricheskaya RSZO TRS-18 «Zarevo» | `SU_ZarevoMLRS` |
+| Soviet Union | Tesla-taran «Perun» | `SU_TeslaRam` | Elektrotaran ETM-7 «Gromoboy» | `SU_GromoboyRam` |
+| Soviet Union | Tank «Apokalipsis» | `SU_Apocalypse` | Tyazhyolyy Tank proryva TTP-11 «Voevoda» | `SU_VoevodaHeavyTank` |
+| Soviet Union | Istrebitel MiG-41 | `SU_MiG41` | Istrebitel I-47 «Krechet» | `SU_KrechetInterceptor` |
+| Soviet Union | Shturmovik «Khind-M» | `SU_Hind` | Shturmovoy vertolyot ShV-38 «Korshun» | `SU_KorshunGunship` |
+| Soviet Union | Dirizhabl «Kirovets» | `SU_Kirov` | Tyazhyolyy dirizhabl TDA-8 «Gromada» | `SU_GromadaAirship` |
+| Soviet Union | Kater «Skat» | `SU_StingrayBoat` | Boevoy kater BK-27 «Buran» | `SU_BuranPatrolBoat` |
+| Soviet Union | Podlodka «Tayfun» | `SU_TyphoonSub` | Udarnaya podlodka UPL-90 «Morok» | `SU_MorokSubmarine` |
+| Soviet Union | Raketnyy kreyser «Drednout» | `SU_Dreadnought` | Raketnyy kreyser RKR-44 «Svyatogor» | `SU_SvyatogorCruiser` |
+| Soviet Union | Mayor Elena Morozova | `SU_Hero_Morozova` | Mayor Elena Morozova | `SU_Hero_Morozova` |
+| Alliance | Mirotvorets | `AL_Peacekeeper` | Strelok M6 «Sentinel» | `AL_SentinelRifleman` |
+| Alliance | Raschyot «Dzhavelin» | `AL_Javelin` | Raketnyy raschyot FGM-31 «Lancer» | `AL_LancerTeam` |
+| Alliance | Polevoy Engineer | `AL_Engineer` | Polevoy Engineer E-4 | `AL_FieldEngineer` |
+| Alliance | Sledopyt | `AL_Pathfinder` | Snayper R-9 «Longwatch» | `AL_LongwatchSniper` |
+| Alliance | Polevoy medik | `AL_Medic` | Polevoy medik M-12 «Lifeline» | `AL_LifelineMedic` |
+| Alliance | Kriospetsialist | `AL_CryoSpecialist` | Spetsialist C-7 «Frostline» | `AL_FrostlineSpecialist` |
+| Alliance | Harvester «Prospektor» | `AL_Prospector` | Dobyvayushchaya platforma M88 «Pioneer» | `AL_PioneerHarvester` |
+| Alliance | Razvedchik «Shakal» | `AL_Jackal` | Razvedmashina LAV-41 «Kestrel» | `AL_KestrelScout` |
+| Alliance | Tank «Gardian» | `AL_Guardian` | Osnovnoy Tank M14 «Bulwark» | `AL_BulwarkMBT` |
+| Alliance | Relsovaya SAU «Afina» | `AL_Athena` | Relsovaya SAU XM190 «Oracle» | `AL_OracleArtillery` |
+| Alliance | Tank «Mirazh» | `AL_Mirage` | Maskirovochnyy Tank XM27 «Refraction» | `AL_RefractionTank` |
+| Alliance | Mobilnyy shchit «Egida» | `AL_AegisShield` | Mobilnyy shchit M46 «Ward» | `AL_WardShieldCarrier` |
+| Alliance | Tank «Paladin» | `AL_Paladin` | Tyazhyolyy Tank M70 «Citadel» | `AL_CitadelTank` |
+| Alliance | Istrebitel «Falkon» | `AL_Falcon` | Istrebitel F/A-48 «Shrike» | `AL_ShrikeInterceptor` |
+| Alliance | VTOL «Kharrier» | `AL_Harrier` | VTOL AV-27 «Vector» | `AL_VectorVTOL` |
+| Alliance | Stels-bombardirovshchik «Spektr» | `AL_Specter` | Stels-bombardirovshchik B-39 «Nightveil» | `AL_NightveilBomber` |
+| Alliance | Gidrofoyl «Riptayd» | `AL_Hydrofoil` | Gidrofoyl PHM-22 «Manta» | `AL_MantaPatrolCraft` |
+| Alliance | Esminets «Triton» | `AL_Triton` | Esminets DDG-31 «Resolute» | `AL_ResoluteDestroyer` |
+| Alliance | Avianosets «Poseydon» | `AL_Poseidon` | Avianosets CVX-90 «Horizon» | `AL_HorizonCarrier` |
+| Alliance | Agent Evelin Khart | `AL_Hero_Hart` | Agent Evelin Khart | `AL_Hero_Hart` |
+| Vostochnaya Coalition | Avangard | `CO_Vanguard` | Strelok Tip 21 «Tsyanvey» | `CO_QianweiRifleman` |
+| Vostochnaya Coalition | Kopeyshchik buri | `CO_StormLancer` | Protivotankovyy raschyot AT-8 «Vadzhra» | `CO_VajraLancer` |
+| Vostochnaya Coalition | Tekhnik seti | `CO_Technician` | Tekhnik seti Tip 06 «Tsze» | `CO_JieTechnician` |
+| Vostochnaya Coalition | Fazovyy strelok | `CO_PhaseArcher` | Fazovyy strelok QBS-19 «Shengun» | `CO_ShengongMarksman` |
+| Vostochnaya Coalition | Nanitnyy medik | `CO_NaniteMedic` | Nanitnyy medik NM-7 «Sandzhivani» | `CO_SanjivaniMedic` |
+| Vostochnaya Coalition | Pochyotnyy strazh | `CO_HonorGuard` | Pochyotnyy strazh HG-33 «Raksha» | `CO_RakshaGuard` |
+| Vostochnaya Coalition | Harvester «Sobiratel» | `CO_Collector` | Dobyvayushchaya platforma GRP-12 «Yuan» | `CO_YuanCollector` |
+| Vostochnaya Coalition | Shagokhod «Bogomol» | `CO_Mantis` | Razvedshagokhod Tip 17 «Kamakiri» | `CO_KamakiriWalker` |
+| Vostochnaya Coalition | Tank «Nefrit» | `CO_JadeTank` | Osnovnoy Tank ZTZ-61 «Tsinlun» | `CO_QinglongMBT` |
+| Vostochnaya Coalition | Artilleriya «Lotos» | `CO_LotusArtillery` | Artilleriya PHL-29 «Musson» | `CO_MonsoonArtillery` |
+| Vostochnaya Coalition | Shchitovoy nositel «Bastion» | `CO_Bastion` | Shchitovoy nositel Tip 42 «Seymon» | `CO_SeimonShieldCarrier` |
+| Vostochnaya Coalition | Shturmovoy shagokhod «Kirin» | `CO_Kirin` | Shturmovoy shagokhod MBT-X «Ayravata» | `CO_AiravataWalker` |
+| Vostochnaya Coalition | Mobilnaya krepost «Nebesnyy dvorets» | `CO_CelestialFortress` | Mobilnaya krepost ZTD-90 «Tyanmen» | `CO_TianmenFortress` |
+| Vostochnaya Coalition | Dron «Strizh» | `CO_SwiftDrone` | Razveddron UAV-12 «Kavasemi» | `CO_KawasemiDrone` |
+| Vostochnaya Coalition | Shturmovik «Gromovoy zhuravl» | `CO_ThunderCrane` | Shturmovik Z-28 «Leykhe» | `CO_LeiheGunship` |
+| Vostochnaya Coalition | Bombardirovshchik «Alyy feniks» | `CO_Vermilion` | Bombardirovshchik H-26 «Agnipaksha» | `CO_AgnipakshaBomber` |
+| Vostochnaya Coalition | Korvet «Mech-ryba» | `CO_Swordfish` | Korvet Tip 32 «Kadzekiri» | `CO_KazekiriCorvette` |
+| Vostochnaya Coalition | Relsovyy kreyser «Leviafan» | `CO_Leviathan` | Relsovyy kreyser Tip 81 «Syuanu» | `CO_XuanwuCruiser` |
+| Vostochnaya Coalition | Podvodnyy avianosets «Dvorets drakona» | `CO_DragonPalace` | Podvodnyy avianosets SSGN-18 «Samudra» | `CO_SamudraCarrier` |
+| Vostochnaya Coalition | Commander Mey Tszyan | `CO_Hero_Mei` | Commander Mey Tszyan | `CO_Hero_Mei` |
+| Khronolegion | Strelok ekha | `CH_EchoRifleman` | Strelok ECHO-7 «Rezonans» | `CH_ResonanceRifleman` |
+| Khronolegion | Fazovyy kopeyshchik | `CH_PhaseLancer` | Kopeyshchik PHASE-L9 «Prokol» | `CH_PunctureLancer` |
+| Khronolegion | Temporalnyy Engineer | `CH_Engineer` | Engineer CSE-2 «Redaktor» | `CH_CausalityEngineer` |
+| Khronolegion | Peremotchik | `CH_Rewinder` | Operator RWD-3 «Revers» | `CH_ReversalMedic` |
+| Khronolegion | Snayper paradoksa | `CH_ParadoxSniper` | Snayper PDX-12 «Aporiya» | `CH_AporiaSniper` |
+| Khronolegion | Nulevoy operativnik | `CH_NullOperative` | Operativnik NULL-12 «Tsenzor» | `CH_CensorOperative` |
+| Khronolegion | Kvantovyy Harvester | `CH_QuantumHarvester` | Harvester QH-4 «Veroyatnik» | `CH_ProbabilistHarvester` |
+| Khronolegion | Razvedchik «Mertsanie» | `CH_BlinkScout` | Razvedchik BLK-8 «Parallaks» | `CH_ParallaxScout` |
+| Khronolegion | Tank «Kontinuum» | `CH_ContinuumTank` | Tank CT-21 «Liniya» | `CH_TimelineTank` |
+| Khronolegion | Artilleriya zaderzhki | `CH_DelayArtillery` | Artilleriya LAG-16 «Delta» | `CH_DeltaDelayArtillery` |
+| Khronolegion | Proektor stazisa | `CH_StasisProjector` | Proektor STS-5 «Pauza» | `CH_PauseProjector` |
+| Khronolegion | Dvigatel epokhi | `CH_EpochEngine` | Tyazhyolyy Tank EPC-0 «Era» | `CH_EraEngine` |
+| Khronolegion | Razlomnyy perekhvatchik | `CH_RiftInterceptor` | Perekhvatchik RFT-31 «Razryv» | `CH_GapInterceptor` |
+| Khronolegion | Shturmovik «Posleobraz» | `CH_AfterimageGunship` | Shturmovik AFG-6 «Shleyf» | `CH_TrailGunship` |
+| Khronolegion | Bombardirovshchik «Gorizont sobytiy» | `CH_EventHorizon` | Bombardirovshchik CRV-9 «Kriticheskaya tochka» | `CH_CriticalPointBomber` |
+| Khronolegion | Fregat «Otmetka priliva» | `CH_Tidemark` | Fregat TMK-9 «Izobata» | `CH_IsobathFrigate` |
+| Khronolegion | Podlodka «Bezdna» | `CH_AbyssWalker` | Podlodka ABY-14 «Batis» | `CH_BathysSubmarine` |
+| Khronolegion | Kovcheg singulyarnosti | `CH_SingularityArk` | Kovcheg SGA-1 «Attraktor» | `CH_AttractorArk` |
+| Khronolegion | Arkhivist Selena Voss | `CH_Hero_Voss` | Arkhivist Selena Voss | `CH_Hero_Voss` |
 
-## 1. Глобальная экономика
-### 1.1. Основные ресурсы
-| Ресурс | Назначение | Как получается | Ключевое ограничение |
+## 1. Globalnaya Economy
+### 1.1. Osnovnye resursy
+| Resurs | Naznachenie | Kak poluchaetsya | Klyuchevoe ogranichenie |
 | --- | --- | --- | --- |
-| Кредиты | Строительство, производство, ремонт, способности | Рудные поля, богатая руда, нейтральные нефтяные станции, разовые награды | Добыча зависит от логистики и защищённости маршрута |
-| Энергия | Питание зданий, обороны, радара и некоторых юнитов | Электростанции и высокотехнологичные реакторы | При дефиците отключаются приоритетные системы |
-| Командный лимит | Ограничение количества боевых единиц | Штаб, казармы, заводы, логистические узлы | Не расходуется, а резервируется юнитами |
-| Фракционный ресурс | Определяет уникальный стиль армии | Отдельная механика каждой фракции | Не заменяет кредиты и не должен быть обязательным для базовых действий |
+| Kredity | Stroitelstvo, Production, remont, sposobnosti | Rudnye polya, bogataya ruda, neytralnye neftyanye stantsii, razovye nagrady | Dobycha zavisit ot logistiki i zashchishchyonnosti marshruta |
+| Energiya | Pitanie zdaniy, oborony, radara i nekotorykh yunitov | Elektrostantsii i vysokotekhnologichnye reaktory | with defitsite otklyuchayutsya prioritetnye sistemy |
+| Komandnyy limit | Ogranichenie kolichestva boevykh edinits | HQ, kazarmy, zavody, logisticheskie uzly | Ne raskhoduetsya, a rezerviruetsya yunitami |
+| Fraktsionnyy resurs | Opredelyaet unikalnyy stil armii | Otdelnaya mekhanika kazhdoy Factions | Ne zamenyaet kredity i ne dolzhen byt obyazatelnym for bazovykh deystviy |
 
-### 1.2. Старт матча
-| Параметр | Стандарт |
+### 1.2. Start matcha
+| Parametr | Standart |
 | --- | --- |
-| Стартовые кредиты | 10 000 |
-| Стартовая энергия | +100 свободной мощности после развёртывания штаба |
-| Стартовый командный лимит | 50 |
-| Максимальный командный лимит | 200 |
-| Стартовый строитель | 1 Мобильный командный модуль, разворачиваемый в штаб |
-| Стартовая разведка | 1 дешёвый разведчик или эквивалент после постройки казарм/завода |
-| Стандартная длительность матча 1v1 | 18–30 минут |
-| Стандартная длительность матча 4v4 | 30–55 минут |
+| Startovye kredity | 10 000 |
+| Startovaya energiya | +100 svobodnoy moshchnosti after razvyortyvaniya shtaba |
+| Startovyy komandnyy limit | 50 |
+| Maksimalnyy komandnyy limit | 200 |
+| Startovyy stroitel | 1 Mobilnyy komandnyy modul, razvorachivaemyy v HQ |
+| Startovaya razvedka | 1 deshyovyy razvedchik or ekvivalent after postroyki kazarm/zavoda |
+| Standartnaya dlitelnost matcha 1v1 | 18–30 minut |
+| Standartnaya dlitelnost matcha 4v4 | 30–55 minut |
 
-### 1.3. Руда и добыча
-Обычное рудное поле содержит 45 000 кредитов. Богатое рудное поле содержит 75 000 кредитов и даёт +25% к скорости загрузки. Базовый груз добытчика — 1 200 кредитов. Полная загрузка занимает 12–16 секунд, выгрузка — 4 секунды, типовой цикл при средней дистанции даёт 35–45 кредитов в секунду. Нефтяная станция приносит 8 кредитов в секунду владельцу и захватывается инженером. Уничтожение рудного поля невозможно; карта должна стимулировать борьбу за маршруты, а не полное удаление экономики соперника.
+### 1.3. Ruda i dobycha
+Obychnoe rudnoe pole soderzhit 45 000 kreditov. Bogatoe rudnoe pole soderzhit 75 000 kreditov i dayot +25% k skorosti zagruzki. Bazovyy gruz dobytchika — 1 200 kreditov. Polnaya zagruzka zanimaet 12–16 sekund, vygruzka — 4 sekundy, tipovoy tsikl with sredney distantsii dayot 35–45 kreditov v sekundu. Neftyanaya stantsiya prinosit 8 kreditov v sekundu vladeltsu i zakhvatyvaetsya inzhenerom. Unichtozhenie rudnogo polya nevozmozhno; karta dolzhna stimulirovat borbu za marshruty, a ne polnoe udalenie ekonomiki sopernika.
 
-### 1.4. Строительство, отмена, продажа и ремонт
-| Действие | Правило |
+### 1.4. Stroitelstvo, otmena, prodazha i remont
+| Deystvie | Pravilo |
 | --- | --- |
-| Отмена здания до 25% готовности | Возврат 90% стоимости |
-| Отмена здания после 25% готовности | Возврат 60% стоимости |
-| Отмена юнита в очереди | Возврат 80% неиспользованной стоимости |
-| Продажа здания | Возврат 50% стоимости и появление небольшой группы экипажа |
-| Ремонт здания | До 30% первоначальной стоимости за восстановление с 1 HP до 100% |
-| Ремонт техники | До 25% первоначальной стоимости за полное восстановление |
-| Захват здания | Инженер тратится; захваченное здание временно отключено на 8 секунд |
+| Otmena Buildings before 25% gotovnosti | Vozvrat 90% stoimosti |
+| Otmena Buildings after 25% gotovnosti | Vozvrat 60% stoimosti |
+| Otmena yunita v ocheredi | Vozvrat 80% neispolzovannoy stoimosti |
+| Prodazha Buildings | Vozvrat 50% stoimosti i poyavlenie nebolshoy gruppy ekipazha |
+| Remont Buildings | before 30% pervonachalnoy stoimosti za vosstanovlenie s 1 HP before 100% |
+| Remont tekhniki | before 25% pervonachalnoy stoimosti za polnoe vosstanovlenie |
+| Zakhvat Buildings | Engineer tratitsya; zakhvachennoe zdanie vremenno otklyucheno na 8 sekund |
 
-### 1.5. Энергосистема
-Каждое здание имеет производство или потребление энергии. При дефиците система отключает объекты по приоритетам: декоративные и вспомогательные системы → радар и мини-карта → ремонт → высокотехнологичное производство → стационарная оборона → супероружие. Игрок может вручную изменить приоритеты. Базовые казармы и добыча никогда полностью не останавливаются, но при тяжёлом дефиците работают на 50% скорости.
+### 1.5. Energosistema
+Kazhdoe zdanie imeet Production or potreblenie energii. with defitsite sistema otklyuchaet obekty po prioritetam: dekorativnye i vspomogatelnye sistemy → radar i mini-karta → remont → vysokotekhnologichnoe Production → statsionarnaya oborona → superoruzhie. Igrok mozhet vruchnuyu izmenit prioritety. Bazovye kazarmy i dobycha nikogda polnostyu ne ostanavlivayutsya, no with tyazhyolom defitsite rabotayut na 50% skorosti.
 
-### 1.6. Командный лимит
-| Категория | Стоимость лимита |
+### 1.6. Komandnyy limit
+| Kategoriya | Stoimost limita |
 | --- | --- |
-| Обычная пехота | 1 |
-| Элитная/тяжёлая пехота | 2 |
-| Лёгкая техника | 3 |
-| Основной танк/артиллерия | 5 |
-| Сверхтяжёлая техника | 8–10 |
-| Истребитель/вертолёт | 4 |
-| Бомбардировщик/воздушный транспорт | 6 |
-| Корабль | 5–10 |
-| Герой | 8 |
+| Obychnaya Infantry | 1 |
+| Elitnaya/tyazhyolaya Infantry | 2 |
+| Lyogkaya Vehicles | 3 |
+| Osnovnoy Tank/artilleriya | 5 |
+| Sverkhtyazhyolaya Vehicles | 8–10 |
+| Istrebitel/vertolyot | 4 |
+| Bombardirovshchik/vozdushnyy transport | 6 |
+| Korabl | 5–10 |
+| Hero | 8 |
 
-### 1.7. Технологические уровни
-| Уровень | Окно матча | Что открывает |
+### 1.7. Tekhnologicheskie urovni
+| Uroven | Okno matcha | Chto otkryvaet |
 | --- | --- | --- |
-| T1 | 0–5 мин | Базовая экономика, пехота, разведка, лёгкая оборона |
-| T2 | 4–12 мин | Завод, радар, авиация/флот, специализированные контр-юниты |
-| T3 | 9+ мин | Технологический центр, элитные юниты, тяжёлая артиллерия, супероружие |
+| T1 | 0–5 min | Bazovaya Economy, Infantry, razvedka, lyogkaya oborona |
+| T2 | 4–12 min | Factory, radar, Aviation/Naval, spetsializirovannye kontr-Units |
+| T3 | 9+ min | Tekhnologicheskiy tsentr, elitnye Units, tyazhyolaya artilleriya, superoruzhie |
 
-## 2. Боевая модель
-### 2.1. Типы брони
-| Тип | Примеры | Сильные стороны | Слабые стороны |
+## 2. Boevaya model
+### 2.1. Tipy broni
+| Tip | Primery | Silnye storony | Slabye storony |
 | --- | --- | --- | --- |
-| Лёгкая пехота | Стрелки, инженеры | Дешёвая, рассредоточенная | Осколочный урон, огонь, подавление |
-| Тяжёлая пехота | Штурмовики, спецназ | Высокая живучесть | Снайперы, плазма, тяжёлые пулемёты |
-| Лёгкая техника | Разведчики, БТР | Скорость | ПТ-оружие, мины |
-| Тяжёлая техника | Танки, шагоходы | Лобовая броня | Бортовые атаки, авиация, электричество |
-| Осадная техника | Артиллерия | Дальность | Разведчики, авиация, ближний бой |
-| Воздушная | Истребители, бомбардировщики | Игнор рельефа | ПВО, перехватчики |
-| Морская | Корабли и подлодки | Высокая дальность и огневая мощь | Авиация, торпеды, береговые батареи |
-| Здания | Производство и оборона | Большой запас HP | Осадный урон, диверсии, супероружие |
-| Щитовая | Коалиция, Хронолегион | Поглощает первый удар | Электричество, длительный фокус |
+| Lyogkaya Infantry | Strelki, inzhenery | Deshyovaya, rassredotochennaya | Oskolochnyy Damaged, ogon, podavlenie |
+| Tyazhyolaya Infantry | Shturmoviki, spetsnaz | Vysokaya zhivuchest | Snaypery, plazma, tyazhyolye pulemyoty |
+| Lyogkaya Vehicles | Razvedchiki, BTR | Skorost | PT-Weapons, miny |
+| Tyazhyolaya Vehicles | Tanki, shagokhody | Lobovaya Armor | Bortovye ataki, Aviation, elektrichestvo |
+| Osadnaya Vehicles | Artilleriya | Dalnost | Razvedchiki, Aviation, blizhniy boy |
+| Vozdushnaya | Istrebiteli, bombardirovshchiki | Ignor relefa | PVO, perekhvatchiki |
+| Morskaya | Korabli i podlodki | Vysokaya dalnost i ognevaya moshch | Aviation, torpedy, beregovye batarei |
+| Buildings | Production i oborona | Bolshoy zapas HP | Osadnyy Damaged, diversii, superoruzhie |
+| Shchitovaya | Coalition, Khronolegion | Pogloshchaet pervyy udar | Elektrichestvo, dlitelnyy fokus |
 
-### 2.2. Типы урона и базовые множители
-| Урон | Лёгкая пехота | Тяжёлая пехота | Лёгкая техника | Тяжёлая техника | Здания | Воздух |
+### 2.2. Tipy urona i bazovye mnozhiteli
+| Damaged | Lyogkaya Infantry | Tyazhyolaya Infantry | Lyogkaya Vehicles | Tyazhyolaya Vehicles | Buildings | Vozdukh |
 | --- | --- | --- | --- | --- | --- | --- |
-| Баллистический | 1.0 | 0.8 | 0.6 | 0.35 | 0.25 | 0.0 |
-| Осколочный | 1.5 | 1.15 | 0.55 | 0.3 | 0.4 | 0.0 |
-| Бронебойный | 0.6 | 0.9 | 1.2 | 1.45 | 0.8 | 0.0 |
-| Осадный | 0.8 | 0.8 | 1.0 | 1.15 | 1.7 | 0.0 |
-| Электрический | 1.0 | 1.15 | 1.3 | 1.35 | 1.0 | 0.75 |
-| Плазменный | 1.1 | 1.25 | 1.1 | 1.1 | 0.9 | 0.9 |
-| Криогенный | 0.9 | 1.0 | 0.8 | 0.8 | 0.6 | 0.8 |
-| Темпоральный | 1.0 | 1.0 | 1.0 | 1.0 | 0.8 | 1.0 |
-| ПВО | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 1.5 |
+| Ballisticheskiy | 1.0 | 0.8 | 0.6 | 0.35 | 0.25 | 0.0 |
+| Oskolochnyy | 1.5 | 1.15 | 0.55 | 0.3 | 0.4 | 0.0 |
+| Broneboynyy | 0.6 | 0.9 | 1.2 | 1.45 | 0.8 | 0.0 |
+| Osadnyy | 0.8 | 0.8 | 1.0 | 1.15 | 1.7 | 0.0 |
+| Elektricheskiy | 1.0 | 1.15 | 1.3 | 1.35 | 1.0 | 0.75 |
+| Plazmennyy | 1.1 | 1.25 | 1.1 | 1.1 | 0.9 | 0.9 |
+| Kriogennyy | 0.9 | 1.0 | 0.8 | 0.8 | 0.6 | 0.8 |
+| Temporalnyy | 1.0 | 1.0 | 1.0 | 1.0 | 0.8 | 1.0 |
+| PVO | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 1.5 |
 
-### 2.3. Ветеранство
-| Ранг | Требование | Бонус |
+### 2.3. Veteranstvo
+| Rang | Trebovanie | Bonus |
 | --- | --- | --- |
-| Новобранец | Базовый | Без бонусов |
-| Ветеран | 1.0 стоимости уничтоженных целей | +10% урон, +8% HP, ускоренное восстановление |
-| Элита | 2.5 стоимости уничтоженных целей | Ещё +10% урон, +10% HP, улучшенная способность |
-| Геройский | 5.0 стоимости уничтоженных целей | Уникальный пассивный эффект, визуальная отметка, особая реплика |
+| Novobranets | Bazovyy | without bonusov |
+| Veteran | 1.0 stoimosti unichtozhennykh tseley | +10% Damaged, +8% HP, uskorennoe vosstanovlenie |
+| Elite | 2.5 stoimosti unichtozhennykh tseley | Eshchyo +10% Damaged, +10% HP, uluchshennaya Ability |
+| Geroyskiy | 5.0 stoimosti unichtozhennykh tseley | Unikalnyy passivnyy effekt, vizualnaya otmetka, osobaya replika |
 
-### 2.4. Универсальные команды
-Все боевые юниты поддерживают Move, Attack, Attack-Move, Stop, Hold Position, Patrol, Guard, Focus Fire и Retreat. Специализированные команды должны появляться контекстно. Приказ не должен нарушать роль юнита: артиллерия не обязана преследовать цель в упор, ПВО не должно пытаться атаковать наземную цель, а транспорт не должен автоматически высаживать десант без явной команды.
+### 2.4. Universalnye komandy
+all boevye Units podderzhivayut Move, Attack, Attack-Move, Stop, Hold Position, Patrol, Guard, Focus Fire i Retreat. Spetsializirovannye komandy dolzhny poyavlyatsya kontekstno. Prikaz ne dolzhen narushat rol yunita: artilleriya ne obyazana presledovat tsel v upor, PVO ne dolzhno pytatsya atakovat nazemnuyu tsel, a transport ne dolzhen avtomaticheski vysazhivat desant without yavnoy komandy.
 
-## 3. Фракционные ресурсы
-| Фракция | Ресурс | Получение | Эффект |
+## 3. Fraktsionnye resursy
+| Fraktsiya | Resurs | Poluchenie | Effekt |
 | --- | --- | --- | --- |
-| СССР | Мобилизация, 0–100 | Урон, потеря собственных войск, удержание передовой | Пороговые бонусы к производству; активные приказы массового наступления |
-| Альянс | Разведданные, 0–100 | Обнаружение врага, сканирование, уничтожение ключевых целей | Точечные сканы, взлом, ускорение авиации и высокоточные удары |
-| Восточная коалиция | Синхронизация, 0–100 | Связанные энергосети, построения, совместные атаки | Пассивные щиты, точность, ускорение производства; падает при разрыве строя |
-| Хронолегион | Темпоральная стабильность, 0–100 | Медленное восстановление, захват хроноузлов | Расходуется на телепортации и перемотку; ниже 30 появляются системные штрафы |
+| Soviet Union | Mobilizatsiya, 0–100 | Damaged, poterya sobstvennykh voysk, uderzhanie peredovoy | Porogovye bonusy k proizvodstvu; aktivnye prikazy massovogo nastupleniya |
+| Alliance | Razveddannye, 0–100 | Obnaruzhenie vraga, skanirovanie, unichtozhenie klyuchevykh tseley | Tochechnye skany, vzlom, uskorenie aviatsii i vysokotochnye udary |
+| Vostochnaya Coalition | Sinkhronizatsiya, 0–100 | Svyazannye energoseti, postroeniya, sovmestnye ataki | Passivnye shchity, tochnost, uskorenie proizvodstva; padaet with razryve stroya |
+| Khronolegion | Temporalnaya stabilnost, 0–100 | Medlennoe vosstanovlenie, zakhvat khronouzlov | Raskhoduetsya na teleportatsii i peremotku; nizhe 30 poyavlyayutsya sistemnye shtrafy |
 
-## 4. Правила озвучки
-Каждый юнит имеет собственный VoiceId. Рядовые боевые единицы говорят коротко и функционально, элитные и герои — более характерно. Реплики не должны копировать фразы существующих игр. Базовые категории: Selected, Move, Attack, Ability, Damaged, Elite, Idle, Death. Для производства необходимо сгенерировать минимум по 2–4 варианта каждой категории, но в этом документе дана каноническая первая линия, задающая характер.
+## 4. Pravila ozvuchki
+Kazhdyy yunit imeet sobstvennyy VoiceId. Ryadovye boevye edinitsy govoryat korotko i funktsionalno, elitnye i geroi — bolee kharakterno. Repliki ne dolzhny kopirovat frazy sushchestvuyushchikh igr. Bazovye kategorii: Selected, Move, Attack, Ability, Damaged, Elite, Idle, Death. for proizvodstva neobkhodimo sgenerirovat minimum po 2–4 varianta kazhdoy kategorii, no v etom dokumente dana kanonicheskaya pervaya liniya, zadayushchaya kharakter.
 
-# Фракция: СССР
-## Фракционная идентичность
-Сверхтяжёлая индустриальная армия, дешёвая пехота, сильная лобовая атака, мощное электрическое и осадное вооружение. Слабости: низкая скорость, дорогая разведка, уязвимость к обходу и точечным ударам.
-## Фракционный ресурс: Мобилизация
-0–24: без бонуса. 25–49: +5% скорость производства пехоты. 50–74: +8% скорость техники и +5% скорость движения рядом со штабом наступления. 75–100: +10% урон тяжёлой техники. Активная способность «Общий нажим» стоит 50 очков и даёт выбранной группе +20% скорость и иммунитет к подавлению на 12 секунд.
-## Здания и экономика фракции
-| Здание | Цена | Время, с | Энергия | Назначение |
+# Fraktsiya: Soviet Union
+## Fraktsionnaya identichnost
+Sverkhtyazhyolaya industrialnaya armiya, deshyovaya Infantry, silnaya lobovaya Attack, moshchnoe elektricheskoe i osadnoe vooruzhenie. Slabosti: nizkaya skorost, dorogaya razvedka, uyazvimost k obkhodu i tochechnym udaram.
+## Fraktsionnyy resurs: Mobilizatsiya
+0–24: without bonusa. 25–49: +5% skorost proizvodstva pekhoty. 50–74: +8% skorost tekhniki i +5% skorost dvizheniya ryadom so shtabom nastupleniya. 75–100: +10% Damaged tyazhyoloy tekhniki. Aktivnaya Ability «Obshchiy nazhim» stoit 50 ochkov i dayot vybrannoy gruppe +20% skorost i immunitet k podavleniyu na 12 sekund.
+## Buildings i Economy Factions
+| Zdanie | Tsena | Vremya, s | Energiya | Naznachenie |
 | --- | --- | --- | --- | --- |
-| Мобильный командный модуль | 5000 | 60 | 0 | Разворачивается в штаб, строит базовые здания, +20 лимита |
-| Красный штаб | — | — | +100 | Строительная зона, производство инженеров и МКМ |
-| Тепловая электростанция | 800 | 18 | +120 | Дешёвая энергия, при уничтожении взрывается |
-| Рудный комбинат | 2400 | 45 | -20 | Включает горнорудную машину ГРМ-8 «Богатырь» |
-| Казарма мобилизации | 700 | 18 | -15 | Пехота T1–T2, +5 лимита |
-| Тяжёлый завод | 2300 | 42 | -40 | Техника, +10 лимита |
-| Аэродром дальней авиации | 1900 | 36 | -45 | 3 посадочных места, авиация |
-| Военно-морской док | 2100 | 42 | -45 | Корабли и ремонт флота |
-| Командный радар | 1500 | 30 | -60 | Мини-карта, дальняя разведка, открывает T2 |
-| Научный комплекс «Гром» | 3600 | 62 | -100 | Открывает T3 и электрические технологии |
-| Пулемётный дот | 700 | 15 | -15 | Против пехоты |
-| Зенитная башня «Шилка» | 950 | 20 | -25 | ПВО |
-| Катушка «Перун» | 1900 | 35 | -75 | Тяжёлая электрическая оборона |
-| Бункер передовой | 1100 | 25 | -10 | Вмещает 5 пехотинцев |
-| Комплекс «Железный купол» | 6000 | 90 | -180 | На 12 секунд делает область неуязвимой; перезарядка 6 мин |
-| Ракетная шахта «Каратель» | 7000 | 110 | -220 | Стратегический ракетный удар; перезарядка 8 мин |
+| Mobilnyy komandnyy modul | 5000 | 60 | 0 | Razvorachivaetsya v HQ, stroit bazovye Buildings, +20 limita |
+| Krasnyy HQ | — | — | +100 | Stroitelnaya zona, Production inzhenerov i MKM |
+| Teplovaya Power Plant | 800 | 18 | +120 | Deshyovaya energiya, with unichtozhenii vzryvaetsya |
+| Rudnyy kombinat | 2400 | 45 | -20 | Vklyuchaet gornorudnuyu mashinu GRM-8 «Bogatyr» |
+| Barracks mobilizatsii | 700 | 18 | -15 | Infantry T1–T2, +5 limita |
+| Tyazhyolyy Factory | 2300 | 42 | -40 | Vehicles, +10 limita |
+| Airfield dalney aviatsii | 1900 | 36 | -45 | 3 posadochnykh mesta, Aviation |
+| Voenno-morskoy dok | 2100 | 42 | -45 | Korabli i remont flota |
+| Komandnyy radar | 1500 | 30 | -60 | Mini-karta, dalnyaya razvedka, otkryvaet T2 |
+| Nauchnyy kompleks «Grom» | 3600 | 62 | -100 | Otkryvaet T3 i elektricheskie tekhnologii |
+| Pulemyotnyy dot | 700 | 15 | -15 | Protiv pekhoty |
+| Zenitnaya bashnya «Shilka» | 950 | 20 | -25 | PVO |
+| Katushka «Perun» | 1900 | 35 | -75 | Tyazhyolaya elektricheskaya oborona |
+| Bunker peredovoy | 1100 | 25 | -10 | Vmeshchaet 5 pekhotintsev |
+| Kompleks «Zheleznyy kupol» | 6000 | 90 | -180 | Na 12 sekund delaet oblast neuyazvimoy; perezaryadka 6 min |
+| Raketnaya shakhta «Karatel» | 7000 | 110 | -220 | Strategicheskiy raketnyy udar; perezaryadka 8 min |
 
-## EVA — канонические системные реплики
-| Событие | Реплика |
+## EVA — kanonicheskie sistemnye repliki
+| Sobytie | Replika |
 | --- | --- |
-| Старт | Командование развёрнуто. Промышленность ждёт приказа. |
-| Низкая энергия | Энергосистема перегружена. Производство замедляется. |
-| База атакована | Враг атакует наши производственные мощности. |
-| Юнит готов | Боевая единица готова к отправке. |
-| Супероружие врага | Зафиксирована подготовка стратегического удара. |
-| Мобилизация 100 | Мобилизация завершена. Армия готова к общему нажиму. |
-| Победа | Сопротивление подавлено. Территория переходит под наш контроль. |
-| Поражение | Командная сеть потеряна. Организованное сопротивление прекращено. |
+| Start | Komandovanie razvyornuto. Promyshlennost zhdyot prikaza. |
+| Nizkaya energiya | Energosistema peregruzhena. Production zamedlyaetsya. |
+| Baza atakovana | Vrag atakuet nashi proizvodstvennye moshchnosti. |
+| Yunit gotov | Boevaya edinitsa gotova k otpravke. |
+| Superoruzhie vraga | Zafiksirovana podgotovka strategicheskogo udara. |
+| Mobilizatsiya 100 | Mobilizatsiya zavershena. Armiya gotova k obshchemu nazhimu. |
+| Pobeda | Soprotivlenie podavleno. Territoriya perekhodit under nash kontrol. |
+| Porazhenie | Komandnaya set poteryana. Organizovannoe soprotivlenie prekrashcheno. |
 
-## Сводная таблица юнитов
-| Юнит | ID | Класс | Тир | Цена | Время | Лимит | HP | Броня | Скорость | Дальность | DPS | Роль |
+## Svodnaya tablitsa yunitov
+| Yunit | ID | Klass | Tir | Tsena | Vremya | Limit | HP | Armor | Skorost | Dalnost | DPS | Rol |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Мотострелок МС-12 «Рубеж» | SU_RubezhRifleman | Пехота | T1 | 150 | 6 | 1 | 110 | Лёгкая пехота | 4.5 | 6 | 9 | Дешёвая линейная пехота и захват территории |
-| Штурмовик ОШ-4 «Запал» | SU_ZapalGrenadier | Пехота | T1 | 350 | 10 | 1 | 150 | Тяжёлая пехота | 3.8 | 7 | 18 | Антипехотный штурмовик и зачистка гарнизонов |
-| Зенитный расчёт ПЗК-9 «Заслон» | SU_ZaslonAATeam | Пехота | T1 | 450 | 12 | 2 | 170 | Тяжёлая пехота | 3.5 | 9 | 22 | Переносное ПВО и контр лёгкой технике |
-| Инженер-сапёр ИС-3 «Мастер» | SU_MasterEngineer | Пехота | T1 | 500 | 15 | 1 | 100 | Лёгкая пехота | 3.7 | 0 | 0 | Захват, ремонт и разминирование |
-| Электроштурмовик ЭШ-8 «Разряд» | SU_RazryadTrooper | Пехота | T2 | 850 | 20 | 2 | 260 | Тяжёлая пехота | 4.0 | 8 | 34 | Электрический штурм тяжёлой пехоты и техники |
-| Офицер связи КС-6 «Вектор» | SU_VektorOfficer | Пехота | T2 | 900 | 22 | 2 | 210 | Тяжёлая пехота | 3.8 | 7 | 16 | Поддержка, мораль и координация |
-| Горнорудная машина ГРМ-8 «Богатырь» | SU_BogatyrOreCarrier | Техника | T1 | 1400 | 28 | 4 | 1600 | Тяжёлая техника | 2.5 | 0 | 0 | Тяжёлый добытчик с высокой живучестью |
-| Боевая разведмашина БРМ-27 «Рысь» | SU_RysScout | Техника | T1 | 600 | 14 | 3 | 520 | Лёгкая техника | 8.2 | 6 | 15 | Разведка, преследование инженеров, захват флангов |
-| Основной танк ОБТ-92 «Гранит» | SU_GranitMBT | Техника | T2 | 1200 | 26 | 5 | 1650 | Тяжёлая техника | 4.3 | 8 | 46 | Основной боевой танк |
-| Термобарическая РСЗО ТРС-18 «Зарево» | SU_ZarevoMLRS | Техника | T2 | 1600 | 34 | 5 | 900 | Осадная техника | 3.2 | 16 | 58 | Осадная артиллерия и выжигание укреплений |
-| Электротаран ЭТМ-7 «Громобой» | SU_GromoboyRam | Техника | T3 | 2200 | 42 | 7 | 2100 | Тяжёлая техника | 4.8 | 6 | 72 | Прорыв щитов и построений |
-| Тяжёлый танк прорыва ТТП-11 «Воевода» | SU_VoevodaHeavyTank | Техника | T3 | 3200 | 58 | 10 | 4200 | Тяжёлая техника | 2.8 | 10 | 98 | Сверхтяжёлый фронтовой танк и ПВО |
-| Истребитель И-47 «Кречет» | SU_KrechetInterceptor | Авиация | T2 | 1100 | 24 | 4 | 700 | Воздушная | 12.0 | 12 | 54 | Перехват авиации и точечные ракетные удары |
-| Штурмовой вертолёт ШВ-38 «Коршун» | SU_KorshunGunship | Авиация | T2 | 1500 | 32 | 5 | 1300 | Воздушная | 7.0 | 7 | 60 | Поддержка наземных войск и десант |
-| Тяжёлый дирижабль ТДА-8 «Громада» | SU_GromadaAirship | Авиация | T3 | 3000 | 60 | 10 | 5000 | Воздушная | 2.0 | 5 | 130 | Стратегический осадный бомбардировщик |
-| Боевой катер БК-27 «Буран» | SU_BuranPatrolBoat | Флот | T1 | 750 | 16 | 4 | 700 | Морская | 8.0 | 7 | 22 | Быстрый катер ПВО и охоты на десант |
-| Ударная подлодка УПЛ-90 «Морок» | SU_MorokSubmarine | Флот | T2 | 1700 | 34 | 6 | 1800 | Морская | 4.8 | 10 | 64 | Скрытая охота на крупные корабли |
-| Ракетный крейсер РКР-44 «Святогор» | SU_SvyatogorCruiser | Флот | T3 | 3400 | 62 | 10 | 4600 | Морская | 2.8 | 22 | 120 | Дальняя осада побережья |
-| Майор Елена Морозова | SU_Hero_Morozova | Герой | T3 | 2600 | 50 | 8 | 900 | Тяжёлая пехота | 5.0 | 10 | 70 | Герой-командир тяжёлой пехоты и электрического оружия |
+| Motostrelok MS-12 «Rubezh» | SU_RubezhRifleman | Infantry | T1 | 150 | 6 | 1 | 110 | Lyogkaya Infantry | 4.5 | 6 | 9 | Deshyovaya lineynaya Infantry i zakhvat territorii |
+| Shturmovik OSh-4 «Zapal» | SU_ZapalGrenadier | Infantry | T1 | 350 | 10 | 1 | 150 | Tyazhyolaya Infantry | 3.8 | 7 | 18 | Antipekhotnyy shturmovik i zachistka garnizonov |
+| Zenitnyy raschyot PZK-9 «Zaslon» | SU_ZaslonAATeam | Infantry | T1 | 450 | 12 | 2 | 170 | Tyazhyolaya Infantry | 3.5 | 9 | 22 | Perenosnoe PVO i kontr lyogkoy tekhnike |
+| Engineer-sapyor IS-3 «Master» | SU_MasterEngineer | Infantry | T1 | 500 | 15 | 1 | 100 | Lyogkaya Infantry | 3.7 | 0 | 0 | Zakhvat, remont i razminirovanie |
+| Elektroshturmovik ESh-8 «Razryad» | SU_RazryadTrooper | Infantry | T2 | 850 | 20 | 2 | 260 | Tyazhyolaya Infantry | 4.0 | 8 | 34 | Elektricheskiy shturm tyazhyoloy pekhoty i tekhniki |
+| Ofitser svyazi KS-6 «Vektor» | SU_VektorOfficer | Infantry | T2 | 900 | 22 | 2 | 210 | Tyazhyolaya Infantry | 3.8 | 7 | 16 | Podderzhka, moral i koordinatsiya |
+| Gornorudnaya mashina GRM-8 «Bogatyr» | SU_BogatyrOreCarrier | Vehicles | T1 | 1400 | 28 | 4 | 1600 | Tyazhyolaya Vehicles | 2.5 | 0 | 0 | Tyazhyolyy Harvester s vysokoy zhivuchestyu |
+| Boevaya razvedmashina BRM-27 «Rys» | SU_RysScout | Vehicles | T1 | 600 | 14 | 3 | 520 | Lyogkaya Vehicles | 8.2 | 6 | 15 | Razvedka, presledovanie inzhenerov, zakhvat flangov |
+| Osnovnoy Tank OBT-92 «Granit» | SU_GranitMBT | Vehicles | T2 | 1200 | 26 | 5 | 1650 | Tyazhyolaya Vehicles | 4.3 | 8 | 46 | Osnovnoy boevoy Tank |
+| Termobaricheskaya RSZO TRS-18 «Zarevo» | SU_ZarevoMLRS | Vehicles | T2 | 1600 | 34 | 5 | 900 | Osadnaya Vehicles | 3.2 | 16 | 58 | Osadnaya artilleriya i vyzhiganie ukrepleniy |
+| Elektrotaran ETM-7 «Gromoboy» | SU_GromoboyRam | Vehicles | T3 | 2200 | 42 | 7 | 2100 | Tyazhyolaya Vehicles | 4.8 | 6 | 72 | Proryv shchitov i postroeniy |
+| Tyazhyolyy Tank proryva TTP-11 «Voevoda» | SU_VoevodaHeavyTank | Vehicles | T3 | 3200 | 58 | 10 | 4200 | Tyazhyolaya Vehicles | 2.8 | 10 | 98 | Sverkhtyazhyolyy frontovoy Tank i PVO |
+| Istrebitel I-47 «Krechet» | SU_KrechetInterceptor | Aviation | T2 | 1100 | 24 | 4 | 700 | Vozdushnaya | 12.0 | 12 | 54 | Perekhvat aviatsii i tochechnye raketnye udary |
+| Shturmovoy vertolyot ShV-38 «Korshun» | SU_KorshunGunship | Aviation | T2 | 1500 | 32 | 5 | 1300 | Vozdushnaya | 7.0 | 7 | 60 | Podderzhka nazemnykh voysk i desant |
+| Tyazhyolyy dirizhabl TDA-8 «Gromada» | SU_GromadaAirship | Aviation | T3 | 3000 | 60 | 10 | 5000 | Vozdushnaya | 2.0 | 5 | 130 | Strategicheskiy osadnyy bombardirovshchik |
+| Boevoy kater BK-27 «Buran» | SU_BuranPatrolBoat | Naval | T1 | 750 | 16 | 4 | 700 | Morskaya | 8.0 | 7 | 22 | Bystryy kater PVO i okhoty na desant |
+| Udarnaya podlodka UPL-90 «Morok» | SU_MorokSubmarine | Naval | T2 | 1700 | 34 | 6 | 1800 | Morskaya | 4.8 | 10 | 64 | Skrytaya okhota na krupnye korabli |
+| Raketnyy kreyser RKR-44 «Svyatogor» | SU_SvyatogorCruiser | Naval | T3 | 3400 | 62 | 10 | 4600 | Morskaya | 2.8 | 22 | 120 | Dalnyaya osada poberezhya |
+| Mayor Elena Morozova | SU_Hero_Morozova | Hero | T3 | 2600 | 50 | 8 | 900 | Tyazhyolaya Infantry | 5.0 | 10 | 70 | Hero-Commander tyazhyoloy pekhoty i elektricheskogo oruzhiya |
 
-## Подробные карточки юнитов
-### 1. Мотострелок МС-12 «Рубеж» (`SU_RubezhRifleman`)
-| Параметр | Значение |
+## Podrobnye kartochki yunitov
+### 1. Motostrelok MS-12 «Rubezh» (`SU_RubezhRifleman`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `SU_RubezhRifleman` |
-| Категория | Пехота |
-| Технологический уровень | T1 |
-| Стоимость | 150 |
-| Время производства | 6 сек |
-| Командный лимит | 1 |
+| Kategoriya | Infantry |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 150 |
+| Vremya proizvodstva | 6 sek |
+| Komandnyy limit | 1 |
 | HP | 110 |
-| Тип брони | Лёгкая пехота |
-| Скорость | 4.5 |
-| Дальность | 6 |
-| Ориентировочный DPS | 9 |
-| Предназначение | Дешёвая линейная пехота и захват территории |
-| Основное оружие | Автомат К-47, баллистический урон |
-| Требования | Казарма мобилизации |
+| Tip broni | Lyogkaya Infantry |
+| Skorost | 4.5 |
+| Dalnost | 6 |
+| Orientirovochnyy DPS | 9 |
+| Prednaznachenie | Deshyovaya lineynaya Infantry i zakhvat territorii |
+| Osnovnoe Weapons | Avtomat K-47, ballisticheskiy Damaged |
+| Requirements | Barracks mobilizatsii |
 
-#### Способности
-- «Окопаться»: 2 сек подготовки, +35% защита и -40% скорость до отмены
+#### Sposobnosti
+- «Okopatsya»: 2 sek podgotovki, +35% zashchita i -40% skorost before otmeny
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Очень дёшев, быстро производится, силён массой |
-| Слабые стороны | Слаб против осколочного урона и огня |
-| Прямые контрмеры | Штурмовики «Запал», пулемётные турели, штурмовая авиация |
+| Silnye storony | Ochen dyoshev, bystro proizvoditsya, silyon massoy |
+| Slabye storony | Slab protiv oskolochnogo urona i ognya |
+| Pryamye kontrmery | Shturmoviki «Zapal», pulemyotnye tureli, shturmovaya Aviation |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Мотострелок МС-12 «Рубеж» на связи. |
-| Move | Бежим, пока дорога свободна. |
-| Attack | Цель вижу. Открываю огонь. |
-| Ability | В землю! Держим позицию! |
-| Damaged | Нас прижали! |
-| Elite | Теперь мы не просто пополнение. |
-| Idle | Обещали форму потеплее. |
-| Death | Передайте… позицию держали. |
+| Selected | Motostrelok MS-12 «Rubezh» na svyazi. |
+| Move | Bezhim, poka doroga svobodna. |
+| Attack | Tsel vizhu. Otkryvayu ogon. |
+| Ability | V zemlyu! Derzhim pozitsiyu! |
+| Damaged | Nas prizhali! |
+| Elite | Teper my ne prosto popolnenie. |
+| Idle | Obeshchali formu poteplee. |
+| Death | Peredayte… pozitsiyu derzhali. |
 
-### 2. Штурмовик ОШ-4 «Запал» (`SU_ZapalGrenadier`)
-| Параметр | Значение |
+### 2. Shturmovik OSh-4 «Zapal» (`SU_ZapalGrenadier`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `SU_ZapalGrenadier` |
-| Категория | Пехота |
-| Технологический уровень | T1 |
-| Стоимость | 350 |
-| Время производства | 10 сек |
-| Командный лимит | 1 |
+| Kategoriya | Infantry |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 350 |
+| Vremya proizvodstva | 10 sek |
+| Komandnyy limit | 1 |
 | HP | 150 |
-| Тип брони | Тяжёлая пехота |
-| Скорость | 3.8 |
-| Дальность | 7 |
-| Ориентировочный DPS | 18 |
-| Предназначение | Антипехотный штурмовик и зачистка гарнизонов |
-| Основное оружие | Автоматический гранатомёт, осколочный урон |
-| Требования | Казарма |
+| Tip broni | Tyazhyolaya Infantry |
+| Skorost | 3.8 |
+| Dalnost | 7 |
+| Orientirovochnyy DPS | 18 |
+| Prednaznachenie | Antipekhotnyy shturmovik i zachistka garnizonov |
+| Osnovnoe Weapons | Avtomaticheskiy granatomyot, oskolochnyy Damaged |
+| Requirements | Barracks |
 
-#### Способности
-- «Термобарический заряд»: выбивает гарнизон и поджигает здание; 28 сек
+#### Sposobnosti
+- «Termobaricheskiy zaryad»: vybivaet garnizon i podzhigaet zdanie; 28 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Сильный урон по группам и зданиям |
-| Слабые стороны | Низкая скорострельность, уязвим для снайперов |
-| Прямые контрмеры | Снайперы, лёгкая техника, авиация |
+| Silnye storony | Silnyy Damaged po gruppam i zdaniyam |
+| Slabye storony | Nizkaya skorostrelnost, uyazvim for snayperov |
+| Pryamye kontrmery | Snaypery, lyogkaya Vehicles, Aviation |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Гранаты снаряжены. |
-| Move | Подойдём на бросок. |
-| Attack | Накрываю сектор! |
-| Ability | Термобарический — внутрь! |
-| Damaged | Осколками задело! |
-| Elite | Теперь попадаю с первого броска. |
-| Idle | Главное — не перепутать сумки. |
-| Death | Чека… уже выдернута… |
+| Selected | Granaty snaryazheny. |
+| Move | Podoydyom na brosok. |
+| Attack | Nakryvayu sektor! |
+| Ability | Termobaricheskiy — vnutr! |
+| Damaged | Oskolkami zadelo! |
+| Elite | Teper popadayu s pervogo broska. |
+| Idle | Glavnoe — ne pereputat sumki. |
+| Death | Cheka… uzhe vydernuta… |
 
-### 3. Зенитный расчёт ПЗК-9 «Заслон» (`SU_ZaslonAATeam`)
-| Параметр | Значение |
+### 3. Zenitnyy raschyot PZK-9 «Zaslon» (`SU_ZaslonAATeam`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `SU_ZaslonAATeam` |
-| Категория | Пехота |
-| Технологический уровень | T1 |
-| Стоимость | 450 |
-| Время производства | 12 сек |
-| Командный лимит | 2 |
+| Kategoriya | Infantry |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 450 |
+| Vremya proizvodstva | 12 sek |
+| Komandnyy limit | 2 |
 | HP | 170 |
-| Тип брони | Тяжёлая пехота |
-| Скорость | 3.5 |
-| Дальность | 9 |
-| Ориентировочный DPS | 22 |
-| Предназначение | Переносное ПВО и контр лёгкой технике |
-| Основное оружие | Фугасная зенитная пушка |
-| Требования | Казарма + радар |
+| Tip broni | Tyazhyolaya Infantry |
+| Skorost | 3.5 |
+| Dalnost | 9 |
+| Orientirovochnyy DPS | 22 |
+| Prednaznachenie | Perenosnoe PVO i kontr lyogkoy tekhnike |
+| Osnovnoe Weapons | Fugasnaya zenitnaya pushka |
+| Requirements | Barracks + radar |
 
-#### Способности
-- «Воздушная засада»: маскируется на 6 сек и получает +40% первый залп
+#### Sposobnosti
+- «Vozdushnaya zasada»: maskiruetsya na 6 sek i poluchaet +40% pervyy zalp
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Дешёвое мобильное ПВО |
-| Слабые стороны | Плох против обычной пехоты в ближнем бою |
-| Прямые контрмеры | Снайперы, артиллерия, танки |
+| Silnye storony | Deshyovoe mobilnoe PVO |
+| Slabye storony | Plokh protiv obychnoy pekhoty v blizhnem boyu |
+| Pryamye kontrmery | Snaypery, artilleriya, tanki |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Небо под контролем. |
-| Move | Ищу чистый сектор. |
-| Attack | Высота подтверждена. Огонь! |
-| Ability | Затаились. Пусть подлетят. |
-| Damaged | Расчёт под обстрелом! |
-| Elite | Ни один борт не уйдёт. |
-| Idle | Летят красиво. Падают лучше. |
-| Death | Небо… ваше… |
+| Selected | Nebo under kontrolem. |
+| Move | Ishchu chistyy sektor. |
+| Attack | Vysota podtverzhdena. Ogon! |
+| Ability | Zatailis. Pust podletyat. |
+| Damaged | Raschyot under obstrelom! |
+| Elite | Ni odin bort ne uydyot. |
+| Idle | Letyat krasivo. Padayut luchshe. |
+| Death | Nebo… vashe… |
 
-### 4. Инженер-сапёр ИС-3 «Мастер» (`SU_MasterEngineer`)
-| Параметр | Значение |
+### 4. Engineer-sapyor IS-3 «Master» (`SU_MasterEngineer`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `SU_MasterEngineer` |
-| Категория | Пехота |
-| Технологический уровень | T1 |
-| Стоимость | 500 |
-| Время производства | 15 сек |
-| Командный лимит | 1 |
+| Kategoriya | Infantry |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 500 |
+| Vremya proizvodstva | 15 sek |
+| Komandnyy limit | 1 |
 | HP | 100 |
-| Тип брони | Лёгкая пехота |
-| Скорость | 3.7 |
-| Дальность | 0 |
-| Ориентировочный DPS | 0 |
-| Предназначение | Захват, ремонт и разминирование |
-| Основное оружие | Не вооружён |
-| Требования | Казарма |
+| Tip broni | Lyogkaya Infantry |
+| Skorost | 3.7 |
+| Dalnost | 0 |
+| Orientirovochnyy DPS | 0 |
+| Prednaznachenie | Zakhvat, remont i razminirovanie |
+| Osnovnoe Weapons | Ne vooruzhyon |
+| Requirements | Barracks |
 
-#### Способности
-- «Полевой ремонт»: восстанавливает 300 HP технике за 8 сек
-- «Захват»: занимает нейтральные и вражеские здания
+#### Sposobnosti
+- «Polevoy remont»: vosstanavlivaet 300 HP tekhnike za 8 sek
+- «Zakhvat»: zanimaet neytralnye i vrazheskie Buildings
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Ключевой тактический юнит |
-| Слабые стороны | Беззащитен, требует сопровождения |
-| Прямые контрмеры | Любая пехота и разведчики |
+| Silnye storony | Klyuchevoy takticheskiy yunit |
+| Slabye storony | Bezzashchiten, trebuet soprovozhdeniya |
+| Pryamye kontrmery | Lyubaya Infantry i razvedchiki |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Инструмент есть. План бы ещё. |
-| Move | Доберусь и починю. |
-| Attack | Я не стрелок. Покажите объект. |
-| Ability | Сейчас заведём эту развалину. |
-| Damaged | Инженера прикройте! |
-| Elite | Я починю даже то, чего ещё не построили. |
-| Idle | По инструкции это должно было работать. |
-| Death | Схема… была верной… |
+| Selected | Instrument est. Plan by eshchyo. |
+| Move | Doberus i pochinyu. |
+| Attack | Ya ne strelok. Pokazhite obekt. |
+| Ability | Seychas zavedyom etu razvalinu. |
+| Damaged | Inzhenera prikroyte! |
+| Elite | Ya pochinyu dazhe to, chego eshchyo ne postroili. |
+| Idle | Po instruktsii eto dolzhno before rabotat. |
+| Death | Skhema… byla vernoy… |
 
-### 5. Электроштурмовик ЭШ-8 «Разряд» (`SU_RazryadTrooper`)
-| Параметр | Значение |
+### 5. Elektroshturmovik ESh-8 «Razryad» (`SU_RazryadTrooper`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `SU_RazryadTrooper` |
-| Категория | Пехота |
-| Технологический уровень | T2 |
-| Стоимость | 850 |
-| Время производства | 20 сек |
-| Командный лимит | 2 |
+| Kategoriya | Infantry |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 850 |
+| Vremya proizvodstva | 20 sek |
+| Komandnyy limit | 2 |
 | HP | 260 |
-| Тип брони | Тяжёлая пехота |
-| Скорость | 4.0 |
-| Дальность | 8 |
-| Ориентировочный DPS | 34 |
-| Предназначение | Электрический штурм тяжёлой пехоты и техники |
-| Основное оружие | Ручной дуговой излучатель |
-| Требования | Казарма + радар + Научный комплекс |
+| Tip broni | Tyazhyolaya Infantry |
+| Skorost | 4.0 |
+| Dalnost | 8 |
+| Orientirovochnyy DPS | 34 |
+| Prednaznachenie | Elektricheskiy shturm tyazhyoloy pekhoty i tekhniki |
+| Osnovnoe Weapons | Ruchnoy dugovoy izluchatel |
+| Requirements | Barracks + radar + Nauchnyy kompleks |
 
-#### Способности
-- «Перегрузка»: цепная молния по 4 целям; 30 сек
+#### Sposobnosti
+- «Peregruzka»: tsepnaya molniya po 4 tselyam; 30 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Высокий урон по технике и щитам |
-| Слабые стороны | Дорогой, уязвим для снайперов и осады |
-| Прямые контрмеры | Снайперы, артиллерия, авиация |
+| Silnye storony | Vysokiy Damaged po tekhnike i shchitam |
+| Slabye storony | Dorogoy, uyazvim for snayperov i osady |
+| Pryamye kontrmery | Snaypery, artilleriya, Aviation |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Контур заряжен. |
-| Move | Ток пойдёт за нами. |
-| Attack | Разряд на цель! |
-| Ability | Перегрузка сети! |
-| Damaged | Изоляция пробита! |
-| Elite | Молния слушается меня. |
-| Idle | Не трогайте кабель. Последнее предупреждение. |
-| Death | Заземление… не сработало… |
+| Selected | Kontur zaryazhen. |
+| Move | Tok poydyot za nami. |
+| Attack | Razryad na tsel! |
+| Ability | Peregruzka seti! |
+| Damaged | Izolyatsiya probita! |
+| Elite | Molniya slushaetsya menya. |
+| Idle | Ne trogayte kabel. Poslednee Warning. |
+| Death | Zazemlenie… ne srabotalo… |
 
-### 6. Офицер связи КС-6 «Вектор» (`SU_VektorOfficer`)
-| Параметр | Значение |
+### 6. Ofitser svyazi KS-6 «Vektor» (`SU_VektorOfficer`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `SU_VektorOfficer` |
-| Категория | Пехота |
-| Технологический уровень | T2 |
-| Стоимость | 900 |
-| Время производства | 22 сек |
-| Командный лимит | 2 |
+| Kategoriya | Infantry |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 900 |
+| Vremya proizvodstva | 22 sek |
+| Komandnyy limit | 2 |
 | HP | 210 |
-| Тип брони | Тяжёлая пехота |
-| Скорость | 3.8 |
-| Дальность | 7 |
-| Ориентировочный DPS | 16 |
-| Предназначение | Поддержка, мораль и координация |
-| Основное оружие | Пистолет-пулемёт и командный передатчик |
-| Требования | Казарма + радар |
+| Tip broni | Tyazhyolaya Infantry |
+| Skorost | 3.8 |
+| Dalnost | 7 |
+| Orientirovochnyy DPS | 16 |
+| Prednaznachenie | Podderzhka, moral i koordinatsiya |
+| Osnovnoe Weapons | Pistolet-pulemyot i komandnyy peredatchik |
+| Requirements | Barracks + radar |
 
-#### Способности
-- «Приказ №1»: союзная пехота в радиусе получает +20% урон и иммунитет к подавлению на 10 сек; 35 сек
-- Пассивно ускоряет получение Мобилизации
+#### Sposobnosti
+- «Prikaz №1»: soyuznaya Infantry v radiuse poluchaet +20% Damaged i immunitet k podavleniyu na 10 sek; 35 sek
+- Passivno uskoryaet poluchenie Mobilizatsii
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Сильно усиливает пехотные массы |
-| Слабые стороны | Сам по себе слаб, приоритетная цель |
-| Прямые контрмеры | Снайперы, артиллерия, диверсанты |
+| Silnye storony | Silno usilivaet pekhotnye massy |
+| Slabye storony | Sam po sebe slab, prioritetnaya tsel |
+| Pryamye kontrmery | Snaypery, artilleriya, diversanty |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Связь с фронтом установлена. |
-| Move | Передаю новый рубеж. |
-| Attack | Приказ утверждён. Уничтожить. |
-| Ability | Первый приказ: ни шага назад! |
-| Damaged | Канал под огнём! |
-| Elite | Теперь армия слышит меня без помех. |
-| Idle | Молчание в эфире подозрительнее стрельбы. |
-| Death | Командование… продолжайте без меня. |
+| Selected | Svyaz s frontom ustanovlena. |
+| Move | Peredayu novyy rubezh. |
+| Attack | Prikaz utverzhdyon. Unichtozhit. |
+| Ability | Pervyy prikaz: ni shaga nazad! |
+| Damaged | Kanal under ognyom! |
+| Elite | Teper armiya slyshit menya without pomekh. |
+| Idle | Molchanie v efire podozritelnee strelby. |
+| Death | Komandovanie… prodolzhayte without menya. |
 
-### 7. Горнорудная машина ГРМ-8 «Богатырь» (`SU_BogatyrOreCarrier`)
-| Параметр | Значение |
+### 7. Gornorudnaya mashina GRM-8 «Bogatyr» (`SU_BogatyrOreCarrier`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `SU_BogatyrOreCarrier` |
-| Категория | Техника |
-| Технологический уровень | T1 |
-| Стоимость | 1400 |
-| Время производства | 28 сек |
-| Командный лимит | 4 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 1400 |
+| Vremya proizvodstva | 28 sek |
+| Komandnyy limit | 4 |
 | HP | 1600 |
-| Тип брони | Тяжёлая техника |
-| Скорость | 2.5 |
-| Дальность | 0 |
-| Ориентировочный DPS | 0 |
-| Предназначение | Тяжёлый добытчик с высокой живучестью |
-| Основное оружие | Без оружия |
-| Требования | Рудный комбинат |
+| Tip broni | Tyazhyolaya Vehicles |
+| Skorost | 2.5 |
+| Dalnost | 0 |
+| Orientirovochnyy DPS | 0 |
+| Prednaznachenie | Tyazhyolyy Harvester s vysokoy zhivuchestyu |
+| Osnovnoe Weapons | without oruzhiya |
+| Requirements | Rudnyy kombinat |
 
-#### Способности
-- «Аварийная броня»: на 8 сек получает -40% входящего урона; 50 сек
+#### Sposobnosti
+- «Avariynaya Armor»: na 8 sek poluchaet -40% vkhodyashchego urona; 50 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Очень прочный, большой груз |
-| Слабые стороны | Медленный и заметный |
-| Прямые контрмеры | ПТ-засады, авиация, мины |
+| Silnye storony | Ochen prochnyy, bolshoy gruz |
+| Slabye storony | Medlennyy i zametnyy |
+| Pryamye kontrmery | PT-zasady, Aviation, miny |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Богатырь готов к рейсу. |
-| Move | Тяжёлый груз идёт. |
-| Attack | Оружия нет. Могу переехать. |
-| Ability | Закрываю броневые шторки. |
-| Damaged | Обшивка держит! |
-| Elite | Маршрут знаю лучше генералов. |
-| Idle | Руда сама себя не привезёт. |
-| Death | Груз… не доставлен… |
+| Selected | Bogatyr gotov k reysu. |
+| Move | Tyazhyolyy gruz idyot. |
+| Attack | Oruzhiya no. Mogu pereekhat. |
+| Ability | Zakryvayu bronevye shtorki. |
+| Damaged | Obshivka derzhit! |
+| Elite | Marshrut znayu luchshe generalov. |
+| Idle | Ruda sama sebya ne privezyot. |
+| Death | Gruz… ne dostavlen… |
 
-### 8. Боевая разведмашина БРМ-27 «Рысь» (`SU_RysScout`)
-| Параметр | Значение |
+### 8. Boevaya razvedmashina BRM-27 «Rys» (`SU_RysScout`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `SU_RysScout` |
-| Категория | Техника |
-| Технологический уровень | T1 |
-| Стоимость | 600 |
-| Время производства | 14 сек |
-| Командный лимит | 3 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 600 |
+| Vremya proizvodstva | 14 sek |
+| Komandnyy limit | 3 |
 | HP | 520 |
-| Тип брони | Лёгкая техника |
-| Скорость | 8.2 |
-| Дальность | 6 |
-| Ориентировочный DPS | 15 |
-| Предназначение | Разведка, преследование инженеров, захват флангов |
-| Основное оружие | Спаренный пулемёт |
-| Требования | Тяжёлый завод |
+| Tip broni | Lyogkaya Vehicles |
+| Skorost | 8.2 |
+| Dalnost | 6 |
+| Orientirovochnyy DPS | 15 |
+| Prednaznachenie | Razvedka, presledovanie inzhenerov, zakhvat flangov |
+| Osnovnoe Weapons | Sparennyy pulemyot |
+| Requirements | Tyazhyolyy Factory |
 
-#### Способности
-- «Прыжок через препятствие»: короткий прыжок, 18 сек
+#### Sposobnosti
+- «Pryzhok via prepyatstvie»: korotkiy pryzhok, 18 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Очень быстрая, видит скрытых юнитов |
-| Слабые стороны | Слабая броня, низкий урон по технике |
-| Прямые контрмеры | ПТ-пехота, мины, танки |
+| Silnye storony | Ochen bystraya, vidit skrytykh yunitov |
+| Slabye storony | Slabaya Armor, nizkiy Damaged po tekhnike |
+| Pryamye kontrmery | PT-Infantry, miny, tanki |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Рысь вышла на маршрут. |
-| Move | Уже там. |
-| Attack | Срезаем хвост колонне! |
-| Ability | Перепрыгиваем! |
-| Damaged | Броня тонкая, не стойте! |
-| Elite | Я вижу фланг раньше радара. |
-| Idle | Главное — не догнать собственный след. |
-| Death | Скорость… не спасла… |
+| Selected | Rys vyshla na marshrut. |
+| Move | Uzhe tam. |
+| Attack | Srezaem khvost kolonne! |
+| Ability | Pereprygivaem! |
+| Damaged | Armor tonkaya, ne stoyte! |
+| Elite | Ya vizhu flang ranshe radara. |
+| Idle | Glavnoe — ne dognat sobstvennyy sled. |
+| Death | Skorost… ne spasla… |
 
-### 9. Основной танк ОБТ-92 «Гранит» (`SU_GranitMBT`)
-| Параметр | Значение |
+### 9. Osnovnoy Tank OBT-92 «Granit» (`SU_GranitMBT`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `SU_GranitMBT` |
-| Категория | Техника |
-| Технологический уровень | T2 |
-| Стоимость | 1200 |
-| Время производства | 26 сек |
-| Командный лимит | 5 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 1200 |
+| Vremya proizvodstva | 26 sek |
+| Komandnyy limit | 5 |
 | HP | 1650 |
-| Тип брони | Тяжёлая техника |
-| Скорость | 4.3 |
-| Дальность | 8 |
-| Ориентировочный DPS | 46 |
-| Предназначение | Основной боевой танк |
-| Основное оружие | 125-мм бронебойная пушка |
-| Требования | Тяжёлый завод + радар |
+| Tip broni | Tyazhyolaya Vehicles |
+| Skorost | 4.3 |
+| Dalnost | 8 |
+| Orientirovochnyy DPS | 46 |
+| Prednaznachenie | Osnovnoy boevoy Tank |
+| Osnovnoe Weapons | 125-mm broneboynaya pushka |
+| Requirements | Tyazhyolyy Factory + radar |
 
-#### Способности
-- «Таран»: ускоряется и отбрасывает лёгкую технику; 26 сек
+#### Sposobnosti
+- «Taran»: uskoryaetsya i otbrasyvaet lyogkuyu tekhniku; 26 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Высокая броня и стабильный урон |
-| Слабые стороны | Медленный поворот, слабый обзор |
-| Прямые контрмеры | ПТ-авиация, обход, артиллерия |
+| Silnye storony | Vysokaya Armor i stabilnyy Damaged |
+| Slabye storony | Medlennyy povorot, slabyy obzor |
+| Pryamye kontrmery | PT-Aviation, obkhod, artilleriya |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Гранит готов. |
-| Move | Гусеницы — вперёд. |
-| Attack | Раздробить цель. |
-| Ability | На таран! |
-| Damaged | Лоб держит, борт подставили! |
-| Elite | Сталь научилась побеждать. |
-| Idle | Тише едешь — дольше стреляешь. |
-| Death | Башня… заклинила… |
+| Selected | Granit gotov. |
+| Move | Gusenitsy — vperyod. |
+| Attack | Razdrobit tsel. |
+| Ability | Na taran! |
+| Damaged | Lob derzhit, bort podstavili! |
+| Elite | Stal nauchilas pobezhdat. |
+| Idle | Tishe edesh — dolshe strelyaesh. |
+| Death | Bashnya… zaklinila… |
 
-### 10. Термобарическая РСЗО ТРС-18 «Зарево» (`SU_ZarevoMLRS`)
-| Параметр | Значение |
+### 10. Termobaricheskaya RSZO TRS-18 «Zarevo» (`SU_ZarevoMLRS`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `SU_ZarevoMLRS` |
-| Категория | Техника |
-| Технологический уровень | T2 |
-| Стоимость | 1600 |
-| Время производства | 34 сек |
-| Командный лимит | 5 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 1600 |
+| Vremya proizvodstva | 34 sek |
+| Komandnyy limit | 5 |
 | HP | 900 |
-| Тип брони | Осадная техника |
-| Скорость | 3.2 |
-| Дальность | 16 |
-| Ориентировочный DPS | 58 |
-| Предназначение | Осадная артиллерия и выжигание укреплений |
-| Основное оружие | Термобарические ракеты |
-| Требования | Тяжёлый завод + радар |
+| Tip broni | Osadnaya Vehicles |
+| Skorost | 3.2 |
+| Dalnost | 16 |
+| Orientirovochnyy DPS | 58 |
+| Prednaznachenie | Osadnaya artilleriya i vyzhiganie ukrepleniy |
+| Osnovnoe Weapons | Termobaricheskie rakety |
+| Requirements | Tyazhyolyy Factory + radar |
 
-#### Способности
-- «Огненный квадрат»: залп по большой зоне, оставляет горение; 38 сек
+#### Sposobnosti
+- «Ognennyy kvadrat»: zalp po bolshoy zone, ostavlyaet gorenie; 38 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Огромный урон по зданиям и скоплениям |
-| Слабые стороны | Не может стрелять вблизи, слабая броня |
-| Прямые контрмеры | Разведчики, авиация, телепорт |
+| Silnye storony | Ogromnyy Damaged po zdaniyam i skopleniyam |
+| Slabye storony | Ne mozhet strelyat vblizi, slabaya Armor |
+| Pryamye kontrmery | Razvedchiki, Aviation, teleport |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Пакет ракет заряжен. |
-| Move | Держим дистанцию. |
-| Attack | Расчётный квадрат подтверждён. |
-| Ability | Поджигаем весь сектор. |
-| Damaged | Пусковая под огнём! |
-| Elite | Один залп — один новый горизонт. |
-| Idle | Красиво горит только чужое. |
-| Death | Боекомплект… сейчас рванёт… |
+| Selected | Paket raket zaryazhen. |
+| Move | Derzhim distantsiyu. |
+| Attack | Raschyotnyy kvadrat podtverzhdyon. |
+| Ability | Podzhigaem ves sektor. |
+| Damaged | Puskovaya under ognyom! |
+| Elite | Odin zalp — odin novyy gorizont. |
+| Idle | Krasivo gorit only chuzhoe. |
+| Death | Boekomplekt… seychas rvanyot… |
 
-### 11. Электротаран ЭТМ-7 «Громобой» (`SU_GromoboyRam`)
-| Параметр | Значение |
+### 11. Elektrotaran ETM-7 «Gromoboy» (`SU_GromoboyRam`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `SU_GromoboyRam` |
-| Категория | Техника |
-| Технологический уровень | T3 |
-| Стоимость | 2200 |
-| Время производства | 42 сек |
-| Командный лимит | 7 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T3 |
+| Stoimost | 2200 |
+| Vremya proizvodstva | 42 sek |
+| Komandnyy limit | 7 |
 | HP | 2100 |
-| Тип брони | Тяжёлая техника |
-| Скорость | 4.8 |
-| Дальность | 6 |
-| Ориентировочный DPS | 72 |
-| Предназначение | Прорыв щитов и построений |
-| Основное оружие | Контактный электрический излучатель |
-| Требования | Научный комплекс |
+| Tip broni | Tyazhyolaya Vehicles |
+| Skorost | 4.8 |
+| Dalnost | 6 |
+| Orientirovochnyy DPS | 72 |
+| Prednaznachenie | Proryv shchitov i postroeniy |
+| Osnovnoe Weapons | Kontaktnyy elektricheskiy izluchatel |
+| Requirements | Nauchnyy kompleks |
 
-#### Способности
-- «Разряд по земле»: конусный электрический удар и краткое оглушение техники; 32 сек
+#### Sposobnosti
+- «Razryad po zemle»: konusnyy elektricheskiy udar i kratkoe oglushenie tekhniki; 32 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Сильный ближний бой, отключает щиты |
-| Слабые стороны | Короткая дальность, уязвим на подходе |
-| Прямые контрмеры | Артиллерия, авиация, мины |
+| Silnye storony | Silnyy blizhniy boy, otklyuchaet shchity |
+| Slabye storony | Korotkaya dalnost, uyazvim na podkhode |
+| Pryamye kontrmery | Artilleriya, Aviation, miny |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Громобой ждёт команды. |
-| Move | К контакту. |
-| Attack | Замыкаю цепь! |
-| Ability | Разряд в грунт! |
-| Damaged | Катушки перегреваются! |
-| Elite | Гроза теперь идёт по земле. |
-| Idle | Сухая погода — временная проблема. |
-| Death | Контур… разомкнут… |
+| Selected | Gromoboy zhdyot komandy. |
+| Move | K kontaktu. |
+| Attack | Zamykayu tsep! |
+| Ability | Razryad v grunt! |
+| Damaged | Katushki peregrevayutsya! |
+| Elite | Groza teper idyot po zemle. |
+| Idle | Sukhaya pogoda — vremennaya problema. |
+| Death | Kontur… razomknut… |
 
-### 12. Тяжёлый танк прорыва ТТП-11 «Воевода» (`SU_VoevodaHeavyTank`)
-| Параметр | Значение |
+### 12. Tyazhyolyy Tank proryva TTP-11 «Voevoda» (`SU_VoevodaHeavyTank`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `SU_VoevodaHeavyTank` |
-| Категория | Техника |
-| Технологический уровень | T3 |
-| Стоимость | 3200 |
-| Время производства | 58 сек |
-| Командный лимит | 10 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T3 |
+| Stoimost | 3200 |
+| Vremya proizvodstva | 58 sek |
+| Komandnyy limit | 10 |
 | HP | 4200 |
-| Тип брони | Тяжёлая техника |
-| Скорость | 2.8 |
-| Дальность | 10 |
-| Ориентировочный DPS | 98 |
-| Предназначение | Сверхтяжёлый фронтовой танк и ПВО |
-| Основное оружие | Две тяжёлые пушки и ракеты ПВО |
-| Требования | Научный комплекс + два Тяжёлых завода |
+| Tip broni | Tyazhyolaya Vehicles |
+| Skorost | 2.8 |
+| Dalnost | 10 |
+| Orientirovochnyy DPS | 98 |
+| Prednaznachenie | Sverkhtyazhyolyy frontovoy Tank i PVO |
+| Osnovnoe Weapons | Dve tyazhyolye pushki i rakety PVO |
+| Requirements | Nauchnyy kompleks + dva Tyazhyolykh zavoda |
 
-#### Способности
-- «Осадный режим»: -60% скорость, +30% дальность и броня; 4 сек развёртывания
+#### Sposobnosti
+- «Osadnyy rezhim»: -60% skorost, +30% dalnost i Armor; 4 sek razvyortyvaniya
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Чудовищная живучесть, универсальность |
-| Слабые стороны | Очень дорог, медленный, большая цель |
-| Прямые контрмеры | Сверхдальняя артиллерия, EMP, массовая авиация |
+| Silnye storony | Chudovishchnaya zhivuchest, universalnost |
+| Slabye storony | Ochen dorog, medlennyy, bolshaya tsel |
+| Pryamye kontrmery | Sverkhdalnyaya artilleriya, EMP, massovaya Aviation |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Воевода вступает в бой. |
-| Move | Земля выдержит. |
-| Attack | Стереть координаты. |
-| Ability | Переходим в осадный режим. |
-| Damaged | Повреждение принято. Продолжаем. |
-| Elite | Теперь это не танк. Это направление фронта. |
-| Idle | Мы не опаздываем. Нас ждут. |
-| Death | Воевода… оставляет рубеж… |
+| Selected | Voevoda vstupaet v boy. |
+| Move | Zemlya vyderzhit. |
+| Attack | Steret koordinaty. |
+| Ability | Perekhodim v osadnyy rezhim. |
+| Damaged | Povrezhdenie prinyato. Prodolzhaem. |
+| Elite | Teper eto ne Tank. Eto napravlenie fronta. |
+| Idle | My ne opazdyvaem. Nas zhdut. |
+| Death | Voevoda… ostavlyaet rubezh… |
 
-### 13. Истребитель И-47 «Кречет» (`SU_KrechetInterceptor`)
-| Параметр | Значение |
+### 13. Istrebitel I-47 «Krechet» (`SU_KrechetInterceptor`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `SU_KrechetInterceptor` |
-| Категория | Авиация |
-| Технологический уровень | T2 |
-| Стоимость | 1100 |
-| Время производства | 24 сек |
-| Командный лимит | 4 |
+| Kategoriya | Aviation |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 1100 |
+| Vremya proizvodstva | 24 sek |
+| Komandnyy limit | 4 |
 | HP | 700 |
-| Тип брони | Воздушная |
-| Скорость | 12.0 |
-| Дальность | 12 |
-| Ориентировочный DPS | 54 |
-| Предназначение | Перехват авиации и точечные ракетные удары |
-| Основное оружие | Ракеты воздух-воздух/воздух-земля |
-| Требования | Аэродром + радар |
+| Tip broni | Vozdushnaya |
+| Skorost | 12.0 |
+| Dalnost | 12 |
+| Orientirovochnyy DPS | 54 |
+| Prednaznachenie | Perekhvat aviatsii i tochechnye raketnye udary |
+| Osnovnoe Weapons | Rakety vozdukh-vozdukh/vozdukh-zemlya |
+| Requirements | Airfield + radar |
 
-#### Способности
-- «Форсаж»: +40% скорость на 6 сек; 25 сек
+#### Sposobnosti
+- «Forsazh»: +40% skorost na 6 sek; 25 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Высокая скорость, мощный первый залп |
-| Слабые стороны | Требует перезарядки на аэродроме |
-| Прямые контрмеры | ПВО, воздушные засады |
+| Silnye storony | Vysokaya skorost, moshchnyy pervyy zalp |
+| Slabye storony | Trebuet perezaryadki na aerodrome |
+| Pryamye kontrmery | PVO, vozdushnye zasady |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Кречет на полосе. |
-| Move | Курс принят. |
-| Attack | Ракеты сошли. |
-| Ability | Форсаж! |
-| Damaged | Потеря давления! |
-| Elite | Небо стало тесным. |
-| Idle | Топливо любит решительных. |
-| Death | Катапульта… отказ… |
+| Selected | Krechet na polose. |
+| Move | Kurs prinyat. |
+| Attack | Rakety soshli. |
+| Ability | Forsazh! |
+| Damaged | Poterya davleniya! |
+| Elite | Nebo after tesnym. |
+| Idle | Toplivo lyubit reshitelnykh. |
+| Death | Katapulta… otkaz… |
 
-### 14. Штурмовой вертолёт ШВ-38 «Коршун» (`SU_KorshunGunship`)
-| Параметр | Значение |
+### 14. Shturmovoy vertolyot ShV-38 «Korshun» (`SU_KorshunGunship`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `SU_KorshunGunship` |
-| Категория | Авиация |
-| Технологический уровень | T2 |
-| Стоимость | 1500 |
-| Время производства | 32 сек |
-| Командный лимит | 5 |
+| Kategoriya | Aviation |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 1500 |
+| Vremya proizvodstva | 32 sek |
+| Komandnyy limit | 5 |
 | HP | 1300 |
-| Тип брони | Воздушная |
-| Скорость | 7.0 |
-| Дальность | 7 |
-| Ориентировочный DPS | 60 |
-| Предназначение | Поддержка наземных войск и десант |
-| Основное оружие | Пушка и неуправляемые ракеты |
-| Требования | Аэродром |
+| Tip broni | Vozdushnaya |
+| Skorost | 7.0 |
+| Dalnost | 7 |
+| Orientirovochnyy DPS | 60 |
+| Prednaznachenie | Podderzhka nazemnykh voysk i desant |
+| Osnovnoe Weapons | Pushka i neupravlyaemye rakety |
+| Requirements | Airfield |
 
-#### Способности
-- «Высадка»: перевозит 6 пехотинцев
-- «Круг огня»: зависает и усиливает огонь на 8 сек
+#### Sposobnosti
+- «Vysadka»: perevozit 6 pekhotintsev
+- «Krug ognya»: zavisaet i usilivaet ogon na 8 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Сильный по пехоте и лёгкой технике |
-| Слабые стороны | Уязвим для ПВО и истребителей |
-| Прямые контрмеры | ПВО, истребители |
+| Silnye storony | Silnyy po pekhote i lyogkoy tekhnike |
+| Slabye storony | Uyazvim for PVO i istrebiteley |
+| Pryamye kontrmery | PVO, istrebiteli |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Коршун готов к вылету. |
-| Move | Идём на малой высоте. |
-| Attack | Работаем по земле! |
-| Ability | Заходим на круг! |
-| Damaged | Хвостовой сектор повреждён! |
-| Elite | Пехота зовёт — мы отвечаем. |
-| Idle | В кабине пахнет топливом и победой. |
-| Death | Борт падает… |
+| Selected | Korshun gotov k vyletu. |
+| Move | Idyom na maloy vysote. |
+| Attack | Rabotaem po zemle! |
+| Ability | Zakhodim na krug! |
+| Damaged | Khvostovoy sektor povrezhdyon! |
+| Elite | Infantry zovyot — my otvechaem. |
+| Idle | V kabine pakhnet toplivom i pobedoy. |
+| Death | Bort padaet… |
 
-### 15. Тяжёлый дирижабль ТДА-8 «Громада» (`SU_GromadaAirship`)
-| Параметр | Значение |
+### 15. Tyazhyolyy dirizhabl TDA-8 «Gromada» (`SU_GromadaAirship`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `SU_GromadaAirship` |
-| Категория | Авиация |
-| Технологический уровень | T3 |
-| Стоимость | 3000 |
-| Время производства | 60 сек |
-| Командный лимит | 10 |
+| Kategoriya | Aviation |
+| Tekhnologicheskiy uroven | T3 |
+| Stoimost | 3000 |
+| Vremya proizvodstva | 60 sek |
+| Komandnyy limit | 10 |
 | HP | 5000 |
-| Тип брони | Воздушная |
-| Скорость | 2.0 |
-| Дальность | 5 |
-| Ориентировочный DPS | 130 |
-| Предназначение | Стратегический осадный бомбардировщик |
-| Основное оружие | Тяжёлые свободнопадающие бомбы |
-| Требования | Научный комплекс + аэродром |
+| Tip broni | Vozdushnaya |
+| Skorost | 2.0 |
+| Dalnost | 5 |
+| Orientirovochnyy DPS | 130 |
+| Prednaznachenie | Strategicheskiy osadnyy bombardirovshchik |
+| Osnovnoe Weapons | Tyazhyolye svobodnopadayushchie bomby |
+| Requirements | Nauchnyy kompleks + Airfield |
 
-#### Способности
-- «Полный газ»: +60% скорость на 10 сек, затем получает 20% урона; 50 сек
+#### Sposobnosti
+- «Polnyy gaz»: +60% skorost na 10 sek, zatem poluchaet 20% urona; 50 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Огромный урон по базе, много HP |
-| Слабые стороны | Крайне медленный, виден всей карте при атаке |
-| Прямые контрмеры | Массовое ПВО, истребители |
+| Silnye storony | Ogromnyy Damaged po baze, mnogo HP |
+| Slabye storony | Krayne medlennyy, viden vsey karte with atake |
+| Pryamye kontrmery | Massovoe PVO, istrebiteli |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Громада в воздухе. |
-| Move | Медленно. Неотвратимо. |
-| Attack | Открыть бомболюки. |
-| Ability | Полный газ. Двигатели на предел. |
-| Damaged | Обшивка горит, курс держим. |
-| Elite | Города узнают нас по тени. |
-| Idle | Высота хорошая. Мир кажется тише. |
-| Death | Балласт… уже не поможет… |
+| Selected | Gromada v vozdukhe. |
+| Move | Medlenno. Neotvratimo. |
+| Attack | Otkryt bombolyuki. |
+| Ability | Polnyy gaz. Dvigateli na predel. |
+| Damaged | Obshivka gorit, kurs derzhim. |
+| Elite | Goroda uznayut nas po teni. |
+| Idle | Vysota khoroshaya. Mir kazhetsya tishe. |
+| Death | Ballast… uzhe ne pomozhet… |
 
-### 16. Боевой катер БК-27 «Буран» (`SU_BuranPatrolBoat`)
-| Параметр | Значение |
+### 16. Boevoy kater BK-27 «Buran» (`SU_BuranPatrolBoat`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `SU_BuranPatrolBoat` |
-| Категория | Флот |
-| Технологический уровень | T1 |
-| Стоимость | 750 |
-| Время производства | 16 сек |
-| Командный лимит | 4 |
+| Kategoriya | Naval |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 750 |
+| Vremya proizvodstva | 16 sek |
+| Komandnyy limit | 4 |
 | HP | 700 |
-| Тип брони | Морская |
-| Скорость | 8.0 |
-| Дальность | 7 |
-| Ориентировочный DPS | 22 |
-| Предназначение | Быстрый катер ПВО и охоты на десант |
-| Основное оружие | Автопушка и лёгкие ракеты |
-| Требования | Военно-морской док |
+| Tip broni | Morskaya |
+| Skorost | 8.0 |
+| Dalnost | 7 |
+| Orientirovochnyy DPS | 22 |
+| Prednaznachenie | Bystryy kater PVO i okhoty na desant |
+| Osnovnoe Weapons | Avtopushka i lyogkie rakety |
+| Requirements | Voenno-morskoy dok |
 
-#### Способности
-- «Электросеть»: ставит электрическую мину на воде; 25 сек
+#### Sposobnosti
+- «Elektroset»: stavit elektricheskuyu minu na vode; 25 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Быстрый, дешёвый, полезен в разведке |
-| Слабые стороны | Слаб против крупных кораблей |
-| Прямые контрмеры | Эсминцы, береговые батареи |
+| Silnye storony | Bystryy, deshyovyy, polezen v razvedke |
+| Slabye storony | Slab protiv krupnykh korabley |
+| Pryamye kontrmery | Esmintsy, beregovye batarei |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Буран на воде. |
-| Move | Режем волну. |
-| Attack | Цель по правому борту! |
-| Ability | Сеть в воду! |
-| Damaged | Корпус принимает воду! |
-| Elite | Море запомнило наш след. |
-| Idle | Штиль — это просто пауза. |
-| Death | Отсек затоплен… |
+| Selected | Buran na vode. |
+| Move | Rezhem volnu. |
+| Attack | Tsel po pravomu bortu! |
+| Ability | Set v vodu! |
+| Damaged | Korpus prinimaet vodu! |
+| Elite | More zapomnilo nash sled. |
+| Idle | Shtil — eto prosto pauza. |
+| Death | Otsek zatoplen… |
 
-### 17. Ударная подлодка УПЛ-90 «Морок» (`SU_MorokSubmarine`)
-| Параметр | Значение |
+### 17. Udarnaya podlodka UPL-90 «Morok» (`SU_MorokSubmarine`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `SU_MorokSubmarine` |
-| Категория | Флот |
-| Технологический уровень | T2 |
-| Стоимость | 1700 |
-| Время производства | 34 сек |
-| Командный лимит | 6 |
+| Kategoriya | Naval |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 1700 |
+| Vremya proizvodstva | 34 sek |
+| Komandnyy limit | 6 |
 | HP | 1800 |
-| Тип брони | Морская |
-| Скорость | 4.8 |
-| Дальность | 10 |
-| Ориентировочный DPS | 64 |
-| Предназначение | Скрытая охота на крупные корабли |
-| Основное оружие | Тяжёлые торпеды |
-| Требования | Док + радар |
+| Tip broni | Morskaya |
+| Skorost | 4.8 |
+| Dalnost | 10 |
+| Orientirovochnyy DPS | 64 |
+| Prednaznachenie | Skrytaya okhota na krupnye korabli |
+| Osnovnoe Weapons | Tyazhyolye torpedy |
+| Requirements | Dok + radar |
 
-#### Способности
-- «Беззвучный ход»: повышенная маскировка на 12 сек; 35 сек
+#### Sposobnosti
+- «Bezzvuchnyy khod»: povyshennaya maskirovka na 12 sek; 35 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Сильна против тяжёлого флота |
-| Слабые стороны | Не атакует наземные цели, уязвима после обнаружения |
-| Прямые контрмеры | Противолодочные корабли, авиация |
+| Silnye storony | Silna protiv tyazhyologo flota |
+| Slabye storony | Ne atakuet nazemnye tseli, uyazvima after obnaruzheniya |
+| Pryamye kontrmery | Protivolodochnye korabli, Aviation |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Морок слушает глубину. |
-| Move | Погружаемся. |
-| Attack | Торпедный раствор открыт. |
-| Ability | Беззвучный ход. |
-| Damaged | Прочный корпус деформирован! |
-| Elite | В море нас замечают слишком поздно. |
-| Idle | Наверху шумят. Здесь думают. |
-| Death | Глубина… принимает… |
+| Selected | Morok slushaet glubinu. |
+| Move | Pogruzhaemsya. |
+| Attack | Torpednyy rastvor otkryt. |
+| Ability | Bezzvuchnyy khod. |
+| Damaged | Prochnyy korpus deformirovan! |
+| Elite | V more nas zamechayut slishkom pozdno. |
+| Idle | Naverkhu shumyat. Zdes dumayut. |
+| Death | Glubina… prinimaet… |
 
-### 18. Ракетный крейсер РКР-44 «Святогор» (`SU_SvyatogorCruiser`)
-| Параметр | Значение |
+### 18. Raketnyy kreyser RKR-44 «Svyatogor» (`SU_SvyatogorCruiser`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `SU_SvyatogorCruiser` |
-| Категория | Флот |
-| Технологический уровень | T3 |
-| Стоимость | 3400 |
-| Время производства | 62 сек |
-| Командный лимит | 10 |
+| Kategoriya | Naval |
+| Tekhnologicheskiy uroven | T3 |
+| Stoimost | 3400 |
+| Vremya proizvodstva | 62 sek |
+| Komandnyy limit | 10 |
 | HP | 4600 |
-| Тип брони | Морская |
-| Скорость | 2.8 |
-| Дальность | 22 |
-| Ориентировочный DPS | 120 |
-| Предназначение | Дальняя осада побережья |
-| Основное оружие | Тяжёлые крылатые ракеты |
-| Требования | Док + Научный комплекс |
+| Tip broni | Morskaya |
+| Skorost | 2.8 |
+| Dalnost | 22 |
+| Orientirovochnyy DPS | 120 |
+| Prednaznachenie | Dalnyaya osada poberezhya |
+| Osnovnoe Weapons | Tyazhyolye krylatye rakety |
+| Requirements | Dok + Nauchnyy kompleks |
 
-#### Способности
-- «Заградительный залп»: 6 ракет по широкой области; 50 сек
+#### Sposobnosti
+- «Zagraditelnyy zalp»: 6 raket po shirokoy oblasti; 50 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Максимальная морская дальность |
-| Слабые стороны | Медленный, слаб в ближнем бою и без охраны |
-| Прямые контрмеры | Подлодки, авиация, быстрые катера |
+| Silnye storony | Maksimalnaya morskaya dalnost |
+| Slabye storony | Medlennyy, slab v blizhnem boyu i without okhrany |
+| Pryamye kontrmery | Podlodki, Aviation, bystrye katera |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Святогор ждёт координаты. |
-| Move | Крейсер меняет позицию. |
-| Attack | Ракетный залп. |
-| Ability | Заградительный огонь по сектору. |
-| Damaged | Палуба пробита! |
-| Elite | Берег заканчивается там, где начинаются наши ракеты. |
-| Idle | Море большое. Дальность больше. |
-| Death | Погреба… детонируют… |
+| Selected | Svyatogor zhdyot koordinaty. |
+| Move | Kreyser menyaet pozitsiyu. |
+| Attack | Raketnyy zalp. |
+| Ability | Zagraditelnyy ogon po sektoru. |
+| Damaged | Paluba probita! |
+| Elite | Bereg zakanchivaetsya tam, gde nachinayutsya nashi rakety. |
+| Idle | More bolshoe. Dalnost bolshe. |
+| Death | Pogreba… detoniruyut… |
 
-### 19. Майор Елена Морозова (`SU_Hero_Morozova`)
-| Параметр | Значение |
+### 19. Mayor Elena Morozova (`SU_Hero_Morozova`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `SU_Hero_Morozova` |
-| Категория | Герой |
-| Технологический уровень | T3 |
-| Стоимость | 2600 |
-| Время производства | 50 сек |
-| Командный лимит | 8 |
+| Kategoriya | Hero |
+| Tekhnologicheskiy uroven | T3 |
+| Stoimost | 2600 |
+| Vremya proizvodstva | 50 sek |
+| Komandnyy limit | 8 |
 | HP | 900 |
-| Тип брони | Тяжёлая пехота |
-| Скорость | 5.0 |
-| Дальность | 10 |
-| Ориентировочный DPS | 70 |
-| Предназначение | Герой-командир тяжёлой пехоты и электрического оружия |
-| Основное оружие | Экспериментальная тесла-винтовка |
-| Требования | Научный комплекс |
+| Tip broni | Tyazhyolaya Infantry |
+| Skorost | 5.0 |
+| Dalnost | 10 |
+| Orientirovochnyy DPS | 70 |
+| Prednaznachenie | Hero-Commander tyazhyoloy pekhoty i elektricheskogo oruzhiya |
+| Osnovnoe Weapons | Eksperimentalnaya Tesla-vintovka |
+| Requirements | Nauchnyy kompleks |
 
-#### Способности
-- «Поле подавления»: враги в области теряют скорость и точность; 40 сек
-- «Командный импульс»: союзники мгновенно получают 20 Мобилизации; 60 сек
-- Один экземпляр
+#### Sposobnosti
+- «Pole podavleniya»: vragi v oblasti teryayut skorost i tochnost; 40 sek
+- «Komandnyy impuls»: soyuzniki mgnovenno poluchayut 20 Mobilizatsii; 60 sek
+- Odin ekzemplyar
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Сильный контроль и поддержка |
-| Слабые стороны | Приоритетная цель, дорогая |
-| Прямые контрмеры | Снайперы, фокус авиации, артиллерия |
+| Silnye storony | Silnyy kontrol i podderzhka |
+| Slabye storony | Prioritetnaya tsel, dorogaya |
+| Pryamye kontrmery | Snaypery, fokus aviatsii, artilleriya |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Майор Морозова. Докладывайте. |
-| Move | Я буду на передовой. |
-| Attack | Этот участок фронта закрываем сейчас. |
-| Ability | Подавить их связь и движение. |
-| Damaged | Царапина. Приказ не меняется. |
-| Elite | Сегодня фронт движется вместе со мной. |
-| Idle | Генералы любят карты. Я предпочитаю местность. |
-| Death | Продолжайте… наступление… |
+| Selected | Mayor Morozova. Dokladyvayte. |
+| Move | Ya budu na peredovoy. |
+| Attack | Etot uchastok fronta zakryvaem seychas. |
+| Ability | Podavit ikh svyaz i Move. |
+| Damaged | Tsarapina. Prikaz ne menyaetsya. |
+| Elite | Segodnya front dvizhetsya vmeste so mnoy. |
+| Idle | Generaly lyubyat karty. Ya predpochitayu mestnost. |
+| Death | Prodolzhayte… nastuplenie… |
 
-# Фракция: Альянс
-## Фракционная идентичность
-Высокоточная мобильная армия с сильной разведкой, авиацией, дистанционным огнём и технологическими контрмерами. Слабости: более низкая прочность, зависимость от информации и позиционного контроля.
-## Фракционный ресурс: Разведданные
-Разведданные генерируются при первом обнаружении вражеских объектов, поддержании разведывательного контакта и уничтожении высокоценных целей. 25 очков — орбитальный скан; 40 — подавление радара в области; 60 — высокоточный удар; 100 — глобальное раскрытие карты на 8 секунд без снятия тумана навсегда.
-## Здания и экономика фракции
-| Здание | Цена | Время, с | Энергия | Назначение |
+# Fraktsiya: Alliance
+## Fraktsionnaya identichnost
+Vysokotochnaya mobilnaya armiya s silnoy razvedkoy, aviatsiey, distantsionnym ognyom i tekhnologicheskimi kontrmerami. Slabosti: bolee nizkaya prochnost, zavisimost ot informatsii i pozitsionnogo kontrolya.
+## Fraktsionnyy resurs: Razveddannye
+Razveddannye generiruyutsya with pervom obnaruzhenii vrazheskikh obektov, podderzhanii razvedyvatelnogo kontakta i unichtozhenii vysokotsennykh tseley. 25 ochkov — orbitalnyy skan; 40 — podavlenie radara v oblasti; 60 — vysokotochnyy udar; 100 — globalnoe raskrytie karty na 8 sekund without snyatiya tumana navsegda.
+## Buildings i Economy Factions
+| Zdanie | Tsena | Vremya, s | Energiya | Naznachenie |
 | --- | --- | --- | --- | --- |
-| Мобильный узел развёртывания | 5000 | 60 | 0 | Разворачивается в штаб, может быстро сворачиваться |
-| Сетевой командный центр | — | — | +110 | Строительная сеть, +20 лимита |
-| Компактный реактор | 900 | 20 | +130 | Безопасная энергия, малый радиус взрыва |
-| Автоматизированный переработчик | 2500 | 44 | -20 | Включает платформу M88 «Pioneer» |
-| Тактическая казарма | 750 | 18 | -15 | Пехота T1–T2, +5 лимита |
-| Модульный завод | 2200 | 40 | -35 | Техника, +10 лимита |
-| Авиабаза «Небесная линия» | 1850 | 34 | -50 | 4 посадочных места |
-| Океанический док | 2100 | 40 | -45 | Флот и морские дроны |
-| Разведывательный центр | 1450 | 28 | -55 | Радар, разведданные, T2 |
-| Лаборатория прикладной физики | 3700 | 60 | -110 | T3, крио и маскировка |
-| Автопушка «Страж» | 750 | 16 | -15 | Против пехоты и лёгкой техники |
-| Ракетная ПВО «Купол» | 1000 | 21 | -30 | Дальнее ПВО |
-| Призматическая батарея | 2100 | 36 | -80 | Сильна против тяжёлых целей |
-| Проектор щита | 1800 | 32 | -85 | Поглощает урон по области |
-| Сеть «Хроноэвакуация» | 6200 | 90 | -190 | Телепортирует выбранную группу домой; 6 мин |
-| Орбитальная платформа «Зенит» | 7200 | 110 | -230 | Высокоточный кинетический удар; 8 мин |
+| Mobilnyy uzel razvyortyvaniya | 5000 | 60 | 0 | Razvorachivaetsya v HQ, mozhet bystro svorachivatsya |
+| Setevoy komandnyy tsentr | — | — | +110 | Stroitelnaya set, +20 limita |
+| Kompaktnyy reaktor | 900 | 20 | +130 | Bezopasnaya energiya, malyy radius vzryva |
+| Avtomatizirovannyy pererabotchik | 2500 | 44 | -20 | Vklyuchaet platformu M88 «Pioneer» |
+| Takticheskaya Barracks | 750 | 18 | -15 | Infantry T1–T2, +5 limita |
+| Modulnyy Factory | 2200 | 40 | -35 | Vehicles, +10 limita |
+| Aviabaza «Nebesnaya liniya» | 1850 | 34 | -50 | 4 posadochnykh mesta |
+| Okeanicheskiy dok | 2100 | 40 | -45 | Naval i morskie drony |
+| Razvedyvatelnyy tsentr | 1450 | 28 | -55 | Radar, razveddannye, T2 |
+| Laboratoriya prikladnoy fiziki | 3700 | 60 | -110 | T3, krio i maskirovka |
+| Avtopushka «Strazh» | 750 | 16 | -15 | Protiv pekhoty i lyogkoy tekhniki |
+| Raketnaya PVO «Kupol» | 1000 | 21 | -30 | Dalnee PVO |
+| Prizmaticheskaya batareya | 2100 | 36 | -80 | Silna protiv tyazhyolykh tseley |
+| Proektor shchita | 1800 | 32 | -85 | Pogloshchaet Damaged po oblasti |
+| Set «Khronoevakuatsiya» | 6200 | 90 | -190 | Teleportiruet vybrannuyu gruppu domoy; 6 min |
+| Orbitalnaya platforma «Zenit» | 7200 | 110 | -230 | Vysokotochnyy kineticheskiy udar; 8 min |
 
-## EVA — канонические системные реплики
-| Событие | Реплика |
+## EVA — kanonicheskie sistemnye repliki
+| Sobytie | Replika |
 | --- | --- |
-| Старт | Командная сеть активна. Все каналы защищены. |
-| Низкая энергия | Энергетический резерв ниже безопасного уровня. |
-| База атакована | Обнаружена атака на критическую инфраструктуру. |
-| Юнит готов | Подразделение завершило подготовку. |
-| Супероружие врага | Стратегическая угроза подтверждена. Идёт расчёт траектории. |
-| Разведданные 100 | Полный пакет разведданных сформирован. |
-| Победа | Цели операции достигнуты. Потери в допустимых пределах. |
-| Поражение | Сеть управления разрушена. Операция прекращена. |
+| Start | Komandnaya set aktivna. all kanaly zashchishcheny. |
+| Nizkaya energiya | Energeticheskiy rezerv nizhe bezopasnogo urovnya. |
+| Baza atakovana | Obnaruzhena Attack na kriticheskuyu infrastrukturu. |
+| Yunit gotov | Podrazdelenie zavershilo podgotovku. |
+| Superoruzhie vraga | Strategicheskaya ugroza podtverzhdena. Idyot raschyot traektorii. |
+| Razveddannye 100 | Polnyy paket razveddannykh sformirovan. |
+| Pobeda | Tseli operatsii dostignuty. Poteri v dopustimykh predelakh. |
+| Porazhenie | Set upravleniya razrushena. Operatsiya prekrashchena. |
 
-## Сводная таблица юнитов
-| Юнит | ID | Класс | Тир | Цена | Время | Лимит | HP | Броня | Скорость | Дальность | DPS | Роль |
+## Svodnaya tablitsa yunitov
+| Yunit | ID | Klass | Tir | Tsena | Vremya | Limit | HP | Armor | Skorost | Dalnost | DPS | Rol |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Стрелок M6 «Sentinel» | AL_SentinelRifleman | Пехота | T1 | 220 | 7 | 1 | 120 | Лёгкая пехота | 5.0 | 6 | 11 | Универсальная стрелковая пехота |
-| Ракетный расчёт FGM-31 «Lancer» | AL_LancerTeam | Пехота | T1 | 450 | 12 | 2 | 145 | Тяжёлая пехота | 3.8 | 11 | 30 | Дальняя ПТ и ПВО поддержка |
-| Полевой инженер E-4 | AL_FieldEngineer | Пехота | T1 | 550 | 15 | 1 | 105 | Лёгкая пехота | 4.2 | 0 | 0 | Захват и быстрый ремонт |
-| Снайпер R-9 «Longwatch» | AL_LongwatchSniper | Пехота | T2 | 750 | 18 | 2 | 135 | Лёгкая пехота | 5.2 | 14 | 48 | Снайпер, разведка, обнаружение скрытых целей |
-| Полевой медик M-12 «Lifeline» | AL_LifelineMedic | Пехота | T2 | 650 | 17 | 1 | 150 | Лёгкая пехота | 4.5 | 0 | 0 | Лечение и снятие негативных эффектов |
-| Специалист C-7 «Frostline» | AL_FrostlineSpecialist | Пехота | T3 | 1000 | 24 | 2 | 240 | Тяжёлая пехота | 4.2 | 8 | 28 | Замедление тяжёлых целей и контроль |
-| Добывающая платформа M88 «Pioneer» | AL_PioneerHarvester | Техника | T1 | 1450 | 27 | 4 | 1200 | Лёгкая техника | 4.0 | 0 | 0 | Быстрый добытчик и временный форпост |
-| Разведмашина LAV-41 «Kestrel» | AL_KestrelScout | Техника | T1 | 700 | 15 | 3 | 430 | Лёгкая техника | 9.0 | 7 | 19 | Разведка, пометка целей и охота на пехоту |
-| Основной танк M14 «Bulwark» | AL_BulwarkMBT | Техника | T2 | 1250 | 25 | 5 | 1350 | Тяжёлая техника | 5.2 | 9 | 43 | Мобильный основной танк |
-| Рельсовая САУ XM190 «Oracle» | AL_OracleArtillery | Техника | T2 | 1750 | 36 | 5 | 850 | Осадная техника | 3.6 | 18 | 62 | Точная дальнобойная артиллерия |
-| Маскировочный танк XM27 «Refraction» | AL_RefractionTank | Техника | T3 | 1900 | 38 | 6 | 1200 | Тяжёлая техника | 5.5 | 9 | 56 | Засадный танк и диверсия |
-| Мобильный щит M46 «Ward» | AL_WardShieldCarrier | Техника | T2 | 1600 | 34 | 5 | 1050 | Лёгкая техника | 4.4 | 0 | 0 | Подвижный энергетический щит |
-| Тяжёлый танк M70 «Citadel» | AL_CitadelTank | Техника | T3 | 2800 | 52 | 9 | 3000 | Тяжёлая техника | 4.0 | 11 | 84 | Тяжёлый танк с активной защитой |
-| Истребитель F/A-48 «Shrike» | AL_ShrikeInterceptor | Авиация | T2 | 1050 | 22 | 4 | 600 | Воздушная | 13.0 | 13 | 50 | Чистый воздушный перехватчик |
-| VTOL AV-27 «Vector» | AL_VectorVTOL | Авиация | T2 | 1450 | 30 | 5 | 950 | Воздушная | 8.5 | 9 | 58 | Гибкий штурмовик и точечный удар |
-| Стелс-бомбардировщик B-39 «Nightveil» | AL_NightveilBomber | Авиация | T3 | 2600 | 52 | 7 | 1500 | Воздушная | 9.5 | 16 | 110 | Глубокий точечный удар по зданиям |
-| Гидрофойл PHM-22 «Manta» | AL_MantaPatrolCraft | Флот | T1 | 850 | 17 | 4 | 650 | Морская | 9.0 | 7 | 24 | Быстрый ПВО-катер и разведка |
-| Эсминец DDG-31 «Resolute» | AL_ResoluteDestroyer | Флот | T2 | 1900 | 37 | 7 | 2100 | Морская | 4.8 | 13 | 66 | Универсальный корабль ПВО и берегового огня |
-| Авианосец CVX-90 «Horizon» | AL_HorizonCarrier | Флот | T3 | 3600 | 65 | 10 | 3800 | Морская | 2.5 | 20 | 95 | Дистанционная морская авиационная платформа |
-| Агент Эвелин Харт | AL_Hero_Hart | Герой | T3 | 2500 | 48 | 8 | 750 | Лёгкая пехота | 5.8 | 15 | 82 | Герой разведки, диверсий и точечных убийств |
+| Strelok M6 «Sentinel» | AL_SentinelRifleman | Infantry | T1 | 220 | 7 | 1 | 120 | Lyogkaya Infantry | 5.0 | 6 | 11 | Universalnaya strelkovaya Infantry |
+| Raketnyy raschyot FGM-31 «Lancer» | AL_LancerTeam | Infantry | T1 | 450 | 12 | 2 | 145 | Tyazhyolaya Infantry | 3.8 | 11 | 30 | Dalnyaya PT i PVO podderzhka |
+| Polevoy Engineer E-4 | AL_FieldEngineer | Infantry | T1 | 550 | 15 | 1 | 105 | Lyogkaya Infantry | 4.2 | 0 | 0 | Zakhvat i bystryy remont |
+| Snayper R-9 «Longwatch» | AL_LongwatchSniper | Infantry | T2 | 750 | 18 | 2 | 135 | Lyogkaya Infantry | 5.2 | 14 | 48 | Snayper, razvedka, obnaruzhenie skrytykh tseley |
+| Polevoy medik M-12 «Lifeline» | AL_LifelineMedic | Infantry | T2 | 650 | 17 | 1 | 150 | Lyogkaya Infantry | 4.5 | 0 | 0 | Lechenie i snyatie negativnykh effektov |
+| Spetsialist C-7 «Frostline» | AL_FrostlineSpecialist | Infantry | T3 | 1000 | 24 | 2 | 240 | Tyazhyolaya Infantry | 4.2 | 8 | 28 | Zamedlenie tyazhyolykh tseley i kontrol |
+| Dobyvayushchaya platforma M88 «Pioneer» | AL_PioneerHarvester | Vehicles | T1 | 1450 | 27 | 4 | 1200 | Lyogkaya Vehicles | 4.0 | 0 | 0 | Bystryy Harvester i vremennyy forpost |
+| Razvedmashina LAV-41 «Kestrel» | AL_KestrelScout | Vehicles | T1 | 700 | 15 | 3 | 430 | Lyogkaya Vehicles | 9.0 | 7 | 19 | Razvedka, pometka tseley i okhota na pekhotu |
+| Osnovnoy Tank M14 «Bulwark» | AL_BulwarkMBT | Vehicles | T2 | 1250 | 25 | 5 | 1350 | Tyazhyolaya Vehicles | 5.2 | 9 | 43 | Mobilnyy osnovnoy Tank |
+| Relsovaya SAU XM190 «Oracle» | AL_OracleArtillery | Vehicles | T2 | 1750 | 36 | 5 | 850 | Osadnaya Vehicles | 3.6 | 18 | 62 | Tochnaya dalnoboynaya artilleriya |
+| Maskirovochnyy Tank XM27 «Refraction» | AL_RefractionTank | Vehicles | T3 | 1900 | 38 | 6 | 1200 | Tyazhyolaya Vehicles | 5.5 | 9 | 56 | Zasadnyy Tank i diversiya |
+| Mobilnyy shchit M46 «Ward» | AL_WardShieldCarrier | Vehicles | T2 | 1600 | 34 | 5 | 1050 | Lyogkaya Vehicles | 4.4 | 0 | 0 | Podvizhnyy energeticheskiy shchit |
+| Tyazhyolyy Tank M70 «Citadel» | AL_CitadelTank | Vehicles | T3 | 2800 | 52 | 9 | 3000 | Tyazhyolaya Vehicles | 4.0 | 11 | 84 | Tyazhyolyy Tank s aktivnoy zashchitoy |
+| Istrebitel F/A-48 «Shrike» | AL_ShrikeInterceptor | Aviation | T2 | 1050 | 22 | 4 | 600 | Vozdushnaya | 13.0 | 13 | 50 | Chistyy vozdushnyy perekhvatchik |
+| VTOL AV-27 «Vector» | AL_VectorVTOL | Aviation | T2 | 1450 | 30 | 5 | 950 | Vozdushnaya | 8.5 | 9 | 58 | Gibkiy shturmovik i tochechnyy udar |
+| Stels-bombardirovshchik B-39 «Nightveil» | AL_NightveilBomber | Aviation | T3 | 2600 | 52 | 7 | 1500 | Vozdushnaya | 9.5 | 16 | 110 | Glubokiy tochechnyy udar po zdaniyam |
+| Gidrofoyl PHM-22 «Manta» | AL_MantaPatrolCraft | Naval | T1 | 850 | 17 | 4 | 650 | Morskaya | 9.0 | 7 | 24 | Bystryy PVO-kater i razvedka |
+| Esminets DDG-31 «Resolute» | AL_ResoluteDestroyer | Naval | T2 | 1900 | 37 | 7 | 2100 | Morskaya | 4.8 | 13 | 66 | Universalnyy korabl PVO i beregovogo ognya |
+| Avianosets CVX-90 «Horizon» | AL_HorizonCarrier | Naval | T3 | 3600 | 65 | 10 | 3800 | Morskaya | 2.5 | 20 | 95 | Distantsionnaya morskaya aviatsionnaya platforma |
+| Agent Evelin Khart | AL_Hero_Hart | Hero | T3 | 2500 | 48 | 8 | 750 | Lyogkaya Infantry | 5.8 | 15 | 82 | Hero razvedki, diversiy i tochechnykh ubiystv |
 
-## Подробные карточки юнитов
-### 1. Стрелок M6 «Sentinel» (`AL_SentinelRifleman`)
-| Параметр | Значение |
+## Podrobnye kartochki yunitov
+### 1. Strelok M6 «Sentinel» (`AL_SentinelRifleman`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `AL_SentinelRifleman` |
-| Категория | Пехота |
-| Технологический уровень | T1 |
-| Стоимость | 220 |
-| Время производства | 7 сек |
-| Командный лимит | 1 |
+| Kategoriya | Infantry |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 220 |
+| Vremya proizvodstva | 7 sek |
+| Komandnyy limit | 1 |
 | HP | 120 |
-| Тип брони | Лёгкая пехота |
-| Скорость | 5.0 |
-| Дальность | 6 |
-| Ориентировочный DPS | 11 |
-| Предназначение | Универсальная стрелковая пехота |
-| Основное оружие | Модульная штурмовая винтовка |
-| Требования | Тактическая казарма |
+| Tip broni | Lyogkaya Infantry |
+| Skorost | 5.0 |
+| Dalnost | 6 |
+| Orientirovochnyy DPS | 11 |
+| Prednaznachenie | Universalnaya strelkovaya Infantry |
+| Osnovnoe Weapons | Modulnaya shturmovaya vintovka |
+| Requirements | Takticheskaya Barracks |
 
-#### Способности
-- «Светошумовой заряд»: снижает точность врага; 24 сек
+#### Sposobnosti
+- «Svetoshumovoy zaryad»: snizhaet tochnost vraga; 24 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Хорошая мобильность и контроль |
-| Слабые стороны | Дороже бойца «Рубеж», слаб против брони |
-| Прямые контрмеры | Осколочный урон, техника |
+| Silnye storony | Khoroshaya mobilnost i kontrol |
+| Slabye storony | Dorozhe boytsa «Rubezh», slab protiv broni |
+| Pryamye kontrmery | Oskolochnyy Damaged, Vehicles |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Стрелок M6 «Sentinel» готов. |
-| Move | Перехожу к точке. |
-| Attack | Контакт. Работаю. |
-| Ability | Светошумовая — пошла! |
-| Damaged | Под огнём, но в строю. |
-| Elite | Теперь я задаю правила контакта. |
-| Idle | Название оптимистичное. Работа — нет. |
-| Death | Сектор… не удержан… |
+| Selected | Strelok M6 «Sentinel» gotov. |
+| Move | Perekhozhu k tochke. |
+| Attack | Kontakt. Rabotayu. |
+| Ability | Svetoshumovaya — poshla! |
+| Damaged | under ognyom, no v stroyu. |
+| Elite | Teper ya zadayu pravila kontakta. |
+| Idle | Nazvanie optimistichnoe. Rabota — no. |
+| Death | Sektor… ne uderzhan… |
 
-### 2. Ракетный расчёт FGM-31 «Lancer» (`AL_LancerTeam`)
-| Параметр | Значение |
+### 2. Raketnyy raschyot FGM-31 «Lancer» (`AL_LancerTeam`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `AL_LancerTeam` |
-| Категория | Пехота |
-| Технологический уровень | T1 |
-| Стоимость | 450 |
-| Время производства | 12 сек |
-| Командный лимит | 2 |
+| Kategoriya | Infantry |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 450 |
+| Vremya proizvodstva | 12 sek |
+| Komandnyy limit | 2 |
 | HP | 145 |
-| Тип брони | Тяжёлая пехота |
-| Скорость | 3.8 |
-| Дальность | 11 |
-| Ориентировочный DPS | 30 |
-| Предназначение | Дальняя ПТ и ПВО поддержка |
-| Основное оружие | Управляемая ракета |
-| Требования | Казарма + разведцентр |
+| Tip broni | Tyazhyolaya Infantry |
+| Skorost | 3.8 |
+| Dalnost | 11 |
+| Orientirovochnyy DPS | 30 |
+| Prednaznachenie | Dalnyaya PT i PVO podderzhka |
+| Osnovnoe Weapons | Upravlyaemaya raketa |
+| Requirements | Barracks + razvedtsentr |
 
-#### Способности
-- «Лазерная метка»: цель получает +20% урона от всех союзников 8 сек; 30 сек
+#### Sposobnosti
+- «Lazernaya metka»: tsel poluchaet +20% urona ot vsekh soyuznikov 8 sek; 30 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Высокая дальность, универсальная ракета |
-| Слабые стороны | Требует сопровождения, медленная перезарядка |
-| Прямые контрмеры | Снайперы, разведчики, артиллерия |
+| Silnye storony | Vysokaya dalnost, universalnaya raketa |
+| Slabye storony | Trebuet soprovozhdeniya, medlennaya perezaryadka |
+| Pryamye kontrmery | Snaypery, razvedchiki, artilleriya |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Лансер захватил канал. |
-| Move | Нужна чистая линия. |
-| Attack | Цель подсвечена. Пуск. |
-| Ability | Держу метку. Бейте сейчас. |
-| Damaged | Оптика повреждена! |
-| Elite | Я вижу слабое место раньше инженера. |
-| Idle | Ракета дорогая. Промах — ещё дороже. |
-| Death | Метка… потеряна… |
+| Selected | Lanser zakhvatil kanal. |
+| Move | Nuzhna chistaya liniya. |
+| Attack | Tsel podsvechena. Pusk. |
+| Ability | Derzhu metku. Beyte seychas. |
+| Damaged | Optika povrezhdena! |
+| Elite | Ya vizhu slaboe mesto ranshe inzhenera. |
+| Idle | Raketa dorogaya. Promakh — eshchyo dorozhe. |
+| Death | Metka… poteryana… |
 
-### 3. Полевой инженер E-4 (`AL_FieldEngineer`)
-| Параметр | Значение |
+### 3. Polevoy Engineer E-4 (`AL_FieldEngineer`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `AL_FieldEngineer` |
-| Категория | Пехота |
-| Технологический уровень | T1 |
-| Стоимость | 550 |
-| Время производства | 15 сек |
-| Командный лимит | 1 |
+| Kategoriya | Infantry |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 550 |
+| Vremya proizvodstva | 15 sek |
+| Komandnyy limit | 1 |
 | HP | 105 |
-| Тип брони | Лёгкая пехота |
-| Скорость | 4.2 |
-| Дальность | 0 |
-| Ориентировочный DPS | 0 |
-| Предназначение | Захват и быстрый ремонт |
-| Основное оружие | Не вооружён |
-| Требования | Казарма |
+| Tip broni | Lyogkaya Infantry |
+| Skorost | 4.2 |
+| Dalnost | 0 |
+| Orientirovochnyy DPS | 0 |
+| Prednaznachenie | Zakhvat i bystryy remont |
+| Osnovnoe Weapons | Ne vooruzhyon |
+| Requirements | Barracks |
 
-#### Способности
-- «Ремонтный рой»: дроны чинят технику на расстоянии; 35 сек
+#### Sposobnosti
+- «Remontnyy roy»: drony chinyat tekhniku na rasstoyanii; 35 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Чинит безопаснее советского инженера |
-| Слабые стороны | Низкая живучесть |
-| Прямые контрмеры | Любая боевая единица |
+| Silnye storony | Chinit bezopasnee sovetskogo inzhenera |
+| Slabye storony | Nizkaya zhivuchest |
+| Pryamye kontrmery | Lyubaya boevaya edinitsa |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Инженерная группа онлайн. |
-| Move | Маршрут построен. |
-| Attack | У меня нет боевого пакета. |
-| Ability | Ремонтные дроны — в работу. |
-| Damaged | Защита костюма нарушена! |
-| Elite | Поломка — это просто незавершённое решение. |
-| Idle | Проектировали без доступа к инструкции. Классика. |
-| Death | Дроны… завершите ремонт… |
+| Selected | Inzhenernaya gruppa onlayn. |
+| Move | Marshrut postroen. |
+| Attack | U menya no boevogo paketa. |
+| Ability | Remontnye drony — v rabotu. |
+| Damaged | Zashchita kostyuma narushena! |
+| Elite | Polomka — eto prosto nezavershyonnoe reshenie. |
+| Idle | Proektirovali without dostupa k instruktsii. Klassika. |
+| Death | Drony… zavershite remont… |
 
-### 4. Снайпер R-9 «Longwatch» (`AL_LongwatchSniper`)
-| Параметр | Значение |
+### 4. Snayper R-9 «Longwatch» (`AL_LongwatchSniper`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `AL_LongwatchSniper` |
-| Категория | Пехота |
-| Технологический уровень | T2 |
-| Стоимость | 750 |
-| Время производства | 18 сек |
-| Командный лимит | 2 |
+| Kategoriya | Infantry |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 750 |
+| Vremya proizvodstva | 18 sek |
+| Komandnyy limit | 2 |
 | HP | 135 |
-| Тип брони | Лёгкая пехота |
-| Скорость | 5.2 |
-| Дальность | 14 |
-| Ориентировочный DPS | 48 |
-| Предназначение | Снайпер, разведка, обнаружение скрытых целей |
-| Основное оружие | Высокоточная винтовка |
-| Требования | Казарма + разведцентр |
+| Tip broni | Lyogkaya Infantry |
+| Skorost | 5.2 |
+| Dalnost | 14 |
+| Orientirovochnyy DPS | 48 |
+| Prednaznachenie | Snayper, razvedka, obnaruzhenie skrytykh tseley |
+| Osnovnoe Weapons | Vysokotochnaya vintovka |
+| Requirements | Barracks + razvedtsentr |
 
-#### Способности
-- «Скрытый наблюдатель»: маскируется неподвижно и увеличивает обзор; 4 сек
+#### Sposobnosti
+- «Skrytyy nablyudatel»: maskiruetsya nepodvizhno i uvelichivaet obzor; 4 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Убивает элитную пехоту, даёт разведданные |
-| Слабые стороны | Слаб против техники и массовой пехоты |
-| Прямые контрмеры | Разведчики, артиллерия, авиация |
+| Silnye storony | Ubivaet elitnuyu pekhotu, dayot razveddannye |
+| Slabye storony | Slab protiv tekhniki i massovoy pekhoty |
+| Pryamye kontrmery | Razvedchiki, artilleriya, Aviation |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Снайпер R-9 «Longwatch» наблюдает. |
-| Move | Иду по мёртвой зоне. |
-| Attack | Один выстрел. |
-| Ability | Растворяюсь в фоне. |
-| Damaged | Позиция раскрыта! |
-| Elite | Я уже видел их следующий шаг. |
-| Idle | Тишина — лучший камуфляж. |
-| Death | Контакт… оборван… |
+| Selected | Snayper R-9 «Longwatch» nablyudaet. |
+| Move | Idu po myortvoy zone. |
+| Attack | Odin vystrel. |
+| Ability | Rastvoryayus v fone. |
+| Damaged | Pozitsiya raskryta! |
+| Elite | Ya uzhe videl ikh sleduyushchiy shag. |
+| Idle | Tishina — luchshiy kamuflyazh. |
+| Death | Kontakt… oborvan… |
 
-### 5. Полевой медик M-12 «Lifeline» (`AL_LifelineMedic`)
-| Параметр | Значение |
+### 5. Polevoy medik M-12 «Lifeline» (`AL_LifelineMedic`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `AL_LifelineMedic` |
-| Категория | Пехота |
-| Технологический уровень | T2 |
-| Стоимость | 650 |
-| Время производства | 17 сек |
-| Командный лимит | 1 |
+| Kategoriya | Infantry |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 650 |
+| Vremya proizvodstva | 17 sek |
+| Komandnyy limit | 1 |
 | HP | 150 |
-| Тип брони | Лёгкая пехота |
-| Скорость | 4.5 |
-| Дальность | 0 |
-| Ориентировочный DPS | 0 |
-| Предназначение | Лечение и снятие негативных эффектов |
-| Основное оружие | Медицинские дроны |
-| Требования | Казарма + разведцентр |
+| Tip broni | Lyogkaya Infantry |
+| Skorost | 4.5 |
+| Dalnost | 0 |
+| Orientirovochnyy DPS | 0 |
+| Prednaznachenie | Lechenie i snyatie negativnykh effektov |
+| Osnovnoe Weapons | Meditsinskie drony |
+| Requirements | Barracks + razvedtsentr |
 
-#### Способности
-- «Стабилизация»: возвращает союзной пехоте 40% HP за 6 сек; 30 сек
+#### Sposobnosti
+- «Stabilizatsiya»: vozvrashchaet soyuznoy pekhote 40% HP za 6 sek; 30 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Поддерживает дорогую пехоту |
-| Слабые стороны | Не вооружён, приоритетная цель |
-| Прямые контрмеры | Снайперы, диверсанты |
+| Silnye storony | Podderzhivaet doroguyu pekhotu |
+| Slabye storony | Ne vooruzhyon, prioritetnaya tsel |
+| Pryamye kontrmery | Snaypery, diversanty |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Медицинский канал открыт. |
-| Move | Иду к раненым. |
-| Attack | Я лечу, а не стреляю. |
-| Ability | Стабилизация началась. |
-| Damaged | Медику нужна помощь! |
-| Elite | Сегодня никто не остаётся на поле. |
-| Idle | Лучшее лечение — не попадать под огонь. |
-| Death | Аптечка… рядом… |
+| Selected | Meditsinskiy kanal otkryt. |
+| Move | Idu k ranenym. |
+| Attack | Ya lechu, a ne strelyayu. |
+| Ability | Stabilizatsiya nachalas. |
+| Damaged | Mediku nuzhna pomoshch! |
+| Elite | Segodnya nikto ne ostayotsya na pole. |
+| Idle | Luchshee lechenie — ne popadat under ogon. |
+| Death | Aptechka… ryadom… |
 
-### 6. Специалист C-7 «Frostline» (`AL_FrostlineSpecialist`)
-| Параметр | Значение |
+### 6. Spetsialist C-7 «Frostline» (`AL_FrostlineSpecialist`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `AL_FrostlineSpecialist` |
-| Категория | Пехота |
-| Технологический уровень | T3 |
-| Стоимость | 1000 |
-| Время производства | 24 сек |
-| Командный лимит | 2 |
+| Kategoriya | Infantry |
+| Tekhnologicheskiy uroven | T3 |
+| Stoimost | 1000 |
+| Vremya proizvodstva | 24 sek |
+| Komandnyy limit | 2 |
 | HP | 240 |
-| Тип брони | Тяжёлая пехота |
-| Скорость | 4.2 |
-| Дальность | 8 |
-| Ориентировочный DPS | 28 |
-| Предназначение | Замедление тяжёлых целей и контроль |
-| Основное оружие | Криогенный излучатель |
-| Требования | Лаборатория физики |
+| Tip broni | Tyazhyolaya Infantry |
+| Skorost | 4.2 |
+| Dalnost | 8 |
+| Orientirovochnyy DPS | 28 |
+| Prednaznachenie | Zamedlenie tyazhyolykh tseley i kontrol |
+| Osnovnoe Weapons | Kriogennyy izluchatel |
+| Requirements | Laboratoriya fiziki |
 
-#### Способности
-- «Полная заморозка»: обездвиживает цель на 4 сек; 34 сек
+#### Sposobnosti
+- «Polnaya zamorozka»: obezdvizhivaet tsel na 4 sek; 34 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Контролирует дорогие цели |
-| Слабые стороны | Низкий прямой урон, требует фокуса союзников |
-| Прямые контрмеры | Снайперы, артиллерия |
+| Silnye storony | Kontroliruet dorogie tseli |
+| Slabye storony | Nizkiy pryamoy Damaged, trebuet fokusa soyuznikov |
+| Pryamye kontrmery | Snaypery, artilleriya |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Криосистема стабильна. |
-| Move | Температуру снижаем по пути. |
-| Attack | Охлаждаю цель. |
-| Ability | Полная заморозка. |
-| Damaged | Контур хладагента пробит! |
-| Elite | Абсолютный ноль всё ещё недостижим. Но мы близко. |
-| Idle | Не облизывайте оборудование. |
-| Death | Температура… растёт… |
+| Selected | Kriosistema stabilna. |
+| Move | Temperaturu snizhaem po puti. |
+| Attack | Okhlazhdayu tsel. |
+| Ability | Polnaya zamorozka. |
+| Damaged | Kontur khladagenta probit! |
+| Elite | Absolyutnyy nol vsyo eshchyo nedostizhim. No my blizko. |
+| Idle | Ne oblizyvayte oborudovanie. |
+| Death | Temperatura… rastyot… |
 
-### 7. Добывающая платформа M88 «Pioneer» (`AL_PioneerHarvester`)
-| Параметр | Значение |
+### 7. Dobyvayushchaya platforma M88 «Pioneer» (`AL_PioneerHarvester`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `AL_PioneerHarvester` |
-| Категория | Техника |
-| Технологический уровень | T1 |
-| Стоимость | 1450 |
-| Время производства | 27 сек |
-| Командный лимит | 4 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 1450 |
+| Vremya proizvodstva | 27 sek |
+| Komandnyy limit | 4 |
 | HP | 1200 |
-| Тип брони | Лёгкая техника |
-| Скорость | 4.0 |
-| Дальность | 0 |
-| Ориентировочный DPS | 0 |
-| Предназначение | Быстрый добытчик и временный форпост |
-| Основное оружие | Без оружия |
-| Требования | Переработчик |
+| Tip broni | Lyogkaya Vehicles |
+| Skorost | 4.0 |
+| Dalnost | 0 |
+| Orientirovochnyy DPS | 0 |
+| Prednaznachenie | Bystryy Harvester i vremennyy forpost |
+| Osnovnoe Weapons | without oruzhiya |
+| Requirements | Pererabotchik |
 
-#### Способности
-- «Развернуть форпост»: становится малой ремонтно-строительной площадкой; повторное сворачивание 10 сек
+#### Sposobnosti
+- «Razvernut forpost»: stanovitsya maloy remontno-stroitelnoy ploshchadkoy; povtornoe svorachivanie 10 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Гибкая логистика, высокая скорость |
-| Слабые стороны | Менее прочный, чем советский добытчик |
-| Прямые контрмеры | Засады, авиация |
+| Silnye storony | Gibkaya logistika, vysokaya skorost |
+| Slabye storony | Menee prochnyy, chem Soviet Harvester |
+| Pryamye kontrmery | Zasady, Aviation |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Пайонир готов к маршруту. |
-| Move | Оптимизирую путь. |
-| Attack | Боевой пакет отсутствует. |
-| Ability | Разворачиваю полевой узел. |
-| Damaged | Грузовой модуль повреждён! |
-| Elite | Я нахожу прибыль там, где другие видят камни. |
-| Idle | Руда не редкая. Время — редкое. |
-| Death | Маршрут… прерван… |
+| Selected | Payonir gotov k marshrutu. |
+| Move | Optimiziruyu put. |
+| Attack | Boevoy paket otsutstvuet. |
+| Ability | Razvorachivayu polevoy uzel. |
+| Damaged | Gruzovoy modul povrezhdyon! |
+| Elite | Ya nakhozhu pribyl tam, gde drugie vidyat kamni. |
+| Idle | Ruda ne redkaya. Vremya — redkoe. |
+| Death | Marshrut… prervan… |
 
-### 8. Разведмашина LAV-41 «Kestrel» (`AL_KestrelScout`)
-| Параметр | Значение |
+### 8. Razvedmashina LAV-41 «Kestrel» (`AL_KestrelScout`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `AL_KestrelScout` |
-| Категория | Техника |
-| Технологический уровень | T1 |
-| Стоимость | 700 |
-| Время производства | 15 сек |
-| Командный лимит | 3 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 700 |
+| Vremya proizvodstva | 15 sek |
+| Komandnyy limit | 3 |
 | HP | 430 |
-| Тип брони | Лёгкая техника |
-| Скорость | 9.0 |
-| Дальность | 7 |
-| Ориентировочный DPS | 19 |
-| Предназначение | Разведка, пометка целей и охота на пехоту |
-| Основное оружие | Импульсная автопушка |
-| Требования | Модульный завод |
+| Tip broni | Lyogkaya Vehicles |
+| Skorost | 9.0 |
+| Dalnost | 7 |
+| Orientirovochnyy DPS | 19 |
+| Prednaznachenie | Razvedka, pometka tseley i okhota na pekhotu |
+| Osnovnoe Weapons | Impulsnaya avtopushka |
+| Requirements | Modulnyy Factory |
 
-#### Способности
-- «Активный скан»: раскрывает скрытые цели; 20 сек
+#### Sposobnosti
+- «Aktivnyy skan»: raskryvaet skrytye tseli; 20 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Самый быстрый наземный разведчик |
-| Слабые стороны | Очень хрупкий |
-| Прямые контрмеры | ПТ-пехота, мины |
+| Silnye storony | Samyy bystryy nazemnyy razvedchik |
+| Slabye storony | Ochen khrupkiy |
+| Pryamye kontrmery | PT-Infantry, miny |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Кестрел в сети. |
-| Move | Проложу короткий путь. |
-| Attack | Цель отмечена и атакована. |
-| Ability | Активный скан. |
-| Damaged | Корпус не рассчитан на это! |
-| Elite | Я нахожу цели ещё до запроса. |
-| Idle | Стоять на месте — не моя специализация. |
-| Death | Сигнал… потерян… |
+| Selected | Kestrel v seti. |
+| Move | Prolozhu korotkiy put. |
+| Attack | Tsel otmechena i atakovana. |
+| Ability | Aktivnyy skan. |
+| Damaged | Korpus ne rasschitan na eto! |
+| Elite | Ya nakhozhu tseli eshchyo before zaprosa. |
+| Idle | Stoyat na meste — ne moya spetsializatsiya. |
+| Death | Signal… poteryan… |
 
-### 9. Основной танк M14 «Bulwark» (`AL_BulwarkMBT`)
-| Параметр | Значение |
+### 9. Osnovnoy Tank M14 «Bulwark» (`AL_BulwarkMBT`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `AL_BulwarkMBT` |
-| Категория | Техника |
-| Технологический уровень | T2 |
-| Стоимость | 1250 |
-| Время производства | 25 сек |
-| Командный лимит | 5 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 1250 |
+| Vremya proizvodstva | 25 sek |
+| Komandnyy limit | 5 |
 | HP | 1350 |
-| Тип брони | Тяжёлая техника |
-| Скорость | 5.2 |
-| Дальность | 9 |
-| Ориентировочный DPS | 43 |
-| Предназначение | Мобильный основной танк |
-| Основное оружие | Композитная пушка |
-| Требования | Завод + разведцентр |
+| Tip broni | Tyazhyolaya Vehicles |
+| Skorost | 5.2 |
+| Dalnost | 9 |
+| Orientirovochnyy DPS | 43 |
+| Prednaznachenie | Mobilnyy osnovnoy Tank |
+| Osnovnoe Weapons | Kompozitnaya pushka |
+| Requirements | Factory + razvedtsentr |
 
-#### Способности
-- «Целеуказатель»: снижает броню цели на 20% на 8 сек; 28 сек
+#### Sposobnosti
+- «Tseleukazatel»: snizhaet bronyu tseli na 20% na 8 sek; 28 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Скорость и командная синергия |
-| Слабые стороны | Ниже HP, чем у «Гранита» |
-| Прямые контрмеры | Тяжёлые танки, ПТ-авиация |
+| Silnye storony | Skorost i komandnaya sinergiya |
+| Slabye storony | Nizhe HP, chem u «Granita» |
+| Pryamye kontrmery | Tyazhyolye tanki, PT-Aviation |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Булварк готов прикрыть. |
-| Move | Держим темп. |
-| Attack | Бронецель подтверждена. |
-| Ability | Снимаю защитный профиль. |
-| Damaged | Композит пробит! |
-| Elite | Я не держу линию. Я двигаю её. |
-| Idle | Лучший щит — правильная дистанция. |
-| Death | Система защиты… офлайн… |
+| Selected | Bulvark gotov prikryt. |
+| Move | Derzhim temp. |
+| Attack | Bronetsel podtverzhdena. |
+| Ability | Snimayu zashchitnyy profil. |
+| Damaged | Kompozit probit! |
+| Elite | Ya ne derzhu liniyu. Ya dvigayu eyo. |
+| Idle | Luchshiy shchit — pravilnaya distantsiya. |
+| Death | Sistema zashchity… oflayn… |
 
-### 10. Рельсовая САУ XM190 «Oracle» (`AL_OracleArtillery`)
-| Параметр | Значение |
+### 10. Relsovaya SAU XM190 «Oracle» (`AL_OracleArtillery`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `AL_OracleArtillery` |
-| Категория | Техника |
-| Технологический уровень | T2 |
-| Стоимость | 1750 |
-| Время производства | 36 сек |
-| Командный лимит | 5 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 1750 |
+| Vremya proizvodstva | 36 sek |
+| Komandnyy limit | 5 |
 | HP | 850 |
-| Тип брони | Осадная техника |
-| Скорость | 3.6 |
-| Дальность | 18 |
-| Ориентировочный DPS | 62 |
-| Предназначение | Точная дальнобойная артиллерия |
-| Основное оружие | Рельсовый ускоритель |
-| Требования | Завод + разведцентр |
+| Tip broni | Osadnaya Vehicles |
+| Skorost | 3.6 |
+| Dalnost | 18 |
+| Orientirovochnyy DPS | 62 |
+| Prednaznachenie | Tochnaya dalnoboynaya artilleriya |
+| Osnovnoe Weapons | Relsovyy uskoritel |
+| Requirements | Factory + razvedtsentr |
 
-#### Способности
-- «Синхронный залп»: мощный выстрел после 3 сек наведения; 36 сек
+#### Sposobnosti
+- «Sinkhronnyy zalp»: moshchnyy vystrel after 3 sek navedeniya; 36 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Точная, почти без разброса |
-| Слабые стороны | Хрупкая, нуждается в разведке |
-| Прямые контрмеры | Разведчики, авиация, телепорт |
+| Silnye storony | Tochnaya, pochti without razbrosa |
+| Slabye storony | Khrupkaya, nuzhdaetsya v razvedke |
+| Pryamye kontrmery | Razvedchiki, Aviation, teleport |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Оракул рассчитывает решение. |
-| Move | Меняю огневую позицию. |
-| Attack | Рельс заряжен. |
-| Ability | Синхронный залп через три секунды. |
-| Damaged | Стабилизатор повреждён! |
-| Elite | Уравнение боя имеет один ответ. |
-| Idle | Точность начинается с терпения. |
-| Death | Магнитный контур… разрушен… |
+| Selected | Orakul rasschityvaet reshenie. |
+| Move | Menyayu ognevuyu pozitsiyu. |
+| Attack | Rels zaryazhen. |
+| Ability | Sinkhronnyy zalp via tri sekundy. |
+| Damaged | Stabilizator povrezhdyon! |
+| Elite | Uravnenie boya imeet odin otvet. |
+| Idle | Tochnost nachinaetsya s terpeniya. |
+| Death | Magnitnyy kontur… razrushen… |
 
-### 11. Маскировочный танк XM27 «Refraction» (`AL_RefractionTank`)
-| Параметр | Значение |
+### 11. Maskirovochnyy Tank XM27 «Refraction» (`AL_RefractionTank`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `AL_RefractionTank` |
-| Категория | Техника |
-| Технологический уровень | T3 |
-| Стоимость | 1900 |
-| Время производства | 38 сек |
-| Командный лимит | 6 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T3 |
+| Stoimost | 1900 |
+| Vremya proizvodstva | 38 sek |
+| Komandnyy limit | 6 |
 | HP | 1200 |
-| Тип брони | Тяжёлая техника |
-| Скорость | 5.5 |
-| Дальность | 9 |
-| Ориентировочный DPS | 56 |
-| Предназначение | Засадный танк и диверсия |
-| Основное оружие | Тепловой луч |
-| Требования | Лаборатория физики |
+| Tip broni | Tyazhyolaya Vehicles |
+| Skorost | 5.5 |
+| Dalnost | 9 |
+| Orientirovochnyy DPS | 56 |
+| Prednaznachenie | Zasadnyy Tank i diversiya |
+| Osnovnoe Weapons | Teplovoy luch |
+| Requirements | Laboratoriya fiziki |
 
-#### Способности
-- «Оптическая маскировка»: в неподвижности становится невидимым; первый выстрел +35% урон
+#### Sposobnosti
+- «Opticheskaya maskirovka»: v nepodvizhnosti stanovitsya nevidimym; pervyy vystrel +35% Damaged
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Сильный первый удар и маскировка |
-| Слабые стороны | Слаб при длительном обмене |
-| Прямые контрмеры | Сканеры, осколочный огонь, авиация |
+| Silnye storony | Silnyy pervyy udar i maskirovka |
+| Slabye storony | Slab with dlitelnom obmene |
+| Pryamye kontrmery | Skanery, oskolochnyy ogon, Aviation |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Рефракция уже на позиции. |
-| Move | Сменю фон. |
-| Attack | Маскировка снята. Огонь. |
-| Ability | Оптика перестраивается. |
-| Damaged | Контур маскировки сорван! |
-| Elite | Они стреляют в то, чего уже нет. |
-| Idle | Деревья не докладывают по радио. |
-| Death | Изображение… исчезает… |
+| Selected | Refraktsiya uzhe na pozitsii. |
+| Move | Smenyu fon. |
+| Attack | Maskirovka snyata. Ogon. |
+| Ability | Optika perestraivaetsya. |
+| Damaged | Kontur maskirovki sorvan! |
+| Elite | Oni strelyayut v to, chego uzhe no. |
+| Idle | Derevya ne dokladyvayut po radio. |
+| Death | Izobrazhenie… ischezaet… |
 
-### 12. Мобильный щит M46 «Ward» (`AL_WardShieldCarrier`)
-| Параметр | Значение |
+### 12. Mobilnyy shchit M46 «Ward» (`AL_WardShieldCarrier`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `AL_WardShieldCarrier` |
-| Категория | Техника |
-| Технологический уровень | T2 |
-| Стоимость | 1600 |
-| Время производства | 34 сек |
-| Командный лимит | 5 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 1600 |
+| Vremya proizvodstva | 34 sek |
+| Komandnyy limit | 5 |
 | HP | 1050 |
-| Тип брони | Лёгкая техника |
-| Скорость | 4.4 |
-| Дальность | 0 |
-| Ориентировочный DPS | 0 |
-| Предназначение | Подвижный энергетический щит |
-| Основное оружие | Не вооружён |
-| Требования | Завод + разведцентр |
+| Tip broni | Lyogkaya Vehicles |
+| Skorost | 4.4 |
+| Dalnost | 0 |
+| Orientirovochnyy DPS | 0 |
+| Prednaznachenie | Podvizhnyy energeticheskiy shchit |
+| Osnovnoe Weapons | Ne vooruzhyon |
+| Requirements | Factory + razvedtsentr |
 
-#### Способности
-- «Проекция»: создаёт направленный щит на 12 сек; 32 сек
+#### Sposobnosti
+- «Proektsiya»: sozdayot napravlennyy shchit na 12 sek; 32 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Защищает артиллерию и пехоту |
-| Слабые стороны | Безоружен, высокое энергопотребление |
-| Прямые контрмеры | Фланг, электричество, фокус |
+| Silnye storony | Zashchishchaet artilleriyu i pekhotu |
+| Slabye storony | Bezoruzhen, vysokoe energopotreblenie |
+| Pryamye kontrmery | Flang, elektrichestvo, fokus |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Уорд готов к проекции. |
-| Move | Перемещаю защитный сектор. |
-| Attack | Прямого вооружения нет. |
-| Ability | Щит развёрнут. |
-| Damaged | Поле проседает! |
-| Elite | Лучший выстрел врага — тот, что не дошёл. |
-| Idle | Щит не выглядит героически. Зато работает. |
-| Death | Проекция… погасла… |
+| Selected | Uord gotov k proektsii. |
+| Move | Peremeshchayu zashchitnyy sektor. |
+| Attack | Pryamogo vooruzheniya no. |
+| Ability | Shchit razvyornut. |
+| Damaged | Pole prosedaet! |
+| Elite | Luchshiy vystrel vraga — tot, chto ne doshyol. |
+| Idle | Shchit ne vyglyadit geroicheski. Zato working. |
+| Death | Proektsiya… pogasla… |
 
-### 13. Тяжёлый танк M70 «Citadel» (`AL_CitadelTank`)
-| Параметр | Значение |
+### 13. Tyazhyolyy Tank M70 «Citadel» (`AL_CitadelTank`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `AL_CitadelTank` |
-| Категория | Техника |
-| Технологический уровень | T3 |
-| Стоимость | 2800 |
-| Время производства | 52 сек |
-| Командный лимит | 9 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T3 |
+| Stoimost | 2800 |
+| Vremya proizvodstva | 52 sek |
+| Komandnyy limit | 9 |
 | HP | 3000 |
-| Тип брони | Тяжёлая техника |
-| Скорость | 4.0 |
-| Дальность | 11 |
-| Ориентировочный DPS | 84 |
-| Предназначение | Тяжёлый танк с активной защитой |
-| Основное оружие | Электромагнитная пушка |
-| Требования | Лаборатория + два завода |
+| Tip broni | Tyazhyolaya Vehicles |
+| Skorost | 4.0 |
+| Dalnost | 11 |
+| Orientirovochnyy DPS | 84 |
+| Prednaznachenie | Tyazhyolyy Tank s aktivnoy zashchitoy |
+| Osnovnoe Weapons | Elektromagnitnaya pushka |
+| Requirements | Laboratoriya + dva zavoda |
 
-#### Способности
-- «Активная защита»: перехватывает 6 ракет/снарядов; 40 сек
+#### Sposobnosti
+- «Aktivnaya zashchita»: perekhvatyvaet 6 raket/snaryadov; 40 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Сильный дальний бой, защита от ракет |
-| Слабые стороны | Дорог, хуже против массовой пехоты |
-| Прямые контрмеры | Осколочная пехота, ближний бой, EMP |
+| Silnye storony | Silnyy dalniy boy, zashchita ot raket |
+| Slabye storony | Dorog, khuzhe protiv massovoy pekhoty |
+| Pryamye kontrmery | Oskolochnaya Infantry, blizhniy boy, EMP |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Цитадель держит строй. |
-| Move | Тяжёлый модуль в движении. |
-| Attack | Электромагнитный выстрел. |
-| Ability | Активная защита включена. |
-| Damaged | Перехватчики исчерпаны! |
-| Elite | Мы выигрываем ещё до попадания. |
-| Idle | Рыцарский кодекс обновлён до версии четыре. |
-| Death | Защитный контур… не отвечает… |
+| Selected | Tsitadel derzhit stroy. |
+| Move | Tyazhyolyy modul v dvizhenii. |
+| Attack | Elektromagnitnyy vystrel. |
+| Ability | Aktivnaya zashchita vklyuchena. |
+| Damaged | Perekhvatchiki ischerpany! |
+| Elite | My vyigryvaem eshchyo before popadaniya. |
+| Idle | Rytsarskiy kodeks obnovlyon before versii chetyre. |
+| Death | Zashchitnyy kontur… ne otvechaet… |
 
-### 14. Истребитель F/A-48 «Shrike» (`AL_ShrikeInterceptor`)
-| Параметр | Значение |
+### 14. Istrebitel F/A-48 «Shrike» (`AL_ShrikeInterceptor`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `AL_ShrikeInterceptor` |
-| Категория | Авиация |
-| Технологический уровень | T2 |
-| Стоимость | 1050 |
-| Время производства | 22 сек |
-| Командный лимит | 4 |
+| Kategoriya | Aviation |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 1050 |
+| Vremya proizvodstva | 22 sek |
+| Komandnyy limit | 4 |
 | HP | 600 |
-| Тип брони | Воздушная |
-| Скорость | 13.0 |
-| Дальность | 13 |
-| Ориентировочный DPS | 50 |
-| Предназначение | Чистый воздушный перехватчик |
-| Основное оружие | Ракеты воздух-воздух |
-| Требования | Авиабаза |
+| Tip broni | Vozdushnaya |
+| Skorost | 13.0 |
+| Dalnost | 13 |
+| Orientirovochnyy DPS | 50 |
+| Prednaznachenie | Chistyy vozdushnyy perekhvatchik |
+| Osnovnoe Weapons | Rakety vozdukh-vozdukh |
+| Requirements | Aviabaza |
 
-#### Способности
-- «Перехват»: мгновенно ускоряется к выбранной воздушной цели; 24 сек
+#### Sposobnosti
+- «Perekhvat»: mgnovenno uskoryaetsya k vybrannoy vozdushnoy tseli; 24 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Лучший истребитель по скорости |
-| Слабые стороны | Почти бесполезен по земле |
-| Прямые контрмеры | ПВО, численное превосходство |
+| Silnye storony | Luchshiy istrebitel po skorosti |
+| Slabye storony | Pochti bespolezen po zemle |
+| Pryamye kontrmery | PVO, chislennoe prevoskhodstvo |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Шрайк готов к перехвату. |
-| Move | Занимаю эшелон. |
-| Attack | Воздушная цель захвачена. |
-| Ability | Перехват подтверждён. |
-| Damaged | Крыло повреждено! |
-| Elite | Небо начинается с моего разрешения. |
-| Idle | Радар чист. Это ненадолго. |
-| Death | Борт… потерян… |
+| Selected | Shrayk gotov k perekhvatu. |
+| Move | Zanimayu eshelon. |
+| Attack | Vozdushnaya tsel zakhvachena. |
+| Ability | Perekhvat podtverzhdyon. |
+| Damaged | Krylo povrezhdeno! |
+| Elite | Nebo nachinaetsya s moego razresheniya. |
+| Idle | Radar chist. Eto nenadolgo. |
+| Death | Bort… poteryan… |
 
 ### 15. VTOL AV-27 «Vector» (`AL_VectorVTOL`)
-| Параметр | Значение |
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `AL_VectorVTOL` |
-| Категория | Авиация |
-| Технологический уровень | T2 |
-| Стоимость | 1450 |
-| Время производства | 30 сек |
-| Командный лимит | 5 |
+| Kategoriya | Aviation |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 1450 |
+| Vremya proizvodstva | 30 sek |
+| Komandnyy limit | 5 |
 | HP | 950 |
-| Тип брони | Воздушная |
-| Скорость | 8.5 |
-| Дальность | 9 |
-| Ориентировочный DPS | 58 |
-| Предназначение | Гибкий штурмовик и точечный удар |
-| Основное оружие | Управляемые ракеты и пушка |
-| Требования | Авиабаза + разведцентр |
+| Tip broni | Vozdushnaya |
+| Skorost | 8.5 |
+| Dalnost | 9 |
+| Orientirovochnyy DPS | 58 |
+| Prednaznachenie | Gibkiy shturmovik i tochechnyy udar |
+| Osnovnoe Weapons | Upravlyaemye rakety i pushka |
+| Requirements | Aviabaza + razvedtsentr |
 
-#### Способности
-- «Вертикальная засада»: зависает за рельефом и получает +25% первый залп
+#### Sposobnosti
+- «Vertikalnaya zasada»: zavisaet za relefom i poluchaet +25% pervyy zalp
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Точный, может зависать |
-| Слабые стороны | Средняя живучесть, дорогая перезарядка |
-| Прямые контрмеры | ПВО, истребители |
+| Silnye storony | Tochnyy, mozhet zavisat |
+| Slabye storony | Srednyaya zhivuchest, dorogaya perezaryadka |
+| Pryamye kontrmery | PVO, istrebiteli |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Вектор на вертикальной тяге. |
-| Move | Перехожу к точке зависания. |
-| Attack | Пакет на цель. |
-| Ability | Зависание. Скрываю сигнатуру. |
-| Damaged | Тяга нестабильна! |
-| Elite | Мне не нужна полоса, чтобы изменить бой. |
-| Idle | Вертикальный взлёт экономит время. Не топливо. |
-| Death | Тяга… падает… |
+| Selected | Vektor na vertikalnoy tyage. |
+| Move | Perekhozhu k tochke zavisaniya. |
+| Attack | Paket na tsel. |
+| Ability | Zavisanie. Skryvayu signaturu. |
+| Damaged | Tyaga nestabilna! |
+| Elite | Mne ne nuzhna polosa, chtoby izmenit boy. |
+| Idle | Vertikalnyy vzlyot ekonomit vremya. Ne toplivo. |
+| Death | Tyaga… padaet… |
 
-### 16. Стелс-бомбардировщик B-39 «Nightveil» (`AL_NightveilBomber`)
-| Параметр | Значение |
+### 16. Stels-bombardirovshchik B-39 «Nightveil» (`AL_NightveilBomber`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `AL_NightveilBomber` |
-| Категория | Авиация |
-| Технологический уровень | T3 |
-| Стоимость | 2600 |
-| Время производства | 52 сек |
-| Командный лимит | 7 |
+| Kategoriya | Aviation |
+| Tekhnologicheskiy uroven | T3 |
+| Stoimost | 2600 |
+| Vremya proizvodstva | 52 sek |
+| Komandnyy limit | 7 |
 | HP | 1500 |
-| Тип брони | Воздушная |
-| Скорость | 9.5 |
-| Дальность | 16 |
-| Ориентировочный DPS | 110 |
-| Предназначение | Глубокий точечный удар по зданиям |
-| Основное оружие | Корректируемые бомбы |
-| Требования | Лаборатория + авиабаза |
+| Tip broni | Vozdushnaya |
+| Skorost | 9.5 |
+| Dalnost | 16 |
+| Orientirovochnyy DPS | 110 |
+| Prednaznachenie | Glubokiy tochechnyy udar po zdaniyam |
+| Osnovnoe Weapons | Korrektiruemye bomby |
+| Requirements | Laboratoriya + aviabaza |
 
-#### Способности
-- «Режим тени»: не обнаруживается обычным радаром до сброса; 45 сек
+#### Sposobnosti
+- «Rezhim teni»: ne obnaruzhivaetsya obychnym radarom before sbrosa; 45 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Скрытный, точный, высокий урон |
-| Слабые стороны | Дорогой и уязвим после атаки |
-| Прямые контрмеры | Спецрадар, истребители |
+| Silnye storony | Skrytnyy, tochnyy, vysokiy Damaged |
+| Slabye storony | Dorogoy i uyazvim after ataki |
+| Pryamye kontrmery | Spetsradar, istrebiteli |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Найтвейл готов к невидимому маршруту. |
-| Move | Вхожу в тень. |
-| Attack | Точка сброса подтверждена. |
-| Ability | Сигнатура обнулена. |
-| Damaged | Нас видят! |
-| Elite | Лучший удар — тот, который никто не успел заметить. |
-| Idle | Отсутствие на радаре — тоже присутствие. |
-| Death | Стелс… нарушен навсегда… |
+| Selected | Naytveyl gotov k nevidimomu marshrutu. |
+| Move | Vkhozhu v ten. |
+| Attack | Tochka sbrosa podtverzhdena. |
+| Ability | Signatura obnulena. |
+| Damaged | Nas vidyat! |
+| Elite | Luchshiy udar — tot, kotoryy nikto ne uspel zametit. |
+| Idle | Otsutstvie na radare — tozhe prisutstvie. |
+| Death | Stels… narushen navsegda… |
 
-### 17. Гидрофойл PHM-22 «Manta» (`AL_MantaPatrolCraft`)
-| Параметр | Значение |
+### 17. Gidrofoyl PHM-22 «Manta» (`AL_MantaPatrolCraft`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `AL_MantaPatrolCraft` |
-| Категория | Флот |
-| Технологический уровень | T1 |
-| Стоимость | 850 |
-| Время производства | 17 сек |
-| Командный лимит | 4 |
+| Kategoriya | Naval |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 850 |
+| Vremya proizvodstva | 17 sek |
+| Komandnyy limit | 4 |
 | HP | 650 |
-| Тип брони | Морская |
-| Скорость | 9.0 |
-| Дальность | 7 |
-| Ориентировочный DPS | 24 |
-| Предназначение | Быстрый ПВО-катер и разведка |
-| Основное оружие | Автопушка и ракеты ПВО |
-| Требования | Океанический док |
+| Tip broni | Morskaya |
+| Skorost | 9.0 |
+| Dalnost | 7 |
+| Orientirovochnyy DPS | 24 |
+| Prednaznachenie | Bystryy PVO-kater i razvedka |
+| Osnovnoe Weapons | Avtopushka i rakety PVO |
+| Requirements | Okeanicheskiy dok |
 
-#### Способности
-- «Радиоподавление»: отключает оружие одного корабля на 5 сек; 28 сек
+#### Sposobnosti
+- «Radiopodavlenie»: otklyuchaet Weapons odnogo korablya na 5 sek; 28 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Очень мобильный, сильная поддержка |
-| Слабые стороны | Слабая броня |
-| Прямые контрмеры | Крупные корабли, береговые батареи |
+| Silnye storony | Ochen mobilnyy, silnaya podderzhka |
+| Slabye storony | Slabaya Armor |
+| Pryamye kontrmery | Krupnye korabli, beregovye batarei |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Манта на крыльях. |
-| Move | Поднимаемся над волной. |
-| Attack | Огонь по борту! |
-| Ability | Глушу оружейный канал. |
-| Damaged | Крыло зацепило! |
-| Elite | Скорость — наше бронирование. |
-| Idle | Вода снизу. Небо сверху. Удобно. |
-| Death | Теряем подъём… |
+| Selected | Manta na krylyakh. |
+| Move | Podnimaemsya nad volnoy. |
+| Attack | Ogon po bortu! |
+| Ability | Glushu oruzheynyy kanal. |
+| Damaged | Krylo zatsepilo! |
+| Elite | Skorost — nashe bronirovanie. |
+| Idle | Voda snizu. Nebo sverkhu. Udobno. |
+| Death | Teryaem podyom… |
 
-### 18. Эсминец DDG-31 «Resolute» (`AL_ResoluteDestroyer`)
-| Параметр | Значение |
+### 18. Esminets DDG-31 «Resolute» (`AL_ResoluteDestroyer`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `AL_ResoluteDestroyer` |
-| Категория | Флот |
-| Технологический уровень | T2 |
-| Стоимость | 1900 |
-| Время производства | 37 сек |
-| Командный лимит | 7 |
+| Kategoriya | Naval |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 1900 |
+| Vremya proizvodstva | 37 sek |
+| Komandnyy limit | 7 |
 | HP | 2100 |
-| Тип брони | Морская |
-| Скорость | 4.8 |
-| Дальность | 13 |
-| Ориентировочный DPS | 66 |
-| Предназначение | Универсальный корабль ПВО и берегового огня |
-| Основное оружие | Ракеты и скорострельная пушка |
-| Требования | Док + разведцентр |
+| Tip broni | Morskaya |
+| Skorost | 4.8 |
+| Dalnost | 13 |
+| Orientirovochnyy DPS | 66 |
+| Prednaznachenie | Universalnyy korabl PVO i beregovogo ognya |
+| Osnovnoe Weapons | Rakety i skorostrelnaya pushka |
+| Requirements | Dok + razvedtsentr |
 
-#### Способности
-- «Сонарный импульс»: раскрывает подлодки в области; 30 сек
+#### Sposobnosti
+- «Sonarnyy impuls»: raskryvaet podlodki v oblasti; 30 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Универсален, надёжное ПВО |
-| Слабые стороны | Не превосходит специализированные корабли |
-| Прямые контрмеры | Тяжёлые крейсеры, фокус подлодок |
+| Silnye storony | Universalen, nadyozhnoe PVO |
+| Slabye storony | Ne prevoskhodit spetsializirovannye korabli |
+| Pryamye kontrmery | Tyazhyolye kreysery, fokus podlodok |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Резолют в боевой сети. |
-| Move | Меняю курс. |
-| Attack | Орудия синхронизированы. |
-| Ability | Сонарный импульс. |
-| Damaged | Пробоина выше ватерлинии! |
-| Elite | Флот держится на тех, кто видит всё. |
-| Idle | Море не нейтрально. Оно просто ждёт. |
-| Death | Корабль покидают… |
+| Selected | Rezolyut v boevoy seti. |
+| Move | Menyayu kurs. |
+| Attack | Orudiya sinkhronizirovany. |
+| Ability | Sonarnyy impuls. |
+| Damaged | Proboina vyshe vaterlinii! |
+| Elite | Naval derzhitsya na tekh, kto vidit vsyo. |
+| Idle | More ne neytralno. Ono prosto zhdyot. |
+| Death | Korabl pokidayut… |
 
-### 19. Авианосец CVX-90 «Horizon» (`AL_HorizonCarrier`)
-| Параметр | Значение |
+### 19. Avianosets CVX-90 «Horizon» (`AL_HorizonCarrier`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `AL_HorizonCarrier` |
-| Категория | Флот |
-| Технологический уровень | T3 |
-| Стоимость | 3600 |
-| Время производства | 65 сек |
-| Командный лимит | 10 |
+| Kategoriya | Naval |
+| Tekhnologicheskiy uroven | T3 |
+| Stoimost | 3600 |
+| Vremya proizvodstva | 65 sek |
+| Komandnyy limit | 10 |
 | HP | 3800 |
-| Тип брони | Морская |
-| Скорость | 2.5 |
-| Дальность | 20 |
-| Ориентировочный DPS | 95 |
-| Предназначение | Дистанционная морская авиационная платформа |
-| Основное оружие | Рой ударных дронов |
-| Требования | Док + лаборатория |
+| Tip broni | Morskaya |
+| Skorost | 2.5 |
+| Dalnost | 20 |
+| Orientirovochnyy DPS | 95 |
+| Prednaznachenie | Distantsionnaya morskaya aviatsionnaya platforma |
+| Osnovnoe Weapons | Roy udarnykh dronov |
+| Requirements | Dok + laboratoriya |
 
-#### Способности
-- «Полный авиапакет»: запускает 8 дронов по области; 55 сек
+#### Sposobnosti
+- «Polnyy aviapaket»: zapuskaet 8 dronov po oblasti; 55 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Атакует издалека, гибкие цели |
-| Слабые стороны | Без прикрытия уязвим для подлодок и авиации |
-| Прямые контрмеры | Подлодки, тяжёлые ракеты |
+| Silnye storony | Atakuet izdaleka, gibkie tseli |
+| Slabye storony | without prikrytiya uyazvim for podlodok i aviatsii |
+| Pryamye kontrmery | Podlodki, tyazhyolye rakety |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Горизонт разворачивает авиакрыло. |
-| Move | Курс авианосной группы принят. |
-| Attack | Дроны идут на цель. |
-| Ability | Полный авиапакет — запуск. |
-| Damaged | Полётная палуба повреждена! |
-| Elite | Мы приносим небо туда, где его не было. |
-| Idle | Авианосец — это аэродром, который умеет уходить. |
-| Death | Палуба… закрыта… |
+| Selected | Gorizont razvorachivaet aviakrylo. |
+| Move | Kurs avianosnoy gruppy prinyat. |
+| Attack | Drony idut na tsel. |
+| Ability | Polnyy aviapaket — zapusk. |
+| Damaged | Polyotnaya paluba povrezhdena! |
+| Elite | My prinosim nebo tuda, gde ego ne before. |
+| Idle | Avianosets — eto Airfield, kotoryy umeet ukhodit. |
+| Death | Paluba… zakryta… |
 
-### 20. Агент Эвелин Харт (`AL_Hero_Hart`)
-| Параметр | Значение |
+### 20. Agent Evelin Khart (`AL_Hero_Hart`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `AL_Hero_Hart` |
-| Категория | Герой |
-| Технологический уровень | T3 |
-| Стоимость | 2500 |
-| Время производства | 48 сек |
-| Командный лимит | 8 |
+| Kategoriya | Hero |
+| Tekhnologicheskiy uroven | T3 |
+| Stoimost | 2500 |
+| Vremya proizvodstva | 48 sek |
+| Komandnyy limit | 8 |
 | HP | 750 |
-| Тип брони | Лёгкая пехота |
-| Скорость | 5.8 |
-| Дальность | 15 |
-| Ориентировочный DPS | 82 |
-| Предназначение | Герой разведки, диверсий и точечных убийств |
-| Основное оружие | Снайперская система и боевые дроны |
-| Требования | Лаборатория |
+| Tip broni | Lyogkaya Infantry |
+| Skorost | 5.8 |
+| Dalnost | 15 |
+| Orientirovochnyy DPS | 82 |
+| Prednaznachenie | Hero razvedki, diversiy i tochechnykh ubiystv |
+| Osnovnoe Weapons | Snayperskaya sistema i boevye drony |
+| Requirements | Laboratoriya |
 
-#### Способности
-- «Призрачный протокол»: полная маскировка на 10 сек; 45 сек
-- «Взлом»: временно отключает вражеское здание или технику; 50 сек
-- Один экземпляр
+#### Sposobnosti
+- «Prizrachnyy protokol»: polnaya maskirovka na 10 sek; 45 sek
+- «Vzlom»: vremenno otklyuchaet vrazheskoe zdanie or tekhniku; 50 sek
+- Odin ekzemplyar
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Разведка, убийство ключевых целей, диверсия |
-| Слабые стороны | Хрупкая, требует микроуправления |
-| Прямые контрмеры | Сканеры, осколочный урон, массовый огонь |
+| Silnye storony | Razvedka, ubiystvo klyuchevykh tseley, diversiya |
+| Slabye storony | Khrupkaya, trebuet mikroupravleniya |
+| Pryamye kontrmery | Skanery, oskolochnyy Damaged, massovyy ogon |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Харт на линии. Какая цель важнее войны? |
-| Move | Уже в их слепой зоне. |
-| Attack | Удаляю проблему. |
-| Ability | Протокол призрака активен. |
-| Damaged | Меня всё-таки заметили. |
-| Elite | Разведка закончилась. Теперь я знаю всё нужное. |
-| Idle | Секреты всегда дешевле штурма. |
-| Death | Данные… отправлены… |
+| Selected | Khart na linii. Kakaya tsel vazhnee voyny? |
+| Move | Uzhe v ikh slepoy zone. |
+| Attack | Udalyayu problemu. |
+| Ability | Protokol prizraka aktiven. |
+| Damaged | Menya vsyo-taki zametili. |
+| Elite | Razvedka zakonchilas. Teper ya znayu vsyo nuzhnoe. |
+| Idle | Sekrety vsegda deshevle shturma. |
+| Death | Dannye… otpravleny… |
 
-# Фракция: Восточная коалиция
-## Фракционная идентичность
-Сбалансированная технологическая армия, построенная вокруг построений, энергетических связей, щитов и комбинирования ролей. Слабости: требует дисциплины, связанной инфраструктуры и плотного взаимодействия юнитов.
-## Фракционный ресурс: Синхронизация
-Синхронизация рассчитывается из числа подключённых зданий, отрядов в построении и активных командных узлов. 25: +5% точность. 50: лёгкий реген щитов. 75: +10% скорость производства. 100: все связанные юниты получают +15% сопротивление урону. Потеря узлов может быстро обрушить показатель.
-## Здания и экономика фракции
-| Здание | Цена | Время, с | Энергия | Назначение |
+# Fraktsiya: Vostochnaya Coalition
+## Fraktsionnaya identichnost
+Sbalansirovannaya tekhnologicheskaya armiya, postroennaya vokrug postroeniy, energeticheskikh svyazey, shchitov i kombinirovaniya roley. Slabosti: trebuet distsipliny, svyazannoy infrastruktury i plotnogo vzaimodeystviya yunitov.
+## Fraktsionnyy resurs: Sinkhronizatsiya
+Sinkhronizatsiya rasschityvaetsya iz chisla podklyuchyonnykh zdaniy, otryadov v postroenii i aktivnykh komandnykh uzlov. 25: +5% tochnost. 50: lyogkiy regen shchitov. 75: +10% skorost proizvodstva. 100: all svyazannye Units poluchayut +15% soprotivlenie uronu. Poterya uzlov mozhet bystro obrushit pokazatel.
+## Buildings i Economy Factions
+| Zdanie | Tsena | Vremya, s | Energiya | Naznachenie |
 | --- | --- | --- | --- | --- |
-| Мобильный узел гармонии | 5000 | 60 | 0 | Разворачивается в командный дворец |
-| Командный дворец | — | — | +105 | Ядро сети, +20 лимита |
-| Солнечный коллектор | 850 | 19 | +125 | Энергия усиливается рядом с другими коллекторами |
-| Рудный синтезатор | 2450 | 44 | -20 | Включает платформу GRP-12 «Юань» |
-| Зал подготовки | 720 | 18 | -15 | Пехота, +5 лимита |
-| Фабрика шагоходов | 2250 | 41 | -40 | Наземная техника, +10 лимита |
-| Воздушная пагода | 1900 | 35 | -45 | Авиация и дроны |
-| Приливный док | 2050 | 40 | -45 | Флот |
-| Башня координации | 1500 | 29 | -55 | Радар, сеть, T2 |
-| Цитадель исследований | 3650 | 61 | -105 | T3 и щиты |
-| Автоматическая турель «Игла» | 720 | 16 | -15 | Против пехоты |
-| Небесное копьё | 980 | 21 | -28 | ПВО |
-| Рельсовая башня «Небесный суд» | 2050 | 36 | -78 | Против тяжёлой техники |
-| Узел гармонического щита | 1750 | 30 | -80 | Щитовая зона |
-| Матрица «Десять тысяч щитов» | 6100 | 90 | -190 | Глобально усиливает щиты на 15 секунд |
-| Сейсмический резонатор | 7000 | 108 | -225 | Серия ударных волн по области; 8 мин |
+| Mobilnyy uzel garmonii | 5000 | 60 | 0 | Razvorachivaetsya v komandnyy dvorets |
+| Komandnyy dvorets | — | — | +105 | Yadro seti, +20 limita |
+| Solnechnyy kollektor | 850 | 19 | +125 | Energiya usilivaetsya ryadom s drugimi kollektorami |
+| Rudnyy sintezator | 2450 | 44 | -20 | Vklyuchaet platformu GRP-12 «Yuan» |
+| Zal podgotovki | 720 | 18 | -15 | Infantry, +5 limita |
+| Fabrika shagokhodov | 2250 | 41 | -40 | Nazemnaya Vehicles, +10 limita |
+| Vozdushnaya pagoda | 1900 | 35 | -45 | Aviation i drony |
+| Prilivnyy dok | 2050 | 40 | -45 | Naval |
+| Bashnya koordinatsii | 1500 | 29 | -55 | Radar, set, T2 |
+| Tsitadel issledovaniy | 3650 | 61 | -105 | T3 i shchity |
+| Avtomaticheskaya turel «Igla» | 720 | 16 | -15 | Protiv pekhoty |
+| Nebesnoe kopyo | 980 | 21 | -28 | PVO |
+| Relsovaya bashnya «Nebesnyy sud» | 2050 | 36 | -78 | Protiv tyazhyoloy tekhniki |
+| Uzel garmonicheskogo shchita | 1750 | 30 | -80 | Shchitovaya zona |
+| Matritsa «Desyat tysyach shchitov» | 6100 | 90 | -190 | Globalno usilivaet shchity na 15 sekund |
+| Seysmicheskiy rezonator | 7000 | 108 | -225 | Seriya udarnykh voln po oblasti; 8 min |
 
-## EVA — канонические системные реплики
-| Событие | Реплика |
+## EVA — kanonicheskie sistemnye repliki
+| Sobytie | Replika |
 | --- | --- |
-| Старт | Командный дворец соединён с сетью. Гармония установлена. |
-| Низкая энергия | Энергетические связи нестабильны. |
-| База атакована | Противник нарушает целостность нашей сети. |
-| Юнит готов | Новое звено вступило в строй. |
-| Супероружие врага | Обнаружено стратегическое возмущение. |
-| Синхронизация 100 | Сеть достигла полной синхронизации. |
-| Победа | Противник лишён координации. Поле стабилизировано. |
-| Поражение | Связь между узлами потеряна. Система распалась. |
+| Start | Komandnyy dvorets soedinyon s setyu. Garmoniya ustanovlena. |
+| Nizkaya energiya | Energeticheskie svyazi nestabilny. |
+| Baza atakovana | Protivnik narushaet tselostnost nashey seti. |
+| Yunit gotov | Novoe zveno vstupilo v stroy. |
+| Superoruzhie vraga | Obnaruzheno strategicheskoe vozmushchenie. |
+| Sinkhronizatsiya 100 | Set dostigla polnoy sinkhronizatsii. |
+| Pobeda | Protivnik lishyon koordinatsii. Pole stabilizirovano. |
+| Porazhenie | Svyaz between uzlami poteryana. Sistema raspalas. |
 
-## Сводная таблица юнитов
-| Юнит | ID | Класс | Тир | Цена | Время | Лимит | HP | Броня | Скорость | Дальность | DPS | Роль |
+## Svodnaya tablitsa yunitov
+| Yunit | ID | Klass | Tir | Tsena | Vremya | Limit | HP | Armor | Skorost | Dalnost | DPS | Rol |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Стрелок Тип 21 «Цяньвэй» | CO_QianweiRifleman | Пехота | T1 | 200 | 7 | 1 | 125 | Лёгкая пехота | 4.8 | 6 | 10 | Базовая строевая пехота |
-| Противотанковый расчёт AT-8 «Ваджра» | CO_VajraLancer | Пехота | T1 | 420 | 11 | 2 | 170 | Тяжёлая пехота | 4.0 | 8 | 26 | ПТ и антимеханическая пехота |
-| Техник сети Тип 06 «Цзе» | CO_JieTechnician | Пехота | T1 | 520 | 15 | 1 | 105 | Лёгкая пехота | 4.0 | 0 | 0 | Захват, ремонт и усиление сети |
-| Фазовый стрелок QBS-19 «Шэньгун» | CO_ShengongMarksman | Пехота | T2 | 720 | 18 | 2 | 140 | Лёгкая пехота | 4.6 | 13 | 44 | Снайпер против тяжёлой пехоты и щитов |
-| Нанитный медик NM-7 «Сандживани» | CO_SanjivaniMedic | Пехота | T2 | 700 | 18 | 1 | 155 | Лёгкая пехота | 4.3 | 0 | 0 | Лечение и временные щиты |
-| Почётный страж HG-33 «Ракша» | CO_RakshaGuard | Пехота | T3 | 1050 | 25 | 2 | 300 | Тяжёлая пехота | 4.1 | 7 | 40 | Элитный защитник командиров и узлов |
-| Добывающая платформа GRP-12 «Юань» | CO_YuanCollector | Техника | T1 | 1425 | 27 | 4 | 1350 | Тяжёлая техника | 3.5 | 0 | 0 | Добыча и поддержка энергетической сети |
-| Разведшагоход Тип 17 «Камакири» | CO_KamakiriWalker | Техника | T1 | 750 | 16 | 3 | 560 | Лёгкая техника | 7.0 | 7 | 21 | Разведка, борьба с пехотой и вертикальный рельеф |
-| Основной танк ZTZ-61 «Цинлун» | CO_QinglongMBT | Техника | T2 | 1300 | 27 | 5 | 1500 | Тяжёлая техника | 4.8 | 9 | 45 | Основной танк с групповым щитом |
-| Артиллерия PHL-29 «Муссон» | CO_MonsoonArtillery | Техника | T2 | 1650 | 35 | 5 | 900 | Осадная техника | 3.4 | 17 | 60 | Многоступенчатая артиллерия по площади |
-| Щитовой носитель Тип 42 «Сэймон» | CO_SeimonShieldCarrier | Техника | T2 | 1700 | 36 | 6 | 1800 | Тяжёлая техника | 3.8 | 0 | 0 | Подвижный узел щита и Синхронизации |
-| Штурмовой шагоход MBT-X «Айравата» | CO_AiravataWalker | Техника | T3 | 2500 | 48 | 8 | 2700 | Тяжёлая техника | 4.6 | 10 | 80 | Тяжёлый универсальный шагоход |
-| Мобильная крепость ZTD-90 «Тяньмэнь» | CO_TianmenFortress | Техника | T3 | 3300 | 60 | 10 | 3900 | Тяжёлая техника | 2.7 | 12 | 95 | Сверхтяжёлый командный узел и артиллерия |
-| Разведдрон UAV-12 «Кавасэми» | CO_KawasemiDrone | Авиация | T1 | 700 | 14 | 3 | 360 | Воздушная | 14.0 | 6 | 18 | Разведка, обнаружение и преследование |
-| Штурмовик Z-28 «Лэйхэ» | CO_LeiheGunship | Авиация | T2 | 1550 | 32 | 5 | 1150 | Воздушная | 7.8 | 8 | 62 | Штурм наземных целей и поддержка построений |
-| Бомбардировщик H-26 «Агнипакша» | CO_AgnipakshaBomber | Авиация | T3 | 2550 | 50 | 7 | 1650 | Воздушная | 8.8 | 14 | 105 | Площадной бомбардировщик и возгорание |
-| Корвет Тип 32 «Кадзэкири» | CO_KazekiriCorvette | Флот | T1 | 900 | 18 | 4 | 780 | Морская | 7.5 | 8 | 28 | Быстрый перехват и торпедная атака |
-| Рельсовый крейсер Тип 81 «Сюаньу» | CO_XuanwuCruiser | Флот | T2 | 2200 | 42 | 8 | 2600 | Морская | 4.0 | 16 | 78 | Дальний корабль против тяжёлых целей |
-| Подводный авианосец SSGN-18 «Самудра» | CO_SamudraCarrier | Флот | T3 | 3700 | 68 | 10 | 4200 | Морская | 2.6 | 18 | 100 | Скрытая база морских дронов |
-| Командир Мэй Цзянь | CO_Hero_Mei | Герой | T3 | 2550 | 49 | 8 | 820 | Тяжёлая пехота | 5.2 | 9 | 68 | Герой построений, щитов и командных связей |
+| Strelok Tip 21 «Tsyanvey» | CO_QianweiRifleman | Infantry | T1 | 200 | 7 | 1 | 125 | Lyogkaya Infantry | 4.8 | 6 | 10 | Bazovaya stroevaya Infantry |
+| Protivotankovyy raschyot AT-8 «Vadzhra» | CO_VajraLancer | Infantry | T1 | 420 | 11 | 2 | 170 | Tyazhyolaya Infantry | 4.0 | 8 | 26 | PT i antimekhanicheskaya Infantry |
+| Tekhnik seti Tip 06 «Tsze» | CO_JieTechnician | Infantry | T1 | 520 | 15 | 1 | 105 | Lyogkaya Infantry | 4.0 | 0 | 0 | Zakhvat, remont i usilenie seti |
+| Fazovyy strelok QBS-19 «Shengun» | CO_ShengongMarksman | Infantry | T2 | 720 | 18 | 2 | 140 | Lyogkaya Infantry | 4.6 | 13 | 44 | Snayper protiv tyazhyoloy pekhoty i shchitov |
+| Nanitnyy medik NM-7 «Sandzhivani» | CO_SanjivaniMedic | Infantry | T2 | 700 | 18 | 1 | 155 | Lyogkaya Infantry | 4.3 | 0 | 0 | Lechenie i vremennye shchity |
+| Pochyotnyy strazh HG-33 «Raksha» | CO_RakshaGuard | Infantry | T3 | 1050 | 25 | 2 | 300 | Tyazhyolaya Infantry | 4.1 | 7 | 40 | Elitnyy zashchitnik komandirov i uzlov |
+| Dobyvayushchaya platforma GRP-12 «Yuan» | CO_YuanCollector | Vehicles | T1 | 1425 | 27 | 4 | 1350 | Tyazhyolaya Vehicles | 3.5 | 0 | 0 | Dobycha i podderzhka energeticheskoy seti |
+| Razvedshagokhod Tip 17 «Kamakiri» | CO_KamakiriWalker | Vehicles | T1 | 750 | 16 | 3 | 560 | Lyogkaya Vehicles | 7.0 | 7 | 21 | Razvedka, borba s pekhotoy i vertikalnyy relef |
+| Osnovnoy Tank ZTZ-61 «Tsinlun» | CO_QinglongMBT | Vehicles | T2 | 1300 | 27 | 5 | 1500 | Tyazhyolaya Vehicles | 4.8 | 9 | 45 | Osnovnoy Tank s gruppovym shchitom |
+| Artilleriya PHL-29 «Musson» | CO_MonsoonArtillery | Vehicles | T2 | 1650 | 35 | 5 | 900 | Osadnaya Vehicles | 3.4 | 17 | 60 | Mnogostupenchataya artilleriya po ploshchadi |
+| Shchitovoy nositel Tip 42 «Seymon» | CO_SeimonShieldCarrier | Vehicles | T2 | 1700 | 36 | 6 | 1800 | Tyazhyolaya Vehicles | 3.8 | 0 | 0 | Podvizhnyy uzel shchita i Sinkhronizatsii |
+| Shturmovoy shagokhod MBT-X «Ayravata» | CO_AiravataWalker | Vehicles | T3 | 2500 | 48 | 8 | 2700 | Tyazhyolaya Vehicles | 4.6 | 10 | 80 | Tyazhyolyy universalnyy shagokhod |
+| Mobilnaya krepost ZTD-90 «Tyanmen» | CO_TianmenFortress | Vehicles | T3 | 3300 | 60 | 10 | 3900 | Tyazhyolaya Vehicles | 2.7 | 12 | 95 | Sverkhtyazhyolyy komandnyy uzel i artilleriya |
+| Razveddron UAV-12 «Kavasemi» | CO_KawasemiDrone | Aviation | T1 | 700 | 14 | 3 | 360 | Vozdushnaya | 14.0 | 6 | 18 | Razvedka, obnaruzhenie i presledovanie |
+| Shturmovik Z-28 «Leykhe» | CO_LeiheGunship | Aviation | T2 | 1550 | 32 | 5 | 1150 | Vozdushnaya | 7.8 | 8 | 62 | Shturm nazemnykh tseley i podderzhka postroeniy |
+| Bombardirovshchik H-26 «Agnipaksha» | CO_AgnipakshaBomber | Aviation | T3 | 2550 | 50 | 7 | 1650 | Vozdushnaya | 8.8 | 14 | 105 | Ploshchadnoy bombardirovshchik i vozgoranie |
+| Korvet Tip 32 «Kadzekiri» | CO_KazekiriCorvette | Naval | T1 | 900 | 18 | 4 | 780 | Morskaya | 7.5 | 8 | 28 | Bystryy perekhvat i torpednaya Attack |
+| Relsovyy kreyser Tip 81 «Syuanu» | CO_XuanwuCruiser | Naval | T2 | 2200 | 42 | 8 | 2600 | Morskaya | 4.0 | 16 | 78 | Dalniy korabl protiv tyazhyolykh tseley |
+| Podvodnyy avianosets SSGN-18 «Samudra» | CO_SamudraCarrier | Naval | T3 | 3700 | 68 | 10 | 4200 | Morskaya | 2.6 | 18 | 100 | Skrytaya baza morskikh dronov |
+| Commander Mey Tszyan | CO_Hero_Mei | Hero | T3 | 2550 | 49 | 8 | 820 | Tyazhyolaya Infantry | 5.2 | 9 | 68 | Hero postroeniy, shchitov i komandnykh svyazey |
 
-## Подробные карточки юнитов
-### 1. Стрелок Тип 21 «Цяньвэй» (`CO_QianweiRifleman`)
-| Параметр | Значение |
+## Podrobnye kartochki yunitov
+### 1. Strelok Tip 21 «Tsyanvey» (`CO_QianweiRifleman`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CO_QianweiRifleman` |
-| Категория | Пехота |
-| Технологический уровень | T1 |
-| Стоимость | 200 |
-| Время производства | 7 сек |
-| Командный лимит | 1 |
+| Kategoriya | Infantry |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 200 |
+| Vremya proizvodstva | 7 sek |
+| Komandnyy limit | 1 |
 | HP | 125 |
-| Тип брони | Лёгкая пехота |
-| Скорость | 4.8 |
-| Дальность | 6 |
-| Ориентировочный DPS | 10 |
-| Предназначение | Базовая строевая пехота |
-| Основное оружие | Импульсная винтовка |
-| Требования | Зал подготовки |
+| Tip broni | Lyogkaya Infantry |
+| Skorost | 4.8 |
+| Dalnost | 6 |
+| Orientirovochnyy DPS | 10 |
+| Prednaznachenie | Bazovaya stroevaya Infantry |
+| Osnovnoe Weapons | Impulsnaya vintovka |
+| Requirements | Zal podgotovki |
 
-#### Способности
-- «Строй»: рядом с двумя бойцами «Цяньвэй» получает +15% защиты
+#### Sposobnosti
+- «Stroy»: ryadom s dvumya boytsami «Tsyanvey» poluchaet +15% zashchity
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Эффективен в группах |
-| Слабые стороны | Слаб при рассеивании |
-| Прямые контрмеры | Осколочный урон, снайперы |
+| Silnye storony | Effektiven v gruppakh |
+| Slabye storony | Slab with rasseivanii |
+| Pryamye kontrmery | Oskolochnyy Damaged, snaypery |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Стрелок Тип 21 «Цяньвэй» готов занять место. |
-| Move | Сохраняем интервал. |
-| Attack | Общий огонь. |
-| Ability | Строй замкнут. |
-| Damaged | Линия нарушена! |
-| Elite | Один шаг, один ритм, одна победа. |
-| Idle | Даже ожидание должно быть организовано. |
-| Death | Моё место… займёт следующий… |
+| Selected | Strelok Tip 21 «Tsyanvey» gotov zanyat mesto. |
+| Move | Sokhranyaem interval. |
+| Attack | Obshchiy ogon. |
+| Ability | Stroy zamknut. |
+| Damaged | Liniya narushena! |
+| Elite | Odin shag, odin ritm, odna pobeda. |
+| Idle | Dazhe Idle dolzhno byt organizovano. |
+| Death | Moyo mesto… zaymyot sleduyushchiy… |
 
-### 2. Противотанковый расчёт AT-8 «Ваджра» (`CO_VajraLancer`)
-| Параметр | Значение |
+### 2. Protivotankovyy raschyot AT-8 «Vadzhra» (`CO_VajraLancer`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CO_VajraLancer` |
-| Категория | Пехота |
-| Технологический уровень | T1 |
-| Стоимость | 420 |
-| Время производства | 11 сек |
-| Командный лимит | 2 |
+| Kategoriya | Infantry |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 420 |
+| Vremya proizvodstva | 11 sek |
+| Komandnyy limit | 2 |
 | HP | 170 |
-| Тип брони | Тяжёлая пехота |
-| Скорость | 4.0 |
-| Дальность | 8 |
-| Ориентировочный DPS | 26 |
-| Предназначение | ПТ и антимеханическая пехота |
-| Основное оружие | Электромагнитное копьё |
-| Требования | Зал подготовки |
+| Tip broni | Tyazhyolaya Infantry |
+| Skorost | 4.0 |
+| Dalnost | 8 |
+| Orientirovochnyy DPS | 26 |
+| Prednaznachenie | PT i antimekhanicheskaya Infantry |
+| Osnovnoe Weapons | Elektromagnitnoe kopyo |
+| Requirements | Zal podgotovki |
 
-#### Способности
-- «Импульсный выпад»: короткий рывок и отключение лёгкой техники на 2 сек; 24 сек
+#### Sposobnosti
+- «Impulsnyy vypad»: korotkiy ryvok i otklyuchenie lyogkoy tekhniki na 2 sek; 24 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Хорош против техники в ближней зоне |
-| Слабые стороны | Уязвим для стрелков и снайперов |
-| Прямые контрмеры | Стрелковая пехота, артиллерия |
+| Silnye storony | Khorosh protiv tekhniki v blizhney zone |
+| Slabye storony | Uyazvim for strelkov i snayperov |
+| Pryamye kontrmery | Strelkovaya Infantry, artilleriya |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Ваджра заряжена. |
-| Move | Сокращаем дистанцию. |
-| Attack | Пробить сердцевину. |
-| Ability | Импульсный выпад! |
-| Damaged | Поле копья нестабильно! |
-| Elite | Сталь тоже знает страх. |
-| Idle | Длинное оружие учит держать дистанцию. |
-| Death | Копьё… погасло… |
+| Selected | Vadzhra zaryazhena. |
+| Move | Sokrashchaem distantsiyu. |
+| Attack | Probit serdtsevinu. |
+| Ability | Impulsnyy vypad! |
+| Damaged | Pole kopya nestabilno! |
+| Elite | Stal tozhe znaet strakh. |
+| Idle | Dlinnoe Weapons uchit derzhat distantsiyu. |
+| Death | Kopyo… pogaslo… |
 
-### 3. Техник сети Тип 06 «Цзе» (`CO_JieTechnician`)
-| Параметр | Значение |
+### 3. Tekhnik seti Tip 06 «Tsze» (`CO_JieTechnician`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CO_JieTechnician` |
-| Категория | Пехота |
-| Технологический уровень | T1 |
-| Стоимость | 520 |
-| Время производства | 15 сек |
-| Командный лимит | 1 |
+| Kategoriya | Infantry |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 520 |
+| Vremya proizvodstva | 15 sek |
+| Komandnyy limit | 1 |
 | HP | 105 |
-| Тип брони | Лёгкая пехота |
-| Скорость | 4.0 |
-| Дальность | 0 |
-| Ориентировочный DPS | 0 |
-| Предназначение | Захват, ремонт и усиление сети |
-| Основное оружие | Сервисный рой |
-| Требования | Зал подготовки |
+| Tip broni | Lyogkaya Infantry |
+| Skorost | 4.0 |
+| Dalnost | 0 |
+| Orientirovochnyy DPS | 0 |
+| Prednaznachenie | Zakhvat, remont i usilenie seti |
+| Osnovnoe Weapons | Servisnyy roy |
+| Requirements | Zal podgotovki |
 
-#### Способности
-- «Связать узел»: временно подключает изолированное здание к сети
-- «Ремонтный рой»: ремонт техники
+#### Sposobnosti
+- «Svyazat uzel»: vremenno podklyuchaet izolirovannoe zdanie k seti
+- «Remontnyy roy»: remont tekhniki
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Ключ к Синхронизации |
-| Слабые стороны | Безоружен |
-| Прямые контрмеры | Любая боевая единица |
+| Silnye storony | Klyuch k Sinkhronizatsii |
+| Slabye storony | Bezoruzhen |
+| Pryamye kontrmery | Lyubaya boevaya edinitsa |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Техник сети Тип 06 «Цзе» готов. |
-| Move | Прокладываю связь. |
-| Attack | Моя задача — восстановление. |
-| Ability | Узел подключён. |
-| Damaged | Рой теряет аппараты! |
-| Elite | Разрывов в сети больше нет. |
-| Idle | Проводов не видно. Ошибки — видно. |
-| Death | Связь… передана… |
+| Selected | Tekhnik seti Tip 06 «Tsze» gotov. |
+| Move | Prokladyvayu svyaz. |
+| Attack | Moya zadacha — vosstanovlenie. |
+| Ability | Uzel podklyuchyon. |
+| Damaged | Roy teryaet apparaty! |
+| Elite | Razryvov v seti bolshe no. |
+| Idle | Provodov ne vidno. Oshibki — vidno. |
+| Death | Svyaz… peredana… |
 
-### 4. Фазовый стрелок QBS-19 «Шэньгун» (`CO_ShengongMarksman`)
-| Параметр | Значение |
+### 4. Fazovyy strelok QBS-19 «Shengun» (`CO_ShengongMarksman`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CO_ShengongMarksman` |
-| Категория | Пехота |
-| Технологический уровень | T2 |
-| Стоимость | 720 |
-| Время производства | 18 сек |
-| Командный лимит | 2 |
+| Kategoriya | Infantry |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 720 |
+| Vremya proizvodstva | 18 sek |
+| Komandnyy limit | 2 |
 | HP | 140 |
-| Тип брони | Лёгкая пехота |
-| Скорость | 4.6 |
-| Дальность | 13 |
-| Ориентировочный DPS | 44 |
-| Предназначение | Снайпер против тяжёлой пехоты и щитов |
-| Основное оружие | Фазовая винтовка |
-| Требования | Зал + Башня координации |
+| Tip broni | Lyogkaya Infantry |
+| Skorost | 4.6 |
+| Dalnost | 13 |
+| Orientirovochnyy DPS | 44 |
+| Prednaznachenie | Snayper protiv tyazhyoloy pekhoty i shchitov |
+| Osnovnoe Weapons | Fazovaya vintovka |
+| Requirements | Zal + Bashnya koordinatsii |
 
-#### Способности
-- «Пробой щита»: следующий выстрел игнорирует щит; 28 сек
+#### Sposobnosti
+- «Proboy shchita»: sleduyushchiy vystrel ignoriruet shchit; 28 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Точная контрэлита |
-| Слабые стороны | Слаб против техники и масс пехоты |
-| Прямые контрмеры | Разведчики, техника |
+| Silnye storony | Tochnaya kontrelita |
+| Slabye storony | Slab protiv tekhniki i mass pekhoty |
+| Pryamye kontrmery | Razvedchiki, Vehicles |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Шэньгун совместил фазу. |
-| Move | Ищу чистую геометрию. |
-| Attack | Прохожу между слоями. |
-| Ability | Щит не считается преградой. |
-| Damaged | Фазовый контур сбит! |
-| Elite | Я стреляю туда, где защита ещё не возникла. |
-| Idle | Тишина помогает увидеть слои. |
-| Death | Фаза… потеряна… |
+| Selected | Shengun sovmestil fazu. |
+| Move | Ishchu chistuyu geometriyu. |
+| Attack | Prokhozhu between sloyami. |
+| Ability | Shchit ne schitaetsya pregradoy. |
+| Damaged | Fazovyy kontur sbit! |
+| Elite | Ya strelyayu tuda, gde zashchita eshchyo ne voznikla. |
+| Idle | Tishina pomogaet uvidet sloi. |
+| Death | Faza… poteryana… |
 
-### 5. Нанитный медик NM-7 «Сандживани» (`CO_SanjivaniMedic`)
-| Параметр | Значение |
+### 5. Nanitnyy medik NM-7 «Sandzhivani» (`CO_SanjivaniMedic`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CO_SanjivaniMedic` |
-| Категория | Пехота |
-| Технологический уровень | T2 |
-| Стоимость | 700 |
-| Время производства | 18 сек |
-| Командный лимит | 1 |
+| Kategoriya | Infantry |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 700 |
+| Vremya proizvodstva | 18 sek |
+| Komandnyy limit | 1 |
 | HP | 155 |
-| Тип брони | Лёгкая пехота |
-| Скорость | 4.3 |
-| Дальность | 0 |
-| Ориентировочный DPS | 0 |
-| Предназначение | Лечение и временные щиты |
-| Основное оружие | Нанитный рой |
-| Требования | Зал + Башня координации |
+| Tip broni | Lyogkaya Infantry |
+| Skorost | 4.3 |
+| Dalnost | 0 |
+| Orientirovochnyy DPS | 0 |
+| Prednaznachenie | Lechenie i vremennye shchity |
+| Osnovnoe Weapons | Nanitnyy roy |
+| Requirements | Zal + Bashnya koordinatsii |
 
-#### Способности
-- «Защитная оболочка»: даёт 200 щита на 10 сек; 32 сек
+#### Sposobnosti
+- «Zashchitnaya obolochka»: dayot 200 shchita na 10 sek; 32 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Лечит и защищает |
-| Слабые стороны | Безоружен |
-| Прямые контрмеры | Снайперы, фокус |
+| Silnye storony | Lechit i zashchishchaet |
+| Slabye storony | Bezoruzhen |
+| Pryamye kontrmery | Snaypery, fokus |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Сандживани готова к распределению. |
-| Move | Следую за построением. |
-| Attack | У меня нет боевого режима. |
-| Ability | Защитная оболочка сформирована. |
-| Damaged | Рой расходуется на меня! |
-| Elite | Наниты уже знают каждую рану. |
-| Idle | Организм — сложная машина. Но чинится быстрее. |
-| Death | Рой… ищет нового носителя… |
+| Selected | Sandzhivani gotova k raspredeleniyu. |
+| Move | Sleduyu za postroeniem. |
+| Attack | U menya no boevogo rezhima. |
+| Ability | Zashchitnaya obolochka sformirovana. |
+| Damaged | Roy raskhoduetsya na menya! |
+| Elite | Nanity uzhe znayut kazhduyu ranu. |
+| Idle | Organizm — slozhnaya mashina. No chinitsya bystree. |
+| Death | Roy… ishchet novogo nositelya… |
 
-### 6. Почётный страж HG-33 «Ракша» (`CO_RakshaGuard`)
-| Параметр | Значение |
+### 6. Pochyotnyy strazh HG-33 «Raksha» (`CO_RakshaGuard`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CO_RakshaGuard` |
-| Категория | Пехота |
-| Технологический уровень | T3 |
-| Стоимость | 1050 |
-| Время производства | 25 сек |
-| Командный лимит | 2 |
+| Kategoriya | Infantry |
+| Tekhnologicheskiy uroven | T3 |
+| Stoimost | 1050 |
+| Vremya proizvodstva | 25 sek |
+| Komandnyy limit | 2 |
 | HP | 300 |
-| Тип брони | Тяжёлая пехота |
-| Скорость | 4.1 |
-| Дальность | 7 |
-| Ориентировочный DPS | 40 |
-| Предназначение | Элитный защитник командиров и узлов |
-| Основное оружие | Плазменный клинок и щит |
-| Требования | Цитадель исследований |
+| Tip broni | Tyazhyolaya Infantry |
+| Skorost | 4.1 |
+| Dalnost | 7 |
+| Orientirovochnyy DPS | 40 |
+| Prednaznachenie | Elitnyy zashchitnik komandirov i uzlov |
+| Osnovnoe Weapons | Plazmennyy klinok i shchit |
+| Requirements | Tsitadel issledovaniy |
 
-#### Способности
-- «Отражение»: 4 сек отражает 40% дальнего урона; 35 сек
+#### Sposobnosti
+- «Otrazhenie»: 4 sek otrazhaet 40% dalnego urona; 35 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Очень живуч в ближнем бою |
-| Слабые стороны | Малая дальность, дорогой |
-| Прямые контрмеры | Артиллерия, авиация, крио |
+| Silnye storony | Ochen zhivuch v blizhnem boyu |
+| Slabye storony | Malaya dalnost, dorogoy |
+| Pryamye kontrmery | Artilleriya, Aviation, krio |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Ракша принимает ответственность. |
-| Move | Я закрою этот путь. |
-| Attack | Вступаю в ближний бой. |
-| Ability | Отразить удар. |
-| Damaged | Щит выдержит. |
-| Elite | Пока я стою, линия существует. |
-| Idle | Честь — это дисциплина без свидетелей. |
-| Death | Линия… не должна дрогнуть… |
+| Selected | Raksha prinimaet otvetstvennost. |
+| Move | Ya zakroyu etot put. |
+| Attack | Vstupayu v blizhniy boy. |
+| Ability | Otrazit udar. |
+| Damaged | Shchit vyderzhit. |
+| Elite | Poka ya stoyu, liniya sushchestvuet. |
+| Idle | Chest — eto distsiplina without svideteley. |
+| Death | Liniya… ne dolzhna drognut… |
 
-### 7. Добывающая платформа GRP-12 «Юань» (`CO_YuanCollector`)
-| Параметр | Значение |
+### 7. Dobyvayushchaya platforma GRP-12 «Yuan» (`CO_YuanCollector`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CO_YuanCollector` |
-| Категория | Техника |
-| Технологический уровень | T1 |
-| Стоимость | 1425 |
-| Время производства | 27 сек |
-| Командный лимит | 4 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 1425 |
+| Vremya proizvodstva | 27 sek |
+| Komandnyy limit | 4 |
 | HP | 1350 |
-| Тип брони | Тяжёлая техника |
-| Скорость | 3.5 |
-| Дальность | 0 |
-| Ориентировочный DPS | 0 |
-| Предназначение | Добыча и поддержка энергетической сети |
-| Основное оружие | Без оружия |
-| Требования | Рудный синтезатор |
+| Tip broni | Tyazhyolaya Vehicles |
+| Skorost | 3.5 |
+| Dalnost | 0 |
+| Orientirovochnyy DPS | 0 |
+| Prednaznachenie | Dobycha i podderzhka energeticheskoy seti |
+| Osnovnoe Weapons | without oruzhiya |
+| Requirements | Rudnyy sintezator |
 
-#### Способности
-- «Энергосвязь»: рядом со зданиями даёт +10 Синхронизации
+#### Sposobnosti
+- «Energosvyaz»: ryadom so zdaniyami dayot +10 Sinkhronizatsii
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Полезен не только экономически |
-| Слабые стороны | Средняя скорость, приоритетная цель |
-| Прямые контрмеры | ПТ-засады, авиация |
+| Silnye storony | Polezen ne only ekonomicheski |
+| Slabye storony | Srednyaya skorost, prioritetnaya tsel |
+| Pryamye kontrmery | PT-zasady, Aviation |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Юань подключён. |
-| Move | Маршрут входит в сеть. |
-| Attack | Вооружение не предусмотрено. |
-| Ability | Энергосвязь установлена. |
-| Damaged | Контейнер повреждён! |
-| Elite | Каждый груз укрепляет сеть. |
-| Idle | Ресурс ценен только после доставки. |
-| Death | Поток… остановлен… |
+| Selected | Yuan podklyuchyon. |
+| Move | Marshrut vkhodit v set. |
+| Attack | Vooruzhenie ne predusmotreno. |
+| Ability | Energosvyaz ustanovlena. |
+| Damaged | Konteyner povrezhdyon! |
+| Elite | Kazhdyy gruz ukreplyaet set. |
+| Idle | Resurs tsenen only after dostavki. |
+| Death | Potok… ostanovlen… |
 
-### 8. Разведшагоход Тип 17 «Камакири» (`CO_KamakiriWalker`)
-| Параметр | Значение |
+### 8. Razvedshagokhod Tip 17 «Kamakiri» (`CO_KamakiriWalker`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CO_KamakiriWalker` |
-| Категория | Техника |
-| Технологический уровень | T1 |
-| Стоимость | 750 |
-| Время производства | 16 сек |
-| Командный лимит | 3 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 750 |
+| Vremya proizvodstva | 16 sek |
+| Komandnyy limit | 3 |
 | HP | 560 |
-| Тип брони | Лёгкая техника |
-| Скорость | 7.0 |
-| Дальность | 7 |
-| Ориентировочный DPS | 21 |
-| Предназначение | Разведка, борьба с пехотой и вертикальный рельеф |
-| Основное оружие | Две импульсные пушки |
-| Требования | Фабрика шагоходов |
+| Tip broni | Lyogkaya Vehicles |
+| Skorost | 7.0 |
+| Dalnost | 7 |
+| Orientirovochnyy DPS | 21 |
+| Prednaznachenie | Razvedka, borba s pekhotoy i vertikalnyy relef |
+| Osnovnoe Weapons | Dve impulsnye pushki |
+| Requirements | Fabrika shagokhodov |
 
-#### Способности
-- «Стенной шаг»: преодолевает малые уступы и баррикады
+#### Sposobnosti
+- «Stennoy shag»: preodolevaet malye ustupy i barrikady
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Высокая проходимость |
-| Слабые стороны | Слабая броня |
-| Прямые контрмеры | ПТ-пехота, танки |
+| Silnye storony | Vysokaya prokhodimost |
+| Slabye storony | Slabaya Armor |
+| Pryamye kontrmery | PT-Infantry, tanki |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Камакири удерживает равновесие. |
-| Move | Траектория не требует дороги. |
-| Attack | Передние конечности стабилизированы. Огонь. |
-| Ability | Преодолеваю препятствие. |
-| Damaged | Одна опора повреждена! |
-| Elite | Рельеф — лишь рекомендация. |
-| Idle | Колёса переоценены. |
-| Death | Баланс… потерян… |
+| Selected | Kamakiri uderzhivaet ravnovesie. |
+| Move | Traektoriya ne trebuet dorogi. |
+| Attack | Perednie konechnosti stabilizirovany. Ogon. |
+| Ability | Preodolevayu prepyatstvie. |
+| Damaged | Odna opora povrezhdena! |
+| Elite | Relef — lish rekomendatsiya. |
+| Idle | Kolyosa pereotseneny. |
+| Death | Balans… poteryan… |
 
-### 9. Основной танк ZTZ-61 «Цинлун» (`CO_QinglongMBT`)
-| Параметр | Значение |
+### 9. Osnovnoy Tank ZTZ-61 «Tsinlun» (`CO_QinglongMBT`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CO_QinglongMBT` |
-| Категория | Техника |
-| Технологический уровень | T2 |
-| Стоимость | 1300 |
-| Время производства | 27 сек |
-| Командный лимит | 5 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 1300 |
+| Vremya proizvodstva | 27 sek |
+| Komandnyy limit | 5 |
 | HP | 1500 |
-| Тип брони | Тяжёлая техника |
-| Скорость | 4.8 |
-| Дальность | 9 |
-| Ориентировочный DPS | 45 |
-| Предназначение | Основной танк с групповым щитом |
-| Основное оружие | Плазменная пушка |
-| Требования | Фабрика + Башня координации |
+| Tip broni | Tyazhyolaya Vehicles |
+| Skorost | 4.8 |
+| Dalnost | 9 |
+| Orientirovochnyy DPS | 45 |
+| Prednaznachenie | Osnovnoy Tank s gruppovym shchitom |
+| Osnovnoe Weapons | Plazmennaya pushka |
+| Requirements | Fabrika + Bashnya koordinatsii |
 
-#### Способности
-- «Сцепление щитов»: соединяет щиты соседних танков, распределяя урон
+#### Sposobnosti
+- «Stseplenie shchitov»: soedinyaet shchity sosednikh tankov, raspredelyaya Damaged
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Очень силён в построении |
-| Слабые стороны | Слабее в одиночку |
-| Прямые контрмеры | Разделение, EMP, артиллерия |
+| Silnye storony | Ochen silyon v postroenii |
+| Slabye storony | Slabee v odinochku |
+| Pryamye kontrmery | Razdelenie, EMP, artilleriya |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Контур Цинлуна готов. |
-| Move | Сохраняем сцепление. |
-| Attack | Плазма на общую цель. |
-| Ability | Щиты объединены. |
-| Damaged | Связь щита ослабла! |
-| Elite | Нас нельзя пробить по одному, пока мы вместе. |
-| Idle | Строй — это броня, которой не видно. |
-| Death | Контур… разорван… |
+| Selected | Kontur Tsinluna gotov. |
+| Move | Sokhranyaem stseplenie. |
+| Attack | Plazma na obshchuyu tsel. |
+| Ability | Shchity obedineny. |
+| Damaged | Svyaz shchita oslabla! |
+| Elite | Nas nelzya probit po odnomu, poka my vmeste. |
+| Idle | Stroy — eto Armor, kotoroy ne vidno. |
+| Death | Kontur… razorvan… |
 
-### 10. Артиллерия PHL-29 «Муссон» (`CO_MonsoonArtillery`)
-| Параметр | Значение |
+### 10. Artilleriya PHL-29 «Musson» (`CO_MonsoonArtillery`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CO_MonsoonArtillery` |
-| Категория | Техника |
-| Технологический уровень | T2 |
-| Стоимость | 1650 |
-| Время производства | 35 сек |
-| Командный лимит | 5 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 1650 |
+| Vremya proizvodstva | 35 sek |
+| Komandnyy limit | 5 |
 | HP | 900 |
-| Тип брони | Осадная техника |
-| Скорость | 3.4 |
-| Дальность | 17 |
-| Ориентировочный DPS | 60 |
-| Предназначение | Многоступенчатая артиллерия по площади |
-| Основное оружие | Кассетные плазменные снаряды |
-| Требования | Фабрика + Башня координации |
+| Tip broni | Osadnaya Vehicles |
+| Skorost | 3.4 |
+| Dalnost | 17 |
+| Orientirovochnyy DPS | 60 |
+| Prednaznachenie | Mnogostupenchataya artilleriya po ploshchadi |
+| Osnovnoe Weapons | Kassetnye plazmennye snaryady |
+| Requirements | Fabrika + Bashnya koordinatsii |
 
-#### Способности
-- «Фронт муссона»: разворачивается, получает +25% дальности и разделяет снаряд на три подбоеприпаса
+#### Sposobnosti
+- «Front mussona»: razvorachivaetsya, poluchaet +25% dalnosti i razdelyaet snaryad na tri podboepripasa
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Отлично против групп |
-| Слабые стороны | Нуждается в развёртывании и защите |
-| Прямые контрмеры | Разведчики, авиация |
+| Silnye storony | Otlichno protiv grupp |
+| Slabye storony | Nuzhdaetsya v razvyortyvanii i zashchite |
+| Pryamye kontrmery | Razvedchiki, Aviation |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Муссон свёрнут. |
-| Move | Ищу место для раскрытия. |
-| Attack | Координаты приняты. |
-| Ability | Муссон разворачивается. |
-| Damaged | Опорные лепестки повреждены! |
-| Elite | Каждый лепесток несёт отдельную гибель. |
-| Idle | Цветок ждёт подходящей почвы. |
-| Death | Лепестки… сломаны… |
+| Selected | Musson svyornut. |
+| Move | Ishchu mesto for raskrytiya. |
+| Attack | Koordinaty prinyaty. |
+| Ability | Musson razvorachivaetsya. |
+| Damaged | Opornye lepestki povrezhdeny! |
+| Elite | Kazhdyy lepestok nesyot otdelnuyu gibel. |
+| Idle | Tsvetok zhdyot podkhodyashchey pochvy. |
+| Death | Lepestki… slomany… |
 
-### 11. Щитовой носитель Тип 42 «Сэймон» (`CO_SeimonShieldCarrier`)
-| Параметр | Значение |
+### 11. Shchitovoy nositel Tip 42 «Seymon» (`CO_SeimonShieldCarrier`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CO_SeimonShieldCarrier` |
-| Категория | Техника |
-| Технологический уровень | T2 |
-| Стоимость | 1700 |
-| Время производства | 36 сек |
-| Командный лимит | 6 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 1700 |
+| Vremya proizvodstva | 36 sek |
+| Komandnyy limit | 6 |
 | HP | 1800 |
-| Тип брони | Тяжёлая техника |
-| Скорость | 3.8 |
-| Дальность | 0 |
-| Ориентировочный DPS | 0 |
-| Предназначение | Подвижный узел щита и Синхронизации |
-| Основное оружие | Не вооружён |
-| Требования | Фабрика + Башня координации |
+| Tip broni | Tyazhyolaya Vehicles |
+| Skorost | 3.8 |
+| Dalnost | 0 |
+| Orientirovochnyy DPS | 0 |
+| Prednaznachenie | Podvizhnyy uzel shchita i Sinkhronizatsii |
+| Osnovnoe Weapons | Ne vooruzhyon |
+| Requirements | Fabrika + Bashnya koordinatsii |
 
-#### Способности
-- «Купол»: создаёт круговой щит 12 сек; 38 сек
-- Пассивно +10 Синхронизации рядом с 4+ юнитами
+#### Sposobnosti
+- «Kupol»: sozdayot krugovoy shchit 12 sek; 38 sek
+- Passivno +10 Sinkhronizatsii ryadom s 4+ yunitami
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Ключевая поддержка армии |
-| Слабые стороны | Безоружен, крупная цель |
-| Прямые контрмеры | Фланг, EMP, фокус |
+| Silnye storony | Klyuchevaya podderzhka armii |
+| Slabye storony | Bezoruzhen, krupnaya tsel |
+| Pryamye kontrmery | Flang, EMP, fokus |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Сэймон принимает сеть. |
-| Move | Переношу центр защиты. |
-| Attack | Оружия нет. Есть щит. |
-| Ability | Купол сформирован. |
-| Damaged | Полевые эмиттеры перегружены! |
-| Elite | Где стою я, там стоит армия. |
-| Idle | Защита редко получает благодарность. |
-| Death | Купол… распался… |
+| Selected | Seymon prinimaet set. |
+| Move | Perenoshu tsentr zashchity. |
+| Attack | Oruzhiya no. Est shchit. |
+| Ability | Kupol sformirovan. |
+| Damaged | Polevye emittery peregruzheny! |
+| Elite | Gde stoyu ya, tam stoit armiya. |
+| Idle | Zashchita redko poluchaet blagodarnost. |
+| Death | Kupol… raspalsya… |
 
-### 12. Штурмовой шагоход MBT-X «Айравата» (`CO_AiravataWalker`)
-| Параметр | Значение |
+### 12. Shturmovoy shagokhod MBT-X «Ayravata» (`CO_AiravataWalker`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CO_AiravataWalker` |
-| Категория | Техника |
-| Технологический уровень | T3 |
-| Стоимость | 2500 |
-| Время производства | 48 сек |
-| Командный лимит | 8 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T3 |
+| Stoimost | 2500 |
+| Vremya proizvodstva | 48 sek |
+| Komandnyy limit | 8 |
 | HP | 2700 |
-| Тип брони | Тяжёлая техника |
-| Скорость | 4.6 |
-| Дальность | 10 |
-| Ориентировочный DPS | 80 |
-| Предназначение | Тяжёлый универсальный шагоход |
-| Основное оружие | Рельсовая пушка и ракеты ПВО |
-| Требования | Цитадель исследований |
+| Tip broni | Tyazhyolaya Vehicles |
+| Skorost | 4.6 |
+| Dalnost | 10 |
+| Orientirovochnyy DPS | 80 |
+| Prednaznachenie | Tyazhyolyy universalnyy shagokhod |
+| Osnovnoe Weapons | Relsovaya pushka i rakety PVO |
+| Requirements | Tsitadel issledovaniy |
 
-#### Способности
-- «Небесный прыжок»: перепрыгивает линию фронта и наносит удар при посадке; 42 сек
+#### Sposobnosti
+- «Nebesnyy pryzhok»: pereprygivaet liniyu fronta i nanosit udar with posadke; 42 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Проходимость, мощный прорыв |
-| Слабые стороны | Дорогой, уязвим во время подготовки прыжка |
-| Прямые контрмеры | ПВО, стазис, тяжёлые танки |
+| Silnye storony | Prokhodimost, moshchnyy proryv |
+| Slabye storony | Dorogoy, uyazvim vo vremya podgotovki pryzhka |
+| Pryamye kontrmery | PVO, stazis, tyazhyolye tanki |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Айравата готова пересечь линию. |
-| Move | Шаг выше препятствий. |
-| Attack | Рельсовый канал открыт. |
-| Ability | Небесный прыжок. |
-| Damaged | Каркас шага повреждён! |
-| Elite | Высота — ещё одно измерение строя. |
-| Idle | Тяжёлая машина тоже может двигаться изящно. |
-| Death | Опоры… не держат… |
+| Selected | Ayravata gotova peresech liniyu. |
+| Move | Shag vyshe prepyatstviy. |
+| Attack | Relsovyy kanal otkryt. |
+| Ability | Nebesnyy pryzhok. |
+| Damaged | Karkas shaga povrezhdyon! |
+| Elite | Vysota — eshchyo odno izmerenie stroya. |
+| Idle | Tyazhyolaya mashina tozhe mozhet dvigatsya izyashchno. |
+| Death | Opory… ne derzhat… |
 
-### 13. Мобильная крепость ZTD-90 «Тяньмэнь» (`CO_TianmenFortress`)
-| Параметр | Значение |
+### 13. Mobilnaya krepost ZTD-90 «Tyanmen» (`CO_TianmenFortress`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CO_TianmenFortress` |
-| Категория | Техника |
-| Технологический уровень | T3 |
-| Стоимость | 3300 |
-| Время производства | 60 сек |
-| Командный лимит | 10 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T3 |
+| Stoimost | 3300 |
+| Vremya proizvodstva | 60 sek |
+| Komandnyy limit | 10 |
 | HP | 3900 |
-| Тип брони | Тяжёлая техника |
-| Скорость | 2.7 |
-| Дальность | 12 |
-| Ориентировочный DPS | 95 |
-| Предназначение | Сверхтяжёлый командный узел и артиллерия |
-| Основное оружие | Две плазменные пушки и дроны |
-| Требования | Цитадель + два завода |
+| Tip broni | Tyazhyolaya Vehicles |
+| Skorost | 2.7 |
+| Dalnost | 12 |
+| Orientirovochnyy DPS | 95 |
+| Prednaznachenie | Sverkhtyazhyolyy komandnyy uzel i artilleriya |
+| Osnovnoe Weapons | Dve plazmennye pushki i drony |
+| Requirements | Tsitadel + dva zavoda |
 
-#### Способности
-- «Командный режим»: останавливается, +20 Синхронизации и ремонтирует союзников
+#### Sposobnosti
+- «Komandnyy rezhim»: ostanavlivaetsya, +20 Sinkhronizatsii i remontiruet soyuznikov
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Мощный центр армии |
-| Слабые стороны | Очень медленный и дорогой |
-| Прямые контрмеры | Осадный фокус, авиация, EMP |
+| Silnye storony | Moshchnyy tsentr armii |
+| Slabye storony | Ochen medlennyy i dorogoy |
+| Pryamye kontrmery | Osadnyy fokus, Aviation, EMP |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Тяньмэнь вошёл в сеть. |
-| Move | Крепость меняет основание. |
-| Attack | Открыть внешние батареи. |
-| Ability | Командный режим установлен. |
-| Damaged | Внешний пояс разрушен! |
-| Elite | Армия больше не нуждается в стенах. |
-| Idle | Дворец не обязан быть неподвижным. |
-| Death | Центральный зал… рушится… |
+| Selected | Tyanmen voshyol v set. |
+| Move | Krepost menyaet osnovanie. |
+| Attack | Otkryt vneshnie batarei. |
+| Ability | Komandnyy rezhim ustanovlen. |
+| Damaged | Vneshniy poyas razrushen! |
+| Elite | Armiya bolshe ne nuzhdaetsya v stenakh. |
+| Idle | Dvorets ne obyazan byt nepodvizhnym. |
+| Death | Tsentralnyy zal… rushitsya… |
 
-### 14. Разведдрон UAV-12 «Кавасэми» (`CO_KawasemiDrone`)
-| Параметр | Значение |
+### 14. Razveddron UAV-12 «Kavasemi» (`CO_KawasemiDrone`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CO_KawasemiDrone` |
-| Категория | Авиация |
-| Технологический уровень | T1 |
-| Стоимость | 700 |
-| Время производства | 14 сек |
-| Командный лимит | 3 |
+| Kategoriya | Aviation |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 700 |
+| Vremya proizvodstva | 14 sek |
+| Komandnyy limit | 3 |
 | HP | 360 |
-| Тип брони | Воздушная |
-| Скорость | 14.0 |
-| Дальность | 6 |
-| Ориентировочный DPS | 18 |
-| Предназначение | Разведка, обнаружение и преследование |
-| Основное оружие | Лёгкий импульсный луч |
-| Требования | Воздушная пагода |
+| Tip broni | Vozdushnaya |
+| Skorost | 14.0 |
+| Dalnost | 6 |
+| Orientirovochnyy DPS | 18 |
+| Prednaznachenie | Razvedka, obnaruzhenie i presledovanie |
+| Osnovnoe Weapons | Lyogkiy impulsnyy luch |
+| Requirements | Vozdushnaya pagoda |
 
-#### Способности
-- «Сетевой маяк»: повышает Синхронизацию видимых союзников
+#### Sposobnosti
+- «Setevoy mayak»: povyshaet Sinkhronizatsiyu vidimykh soyuznikov
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Очень быстрый и дешёвый |
-| Слабые стороны | Хрупкий, малый урон |
-| Прямые контрмеры | Любое ПВО |
+| Silnye storony | Ochen bystryy i deshyovyy |
+| Slabye storony | Khrupkiy, malyy Damaged |
+| Pryamye kontrmery | Lyuboe PVO |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Кавасэми подключён. |
-| Move | Маршрут свободен. |
-| Attack | Лёгкая цель подтверждена. |
-| Ability | Сетевой маяк активен. |
-| Damaged | Корпус дрона нарушен! |
-| Elite | Я вижу сеть сверху. |
-| Idle | Малый размер — большая свобода. |
-| Death | Сигнал… исчез… |
+| Selected | Kavasemi podklyuchyon. |
+| Move | Marshrut svoboden. |
+| Attack | Lyogkaya tsel podtverzhdena. |
+| Ability | Setevoy mayak aktiven. |
+| Damaged | Korpus drona narushen! |
+| Elite | Ya vizhu set sverkhu. |
+| Idle | Malyy razmer — bolshaya svoboda. |
+| Death | Signal… ischez… |
 
-### 15. Штурмовик Z-28 «Лэйхэ» (`CO_LeiheGunship`)
-| Параметр | Значение |
+### 15. Shturmovik Z-28 «Leykhe» (`CO_LeiheGunship`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CO_LeiheGunship` |
-| Категория | Авиация |
-| Технологический уровень | T2 |
-| Стоимость | 1550 |
-| Время производства | 32 сек |
-| Командный лимит | 5 |
+| Kategoriya | Aviation |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 1550 |
+| Vremya proizvodstva | 32 sek |
+| Komandnyy limit | 5 |
 | HP | 1150 |
-| Тип брони | Воздушная |
-| Скорость | 7.8 |
-| Дальность | 8 |
-| Ориентировочный DPS | 62 |
-| Предназначение | Штурм наземных целей и поддержка построений |
-| Основное оружие | Плазменные ракеты |
-| Требования | Воздушная пагода + Башня |
+| Tip broni | Vozdushnaya |
+| Skorost | 7.8 |
+| Dalnost | 8 |
+| Orientirovochnyy DPS | 62 |
+| Prednaznachenie | Shturm nazemnykh tseley i podderzhka postroeniy |
+| Osnovnoe Weapons | Plazmennye rakety |
+| Requirements | Vozdushnaya pagoda + Bashnya |
 
-#### Способности
-- «Защитное крыло»: даёт союзной группе 150 щита; 35 сек
+#### Sposobnosti
+- «Zashchitnoe krylo»: dayot soyuznoy gruppe 150 shchita; 35 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Урон плюс поддержка |
-| Слабые стороны | Средняя скорость, зависит от ПВО-прикрытия |
-| Прямые контрмеры | Истребители, ПВО |
+| Silnye storony | Damaged plyus podderzhka |
+| Slabye storony | Srednyaya skorost, zavisit ot PVO-prikrytiya |
+| Pryamye kontrmery | Istrebiteli, PVO |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Лэйхэ готов. |
-| Move | Крыло следует за строем. |
-| Attack | Пикирую на цель. |
-| Ability | Защитное крыло раскрыто. |
-| Damaged | Плазменная тяга нестабильна! |
-| Elite | Гром приходит сверху, щит — вместе с ним. |
-| Idle | Журавль спокоен до первого выстрела. |
-| Death | Крыло… сломано… |
+| Selected | Leykhe gotov. |
+| Move | Krylo sleduet za stroem. |
+| Attack | Pikiruyu na tsel. |
+| Ability | Zashchitnoe krylo raskryto. |
+| Damaged | Plazmennaya tyaga nestabilna! |
+| Elite | Grom prikhodit sverkhu, shchit — vmeste s nim. |
+| Idle | Zhuravl spokoen before pervogo vystrela. |
+| Death | Krylo… slomano… |
 
-### 16. Бомбардировщик H-26 «Агнипакша» (`CO_AgnipakshaBomber`)
-| Параметр | Значение |
+### 16. Bombardirovshchik H-26 «Agnipaksha» (`CO_AgnipakshaBomber`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CO_AgnipakshaBomber` |
-| Категория | Авиация |
-| Технологический уровень | T3 |
-| Стоимость | 2550 |
-| Время производства | 50 сек |
-| Командный лимит | 7 |
+| Kategoriya | Aviation |
+| Tekhnologicheskiy uroven | T3 |
+| Stoimost | 2550 |
+| Vremya proizvodstva | 50 sek |
+| Komandnyy limit | 7 |
 | HP | 1650 |
-| Тип брони | Воздушная |
-| Скорость | 8.8 |
-| Дальность | 14 |
-| Ориентировочный DPS | 105 |
-| Предназначение | Площадной бомбардировщик и возгорание |
-| Основное оружие | Плазменные зажигательные бомбы |
-| Требования | Цитадель + пагода |
+| Tip broni | Vozdushnaya |
+| Skorost | 8.8 |
+| Dalnost | 14 |
+| Orientirovochnyy DPS | 105 |
+| Prednaznachenie | Ploshchadnoy bombardirovshchik i vozgoranie |
+| Osnovnoe Weapons | Plazmennye zazhigatelnye bomby |
+| Requirements | Tsitadel + pagoda |
 
-#### Способности
-- «Возрождение»: один раз за жизнь при смертельном уроне возвращается на базу с 25% HP
+#### Sposobnosti
+- «Vozrozhdenie»: odin raz za zhizn with smertelnom urone vozvrashchaetsya na bazu s 25% HP
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Высокий площадной урон, шанс спастись |
-| Слабые стороны | Дорогой, уязвим на обратном маршруте |
-| Прямые контрмеры | Истребители, дальнее ПВО |
+| Silnye storony | Vysokiy ploshchadnoy Damaged, shans spastis |
+| Slabye storony | Dorogoy, uyazvim na obratnom marshrute |
+| Pryamye kontrmery | Istrebiteli, dalnee PVO |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Агнипакша готова к циклу. |
-| Move | Выхожу на высоту удара. |
-| Attack | Огонь будет виден издалека. |
-| Ability | Цикл возрождения активен. |
-| Damaged | Пламя коснулось крыла! |
-| Elite | Я возвращаюсь раньше, чем враг празднует. |
-| Idle | Пепел — тоже часть полёта. |
-| Death | На этот раз… цикл завершён… |
+| Selected | Agnipaksha gotova k tsiklu. |
+| Move | Vykhozhu na vysotu udara. |
+| Attack | Ogon budet viden izdaleka. |
+| Ability | Tsikl vozrozhdeniya aktiven. |
+| Damaged | Plamya kosnulos kryla! |
+| Elite | Ya vozvrashchayus ranshe, chem vrag prazdnuet. |
+| Idle | Pepel — tozhe chast polyota. |
+| Death | Na etot raz… tsikl zavershyon… |
 
-### 17. Корвет Тип 32 «Кадзэкири» (`CO_KazekiriCorvette`)
-| Параметр | Значение |
+### 17. Korvet Tip 32 «Kadzekiri» (`CO_KazekiriCorvette`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CO_KazekiriCorvette` |
-| Категория | Флот |
-| Технологический уровень | T1 |
-| Стоимость | 900 |
-| Время производства | 18 сек |
-| Командный лимит | 4 |
+| Kategoriya | Naval |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 900 |
+| Vremya proizvodstva | 18 sek |
+| Komandnyy limit | 4 |
 | HP | 780 |
-| Тип брони | Морская |
-| Скорость | 7.5 |
-| Дальность | 8 |
-| Ориентировочный DPS | 28 |
-| Предназначение | Быстрый перехват и торпедная атака |
-| Основное оружие | Лёгкие торпеды и пушка |
-| Требования | Приливный док |
+| Tip broni | Morskaya |
+| Skorost | 7.5 |
+| Dalnost | 8 |
+| Orientirovochnyy DPS | 28 |
+| Prednaznachenie | Bystryy perekhvat i torpednaya Attack |
+| Osnovnoe Weapons | Lyogkie torpedy i pushka |
+| Requirements | Prilivnyy dok |
 
-#### Способности
-- «Режущий манёвр»: рывок вдоль цели, снижает её точность
+#### Sposobnosti
+- «Rezhushchiy manyovr»: ryvok vdol tseli, snizhaet eyo tochnost
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Скорость и охота на подлодки |
-| Слабые стороны | Слаб против крейсеров |
-| Прямые контрмеры | Тяжёлые корабли |
+| Silnye storony | Skorost i okhota na podlodki |
+| Slabye storony | Slab protiv kreyserov |
+| Pryamye kontrmery | Tyazhyolye korabli |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Кадзэкири готов. |
-| Move | Режем течение. |
-| Attack | Торпеды по курсу. |
-| Ability | Режущий манёвр. |
-| Damaged | Киль повреждён! |
-| Elite | Мы разрезаем море и строй врага. |
-| Idle | Течение всегда выдаёт движение. |
-| Death | Корпус… уходит вниз… |
+| Selected | Kadzekiri gotov. |
+| Move | Rezhem techenie. |
+| Attack | Torpedy po kursu. |
+| Ability | Rezhushchiy manyovr. |
+| Damaged | Kil povrezhdyon! |
+| Elite | My razrezaem more i stroy vraga. |
+| Idle | Techenie vsegda vydayot Move. |
+| Death | Korpus… ukhodit vniz… |
 
-### 18. Рельсовый крейсер Тип 81 «Сюаньу» (`CO_XuanwuCruiser`)
-| Параметр | Значение |
+### 18. Relsovyy kreyser Tip 81 «Syuanu» (`CO_XuanwuCruiser`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CO_XuanwuCruiser` |
-| Категория | Флот |
-| Технологический уровень | T2 |
-| Стоимость | 2200 |
-| Время производства | 42 сек |
-| Командный лимит | 8 |
+| Kategoriya | Naval |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 2200 |
+| Vremya proizvodstva | 42 sek |
+| Komandnyy limit | 8 |
 | HP | 2600 |
-| Тип брони | Морская |
-| Скорость | 4.0 |
-| Дальность | 16 |
-| Ориентировочный DPS | 78 |
-| Предназначение | Дальний корабль против тяжёлых целей |
-| Основное оружие | Корабельная рельсовая пушка |
-| Требования | Док + Башня |
+| Tip broni | Morskaya |
+| Skorost | 4.0 |
+| Dalnost | 16 |
+| Orientirovochnyy DPS | 78 |
+| Prednaznachenie | Dalniy korabl protiv tyazhyolykh tseley |
+| Osnovnoe Weapons | Korabelnaya relsovaya pushka |
+| Requirements | Dok + Bashnya |
 
-#### Способности
-- «Стабилизированный выстрел»: пробивает несколько целей по линии; 38 сек
+#### Sposobnosti
+- «Stabilizirovannyy vystrel»: probivaet neskolko tseley po linii; 38 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Высокая дальность и пробитие |
-| Слабые стороны | Медленная перезарядка |
-| Прямые контрмеры | Подлодки, авиация |
+| Silnye storony | Vysokaya dalnost i probitie |
+| Slabye storony | Medlennaya perezaryadka |
+| Pryamye kontrmery | Podlodki, Aviation |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Сюаньу стабилен. |
-| Move | Крейсер меняет линию огня. |
-| Attack | Рельсовый импульс. |
-| Ability | Стабилизированный пробой. |
-| Damaged | Секции корпуса разгерметизированы! |
-| Elite | Море не скрывает цель от прямой линии. |
-| Idle | Большая дальность требует большого терпения. |
-| Death | Стабилизация… потеряна… |
+| Selected | Syuanu stabilen. |
+| Move | Kreyser menyaet liniyu ognya. |
+| Attack | Relsovyy impuls. |
+| Ability | Stabilizirovannyy proboy. |
+| Damaged | Sektsii korpusa razgermetizirovany! |
+| Elite | More ne skryvaet tsel ot pryamoy linii. |
+| Idle | Bolshaya dalnost trebuet bolshogo terpeniya. |
+| Death | Stabilizatsiya… poteryana… |
 
-### 19. Подводный авианосец SSGN-18 «Самудра» (`CO_SamudraCarrier`)
-| Параметр | Значение |
+### 19. Podvodnyy avianosets SSGN-18 «Samudra» (`CO_SamudraCarrier`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CO_SamudraCarrier` |
-| Категория | Флот |
-| Технологический уровень | T3 |
-| Стоимость | 3700 |
-| Время производства | 68 сек |
-| Командный лимит | 10 |
+| Kategoriya | Naval |
+| Tekhnologicheskiy uroven | T3 |
+| Stoimost | 3700 |
+| Vremya proizvodstva | 68 sek |
+| Komandnyy limit | 10 |
 | HP | 4200 |
-| Тип брони | Морская |
-| Скорость | 2.6 |
-| Дальность | 18 |
-| Ориентировочный DPS | 100 |
-| Предназначение | Скрытая база морских дронов |
-| Основное оружие | Ударные подводные и воздушные дроны |
-| Требования | Док + Цитадель |
+| Tip broni | Morskaya |
+| Skorost | 2.6 |
+| Dalnost | 18 |
+| Orientirovochnyy DPS | 100 |
+| Prednaznachenie | Skrytaya baza morskikh dronov |
+| Osnovnoe Weapons | Udarnye podvodnye i vozdushnye drony |
+| Requirements | Dok + Tsitadel |
 
-#### Способности
-- «Погружённый запуск»: выпускает смешанный рой, не раскрываясь 6 сек
+#### Sposobnosti
+- «Pogruzhyonnyy zapusk»: vypuskaet smeshannyy roy, ne raskryvayas 6 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Скрытность и универсальность |
-| Слабые стороны | Очень дорог, слаб при обнаружении вблизи |
-| Прямые контрмеры | Сонар, подлодки, массовая авиация |
+| Silnye storony | Skrytnost i universalnost |
+| Slabye storony | Ochen dorog, slab with obnaruzhenii vblizi |
+| Pryamye kontrmery | Sonar, podlodki, massovaya Aviation |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Самудра скрыта под приливом. |
-| Move | Глубина принимает нас. |
-| Attack | Выпустить рой. |
-| Ability | Погружённый запуск. |
-| Damaged | Внутренний док затоплен! |
-| Elite | Мы приносим небо из глубины. |
-| Idle | Самая сильная крепость — та, которую не нашли. |
-| Death | Дворец… опускается… |
+| Selected | Samudra skryta under prilivom. |
+| Move | Glubina prinimaet nas. |
+| Attack | Vypustit roy. |
+| Ability | Pogruzhyonnyy zapusk. |
+| Damaged | Vnutrenniy dok zatoplen! |
+| Elite | My prinosim nebo iz glubiny. |
+| Idle | Samaya silnaya krepost — ta, kotoruyu ne nashli. |
+| Death | Dvorets… opuskaetsya… |
 
-### 20. Командир Мэй Цзянь (`CO_Hero_Mei`)
-| Параметр | Значение |
+### 20. Commander Mey Tszyan (`CO_Hero_Mei`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CO_Hero_Mei` |
-| Категория | Герой |
-| Технологический уровень | T3 |
-| Стоимость | 2550 |
-| Время производства | 49 сек |
-| Командный лимит | 8 |
+| Kategoriya | Hero |
+| Tekhnologicheskiy uroven | T3 |
+| Stoimost | 2550 |
+| Vremya proizvodstva | 49 sek |
+| Komandnyy limit | 8 |
 | HP | 820 |
-| Тип брони | Тяжёлая пехота |
-| Скорость | 5.2 |
-| Дальность | 9 |
-| Ориентировочный DPS | 68 |
-| Предназначение | Герой построений, щитов и командных связей |
-| Основное оружие | Плазменная винтовка и командные дроны |
-| Требования | Цитадель |
+| Tip broni | Tyazhyolaya Infantry |
+| Skorost | 5.2 |
+| Dalnost | 9 |
+| Orientirovochnyy DPS | 68 |
+| Prednaznachenie | Hero postroeniy, shchitov i komandnykh svyazey |
+| Osnovnoe Weapons | Plazmennaya vintovka i komandnye drony |
+| Requirements | Tsitadel |
 
-#### Способности
-- «Совершенный строй»: мгновенно даёт группе максимальные бонусы построения на 12 сек
-- «Перенос щита»: перенаправляет щиты союзников к выбранной цели; 40 сек
-- Один экземпляр
+#### Sposobnosti
+- «Sovershennyy stroy»: mgnovenno dayot gruppe maksimalnye bonusy postroeniya na 12 sek
+- «Perenos shchita»: perenapravlyaet shchity soyuznikov k vybrannoy tseli; 40 sek
+- Odin ekzemplyar
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Усиливает армию и спасает ключевые цели |
-| Слабые стороны | Сама по себе не уничтожает тяжёлую технику |
-| Прямые контрмеры | Снайперы, артиллерия, изоляция |
+| Silnye storony | Usilivaet armiyu i spasaet klyuchevye tseli |
+| Slabye storony | Sama po sebe ne unichtozhaet tyazhyoluyu tekhniku |
+| Pryamye kontrmery | Snaypery, artilleriya, izolyatsiya |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Командир Мэй Цзянь принимает сеть. |
-| Move | Я займу центр построения. |
-| Attack | Все звенья — огонь по одной цели. |
-| Ability | Совершенный строй. Дышим в одном ритме. |
-| Damaged | Связь держится. Продолжайте. |
-| Elite | Армия стала единым движением. |
-| Idle | Порядок не замедляет. Он исключает лишнее. |
-| Death | Сохраните… строй… |
+| Selected | Commander Mey Tszyan prinimaet set. |
+| Move | Ya zaymu tsentr postroeniya. |
+| Attack | all zvenya — ogon po odnoy tseli. |
+| Ability | Sovershennyy stroy. Dyshim v odnom ritme. |
+| Damaged | Svyaz derzhitsya. Prodolzhayte. |
+| Elite | Armiya stala edinym dvizheniem. |
+| Idle | Poryadok ne zamedlyaet. On isklyuchaet lishnee. |
+| Death | Sokhranite… stroy… |
 
-# Фракция: Хронолегион
-## Фракционная идентичность
-Дорогая армия контроля пространства и времени. Телепортации, задержки, перемотка урона, временные копии и изменение темпа боя. Слабости: низкая базовая прочность, высокая цена ошибок и зависимость от темпоральной стабильности.
-## Фракционный ресурс: Темпоральная стабильность
-Стабильность восстанавливается по 1 очку каждые 2 секунды и ускоряется у хроноузлов. Телепортации, перемотка и стазис расходуют ресурс. Ниже 30: +25% перезарядка способностей и -10% скорость. При 0: активные временные копии исчезают, а телепортация блокируется до восстановления 20 очков.
-## Здания и экономика фракции
-| Здание | Цена | Время, с | Энергия | Назначение |
+# Fraktsiya: Khronolegion
+## Fraktsionnaya identichnost
+Dorogaya armiya kontrolya prostranstva i vremeni. Teleportatsii, zaderzhki, peremotka urona, vremennye kopii i izmenenie tempa boya. Slabosti: nizkaya bazovaya prochnost, vysokaya tsena oshibok i zavisimost ot temporalnoy stabilnosti.
+## Fraktsionnyy resurs: Temporalnaya stabilnost
+Stabilnost vosstanavlivaetsya po 1 ochku kazhdye 2 sekundy i uskoryaetsya u khronouzlov. Teleportatsii, peremotka i stazis raskhoduyut resurs. Nizhe 30: +25% perezaryadka sposobnostey i -10% skorost. with 0: aktivnye vremennye kopii ischezayut, a teleportatsiya blokiruetsya before vosstanovleniya 20 ochkov.
+## Buildings i Economy Factions
+| Zdanie | Tsena | Vremya, s | Energiya | Naznachenie |
 | --- | --- | --- | --- | --- |
-| Мобильный хроноковчег | 5200 | 64 | 0 | Разворачивается в центр причинности |
-| Центр причинности | — | — | +100 | Строительная область, +20 лимита |
-| Реактор замедленного распада | 950 | 22 | +135 | Много энергии, нестабилен при уничтожении |
-| Квантовый переработчик | 2600 | 46 | -25 | Включает добытчик QH-4 «Вероятник» |
-| Казарма эха | 800 | 20 | -18 | Пехота, +5 лимита |
-| Фабрика континуума | 2400 | 44 | -45 | Техника, +10 лимита |
-| Разломный аэродром | 2000 | 37 | -55 | Авиация |
-| Док временного прилива | 2200 | 44 | -50 | Флот |
-| Наблюдатель вероятностей | 1650 | 32 | -65 | Радар, хроноузлы, T2 |
-| Архив будущего | 3900 | 65 | -120 | T3, перемотка и парадоксы |
-| Турель эха | 800 | 18 | -18 | Повторяет каждый третий выстрел |
-| Зенитный разрыв | 1050 | 22 | -32 | ПВО и замедление |
-| Проектор STS-5 «Пауза» | 2200 | 38 | -90 | Останавливает цели на короткое время |
-| Якорь причинности | 1900 | 34 | -70 | Ускоряет восстановление стабильности |
-| Матрица «Обратный отсчёт» | 6500 | 94 | -200 | Перематывает дружественные войска в состояние 10 секунд назад |
-| Сингулярный коллапсер | 7500 | 115 | -240 | Создаёт временную сингулярность; 9 мин |
+| Mobilnyy khronokovcheg | 5200 | 64 | 0 | Razvorachivaetsya v tsentr prichinnosti |
+| Tsentr prichinnosti | — | — | +100 | Stroitelnaya oblast, +20 limita |
+| Reaktor zamedlennogo raspada | 950 | 22 | +135 | Mnogo energii, nestabilen with unichtozhenii |
+| Kvantovyy pererabotchik | 2600 | 46 | -25 | Vklyuchaet Harvester QH-4 «Veroyatnik» |
+| Barracks ekha | 800 | 20 | -18 | Infantry, +5 limita |
+| Fabrika kontinuuma | 2400 | 44 | -45 | Vehicles, +10 limita |
+| Razlomnyy Airfield | 2000 | 37 | -55 | Aviation |
+| Dok vremennogo priliva | 2200 | 44 | -50 | Naval |
+| Nablyudatel veroyatnostey | 1650 | 32 | -65 | Radar, khronouzly, T2 |
+| Arkhiv budushchego | 3900 | 65 | -120 | T3, peremotka i paradoksy |
+| Turel ekha | 800 | 18 | -18 | Povtoryaet kazhdyy tretiy vystrel |
+| Zenitnyy razryv | 1050 | 22 | -32 | PVO i zamedlenie |
+| Proektor STS-5 «Pauza» | 2200 | 38 | -90 | Ostanavlivaet tseli na korotkoe vremya |
+| Yakor prichinnosti | 1900 | 34 | -70 | Uskoryaet vosstanovlenie stabilnosti |
+| Matritsa «Obratnyy otschyot» | 6500 | 94 | -200 | Perematyvaet druzhestvennye voyska v State 10 sekund nazad |
+| Singulyarnyy kollapser | 7500 | 115 | -240 | Sozdayot vremennuyu singulyarnost; 9 min |
 
-## EVA — канонические системные реплики
-| Событие | Реплика |
+## EVA — kanonicheskie sistemnye repliki
+| Sobytie | Replika |
 | --- | --- |
-| Старт | Причинная цепь закреплена. Настоящее доступно для редактирования. |
-| Низкая энергия | Энергетический контур отстаёт от временной линии. |
-| База атакована | В текущем варианте будущего база находится под ударом. |
-| Юнит готов | Единица синхронизирована с настоящим. |
-| Супероружие врага | Зафиксирован исход с массовыми потерями. Вероятность растёт. |
-| Стабильность 30 | Темпоральная стабильность критически снижена. |
-| Победа | Вражеская линия событий завершена. |
-| Поражение | Этот вариант истории больше не поддерживается. |
+| Start | Prichinnaya tsep zakreplena. Nastoyashchee dostupno for redaktirovaniya. |
+| Nizkaya energiya | Energeticheskiy kontur otstayot ot vremennoy linii. |
+| Baza atakovana | V tekushchem variante budushchego baza nakhoditsya under udarom. |
+| Yunit gotov | Edinitsa sinkhronizirovana s nastoyashchim. |
+| Superoruzhie vraga | Zafiksirovan iskhod s massovymi poteryami. Veroyatnost rastyot. |
+| Stabilnost 30 | Temporalnaya stabilnost kriticheski snizhena. |
+| Pobeda | Vrazheskaya liniya sobytiy zavershena. |
+| Porazhenie | Etot variant istorii bolshe ne podderzhivaetsya. |
 
-## Сводная таблица юнитов
-| Юнит | ID | Класс | Тир | Цена | Время | Лимит | HP | Броня | Скорость | Дальность | DPS | Роль |
+## Svodnaya tablitsa yunitov
+| Yunit | ID | Klass | Tir | Tsena | Vremya | Limit | HP | Armor | Skorost | Dalnost | DPS | Rol |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Стрелок ECHO-7 «Резонанс» | CH_ResonanceRifleman | Пехота | T1 | 260 | 8 | 1 | 105 | Лёгкая пехота | 5.1 | 6 | 12 | Базовая пехота с повтором выстрела |
-| Копейщик PHASE-L9 «Прокол» | CH_PunctureLancer | Пехота | T1 | 480 | 12 | 2 | 155 | Тяжёлая пехота | 4.4 | 8 | 27 | ПТ-пехота с короткой фазой |
-| Инженер CSE-2 «Редактор» | CH_CausalityEngineer | Пехота | T1 | 600 | 16 | 1 | 95 | Лёгкая пехота | 4.1 | 0 | 0 | Захват, ремонт и перемотка зданий |
-| Оператор RWD-3 «Реверс» | CH_ReversalMedic | Пехота | T2 | 780 | 19 | 2 | 160 | Лёгкая пехота | 4.3 | 0 | 0 | Медик и восстановление недавнего состояния |
-| Снайпер PDX-12 «Апория» | CH_AporiaSniper | Пехота | T2 | 850 | 20 | 2 | 120 | Лёгкая пехота | 4.7 | 15 | 55 | Снайпер с задержанным уроном |
-| Оперативник NULL-12 «Цензор» | CH_CensorOperative | Пехота | T3 | 1150 | 26 | 2 | 230 | Тяжёлая пехота | 5.5 | 8 | 42 | Диверсант, отключающий способности и производство |
-| Добытчик QH-4 «Вероятник» | CH_ProbabilistHarvester | Техника | T1 | 1550 | 30 | 4 | 1100 | Лёгкая техника | 4.4 | 0 | 0 | Быстрый добытчик с аварийным возвратом |
-| Разведчик BLK-8 «Параллакс» | CH_ParallaxScout | Техника | T1 | 800 | 16 | 3 | 400 | Лёгкая техника | 8.5 | 7 | 17 | Разведка и короткие телепорты |
-| Танк CT-21 «Линия» | CH_TimelineTank | Техника | T2 | 1450 | 29 | 5 | 1250 | Тяжёлая техника | 5.0 | 9 | 48 | Основной танк с накоплением временного щита |
-| Артиллерия LAG-16 «Дельта» | CH_DeltaDelayArtillery | Техника | T2 | 1800 | 37 | 5 | 800 | Осадная техника | 3.3 | 19 | 64 | Снаряды с задержанным взрывом и контроль зоны |
-| Проектор STS-5 «Пауза» | CH_PauseProjector | Техника | T2 | 1900 | 39 | 6 | 1400 | Тяжёлая техника | 3.8 | 10 | 18 | Контроль тяжёлых целей |
-| Тяжёлый танк EPC-0 «Эра» | CH_EraEngine | Техника | T3 | 3100 | 58 | 10 | 3200 | Тяжёлая техника | 3.2 | 12 | 88 | Сверхтяжёлый танк, создающий временные копии |
-| Перехватчик RFT-31 «Разрыв» | CH_GapInterceptor | Авиация | T2 | 1200 | 24 | 4 | 580 | Воздушная | 13.5 | 12 | 52 | Телепортирующийся перехватчик |
-| Штурмовик AFG-6 «Шлейф» | CH_TrailGunship | Авиация | T2 | 1600 | 33 | 5 | 1000 | Воздушная | 8.0 | 8 | 60 | Штурмовик с ложными копиями |
-| Бомбардировщик CRV-9 «Критическая точка» | CH_CriticalPointBomber | Авиация | T3 | 2800 | 54 | 7 | 1500 | Воздушная | 8.7 | 15 | 115 | Стратегический бомбардировщик контроля |
-| Фрегат TMK-9 «Изобата» | CH_IsobathFrigate | Флот | T1 | 950 | 19 | 4 | 760 | Морская | 7.0 | 9 | 30 | Быстрый корабль контроля и разведки |
-| Подлодка ABY-14 «Батис» | CH_BathysSubmarine | Флот | T2 | 2000 | 39 | 7 | 2000 | Морская | 4.4 | 11 | 70 | Скрытая подлодка с коротким скачком |
-| Ковчег SGA-1 «Аттрактор» | CH_AttractorArk | Флот | T3 | 3900 | 70 | 10 | 4000 | Морская | 2.4 | 19 | 105 | Тяжёлый корабль контроля и телепортации |
-| Архивист Селена Восс | CH_Hero_Voss | Герой | T3 | 2700 | 50 | 8 | 700 | Лёгкая пехота | 5.4 | 12 | 72 | Герой контроля времени и перемотки группы |
+| Strelok ECHO-7 «Rezonans» | CH_ResonanceRifleman | Infantry | T1 | 260 | 8 | 1 | 105 | Lyogkaya Infantry | 5.1 | 6 | 12 | Bazovaya Infantry s povtorom vystrela |
+| Kopeyshchik PHASE-L9 «Prokol» | CH_PunctureLancer | Infantry | T1 | 480 | 12 | 2 | 155 | Tyazhyolaya Infantry | 4.4 | 8 | 27 | PT-Infantry s korotkoy fazoy |
+| Engineer CSE-2 «Redaktor» | CH_CausalityEngineer | Infantry | T1 | 600 | 16 | 1 | 95 | Lyogkaya Infantry | 4.1 | 0 | 0 | Zakhvat, remont i peremotka zdaniy |
+| Operator RWD-3 «Revers» | CH_ReversalMedic | Infantry | T2 | 780 | 19 | 2 | 160 | Lyogkaya Infantry | 4.3 | 0 | 0 | Medik i vosstanovlenie nedavnego sostoyaniya |
+| Snayper PDX-12 «Aporiya» | CH_AporiaSniper | Infantry | T2 | 850 | 20 | 2 | 120 | Lyogkaya Infantry | 4.7 | 15 | 55 | Snayper s zaderzhannym uronom |
+| Operativnik NULL-12 «Tsenzor» | CH_CensorOperative | Infantry | T3 | 1150 | 26 | 2 | 230 | Tyazhyolaya Infantry | 5.5 | 8 | 42 | Diversant, otklyuchayushchiy sposobnosti i Production |
+| Harvester QH-4 «Veroyatnik» | CH_ProbabilistHarvester | Vehicles | T1 | 1550 | 30 | 4 | 1100 | Lyogkaya Vehicles | 4.4 | 0 | 0 | Bystryy Harvester s avariynym vozvratom |
+| Razvedchik BLK-8 «Parallaks» | CH_ParallaxScout | Vehicles | T1 | 800 | 16 | 3 | 400 | Lyogkaya Vehicles | 8.5 | 7 | 17 | Razvedka i korotkie teleporty |
+| Tank CT-21 «Liniya» | CH_TimelineTank | Vehicles | T2 | 1450 | 29 | 5 | 1250 | Tyazhyolaya Vehicles | 5.0 | 9 | 48 | Osnovnoy Tank s nakopleniem vremennogo shchita |
+| Artilleriya LAG-16 «Delta» | CH_DeltaDelayArtillery | Vehicles | T2 | 1800 | 37 | 5 | 800 | Osadnaya Vehicles | 3.3 | 19 | 64 | Snaryady s zaderzhannym vzryvom i kontrol zony |
+| Proektor STS-5 «Pauza» | CH_PauseProjector | Vehicles | T2 | 1900 | 39 | 6 | 1400 | Tyazhyolaya Vehicles | 3.8 | 10 | 18 | Kontrol tyazhyolykh tseley |
+| Tyazhyolyy Tank EPC-0 «Era» | CH_EraEngine | Vehicles | T3 | 3100 | 58 | 10 | 3200 | Tyazhyolaya Vehicles | 3.2 | 12 | 88 | Sverkhtyazhyolyy Tank, sozdayushchiy vremennye kopii |
+| Perekhvatchik RFT-31 «Razryv» | CH_GapInterceptor | Aviation | T2 | 1200 | 24 | 4 | 580 | Vozdushnaya | 13.5 | 12 | 52 | Teleportiruyushchiysya perekhvatchik |
+| Shturmovik AFG-6 «Shleyf» | CH_TrailGunship | Aviation | T2 | 1600 | 33 | 5 | 1000 | Vozdushnaya | 8.0 | 8 | 60 | Shturmovik s lozhnymi kopiyami |
+| Bombardirovshchik CRV-9 «Kriticheskaya tochka» | CH_CriticalPointBomber | Aviation | T3 | 2800 | 54 | 7 | 1500 | Vozdushnaya | 8.7 | 15 | 115 | Strategicheskiy bombardirovshchik kontrolya |
+| Fregat TMK-9 «Izobata» | CH_IsobathFrigate | Naval | T1 | 950 | 19 | 4 | 760 | Morskaya | 7.0 | 9 | 30 | Bystryy korabl kontrolya i razvedki |
+| Podlodka ABY-14 «Batis» | CH_BathysSubmarine | Naval | T2 | 2000 | 39 | 7 | 2000 | Morskaya | 4.4 | 11 | 70 | Skrytaya podlodka s korotkim skachkom |
+| Kovcheg SGA-1 «Attraktor» | CH_AttractorArk | Naval | T3 | 3900 | 70 | 10 | 4000 | Morskaya | 2.4 | 19 | 105 | Tyazhyolyy korabl kontrolya i teleportatsii |
+| Arkhivist Selena Voss | CH_Hero_Voss | Hero | T3 | 2700 | 50 | 8 | 700 | Lyogkaya Infantry | 5.4 | 12 | 72 | Hero kontrolya vremeni i peremotki gruppy |
 
-## Подробные карточки юнитов
-### 1. Стрелок ECHO-7 «Резонанс» (`CH_ResonanceRifleman`)
-| Параметр | Значение |
+## Podrobnye kartochki yunitov
+### 1. Strelok ECHO-7 «Rezonans» (`CH_ResonanceRifleman`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CH_ResonanceRifleman` |
-| Категория | Пехота |
-| Технологический уровень | T1 |
-| Стоимость | 260 |
-| Время производства | 8 сек |
-| Командный лимит | 1 |
+| Kategoriya | Infantry |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 260 |
+| Vremya proizvodstva | 8 sek |
+| Komandnyy limit | 1 |
 | HP | 105 |
-| Тип брони | Лёгкая пехота |
-| Скорость | 5.1 |
-| Дальность | 6 |
-| Ориентировочный DPS | 12 |
-| Предназначение | Базовая пехота с повтором выстрела |
-| Основное оружие | Винтовка эха |
-| Требования | Казарма эха |
+| Tip broni | Lyogkaya Infantry |
+| Skorost | 5.1 |
+| Dalnost | 6 |
+| Orientirovochnyy DPS | 12 |
+| Prednaznachenie | Bazovaya Infantry s povtorom vystrela |
+| Osnovnoe Weapons | Vintovka ekha |
+| Requirements | Barracks ekha |
 
-#### Способности
-- Каждый четвёртый залп повторяется через 0.6 сек с 50% урона
+#### Sposobnosti
+- Kazhdyy chetvyortyy zalp povtoryaetsya via 0.6 sek s 50% urona
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Хороший длительный урон |
-| Слабые стороны | Хрупкий, слаб против осколков |
-| Прямые контрмеры | Осколочный урон, техника |
+| Silnye storony | Khoroshiy dlitelnyy Damaged |
+| Slabye storony | Khrupkiy, slab protiv oskolkov |
+| Pryamye kontrmery | Oskolochnyy Damaged, Vehicles |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Резонанс отвечает. |
-| Move | Мы уже шли этим путём. |
-| Attack | Первый выстрел. Затем повтор. |
-| Ability | Эхо закреплено. |
-| Damaged | Этот урон уже знаком. |
-| Elite | Я слышу выстрел до нажатия спуска. |
-| Idle | Тишина тоже иногда повторяется. |
-| Death | Эхо… затихает… |
+| Selected | Rezonans otvechaet. |
+| Move | My uzhe shli etim putyom. |
+| Attack | Pervyy vystrel. Zatem povtor. |
+| Ability | Ekho zakrepleno. |
+| Damaged | Etot Damaged uzhe znakom. |
+| Elite | Ya slyshu vystrel before nazhatiya spuska. |
+| Idle | Tishina tozhe inogda povtoryaetsya. |
+| Death | Ekho… zatikhaet… |
 
-### 2. Копейщик PHASE-L9 «Прокол» (`CH_PunctureLancer`)
-| Параметр | Значение |
+### 2. Kopeyshchik PHASE-L9 «Prokol» (`CH_PunctureLancer`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CH_PunctureLancer` |
-| Категория | Пехота |
-| Технологический уровень | T1 |
-| Стоимость | 480 |
-| Время производства | 12 сек |
-| Командный лимит | 2 |
+| Kategoriya | Infantry |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 480 |
+| Vremya proizvodstva | 12 sek |
+| Komandnyy limit | 2 |
 | HP | 155 |
-| Тип брони | Тяжёлая пехота |
-| Скорость | 4.4 |
-| Дальность | 8 |
-| Ориентировочный DPS | 27 |
-| Предназначение | ПТ-пехота с короткой фазой |
-| Основное оружие | Темпоральное копьё |
-| Требования | Казарма |
+| Tip broni | Tyazhyolaya Infantry |
+| Skorost | 4.4 |
+| Dalnost | 8 |
+| Orientirovochnyy DPS | 27 |
+| Prednaznachenie | PT-Infantry s korotkoy fazoy |
+| Osnovnoe Weapons | Temporalnoe kopyo |
+| Requirements | Barracks |
 
-#### Способности
-- «Фазовый шаг»: становится неуязвимым на 1 сек и проходит сквозь юниты; 22 сек, 8 стабильности
+#### Sposobnosti
+- «Fazovyy shag»: stanovitsya neuyazvimym na 1 sek i prokhodit skvoz Units; 22 sek, 8 stabilnosti
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Хорош в прорыве к технике |
-| Слабые стороны | Зависим от стабильности |
-| Прямые контрмеры | Стрелки, контроль, артиллерия |
+| Silnye storony | Khorosh v proryve k tekhnike |
+| Slabye storony | Zavisim ot stabilnosti |
+| Pryamye kontrmery | Strelki, kontrol, artilleriya |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Прокол находится между мгновениями. |
-| Move | Шагну через препятствие. |
-| Attack | Пробиваю текущую версию брони. |
-| Ability | Фазовый шаг. |
-| Damaged | Возврат был слишком ранним! |
-| Elite | Я касаюсь цели раньше её защиты. |
-| Idle | Стоять — тоже движение, если время идёт. |
-| Death | Не успел… вернуться… |
+| Selected | Prokol nakhoditsya between mgnoveniyami. |
+| Move | Shagnu via prepyatstvie. |
+| Attack | Probivayu tekushchuyu versiyu broni. |
+| Ability | Fazovyy shag. |
+| Damaged | Vozvrat byl slishkom rannim! |
+| Elite | Ya kasayus tseli ranshe eyo zashchity. |
+| Idle | Stoyat — tozhe Move, esli vremya idyot. |
+| Death | Ne uspel… vernutsya… |
 
-### 3. Инженер CSE-2 «Редактор» (`CH_CausalityEngineer`)
-| Параметр | Значение |
+### 3. Engineer CSE-2 «Redaktor» (`CH_CausalityEngineer`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CH_CausalityEngineer` |
-| Категория | Пехота |
-| Технологический уровень | T1 |
-| Стоимость | 600 |
-| Время производства | 16 сек |
-| Командный лимит | 1 |
+| Kategoriya | Infantry |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 600 |
+| Vremya proizvodstva | 16 sek |
+| Komandnyy limit | 1 |
 | HP | 95 |
-| Тип брони | Лёгкая пехота |
-| Скорость | 4.1 |
-| Дальность | 0 |
-| Ориентировочный DPS | 0 |
-| Предназначение | Захват, ремонт и перемотка зданий |
-| Основное оружие | Хроноинструменты |
-| Требования | Казарма |
+| Tip broni | Lyogkaya Infantry |
+| Skorost | 4.1 |
+| Dalnost | 0 |
+| Orientirovochnyy DPS | 0 |
+| Prednaznachenie | Zakhvat, remont i peremotka zdaniy |
+| Osnovnoe Weapons | Khronoinstrumenty |
+| Requirements | Barracks |
 
-#### Способности
-- «Перемотка ремонта»: возвращает зданию состояние 6 сек назад; 40 сек, 15 стабильности
+#### Sposobnosti
+- «Peremotka remonta»: vozvrashchaet zdaniyu State 6 sek nazad; 40 sek, 15 stabilnosti
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Может отменить недавний урон |
-| Слабые стороны | Очень хрупкий |
-| Прямые контрмеры | Любая боевая единица |
+| Silnye storony | Mozhet otmenit nedavniy Damaged |
+| Slabye storony | Ochen khrupkiy |
+| Pryamye kontrmery | Lyubaya boevaya edinitsa |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Редактор сверяет причинную метку. |
-| Move | Иду к повреждённому событию. |
-| Attack | У меня нет оружия в этой линии. |
-| Ability | Возвращаю конструкцию назад. |
-| Damaged | Моя метка сбилась! |
-| Elite | Поломка — это прошлое, которое можно отменить. |
-| Idle | Инструкция устаревает раньше, чем печатается. |
-| Death | Метка… потеряна… |
+| Selected | Redaktor sveryaet prichinnuyu metku. |
+| Move | Idu k povrezhdyonnomu sobytiyu. |
+| Attack | U menya no oruzhiya v etoy linii. |
+| Ability | Vozvrashchayu konstruktsiyu nazad. |
+| Damaged | Moya metka sbilas! |
+| Elite | Polomka — eto proshloe, kotoroe mozhno otmenit. |
+| Idle | Instruktsiya ustarevaet ranshe, chem pechataetsya. |
+| Death | Metka… poteryana… |
 
-### 4. Оператор RWD-3 «Реверс» (`CH_ReversalMedic`)
-| Параметр | Значение |
+### 4. Operator RWD-3 «Revers» (`CH_ReversalMedic`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CH_ReversalMedic` |
-| Категория | Пехота |
-| Технологический уровень | T2 |
-| Стоимость | 780 |
-| Время производства | 19 сек |
-| Командный лимит | 2 |
+| Kategoriya | Infantry |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 780 |
+| Vremya proizvodstva | 19 sek |
+| Komandnyy limit | 2 |
 | HP | 160 |
-| Тип брони | Лёгкая пехота |
-| Скорость | 4.3 |
-| Дальность | 0 |
-| Ориентировочный DPS | 0 |
-| Предназначение | Медик и восстановление недавнего состояния |
-| Основное оружие | Медицинский хроноузел |
-| Требования | Казарма + Наблюдатель |
+| Tip broni | Lyogkaya Infantry |
+| Skorost | 4.3 |
+| Dalnost | 0 |
+| Orientirovochnyy DPS | 0 |
+| Prednaznachenie | Medik i vosstanovlenie nedavnego sostoyaniya |
+| Osnovnoe Weapons | Meditsinskiy khronouzel |
+| Requirements | Barracks + Nablyudatel |
 
-#### Способности
-- «Возврат состояния»: союзник возвращает HP, имевшиеся 5 сек назад; 32 сек, 12 стабильности
+#### Sposobnosti
+- «Vozvrat sostoyaniya»: soyuznik vozvrashchaet HP, imevshiesya 5 sek nazad; 32 sek, 12 stabilnosti
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Очень сильное точечное спасение |
-| Слабые стороны | Не лечит длительный старый урон, безоружен |
-| Прямые контрмеры | Фокус, снайперы |
+| Silnye storony | Ochen silnoe tochechnoe spasenie |
+| Slabye storony | Ne lechit dlitelnyy staryy Damaged, bezoruzhen |
+| Pryamye kontrmery | Fokus, snaypery |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Оператор RWD-3 «Реверс» готов сравнить состояния. |
-| Move | Иду к точке расхождения. |
-| Attack | Боевая функция отсутствует. |
-| Ability | Возвращаю пять секунд. |
-| Damaged | Слишком много повреждений сразу! |
-| Elite | Я помню вас целыми. Этого достаточно. |
-| Idle | Медицина лечит тело. Я лечу момент. |
-| Death | Состояние… не восстановлено… |
+| Selected | Operator RWD-3 «Revers» gotov sravnit sostoyaniya. |
+| Move | Idu k tochke raskhozhdeniya. |
+| Attack | Boevaya funktsiya otsutstvuet. |
+| Ability | Vozvrashchayu pyat sekund. |
+| Damaged | Slishkom mnogo povrezhdeniy srazu! |
+| Elite | Ya pomnyu vas tselymi. Etogo dostatochno. |
+| Idle | Meditsina lechit telo. Ya lechu moment. |
+| Death | State… ne vosstanovleno… |
 
-### 5. Снайпер PDX-12 «Апория» (`CH_AporiaSniper`)
-| Параметр | Значение |
+### 5. Snayper PDX-12 «Aporiya» (`CH_AporiaSniper`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CH_AporiaSniper` |
-| Категория | Пехота |
-| Технологический уровень | T2 |
-| Стоимость | 850 |
-| Время производства | 20 сек |
-| Командный лимит | 2 |
+| Kategoriya | Infantry |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 850 |
+| Vremya proizvodstva | 20 sek |
+| Komandnyy limit | 2 |
 | HP | 120 |
-| Тип брони | Лёгкая пехота |
-| Скорость | 4.7 |
-| Дальность | 15 |
-| Ориентировочный DPS | 55 |
-| Предназначение | Снайпер с задержанным уроном |
-| Основное оружие | Парадоксальная винтовка |
-| Требования | Казарма + Наблюдатель |
+| Tip broni | Lyogkaya Infantry |
+| Skorost | 4.7 |
+| Dalnost | 15 |
+| Orientirovochnyy DPS | 55 |
+| Prednaznachenie | Snayper s zaderzhannym uronom |
+| Osnovnoe Weapons | Paradoksalnaya vintovka |
+| Requirements | Barracks + Nablyudatel |
 
-#### Способности
-- «Отложенная смерть»: урон срабатывает через 4 сек и удваивается, если цель получает второй выстрел; 30 сек
+#### Sposobnosti
+- «Otlozhennaya Death»: Damaged srabatyvaet via 4 sek i udvaivaetsya, esli tsel poluchaet vtoroy vystrel; 30 sek
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Убивает элитную пехоту и героев |
-| Слабые стороны | Сложен в управлении, слаб против техники |
-| Прямые контрмеры | Разведчики, авиация |
+| Silnye storony | Ubivaet elitnuyu pekhotu i geroev |
+| Slabye storony | Slozhen v upravlenii, slab protiv tekhniki |
+| Pryamye kontrmery | Razvedchiki, Aviation |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Апория вычислена. |
-| Move | Займу позицию до её появления. |
-| Attack | Выстрел сделан. Результат позже. |
-| Ability | Смерть отложена. |
-| Damaged | Меня опередили. |
-| Elite | Цель уже мертва. Она просто ещё не знает. |
-| Idle | Ожидание — часть выстрела. |
-| Death | Такой исход… не предполагался… |
+| Selected | Aporiya vychislena. |
+| Move | Zaymu pozitsiyu before eyo poyavleniya. |
+| Attack | Vystrel sdelan. Rezultat pozzhe. |
+| Ability | Death otlozhena. |
+| Damaged | Menya operedili. |
+| Elite | Tsel uzhe mertva. Ona prosto eshchyo ne znaet. |
+| Idle | Idle — chast vystrela. |
+| Death | Takoy iskhod… ne predpolagalsya… |
 
-### 6. Оперативник NULL-12 «Цензор» (`CH_CensorOperative`)
-| Параметр | Значение |
+### 6. Operativnik NULL-12 «Tsenzor» (`CH_CensorOperative`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CH_CensorOperative` |
-| Категория | Пехота |
-| Технологический уровень | T3 |
-| Стоимость | 1150 |
-| Время производства | 26 сек |
-| Командный лимит | 2 |
+| Kategoriya | Infantry |
+| Tekhnologicheskiy uroven | T3 |
+| Stoimost | 1150 |
+| Vremya proizvodstva | 26 sek |
+| Komandnyy limit | 2 |
 | HP | 230 |
-| Тип брони | Тяжёлая пехота |
-| Скорость | 5.5 |
-| Дальность | 8 |
-| Ориентировочный DPS | 42 |
-| Предназначение | Диверсант, отключающий способности и производство |
-| Основное оружие | Нулевой излучатель |
-| Требования | Архив будущего |
+| Tip broni | Tyazhyolaya Infantry |
+| Skorost | 5.5 |
+| Dalnost | 8 |
+| Orientirovochnyy DPS | 42 |
+| Prednaznachenie | Diversant, otklyuchayushchiy sposobnosti i Production |
+| Osnovnoe Weapons | Nulevoy izluchatel |
+| Requirements | Arkhiv budushchego |
 
-#### Способности
-- «Обнуление»: отключает активные способности цели на 8 сек; 38 сек, 18 стабильности
-- Может маскироваться вне боя
+#### Sposobnosti
+- «Obnulenie»: otklyuchaet aktivnye sposobnosti tseli na 8 sek; 38 sek, 18 stabilnosti
+- Mozhet maskirovatsya vne boya
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Контрит героев и поддержку |
-| Слабые стороны | Невысокий прямой урон |
-| Прямые контрмеры | Сканеры, массовый огонь |
+| Silnye storony | Kontrit geroev i podderzhku |
+| Slabye storony | Nevysokiy pryamoy Damaged |
+| Pryamye kontrmery | Skanery, massovyy ogon |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Цензор активен. |
-| Move | Удаляю своё присутствие. |
-| Attack | Цель исключается. |
-| Ability | Функции обнулены. |
-| Damaged | Нулевая оболочка нарушена! |
-| Elite | Я не побеждаю врага. Я отменяю его возможность победить. |
-| Idle | Отсутствие — тоже форма контроля. |
-| Death | Запись… восстановлена врагом… |
+| Selected | Tsenzor aktiven. |
+| Move | Udalyayu svoyo prisutstvie. |
+| Attack | Tsel isklyuchaetsya. |
+| Ability | Funktsii obnuleny. |
+| Damaged | Nulevaya obolochka narushena! |
+| Elite | Ya ne pobezhdayu vraga. Ya otmenyayu ego vozmozhnost pobedit. |
+| Idle | Otsutstvie — tozhe forma kontrolya. |
+| Death | Zapis… vosstanovlena vragom… |
 
-### 7. Добытчик QH-4 «Вероятник» (`CH_ProbabilistHarvester`)
-| Параметр | Значение |
+### 7. Harvester QH-4 «Veroyatnik» (`CH_ProbabilistHarvester`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CH_ProbabilistHarvester` |
-| Категория | Техника |
-| Технологический уровень | T1 |
-| Стоимость | 1550 |
-| Время производства | 30 сек |
-| Командный лимит | 4 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 1550 |
+| Vremya proizvodstva | 30 sek |
+| Komandnyy limit | 4 |
 | HP | 1100 |
-| Тип брони | Лёгкая техника |
-| Скорость | 4.4 |
-| Дальность | 0 |
-| Ориентировочный DPS | 0 |
-| Предназначение | Быстрый добытчик с аварийным возвратом |
-| Основное оружие | Без оружия |
-| Требования | Квантовый переработчик |
+| Tip broni | Lyogkaya Vehicles |
+| Skorost | 4.4 |
+| Dalnost | 0 |
+| Orientirovochnyy DPS | 0 |
+| Prednaznachenie | Bystryy Harvester s avariynym vozvratom |
+| Osnovnoe Weapons | without oruzhiya |
+| Requirements | Kvantovyy pererabotchik |
 
-#### Способности
-- «Квантовый возврат»: телепортируется к переработчику; 45 сек, 15 стабильности
+#### Sposobnosti
+- «Kvantovyy vozvrat»: teleportiruetsya k pererabotchiku; 45 sek, 15 stabilnosti
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Трудно перехватить при внимательном управлении |
-| Слабые стороны | Хрупкий, дорого стоит |
-| Прямые контрмеры | EMP, мгновенный фокус |
+| Silnye storony | Trudno perekhvatit with vnimatelnom upravlenii |
+| Slabye storony | Khrupkiy, dorogo stoit |
+| Pryamye kontrmery | EMP, mgnovennyy fokus |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Маршрут Вероятника открыт. |
-| Move | Вероятность доставки достаточна. |
-| Attack | Боевой исход не поддерживается. |
-| Ability | Возврат к переработчику. |
-| Damaged | Вероятность потери растёт! |
-| Elite | Я доставляю груз из тех линий, где меня не перехватили. |
-| Idle | Маршрут существует в нескольких вариантах. |
-| Death | Эта вероятность… победила… |
+| Selected | Marshrut Veroyatnika otkryt. |
+| Move | Veroyatnost dostavki dostatochna. |
+| Attack | Boevoy iskhod ne podderzhivaetsya. |
+| Ability | Vozvrat k pererabotchiku. |
+| Damaged | Veroyatnost poteri rastyot! |
+| Elite | Ya dostavlyayu gruz iz tekh liniy, gde menya ne perekhvatili. |
+| Idle | Marshrut sushchestvuet v neskolkikh variantakh. |
+| Death | Eta veroyatnost… pobedila… |
 
-### 8. Разведчик BLK-8 «Параллакс» (`CH_ParallaxScout`)
-| Параметр | Значение |
+### 8. Razvedchik BLK-8 «Parallaks» (`CH_ParallaxScout`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CH_ParallaxScout` |
-| Категория | Техника |
-| Технологический уровень | T1 |
-| Стоимость | 800 |
-| Время производства | 16 сек |
-| Командный лимит | 3 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 800 |
+| Vremya proizvodstva | 16 sek |
+| Komandnyy limit | 3 |
 | HP | 400 |
-| Тип брони | Лёгкая техника |
-| Скорость | 8.5 |
-| Дальность | 7 |
-| Ориентировочный DPS | 17 |
-| Предназначение | Разведка и короткие телепорты |
-| Основное оружие | Импульсный излучатель |
-| Требования | Фабрика континуума |
+| Tip broni | Lyogkaya Vehicles |
+| Skorost | 8.5 |
+| Dalnost | 7 |
+| Orientirovochnyy DPS | 17 |
+| Prednaznachenie | Razvedka i korotkie teleporty |
+| Osnovnoe Weapons | Impulsnyy izluchatel |
+| Requirements | Fabrika kontinuuma |
 
-#### Способности
-- «Скачок»: телепорт на короткую дистанцию; 12 сек, 6 стабильности
+#### Sposobnosti
+- «Skachok»: teleport na korotkuyu distantsiyu; 12 sek, 6 stabilnosti
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Лучший разведчик для обхода препятствий |
-| Слабые стороны | Очень хрупкий |
-| Прямые контрмеры | Мины, зоны контроля, ПТ |
+| Silnye storony | Luchshiy razvedchik for obkhoda prepyatstviy |
+| Slabye storony | Ochen khrupkiy |
+| Pryamye kontrmery | Miny, zony kontrolya, PT |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Параллакс зафиксирован. |
-| Move | Следующая точка уже рядом. |
-| Attack | Появляюсь на линии огня. |
-| Ability | Скачок. |
-| Damaged | Координаты дрожат! |
-| Elite | Расстояние — это просто плохая привычка. |
-| Idle | Между здесь и там слишком много пустого времени. |
-| Death | Координата… закрыта… |
+| Selected | Parallaks zafiksirovan. |
+| Move | Sleduyushchaya tochka uzhe ryadom. |
+| Attack | Poyavlyayus na linii ognya. |
+| Ability | Skachok. |
+| Damaged | Koordinaty drozhat! |
+| Elite | Rasstoyanie — eto prosto plokhaya privychka. |
+| Idle | between zdes i tam slishkom mnogo pustogo vremeni. |
+| Death | Koordinata… zakryta… |
 
-### 9. Танк CT-21 «Линия» (`CH_TimelineTank`)
-| Параметр | Значение |
+### 9. Tank CT-21 «Liniya» (`CH_TimelineTank`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CH_TimelineTank` |
-| Категория | Техника |
-| Технологический уровень | T2 |
-| Стоимость | 1450 |
-| Время производства | 29 сек |
-| Командный лимит | 5 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 1450 |
+| Vremya proizvodstva | 29 sek |
+| Komandnyy limit | 5 |
 | HP | 1250 |
-| Тип брони | Тяжёлая техника |
-| Скорость | 5.0 |
-| Дальность | 9 |
-| Ориентировочный DPS | 48 |
-| Предназначение | Основной танк с накоплением временного щита |
-| Основное оружие | Континуумная пушка |
-| Требования | Фабрика + Наблюдатель |
+| Tip broni | Tyazhyolaya Vehicles |
+| Skorost | 5.0 |
+| Dalnost | 9 |
+| Orientirovochnyy DPS | 48 |
+| Prednaznachenie | Osnovnoy Tank s nakopleniem vremennogo shchita |
+| Osnovnoe Weapons | Kontinuumnaya pushka |
+| Requirements | Fabrika + Nablyudatel |
 
-#### Способности
-- «Временной панцирь»: 6 сек записывает урон, затем возвращает 40% потерянного HP; 34 сек, 14 стабильности
+#### Sposobnosti
+- «Vremennoy pantsir»: 6 sek zapisyvaet Damaged, zatem vozvrashchaet 40% poteryannogo HP; 34 sek, 14 stabilnosti
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Хорошо переживает фокус |
-| Слабые стороны | Слаб после окончания панциря |
-| Прямые контрмеры | Отложенный урон, EMP, длительный огонь |
+| Silnye storony | Khorosho perezhivaet fokus |
+| Slabye storony | Slab after okonchaniya pantsirya |
+| Pryamye kontrmery | Otlozhennyy Damaged, EMP, dlitelnyy ogon |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Линия стабильна. |
-| Move | Продолжаю линию движения. |
-| Attack | Событие поражения цели начато. |
-| Ability | Записываю повреждения. |
-| Damaged | Панцирь запоминает удар! |
-| Elite | Мой урон всегда временный. Ваш — нет. |
-| Idle | Настоящее — самая тонкая броня. |
-| Death | Запись… не восстановилась… |
+| Selected | Liniya stabilna. |
+| Move | Prodolzhayu liniyu dvizheniya. |
+| Attack | Sobytie porazheniya tseli nachato. |
+| Ability | Zapisyvayu povrezhdeniya. |
+| Damaged | Pantsir zapominaet udar! |
+| Elite | Moy Damaged vsegda vremennyy. Vash — no. |
+| Idle | Nastoyashchee — samaya tonkaya Armor. |
+| Death | Zapis… ne vosstanovilas… |
 
-### 10. Артиллерия LAG-16 «Дельта» (`CH_DeltaDelayArtillery`)
-| Параметр | Значение |
+### 10. Artilleriya LAG-16 «Delta» (`CH_DeltaDelayArtillery`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CH_DeltaDelayArtillery` |
-| Категория | Техника |
-| Технологический уровень | T2 |
-| Стоимость | 1800 |
-| Время производства | 37 сек |
-| Командный лимит | 5 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 1800 |
+| Vremya proizvodstva | 37 sek |
+| Komandnyy limit | 5 |
 | HP | 800 |
-| Тип брони | Осадная техника |
-| Скорость | 3.3 |
-| Дальность | 19 |
-| Ориентировочный DPS | 64 |
-| Предназначение | Снаряды с задержанным взрывом и контроль зоны |
-| Основное оружие | Темпоральные мины-снаряды |
-| Требования | Фабрика + Наблюдатель |
+| Tip broni | Osadnaya Vehicles |
+| Skorost | 3.3 |
+| Dalnost | 19 |
+| Orientirovochnyy DPS | 64 |
+| Prednaznachenie | Snaryady s zaderzhannym vzryvom i kontrol zony |
+| Osnovnoe Weapons | Temporalnye miny-snaryady |
+| Requirements | Fabrika + Nablyudatel |
 
-#### Способности
-- «Поле задержки»: область замедляет врагов на 50% 8 сек; 40 сек, 18 стабильности
+#### Sposobnosti
+- «Pole zaderzhki»: oblast zamedlyaet vragov na 50% 8 sek; 40 sek, 18 stabilnosti
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Отличный контроль и дальность |
-| Слабые стороны | Слабая броня, урон не мгновенный |
-| Прямые контрмеры | Разведчики, авиация |
+| Silnye storony | Otlichnyy kontrol i dalnost |
+| Slabye storony | Slabaya Armor, Damaged ne mgnovennyy |
+| Pryamye kontrmery | Razvedchiki, Aviation |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Дельта настроена. |
-| Move | Сдвигаю точку будущего взрыва. |
-| Attack | Снаряд прибыл. Взрыв позже. |
-| Ability | Поле задержки создано. |
-| Damaged | Расчёт времени нарушен! |
-| Elite | Враг успевает понять ошибку. Исправить — нет. |
-| Idle | Спешка полезна только цели. |
-| Death | Таймер… остановлен… |
+| Selected | Delta nastroena. |
+| Move | Sdvigayu tochku budushchego vzryva. |
+| Attack | Snaryad pribyl. Vzryv pozzhe. |
+| Ability | Pole zaderzhki created. |
+| Damaged | Raschyot vremeni narushen! |
+| Elite | Vrag uspevaet ponyat oshibku. Ispravit — no. |
+| Idle | Speshka polezna only tseli. |
+| Death | Taymer… ostanovlen… |
 
-### 11. Проектор STS-5 «Пауза» (`CH_PauseProjector`)
-| Параметр | Значение |
+### 11. Proektor STS-5 «Pauza» (`CH_PauseProjector`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CH_PauseProjector` |
-| Категория | Техника |
-| Технологический уровень | T2 |
-| Стоимость | 1900 |
-| Время производства | 39 сек |
-| Командный лимит | 6 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 1900 |
+| Vremya proizvodstva | 39 sek |
+| Komandnyy limit | 6 |
 | HP | 1400 |
-| Тип брони | Тяжёлая техника |
-| Скорость | 3.8 |
-| Дальность | 10 |
-| Ориентировочный DPS | 18 |
-| Предназначение | Контроль тяжёлых целей |
-| Основное оружие | Стазис-луч |
-| Требования | Фабрика + Наблюдатель |
+| Tip broni | Tyazhyolaya Vehicles |
+| Skorost | 3.8 |
+| Dalnost | 10 |
+| Orientirovochnyy DPS | 18 |
+| Prednaznachenie | Kontrol tyazhyolykh tseley |
+| Osnovnoe Weapons | Stazis-luch |
+| Requirements | Fabrika + Nablyudatel |
 
-#### Способности
-- «Полный стазис»: выключает цель из боя на 5 сек; 42 сек, 22 стабильности
+#### Sposobnosti
+- «Polnyy stazis»: vyklyuchaet tsel iz boya na 5 sek; 42 sek, 22 stabilnosti
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Сильнейший контроль одной цели |
-| Слабые стороны | Низкий урон, дорогой |
-| Прямые контрмеры | Фокус, артиллерия, Null-эффекты |
+| Silnye storony | Silneyshiy kontrol odnoy tseli |
+| Slabye storony | Nizkiy Damaged, dorogoy |
+| Pryamye kontrmery | Fokus, artilleriya, Null-effekty |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Пауза готова остановить момент. |
-| Move | Переношу зону покоя. |
-| Attack | Замедляю цель до нуля. |
-| Ability | Полный стазис. |
-| Damaged | Камера стазиса треснула! |
-| Elite | Время врага заканчивается по моей команде. |
-| Idle | Неподвижность бывает абсолютной. |
-| Death | Момент… продолжился… |
+| Selected | Pauza gotova ostanovit moment. |
+| Move | Perenoshu zonu pokoya. |
+| Attack | Zamedlyayu tsel before nulya. |
+| Ability | Polnyy stazis. |
+| Damaged | Kamera stazisa tresnula! |
+| Elite | Vremya vraga zakanchivaetsya po moey komande. |
+| Idle | Nepodvizhnost byvaet absolyutnoy. |
+| Death | Moment… prodolzhilsya… |
 
-### 12. Тяжёлый танк EPC-0 «Эра» (`CH_EraEngine`)
-| Параметр | Значение |
+### 12. Tyazhyolyy Tank EPC-0 «Era» (`CH_EraEngine`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CH_EraEngine` |
-| Категория | Техника |
-| Технологический уровень | T3 |
-| Стоимость | 3100 |
-| Время производства | 58 сек |
-| Командный лимит | 10 |
+| Kategoriya | Vehicles |
+| Tekhnologicheskiy uroven | T3 |
+| Stoimost | 3100 |
+| Vremya proizvodstva | 58 sek |
+| Komandnyy limit | 10 |
 | HP | 3200 |
-| Тип брони | Тяжёлая техника |
-| Скорость | 3.2 |
-| Дальность | 12 |
-| Ориентировочный DPS | 88 |
-| Предназначение | Сверхтяжёлый танк, создающий временные копии |
-| Основное оружие | Двойная хроно-пушка |
-| Требования | Архив + два завода |
+| Tip broni | Tyazhyolaya Vehicles |
+| Skorost | 3.2 |
+| Dalnost | 12 |
+| Orientirovochnyy DPS | 88 |
+| Prednaznachenie | Sverkhtyazhyolyy Tank, sozdayushchiy vremennye kopii |
+| Osnovnoe Weapons | Dvoynaya Chrono-pushka |
+| Requirements | Arkhiv + dva zavoda |
 
-#### Способности
-- «Послеобраз»: создаёт копию с 45% характеристик на 15 сек; 55 сек, 30 стабильности
+#### Sposobnosti
+- «Posleobraz»: sozdayot kopiyu s 45% kharakteristik na 15 sek; 55 sek, 30 stabilnosti
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Огромный тактический потенциал |
-| Слабые стороны | Очень дорог и сильно расходует стабильность |
-| Прямые контрмеры | EMP, фокус по оригиналу, Null-оперативники |
+| Silnye storony | Ogromnyy takticheskiy potentsial |
+| Slabye storony | Ochen dorog i silno raskhoduet stabilnost |
+| Pryamye kontrmery | EMP, fokus po originalu, Null-operativniki |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Тяжёлый танк EPC-0 «Эра» вошёл в настоящее. |
-| Move | Перемещаю эпоху вперёд. |
-| Attack | Два исхода сходятся на цели. |
-| Ability | Создаю послеобраз. |
-| Damaged | Причинный корпус повреждён! |
-| Elite | Одного меня достаточно. Двух — слишком много. |
-| Idle | История любит повторения. Я — тоже. |
-| Death | Эпоха… завершена… |
+| Selected | Tyazhyolyy Tank EPC-0 «Era» voshyol v nastoyashchee. |
+| Move | Peremeshchayu epokhu vperyod. |
+| Attack | Dva iskhoda skhodyatsya na tseli. |
+| Ability | Sozdayu posleobraz. |
+| Damaged | Prichinnyy korpus povrezhdyon! |
+| Elite | Odnogo menya dostatochno. Dvukh — slishkom mnogo. |
+| Idle | Istoriya lyubit povtoreniya. Ya — tozhe. |
+| Death | Epokha… zavershena… |
 
-### 13. Перехватчик RFT-31 «Разрыв» (`CH_GapInterceptor`)
-| Параметр | Значение |
+### 13. Perekhvatchik RFT-31 «Razryv» (`CH_GapInterceptor`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CH_GapInterceptor` |
-| Категория | Авиация |
-| Технологический уровень | T2 |
-| Стоимость | 1200 |
-| Время производства | 24 сек |
-| Командный лимит | 4 |
+| Kategoriya | Aviation |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 1200 |
+| Vremya proizvodstva | 24 sek |
+| Komandnyy limit | 4 |
 | HP | 580 |
-| Тип брони | Воздушная |
-| Скорость | 13.5 |
-| Дальность | 12 |
-| Ориентировочный DPS | 52 |
-| Предназначение | Телепортирующийся перехватчик |
-| Основное оружие | Разломные ракеты |
-| Требования | Разломный аэродром |
+| Tip broni | Vozdushnaya |
+| Skorost | 13.5 |
+| Dalnost | 12 |
+| Orientirovochnyy DPS | 52 |
+| Prednaznachenie | Teleportiruyushchiysya perekhvatchik |
+| Osnovnoe Weapons | Razlomnye rakety |
+| Requirements | Razlomnyy Airfield |
 
-#### Способности
-- «Разрыв курса»: мгновенно меняет позицию за целью; 22 сек, 8 стабильности
+#### Sposobnosti
+- «Razryv kursa»: mgnovenno menyaet pozitsiyu za tselyu; 22 sek, 8 stabilnosti
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Очень силён в воздушной дуэли |
-| Слабые стороны | Хрупкий, требует стабильности |
-| Прямые контрмеры | ПВО, численность |
+| Silnye storony | Ochen silyon v vozdushnoy dueli |
+| Slabye storony | Khrupkiy, trebuet stabilnosti |
+| Pryamye kontrmery | PVO, chislennost |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Разрыв удерживает канал. |
-| Move | Курс можно сократить. |
-| Attack | Выхожу за хвост цели. |
-| Ability | Разрыв курса. |
-| Damaged | Разлом нестабилен! |
-| Elite | Воздушный бой заканчивается до первого виража. |
-| Idle | Крылья нужны только для приличия. |
-| Death | Разлом… закрылся… |
+| Selected | Razryv uderzhivaet kanal. |
+| Move | Kurs mozhno sokratit. |
+| Attack | Vykhozhu za khvost tseli. |
+| Ability | Razryv kursa. |
+| Damaged | Razlom nestabilen! |
+| Elite | Vozdushnyy boy zakanchivaetsya before pervogo virazha. |
+| Idle | Krylya nuzhny only for prilichiya. |
+| Death | Razlom… zakrylsya… |
 
-### 14. Штурмовик AFG-6 «Шлейф» (`CH_TrailGunship`)
-| Параметр | Значение |
+### 14. Shturmovik AFG-6 «Shleyf» (`CH_TrailGunship`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CH_TrailGunship` |
-| Категория | Авиация |
-| Технологический уровень | T2 |
-| Стоимость | 1600 |
-| Время производства | 33 сек |
-| Командный лимит | 5 |
+| Kategoriya | Aviation |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 1600 |
+| Vremya proizvodstva | 33 sek |
+| Komandnyy limit | 5 |
 | HP | 1000 |
-| Тип брони | Воздушная |
-| Скорость | 8.0 |
-| Дальность | 8 |
-| Ориентировочный DPS | 60 |
-| Предназначение | Штурмовик с ложными копиями |
-| Основное оружие | Темпоральные автопушки |
-| Требования | Аэродром + Наблюдатель |
+| Tip broni | Vozdushnaya |
+| Skorost | 8.0 |
+| Dalnost | 8 |
+| Orientirovochnyy DPS | 60 |
+| Prednaznachenie | Shturmovik s lozhnymi kopiyami |
+| Osnovnoe Weapons | Temporalnye avtopushki |
+| Requirements | Airfield + Nablyudatel |
 
-#### Способности
-- «Ложный рой»: создаёт 3 неатакующих копии, сбивающих наведение; 34 сек, 12 стабильности
+#### Sposobnosti
+- «Lozhnyy roy»: sozdayot 3 neatakuyushchikh kopii, sbivayushchikh navedenie; 34 sek, 12 stabilnosti
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Хорошо переживает ПВО |
-| Слабые стороны | Средний урон, копии не наносят урон |
-| Прямые контрмеры | Площадное ПВО, сканеры |
+| Silnye storony | Khorosho perezhivaet PVO |
+| Slabye storony | Sredniy Damaged, kopii ne nanosyat Damaged |
+| Pryamye kontrmery | Ploshchadnoe PVO, skanery |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Шлейф синхронизирован. |
-| Move | Копии держат строй. |
-| Attack | Настоящий залп среди ложных. |
-| Ability | Ложный рой создан. |
-| Damaged | Попали в оригинал! |
-| Elite | Пусть выберут правильную цель. Времени нет. |
-| Idle | Иногда я сам не уверен, который из нас настоящий. |
-| Death | Оригинал… потерян… |
+| Selected | Shleyf sinkhronizirovan. |
+| Move | Kopii derzhat stroy. |
+| Attack | Nastoyashchiy zalp sredi lozhnykh. |
+| Ability | Lozhnyy roy sozdan. |
+| Damaged | Popali v original! |
+| Elite | Pust vyberut pravilnuyu tsel. Vremeni no. |
+| Idle | Inogda ya sam ne uveren, kotoryy iz nas nastoyashchiy. |
+| Death | Original… poteryan… |
 
-### 15. Бомбардировщик CRV-9 «Критическая точка» (`CH_CriticalPointBomber`)
-| Параметр | Значение |
+### 15. Bombardirovshchik CRV-9 «Kriticheskaya tochka» (`CH_CriticalPointBomber`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CH_CriticalPointBomber` |
-| Категория | Авиация |
-| Технологический уровень | T3 |
-| Стоимость | 2800 |
-| Время производства | 54 сек |
-| Командный лимит | 7 |
+| Kategoriya | Aviation |
+| Tekhnologicheskiy uroven | T3 |
+| Stoimost | 2800 |
+| Vremya proizvodstva | 54 sek |
+| Komandnyy limit | 7 |
 | HP | 1500 |
-| Тип брони | Воздушная |
-| Скорость | 8.7 |
-| Дальность | 15 |
-| Ориентировочный DPS | 115 |
-| Предназначение | Стратегический бомбардировщик контроля |
-| Основное оружие | Сингулярные заряды |
-| Требования | Архив + аэродром |
+| Tip broni | Vozdushnaya |
+| Skorost | 8.7 |
+| Dalnost | 15 |
+| Orientirovochnyy DPS | 115 |
+| Prednaznachenie | Strategicheskiy bombardirovshchik kontrolya |
+| Osnovnoe Weapons | Singulyarnye zaryady |
+| Requirements | Arkhiv + Airfield |
 
-#### Способности
-- «Обратная волна»: после взрыва враги притягиваются к центру; 48 сек, 24 стабильности
+#### Sposobnosti
+- «Obratnaya volna»: after vzryva vragi prityagivayutsya k tsentru; 48 sek, 24 stabilnosti
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Сильный урон и стягивание |
-| Слабые стороны | Дорогой, заметный после сброса |
-| Прямые контрмеры | Истребители, дальнее ПВО |
+| Silnye storony | Silnyy Damaged i styagivanie |
+| Slabye storony | Dorogoy, zametnyy after sbrosa |
+| Pryamye kontrmery | Istrebiteli, dalnee PVO |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Критическая точка сформирована. |
-| Move | Подхожу к точке необратимости. |
-| Attack | Сбрасываю сингулярный заряд. |
-| Ability | Обратная волна активна. |
-| Damaged | Контейнер сингулярности повреждён! |
-| Elite | После моего удара пути назад нет буквально. |
-| Idle | Не смотрите в центр слишком долго. |
-| Death | Горизонт… поглотил носитель… |
+| Selected | Kriticheskaya tochka sformirovana. |
+| Move | Podkhozhu k tochke neobratimosti. |
+| Attack | Sbrasyvayu singulyarnyy zaryad. |
+| Ability | Obratnaya volna aktivna. |
+| Damaged | Konteyner singulyarnosti povrezhdyon! |
+| Elite | after moego udara puti nazad no bukvalno. |
+| Idle | Ne smotrite v tsentr slishkom dolgo. |
+| Death | Gorizont… poglotil nositel… |
 
-### 16. Фрегат TMK-9 «Изобата» (`CH_IsobathFrigate`)
-| Параметр | Значение |
+### 16. Fregat TMK-9 «Izobata» (`CH_IsobathFrigate`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CH_IsobathFrigate` |
-| Категория | Флот |
-| Технологический уровень | T1 |
-| Стоимость | 950 |
-| Время производства | 19 сек |
-| Командный лимит | 4 |
+| Kategoriya | Naval |
+| Tekhnologicheskiy uroven | T1 |
+| Stoimost | 950 |
+| Vremya proizvodstva | 19 sek |
+| Komandnyy limit | 4 |
 | HP | 760 |
-| Тип брони | Морская |
-| Скорость | 7.0 |
-| Дальность | 9 |
-| Ориентировочный DPS | 30 |
-| Предназначение | Быстрый корабль контроля и разведки |
-| Основное оружие | Импульсные торпеды |
-| Требования | Док временного прилива |
+| Tip broni | Morskaya |
+| Skorost | 7.0 |
+| Dalnost | 9 |
+| Orientirovochnyy DPS | 30 |
+| Prednaznachenie | Bystryy korabl kontrolya i razvedki |
+| Osnovnoe Weapons | Impulsnye torpedy |
+| Requirements | Dok vremennogo priliva |
 
-#### Способности
-- «Отметка прилива»: помечает область; союзные корабли получают +15% скорость
+#### Sposobnosti
+- «Otmetka priliva»: pomechaet oblast; soyuznye korabli poluchayut +15% skorost
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Хорошая поддержка флота |
-| Слабые стороны | Слаб против тяжёлых кораблей |
-| Прямые контрмеры | Крейсеры, береговая артиллерия |
+| Silnye storony | Khoroshaya podderzhka flota |
+| Slabye storony | Slab protiv tyazhyolykh korabley |
+| Pryamye kontrmery | Kreysery, beregovaya artilleriya |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Изобата активна. |
-| Move | Сдвигаю линию воды. |
-| Attack | Торпеды входят в настоящее. |
-| Ability | Прилив отмечен. |
-| Damaged | Временная ватерлиния нарушена! |
-| Elite | Море запоминает наши маршруты. |
-| Idle | Прилив всегда возвращается. |
-| Death | Отметка… смыта… |
+| Selected | Izobata aktivna. |
+| Move | Sdvigayu liniyu vody. |
+| Attack | Torpedy vkhodyat v nastoyashchee. |
+| Ability | Priliv otmechen. |
+| Damaged | Vremennaya vaterliniya narushena! |
+| Elite | More zapominaet nashi marshruty. |
+| Idle | Priliv vsegda vozvrashchaetsya. |
+| Death | Otmetka… smyta… |
 
-### 17. Подлодка ABY-14 «Батис» (`CH_BathysSubmarine`)
-| Параметр | Значение |
+### 17. Podlodka ABY-14 «Batis» (`CH_BathysSubmarine`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CH_BathysSubmarine` |
-| Категория | Флот |
-| Технологический уровень | T2 |
-| Стоимость | 2000 |
-| Время производства | 39 сек |
-| Командный лимит | 7 |
+| Kategoriya | Naval |
+| Tekhnologicheskiy uroven | T2 |
+| Stoimost | 2000 |
+| Vremya proizvodstva | 39 sek |
+| Komandnyy limit | 7 |
 | HP | 2000 |
-| Тип брони | Морская |
-| Скорость | 4.4 |
-| Дальность | 11 |
-| Ориентировочный DPS | 70 |
-| Предназначение | Скрытая подлодка с коротким скачком |
-| Основное оружие | Темпоральные торпеды |
-| Требования | Док + Наблюдатель |
+| Tip broni | Morskaya |
+| Skorost | 4.4 |
+| Dalnost | 11 |
+| Orientirovochnyy DPS | 70 |
+| Prednaznachenie | Skrytaya podlodka s korotkim skachkom |
+| Osnovnoe Weapons | Temporalnye torpedy |
+| Requirements | Dok + Nablyudatel |
 
-#### Способности
-- «Глубинный скачок»: телепорт под водой; 30 сек, 14 стабильности
+#### Sposobnosti
+- «Glubinnyy skachok»: teleport under vodoy; 30 sek, 14 stabilnosti
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Может обходить противолодочные линии |
-| Слабые стороны | Дорогая, уязвима при низкой стабильности |
-| Прямые контрмеры | Сонар, массовый фокус |
+| Silnye storony | Mozhet obkhodit protivolodochnye linii |
+| Slabye storony | Dorogaya, uyazvima with nizkoy stabilnosti |
+| Pryamye kontrmery | Sonar, massovyy fokus |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Батис движется под линией. |
-| Move | Глубина сократит путь. |
-| Attack | Торпеды опережают волну. |
-| Ability | Глубинный скачок. |
-| Damaged | Корпус искажён! |
-| Elite | Нас нельзя окружить в пространстве. |
-| Idle | В глубине время идёт иначе. |
-| Death | Батис… теряет глубину… |
+| Selected | Batis dvizhetsya under liniey. |
+| Move | Glubina sokratit put. |
+| Attack | Torpedy operezhayut volnu. |
+| Ability | Glubinnyy skachok. |
+| Damaged | Korpus iskazhyon! |
+| Elite | Nas nelzya okruzhit v prostranstve. |
+| Idle | V glubine vremya idyot inache. |
+| Death | Batis… teryaet glubinu… |
 
-### 18. Ковчег SGA-1 «Аттрактор» (`CH_AttractorArk`)
-| Параметр | Значение |
+### 18. Kovcheg SGA-1 «Attraktor» (`CH_AttractorArk`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CH_AttractorArk` |
-| Категория | Флот |
-| Технологический уровень | T3 |
-| Стоимость | 3900 |
-| Время производства | 70 сек |
-| Командный лимит | 10 |
+| Kategoriya | Naval |
+| Tekhnologicheskiy uroven | T3 |
+| Stoimost | 3900 |
+| Vremya proizvodstva | 70 sek |
+| Komandnyy limit | 10 |
 | HP | 4000 |
-| Тип брони | Морская |
-| Скорость | 2.4 |
-| Дальность | 19 |
-| Ориентировочный DPS | 105 |
-| Предназначение | Тяжёлый корабль контроля и телепортации |
-| Основное оружие | Сингулярная артиллерия |
-| Требования | Док + Архив |
+| Tip broni | Morskaya |
+| Skorost | 2.4 |
+| Dalnost | 19 |
+| Orientirovochnyy DPS | 105 |
+| Prednaznachenie | Tyazhyolyy korabl kontrolya i teleportatsii |
+| Osnovnoe Weapons | Singulyarnaya artilleriya |
+| Requirements | Dok + Arkhiv |
 
-#### Способности
-- «Морской портал»: телепортирует до 6 союзных кораблей к себе; 65 сек, 35 стабильности
+#### Sposobnosti
+- «Morskoy portal»: teleportiruet before 6 soyuznykh korabley k sebe; 65 sek, 35 stabilnosti
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Меняет расстановку всего флота |
-| Слабые стороны | Очень дорог, огромная цель |
-| Прямые контрмеры | Подлодки, стратегические удары |
+| Silnye storony | Menyaet rasstanovku Total flota |
+| Slabye storony | Ochen dorog, ogromnaya tsel |
+| Pryamye kontrmery | Podlodki, strategicheskie udary |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Аттрактор удерживает сингулярность. |
-| Move | Переношу центр притяжения. |
-| Attack | Открыть артиллерийский коллапс. |
-| Ability | Морской портал сформирован. |
-| Damaged | Сингулярность выходит из центра! |
-| Elite | Флот больше не ограничен морем между точками. |
-| Idle | Ковчег хранит не людей. Он хранит варианты. |
-| Death | Сингулярность… теряет оболочку… |
+| Selected | Attraktor uderzhivaet singulyarnost. |
+| Move | Perenoshu tsentr prityazheniya. |
+| Attack | Otkryt artilleriyskiy kollaps. |
+| Ability | Morskoy portal sformirovan. |
+| Damaged | Singulyarnost vykhodit iz tsentra! |
+| Elite | Naval bolshe ne ogranichen morem between tochkami. |
+| Idle | Kovcheg khranit ne lyudey. On khranit varianty. |
+| Death | Singulyarnost… teryaet obolochku… |
 
-### 19. Архивист Селена Восс (`CH_Hero_Voss`)
-| Параметр | Значение |
+### 19. Arkhivist Selena Voss (`CH_Hero_Voss`)
+| Parametr | Value |
 | --- | --- |
 | Stable ID | `CH_Hero_Voss` |
-| Категория | Герой |
-| Технологический уровень | T3 |
-| Стоимость | 2700 |
-| Время производства | 50 сек |
-| Командный лимит | 8 |
+| Kategoriya | Hero |
+| Tekhnologicheskiy uroven | T3 |
+| Stoimost | 2700 |
+| Vremya proizvodstva | 50 sek |
+| Komandnyy limit | 8 |
 | HP | 700 |
-| Тип брони | Лёгкая пехота |
-| Скорость | 5.4 |
-| Дальность | 12 |
-| Ориентировочный DPS | 72 |
-| Предназначение | Герой контроля времени и перемотки группы |
-| Основное оружие | Архивный излучатель |
-| Требования | Архив будущего |
+| Tip broni | Lyogkaya Infantry |
+| Skorost | 5.4 |
+| Dalnost | 12 |
+| Orientirovochnyy DPS | 72 |
+| Prednaznachenie | Hero kontrolya vremeni i peremotki gruppy |
+| Osnovnoe Weapons | Arkhivnyy izluchatel |
+| Requirements | Arkhiv budushchego |
 
-#### Способности
-- «Архив состояния»: записывает состояние группы и может вернуть его в течение 12 сек
-- «Запрет события»: отменяет одно применение вражеской способности; 60 сек
-- Один экземпляр
+#### Sposobnosti
+- «Arkhiv sostoyaniya»: zapisyvaet State gruppy i mozhet vernut ego v techenie 12 sek
+- «Zapret sobytiya»: otmenyaet odno primenenie vrazheskoy sposobnosti; 60 sek
+- Odin ekzemplyar
 
-#### Баланс и применение
-| Аспект | Описание |
+#### Balans i primenenie
+| Aspekt | Description |
 | --- | --- |
-| Сильные стороны | Уникальное спасение армии и контрспособности |
-| Слабые стороны | Крайне хрупкая и сложная |
-| Прямые контрмеры | Снайперы, внезапный фокус, Null-эффекты |
+| Silnye storony | Unikalnoe spasenie armii i kontrsposobnosti |
+| Slabye storony | Krayne khrupkaya i slozhnaya |
+| Pryamye kontrmery | Snaypery, vnezapnyy fokus, Null-effekty |
 
-#### Озвучка
-| Условие | Каноническая реплика |
+#### Voiceover
+| Uslovie | Kanonicheskaya replika |
 | --- | --- |
-| Selected | Архивист Восс. Я помню исходы, которых ещё нет. |
-| Move | Эта точка присутствует во всех полезных вариантах. |
-| Attack | Удаляю нежелательное продолжение. |
-| Ability | Состояние записано. Возврат разрешён. |
-| Damaged | Архив получает несовместимые данные. |
-| Elite | Будущее больше не удивляет меня. |
-| Idle | История — плохой архив. Слишком многое теряет. |
-| Death | Запись… не сохранилась… |
+| Selected | Arkhivist Voss. Ya pomnyu iskhody, kotorykh eshchyo no. |
+| Move | Eta tochka prisutstvuet vo vsekh poleznykh variantakh. |
+| Attack | Udalyayu nezhelatelnoe prodolzhenie. |
+| Ability | State zapisano. Vozvrat razreshyon. |
+| Damaged | Arkhiv poluchaet nesovmestimye dannye. |
+| Elite | Budushchee bolshe ne udivlyaet menya. |
+| Idle | Istoriya — plokhoy arkhiv. Slishkom mnogoe teryaet. |
+| Death | Zapis… ne sokhranilas… |
 
-# 5. Системные правила AI и автоповедения
-## 5.1. Приоритеты целей
-| Тип юнита | Приоритет |
+# 5. Sistemnye pravila AI i avtopovedeniya
+## 5.1. Prioritety tseley
+| Tip yunita | Prioritet |
 | --- | --- |
-| Стрелковая пехота | Вражеская пехота → инженеры → лёгкая техника |
-| ПТ-пехота | Лёгкая техника → тяжёлая техника → здания |
-| Основной танк | Тяжёлая техника → лёгкая техника → здания |
-| Артиллерия | Скопления → оборона → производство |
-| ПВО | Бомбардировщики → штурмовики → транспорт → истребители |
-| Истребитель | Бомбардировщики → штурмовики → истребители |
-| Герой/поддержка | Ключевые цели и применение способностей по правилам угрозы |
+| Strelkovaya Infantry | Vrazheskaya Infantry → inzhenery → lyogkaya Vehicles |
+| PT-Infantry | Lyogkaya Vehicles → tyazhyolaya Vehicles → Buildings |
+| Osnovnoy Tank | Tyazhyolaya Vehicles → lyogkaya Vehicles → Buildings |
+| Artilleriya | Skopleniya → oborona → Production |
+| PVO | Bombardirovshchiki → shturmoviki → transport → istrebiteli |
+| Istrebitel | Bombardirovshchiki → shturmoviki → istrebiteli |
+| Hero/podderzhka | Klyuchevye tseli i primenenie sposobnostey po pravilam ugrozy |
 
-## 5.2. Автоматический отход
-По умолчанию юниты не отступают сами, чтобы не ломать контроль игрока. Допускается опциональный режим «Осторожный AI»: юнит при HP ниже 20% отходит к ближайшей ремонтной зоне, если не находится в режиме Hold Position, Guard или Attack-Move с запретом отхода.
+## 5.2. Avtomaticheskiy otkhod
+Po umolchaniyu Units ne otstupayut sami, chtoby ne lomat kontrol igroka. Dopuskaetsya optsionalnyy rezhim «Ostorozhnyy AI»: yunit with HP nizhe 20% otkhodit k blizhayshey remontnoy zone, esli ne nakhoditsya v rezhime Hold Position, Guard or Attack-Move s zapretom otkhoda.
 
-## 5.3. Построения
-| Построение | Эффект | Недостаток |
+## 5.3. Postroeniya
+| Postroenie | Effekt | Nedostatok |
 | --- | --- | --- |
-| Линия | Максимум фронтального огня | Уязвима для артиллерии |
-| Колонна | Быстрое перемещение через узкие места | Слабый первый залп |
-| Клин | Бонус к прорыву и тарану | Открытые фланги |
-| Круг | Защита поддержки и героев | Низкая скорость |
-| Рассеивание | Снижение урона от площади | Хуже локальный фокус |
+| Liniya | Maksimum frontalnogo ognya | Uyazvima for artillerii |
+| Kolonna | Bystroe peremeshchenie via uzkie mesta | Slabyy pervyy zalp |
+| Klin | Bonus k proryvu i taranu | Otkrytye flangi |
+| Krug | Zashchita podderzhki i geroev | Nizkaya skorost |
+| Rasseivanie | Snizhenie urona ot ploshchadi | Khuzhe lokalnyy fokus |
 
-# 6. Баланс матчапов
-| Фракция | Сильнее всего против | Слабее всего против | Условие победы |
+# 6. Balans matchapov
+| Fraktsiya | Silnee Total protiv | Slabee Total protiv | Uslovie pobedy |
 | --- | --- | --- | --- |
-| СССР | Фронтальных наземных армий, статичной обороны | Мобильных флангов, дальнего контроля, экономического харасса | Дожить до тяжёлой техники и навязать прямой бой |
-| Альянс | Медленных армий, авиационно слабых баз | Массовой дешёвой пехоты и затяжного обмена ресурсами | Получить разведданные и выигрывать точечными ударами |
-| Восточная коалиция | Разрозненных армий и одиночных дорогих целей | Разделения, EMP и ударов по узлам сети | Сохранить Синхронизацию и вести бой построением |
-| Хронолегион | Предсказуемых атак и дорогих ключевых юнитов | Массового дешёвого давления и постоянного фокуса | Выигрывать темп за счёт контроля времени, не обнуляя стабильность |
+| Soviet Union | Frontalnykh nazemnykh armiy, statichnoy oborony | Mobilnykh flangov, dalnego kontrolya, ekonomicheskogo kharassa | Dozhit before tyazhyoloy tekhniki i navyazat pryamoy boy |
+| Alliance | Medlennykh armiy, aviatsionno slabykh baz | Massovoy deshyovoy pekhoty i zatyazhnogo obmena resursami | Poluchit razveddannye i vyigryvat tochechnymi udarami |
+| Vostochnaya Coalition | Razroznennykh armiy i odinochnykh dorogikh tseley | Razdeleniya, EMP i udarov po uzlam seti | Sokhranit Sinkhronizatsiyu i vesti boy postroeniem |
+| Khronolegion | Predskazuemykh atak i dorogikh klyuchevykh yunitov | Massovogo deshyovogo davleniya i postoyannogo fokusa | Vyigryvat temp za schyot kontrolya vremeni, ne obnulyaya stabilnost |
 
-# 7. Рекомендованные стартовые составы
-| Фракция | Первые 5 минут | Переход в T2 | T3-ядро армии |
+# 7. Rekomendovannye startovye sostavy
+| Fraktsiya | Pervye 5 minut | Perekhod v T2 | T3-yadro armii |
 | --- | --- | --- | --- |
-| СССР | 8–12 бойцов «Рубеж», 2 штурмовика «Запал», одна «Рысь» | «Граниты» + расчёты «Заслон» + «Зарево» | «Воеводы» + «Громобои» + «Громада»/«Святогор» |
-| Альянс | «Сентинелы», «Кестрел», ранний «Longwatch» | «Булварки» + «Оракул» + «Уорд» | «Цитадели» + «Найтвейлы» + «Горизонт» |
-| Восточная коалиция | Бойцы «Цяньвэй» в строю, «Камакири», техник «Цзе» | «Цинлуны» + «Сэймон» + «Муссон» | «Айравата» + «Тяньмэнь» + «Самудра» |
-| Хронолегион | «Резонансы», «Параллакс», копейщики PHASE-L9 | Танки «Линия» + артиллерия «Дельта» + «Реверс» | «Эра» + Восс + «Аттрактор» |
+| Soviet Union | 8–12 boytsov «Rubezh», 2 shturmovika «Zapal», odna «Rys» | «Granity» + raschyoty «Zaslon» + «Zarevo» | «Voevody» + «Gromoboi» + «Gromada»/«Svyatogor» |
+| Alliance | «Sentinely», «Kestrel», ranniy «Longwatch» | «Bulvarki» + «Orakul» + «Uord» | «Tsitadeli» + «Naytveyly» + «Gorizont» |
+| Vostochnaya Coalition | Boytsy «Tsyanvey» v stroyu, «Kamakiri», tekhnik «Tsze» | «Tsinluny» + «Seymon» + «Musson» | «Ayravata» + «Tyanmen» + «Samudra» |
+| Khronolegion | «Rezonansy», «Parallaks», kopeyshchiki PHASE-L9 | Tanki «Liniya» + artilleriya «Delta» + «Revers» | «Era» + Voss + «Attraktor» |
 
-# 8. Техническое представление в Unreal Engine 5
-Каждый юнит должен описываться Primary Data Asset класса `URA4UnitDefinition`. После naming reset версия 2.0 новые Stable ID из раздела 0.2 являются каноническими. Старые значения разрешены только в массиве `LegacyAliases` и не могут использоваться как имя нового пакета, `VoiceId` или Gameplay Tag. Балансовые значения не хранятся в Blueprint. Обязательные поля: UnitId, FactionTag, DomainTag, Tier, Cost, BuildTime, CommandCost, MaxHealth, ArmorType, MoveSpeed, TurnRate, VisionRange, WeaponDefinitions, AbilityDefinitions, Prerequisites, SoftClassReference на представление, VoiceId, UIIcon, Portrait, SelectionPriority и AIThreatValue. Все способности получают Gameplay Tags, но базовые команды Move/Attack/Stop не должны быть Gameplay Ability без необходимости.
+# 8. Tekhnicheskoe predstavlenie v Unreal Engine 5
+Kazhdyy yunit dolzhen opisyvatsya Primary Data Asset klassa `URA4UnitDefinition`. after naming reset Version 2.0 novye Stable ID iz razdela 0.2 yavlyayutsya kanonicheskimi. Starye znacheniya razresheny only v massive `LegacyAliases` i ne mogut ispolzovatsya kak imya novogo paketa, `VoiceId` or Gameplay Tag. Balansovye znacheniya ne khranyatsya v Blueprint. Obyazatelnye polya: UnitId, FactionTag, DomainTag, Tier, Cost, BuildTime, CommandCost, MaxHealth, ArmorType, MoveSpeed, TurnRate, VisionRange, WeaponDefinitions, AbilityDefinitions, Prerequisites, SoftClassReference na predstavlenie, VoiceId, UIIcon, Portrait, SelectionPriority i AIThreatValue. all sposobnosti poluchayut Gameplay Tags, no bazovye komandy Move/Attack/Stop ne dolzhny byt Gameplay Ability without neobkhodimosti.
 
 ## 8.1. Gameplay Tags
-Пример обязательной иерархии:
+Primer obyazatelnoy ierarkhii:
 ```text
 Faction.Soviet
 Faction.Alliance
@@ -3665,27 +3665,27 @@ State.Heroic
 ```
 
 ## 8.2. Voice manifest
-Для каждого юнита создаётся `VoiceId`, совпадающий с ID в документе. Файлы: `VO_<Faction>_<UnitId>_<Event>_<Variant>.wav`. Категории событий: Selected, Move, Attack, Ability, Damaged, CriticalDamage, Elite, Idle, Death, CannotComply, DestinationBlocked, EnemyDestroyed. Минимум 3 варианта Selected/Move/Attack и 2 варианта остальных событий.
+for kazhdogo yunita sozdayotsya `VoiceId`, sovpadayushchiy s ID v dokumente. Fayly: `VO_<Faction>_<UnitId>_<Event>_<Variant>.wav`. Kategorii sobytiy: Selected, Move, Attack, Ability, Damaged, CriticalDamage, Elite, Idle, Death, CannotComply, DestinationBlocked, EnemyDestroyed. Minimum 3 varianta Selected/Move/Attack i 2 varianta ostalnykh sobytiy.
 
-# 9. Правила последующего балансирования
-1. Нельзя менять одновременно стоимость, HP и DPS одного юнита без отдельного теста.  
-2. Любой юнит с телепортацией обязан иметь видимый телеграф, стоимость стабильности или длинную перезарядку.  
-3. Любая дальнобойная артиллерия должна иметь минимальную дистанцию или слабость в ближнем бою.  
-4. Любой сверхтяжёлый юнит обязан иметь минимум две доступные контрмеры у каждой фракции.  
-5. Герой не должен в одиночку уничтожать полноценную армию; его сила — в уникальной тактической функции.  
-6. Ни одна пассивная экономика не должна окупаться быстрее чем за 4 минуты без риска захвата.  
-7. В ранней игре одна потерянная единица не должна автоматически решать матч, кроме грубой ошибки с мобильным штабом.  
-8. Победа должна достигаться армией и контролем карты, а не только ожиданием супероружия.  
+# 9. Pravila posleduyushchego balansirovaniya
+1. Nelzya menyat odnovremenno stoimost, HP i DPS odnogo yunita without otdelnogo testa.  
+2. Lyuboy yunit s teleportatsiey obyazan imet vidimyy telegraf, stoimost stabilnosti or dlinnuyu perezaryadku.  
+3. Lyubaya dalnoboynaya artilleriya dolzhna imet minimalnuyu distantsiyu or slabost v blizhnem boyu.  
+4. Lyuboy sverkhtyazhyolyy yunit obyazan imet minimum dve dostupnye kontrmery u kazhdoy Factions.  
+5. Hero ne dolzhen v odinochku unichtozhat polnotsennuyu armiyu; ego sila — v unikalnoy takticheskoy funktsii.  
+6. Ni odna passivnaya Economy ne dolzhna okupatsya bystree chem za 4 minuty without riska zakhvata.  
+7. V ranney igre odna poteryannaya edinitsa ne dolzhna avtomaticheski reshat match, krome gruboy oshibki s mobilnym shtabom.  
+8. Pobeda dolzhna dostigatsya armiey i kontrolem karty, a ne only ozhidaniem superoruzhiya.  
 
-# 10. Итоговый production-чеклист
-| Подсистема | Готовность определяется так |
+# 10. Itogovyy production-cheklist
+| Podsistema | Gotovnost opredelyaetsya tak |
 | --- | --- |
-| Экономика | Добыча, энергия, лимит, отмена, продажа и ремонт реализованы и покрыты тестами |
-| Фракции | У каждой есть сильная сторона, слабость и рабочий фракционный ресурс |
-| Юниты | Все ID заведены в Data Assets, нет временных PlaceholderUnit |
-| Способности | Стоимость, cooldown, телеграф, authority и контрмеры определены |
-| Озвучка | Все события имеют минимум требуемое число вариантов, файлы в manifest |
-| UI | Цена, время, prerequisite, блокировка и способность отображаются корректно |
-| AI | Умеет использовать роли, построения, поддержку и супероружие |
-| Сеть | Сервер авторитетен по стоимости, урону, способности и перемещению |
-| Тесты | Есть unit, functional, multiplayer и нагрузочные тесты |
+| Economy | Dobycha, energiya, limit, otmena, prodazha i remont realizovany i pokryty testami |
+| Factions | U kazhdoy est silnaya storona, slabost i rabochiy fraktsionnyy resurs |
+| Units | all ID zavedeny v Data Assets, no vremennykh PlaceholderUnit |
+| Sposobnosti | Stoimost, cooldown, telegraf, authority i kontrmery opredeleny |
+| Voiceover | all sobytiya imeyut minimum trebuemoe chislo variantov, fayly v manifest |
+| UI | Tsena, vremya, prerequisite, blokirovka i Ability otobrazhayutsya korrektno |
+| AI | Umeet ispolzovat roli, postroeniya, podderzhku i superoruzhie |
+| Set | Server avtoriteten po stoimosti, uronu, sposobnosti i peremeshcheniyu |
+| Testy | Est unit, functional, multiplayer i nagruzochnye testy |

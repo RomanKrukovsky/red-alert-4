@@ -81,7 +81,7 @@ void ARA4CameraPawn::Tick(float DeltaSeconds)
         // +X, which is what every pan, edge scroll and drag it produces assumes. An
         // Unreal yaw of 0 points the camera down +X, making screen-up +X instead, so
         // W walked the focus sideways. Yaw 90 looks down +Y and lines the two up.
-        SpringArm->SetWorldRotation(FRotator(PitchDegrees, 90.0f + CameraController.GetYawDegrees(), 0.0f));
+        SpringArm->SetWorldRotation(FRotator(CameraController.GetPitchDegrees(), 90.0f + CameraController.GetYawDegrees(), 0.0f));
     }
 
     if (!bReportedInitialCameraState && GetWorld() != nullptr &&

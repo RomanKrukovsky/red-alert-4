@@ -1,100 +1,69 @@
-# 01. Матрица источников
+#01. Source Matrix
+## A. Official Generals / Zero Hour source code
+Source: https://github.com/electronicarts/CnC_Generals_Zero_Hour
+Status:
 
-## A. Официальный исходный код Generals / Zero Hour
-
-Источник: https://github.com/electronicarts/CnC_Generals_Zero_Hour
-
-Статус:
-
-- официальный репозиторий Electronic Arts;
-- опубликован под GPL-3.0 с дополнительными условиями EA;
-- архивирован 27 февраля 2025 года;
-- содержит деревья `Generals` и `GeneralsMD`;
-- не является современным готовым SDK: исходный build рассчитан на Visual Studio 6 и зависит от ряда старых либо проприетарных библиотек.
-
-Полезность:
-
-- границы GameClient / GameLogic / GameNetwork / Common;
-- объектная модель и модульные поведения;
-- команды, кадры синхронизации и сетевой транспорт;
-- AI, pathfinding, weapons, armor, scripting, victory conditions;
-- сохранение игрового состояния и инфраструктура данных.
-
-Ограничение:
-
-- код нельзя копировать в закрытый коммерческий Unreal-модуль;
-- допустимо изучать идеи, границы подсистем, инварианты и алгоритмические требования, после чего писать независимую реализацию.
-
-## B. Официальный C&C Modding Support
-
-Источник: https://github.com/electronicarts/CnC_Modding_Support
-
+- official Electronic Arts repository;
+- published under GPL-3.0 with additional EA terms;
+- archived February 27, 2025;
+- contains the `Generals` and `GeneralsMD` trees;
+- is not a modern ready-made SDK: the original build is designed for Visual Studio 6 and depends on a number of old or proprietary libraries.
+Utility:
+- GameClient / GameLogic / GameNetwork / Common boundaries;
+- object model and modular behavior;
+- commands, synchronization frames and network transport;- AI, pathfinding, weapons, armor, scripting, victory conditions;
+- saving game state and data infrastructure.
+Limitation:
+- the code cannot be copied into a closed commercial Unreal module;
+- it is permissible to study ideas, boundaries of subsystems, invariants and algorithmic Requirements, after which write an independent implementation.
+## B. Official C&C Modding Support
+Source: https://github.com/electronicarts/CnC_Modding_Support
 RA3: https://github.com/electronicarts/CnC_Modding_Support/tree/main/Red%20Alert%203
 
-Статус:
+Status:
 
-- официальный репозиторий EA;
-- архивирован 15 августа 2025 года;
-- для RA3 содержит `Libraries`, `Schemas`, `Shaders`, `Xml`, `RA3Music.h`;
-- полного C++-кода RA3 не содержит.
-
-Полезность:
-
-- формальные XSD-схемы;
-- структура игровых объектов и их наследования;
-- экономика, зависимости и технологические уровни;
-- команды, abilities, upgrades, AI и multiplayer settings;
-- визуальные состояния, FX и shader feature taxonomy;
-- структура campaign/skirmish scripts.
-
-Ограничение:
-
-- это не свободная библиотека готовых данных для коммерческой игры;
-- значения, названия, фракции, ссылки на арт и баланс нельзя механически переносить в продукт.
-
-## C. Официальные правила моддинга EA
-
-Источник: https://www.ea.com/games/command-and-conquer/command-and-conquer-remastered/news/modding-faq
-
-Критические положения для проекта:
-
-- EA перечисляет полный опубликованный GPL-код только для Red Alert, Tiberian Dawn, Renegade, Generals и Zero Hour;
-- моды с материалами C&C должны быть бесплатными и некоммерческими;
-- нельзя создавать впечатление официальной связи с EA;
-- использование торговых марок, логотипов и музыки ограничено;
-- для публичного мода требуется дисклеймер о том, что EA его не поддерживает.
-
-## D. RA3 Mod SDK и art/campaign packs
-
-Вторичный каталог: https://www.cnclabs.com/downloads/redalert3/modding-and-mapping.aspx
-
-Полезность:
-
+- official EA repository;
+- archived August 15, 2025;
+- for RA3 contains `Libraries`, `Schemas`, `Shaders`, `Xml`, `RA3Music.h`;
+- RA3 does not contain complete C++ code.
+Utility:
+- formal XSD schemas;
+- structure of game objects and their inheritance;
+- Economy, dependencies and technological levels;
+- commands, abilities, upgrades, AI and multiplayer settings;
+- visual states, FX and shader feature taxonomy;
+- campaign/skirmish scripts structure.
+Limitation:
+- this is not a free library of ready-made data for a commercial game;
+- values, names, Factions, links to art and balance cannot be mechanically transferred to the product.
+## C. Official EA Modding Rules
+Source: https://www.ea.com/games/command-and-conquer/command-and-conquer-remastered/news/modding-faq
+Critical points for the project:
+- EA lists complete published GPL code only for Red Alert, Tiberian Dawn, Renegade, Generals and Zero Hour;
+- mods with C&C materials must be free and non-commercial;
+- you cannot create the impression of an official connection with EA;
+- the use of trademarks, logos and music is limited;
+- for a public mod, a disclaimer is required stating that EA does not support it.
+## D. RA3 Mod SDK and art/campaign packs
+Secondary directory: https://www.cnclabs.com/downloads/redalert3/modding-and-mapping.aspx
+Utility:
 - Mod SDK v3;
 - World Builder;
 - campaign source files;
 - W3X/TGA/XML/3ds Max source packs;
-- практическое понимание старого content pipeline.
-
-Статус доверия:
-
-- использовать как навигацию и зеркало;
-- юридические выводы проверять по материалам EA;
-- бинарные загрузки не включать в производственный репозиторий без отдельной проверки происхождения.
-
-## E. Активный community fork GeneralsGameCode
-
-Источник: https://github.com/TheSuperHackers/GeneralsGameCode
-
-Полезность:
-
-- современная навигация по старому коду;
-- перенос на Visual Studio 2022/C++20;
-- обсуждения детерминизма, replays, desync и кроссплатформенной математики;
-- полезен для поиска известных проблем исходной архитектуры.
-
-Ограничение:
-
-- это не источник истины о первоначальном поведении;
-- изменения community fork должны сверяться с официальным snapshot EA;
-- GPL-код по-прежнему не переносится в закрытый Unreal runtime.
+- practical understanding of the old content pipeline.
+Trust Status:
+- use as navigation and mirror;
+- check legal conclusions based on EA materials;
+- binary downloads should not be included in the production repository without separate verification of origin.
+## E. Active community fork GeneralsGameCode
+Source: https://github.com/TheSuperHackers/GeneralsGameCode
+Utility:
+- modern Navigation using the old code;
+- ported to Visual Studio 2022/C++20;
+- discussions of determinism, replays, desync and cross-platform mathematics;
+- useful for finding known problems in the original architecture.
+Limitation:
+- it is not a source of truth about original behavior;
+- community fork changes must be verified with the official EA snapshot;
+- GPL code is still not transferred to the closed Unreal runtime.

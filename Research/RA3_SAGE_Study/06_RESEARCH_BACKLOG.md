@@ -1,74 +1,56 @@
-# 06. Следующие исследовательские проходы
-
-## P0 — архитектурное ядро
-
-### R-001. Simulation loop и state ownership
-
-Изучить:
-
-- порядок update в Generals/Zero Hour;
-- object lifecycle;
+#06. Next exploration passes
+## P0 - architectural core
+### R-001. Simulation loop and state ownership
+Explore:
+- update order in Generals/Zero Hour;- object lifecycle;
 - random streams;
 - state hashing/CRC;
-- разделение logic/client update.
-
-Выход:
-
+- logic/client update separation.
+Exit:
 - `SIMULATION_INVARIANTS.md`;
-- sequence diagram кадра;
-- список nondeterminism hazards для Unreal.
-
+- sequence diagram of the frame;
+- list of nondeterminism hazards for Unreal.
 ### R-002. Command pipeline
 
-Изучить:
-
+Explore:
 - input translation;
 - game messages;
 - command validation;
 - deterministic ordering;
 - AI commands vs player commands.
 
-Выход:
-
+Exit:
 - `COMMAND_PROTOCOL_SPEC.md`;
 - versioned command envelope;
 - validation matrix.
 
-### R-003. Network и replay
-
-Изучить:
-
+### R-003. Network and replay
+Explore:
 - FrameData/NetCommand flow;
 - input delay/barriers;
 - content/version checks;
 - mismatch detection;
 - replay format and seeking.
 
-Выход:
-
-- сравнительный ADR по lockstep/server/hybrid;
-- desync diagnostics design;
+Exit:
+- comparative ADR for lockstep/server/hybrid;- desync diagnostics design;
 - replay test plan.
 
 ### R-004. Entity/component model
 
-Изучить:
-
+Explore:
 - GameObject inheritance;
 - module lifecycle;
 - body/AI/client behavior separation;
-- ownership и event flow.
-
-Выход:
-
+- ownership and event flow.
+Exit:
 - RA4 component boundaries;
 - prohibited dependencies;
 - lifecycle state machine.
 
 ## P1 — gameplay systems
 
-### R-005. Weapons, damage и armor
-
+### R-005. Weapons, damage and armor
 - targeting filters;
 - weapon slots/modes;
 - turret control;
@@ -77,8 +59,7 @@
 - modifiers/status effects;
 - death modules.
 
-### R-006. Movement, pathfinding и formations
-
+### R-006. Movement, pathfinding and formations
 - locomotor profiles;
 - AIPathfind;
 - partition/spatial queries;
@@ -87,8 +68,7 @@
 - dynamic blockers;
 - amphibious/naval edge cases.
 
-### R-007. Economy, production и tech graph
-
+### R-007. Economy, production and tech graph
 - accounts/resources;
 - build assistant;
 - queues and factories;
@@ -109,8 +89,7 @@
 
 ## P2 — player-facing systems
 
-### R-009. Selection, commands и control bar
-
+### R-009. Selection, commands and control bar
 - selection translator;
 - command availability;
 - hotkeys;
@@ -138,10 +117,8 @@
 - post FX;
 - faction readability.
 
-Цель — собственная Unreal implementation matrix, а не портирование HLSL.
-
-## P3 — validation и production readiness
-
+The goal is our own Unreal implementation matrix, not an HLSL port.
+## P3 - validation and production readiness
 ### R-012. Content compiler
 
 - independent RA4 schema;
@@ -153,8 +130,7 @@
 
 ### R-013. Performance model
 
-- CPU budgets на simulation/navigation/AI;
-- memory per entity;
+- CPU budgets for simulation/navigation/AI;- memory per entity;
 - network bytes per command;
 - replay size;
 - server cost;
@@ -168,15 +144,12 @@
 - release gate;
 - third-party notices.
 
-## Definition of Done для каждого исследования
-
-Каждый пункт считается закрытым только при наличии:
-
-1. списка первичных источников;
-2. подтверждённых наблюдений отдельно от предположений;
-3. самостоятельной RA4-спецификации;
-4. diagram/data-flow;
+## Definition of Done for each study
+Each item is considered closed only with availability:
+1. list of primary sources;
+2. confirmed observations separate from assumptions;
+3. independent RA4 specification;4. diagram/data-flow;
 5. edge cases;
 6. tests/acceptance criteria;
-7. юридического provenance;
-8. ADR с принятым либо отложенным решением.
+7. legal provenance;
+8. ADR with an accepted or deferred decision.

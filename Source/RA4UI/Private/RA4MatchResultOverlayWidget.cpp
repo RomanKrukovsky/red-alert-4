@@ -162,8 +162,8 @@ void URA4MatchResultOverlayWidget::RefreshTexts()
 {
     if (HeadingText != nullptr)
     {
-        HeadingText->SetText(bVictory ? NSLOCTEXT("RA4", "MatchResultVictory", "ПОБЕДА")
-                                      : NSLOCTEXT("RA4", "MatchResultDefeat", "ПОРАЖЕНИЕ"));
+        HeadingText->SetText(bVictory ? NSLOCTEXT("RA4", "MatchResultVictory", "VICTORY")
+                                      : NSLOCTEXT("RA4", "MatchResultDefeat", "DEFEAT"));
         HeadingText->SetColorAndOpacity(FSlateColor(bVictory ? kVictory : kDefeat));
     }
 
@@ -172,20 +172,20 @@ void URA4MatchResultOverlayWidget::RefreshTexts()
         BodyText->SetText(
             bVictory
                 ? NSLOCTEXT("RA4", "MatchResultVictoryBody",
-                            "Операция завершена успешно. Можно сразу начать матч заново или безопасно выйти.")
+                            "Operatsiya zavershena uspeshno. Mozhno srazu nachat match zanovo ili bezopasno vyyti.")
                 : NSLOCTEXT("RA4", "MatchResultDefeatBody",
-                            "База потеряна. Попробуйте еще раз или завершите текущую демо-сессию."));
+                            "Baza poteryana. Poprobuyte eshche raz ili zavershite tekushchuyu demo-sessiyu."));
     }
 
     if (RetryButtonText != nullptr)
     {
-        RetryButtonText->SetText(NSLOCTEXT("RA4", "MatchResultRetry", "ПОВТОРИТЬ"));
+        RetryButtonText->SetText(NSLOCTEXT("RA4", "MatchResultRetry", "POVTORIT"));
     }
 
     if (ExitButtonText != nullptr)
     {
         ExitButtonText->SetText(
-            bHasMainMenuLevel ? NSLOCTEXT("RA4", "MatchResultExitToMenu", "ВЫЙТИ В МЕНЮ")
-                              : NSLOCTEXT("RA4", "MatchResultExit", "ВЫЙТИ"));
+            bHasMainMenuLevel ? NSLOCTEXT("RA4", "MatchResultExitToMenu", "VYYTI V MENYu")
+                              : NSLOCTEXT("RA4", "MatchResultExit", "VYYTI"));
     }
 }

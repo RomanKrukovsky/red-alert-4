@@ -6,7 +6,7 @@
 
 URA4MainMenuViewModel::URA4MainMenuViewModel()
 {
-    PlayerProfileName = LOCTEXT("DefaultCommander", "КОМАНДУЮЩИЙ");
+    PlayerProfileName = LOCTEXT("DefaultCommander", "COMMANDER");
 }
 
 void URA4MainMenuViewModel::SetPlayerProfileName(const FText& InName)

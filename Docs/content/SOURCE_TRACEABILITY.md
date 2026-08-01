@@ -26,11 +26,9 @@ Every implemented system is traced to its source in the bible.
 | TemporalStability (Chrono) | 3 | 207 | FactionResourceDef | (data loaded) | BibleImport tests |
 | Voice events (624) | 4 | 210 | VoiceSetDef + VoiceLineDef | (data loaded) | BibleImport tests |
 | EVA lines (32) | per faction | Faction sections | EvaLineDef | (data loaded) | BibleImport tests |
-| USSR 19 units | Faction: СССР | 212-1037 | EntityDef × 19 | Loaded | BibleImport tests |
-| Alliance 20 units | Faction: Альянс | 1038-1901 | EntityDef × 20 | Loaded | BibleImport tests |
-| Coalition 20 units | Faction: Восточная коалиция | 1902-2767 | EntityDef × 20 | Loaded | BibleImport tests |
-| ChronoLegion 19 units | Faction: Хронолегион | 2768-3691 | EntityDef × 19 | Loaded | BibleImport tests |
-| USSR 16 buildings | СССР buildings | 217-236 | EntityDef × 16 | Loaded | BibleImport tests |
-| Alliance 16 buildings | Альянс buildings | 1043-1062 | EntityDef × 16 | Loaded | BibleImport tests |
-| Coalition 16 buildings | Коалиция buildings | 1907-1928 | EntityDef × 16 | Loaded | BibleImport tests |
-| ChronoLegion 16 buildings | Хронолегион buildings | 2773-2793 | EntityDef × 16 | Loaded | BibleImport tests |
+| USSR 19 units | Faction: USSR | 212-1037 | EntityDef × 19 | Loaded | BibleImport tests || Alliance 20 units | Faction: Alliance | 1038-1901 | EntityDef × 20 | Loaded | BibleImport tests |
+| Coalition 20 units | Faction: Eastern Coalition | 1902-2767 | EntityDef × 20 | Loaded | BibleImport tests |
+| ChronoLegion 19 units | Faction: Chronolegion | 2768-3691 | EntityDef × 19 | Loaded | BibleImport tests |
+| USSR 16 buildings | USSR buildings | 217-236 | EntityDef × 16 | Loaded | BibleImport tests || Alliance 16 buildings | Alliance buildings | 1043-1062 | EntityDef × 16 | Loaded | BibleImport tests |
+| Coalition 16 buildings | Coalition buildings | 1907-1928 | EntityDef × 16 | Loaded | BibleImport tests |
+| ChronoLegion 16 buildings | Chronolegion buildings | 2773-2793 | EntityDef × 16 | Loaded | BibleImport tests |

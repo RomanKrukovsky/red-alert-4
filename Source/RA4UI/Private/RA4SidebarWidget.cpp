@@ -185,11 +185,11 @@ struct TabDef
     const TCHAR* Caption;
 };
 const TabDef kTabs[] = {
-    {0, TEXT("СТР")},   // Structure
-    {1, TEXT("ОБО")},   // Defense
-    {2, TEXT("ПЕХ")},   // Infantry
-    {3, TEXT("ТЕХ")},   // Vehicle
-    {4, TEXT("АВИ")},   // Aircraft
+    {0, TEXT("STR")},   // Structure
+    {1, TEXT("DEF")},   // Defense
+    {2, TEXT("INF")},   // Infantry
+    {3, TEXT("VEH")},   // Vehicle
+    {4, TEXT("AIR")},   // Aircraft
 };
 
 UTextBlock* MakeLabel(UWidgetTree* Tree, FName Name, const FLinearColor& Colour, int32 Size, bool bBold)
@@ -218,15 +218,15 @@ FText BlockReasonText(ERA4BuildBlockReason Reason)
     switch (Reason)
     {
     case ERA4BuildBlockReason::InsufficientCredits:
-        return NSLOCTEXT("RA4", "Block_Credits", "нет средств");
+        return NSLOCTEXT("RA4", "Block_Credits", "Low Funds");
     case ERA4BuildBlockReason::MissingPrerequisite:
-        return NSLOCTEXT("RA4", "Block_Prereq", "нет здания");
+        return NSLOCTEXT("RA4", "Block_Prereq", "Prerequisite Missing");
     case ERA4BuildBlockReason::NoProducer:
-        return NSLOCTEXT("RA4", "Block_Producer", "нет завода");
+        return NSLOCTEXT("RA4", "Block_Producer", "Factory Missing");
     case ERA4BuildBlockReason::QueueFull:
-        return NSLOCTEXT("RA4", "Block_Queue", "очередь полна");
+        return NSLOCTEXT("RA4", "Block_Queue", "Queue Full");
     case ERA4BuildBlockReason::MatchOver:
-        return NSLOCTEXT("RA4", "Block_Over", "матч окончен");
+        return NSLOCTEXT("RA4", "Block_Over", "Match Ended");
     default:
         return FText::GetEmpty();
     }
@@ -361,7 +361,7 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
         AddRow(Frame, 6.0f);
     }
 
-    // --- selected object info card ("СПРАВКА ОБ ОБЪЕКТЕ") -------------------
+    // --- selected object info card ("OBJECT INFO") -------------------
     {
         UBorder* Frame = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("SelectionFrame"));
         Frame->SetBrushColor(kPanelDeep);
@@ -370,11 +370,11 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
         UVerticalBox* Stack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("SelStack"));
 
         UTextBlock* Header = MakeLabel(WidgetTree, TEXT("SelHeader"), kTextDim, 9, true);
-        Header->SetText(NSLOCTEXT("RA4", "Sidebar_SelHeader", "СПРАВКА ОБ ОБЪЕКТЕ"));
+        Header->SetText(NSLOCTEXT("RA4", "Sidebar_SelHeader", "OBJECT INFO"));
         Stack->AddChildToVerticalBox(Header);
 
         SelectionNameText = MakeLabel(WidgetTree, TEXT("SelName"), kTextNormal, 12, true);
-        SelectionNameText->SetText(NSLOCTEXT("RA4", "Sidebar_NoSelection", "ОБЪЕКТ НЕ ВЫБРАН"));
+        SelectionNameText->SetText(NSLOCTEXT("RA4", "Sidebar_NoSelection", "NO SELECTION"));
         Stack->AddChildToVerticalBox(SelectionNameText);
 
         SelectionHealthBar = WidgetTree->ConstructWidget<UProgressBar>(UProgressBar::StaticClass(), TEXT("SelHealthBar"));
@@ -390,7 +390,7 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
         Stack->AddChildToVerticalBox(SelectionHealthText);
 
         SelectionDetailsText = MakeLabel(WidgetTree, TEXT("SelDetails"), kTextDim, 9, false);
-        SelectionDetailsText->SetText(NSLOCTEXT("RA4", "Sidebar_SelectionHint", "Кликните по юниту или зданию"));
+        SelectionDetailsText->SetText(NSLOCTEXT("RA4", "Sidebar_SelectionHint", "Select a unit or structure"));
         Stack->AddChildToVerticalBox(SelectionDetailsText);
 
         Frame->AddChild(Stack);
@@ -511,10 +511,10 @@ void URA4SidebarWidget::RefreshSelection()
     const URA4HUDViewModel* VM = Provider->GetHUDViewModel();
     if (VM == nullptr || VM->GetSelectionCount() == 0)
     {
-        SelectionNameText->SetText(NSLOCTEXT("RA4", "Sidebar_NoSelection", "ОБЪЕКТ НЕ ВЫБРАН"));
+        SelectionNameText->SetText(NSLOCTEXT("RA4", "Sidebar_NoSelection", "NO SELECTION"));
         if (SelectionHealthText) SelectionHealthText->SetText(FText::GetEmpty());
         if (SelectionHealthBar) SelectionHealthBar->SetPercent(0.0f);
-        if (SelectionDetailsText) SelectionDetailsText->SetText(NSLOCTEXT("RA4", "Sidebar_SelectionHint", "Кликните по юниту или зданию"));
+        if (SelectionDetailsText) SelectionDetailsText->SetText(NSLOCTEXT("RA4", "Sidebar_SelectionHint", "Select a unit or structure"));
     }
     else
     {
@@ -527,17 +527,17 @@ void URA4SidebarWidget::RefreshSelection()
         }
         if (SelectionHealthText)
         {
-            SelectionHealthText->SetText(FText::Format(NSLOCTEXT("RA4", "Sidebar_HPFormat", "ЗДОРОВЬЕ: {0}%"), FText::AsNumber(int32(HP * 100.0f))));
+            SelectionHealthText->SetText(FText::Format(NSLOCTEXT("RA4", "Sidebar_HPFormat", "HEALTH: {0}%"), FText::AsNumber(int32(HP * 100.0f))));
         }
         if (SelectionDetailsText)
         {
             if (VM->GetSelectionCount() > 1)
             {
-                SelectionDetailsText->SetText(FText::Format(NSLOCTEXT("RA4", "Sidebar_MultiSelFormat", "Выбрано объектов: {0}"), FText::AsNumber(VM->GetSelectionCount())));
+                SelectionDetailsText->SetText(FText::Format(NSLOCTEXT("RA4", "Sidebar_MultiSelFormat", "Selected Objects: {0}"), FText::AsNumber(VM->GetSelectionCount())));
             }
             else
             {
-                SelectionDetailsText->SetText(VM->IsPrimaryOwned() ? NSLOCTEXT("RA4", "Sidebar_Owned", "Союзный объект") : NSLOCTEXT("RA4", "Sidebar_Enemy", "Вражеский объект"));
+                SelectionDetailsText->SetText(VM->IsPrimaryOwned() ? NSLOCTEXT("RA4", "Sidebar_Owned", "Allied Unit") : NSLOCTEXT("RA4", "Sidebar_Enemy", "Enemy Unit"));
             }
         }
     }
@@ -597,7 +597,7 @@ void URA4SidebarWidget::RefreshResources()
     }
     if (PowerText != nullptr)
     {
-        PowerText->SetText(FText::Format(NSLOCTEXT("RA4", "Sidebar_PowerFormat", "ЭНЕРГИЯ  {0} / {1}"),
+        PowerText->SetText(FText::Format(NSLOCTEXT("RA4", "Sidebar_PowerFormat", "POWER  {0} / {1}"),
                                          FText::AsNumber(Provider->GetPowerProduced()),
                                          FText::AsNumber(Provider->GetPowerConsumed())));
         PowerText->SetColorAndOpacity(FSlateColor(Provider->IsPowerShortage() ? kPowerLow : kPowerOk));
@@ -659,7 +659,7 @@ void URA4SidebarWidget::RefreshCards()
         Name->SetAutoWrapText(true);
         CardStack->AddChildToVerticalBox(Name);
 
-        FText InfoText = FText::Format(NSLOCTEXT("RA4", "Card_CostTimeFormat", "{0} Кр. | {1}с"),
+        FText InfoText = FText::Format(NSLOCTEXT("RA4", "Card_CostTimeFormat", "{0} Cr. | {1}s"),
                                        FText::AsNumber(Option.Cost),
                                        FText::AsNumber(FMath::RoundToInt(Option.BuildSeconds)));
         UTextBlock* Cost = MakeLabel(WidgetTree, *FString::Printf(TEXT("CardCost%d"), Index), kCredits, 9, false);
@@ -670,7 +670,7 @@ void URA4SidebarWidget::RefreshCards()
         if (Option.PowerDelta != 0)
         {
             FLinearColor PowerColor = Option.PowerDelta > 0 ? kPowerOk : kPowerLow;
-            FText CardPowerText = FText::Format(NSLOCTEXT("RA4", "Card_PowerFormat", "{0}{1} Энергии"),
+            FText CardPowerText = FText::Format(NSLOCTEXT("RA4", "Card_PowerFormat", "{0}{1} Power"),
                                                 FText::FromString(Option.PowerDelta > 0 ? TEXT("+") : TEXT("")),
                                                 FText::AsNumber(Option.PowerDelta));
             UTextBlock* PowerLabel = MakeLabel(WidgetTree, *FString::Printf(TEXT("CardPower%d"), Index), PowerColor, 8, false);
@@ -684,7 +684,7 @@ void URA4SidebarWidget::RefreshCards()
             FText WhyText = BlockReasonText(Option.BlockReason);
             if (Option.BlockReason == ERA4BuildBlockReason::MissingPrerequisite && !Option.PrerequisiteText.IsEmpty())
             {
-                WhyText = FText::Format(NSLOCTEXT("RA4", "Card_PrereqFormat", "Треб: {0}"), Option.PrerequisiteText);
+                WhyText = FText::Format(NSLOCTEXT("RA4", "Card_PrereqFormat", "Req: {0}"), Option.PrerequisiteText);
             }
             UTextBlock* Reason = MakeLabel(WidgetTree, *FString::Printf(TEXT("CardWhy%d"), Index), kTextDim, 8, false);
             Reason->SetText(WhyText);
@@ -723,7 +723,7 @@ void URA4SidebarWidget::RefreshQueue()
     if (Queue.Num() == 0)
     {
         UTextBlock* Idle = MakeLabel(WidgetTree, TEXT("QueueIdle"), kTextDim, 9, false);
-        Idle->SetText(NSLOCTEXT("RA4", "Sidebar_QueueIdle", "ОЧЕРЕДЬ ПУСТА"));
+        Idle->SetText(NSLOCTEXT("RA4", "Sidebar_QueueIdle", "QUEUE IDLE"));
         QueueBox->AddChildToVerticalBox(Idle);
         return;
     }
@@ -737,13 +737,13 @@ void URA4SidebarWidget::RefreshQueue()
         {
             // The one queue state that needs the player to act, so it says so instead
             // of showing a finished bar and waiting to be understood.
-            Line->SetText(FText::Format(NSLOCTEXT("RA4", "Sidebar_QueuePlace", "{0} — ВЫБЕРИТЕ МЕСТО"),
+            Line->SetText(FText::Format(NSLOCTEXT("RA4", "Sidebar_QueuePlace", "{0} — READY TO PLACE"),
                                         Entry.DisplayName));
             Line->SetColorAndOpacity(FSlateColor(kPowerOk));
         }
         else if (Entry.bPaused)
         {
-            Line->SetText(FText::Format(NSLOCTEXT("RA4", "Sidebar_QueuePaused", "{0} — ПАУЗА"), Entry.DisplayName));
+            Line->SetText(FText::Format(NSLOCTEXT("RA4", "Sidebar_QueuePaused", "{0} — PAUSED"), Entry.DisplayName));
             Line->SetColorAndOpacity(FSlateColor(kTextDim));
         }
         else
