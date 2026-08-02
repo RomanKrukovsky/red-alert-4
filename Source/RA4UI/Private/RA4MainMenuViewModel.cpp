@@ -23,4 +23,20 @@ FText URA4MainMenuViewModel::GetPlayerProfileName() const
     return PlayerProfileName;
 }
 
+void URA4MainMenuViewModel::ExecuteNewSkirmishCommand()
+{
+    OnNewSkirmishClicked.Broadcast();
+}
+
+void URA4MainMenuViewModel::ExecuteSettingsCommand()
+{
+    OnSettingsClicked.Broadcast();
+}
+
+void URA4MainMenuViewModel::ExecuteExitCommand()
+{
+    OnExitClicked.Broadcast();
+}
+
 #undef LOCTEXT_NAMESPACE
+

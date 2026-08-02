@@ -1,0 +1,20 @@
+<UserControl
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    x:Class="RA4.MainMenuScreen">
+
+    <Grid Background="#0A0505">
+        <!-- Main Navigation Stack Panel -->
+        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Center" Margin="80,0,0,0" Width="350">
+            <TextBlock Text="COMMAND &amp; CONQUER™" FontFamily="{StaticResource FontPrimary}" FontSize="16" Foreground="{StaticResource ThemeSecondaryBrush}" LetterSpacing="4"/>
+            <TextBlock Text="RED ALERT 4" FontFamily="{StaticResource FontHeader}" FontSize="64" Foreground="{StaticResource ThemePrimaryBrush}" Margin="0,0,0,40"/>
+
+            <Button Content="★ КАМПАНИЯ" Command="{Binding OpenCampaignCommand}" Style="{StaticResource RA4ButtonStyle}" Margin="0,0,0,10" HorizontalContentAlignment="Left"/>
+            <Button Content="🌐 СЕТЕВАЯ ИГРА" Command="{Binding OpenMultiplayerCommand}" Style="{StaticResource RA4ButtonStyle}" Margin="0,0,0,10" HorizontalContentAlignment="Left"/>
+            <Button Content="⚔️ СХВАТКА" Command="{Binding OpenSkirmishCommand}" Style="{StaticResource RA4ButtonStyle}" Margin="0,0,0,10" HorizontalContentAlignment="Left"/>
+            <Button Content="⚙️ НАСТРОЙКИ" Command="{Binding OpenSettingsCommand}" Style="{StaticResource RA4ButtonStyle}" Margin="0,0,0,10" HorizontalContentAlignment="Left"/>
+            <Button Content="🚪 ВЫХОД" Command="{Binding ExitGameCommand}" Style="{StaticResource RA4ButtonStyle}" Margin="0,0,0,10" HorizontalContentAlignment="Left"/>
+        </StackPanel>
+    </Grid>
+
+</UserControl>

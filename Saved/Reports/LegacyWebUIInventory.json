@@ -1,0 +1,100 @@
+{
+  "timestamp": "2026-08-02T12:41:30Z",
+  "branch": "migration/noesis-ui",
+  "project": "Red Alert 4",
+  "targetArchitecture": "NoesisGUI C++ / XAML for Unreal Engine 5 (BLOCKED_PLUGIN_MISSING)",
+  "summary": {
+    "totalScreens": 15,
+    "totalComponents": 22,
+    "npmPackages": ["react", "react-dom", "react-router-dom", "zustand", "zod", "lucide-react", "classnames", "vite"],
+    "legacyRuntime": "React 18 / DOM / WebBrowser Widget",
+    "pluginStatus": "BLOCKED_PLUGIN_MISSING",
+    "migrationStatus": "DECLARED / DATA_ONLY"
+  },
+  "inventory": [
+    {
+      "id": "screen_start",
+      "name": "Start / Title Screen",
+      "path": "ra4-ui/src/screens/StartScreen.tsx",
+      "legacyComponent": "StartScreen",
+      "status": "LEGACY_PRESENT",
+      "inputs": ["KeyPress", "MouseClick"],
+      "outputs": ["NavigateToMenu"],
+      "state": ["SplashAnimation"],
+      "dependencies": ["react-router-dom"],
+      "assets": ["SCREENSHOTS/1.png"],
+      "targetNoesis": "Assets/Noesis/Screens/StartScreen.xaml",
+      "viewModel": "URA4StartScreenViewModel"
+    },
+    {
+      "id": "screen_main_menu",
+      "name": "Main Menu",
+      "path": "ra4-ui/src/screens/MainMenu.tsx",
+      "legacyComponent": "MainMenuScreen",
+      "status": "LEGACY_PRESENT",
+      "inputs": ["ButtonClick", "HotkeyNav"],
+      "outputs": ["OpenCampaign", "OpenSkirmish", "OpenSettings", "ExitGame"],
+      "state": ["CommanderLevel", "NewsFeed", "SelectedOption"],
+      "dependencies": ["GameStateContext", "Button", "Panel"],
+      "assets": ["SCREENSHOTS/2.png"],
+      "targetNoesis": "Assets/Noesis/Screens/MainMenuScreen.xaml",
+      "viewModel": "URA4MainMenuViewModel"
+    },
+    {
+      "id": "screen_campaign_select",
+      "name": "Campaign Theater Selection",
+      "path": "ra4-ui/src/screens/CampaignSelect.tsx",
+      "legacyComponent": "CampaignSelectScreen",
+      "status": "LEGACY_PRESENT",
+      "inputs": ["FactionCardClick", "HoverFaction"],
+      "outputs": ["SelectFaction", "LaunchCampaign", "BackToMenu"],
+      "state": ["HoveredFaction", "ProgressPerFaction", "Difficulty"],
+      "dependencies": ["CroppedImage", "Button", "Panel"],
+      "assets": ["SCREENSHOTS/3.png", "SCREENSHOTS/4.png", "SCREENSHOTS/5.png", "SCREENSHOTS/6.png"],
+      "targetNoesis": "Assets/Noesis/Screens/CampaignSelectScreen.xaml",
+      "viewModel": "URA4CampaignSelectViewModel"
+    },
+    {
+      "id": "screen_briefing",
+      "name": "Faction Operation Briefing",
+      "path": "ra4-ui/src/screens/FactionBriefing.tsx",
+      "legacyComponent": "MissionBriefingScreen",
+      "status": "LEGACY_PRESENT",
+      "inputs": ["FactionTabClick", "StartMission", "BackToCampaign"],
+      "outputs": ["LoadMissionMap", "SetDifficulty"],
+      "state": ["FactionData", "MissionList", "ChapterProgress"],
+      "dependencies": ["ProgressBar", "Panel", "Button"],
+      "assets": ["SCREENSHOTS/4.png", "SCREENSHOTS/5.png", "SCREENSHOTS/6.png", "SCREENSHOTS/7.png"],
+      "targetNoesis": "Assets/Noesis/Screens/MissionBriefingScreen.xaml",
+      "viewModel": "URA4BriefingViewModel"
+    },
+    {
+      "id": "screen_skirmish",
+      "name": "Skirmish & Lobby Setup",
+      "path": "ra4-ui/src/screens/SkirmishScreen.tsx",
+      "legacyComponent": "SkirmishSetupScreen",
+      "status": "LEGACY_PRESENT",
+      "inputs": ["PlayerRowClick", "ChatMessageSend", "StartMatchClick"],
+      "outputs": ["StartMatch", "SendChat", "LeaveLobby", "ChangeMap"],
+      "state": ["PlayerGrid", "MatchSettings", "ChatHistory", "MapPreview"],
+      "dependencies": ["Button", "Panel", "SkirmishScreen.css"],
+      "assets": ["SCREENSHOTS/8.png"],
+      "targetNoesis": "Assets/Noesis/Screens/SkirmishSetupScreen.xaml",
+      "viewModel": "URA4SkirmishLobbyViewModel"
+    },
+    {
+      "id": "screen_ingame_hud",
+      "name": "In-Game Command HUD",
+      "path": "ra4-ui/src/screens/InGameHUD.tsx",
+      "legacyComponent": "MainHUD",
+      "status": "LEGACY_PRESENT",
+      "inputs": ["ProductionTabClick", "BuildTileClick", "CommandClick", "MinimapClick"],
+      "outputs": ["IssueCommand", "QueueProduction", "CancelQueue", "MoveCamera"],
+      "state": ["Resources", "Power", "Intel", "SelectedBuilding", "QueueList", "MinimapSnapshot"],
+      "dependencies": ["Minimap", "ProductionPanel", "CommandBar", "HUDHeader"],
+      "assets": ["SCREENSHOTS/13.png", "SCREENSHOTS/14.png", "SCREENSHOTS/15.png", "SCREENSHOTS/16.png"],
+      "targetNoesis": "Assets/Noesis/Screens/InGameHUD.xaml",
+      "viewModel": "URA4HUDViewModel"
+    }
+  ]
+}
