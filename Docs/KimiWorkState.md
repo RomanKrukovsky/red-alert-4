@@ -51,3 +51,5 @@ RA4Tests, RA4UI, RAAI. Targets: RedAlert4, Editor, Server.
 
 ## Следующая итерация (4)
 Создать mapping существующего UI (UICodeInventory.json) к внешнему визуальному описанию скриншотов 1–24. Если vision доступна — заматчить скриншоты на WBP/C++ экраны; иначе использовать ra4-ui React-прототип и названия WBP как прокси, с confidence-полем. Результат → `Saved/Reports/ScreenshotToUIMapping.json`. НЕ менять UI.
+
+CONTINUE_COMMAND: «Прочитай Docs/KimiWorkState.md и продолжи с итерации 4: создай mapping существующего UI к визуальному описанию 24 скриншотов в Saved/Reports/ScreenshotToUIMapping.json. Не изменяй UI.»
