@@ -1,0 +1,145 @@
+@import url('https://fonts.googleapis.com/css2?family=Jura:wght@400;500;600;700&family=Oswald:wght@300;400;500;600;700&family=Orbitron:wght@400;600;800;900&family=Inter:wght@400;600;700&display=swap');
+
+@import './tokens/colors.css';
+@import './tokens/typography.css';
+@import './tokens/components.css';
+@import './tokens/effects.css';
+@import './tokens/layout.css';
+@import './tokens/spacing.css';
+
+@import './themes/theme-soviet.css';
+@import './themes/theme-allies.css';
+@import './themes/theme-eastern-coalition.css';
+@import './themes/theme-chronolegion.css';
+
+:root {
+  /* Global Typography */
+  --font-primary: 'Jura', sans-serif; /* For futuristic UI elements */
+  --font-secondary: 'Oswald', sans-serif; /* For headings and condensed text */
+  
+  /* Global Sizes */
+  --border-radius-sm: 4px;
+  --border-radius-md: 8px;
+  --panel-padding: 16px;
+  
+  /* Fallback defaults (USSR) */
+  --theme-primary: #ff1a1a;
+  --theme-primary-glow: rgba(255, 26, 26, 0.6);
+  --theme-primary-dim: rgba(255, 26, 26, 0.2);
+  --theme-secondary: #ffb700;
+  --theme-bg-dark: #0a0505;
+  --theme-bg-panel: rgba(20, 10, 10, 0.85);
+  --theme-border: #4a1515;
+  --theme-text-main: #ffffff;
+  --theme-text-muted: #a08080;
+}
+
+/* Faction Themes */
+.theme-ussr {
+  --theme-primary: #ff1a1a;
+  --theme-primary-glow: rgba(255, 26, 26, 0.6);
+  --theme-primary-dim: rgba(255, 26, 26, 0.2);
+  --theme-secondary: #ffb700; /* Gold */
+  --theme-bg-dark: #0a0505;
+  --theme-bg-panel: rgba(20, 10, 10, 0.85);
+  --theme-border: #5a1515;
+  --theme-text-main: #ffffff;
+  --theme-text-muted: #c09090;
+}
+
+.theme-allies {
+  --theme-primary: #0088ff;
+  --theme-primary-glow: rgba(0, 136, 255, 0.6);
+  --theme-primary-dim: rgba(0, 136, 255, 0.2);
+  --theme-secondary: #e0e0e0; /* Silver/White */
+  --theme-bg-dark: #050a14;
+  --theme-bg-panel: rgba(10, 20, 35, 0.85);
+  --theme-border: #153a5a;
+  --theme-text-main: #ffffff;
+  --theme-text-muted: #80a0c0;
+}
+
+.theme-ec {
+  --theme-primary: #00ff66;
+  --theme-primary-glow: rgba(0, 255, 102, 0.6);
+  --theme-primary-dim: rgba(0, 255, 102, 0.2);
+  --theme-secondary: #ffd700; /* Bright Gold */
+  --theme-bg-dark: #05140a;
+  --theme-bg-panel: rgba(10, 30, 15, 0.85);
+  --theme-border: #155a2a;
+  --theme-text-main: #ffffff;
+  --theme-text-muted: #80c090;
+}
+
+.theme-chrono {
+  --theme-primary: #aa00ff;
+  --theme-primary-glow: rgba(170, 0, 255, 0.6);
+  --theme-primary-dim: rgba(170, 0, 255, 0.2);
+  --theme-secondary: #e0b0ff; /* Light Violet */
+  --theme-bg-dark: #10051a;
+  --theme-bg-panel: rgba(20, 10, 35, 0.85);
+  --theme-border: #4a156a;
+  --theme-text-main: #ffffff;
+  --theme-text-muted: #b090c0;
+}
+
+/* Global Reset & Base Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none; /* Prevent text selection for UI feel */
+}
+
+body {
+  font-family: var(--font-primary);
+  background-color: var(--theme-bg-dark);
+  color: var(--theme-text-main);
+  overflow: hidden; /* Hide scrollbars for the game UI */
+  width: 100vw;
+  height: 100vh;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--theme-bg-dark);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--theme-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-primary);
+}
+
+/* Utility Classes */
+.text-primary { color: var(--theme-primary); }
+.text-secondary { color: var(--theme-secondary); }
+.text-muted { color: var(--theme-text-muted); }
+
+.glow-text {
+  text-shadow: 0 0 5px var(--theme-primary-glow), 0 0 10px var(--theme-primary-glow);
+}
+
+.glow-box {
+  box-shadow: 0 0 10px var(--theme-primary-glow), inset 0 0 10px var(--theme-primary-dim);
+}
+
+/* Angled corners via clip-path utility */
+.clip-angled-tl-br {
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+}
+.clip-angled-all {
+  clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px), 0 10px);
+}

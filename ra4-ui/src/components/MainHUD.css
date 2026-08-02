@@ -1,0 +1,37 @@
+.ra4-hud-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-family: var(--font-family-ui);
+  z-index: 2000;
+}
+
+.ra4-hud-interactive {
+  pointer-events: auto;
+}
+
+.ra4-hud-top-bar {
+  display: flex;
+  justify-content: space-between;
+}
+
+.ra4-hud-middle {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 20px;
+}
+
+.ra4-hud-bottom {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 10px 10px 10px;
+}

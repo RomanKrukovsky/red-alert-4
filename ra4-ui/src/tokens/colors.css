@@ -1,0 +1,43 @@
+/* RA4 Design Token System: Colors */
+:root {
+  /* Faction primary color base (overridden by theme classes) */
+  --faction-primary: #ff2a4b;
+  --faction-secondary: #ff5555;
+  --faction-dark: #800a1c;
+  --faction-glow: rgba(255, 42, 75, 0.4);
+  --faction-text: #ffffff;
+  --faction-text-muted: #ffcccc;
+
+  /* Global Surfaces */
+  --ra4-bg-panel-dark: rgba(10, 16, 26, 0.88);
+  --ra4-bg-panel-heavy: rgba(6, 9, 15, 0.96);
+  --ra4-bg-glass: rgba(14, 22, 35, 0.75);
+
+  /* Global States */
+  --ra4-state-success: #26b259;
+  --ra4-state-warning: #ffd700;
+  --ra4-state-error: #ff2a4b;
+  --ra4-state-disabled: rgba(255, 255, 255, 0.3);
+
+  /* Global Borders */
+  --ra4-border-metal: rgba(255, 255, 255, 0.12);
+  --ra4-border-light: rgba(255, 255, 255, 0.25);
+
+  /* Faction Extensibility */
+  --faction-panel: rgba(10, 16, 26, 0.88);
+  --faction-border: rgba(255, 255, 255, 0.25);
+  --faction-accent: #ff2a4b;
+  --faction-text-highlight: #ffffff;
+
+  /* Overlays & Health */
+  --ra4-bg-overlay: rgba(0, 0, 0, 0.6);
+  --ra4-hp-bar-high: #26b259;
+  --ra4-hp-bar-mid: #ffd700;
+  --ra4-hp-bar-low: #ff2a4b;
+
+  /* Minimap */
+  --ra4-minimap-friendly: #00aaff;
+  --ra4-minimap-enemy: #ff2a4b;
+  --ra4-minimap-resource: #ffd700;
+  --ra4-minimap-fog: rgba(0, 0, 0, 0.5);
+}

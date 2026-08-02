@@ -1,0 +1,90 @@
+/* RA4 Design Token System: AAA Soviet & Sci-Fi RTS Typography */
+:root {
+  /* Font Families */
+  --font-family-logo: 'Russo One', sans-serif;
+  --font-family-header: 'Exo 2', sans-serif;
+  --font-family-ui: 'Exo 2', sans-serif;
+  --font-family-condensed: 'Russo One', sans-serif;
+  --font-family-mono: 'Roboto Mono', monospace;
+
+  /* Font Sizes */
+  --font-size-xs: 11px;
+  --font-size-sm: 13px;
+  --font-size-base: 15px;
+  --font-size-lg: 18px;
+  --font-size-xl: 22px;
+  --font-size-2xl: 28px;
+  --font-size-3xl: 36px;
+  --font-size-logo: 54px;
+
+  /* Semantic Sizes */
+  --font-h1: 36px;
+  --font-h2: 28px;
+  --font-body: 15px;
+  --font-hud: 13px;
+  --font-counter: 22px;
+
+  /* Font Weights */
+  --font-weight-regular: 600;
+  --font-weight-medium: 700;
+  --font-weight-bold: 800;
+  --font-weight-heavy: 900;
+
+  /* Letter Spacings */
+  --letter-spacing-tight: -0.01em;
+  --letter-spacing-normal: 0.04em;
+  --letter-spacing-wide: 0.08em;
+  --letter-spacing-header: 0.07em;
+  --letter-spacing-soviet: 0.09em;
+}
+
+/* Typography Utility Classes */
+.ra4-font-header {
+  font-family: var(--font-family-header);
+  letter-spacing: var(--letter-spacing-header);
+  text-transform: uppercase;
+}
+
+.ra4-font-ui {
+  font-family: var(--font-family-ui);
+  font-weight: 700;
+  letter-spacing: var(--letter-spacing-normal);
+}
+
+.ra4-font-mono {
+  font-family: var(--font-family-mono);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.ra4-font-condensed {
+  font-family: var(--font-family-condensed);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+.ra4-tabular-num {
+  font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Tactical Text Glow Effects */
+.ra4-text-glow-soviet {
+  text-shadow: 0 0 10px rgba(231, 72, 53, 0.7), 0 0 20px rgba(231, 72, 53, 0.4);
+}
+
+.ra4-text-glow-allies {
+  text-shadow: 0 0 10px rgba(74, 158, 255, 0.7), 0 0 20px rgba(74, 158, 255, 0.4);
+}
+
+.ra4-text-glow-gold {
+  text-shadow: 0 0 10px rgba(236, 182, 70, 0.7), 0 0 20px rgba(236, 182, 70, 0.4);
+}
+
+.ra4-text-glow-coalition {
+  text-shadow: 0 0 10px rgba(0, 204, 102, 0.7), 0 0 20px rgba(0, 204, 102, 0.4);
+}
+
+.ra4-text-glow-chronolegion {
+  text-shadow: 0 0 10px rgba(138, 43, 226, 0.7), 0 0 20px rgba(138, 43, 226, 0.4);
+}

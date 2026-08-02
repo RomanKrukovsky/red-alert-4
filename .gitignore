@@ -44,3 +44,7 @@ __pycache__/
 *.uasset
 *.umap
 
+
+# Kimi work-state reports must persist between iterations
+!Saved/Reports/
+!Saved/Reports/**

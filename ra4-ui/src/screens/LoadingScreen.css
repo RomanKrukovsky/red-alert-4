@@ -1,0 +1,85 @@
+.ra4-loading-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #000;
+  background-image: radial-gradient(circle at center, #1a0808 0%, #000 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-family-ui);
+  color: var(--faction-text);
+  z-index: 3900;
+}
+
+.ra4-loading-content {
+  width: 600px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.ra4-loading-title {
+  font-family: var(--font-family-logo);
+  font-size: 32px;
+  letter-spacing: 4px;
+  color: var(--faction-secondary);
+  text-shadow: 0 0 10px var(--faction-glow);
+  margin-bottom: 20px;
+}
+
+.ra4-loading-subtitle {
+  font-size: 14px;
+  color: var(--faction-text-muted);
+  letter-spacing: 2px;
+  margin-bottom: 40px;
+}
+
+.ra4-loading-bar-container {
+  width: 100%;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid var(--faction-dark);
+  box-shadow: inset 0 0 10px rgba(0,0,0,1);
+  position: relative;
+  overflow: hidden;
+  clip-path: var(--faction-clip-path);
+  margin-bottom: 10px;
+}
+
+.ra4-loading-bar-fill {
+  height: 100%;
+  background: var(--faction-secondary);
+  box-shadow: 0 0 15px var(--faction-glow);
+  transition: width 0.1s linear;
+}
+
+.ra4-loading-percentage {
+  font-family: var(--font-family-logo);
+  font-size: 18px;
+  color: var(--faction-text);
+  margin-bottom: 40px;
+}
+
+.ra4-loading-hint {
+  width: 100%;
+  background: var(--faction-bg-panel);
+  border: 1px solid var(--faction-dark);
+  padding: 15px 20px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #ccc;
+  text-align: left;
+  clip-path: var(--faction-clip-path);
+}
+
+.ra4-loading-hint-title {
+  color: var(--faction-secondary);
+  font-weight: bold;
+  letter-spacing: 1px;
+  margin-bottom: 5px;
+}

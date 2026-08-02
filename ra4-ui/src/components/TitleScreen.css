@@ -1,0 +1,95 @@
+.ra4-title-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #05080f;
+  /* Cinematic background placeholder */
+  background-image: radial-gradient(circle at 50% 50%, #1a080d 0%, #05080f 80%);
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 4000;
+  font-family: var(--font-family-ui);
+  overflow: hidden;
+}
+
+.ra4-title-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  z-index: 2;
+}
+
+.ra4-title-star {
+  width: 120px;
+  height: 120px;
+  background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><polygon points="50,5 61,40 98,40 68,62 79,96 50,75 21,96 32,62 2,40 39,40" fill="%23ff0000" stroke="%23ff6666" stroke-width="2"/></svg>') no-repeat center;
+  background-size: contain;
+  margin-bottom: 20px;
+  filter: drop-shadow(0 0 20px rgba(255, 0, 0, 0.8));
+}
+
+.ra4-title-cc {
+  font-size: 24px;
+  font-family: var(--font-family-logo);
+  color: #ffffff;
+  letter-spacing: 6px;
+  margin-bottom: 10px;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+}
+
+.ra4-title-main {
+  font-size: 110px;
+  font-weight: 900;
+  font-family: var(--font-family-logo);
+  letter-spacing: 8px;
+  margin: 0;
+  color: #ff0000;
+  background: linear-gradient(to bottom, #ff5555, #880000);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.9)) drop-shadow(0 0 30px rgba(255,0,0,0.4));
+  /* Faux metallic edge using text-shadow since background-clip is used */
+}
+
+.ra4-title-prompt {
+  position: absolute;
+  bottom: 40px;
+  font-size: 18px;
+  letter-spacing: 4px;
+  color: #ffffff;
+  opacity: 0.8;
+  animation: pulse 2s infinite ease-in-out;
+  text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+}
+
+.ra4-title-prompt::before, .ra4-title-prompt::after {
+  content: '★';
+  color: #ff0000;
+  margin: 0 15px;
+  font-size: 14px;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 1; filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.5)); }
+  100% { opacity: 0.4; }
+}
+
+.ra4-title-particles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  /* Basic implementation of particles/lightning */
+  background: url('data:image/svg+xml;utf8,<svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="none" /></svg>');
+}

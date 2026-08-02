@@ -1,0 +1,32 @@
+/* RA4 Chronolegion Theme */
+.theme-chronolegion {
+  --faction-primary: #8A2BE2;
+  --faction-secondary: #ba55d3;
+  --faction-dark: #220033;
+  --faction-glow: rgba(138, 43, 226, 0.7);
+  --faction-text: #f0e6ff;
+  --faction-text-muted: #9977aa;
+  
+  --faction-panel: rgba(25, 0, 50, 0.85);
+  --faction-border: rgba(186, 85, 211, 0.5);
+  --faction-accent: #00FFFF;
+  --faction-text-highlight: #E0E0FF;
+  
+  --faction-clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+  
+  /* Distorted energy border style */
+  --faction-border-style: 1px solid var(--faction-secondary);
+  --faction-box-shadow: inset 0 0 25px rgba(138, 43, 226, 0.3), 0 0 15px rgba(138, 43, 226, 0.2);
+}
+
+.theme-chronolegion ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.theme-chronolegion ::-webkit-scrollbar-track {
+  background: rgba(25, 0, 50, 0.5);
+}
+.theme-chronolegion ::-webkit-scrollbar-thumb {
+  background: var(--faction-secondary);
+  border: 1px solid var(--faction-dark);
+}

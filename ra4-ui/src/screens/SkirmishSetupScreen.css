@@ -1,0 +1,195 @@
+.ra4-skirmish-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #0a0404;
+  background-image: radial-gradient(circle at center, #1a0808 0%, #050202 100%);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 40px;
+  font-family: var(--font-family-ui);
+  color: var(--faction-text);
+  z-index: 3500;
+  box-sizing: border-box;
+}
+
+.ra4-skirmish-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.ra4-skirmish-title {
+  font-family: var(--font-family-logo);
+  font-size: 24px;
+  letter-spacing: 4px;
+  color: #a00000;
+  text-shadow: 1px 1px 0 #ff5555, 0 0 10px rgba(255, 0, 0, 0.5);
+}
+
+.ra4-skirmish-content {
+  display: flex;
+  flex: 1;
+  gap: 20px;
+  min-height: 0;
+}
+
+.ra4-skirmish-panel {
+  background: var(--faction-bg-panel);
+  border: var(--faction-border-style);
+  clip-path: var(--faction-clip-path);
+  box-shadow: var(--faction-box-shadow);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.ra4-skirmish-left {
+  flex: 0 0 300px;
+  gap: 20px;
+}
+
+.ra4-skirmish-center {
+  flex: 1;
+  gap: 10px;
+}
+
+.ra4-skirmish-right {
+  flex: 0 0 340px;
+  gap: 20px;
+}
+
+.ra4-skirmish-section-title {
+  color: var(--faction-secondary);
+  font-family: var(--font-family-header);
+  font-size: 15px;
+  letter-spacing: 2px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.ra4-skirmish-setting-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-family: var(--font-family-ui);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ra4-skirmish-setting-label {
+  color: var(--faction-text-muted);
+}
+
+.ra4-skirmish-setting-value {
+  color: #fff;
+}
+
+/* Player Grid */
+.ra4-player-grid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+}
+
+.ra4-player-header {
+  display: grid;
+  grid-template-columns: 30px 1fr 120px 60px 80px 100px;
+  color: var(--faction-text-muted);
+  font-family: var(--font-family-header);
+  font-size: 12px;
+  letter-spacing: 1px;
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--faction-dark);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.ra4-player-row {
+  display: grid;
+  grid-template-columns: 30px 1fr 120px 60px 80px 100px;
+  align-items: center;
+  background: rgba(255, 0, 0, 0.05);
+  border: 1px solid rgba(255, 0, 0, 0.1);
+  padding: 8px 10px;
+  font-family: var(--font-family-ui);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.ra4-player-row:hover {
+  background: rgba(255, 0, 0, 0.1);
+}
+
+.ra4-color-box {
+  width: 16px;
+  height: 16px;
+  border: 1px solid #fff;
+}
+
+.ra4-ready-icon {
+  color: #00ff00;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Chat Box */
+.ra4-chat-box {
+  height: 120px;
+  border: 1px solid var(--faction-dark);
+  background: rgba(0, 0, 0, 0.5);
+  padding: 10px;
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ra4-chat-input-wrapper {
+  display: flex;
+  margin-top: 10px;
+  gap: 10px;
+}
+
+.ra4-chat-input {
+  flex: 1;
+  background: transparent;
+  border: 1px solid var(--faction-dark);
+  color: #fff;
+  padding: 8px;
+  font-family: inherit;
+}
+
+/* Map Preview */
+.ra4-map-preview {
+  width: 100%;
+  height: 180px;
+  background: #333;
+  border: 1px solid var(--faction-dark);
+  margin-bottom: 10px;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%23111"/><text x="50" y="50" fill="%23555" text-anchor="middle" alignment-baseline="middle">MAP PREVIEW</text></svg>');
+  background-size: cover;
+  background-position: center;
+}
+
+/* Bottom Action Bar */
+.ra4-skirmish-actions {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.ra4-start-btn {
+  font-size: 24px !important;
+  padding: 15px 60px !important;
+}

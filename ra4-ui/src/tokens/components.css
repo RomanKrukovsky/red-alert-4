@@ -1,0 +1,64 @@
+/* RA4 Component Base Styles */
+
+.ra4-button {
+  position: relative;
+  border: none;
+  background: transparent;
+  color: var(--faction-text);
+  font-family: var(--font-family-header);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-header);
+  cursor: pointer;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-fast);
+}
+
+.ra4-button-primary {
+  background: var(--faction-bg-panel);
+  clip-path: var(--faction-clip-path);
+  border: var(--faction-border-style);
+  box-shadow: var(--faction-box-shadow);
+  padding: var(--spacing-2) var(--spacing-4);
+  text-transform: uppercase;
+  font-family: var(--font-family-header);
+  letter-spacing: var(--letter-spacing-header);
+}
+
+.ra4-button-primary:hover {
+  background: var(--faction-dark);
+  filter: brightness(1.2);
+}
+
+.ra4-button-primary:active {
+  transform: translateY(2px);
+}
+
+.ra4-button-primary .ra4-button-glow {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, var(--faction-glow), transparent);
+  transition: 0.3s;
+}
+
+.ra4-button-primary:hover .ra4-button-glow {
+  left: 100%;
+}
+
+.ra4-frame {
+  position: relative;
+  background: var(--faction-bg-panel);
+  clip-path: var(--faction-clip-path);
+  box-shadow: var(--faction-box-shadow);
+  border: var(--faction-border-style);
+  color: var(--faction-text);
+}
+
+.ra4-frame-glow {
+  filter: drop-shadow(0 0 10px var(--faction-glow));
+}
