@@ -85,7 +85,23 @@ void ARA4EntityActor::SetEntityMesh(UStaticMesh* InMesh)
 {
     if (MeshComponent)
     {
+        // The constructor puts BasicShapeMaterial on the emergency cube. Component
+        // overrides survive SetStaticMesh(), so without clearing them every real
+        // PBR slot is silently replaced by that placeholder material at runtime.
+        MeshComponent->EmptyOverrideMaterials();
         MeshComponent->SetStaticMesh(InMesh);
+        if (InMesh)
+        {
+            // EmptyOverrideMaterials alone is not enough for this native default
+            // subobject: the constructor override can be restored from the actor
+            // archetype after the mesh swap. Copy the authored asset slots back to
+            // the component explicitly so GetMaterial() and rendering agree.
+            const int32 MaterialCount = InMesh->GetStaticMaterials().Num();
+            for (int32 MaterialIndex = 0; MaterialIndex < MaterialCount; ++MaterialIndex)
+            {
+                MeshComponent->SetMaterial(MaterialIndex, InMesh->GetMaterial(MaterialIndex));
+            }
+        }
         // The scale correction is relative to the mesh's own bounds, so a swap
         // invalidates it. Recompute against the new geometry rather than relying on
         // callers to happen to set the mesh before the scale.
@@ -101,6 +117,21 @@ void ARA4EntityActor::SetTeamColor(const FLinearColor& TeamColor)
     if (MeshComponent == nullptr)
     {
         return;
+    }
+
+    // Production meshes already carry faction PBR instances per authored slot
+    // (paint, rubber, glass, concrete and emissive). Replacing every slot with
+    // the old blockout material destroys that work and makes the four factions
+    // visually identical. Player ownership remains readable through selection
+    // decals/UI until a dedicated mask channel is authored.
+    if (const UStaticMesh* StaticMesh = MeshComponent->GetStaticMesh())
+    {
+        const FString MeshPath = StaticMesh->GetPathName();
+        if (MeshPath.Contains(TEXT("/RA4/Art/Units/")) ||
+            MeshPath.Contains(TEXT("/RA4/Art/Buildings/")))
+        {
+            return;
+        }
     }
 
     // Select the faction's textured metal material. Imported FBX blockouts commonly

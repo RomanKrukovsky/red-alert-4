@@ -1,0 +1,141 @@
+{
+  "stable_id": "CO_YuanCollector",
+  "sockets": [
+    {
+      "name": "Engine",
+      "location_cm": [
+        -140.0,
+        -0.0,
+        110.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "Exhaust",
+      "location_cm": [
+        -154.0,
+        -106.2,
+        132.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "Muzzle",
+      "location_cm": [
+        168.0,
+        -0.0,
+        115.5
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "ProjectileSpawn",
+      "location_cm": [
+        168.0,
+        -0.0,
+        115.5
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "SelectionOrigin",
+      "location_cm": [
+        0.0,
+        -0.0,
+        0.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "Socket_Engine",
+      "location_cm": [
+        -140.0,
+        -0.0,
+        110.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "Socket_Muzzle",
+      "location_cm": [
+        168.0,
+        -0.0,
+        115.5
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "Socket_Turret",
+      "location_cm": [
+        0.0,
+        -0.0,
+        200.75
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "Turret",
+      "location_cm": [
+        0.0,
+        -0.0,
+        200.75
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "VFX_Impact",
+      "location_cm": [
+        0.0,
+        -0.0,
+        154.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "material_order": [
+    "MI_RA4_Accent_Coalition",
+    "MI_RA4_Metal",
+    "MI_RA4_Paint_Coalition",
+    "MI_RA4_RubberTrack"
+  ]
+}

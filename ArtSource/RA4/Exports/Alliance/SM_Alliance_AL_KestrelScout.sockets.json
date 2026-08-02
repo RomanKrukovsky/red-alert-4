@@ -1,0 +1,142 @@
+{
+  "stable_id": "AL_KestrelScout",
+  "sockets": [
+    {
+      "name": "Engine",
+      "location_cm": [
+        -84.0,
+        -0.0,
+        70.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "Exhaust",
+      "location_cm": [
+        -92.4,
+        -64.8,
+        84.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "Muzzle",
+      "location_cm": [
+        107.1,
+        -0.0,
+        119.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "ProjectileSpawn",
+      "location_cm": [
+        107.1,
+        -0.0,
+        119.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "SelectionOrigin",
+      "location_cm": [
+        0.0,
+        -0.0,
+        0.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "Socket_Engine",
+      "location_cm": [
+        -84.0,
+        -0.0,
+        70.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "Socket_Muzzle",
+      "location_cm": [
+        107.1,
+        -0.0,
+        119.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "Socket_Turret",
+      "location_cm": [
+        0.0,
+        -0.0,
+        127.75
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "Turret",
+      "location_cm": [
+        0.0,
+        -0.0,
+        127.75
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "VFX_Impact",
+      "location_cm": [
+        0.0,
+        -0.0,
+        98.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "material_order": [
+    "MI_RA4_Accent_Alliance",
+    "MI_RA4_Emissive_Alliance",
+    "MI_RA4_Metal",
+    "MI_RA4_Paint_Alliance",
+    "MI_RA4_RubberTrack"
+  ]
+}
