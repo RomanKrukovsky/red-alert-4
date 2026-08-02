@@ -1,0 +1,76 @@
+{
+  "stable_id": "CO_Barracks",
+  "sockets": [
+    {
+      "name": "Exhaust",
+      "location_cm": [
+        108.0,
+        -180.0,
+        288.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "Rally",
+      "location_cm": [
+        -450.0,
+        -0.0,
+        8.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "SelectionOrigin",
+      "location_cm": [
+        0.0,
+        -0.0,
+        0.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "UnitExit",
+      "location_cm": [
+        -330.0,
+        -0.0,
+        8.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "VFX_Impact",
+      "location_cm": [
+        0.0,
+        -0.0,
+        232.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "material_order": [
+    "MI_RA4_Accent_Coalition",
+    "MI_RA4_Concrete",
+    "MI_RA4_Metal",
+    "MI_RA4_Paint_Coalition"
+  ]
+}

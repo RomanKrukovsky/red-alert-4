@@ -1,0 +1,77 @@
+{
+  "stable_id": "SU_Refinery",
+  "sockets": [
+    {
+      "name": "Exhaust",
+      "location_cm": [
+        144.0,
+        -240.0,
+        324.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "Rally",
+      "location_cm": [
+        -600.0,
+        -0.0,
+        8.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "SelectionOrigin",
+      "location_cm": [
+        0.0,
+        -0.0,
+        0.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "UnitExit",
+      "location_cm": [
+        -440.0,
+        -0.0,
+        8.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "VFX_Impact",
+      "location_cm": [
+        0.0,
+        -0.0,
+        261.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "material_order": [
+    "MI_RA4_Accent_Soviet",
+    "MI_RA4_Concrete",
+    "MI_RA4_Metal",
+    "MI_RA4_Paint_Soviet",
+    "MI_RA4_RubberTrack"
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "stable_id": "AL_PowerPlant",
+  "sockets": [
+    {
+      "name": "Exhaust",
+      "location_cm": [
+        108.0,
+        -180.0,
+        345.6
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "Rally",
+      "location_cm": [
+        -450.0,
+        -0.0,
+        8.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "SelectionOrigin",
+      "location_cm": [
+        0.0,
+        -0.0,
+        0.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "UnitExit",
+      "location_cm": [
+        -330.0,
+        -0.0,
+        8.0
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "VFX_Impact",
+      "location_cm": [
+        0.0,
+        -0.0,
+        278.4
+      ],
+      "rotation_degrees": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "material_order": [
+    "MI_RA4_Accent_Alliance",
+    "MI_RA4_ArmouredGlass",
+    "MI_RA4_Concrete",
+    "MI_RA4_Emissive_Alliance",
+    "MI_RA4_Metal",
+    "MI_RA4_Paint_Alliance"
+  ]
+}
