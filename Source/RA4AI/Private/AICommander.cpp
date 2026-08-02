@@ -117,6 +117,11 @@ void AICommander::Reset()
     bHasScoutOrder = false;
     ActiveOperation = TacticalOperation();
     DecisionLog.clear();
+    // The doctrine is the only Reset exception: it depends on the commander's
+    // faction, which is world state, so it is re-resolved on the next first Tick.
+    bDoctrineLoaded = false;
+    LastHarassRaidTick = 0;
+    bHasHarassRaid = false;
 }
 
 void AICommander::Log(TickIndex Tick, CommandType Type, ContentId Content, const char* Reason)
@@ -140,6 +145,34 @@ void AICommander::LogIdleStrategyDecision(TickIndex Tick)
 {
     Log(Tick, CommandType::None, ContentId(),
         "strategy selected; no valid action");
+}
+
+void AICommander::LoadDoctrine(const SimWorld& World)
+{
+    const PlayerState& State = World.GetPlayer(Player);
+    Doctrine = AIDoctrineRegistry::GetDoctrineForFaction(State.Faction, Profile);
+    Personality = Doctrine.Personality;
+    bDoctrineLoaded = true;
+}
+
+int32_t AICommander::EffectiveTargetHarvesters() const
+{
+    // Doctrine beats config only when loaded and non-default: a doctrine field of
+    // zero must behave exactly like the old config-only path.
+    if (bDoctrineLoaded && Doctrine.TargetHarvesterCount > 0)
+    {
+        return Doctrine.TargetHarvesterCount;
+    }
+    return Config.TargetHarvesters;
+}
+
+int32_t AICommander::EffectiveAssaultArmySize() const
+{
+    if (bDoctrineLoaded && Doctrine.MinimumAssaultArmySize > 0)
+    {
+        return Doctrine.MinimumAssaultArmySize;
+    }
+    return Config.AttackArmySize;
 }
 
 // ---------------------------------------------------------------------------
@@ -477,6 +510,21 @@ bool AICommander::TryScout(const SimWorld& World, std::vector<Command>& Out)
     if (Content == nullptr)
     {
         return false;
+    }
+
+    // Personalities with a low scout priority deliberately starve scouting of fresh
+    // orders: the gap between scout orders stretches from 20 ticks (priority 100)
+    // to 600 (priority 0). Default 70 keeps the old, un-paced behaviour visible.
+    if (bDoctrineLoaded && bHasScoutOrder && LastScoutOrderTick != 0)
+    {
+        const int32_t P = Personality.ScoutPriority < 0 ? 0 :
+                          (Personality.ScoutPriority > 100 ? 100 : Personality.ScoutPriority);
+        const int32_t ScoutGapTicks = 20 + (100 - P) * 580 / 100;
+        const TickIndex Now = World.GetTick();
+        if (Now >= LastScoutOrderTick && Now - LastScoutOrderTick < TickIndex(ScoutGapTicks))
+        {
+            return false;
+        }
     }
 
     // Is the current scout still alive and still busy walking to its waypoint?
@@ -909,8 +957,15 @@ bool AICommander::TryBuildEconomy(const SimWorld& World, std::vector<Command>& O
 {
     const PlayerState& State = World.GetPlayer(Player);
 
-    // Power first: a shortage throttles everything else the commander is about to do.
-    if (State.PowerConsumed >= State.PowerProduced)
+    // Power first: a shortage throttles everything else the commander is about to
+    // do. The doctrine's buffer tightens the trigger (surplus counted in integer
+    // percent of produced power) without changing behaviour when it is zero.
+    const int32_t BufferPercent = bDoctrineLoaded ? Doctrine.PowerPlantBuffer : 0;
+    const bool bPowerShort = State.PowerConsumed >= State.PowerProduced ||
+        (BufferPercent > 0 &&
+         int64_t(State.PowerConsumed) * 100 >=
+             int64_t(State.PowerProduced) * (100 - BufferPercent));
+    if (bPowerShort)
     {
         if (QueueProduction(World, FindStructure(World, &IsPowerPlant), "power at or over capacity", Out))
         {
@@ -930,7 +985,7 @@ bool AICommander::TryBuildEconomy(const SimWorld& World, std::vector<Command>& O
     if (Harvester.IsValid())
     {
         const int32_t Have = CountOwnedUnits(World, /*bCombatOnly*/ false) - CountOwnedUnits(World, true);
-        if (Have < Config.TargetHarvesters)
+        if (Have < EffectiveTargetHarvesters())
         {
             if (QueueProduction(World, Harvester, "below harvester target", Out))
             {
@@ -1039,8 +1094,16 @@ void AICommander::ReconcileSquad(const SimWorld& World)
         return;
     }
 
+    // A personality that hates regrouping drops fewer casualties per decision: the
+    // prune runs only every RegroupFrequencyTicks decision cycles (or every cycle
+    // when the value is unset). Recruiting idle units is cheap and always allowed.
+    const int32_t RegroupGap = bDoctrineLoaded && Personality.RegroupFrequencyTicks > 0
+        ? Personality.RegroupFrequencyTicks : 1;
+
     // Drop destroyed, non-combat or wounded units from the assigned squad.  The
     // order of the remaining units is preserved so that assignment is stable.
+    if (World.GetTick() % TickIndex(RegroupGap) == 0)
+    {
     std::vector<EntityId> Kept;
     Kept.reserve(ActiveOperation.AssignedUnits.size());
     for (EntityId Id : ActiveOperation.AssignedUnits)
@@ -1058,6 +1121,7 @@ void AICommander::ReconcileSquad(const SimWorld& World)
         Kept.push_back(Id);
     }
     ActiveOperation.AssignedUnits.swap(Kept);
+    }
 
     // Recruit every idle, non-wounded combat unit into an active operation.  Once a
     // push has started, leaving units at base while a small squad attacks alone is the
@@ -1249,6 +1313,122 @@ void AICommander::PruneRetreatedUnits(const SimWorld& World)
     ActiveOperation.AssignedUnits.swap(StillRetreating);
 }
 
+bool AICommander::TryHarassRaid(const SimWorld& World, int32_t ArmySize,
+                                std::vector<Command>& Out)
+{
+    if (!bDoctrineLoaded)
+    {
+        return false;
+    }
+    // Personalities that neither commit nor flank never raid; a zero/default
+    // personality keeps the old behaviour of no raids at all.
+    if (Personality.Aggressiveness < 60 || Personality.FlankingTendency < 30)
+    {
+        return false;
+    }
+
+    const bool bOperationIdle =
+        ActiveOperation.State == OperationState::Proposed ||
+        ActiveOperation.State == OperationState::Completed ||
+        ActiveOperation.State == OperationState::Aborted;
+    if (!bOperationIdle)
+    {
+        return false;
+    }
+
+    // Enough force for a probe, but not the full push -- that is the push's job.
+    const int32_t RaidThreshold = std::max(Config.MinimumAttackSize,
+                                           EffectiveAssaultArmySize() / 2);
+    if (ArmySize < RaidThreshold || ArmySize >= EffectiveAssaultArmySize())
+    {
+        return false;
+    }
+
+    // Raids are gated so one fires at most every RegroupFrequencyTicks ticks.
+    const int32_t Gap = Personality.RegroupFrequencyTicks > 0
+        ? Personality.RegroupFrequencyTicks : 1;
+    const TickIndex Now = World.GetTick();
+    if (bHasHarassRaid && Now >= LastHarassRaidTick &&
+        Now - LastHarassRaidTick < TickIndex(Gap))
+    {
+        return false;
+    }
+
+    if (Knowledge == nullptr)
+    {
+        return false;
+    }
+
+    // Raid the most recent harvester/expansion sighting; fall back to any memory
+    // that is not the enemy main base (a construction yard is the main push's job).
+    const ContentDatabase* Content = Knowledge->GetContent();
+    const EnemyMemory* Best = nullptr;
+    const EnemyMemory* Fallback = nullptr;
+    for (const EnemyMemory& Mem : Knowledge->GetKnownEnemies())
+    {
+        const EntityDef* Def = Content != nullptr ? Content->FindEntity(Mem.DefId) : nullptr;
+        const bool bIsMainBase = Def != nullptr && Def->Building.bIsConstructionYard;
+        if (bIsMainBase)
+        {
+            continue;
+        }
+        if (Fallback == nullptr || Mem.LastSeenTick > Fallback->LastSeenTick)
+        {
+            Fallback = &Mem;
+        }
+        const bool bIsEconomy =
+            (Def != nullptr && (HasRole(Def->Roles, EntityRole::Harvester) ||
+                                HasRole(Def->Roles, EntityRole::Refinery)));
+        if (bIsEconomy && (Best == nullptr || Mem.LastSeenTick > Best->LastSeenTick))
+        {
+            Best = &Mem;
+        }
+    }
+    if (Best == nullptr)
+    {
+        Best = Fallback;
+    }
+    if (Best == nullptr)
+    {
+        return false;
+    }
+
+    // Send half the idle squad through the standard AttackMove path. Which half is
+    // chosen from the seeded stream so a replay picks the same raiders.
+    ReconcileSquad(World);
+    const size_t RaidCount = std::max<size_t>(1, ActiveOperation.AssignedUnits.size() / 2);
+    const Vec2 Destination = World.GetMap().TileCenterToWorld(Best->Position);
+    size_t Issued = 0;
+    for (size_t I = 0; I < ActiveOperation.AssignedUnits.size() && Issued < RaidCount; ++I)
+    {
+        const size_t Index =
+            (I + Rng.NextBelow(uint32_t(ActiveOperation.AssignedUnits.size()))) %
+            ActiveOperation.AssignedUnits.size();
+        const EntityId Id = ActiveOperation.AssignedUnits[Index];
+        const OrderQueue* Orders = World.GetOrders(Id);
+        if (Orders != nullptr && Orders->Count > 0)
+        {
+            continue;
+        }
+        Command C;
+        C.Type = CommandType::AttackMove;
+        C.Issuer = Player;
+        C.Primary = Id;
+        C.Location = Destination;
+        Out.push_back(C);
+        ++Issued;
+    }
+    if (Issued == 0)
+    {
+        return false;
+    }
+
+    bHasHarassRaid = true;
+    LastHarassRaidTick = Now;
+    Log(Now, CommandType::AttackMove, ContentId(), "harass raid");
+    return true;
+}
+
 void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
 {
     const ContentDatabase* Content = World.GetContent();
@@ -1296,7 +1476,7 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
         }
     }
 
-    ActiveOperation.RequiredCombatUnits = Config.AttackArmySize;
+    ActiveOperation.RequiredCombatUnits = std::max(EffectiveAssaultArmySize(), Config.AttackArmySize);
     ActiveOperation.MinRetreatUnits = Config.MinimumAttackSize;
 
     const int32_t ArmySize = CountOwnedUnits(World, /*bCombatOnly*/ true);
@@ -1324,6 +1504,12 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
             // Not enough force to venture out yet; keep building.
             return;
         }
+    }
+
+    // Small raids keep pressure on between big operations.
+    if (TryHarassRaid(World, ArmySize, Out))
+    {
+        return;
     }
 
     if (ArmySize == 0)
@@ -1439,6 +1625,17 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
                 ActiveOperation.TransitionTo(OperationState::Retreating, World.GetTick());
                 IssueSquadRetreat(World, Out);
             }
+            else if (bDoctrineLoaded && int64_t(ActiveOperation.AssignedUnits.size()) * 100 <
+                     int64_t(ActiveOperation.RequiredCombatUnits > 0 ? ActiveOperation.RequiredCombatUnits : 1) *
+                         int64_t(Personality.AcceptableLossesPercent < 100 ? Personality.AcceptableLossesPercent : 99) &&
+                     int64_t(Personality.AcceptableLossesPercent) * 2 < 100)
+            {
+                // A personality that hates accepting losses breaks off once roughly
+                // AcceptableLossesPercent of the required force is gone; the default
+                // (no doctrine) keeps the original single MinRetreatUnits rule.
+                ActiveOperation.TransitionTo(OperationState::Retreating, World.GetTick());
+                IssueSquadRetreat(World, Out);
+            }
             else
             {
                 // The push has committed and still has combat strength.  Keep refreshing
@@ -1542,6 +1739,14 @@ void AICommander::Tick(const SimWorld& World, std::vector<Command>& OutCommands)
     if (!State.bActive || State.bDefeated)
     {
         return;
+    }
+
+    // The faction is only a snapshot once the world is set up, so resolve the
+    // doctrine here rather than in Initialize, where the SimWorld may not hold a
+    // real faction for this player yet.
+    if (!bDoctrineLoaded)
+    {
+        LoadDoctrine(World);
     }
 
     if (IsUnderAttack(World))

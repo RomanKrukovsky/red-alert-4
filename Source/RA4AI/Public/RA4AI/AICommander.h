@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 
+#include "RA4AI/AIDoctrine.h"
 #include "RA4AI/AIStrategy.h"
 #include "RA4AI/AIWorldView.h"
 #include "RA4AI/TacticalOperation.h"
@@ -63,6 +64,10 @@ public:
     const std::vector<AIDecision>& GetDecisionLog() const { return DecisionLog; }
     void SetDecisionLogLimit(size_t Limit) { DecisionLogLimit = Limit; }
 
+    // Test hook: the doctrine/personality resolved from the commander's faction.
+    // Invalid until the first Tick, when the world is ready.
+    const FactionDoctrineDef& GetDoctrineForTesting() const { return Doctrine; }
+
 private:
     // --- decision steps, in priority order -------------------------------
     bool TryPlaceFinishedStructure(const SimWorld& World, std::vector<Command>& Out);
@@ -87,6 +92,14 @@ private:
 
     bool ExecuteStrategy(AIStrategy Strategy, const SimWorld& World,
                          std::vector<Command>& Out);
+
+    // Doctrine resolution: happens once, lazily on the first Tick, because the
+    // commander's faction lives in the SimWorld and is only valid once a match is
+    // set up. Until then every doctrine-dependent decision falls back to Config.
+    void LoadDoctrine(const SimWorld& World);
+    int32_t EffectiveTargetHarvesters() const;
+    int32_t EffectiveAssaultArmySize() const;
+    bool TryHarassRaid(const SimWorld& World, int32_t ArmySize, std::vector<Command>& Out);
 
     // --- world queries ----------------------------------------------------
     ContentId FindStructure(const SimWorld& World, bool (*Predicate)(const EntityDef&)) const;
@@ -134,6 +147,14 @@ private:
     AIProfile Profile = AIProfile::Balanced;
     AIConfig Config;
     Random Rng;
+
+    // Resolved on the first Tick; start invalid so that Doctrine/Personality copies
+    // only happen after a matter tick for this commander.
+    FactionDoctrineDef Doctrine;
+    AIPersonality Personality;
+    bool bDoctrineLoaded = false;
+    TickIndex LastHarassRaidTick = 0;
+    bool bHasHarassRaid = false;
 
     int32_t TicksSinceDecision = 0;
     AIStrategy ActiveStrategy = AIStrategy::ExpandEconomy;

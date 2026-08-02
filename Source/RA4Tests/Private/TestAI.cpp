@@ -975,6 +975,94 @@ RA4_TEST(AI, MassSimulationsBenchmark)
     RA4_EXPECT(TotalTicksExecuted > 0);
 }
 
+RA4_TEST(AI, HardDifficultyIssuesMoreDecisionsThanEasy)
+{
+    // Same profile, same seed: only the difficulty config differs. With a 4x tighter
+    // decision interval the Hard commander must log strictly more decisions.
+    const int32_t Ticks = SecondsToTicks(120);
 
+    AIMatch Easy;
+    Easy.Enable(0, AIProfile::Balanced);
+    Easy.Commanders[0].SetConfig(MakeProfileConfig(AIProfile::Balanced, AIDifficulty::Easy));
+    Easy.Commanders[0].SetDecisionLogLimit(2048);
+    Easy.Run(Ticks);
 
+    AIMatch Hard;
+    Hard.Enable(0, AIProfile::Balanced);
+    Hard.Commanders[0].SetConfig(MakeProfileConfig(AIProfile::Balanced, AIDifficulty::Hard));
+    Hard.Commanders[0].SetDecisionLogLimit(2048);
+    Hard.Run(Ticks);
 
+    std::printf("         decisions @120s: easy=%zu hard=%zu\n",
+                Easy.Commanders[0].GetDecisionLog().size(),
+                Hard.Commanders[0].GetDecisionLog().size());
+    RA4_EXPECT(Hard.Commanders[0].GetDecisionLog().size() >
+               Easy.Commanders[0].GetDecisionLog().size());
+}
+
+RA4_TEST(AI, DoctrineRaisesSovietHarvesterTarget)
+{
+    // Player 0 is Soviet in the AIMatch harness, so the commander resolves the
+    // Soviet doctrine on its first tick (TargetHarvesterCount = 4).
+    AIMatch M;
+    M.Enable(0, AIProfile::Balanced);
+    M.Run(2);
+
+    const FactionDoctrineDef& Doctrine = M.Commanders[0].GetDoctrineForTesting();
+    RA4_EXPECT(Doctrine.TargetHarvesterCount > M.Commanders[0].GetConfig().TargetHarvesters);
+    RA4_EXPECT(Doctrine.MinimumAssaultArmySize > 0);
+}
+
+RA4_TEST(AI, DoctrineLoadsLazilyOnFirstTick)
+{
+    // Before the world exists the doctrine must stay at defaults: Initialize never
+    // touches it, only Tick does.
+    AICommander Commander;
+    Commander.Initialize(0, AIProfile::Balanced, 123);
+    RA4_EXPECT(Commander.GetDoctrineForTesting().TargetHarvesterCount == 3); // struct default
+
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(20260731));
+    std::vector<Command> Commands;
+    Commander.Tick(World, Commands);
+    RA4_EXPECT(Commander.GetDoctrineForTesting().TargetHarvesterCount == 4); // Soviet doctrine
+}
+RA4_TEST(ZZ, DiagStallScenario3)
+{
+    // Temporary diagnostic for the Defensive vs Aggressive stall.
+    AIMatch M(20260732);
+    M.Enable(0, AIProfile::Defensive, 103);
+    M.Enable(1, AIProfile::Aggressive, 203);
+    M.Commanders[0].SetDecisionLogLimit(2048);
+    M.Commanders[1].SetDecisionLogLimit(2048);
+
+    for (int Block = 0; Block < 6 && M.World.GetPhase() == MatchPhase::Running; ++Block)
+    {
+        M.Run(SecondsToTicks(150));
+        std::printf("  t=%u P0: armed=%d b=%d op=%s assigned=%zu credits=%d farms... P1: armed=%d b=%d op=%s assigned=%zu\n",
+                    M.World.GetTick(), M.CountArmed(0), M.CountBuildings(0),
+                    ToString(M.Commanders[0].GetActiveOperation().State),
+                    M.Commanders[0].GetActiveOperation().AssignedUnits.size(),
+                    M.World.GetPlayer(0).Credits,
+                    M.CountArmed(1), M.CountBuildings(1),
+                    ToString(M.Commanders[1].GetActiveOperation().State),
+                    M.Commanders[1].GetActiveOperation().AssignedUnits.size());
+    }
+    {
+        const std::vector<AIDecision>& L = M.Commanders[0].GetDecisionLog();
+        std::printf("P0 log tail:\n");
+        for (size_t I = L.size() > 12 ? L.size() - 12 : 0; I < L.size(); ++I)
+        {
+            std::printf("  t=%u: %s\n", L[I].Tick, L[I].Reason.c_str());
+        }
+        const std::vector<AIDecision>& L1 = M.Commanders[1].GetDecisionLog();
+        std::printf("P1 log tail:\n");
+        for (size_t I = L1.size() > 12 ? L1.size() - 12 : 0; I < L1.size(); ++I)
+        {
+            std::printf("  t=%u: %s\n", L1[I].Tick, L1[I].Reason.c_str());
+        }
+    }
+    RA4_EXPECT(M.World.GetPhase() == MatchPhase::Finished);
+}
