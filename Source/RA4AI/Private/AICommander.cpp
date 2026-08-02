@@ -1523,20 +1523,6 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
         return;
     }
 
-    // A Economic commander turtling with a full treasury must still start modest
-    // production: doctrine targets are wishes, not blockers. When a doctrine-
-    // raised threshold has stalled out the profile for 1500+ decision ticks,
-    // everything above was compiled but nothing trained, so let the profile act.
-    const bool bProfileStuck =
-        bDoctrineLoaded &&
-        ArmySize == 0 &&
-        World.GetPlayer(Player).Credits > Config.CreditReserve * 3 &&
-        World.GetTick() > TickIndex(Config.DecisionIntervalTicks * 150);
-    if (bProfileStuck)
-    {
-        ReconcileSquad(World);
-    }
-
     if (ArmySize == 0)
     {
         // Wiped out: abort the operation and rebuild before committing again.
