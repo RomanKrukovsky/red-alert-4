@@ -49,7 +49,7 @@ RA4Tests, RA4UI, RAAI. Targets: RedAlert4, Editor, Server.
 - Файл инвентаря честно помечен `analysis_status: pending_vision`. screen/elements/visual = null.
 - Отмечено: в проекте есть незакоммиченный `ra4-ui/` (untracked) — возможно, там уже есть UI-наработки; стоит осмотреть в итерации 3b.
 
-## Следующая итерация (4)
-Создать mapping существующего UI (UICodeInventory.json) к внешнему визуальному описанию скриншотов 1–24. Если vision доступна — заматчить скриншоты на WBP/C++ экраны; иначе использовать ra4-ui React-прототип и названия WBP как прокси, с confidence-полем. Результат → `Saved/Reports/ScreenshotToUIMapping.json`. НЕ менять UI.
+## Следующая итерация (5)
+Итерация 5: сверить `DA_RA4_ArtMappings` и фактический runtime-path на тему «юнит -> mesh», особенно для SimWorldSubsystem → EntityActor. Проверить, есть ли runtime-выводы в `DescribeVisualState()` и нет ли расхождений по `ContentMeshRegistry`, `ArtMapping` и `DA_RA4_ArtMappings` после коммита `0535000`. Затем точечно починить найденные mismatch'и (не переписывая UI и не ломая текущий deterministic sim contract).
 
-CONTINUE_COMMAND: «Прочитай Docs/KimiWorkState.md и продолжи с итерации 4: создай mapping существующего UI к визуальному описанию 24 скриншотов в Saved/Reports/ScreenshotToUIMapping.json. Не изменяй UI.»
+CONTINUE_COMMAND: «Прочитай Docs/KimiWorkState.md и продолжи с итерации 5: проверить и поправить оставшиеся расхождения art-mapping для юнитов/зданий в RA4, не изменять UI»
