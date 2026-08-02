@@ -965,6 +965,16 @@ RA4_TEST(AI, MassSimulationsBenchmark)
 
         Match.Run(10000);
         const int32_t Winner = Match.World.GetWinner();
+        if (Winner != 0 && Winner != 1 && Winner != -1)
+        {
+            std::printf("  stall seed %d tick=%u p0 armed=%d b=%d op=%s | p1 armed=%d b=%d op=%s profiles=%d/%d\n",
+                        SeedIdx, Match.World.GetTick(),
+                        Match.CountArmed(0), Match.CountBuildings(0),
+                        ToString(Match.Commanders[0].GetActiveOperation().State),
+                        Match.CountArmed(1), Match.CountBuildings(1),
+                        ToString(Match.Commanders[1].GetActiveOperation().State),
+                        SeedIdx % 4, (SeedIdx + 1) % 4);
+        }
         RA4_EXPECT(Winner == 0 || Winner == 1 || Winner == -1);
 
         CompletedMatches++;
@@ -1029,12 +1039,12 @@ RA4_TEST(AI, DoctrineLoadsLazilyOnFirstTick)
     Commander.Tick(World, Commands);
     RA4_EXPECT(Commander.GetDoctrineForTesting().TargetHarvesterCount == 4); // Soviet doctrine
 }
-RA4_TEST(ZZ, DiagStallScenario3)
+RA4_TEST(ZZ, DiagStallEconDef)
 {
-    // Temporary diagnostic for the Defensive vs Aggressive stall.
-    AIMatch M(20260732);
-    M.Enable(0, AIProfile::Defensive, 103);
-    M.Enable(1, AIProfile::Aggressive, 203);
+    // Temporary diagnostic for Economic vs Defensive stall (bench seed 2).
+    AIMatch M(20260731u + 2 * 12345u);
+    M.Enable(0, AIProfile::Economic, 20260731u + 2 * 12345u);
+    M.Enable(1, AIProfile::Defensive, 20260731u + 2 * 12345u + 1);
     M.Commanders[0].SetDecisionLogLimit(2048);
     M.Commanders[1].SetDecisionLogLimit(2048);
 
@@ -1047,7 +1057,7 @@ RA4_TEST(ZZ, DiagStallScenario3)
                     M.Commanders[0].GetActiveOperation().AssignedUnits.size(),
                     M.Commanders[0].GetActiveOperation().TargetLocation.X,
                     M.Commanders[0].GetActiveOperation().TargetLocation.Y,
-                    M.World.GetPlayer(0).Credits,
+                    M.World.GetPlayer(0).UnitsLost,
                     M.CountArmed(1), M.CountBuildings(1),
                     ToString(M.Commanders[1].GetActiveOperation().State),
                     M.Commanders[1].GetActiveOperation().AssignedUnits.size(),
@@ -1059,15 +1069,23 @@ RA4_TEST(ZZ, DiagStallScenario3)
         {
             const PlayerState& S = M.World.GetPlayer(PlayerId(P));
             int32_t Queued = 0;
+            int32_t Q[8] = {0, 0, 0, 0, 0, 0, 0, 0};
             const std::vector<EntityCore>& Cores = M.World.GetAllCores();
             for (uint32_t I = 0; I < uint32_t(Cores.size()); ++I)
             {
                 if (!Cores[I].bAlive || Cores[I].Owner != PlayerId(P)) { continue; }
                 const BuildingComp* B = M.World.GetBuilding(M.World.MakeId(I));
                 if (B != nullptr) { Queued += int32_t(B->Queue.size()); }
+                const EntityDef* D = M.Content.FindEntity(Cores[I].Def);
+                if (D != nullptr && Cores[I].Kind == EntityKind::Building)
+                {
+                    ++Q[int(D->Production.Category)];
+                }
             }
-            std::printf("P%d: credits=%d power=%d/%d queuedItems=%d\n",
-                        P, S.Credits, S.PowerProduced, S.PowerConsumed, Queued);
+            std::printf("P%d: credits=%d power=%d/%d queuedItems=%d strat=%s prodB=%d inf=%d veh=%d def=%d econ=%d\n",
+                        P, S.Credits, S.PowerProduced, S.PowerConsumed, Queued,
+                        ToString(M.Commanders[P].GetActiveStrategy()),
+                        Q[0], Q[1], Q[2], Q[3], Q[4]);
         }
     }
     RA4_EXPECT(M.World.GetPhase() == MatchPhase::Finished);
