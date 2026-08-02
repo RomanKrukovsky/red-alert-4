@@ -561,8 +561,8 @@ void URA4SimWorldSubsystem::SyncPresentation()
                     RegisterEntityActor(Index, Actor);
 
                     // Assign 3D mesh if ContentId exists in registry. When it does
-                    // not, the actor keeps its placeholder primitive rather than
-                    // rendering nothing.
+                    // not, the actor keeps its placeholder primitive, and we log the miss
+                    // once per content id so a bad asset path is not invisible in PIE.
                     uint32 ContentIdValue = Cores[Index].Def.Value;
                     if (UStaticMesh** MeshPtr = ContentMeshRegistry.Find(ContentIdValue))
                     {
@@ -578,6 +578,21 @@ void URA4SimWorldSubsystem::SyncPresentation()
                         {
                             Actor->SetEntityMesh(OreMesh);
                         }
+                    }
+                    else if (!MissingMeshContentIds.Contains(ContentIdValue))
+                    {
+                        FString MissingName = TEXT("<no-def>");
+                        if (Content != nullptr)
+                        {
+                            if (const RA4::EntityDef* Def = Content->FindEntity(Cores[Index].Def))
+                            {
+                                MissingName = FString(Def->Name.c_str());
+                            }
+                        }
+                        UE_LOG(LogTemp, Warning,
+                               TEXT("RA4 presentation has no mesh mapping for content id %u (%s)"),
+                               ContentIdValue, *MissingName);
+                        MissingMeshContentIds.Add(ContentIdValue);
                     }
 
                     // Size and colour the placeholder from real definition data, so a

@@ -134,5 +134,9 @@ private:
     // Mapping from simulation EntityIndex to presentation AActor
     TMap<uint32, ARA4EntityActor*> EntityActors;
 
+    // One-shot diagnostics so a missing presentation asset is visible in the log
+    // instead of silently leaving a cube on the battlefield.
+    TSet<uint32> MissingMeshContentIds;
+
     bool bReportedPresentationState = false;
 };
