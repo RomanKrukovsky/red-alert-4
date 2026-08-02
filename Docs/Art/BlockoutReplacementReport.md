@@ -38,13 +38,15 @@ Unreal Engine: 5.8.1 (фактическая версия установленн
 - Сборка `RedAlert4Editor Mac Development`: успешно.
 - Живой запуск `RA4_Skirmish`: успешно. В логе штаб, переработчик и харвестер используют `MI_RA4_Surface_Soviet`, а не `BasicShapeMaterial`.
 - Showcase: обе карты создаются повторным запуском скрипта; дневная сцена содержит 42 актора, включая все 36 моделей, свет, атмосферу, туман, землю и камеру.
-- Cook трёх проверочных карт: выполняется отдельно с `-SkipZenStore`; итог записывается после завершения проверки.
+- Cook трёх проверочных карт с `-SkipZenStore`: обработаны все 712 пакетов, созданы cooked asset registry, 570 файлов нового art-каталога и обе showcase-карты. Команда всё же завершилась с кодом 1 из-за существующей настройки Asset Manager: для `GameFeatureData` нет обязательного правила сканирования.
 
 Отчёты проверки лежат в:
 
 - `Saved/Reports/BlockoutReplacementInventory.json`
 - `Saved/Reports/ModelImportReport.json`
 - `Saved/Reports/ModelValidationReport.json`
+- `Saved/Reports/Screenshots/Blockout_Before.jpeg`
+- `Saved/Reports/Screenshots/VerticalSlice_After.jpeg`
 
 ## Что остаётся
 
@@ -55,6 +57,7 @@ Unreal Engine: 5.8.1 (фактическая версия установленн
 - Нет финальных разрушенных вариантов и фракционных decal-mask для цвета конкретного игрока.
 - Материалы хорошо различают фракции в тестовой сцене, но требуют финального баланса экспозиции и roughness в боевой карте.
 - Hardcoded visual registry остаётся техническим долгом; следующим шагом его следует полностью перенести в проверяемый Data Asset без изменения simulation layer.
+- Полностью зелёный cook блокирует существующая конфигурация `GameFeatureData`, хотя сам cooker дошёл до `Packages Remain 0` и записал новые ассеты.
 - Headless-набор проекта сейчас не собирается из-за существующей до этой ветки зависимости `RA4FogOfWar/Public/FogOfWarGrid.h` от `CoreMinimal.h`. Поэтому тесты и побайтовое сравнение `RA4MatchDump` в этой ветке честно не подтверждены. Арт-изменения этот модуль не затрагивают.
 
 ## Повторение pipeline
