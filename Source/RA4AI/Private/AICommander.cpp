@@ -1354,6 +1354,15 @@ bool AICommander::TryHarassRaid(const SimWorld& World, int32_t ArmySize,
         return false;
     }
 
+    // Raids are an alternative to the big push only while the operation is idle;
+    // once the squad is gathering/staging/advancing, harass must not steal ticks.
+    if (ActiveOperation.State == OperationState::Gathering ||
+        ActiveOperation.State == OperationState::Staging ||
+        ActiveOperation.State == OperationState::Advancing)
+    {
+        return false;
+    }
+
     if (Knowledge == nullptr)
     {
         return false;
@@ -1506,10 +1515,26 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
         }
     }
 
-    // Small raids keep pressure on between big operations.
-    if (TryHarassRaid(World, ArmySize, Out))
+    // Small raids keep pressure on between big operations, but only when a target
+    // is actually known: with nothing in memory the scouting/gathering fallback
+    // above must run, otherwise one turtle steals every decision tick forever.
+    if (bHasTarget && TryHarassRaid(World, ArmySize, Out))
     {
         return;
+    }
+
+    // A Economic commander turtling with a full treasury must still start modest
+    // production: doctrine targets are wishes, not blockers. When a doctrine-
+    // raised threshold has stalled out the profile for 1500+ decision ticks,
+    // everything above was compiled but nothing trained, so let the profile act.
+    const bool bProfileStuck =
+        bDoctrineLoaded &&
+        ArmySize == 0 &&
+        World.GetPlayer(Player).Credits > Config.CreditReserve * 3 &&
+        World.GetTick() > TickIndex(Config.DecisionIntervalTicks * 150);
+    if (bProfileStuck)
+    {
+        ReconcileSquad(World);
     }
 
     if (ArmySize == 0)
@@ -1554,6 +1579,17 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
     {
         // Nothing to attack and no active operation to finish.
         return;
+    }
+    else if (ActiveOperation.State == OperationState::Advancing ||
+             ActiveOperation.State == OperationState::Engaging)
+    {
+        // The squad arrived at a stale target and saw nothing: there may be a real
+        // base just over the fog edge. Pivot to the next scout waypoint instead of
+        // idling at an empty tile until MemoryRetentionTicks expire.
+        if (AnySquadNearTarget(World, ActiveOperation.TargetLocation))
+        {
+            ActiveOperation.TargetLocation = GetAndAdvanceScoutWaypoint(World);
+        }
     }
 
     ReconcileSquad(World);
@@ -1705,11 +1741,22 @@ bool AICommander::ExecuteStrategy(AIStrategy Strategy,
         case AIStrategy::TechUp:
             return TryBuildTech(World, Out);
         case AIStrategy::Fortify:
+        {
+            // A Fortify commander with no production and no army can never satisfy
+            // either half of the branch (no defence prerequisites, no unit
+            // producers), so it turtles at full credits forever. Build the missing
+            // producers first; this is the only way Fortify can act at all.
+            if (CountOwnedUnits(World, /*bCombatOnly*/ true) == 0 &&
+                TryBuildTech(World, Out))
+            {
+                return true;
+            }
             if (TryBuildDefence(World, Out))
             {
                 return true;
             }
             return TryTrainArmy(World, Out);
+        }
         case AIStrategy::AssembleArmy:
             return TryTrainArmy(World, Out);
         case AIStrategy::Assault:
@@ -1739,6 +1786,16 @@ void AICommander::Tick(const SimWorld& World, std::vector<Command>& OutCommands)
     if (!State.bActive || State.bDefeated)
     {
         return;
+    }
+
+    // A commander whose production chain is broken (no training → stuck in Fortify
+    // with no action possible) must not score Fortify as a live option or it
+    // turtles at full credits forever, as the Defensive profile did in headless
+    // skirmishes.
+    if (ActiveStrategy == AIStrategy::Fortify && CountOwnedUnits(World, true) == 0 &&
+        ActiveOperation.AssignedUnits.empty())
+    {
+        ActiveStrategy = AIStrategy::AssembleArmy;
     }
 
     // The faction is only a snapshot once the world is set up, so resolve the
