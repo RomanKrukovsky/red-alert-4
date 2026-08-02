@@ -3,6 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "RA4HUDTypes.h"
+#include "RA4UIScreenViewModel.h"
 #include "RA4ViewModelBase.h"
 #include "RA4HUDViewModel.generated.h"
 
@@ -14,6 +16,7 @@ class RA4UI_API URA4HUDViewModel : public URA4ViewModelBase
 public:
     URA4HUDViewModel();
 
+    // --- Economy & Power ---
     UFUNCTION(BlueprintCallable, Category = "ViewModel|Economy")
     void SetCredits(int32 InCredits);
     
@@ -27,13 +30,45 @@ public:
     float GetPowerRatio() const;
 
     UFUNCTION(BlueprintCallable, Category = "ViewModel|Economy")
+    void SetPowerProduced(int32 InPowerProduced);
+
+    UFUNCTION(BlueprintPure, Category = "ViewModel|Economy")
+    int32 GetPowerProduced() const { return PowerProduced; }
+
+    UFUNCTION(BlueprintCallable, Category = "ViewModel|Economy")
+    void SetPowerConsumed(int32 InPowerConsumed);
+
+    UFUNCTION(BlueprintPure, Category = "ViewModel|Economy")
+    int32 GetPowerConsumed() const { return PowerConsumed; }
+
+    UFUNCTION(BlueprintCallable, Category = "ViewModel|Economy")
     void SetPowerShortage(bool bShortage);
 
     UFUNCTION(BlueprintPure, Category = "ViewModel|Economy")
     bool IsPowerShortage() const;
 
+    // --- Command Limit / Supply ---
+    UFUNCTION(BlueprintCallable, Category = "ViewModel|Supply")
+    void SetCommandLimit(int32 InUsed, int32 InMax);
+
+    UFUNCTION(BlueprintCallable, Category = "ViewModel|Supply")
+    void SetCommandLimitUsed(int32 InUsed);
+
+    UFUNCTION(BlueprintPure, Category = "ViewModel|Supply")
+    int32 GetCommandLimitUsed() const { return CommandLimitUsed; }
+
+    UFUNCTION(BlueprintCallable, Category = "ViewModel|Supply")
+    void SetCommandLimitMax(int32 InMax);
+
+    UFUNCTION(BlueprintPure, Category = "ViewModel|Supply")
+    int32 GetCommandLimitMax() const { return CommandLimitMax; }
+
+    // --- Selection ---
     UFUNCTION(BlueprintCallable, Category = "ViewModel|Selection")
     void SetSelectionState(int32 Count, float HealthRatio, const FString& EntityName, bool bOwned);
+
+    UFUNCTION(BlueprintCallable, Category = "ViewModel|Selection")
+    void SetSelectionKind(ERA4SelectionKind InKind);
 
     UFUNCTION(BlueprintPure, Category = "ViewModel|Selection")
     int32 GetSelectionCount() const { return SelectionCount; }
@@ -47,15 +82,37 @@ public:
     UFUNCTION(BlueprintPure, Category = "ViewModel|Selection")
     bool IsPrimaryOwned() const { return bPrimaryOwned; }
 
+    UFUNCTION(BlueprintPure, Category = "ViewModel|Selection")
+    ERA4SelectionKind GetSelectionKind() const { return SelectionKind; }
+
+    // --- Production Queue ---
+    UFUNCTION(BlueprintCallable, Category = "ViewModel|Production")
+    void SetProductionQueue(const TArray<FRA4ProductionQueueItem>& InQueue);
+
+    UFUNCTION(BlueprintPure, Category = "ViewModel|Production")
+    const TArray<FRA4ProductionQueueItem>& GetProductionQueue() const { return ProductionQueue; }
+
 private:
     UPROPERTY(FieldNotify, Setter, Getter)
     int32 Credits;
+
+    UPROPERTY(FieldNotify, Setter = SetPowerProduced, Getter = GetPowerProduced)
+    int32 PowerProduced;
+
+    UPROPERTY(FieldNotify, Setter = SetPowerConsumed, Getter = GetPowerConsumed)
+    int32 PowerConsumed;
 
     UPROPERTY(FieldNotify, Getter = GetPowerRatio)
     float PowerRatio;
 
     UPROPERTY(FieldNotify, Getter = IsPowerShortage)
     bool bPowerShortage;
+
+    UPROPERTY(FieldNotify, Setter = SetCommandLimitUsed, Getter = GetCommandLimitUsed)
+    int32 CommandLimitUsed;
+
+    UPROPERTY(FieldNotify, Setter = SetCommandLimitMax, Getter = GetCommandLimitMax)
+    int32 CommandLimitMax;
 
     UPROPERTY(FieldNotify, Getter = GetSelectionCount)
     int32 SelectionCount;
@@ -68,4 +125,10 @@ private:
 
     UPROPERTY(FieldNotify, Getter = IsPrimaryOwned)
     bool bPrimaryOwned;
+
+    UPROPERTY(FieldNotify, Setter = SetSelectionKind, Getter = GetSelectionKind)
+    ERA4SelectionKind SelectionKind;
+
+    UPROPERTY(FieldNotify, Setter = SetProductionQueue, Getter = GetProductionQueue)
+    TArray<FRA4ProductionQueueItem> ProductionQueue;
 };

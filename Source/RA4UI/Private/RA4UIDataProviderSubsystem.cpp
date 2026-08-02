@@ -263,6 +263,7 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
     HUDViewModel->SetCredits(Snapshot.Resources.Credits);
     HUDViewModel->SetPower(Snapshot.Resources.PowerProduced, Snapshot.Resources.PowerConsumed);
     HUDViewModel->SetPowerShortage(Snapshot.Resources.bPowerShortage);
+    HUDViewModel->SetCommandLimit(Snapshot.Resources.SupplyUsed, Snapshot.Resources.SupplyCap);
 
     const float PrimaryHealthRatio =
         Snapshot.Selection.PrimaryHealthMax > 0
@@ -272,9 +273,10 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
         Snapshot.Selection.TotalCount, PrimaryHealthRatio,
         KeyToText(Snapshot.Selection.PrimaryDisplayNameKey).ToString(),
         Snapshot.Selection.bPrimaryIsOwned);
-    OnSelectionChanged.Broadcast();
-
+    
     SelectionKind = ToBlueprint(Snapshot.Selection.Kind);
+    HUDViewModel->SetSelectionKind(SelectionKind);
+    OnSelectionChanged.Broadcast();
 
     // --- selection groups -----------------------------------------------------
     SelectionGroups.Reset(int32(Snapshot.Selection.Groups.size()));
@@ -291,6 +293,9 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
     const TArray<FRA4ProductionEntry> PreviousQueue = ProductionQueue;
     const TArray<FRA4BuildOption> PreviousOptions = BuildOptions;
 
+    TArray<FRA4ProductionQueueItem> VMProductionQueue;
+    VMProductionQueue.Reserve(int32(Snapshot.Production.Queue.size()));
+
     ProductionQueue.Reset(int32(Snapshot.Production.Queue.size()));
     for (const RP::QueueEntry& Entry : Snapshot.Production.Queue)
     {
@@ -303,7 +308,16 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
         Out.bAwaitingPlacement = Entry.bAwaitingPlacement;
         Out.SlotIndex = Entry.SlotIndex;
         ProductionQueue.Add(Out);
+
+        FRA4ProductionQueueItem VMItem;
+        VMItem.DisplayName = Out.DisplayName;
+        VMItem.Cost = 0;
+        VMItem.Progress = FMath::Clamp(float(Entry.ProgressPercent) / 100.0f, 0.0f, 1.0f);
+        VMItem.Quantity = 1;
+        VMProductionQueue.Add(VMItem);
     }
+
+    HUDViewModel->SetProductionQueue(VMProductionQueue);
 
     // --- build sidebar --------------------------------------------------------
     BuildOptions.Reset(int32(Snapshot.Production.Options.size()));

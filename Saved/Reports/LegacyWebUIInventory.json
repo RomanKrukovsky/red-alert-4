@@ -2,12 +2,14 @@
   "timestamp": "2026-08-02T12:41:30Z",
   "branch": "migration/noesis-ui",
   "project": "Red Alert 4",
-  "targetArchitecture": "NoesisGUI C++ / XAML for Unreal Engine 5",
+  "targetArchitecture": "NoesisGUI C++ / XAML for Unreal Engine 5 (BLOCKED_PLUGIN_MISSING)",
   "summary": {
     "totalScreens": 15,
     "totalComponents": 22,
     "npmPackages": ["react", "react-dom", "react-router-dom", "zustand", "zod", "lucide-react", "classnames", "vite"],
-    "legacyRuntime": "React 18 / DOM / WebBrowser Widget"
+    "legacyRuntime": "React 18 / DOM / WebBrowser Widget",
+    "pluginStatus": "BLOCKED_PLUGIN_MISSING",
+    "migrationStatus": "DECLARED / DATA_ONLY"
   },
   "inventory": [
     {

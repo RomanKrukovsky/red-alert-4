@@ -1,5 +1,7 @@
 # Red Alert 4: NoesisGUI C++ & XAML Architecture Blueprint
 
+> **Status Notice**: Plugin Status: `BLOCKED_PLUGIN_MISSING`. `Plugins/NoesisGUI` is not installed in the repository. The architecture defined below represents the target specification.
+
 ## 1. System Overview
 
 This document defines the production C++ and XAML architecture for Red Alert 4's native NoesisGUI user interface in Unreal Engine 5.

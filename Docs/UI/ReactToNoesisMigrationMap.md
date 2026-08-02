@@ -1,5 +1,7 @@
 # React to NoesisGUI (C++ / XAML) Migration Mapping Matrix
 
+> **Status Notice**: Plugin Status: `BLOCKED_PLUGIN_MISSING`. `Plugins/NoesisGUI` is not installed in the repository. All mappings represent DECLARED conversion specifications.
+
 This document provides an explicit 1-to-1 conversion map for transitioning all React/CSS constructs to native NoesisGUI (WPF/XAML) elements in Unreal Engine 5.
 
 ---

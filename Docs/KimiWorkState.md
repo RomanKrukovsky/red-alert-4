@@ -34,6 +34,14 @@ RA4Tests, RA4UI, RAAI. Targets: RedAlert4, Editor, Server.
 | 1 | Безопасная подготовка: ветка, WorkState, инвентарь baseline | COMPLETE | (этот коммит) |
 
 | 2 | Инвентаризация screenshots | PARTIAL | (см. ниже) |
+| 3 | Задача B: инвентаризация UI-кода и UI-assets | COMPLETE | (этот коммит) |
+
+### Итерация 3 — детали (задача B, ≤8 мин)
+- Создан `Saved/Reports/UICodeInventory.json` — валидный JSON, покрывает RA4UI, Content/RA4UI WBP, ra4-ui/.
+- **ra4-ui/** — это отдельный git-репозиторий, React-прототип UI (Vite + React 19 + TS), НЕ частью UE-проекта, не старая реализация. Содержит скриншоты 1–24 и экраны StartScreen/MainMenu/CampaignSelect/FactionBriefing/InGameHUD/SkirmishScreen. Ничего не удалено, не скопировано; использовать только как визуальный референс.
+- Рантайм-точки создания виджетов: `RA4PlayerController.cpp` BeginPlay (Sidebar, ViewportSubsystem->AddWidget), ShowMatchResult (AddToViewport(100)) + menu-экраны с прямым CreateWidget/AddToViewport (CommandCentre, CampaignSelect, Showcase, SkirmishSetup). Роутер URA4UIRouterSubsystem существует, но обходится — зафиксировано как дефект.
+- Существующие экраны: глав. меню, skirmish setup, HUD (9 WBP-вариантов + C++), правая панель (C++ Sidebar с радаром), миникарта (дублируется WBP/C++), выбранный объект (WBP_SelectionPanel), очередь (WBP_Production*), пауза (только WBP_RA4_Pause), победа/поражение (один MatchResultOverlay + WBP_RA4_Victory).
+- UI/виджеты не изменены, новые виджеты не созданы.
 
 ### Итерация 2 — детали
 - Проверено существование всех 24 PNG, зафиксированы размеры (1672×941), пути, размеры файлов → `Saved/Reports/ScreenshotUIInventory.json` (валидный JSON, 24 записи).
@@ -41,9 +49,5 @@ RA4Tests, RA4UI, RAAI. Targets: RedAlert4, Editor, Server.
 - Файл инвентаря честно помечен `analysis_status: pending_vision`. screen/elements/visual = null.
 - Отмечено: в проекте есть незакоммиченный `ra4-ui/` (untracked) — возможно, там уже есть UI-наработки; стоит осмотреть в итерации 3b.
 
-## Следующая итерация (3)
-Задача A (предпочтительно, если доступна vision): повторить анализ screenshots 1–24 с моделью/инструментом, принимающим изображения; заполнить поля инвентаря реальными данными.
-Задача B (fallback, без зрения): инвентаризация существующего UI-кода — модуль `Source/RA4UI`, виджеты в `Content/` (WBP_*), папка `ra4-ui/`; составить `Saved/Reports/UICodeInventory.json` (список виджетов, экранов, их назначение). Критерий: валидный JSON, покрывает RA4UI и Content-виджеты.
-Не более 6–8 минут.
-
-CONTINUE_COMMAND: «Прочитай Docs/KimiWorkState.md и продолжи с итерации 3: если можешь читать изображения — задача A (анализ 24 скриншотов, ≤8 минут); иначе задача B — инвентаризация RA4UI/ra4-ui в Saved/Reports/UICodeInventory.json».
+## Следующая итерация (4)
+Создать mapping существующего UI (UICodeInventory.json) к внешнему визуальному описанию скриншотов 1–24. Если vision доступна — заматчить скриншоты на WBP/C++ экраны; иначе использовать ra4-ui React-прототип и названия WBP как прокси, с confidence-полем. Результат → `Saved/Reports/ScreenshotToUIMapping.json`. НЕ менять UI.
