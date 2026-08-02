@@ -1,0 +1,9 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <FontFamily x:Key="FontSecondary">pack://application:,,,/RA4;component/Content/RA4/UI/Fonts/#Oswald</FontFamily>
+    <FontFamily x:Key="FontPrimary">pack://application:,,,/RA4;component/Content/RA4/UI/Fonts/#Jura</FontFamily>
+    <FontFamily x:Key="FontHeader">pack://application:,,,/RA4;component/Content/RA4/UI/Fonts/#Orbitron</FontFamily>
+
+</ResourceDictionary>
