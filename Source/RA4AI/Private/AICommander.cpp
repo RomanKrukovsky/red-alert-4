@@ -1821,6 +1821,37 @@ void AICommander::Tick(const SimWorld& World, std::vector<Command>& OutCommands)
     ActiveStrategy =
         SelectStrategy(Scores, ActiveStrategy, bHasActiveStrategy, Config);
     bHasActiveStrategy = true;
+    // Doctrine is guidance, not a lock: if the commander sits at a full treasury
+    // with no army and no units in flight for a long stretch, scores such as
+    // Opening ("build more economy") hard-park production while nothing can ever
+    // spawn. Force the strategy floor that lets the profile act.
+    {
+        bool bHasInfantryProducer = false;
+        for (const EntityCore& Core : World.GetAllCores())
+        {
+            if (!Core.bAlive || Core.Owner != Player || Core.Kind != EntityKind::Building)
+            {
+                continue;
+            }
+            const EntityDef* Def = World.GetContent() != nullptr ? World.GetContent()->FindEntity(Core.Def) : nullptr;
+            if (Def != nullptr &&
+                (ProducesCategory(*World.GetContent(), Core.Def, ProductionCategory::Infantry) ||
+                 ProducesCategory(*World.GetContent(), Core.Def, ProductionCategory::Vehicle)))
+            {
+                bHasInfantryProducer = true;
+                break;
+            }
+        }
+        const bool bStuck = World.GetPlayer(Player).Credits > Config.CreditReserve * 2 &&
+            !bHasInfantryProducer && Assessment.ArmedUnits == 0 &&
+            !Assessment.bHasConstructionYard == false &&
+            World.GetTick() > TickIndex(Config.DecisionIntervalTicks * 30);
+        if (bStuck && ActiveStrategy != AIStrategy::ExpandEconomy &&
+            Assessment.ProductionBuildings == 0)
+        {
+            ActiveStrategy = AIStrategy::AssembleArmy;
+        }
+    }
     PreviousStrategyForDecision = Previous;
     ActiveStrategyScore = FindStrategyScore(Scores, ActiveStrategy);
 
