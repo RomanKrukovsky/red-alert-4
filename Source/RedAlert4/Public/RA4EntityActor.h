@@ -44,6 +44,12 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Visuals")
     void ApplyPrimitiveComposition(const FString& EntityId);
 
+    // Sets the art mapping asset used to resolve presentation assets for this entity.
+    void SetArtMappingAsset(class URA4ArtMappingDataAsset* InArtMapping);
+
+    // Sets the faction-scoped content id (e.g. unit.sov.conscript) used by ArtMapping.
+    void SetEntityId(const FString& InEntityId);
+
     // Diagnostic dump of what this actor is actually rendering. Used to answer
     // "the match runs but I see nothing" with data instead of guesses.
     FString DescribeVisualState() const;
@@ -82,6 +88,13 @@ protected:
 
     UPROPERTY(Transient)
     TObjectPtr<class UAnimSequence> CachedAttackAnim;
+
+    UPROPERTY(Transient)
+    TObjectPtr<class URA4ArtMappingDataAsset> ArtMapping;
+
+    // Kind tag such as "unit.sov.conscript" (from the simulation) or
+    // "building.sov.construction_yard"; drives ArtMapping lookup and primitive fallback.
+    FString EntityId;
 
     // Smooth interpolation targets
     FVector TargetPosition;

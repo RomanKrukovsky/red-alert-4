@@ -52,6 +52,12 @@ void ARA4SkirmishGameMode::BeginPlay()
     uint8 PlayerFaction = UGameplayStatics::GetIntOption(Options, TEXT("PlayerFaction"), SovietFaction);
     uint8 EnemyFaction = UGameplayStatics::GetIntOption(Options, TEXT("EnemyFaction"), AllianceFaction);
     int32 Difficulty = UGameplayStatics::GetIntOption(Options, TEXT("Difficulty"), 1);
+    int32 AISpot = UGameplayStatics::GetIntOption(Options, TEXT("AISpot"), -1);
+    int32 NumAI = UGameplayStatics::GetIntOption(Options, TEXT("NumAI"), 1);
+    if (NumAI < 1)
+    {
+        NumAI = 1;
+    }
 
     const auto IsPlayableFaction = [](uint8 Faction)
     {
@@ -68,14 +74,15 @@ void ARA4SkirmishGameMode::BeginPlay()
         UE_LOG(LogTemp, Warning, TEXT("RA4 invalid EnemyFaction option; using %u"), EnemyFaction);
     }
 
-    UE_LOG(LogTemp, Display, TEXT("RA4 skirmish factions: player=%u enemy=%u"), PlayerFaction, EnemyFaction);
+    UE_LOG(LogTemp, Display, TEXT("RA4 skirmish factions: player=%u enemy=%u difficulty=%d ai=%d aispot=%d"),
+           PlayerFaction, EnemyFaction, Difficulty, NumAI, AISpot);
 
     // Start the simulation match
     if (UWorld* World = GetWorld())
     {
         if (URA4SimWorldSubsystem* SimSub = World->GetSubsystem<URA4SimWorldSubsystem>())
         {
-            SimSub->StartSkirmishMatch(PlayerFaction, EnemyFaction, Difficulty);
+            SimSub->StartSkirmishMatch(PlayerFaction, EnemyFaction, Difficulty, NumAI, AISpot);
         }
     }
 

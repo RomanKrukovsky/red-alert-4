@@ -2,6 +2,7 @@
 
 #include "RA4SimWorldSubsystem.h"
 #include "RA4AI/AICommander.h"
+#include "RA4AI/AIStrategy.h"
 #include "RA4Simulation/SimWorld.h"
 #include "RA4Content/ContentDatabase.h"
 #include "RA4Presentation/HudSnapshot.h"
@@ -73,11 +74,33 @@ void URA4SimWorldSubsystem::Initialize(FSubsystemCollectionBase& Collection)
     // redundant flat plane on top of it. Deferred to the first Tick instead.
 }
 
-void URA4SimWorldSubsystem::StartSkirmishMatch(uint8 PlayerFaction, uint8 EnemyFaction, int32 Difficulty)
+namespace
+{
+// The setup widget emits Difficulty as a plain int (0/1/2); clamp anything out of
+// range to Hard rather than leave a commander unconfigured.
+RA4::AI::AIDifficulty MapIntToAIDifficulty(int32 Difficulty)
+{
+    if (Difficulty <= 0)
+    {
+        return RA4::AI::AIDifficulty::Easy;
+    }
+    if (Difficulty == 1)
+    {
+        return RA4::AI::AIDifficulty::Normal;
+    }
+    return RA4::AI::AIDifficulty::Hard;
+}
+} // namespace
+
+void URA4SimWorldSubsystem::StartSkirmishMatch(uint8 PlayerFaction, uint8 EnemyFaction, int32 Difficulty, int32 NumAI, int32 AISpot)
 {
     // The lobby or GameMode supplies the match setup.
-    FRA4MatchBootstrap::BuildSkirmish(*Content, *SimWorld, /*Seed*/ 20260728, static_cast<RA4::FactionId>(PlayerFaction), static_cast<RA4::FactionId>(EnemyFaction));
+    FRA4MatchBootstrap::BuildSkirmish(*Content, *SimWorld, /*Seed*/ 20260728,
+        static_cast<RA4::FactionId>(PlayerFaction), static_cast<RA4::FactionId>(EnemyFaction),
+        NumAI, AISpot);
     bWasLocalPowerShortage = false;
+
+    const RA4::AI::AIDifficulty MappedDifficulty = MapIntToAIDifficulty(Difficulty);
 
     // Every active player other than the local one gets a commander.
     constexpr RA4::PlayerId kLocalPlayer = 0;
@@ -89,8 +112,13 @@ void URA4SimWorldSubsystem::StartSkirmishMatch(uint8 PlayerFaction, uint8 EnemyF
         }
         RA4::AI::AICommander* Commander = new RA4::AI::AICommander();
         Commander->Initialize(Player, RA4::AI::AIProfile::Balanced, 20260728ull ^ (uint64(Player) * 0x9E3779B9ull));
+        // Initialize builds the Normal-difficulty config; the URL-selected difficulty
+        // refines it (decision cadence, memory cadence, Hard income bonus).
+        Commander->SetConfig(RA4::AI::MakeProfileConfig(RA4::AI::AIProfile::Balanced, MappedDifficulty));
         AICommanders.push_back(Commander);
-        UE_LOG(LogTemp, Display, TEXT("RA4 AI commander attached to player %d"), int32(Player));
+        UE_LOG(LogTemp, Display, TEXT("RA4 AI commander attached to player %d (profile=%s difficulty=%s)"),
+               int32(Player), UTF8_TO_TCHAR(RA4::AI::ToString(RA4::AI::AIProfile::Balanced)),
+               UTF8_TO_TCHAR(RA4::AI::ToString(MappedDifficulty)));
     }
 
     UE_LOG(LogTemp, Display, TEXT("RA4 skirmish initialized with %llu simulation entities"),

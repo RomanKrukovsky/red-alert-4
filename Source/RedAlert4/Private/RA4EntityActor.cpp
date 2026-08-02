@@ -285,8 +285,19 @@ FString ARA4EntityActor::DescribeVisualState() const
         Bounds.SphereRadius, MeshComponent->IsVisible() ? 1 : 0, IsHidden() ? 1 : 0);
 }
 
-void ARA4EntityActor::ApplyPrimitiveComposition(const FString& EntityId)
+void ARA4EntityActor::SetArtMappingAsset(URA4ArtMappingDataAsset* InArtMapping)
 {
+    ArtMapping = InArtMapping;
+}
+
+void ARA4EntityActor::SetEntityId(const FString& InEntityId)
+{
+    EntityId = InEntityId;
+}
+
+void ARA4EntityActor::ApplyPrimitiveComposition(const FString& InEntityId)
+{
+    SetEntityId(InEntityId);
     // If a real 3D static mesh is assigned, skip Phase 0 procedural shape composition
     if (MeshComponent != nullptr && MeshComponent->GetStaticMesh() != nullptr &&
         !MeshComponent->GetStaticMesh()->GetPathName().Contains(TEXT("BasicShapes/Cube")))
@@ -404,28 +415,163 @@ void ARA4EntityActor::ApplyPrimitiveComposition(const FString& EntityId)
                         !LowerId.Contains(TEXT("tank")) &&
                         !LowerId.Contains(TEXT("harvester"));
 
-    // Query DataAsset ArtMapping for custom SkeletalMesh or StaticMesh overrides
-    const URA4ArtMappingDataAsset* ArtData = LoadObject<URA4ArtMappingDataAsset>(nullptr, TEXT("/Game/RA4/Art/Generated/DA_RA4_ArtMappings.DA_RA4_ArtMappings"));
+    // Query DataAsset ArtMapping for custom SkeletalMesh or StaticMesh overrides.
+    // Art data keys are checked in two name spaces: the raw content id
+    // (`unit.sov.conscript`) and the short bible key (`SU_Conscript`) so that either
+    // authoring convention resolves without renaming every blockout asset.
+    const URA4ArtMappingDataAsset* ArtData = ArtMapping
+        ? ArtMapping
+        : LoadObject<URA4ArtMappingDataAsset>(nullptr, TEXT("/Game/RA4/Art/Generated/DA_RA4_ArtMappings.DA_RA4_ArtMappings"));
+
+    auto ApplyUnitArt = [this](const FRA4UnitArtDefinition& UnitArt)
+    {
+        if (!UnitArt.IdleAnim.IsNull()) CachedIdleAnim = UnitArt.IdleAnim.LoadSynchronous();
+        if (!UnitArt.RunAnim.IsNull()) CachedRunAnim = UnitArt.RunAnim.LoadSynchronous();
+        if (!UnitArt.AttackAnim.IsNull()) CachedAttackAnim = UnitArt.AttackAnim.LoadSynchronous();
+
+        if (!UnitArt.SkeletalMesh.IsNull() && SkeletalMeshComponent)
+        {
+            USkeletalMesh* SkelMesh = UnitArt.SkeletalMesh.LoadSynchronous();
+            if (SkelMesh)
+            {
+                MeshComponent->SetVisibility(false, true);
+                SkeletalMeshComponent->SetSkeletalMesh(SkelMesh);
+                SkeletalMeshComponent->SetVisibility(true);
+                SkeletalMeshComponent->SetRelativeLocation(UnitArt.MeshOffset);
+                SkeletalMeshComponent->SetRelativeRotation(UnitArt.MeshRotation);
+                SkeletalMeshComponent->SetWorldScale3D(UnitArt.MeshScale);
+                return true;
+            }
+        }
+
+        if (!UnitArt.StaticMesh.IsNull() && MeshComponent)
+        {
+            UStaticMesh* NewMesh = UnitArt.StaticMesh.LoadSynchronous();
+            if (NewMesh)
+            {
+                MeshComponent->SetStaticMesh(NewMesh);
+                MeshComponent->SetVisibility(true);
+                if (bHasRequestedVisualScale)
+                {
+                    SetVisualScale(RequestedVisualScale);
+                }
+                return true;
+            }
+        }
+        return false;
+    };
+
     if (ArtData)
     {
         FRA4UnitArtDefinition UnitArt;
-        if (ArtData->FindUnitArt(FName(*EntityId), UnitArt))
+        if (ArtData->FindUnitArt(FName(*EntityId), UnitArt) && ApplyUnitArt(UnitArt))
         {
-            if (!UnitArt.IdleAnim.IsNull()) CachedIdleAnim = UnitArt.IdleAnim.LoadSynchronous();
-            if (!UnitArt.RunAnim.IsNull()) CachedRunAnim = UnitArt.RunAnim.LoadSynchronous();
-            if (!UnitArt.AttackAnim.IsNull()) CachedAttackAnim = UnitArt.AttackAnim.LoadSynchronous();
+            return;
+        }
 
-            if (!UnitArt.SkeletalMesh.IsNull() && SkeletalMeshComponent)
+        // unit.sov.conscript -> SU_Conscript style content id
+        FString BibleId;
+        if (EntityId.StartsWith(TEXT("unit.")) || EntityId.StartsWith(TEXT("building.")))
+        {
+            int32 DotCount = 0;
+            for (int32 Index = 0; Index < EntityId.Len(); ++Index)
             {
-                USkeletalMesh* SkelMesh = UnitArt.SkeletalMesh.LoadSynchronous();
-                if (SkelMesh)
+                if (EntityId[Index] == TEXT('.')) { ++DotCount; }
+            }
+            if (DotCount == 2)
+            {
+                int32 FirstDot = EntityId.Find(TEXT("."));
+                int32 SecondDot = EntityId.Find(TEXT("."), ESearchCase::CaseSensitive, ESearchDir::FromStart, FirstDot + 1);
+                if (FirstDot != INDEX_NONE && SecondDot != INDEX_NONE && SecondDot > FirstDot)
                 {
-                    MeshComponent->SetVisibility(false, true);
-                    SkeletalMeshComponent->SetSkeletalMesh(SkelMesh);
-                    SkeletalMeshComponent->SetVisibility(true);
-                    SkeletalMeshComponent->SetRelativeLocation(UnitArt.MeshOffset);
-                    SkeletalMeshComponent->SetRelativeRotation(UnitArt.MeshRotation);
-                    SkeletalMeshComponent->SetWorldScale3D(UnitArt.MeshScale);
+                    const FString Faction = EntityId.Mid(FirstDot + 1, SecondDot - FirstDot - 1);
+                    const FString Name = EntityId.Mid(SecondDot + 1);
+                    const FString Prefix = Faction.ToUpper();
+                    // e.g. sov -> SU, all -> AL, coa -> CO, chr -> CH
+                    const TCHAR* Short = TEXT("");
+                    if (Prefix == TEXT("SOV")) Short = TEXT("SU");
+                    else if (Prefix == TEXT("ALL")) Short = TEXT("AL");
+                    else if (Prefix == TEXT("COA")) Short = TEXT("CO");
+                    else if (Prefix == TEXT("CHR")) Short = TEXT("CH");
+                    if (Short[0] != TEXT('\0'))
+                    {
+                        // CamelCase the snake_case name: heavy_tank -> HeavyTank
+                        FString TitleName;
+                        bool bUpperNext = true;
+                        for (const TCHAR Ch : Name)
+                        {
+                            if (Ch == TEXT('_'))
+                            {
+                                bUpperNext = true;
+                                continue;
+                            }
+                            TitleName += bUpperNext ? static_cast<TCHAR>(FChar::ToUpper(Ch)) : Ch;
+                            bUpperNext = false;
+                        }
+                        BibleId = FString::Printf(TEXT("%s_%s"), Short, *TitleName);
+                        if (ArtData->FindUnitArt(FName(*BibleId), UnitArt) && ApplyUnitArt(UnitArt))
+                        {
+                            return;
+                        }
+
+                        // The DataAsset was authored against older Bible keys, not the
+                        // current content names. Map them explicitly so the lookup works
+                        // without renaming every row in the DA.
+                        static const TMap<FString, FString> KnownAliases = {
+                            { TEXT("unit.sov.conscript"),       TEXT("SU_Conscript") },
+                            { TEXT("unit.sov.ore_harvester"),   TEXT("SU_Harvester") },
+                            { TEXT("unit.sov.heavy_tank"),      TEXT("SU_HammerTank") },
+                            { TEXT("unit.sov.rocket_trooper"),  TEXT("SU_ShockTrooper") },
+                            { TEXT("unit.sov.mcv"),             TEXT("SU_MCV") },
+                            { TEXT("unit.all.rifleman"),        TEXT("AL_Peacekeeper") },
+                            { TEXT("unit.all.ore_harvester"),   TEXT("AL_Prospector") },
+                            { TEXT("unit.all.light_tank"),      TEXT("AL_GuardianTank") },
+                            { TEXT("unit.all.missile_infantry"), TEXT("AL_Javelin") },
+                            { TEXT("unit.all.mcv"),             TEXT("AL_MCV") },
+                            { TEXT("building.sov.construction_yard"), TEXT("SU_ConYard") },
+                            { TEXT("building.sov.tesla_reactor"),     TEXT("SU_PowerPlant") },
+                            { TEXT("building.sov.ore_refinery"),      TEXT("SU_Refinery") },
+                            { TEXT("building.sov.barracks"),          TEXT("SU_Barracks") },
+                            { TEXT("building.sov.war_factory"),       TEXT("SU_WarFactory") },
+                            { TEXT("building.sov.gun_turret"),        TEXT("SU_SentryTurret") },
+                            { TEXT("building.all.construction_yard"), TEXT("AL_ConYard") },
+                            { TEXT("building.all.power_plant"),       TEXT("AL_PowerPlant") },
+                            { TEXT("building.all.ore_refinery"),      TEXT("AL_Refinery") },
+                            { TEXT("building.all.barracks"),          TEXT("AL_Barracks") },
+                            { TEXT("building.all.war_factory"),       TEXT("AL_WarFactory") },
+                            { TEXT("building.all.pillbox"),           TEXT("AL_MultigunTurret") },
+                        };
+                        if (const FString* Alias = KnownAliases.Find(EntityId))
+                        {
+                            BibleId = *Alias;
+                            if (ArtData->FindUnitArt(FName(*BibleId), UnitArt) && ApplyUnitArt(UnitArt))
+                            {
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        FRA4BuildingArtDefinition BuildingArt;
+        if (ArtData->FindBuildingArt(FName(*EntityId), BuildingArt) || (!BibleId.IsEmpty() && ArtData->FindBuildingArt(FName(*BibleId), BuildingArt)))
+        {
+            TSoftObjectPtr<UStaticMesh> StageMesh = BuildingArt.Stage4_ActiveMesh;
+            if (StageMesh.IsNull()) StageMesh = BuildingArt.Stage2_StructureMesh;
+            if (StageMesh.IsNull()) StageMesh = BuildingArt.Stage1_FoundationMesh;
+            if (StageMesh.IsNull()) StageMesh = BuildingArt.Stage0_DeliveryMesh;
+            if (!StageMesh.IsNull() && MeshComponent)
+            {
+                UStaticMesh* NewMesh = StageMesh.LoadSynchronous();
+                if (NewMesh)
+                {
+                    MeshComponent->SetStaticMesh(NewMesh);
+                    MeshComponent->SetVisibility(true);
+                    if (bHasRequestedVisualScale)
+                    {
+                        SetVisualScale(RequestedVisualScale);
+                    }
                     return;
                 }
             }

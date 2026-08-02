@@ -18,6 +18,10 @@ struct REDALERT4_API FRA4MatchBootstrap
 {
     // Fills Content, initialises World, and seeds two opposing bases plus an ore
     // field for each. Content must outlive World: the simulation holds a raw
-    // pointer to it for the whole match.
-    static void BuildSkirmish(RA4::ContentDatabase& Content, RA4::SimWorld& World, uint64 Seed, RA4::FactionId PlayerFaction = RA4::FactionId::Soviet, RA4::FactionId EnemyFaction = RA4::FactionId::Alliance);
+    // pointer to it for the whole match. NumAIPlayers seeds additional opposing
+    // bases (slots 1..NumAIPlayers); defaults keep the classic 1v1 unchanged.
+    static void BuildSkirmish(RA4::ContentDatabase& Content, RA4::SimWorld& World, uint64 Seed,
+                              RA4::FactionId PlayerFaction = RA4::FactionId::Soviet,
+                              RA4::FactionId EnemyFaction = RA4::FactionId::Alliance,
+                              int32 NumAIPlayers = 1, int32 AISpot = -1);
 };

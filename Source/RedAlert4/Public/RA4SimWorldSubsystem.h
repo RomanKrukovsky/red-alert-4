@@ -61,8 +61,10 @@ public:
     // Returns the latest computed snapshot of the match for UI presentation
     const RA4::Presentation::HudSnapshot* GetLatestHudSnapshot() const { return LatestSnapshot; }
 
-    // Initializes the simulation state for a skirmish match. Should be called by the GameMode.
-    void StartSkirmishMatch(uint8 PlayerFaction, uint8 EnemyFaction, int32 Difficulty);
+    // Initializes the simulation state for a skirmish match. Should be called by the
+    // GameMode. NumAI and AISpot default to the classic 1v1 layout.
+    void StartSkirmishMatch(uint8 PlayerFaction, uint8 EnemyFaction, int32 Difficulty,
+                            int32 NumAI = 1, int32 AISpot = -1);
 
     // Sets the local player's selection for HUD projection
     void SetSelectedEntitiesForHUD(const std::vector<RA4::EntityId>& Selection);
