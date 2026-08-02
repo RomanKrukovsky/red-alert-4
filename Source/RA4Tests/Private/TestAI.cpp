@@ -1051,13 +1051,14 @@ RA4_TEST(ZZ, DiagStallEconDef)
     for (int Block = 0; Block < 6 && M.World.GetPhase() == MatchPhase::Running; ++Block)
     {
         M.Run(SecondsToTicks(150));
-        std::printf("  t=%u P0: armed=%d b=%d op=%s assigned=%zu target=(%d,%d) credits=%d | P1: armed=%d b=%d op=%s assigned=%zu target=(%d,%d)\n",
+        std::printf("  t=%u P0: armed=%d b=%d op=%s assigned=%zu target=(%d,%d) credits=%d strat=%s | P1: armed=%d b=%d op=%s assigned=%zu target=(%d,%d)\n",
                     M.World.GetTick(), M.CountArmed(0), M.CountBuildings(0),
                     ToString(M.Commanders[0].GetActiveOperation().State),
                     M.Commanders[0].GetActiveOperation().AssignedUnits.size(),
                     M.Commanders[0].GetActiveOperation().TargetLocation.X,
                     M.Commanders[0].GetActiveOperation().TargetLocation.Y,
-                    M.World.GetPlayer(0).UnitsLost,
+                    M.World.GetPlayer(0).Credits,
+                    ToString(M.Commanders[0].GetActiveStrategy()),
                     M.CountArmed(1), M.CountBuildings(1),
                     ToString(M.Commanders[1].GetActiveOperation().State),
                     M.Commanders[1].GetActiveOperation().AssignedUnits.size(),
