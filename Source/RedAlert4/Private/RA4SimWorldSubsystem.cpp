@@ -855,4 +855,69 @@ void URA4SimWorldSubsystem::RegisterDefaultBlockoutMeshes()
     LoadBlockoutMesh(RA4::MakeContentId("CH_BathysSubmarine").Value, TEXT("/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_BathysSubmarine_Blockout.SM_Chronolegion_CH_BathysSubmarine_Blockout"));
     LoadBlockoutMesh(RA4::MakeContentId("CH_AttractorArk").Value, TEXT("/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_AttractorArk_Blockout.SM_Chronolegion_CH_AttractorArk_Blockout"));
     LoadBlockoutMesh(RA4::MakeContentId("CH_Hero_Voss").Value, TEXT("/Game/RA4/Art/Blockout/Chronolegion/SM_Chronolegion_CH_Hero_Voss_Blockout.SM_Chronolegion_CH_Hero_Voss_Blockout"));
+
+    // The legacy blockout registry remains a safe fallback for the rest of the
+    // roster. These verified vertical-slice assets deliberately overwrite the
+    // same ContentIds after all fallback entries have been registered.
+    struct FProductionMeshEntry
+    {
+        const char* ContentId;
+        const TCHAR* AssetPath;
+    };
+    static const FProductionMeshEntry ProductionMeshes[] = {
+        {"building.sov.construction_yard", TEXT("/Game/RA4/Art/Buildings/Soviet/SM_Soviet_SU_ConYard.SM_Soviet_SU_ConYard")},
+        {"building.sov.tesla_reactor", TEXT("/Game/RA4/Art/Buildings/Soviet/SM_Soviet_SU_PowerPlant.SM_Soviet_SU_PowerPlant")},
+        {"building.sov.ore_refinery", TEXT("/Game/RA4/Art/Buildings/Soviet/SM_Soviet_SU_Refinery.SM_Soviet_SU_Refinery")},
+        {"building.sov.barracks", TEXT("/Game/RA4/Art/Buildings/Soviet/SM_Soviet_SU_Barracks.SM_Soviet_SU_Barracks")},
+        {"building.sov.war_factory", TEXT("/Game/RA4/Art/Buildings/Soviet/SM_Soviet_SU_WarFactory.SM_Soviet_SU_WarFactory")},
+        {"unit.sov.ore_harvester", TEXT("/Game/RA4/Art/Units/Soviet/SM_Soviet_SU_BogatyrOreCarrier.SM_Soviet_SU_BogatyrOreCarrier")},
+        {"unit.sov.heavy_tank", TEXT("/Game/RA4/Art/Units/Soviet/SM_Soviet_SU_GranitMBT.SM_Soviet_SU_GranitMBT")},
+        {"building.all.construction_yard", TEXT("/Game/RA4/Art/Buildings/Alliance/SM_Alliance_AL_ConYard.SM_Alliance_AL_ConYard")},
+        {"building.all.power_plant", TEXT("/Game/RA4/Art/Buildings/Alliance/SM_Alliance_AL_PowerPlant.SM_Alliance_AL_PowerPlant")},
+        {"building.all.ore_refinery", TEXT("/Game/RA4/Art/Buildings/Alliance/SM_Alliance_AL_Refinery.SM_Alliance_AL_Refinery")},
+        {"building.all.barracks", TEXT("/Game/RA4/Art/Buildings/Alliance/SM_Alliance_AL_Barracks.SM_Alliance_AL_Barracks")},
+        {"building.all.war_factory", TEXT("/Game/RA4/Art/Buildings/Alliance/SM_Alliance_AL_WarFactory.SM_Alliance_AL_WarFactory")},
+        {"unit.all.ore_harvester", TEXT("/Game/RA4/Art/Units/Alliance/SM_Alliance_AL_PioneerHarvester.SM_Alliance_AL_PioneerHarvester")},
+        {"unit.all.light_tank", TEXT("/Game/RA4/Art/Units/Alliance/SM_Alliance_AL_BulwarkMBT.SM_Alliance_AL_BulwarkMBT")},
+        {"SU_ConYard", TEXT("/Game/RA4/Art/Buildings/Soviet/SM_Soviet_SU_ConYard.SM_Soviet_SU_ConYard")},
+        {"SU_PowerPlant", TEXT("/Game/RA4/Art/Buildings/Soviet/SM_Soviet_SU_PowerPlant.SM_Soviet_SU_PowerPlant")},
+        {"SU_Refinery", TEXT("/Game/RA4/Art/Buildings/Soviet/SM_Soviet_SU_Refinery.SM_Soviet_SU_Refinery")},
+        {"SU_Barracks", TEXT("/Game/RA4/Art/Buildings/Soviet/SM_Soviet_SU_Barracks.SM_Soviet_SU_Barracks")},
+        {"SU_WarFactory", TEXT("/Game/RA4/Art/Buildings/Soviet/SM_Soviet_SU_WarFactory.SM_Soviet_SU_WarFactory")},
+        {"SU_BogatyrOreCarrier", TEXT("/Game/RA4/Art/Units/Soviet/SM_Soviet_SU_BogatyrOreCarrier.SM_Soviet_SU_BogatyrOreCarrier")},
+        {"SU_RysScout", TEXT("/Game/RA4/Art/Units/Soviet/SM_Soviet_SU_RysScout.SM_Soviet_SU_RysScout")},
+        {"SU_GranitMBT", TEXT("/Game/RA4/Art/Units/Soviet/SM_Soviet_SU_GranitMBT.SM_Soviet_SU_GranitMBT")},
+        {"SU_ZarevoMLRS", TEXT("/Game/RA4/Art/Units/Soviet/SM_Soviet_SU_ZarevoMLRS.SM_Soviet_SU_ZarevoMLRS")},
+        {"AL_ConYard", TEXT("/Game/RA4/Art/Buildings/Alliance/SM_Alliance_AL_ConYard.SM_Alliance_AL_ConYard")},
+        {"AL_PowerPlant", TEXT("/Game/RA4/Art/Buildings/Alliance/SM_Alliance_AL_PowerPlant.SM_Alliance_AL_PowerPlant")},
+        {"AL_Refinery", TEXT("/Game/RA4/Art/Buildings/Alliance/SM_Alliance_AL_Refinery.SM_Alliance_AL_Refinery")},
+        {"AL_Barracks", TEXT("/Game/RA4/Art/Buildings/Alliance/SM_Alliance_AL_Barracks.SM_Alliance_AL_Barracks")},
+        {"AL_WarFactory", TEXT("/Game/RA4/Art/Buildings/Alliance/SM_Alliance_AL_WarFactory.SM_Alliance_AL_WarFactory")},
+        {"AL_PioneerHarvester", TEXT("/Game/RA4/Art/Units/Alliance/SM_Alliance_AL_PioneerHarvester.SM_Alliance_AL_PioneerHarvester")},
+        {"AL_KestrelScout", TEXT("/Game/RA4/Art/Units/Alliance/SM_Alliance_AL_KestrelScout.SM_Alliance_AL_KestrelScout")},
+        {"AL_BulwarkMBT", TEXT("/Game/RA4/Art/Units/Alliance/SM_Alliance_AL_BulwarkMBT.SM_Alliance_AL_BulwarkMBT")},
+        {"AL_OracleArtillery", TEXT("/Game/RA4/Art/Units/Alliance/SM_Alliance_AL_OracleArtillery.SM_Alliance_AL_OracleArtillery")},
+        {"CO_ConYard", TEXT("/Game/RA4/Art/Buildings/Coalition/SM_Coalition_CO_ConYard.SM_Coalition_CO_ConYard")},
+        {"CO_PowerPlant", TEXT("/Game/RA4/Art/Buildings/Coalition/SM_Coalition_CO_PowerPlant.SM_Coalition_CO_PowerPlant")},
+        {"CO_Refinery", TEXT("/Game/RA4/Art/Buildings/Coalition/SM_Coalition_CO_Refinery.SM_Coalition_CO_Refinery")},
+        {"CO_Barracks", TEXT("/Game/RA4/Art/Buildings/Coalition/SM_Coalition_CO_Barracks.SM_Coalition_CO_Barracks")},
+        {"CO_WarFactory", TEXT("/Game/RA4/Art/Buildings/Coalition/SM_Coalition_CO_WarFactory.SM_Coalition_CO_WarFactory")},
+        {"CO_YuanCollector", TEXT("/Game/RA4/Art/Units/Coalition/SM_Coalition_CO_YuanCollector.SM_Coalition_CO_YuanCollector")},
+        {"CO_KamakiriWalker", TEXT("/Game/RA4/Art/Units/Coalition/SM_Coalition_CO_KamakiriWalker.SM_Coalition_CO_KamakiriWalker")},
+        {"CO_QinglongMBT", TEXT("/Game/RA4/Art/Units/Coalition/SM_Coalition_CO_QinglongMBT.SM_Coalition_CO_QinglongMBT")},
+        {"CO_MonsoonArtillery", TEXT("/Game/RA4/Art/Units/Coalition/SM_Coalition_CO_MonsoonArtillery.SM_Coalition_CO_MonsoonArtillery")},
+        {"CH_ConYard", TEXT("/Game/RA4/Art/Buildings/Chronolegion/SM_Chronolegion_CH_ConYard.SM_Chronolegion_CH_ConYard")},
+        {"CH_PowerPlant", TEXT("/Game/RA4/Art/Buildings/Chronolegion/SM_Chronolegion_CH_PowerPlant.SM_Chronolegion_CH_PowerPlant")},
+        {"CH_Refinery", TEXT("/Game/RA4/Art/Buildings/Chronolegion/SM_Chronolegion_CH_Refinery.SM_Chronolegion_CH_Refinery")},
+        {"CH_Barracks", TEXT("/Game/RA4/Art/Buildings/Chronolegion/SM_Chronolegion_CH_Barracks.SM_Chronolegion_CH_Barracks")},
+        {"CH_WarFactory", TEXT("/Game/RA4/Art/Buildings/Chronolegion/SM_Chronolegion_CH_WarFactory.SM_Chronolegion_CH_WarFactory")},
+        {"CH_ProbabilistHarvester", TEXT("/Game/RA4/Art/Units/Chronolegion/SM_Chronolegion_CH_ProbabilistHarvester.SM_Chronolegion_CH_ProbabilistHarvester")},
+        {"CH_ParallaxScout", TEXT("/Game/RA4/Art/Units/Chronolegion/SM_Chronolegion_CH_ParallaxScout.SM_Chronolegion_CH_ParallaxScout")},
+        {"CH_TimelineTank", TEXT("/Game/RA4/Art/Units/Chronolegion/SM_Chronolegion_CH_TimelineTank.SM_Chronolegion_CH_TimelineTank")},
+        {"CH_DeltaDelayArtillery", TEXT("/Game/RA4/Art/Units/Chronolegion/SM_Chronolegion_CH_DeltaDelayArtillery.SM_Chronolegion_CH_DeltaDelayArtillery")},
+    };
+    for (const FProductionMeshEntry& Entry : ProductionMeshes)
+    {
+        LoadBlockoutMesh(RA4::MakeContentId(Entry.ContentId).Value, Entry.AssetPath);
+    }
 }
