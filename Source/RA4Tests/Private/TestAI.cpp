@@ -1041,27 +1041,33 @@ RA4_TEST(ZZ, DiagStallScenario3)
     for (int Block = 0; Block < 6 && M.World.GetPhase() == MatchPhase::Running; ++Block)
     {
         M.Run(SecondsToTicks(150));
-        std::printf("  t=%u P0: armed=%d b=%d op=%s assigned=%zu credits=%d farms... P1: armed=%d b=%d op=%s assigned=%zu\n",
+        std::printf("  t=%u P0: armed=%d b=%d op=%s assigned=%zu target=(%d,%d) credits=%d | P1: armed=%d b=%d op=%s assigned=%zu target=(%d,%d)\n",
                     M.World.GetTick(), M.CountArmed(0), M.CountBuildings(0),
                     ToString(M.Commanders[0].GetActiveOperation().State),
                     M.Commanders[0].GetActiveOperation().AssignedUnits.size(),
+                    M.Commanders[0].GetActiveOperation().TargetLocation.X,
+                    M.Commanders[0].GetActiveOperation().TargetLocation.Y,
                     M.World.GetPlayer(0).Credits,
                     M.CountArmed(1), M.CountBuildings(1),
                     ToString(M.Commanders[1].GetActiveOperation().State),
-                    M.Commanders[1].GetActiveOperation().AssignedUnits.size());
+                    M.Commanders[1].GetActiveOperation().AssignedUnits.size(),
+                    M.Commanders[1].GetActiveOperation().TargetLocation.X,
+                    M.Commanders[1].GetActiveOperation().TargetLocation.Y);
     }
     {
-        const std::vector<AIDecision>& L = M.Commanders[0].GetDecisionLog();
-        std::printf("P0 log tail:\n");
-        for (size_t I = L.size() > 12 ? L.size() - 12 : 0; I < L.size(); ++I)
+        for (int P = 0; P < 2; ++P)
         {
-            std::printf("  t=%u: %s\n", L[I].Tick, L[I].Reason.c_str());
-        }
-        const std::vector<AIDecision>& L1 = M.Commanders[1].GetDecisionLog();
-        std::printf("P1 log tail:\n");
-        for (size_t I = L1.size() > 12 ? L1.size() - 12 : 0; I < L1.size(); ++I)
-        {
-            std::printf("  t=%u: %s\n", L1[I].Tick, L1[I].Reason.c_str());
+            const PlayerState& S = M.World.GetPlayer(PlayerId(P));
+            int32_t Queued = 0;
+            const std::vector<EntityCore>& Cores = M.World.GetAllCores();
+            for (uint32_t I = 0; I < uint32_t(Cores.size()); ++I)
+            {
+                if (!Cores[I].bAlive || Cores[I].Owner != PlayerId(P)) { continue; }
+                const BuildingComp* B = M.World.GetBuilding(M.World.MakeId(I));
+                if (B != nullptr) { Queued += int32_t(B->Queue.size()); }
+            }
+            std::printf("P%d: credits=%d power=%d/%d queuedItems=%d\n",
+                        P, S.Credits, S.PowerProduced, S.PowerConsumed, Queued);
         }
     }
     RA4_EXPECT(M.World.GetPhase() == MatchPhase::Finished);
