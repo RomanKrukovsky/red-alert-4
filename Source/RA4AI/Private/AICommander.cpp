@@ -459,6 +459,11 @@ void AICommander::UpdateKnowledge(const SimWorld& World)
         Knowledge.reset(new SimWorldView(World, Player));
         KnowledgeWorld = &World;
         TicksSinceMemoryUpdate = Config.MemoryUpdateIntervalTicks;   // observe at once
+
+        // Initialize spatial maps to match dimensions.
+        const MapDescription& Map = World.GetMap();
+        Threats.Init(Map.Width, Map.Height);
+        Values.Init(Map.Width, Map.Height);
     }
 
     if (++TicksSinceMemoryUpdate < Config.MemoryUpdateIntervalTicks)
@@ -467,6 +472,13 @@ void AICommander::UpdateKnowledge(const SimWorld& World)
     }
     TicksSinceMemoryUpdate = 0;
     Knowledge->UpdateMemory(TickIndex(std::max(0, Config.MemoryRetentionTicks)));
+
+    // Recompute spatial awareness maps from fog-limited memory.
+    const ContentDatabase* Content = World.GetContent();
+    Threats.UpdateFromMemory(Knowledge->GetKnownEnemies(), Content,
+                             World.GetMap(), World.GetTick());
+    Values.UpdateFromWorld(World, Player, Knowledge->GetKnownEnemies(),
+                           Content, World.GetTick());
 }
 
 TileCoord AICommander::NextScoutWaypoint(const SimWorld& World) const

@@ -1606,6 +1606,7 @@ void ARA4PlayerController::EnterDirectControl(int64 EntityIdValue)
         DirectControlEntityId = TargetId;
         DirectControlCameraRotation = EntityActor->GetPossessionCameraRotation();
 
+        bAutoManageActiveCameraTarget = false;
         SetViewTargetWithBlend(EntityActor, 0.2f);
         bShowMouseCursor = false;
         SetInputMode(FInputModeGameOnly());
@@ -1621,25 +1622,29 @@ void ARA4PlayerController::EnterDirectControl(int64 EntityIdValue)
 
 void ARA4PlayerController::ExitDirectControl()
 {
-    bDirectControlActive = false;
-    DirectControlEntityId = EntityId{};
-
-    if (ARA4CameraPawn* CameraPawn = GetCameraPawn())
+    if (bDirectControlActive)
     {
-        SetViewTargetWithBlend(CameraPawn, 0.2f);
-    }
+        bDirectControlActive = false;
+        DirectControlEntityId = EntityId{};
+        bAutoManageActiveCameraTarget = true;
 
-    bShowMouseCursor = true;
-    FInputModeGameAndUI InputMode;
-    InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-    InputMode.SetHideCursorDuringCapture(false);
-    SetInputMode(InputMode);
+        if (ARA4CameraPawn* CameraPawn = GetCameraPawn())
+        {
+            SetViewTargetWithBlend(CameraPawn, 0.2f);
+        }
 
-    if (GEngine != nullptr)
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Yellow, TEXT("[FPS MODE OFF] RTS View Returned"));
+        bShowMouseCursor = true;
+        FInputModeGameAndUI InputMode;
+        InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+        InputMode.SetHideCursorDuringCapture(false);
+        SetInputMode(InputMode);
+
+        if (GEngine != nullptr)
+        {
+            GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Yellow, TEXT("[FPS MODE OFF] RTS View Returned"));
+        }
+        UE_LOG(LogTemp, Display, TEXT("RA4 First Person Direct Control deactivated"));
     }
-    UE_LOG(LogTemp, Display, TEXT("RA4 First Person Direct Control deactivated"));
 }
 
 void ARA4PlayerController::UpdateDirectControl(float DeltaTime)
