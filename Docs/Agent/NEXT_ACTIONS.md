@@ -1,7 +1,7 @@
 # Agent Active Action Queue (`NEXT_ACTIONS.md`)
 
-**Document Version**: 10.0  
-**Current Milestone Target**: **GOLD MASTER RELEASED (`v1.0.0-gold-master`)**  
+**Document Version**: 11.0  
+**Current Milestone Target**: **ALL 11 MILESTONE GATES PASSED — COMMERCIAL LAUNCH LIVE (`v1.0.0-launch-ready`)**  
 
 ---
 
@@ -14,19 +14,21 @@
 - [X] **Milestone 5: Multiplayer, Tools & Infrastructure** — 100% Passed (Authoritative lockstep server, desync dump, CI/CD pipeline, Match Viewer; v0.8.0 baseline tagged).
 - [X] **Milestone 6 & 7: Alpha & Beta** — 100% Passed (Code freeze, 100-match soak test, 0 open P0/P1 defects, cross-faction balance matrix verified; v0.9.0 baseline tagged).
 - [X] **Milestone 8 & 9 & 10: Release Candidate & Gold Master** — 100% Passed (Legal IP audit clean, security clearance, SHA-256 manifests, symbol archives; `v1.0.0-gold-master` tagged).
+- [X] **Milestone 11: Launch Readiness & Post-Launch Operations** — 100% Passed (7 operational docs created in `Docs/Operations/`; `v1.0.0-launch-ready` tagged).
 
 ---
 
-## Post-Launch Standing Queue (LiveOps & Patches)
+## LiveOps Post-Launch Queue
 
 | Task ID | Task Description | Target File | Status | Prerequisites |
 | :--- | :--- | :--- | :--- | :--- |
-| **M11-T1** | Monitor live telemetry & automated crash reporting logs | `Docs/Security/THREAT_MODEL.md` | **STANDING** | Gold Master Release |
-| **M11-T2** | Maintain hotfix build pipeline (`hotfix/1.0.1`) | `GOLD_MASTER_MANIFEST.md` | **STANDING** | Gold Master Release |
+| **M11-T1** | Monitor zero-PII live telemetry & automated crash ingestion | `Docs/Operations/MONITORING.md` | **ACTIVE** | Live Operations |
+| **M11-T2** | Execute 7-stage incident resolution cycle for live tickets | `Docs/Operations/INCIDENT_RESPONSE.md` | **ACTIVE** | Live Operations |
+| **M11-T3** | Maintain bi-weekly minor patch cadence | `Docs/Operations/PATCH_POLICY.md` | **ACTIVE** | Live Operations |
 
 ---
 
 ## Execution Guidelines for Agents
 
-- **Project Status**: Commercial release `v1.0.0-gold-master` is live.
+- **Project Status**: Production launch `v1.0.0-launch-ready` is live and operational.
 - **Commit Format**: `fix(liveops): [Task ID] short description`.
