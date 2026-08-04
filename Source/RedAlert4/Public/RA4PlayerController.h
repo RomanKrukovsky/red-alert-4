@@ -53,8 +53,6 @@ public:
     }
     const RA4::Input::SelectionModel& GetSelection() const { return Selection; }
 
-    virtual bool InputKey(const FInputKeyParams& Params) override;
-
     // Armed by pressing A; the next click becomes an attack-move.
     UFUNCTION(BlueprintCallable, Category = "RA4|Input")
     void ArmAttackMove() { bAttackMoveArmed = true; }

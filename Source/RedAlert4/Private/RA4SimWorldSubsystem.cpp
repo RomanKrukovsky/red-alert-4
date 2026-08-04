@@ -1000,7 +1000,7 @@ void URA4SimWorldSubsystem::UnregisterEntityActor(int32 EntityIndex)
 ARA4EntityActor* URA4SimWorldSubsystem::GetEntityActor(int32 EntityIndex) const
 {
     if (EntityIndex < 0) return nullptr;
-    if (const ARA4EntityActor* const* ActorPtr = EntityActors.Find(static_cast<uint32>(EntityIndex)))
+    if (ARA4EntityActor* const* ActorPtr = const_cast<TMap<uint32, ARA4EntityActor*>&>(EntityActors).Find(static_cast<uint32>(EntityIndex)))
     {
         return *ActorPtr;
     }
@@ -1010,7 +1010,7 @@ ARA4EntityActor* URA4SimWorldSubsystem::GetEntityActor(int32 EntityIndex) const
 ARA4EntityActor* URA4SimWorldSubsystem::GetEntityActor(RA4::EntityId Id) const
 {
     if (!Id.IsValid()) return nullptr;
-    return GetEntityActor(static_cast<int32>(Id.Value));
+    return GetEntityActor(static_cast<int32>(Id.Index));
 }
 
 void URA4SimWorldSubsystem::LoadBlockoutMesh(uint32 ContentIdValue, const TCHAR* AssetPath)

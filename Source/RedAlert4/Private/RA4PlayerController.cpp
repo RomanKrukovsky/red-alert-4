@@ -21,6 +21,8 @@
 #include "Layout/WidgetPath.h"
 #include "Misc/PackageName.h"
 #include "UnrealClient.h"
+#include "EngineUtils.h"
+#include "Camera/CameraComponent.h"
 
 #include "RA4Content/ContentDatabase.h"
 #include "RA4Core/SimConfig.h"
@@ -220,16 +222,6 @@ void ARA4PlayerController::DebugForceDefeat()
 // ---------------------------------------------------------------------------
 // Input binding
 // ---------------------------------------------------------------------------
-
-bool ARA4PlayerController::InputKey(const FInputKeyParams& Params)
-{
-    if (Params.Event == IE_Pressed && Params.Key == EKeys::F)
-    {
-        ToggleDirectControl();
-        return true;
-    }
-    return Super::InputKey(Params);
-}
 
 void ARA4PlayerController::SetupInputComponent()
 {
@@ -1510,7 +1502,7 @@ void ARA4PlayerController::ToggleDirectControl()
 
     if (TargetEntity.IsValid())
     {
-        EnterDirectControl(static_cast<int64>(TargetEntity.Value));
+        EnterDirectControl(static_cast<int64>(TargetEntity.Index));
         return;
     }
 
@@ -1582,10 +1574,15 @@ void ARA4PlayerController::ToggleDirectControl()
 void ARA4PlayerController::EnterDirectControl(int64 EntityIdValue)
 {
     URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
-    EntityId TargetId(static_cast<uint32_t>(EntityIdValue));
-    ARA4EntityActor* EntityActor = Subsystem != nullptr ? Subsystem->GetEntityActor(TargetId) : nullptr;
+    const uint32_t EntityIndex = static_cast<uint32_t>(EntityIdValue);
+    ARA4EntityActor* EntityActor = Subsystem != nullptr ? Subsystem->GetEntityActor(static_cast<int32>(EntityIndex)) : nullptr;
+    uint32_t EntityGen = 0;
 
-    if (EntityActor == nullptr)
+    if (EntityActor != nullptr)
+    {
+        EntityGen = EntityActor->GetEntityGeneration();
+    }
+    else
     {
         if (UWorld* World = GetWorld())
         {
@@ -1594,12 +1591,14 @@ void ARA4PlayerController::EnterDirectControl(int64 EntityIdValue)
                 if (*It != nullptr)
                 {
                     EntityActor = *It;
-                    TargetId = EntityId(static_cast<uint32_t>(EntityActor->GetEntityIndex()));
                     break;
                 }
             }
         }
     }
+
+    EntityId TargetId(EntityActor != nullptr ? static_cast<uint32_t>(EntityActor->GetEntityIndex()) : EntityIndex,
+                      EntityActor != nullptr ? EntityActor->GetEntityGeneration() : 0u);
 
     if (EntityActor != nullptr)
     {
@@ -1691,8 +1690,8 @@ void ARA4PlayerController::UpdateDirectControl(float DeltaTime)
             Command Cmd;
             Cmd.Type = CommandType::Move;
             Cmd.Issuer = Selection.GetLocalPlayer();
-            Cmd.Selection = {DirectControlEntityId};
-            Cmd.TargetLocation = Vec2{Fixed::FromDouble(TargetLoc.X), Fixed::FromDouble(TargetLoc.Y)};
+            Cmd.Primary = DirectControlEntityId;
+            Cmd.Location = Vec2{Fixed::FromInt(static_cast<int64>(TargetLoc.X)), Fixed::FromInt(static_cast<int64>(TargetLoc.Y))};
             SubmitOrders({Cmd});
         }
 
@@ -1706,8 +1705,8 @@ void ARA4PlayerController::UpdateDirectControl(float DeltaTime)
             Command Cmd;
             Cmd.Type = CommandType::AttackMove;
             Cmd.Issuer = Selection.GetLocalPlayer();
-            Cmd.Selection = {DirectControlEntityId};
-            Cmd.TargetLocation = Vec2{Fixed::FromDouble(AimTarget.X), Fixed::FromDouble(AimTarget.Y)};
+            Cmd.Primary = DirectControlEntityId;
+            Cmd.Location = Vec2{Fixed::FromInt(static_cast<int64>(AimTarget.X)), Fixed::FromInt(static_cast<int64>(AimTarget.Y))};
             SubmitOrders({Cmd});
         }
     }
