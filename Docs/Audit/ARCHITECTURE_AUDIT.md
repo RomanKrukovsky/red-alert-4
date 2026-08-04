@@ -1,73 +1,134 @@
-# C++ Architecture & Simulation Audit (`ARCHITECTURE_AUDIT.md`)
+# RA4 — Architecture Audit
 
-**Audit Date**: August 4, 2026  
-**Target Architecture**: Lockstep Deterministic C++ RTS Core  
+**Audit date:** 2026-08-04
+**Pinned commit:** `d915757`
 
----
+Supersedes the previous version, whose "Architectural Gaps" section describes a NoesisGUI
+build blocker that no longer exists and cites files (`RA4NoesisHUDViewModel.cpp`) that are
+not in `Source/RA4UI`.
 
-## 1. Architectural Overview & Boundaries
+## 1. The core architecture is sound and the key invariant holds
 
-The RA4 architecture strictly separates the **Deterministic Simulation Core** (`Source/RA4Simulation`, `Source/RA4Core`, `Source/RA4Content`) from the **Unreal Engine Presentation Layer** (`Source/RA4Presentation`, `Source/RedAlert4`, `Source/RA4UI`).
+The separation between an engine-free deterministic core and the Unreal layer is real, not
+aspirational. Verified structurally:
+
+- `Tools/HeadlessBuild/CMakeLists.txt` compiles `RA4Core`, `RA4Content`, `RA4Simulation`,
+  `RA4Combat`, `RA4Navigation`, `RA4FogOfWar`, `RA4AI`, `RA4Replay`, `RA4Campaign`,
+  `RA4Input` and `RA4Presentation` into static libraries **without linking Unreal at all**.
+  A core that genuinely could not be decoupled would not compile in this configuration.
+- `RA4Presentation` needs a shim (`Tools/HeadlessBuild/UnrealStub`) added to its include
+  path, which marks it correctly as the boundary module.
+
+This is the project's strongest asset and should be protected in any subsequent work.
+
+### 1.1 Determinism is enforced, not merely claimed
+
+| Invariant | Evidence |
+| --- | --- |
+| Same seed + same commands ⇒ same state | `VerticalSlice.FullMatch` → `4e6d9e69576c002b`, identical across repeated runs |
+| Frame rate does not affect simulation | `URA4SimWorldSubsystem::Tick` accumulates `TimeSinceLastSimTick` and steps a `while (… >= SimTickDelta)` fixed-timestep loop (`RA4SimWorldSubsystem.cpp:347-380`) |
+| Desync detected at the tick it occurs | `Lockstep.DesyncIsCaughtOnTheTickItHappens`, `ProvingGround.ForcedDesyncDetection` |
+| AI uses only player-legal commands | `AICommander::Tick(const SimWorld&, std::vector<Command>&)` — const world in, `Command` list out. No mutation path exists |
+| Presentation does not mutate simulation | `SyncPresentation()` reads sim state and spawns/destroys `ARA4EntityActor`; no write-back observed |
+
+## 2. Architectural violations found
+
+### 2.1 Content is hardcoded in C++, contradicting ADR-0004 / ADR-004
+
+`Docs/ADR/0004-content-lives-in-data-not-code.md` and `Docs/ADRs/ADR-004-Data-Driven-Content.md`
+both state content must live in data. Campaign missions do not:
 
 ```
-+-----------------------------------------------------------------------+
-|                         UNREAL ENGINE 5 LAYER                         |
-|   RA4Presentation | RedAlert4 | RA4UI | Slate / UMG / ViewModels      |
-+-----------------------------------------------------------------------+
-                                    | Reads Snapshots & Issues Commands
-                                    v
-+-----------------------------------------------------------------------+
-|                    DETERMINISTIC SIMULATION CORE                      |
-|   RA4Simulation | RA4Combat | RA4Navigation | RA4AI | RA4Network      |
-|   RA4FogOfWar  | RA4Replay | RA4Campaign   | RA4Content | RA4Core     |
-+-----------------------------------------------------------------------+
+$ grep -c "Missions.push_back" Source/RA4Campaign/Private/CampaignDatabase.cpp
+50
+$ find . -iname "*mission*.json"
+(no results)
 ```
 
----
+Missions are ~50 hardcoded `push_back` calls with `MissionId = std::string(Chapter) +
+"_mission_" + N`. Adding or balancing a mission requires a recompile. This also makes the
+"38 authored campaign missions" claim untestable in the sense the ADR intended.
 
-## 2. Module Dependency Analysis
+### 2.2 Three competing ADR directories
 
-### Pure C++ Engine Modules (Zero Engine/UObject Dependencies)
-1. **`RA4Core`** (`Source/RA4Core`): Basic types, fixed-point math (`FixedPoint.h`), IDs (`EntityId`, `PlayerId`, `TickIndex`), Hash utilities (`Hash64.h`), and assertion macros.
-2. **`RA4Content`** (`Source/RA4Content`): Database classes (`ContentDatabase`, `BibleContentLoader`) for unit stats, armor matrices, cost/build times, and voice line mappings loaded from `ra4_content.normalized.json`.
-3. **`RA4Simulation`** (`Source/RA4Simulation`): Core deterministic state (`SimWorld`), entity definitions, harvester AI state machine, Command Bus (`CommandBus`), and Lockstep engine (`LockstepSession`).
-4. **`RA4Combat`** (`Source/RA4Combat`): Combat mechanics, weapon range checks, armor matrix lookup, and damage calculation.
-5. **`RA4Navigation`** (`Source/RA4Navigation`): Grid-based pathfinding, flowfields, unit collision avoidance, and spatial occupancy grid.
-6. **`RA4FogOfWar`** (`Source/RA4FogOfWar`): Bit-grid vision calculation and fog-of-war reveal for simulation and AI.
-7. **`RA4AI`** (`Source/RA4AI`): Utility AI commander (`AICommander`), army group management, strategic decision loops, and threat evaluation.
-8. **`RA4Network`** (`Source/RA4Network`): Lockstep packet framing, LAN lobby handling, and client/server command distribution.
-9. **`RA4Campaign`** (`Source/RA4Campaign`): Data-driven mission runner, objective state evaluator, and briefing cutscene triggers.
-10. **`RA4Replay`** (`Source/RA4Replay`): Deterministic replay stream recorder and playback deserializer.
+```
+Docs/ADR/          12 files, format 0001-kebab-case.md
+Docs/ADRs/         11 files, format ADR-001-Title-Case.md
+Docs/Architecture/ADR/  10 files, format ADR-0001-kebab.md
+```
 
-### Unreal Engine Bound Modules
-1. **`RA4Presentation`** (`Source/RA4Presentation`): Maps simulation entity IDs to Unreal `AActor` / `USkeletalMeshComponent` visuals (`URA4PresentationSubsystem`, `URA4ArtMapping`).
-2. **`RedAlert4`** (`Source/RedAlert4`): GameMode (`ARA4GameModeBase`), GameInstance, PlayerController, Pawn, and UE engine entry points.
-3. **`RA4Input`** (`Source/RA4Input`): Mouse selection logic, marquee box selection, WASD camera panning, and CommandBus order dispatching.
-4. **`RA4UI`** (`Source/RA4UI`): ViewModels, HUD state binding, UI input router, and widget catalog.
+33 ADRs across three directories with three naming conventions and overlapping subject
+matter — e.g. fixed-point math is decided in both `Docs/ADR/0001` and `Docs/ADRs/ADR-002`;
+data-driven content in both `Docs/ADR/0004` and `Docs/ADRs/ADR-004`. CLAUDE.md mandates a
+single `Docs/Architecture/ADR/`. There is no index establishing which set is authoritative,
+so "change requires an ADR" is currently unenforceable — one can be written in whichever
+directory is most convenient.
 
----
+### 2.3 ADR-0008 describes an AI architecture that is not built
 
-## 3. Determinism, State Hashing & Lockstep Verification
+`Docs/Architecture/ADR/ADR-0008-htn-utility-ai-commander.md` specifies an HTN planner.
+`HTNPlan.cpp`, `HTNTask.cpp`, `HTNWorldState.cpp` and their headers (488 lines) exist,
+reference only one another, and are **excluded from the CMake `RA4AI` library**. The AI that
+actually runs is the utility loop in `AIStrategy.cpp` / `AICommander.cpp`. See AI_AUDIT.md.
 
-### State Hash Engine (`SimWorld::CalculateStateHash`)
-- Hashes entity positions, health, shield, state flags, production queues, harvester cargo, and active commands.
-- Verified by unit test `Lockstep.MatchingChecksumsDoNotReportDesync` and `ProvingGround.ForcedDesyncDetection`.
-- **Finding**: State hash calculation is 100% deterministic and excludes frame-rate or visual presentation attributes.
+### 2.4 The test module is outside the Unreal build graph
 
-### Lockstep Command Bus (`CommandBus.h`, `LockstepSession.h`)
-- Implements lockstep frame assembly, input delay buffering (configurable target ticks), and tick isolation.
-- Duplicate frames are discarded; missing frames trigger peer stalls until authoritative retransmission arrives.
-- **Empirical Test Proof**:
-  - `Lockstep.TwoPeersStayInSyncAcrossAFullMatch` (PASS)
-  - `Lockstep.DesyncIsCaughtOnTheTickItHappens` (PASS)
-  - `ProvingGround.HeadlessStressScenario500Entities` (PASS - 500 entities simulated for 1000 ticks without desync).
+`Source/RA4Tests/` has no `Build.cs` and is absent from `RedAlert4.uproject`. It is a
+CMake-only target. Consequence: no automated test can exercise any UObject, actor,
+rendering or UMG behaviour, so the entire Unreal half of the architecture is structurally
+untestable. This is the deepest architectural gap in the project.
 
----
+### 2.5 `RA4Presentation` is in the engine-free build
 
-## 4. Architectural Gaps & Debt
+`RA4Presentation` compiles headlessly only because `UnrealStub` fakes the engine types it
+touches. That is a pragmatic choice for testing `HudSnapshot`, but it means the module sits
+on both sides of the boundary and the stub must be kept in sync by hand. Worth an explicit
+ADR rather than remaining an implicit arrangement.
 
-1. **NoesisGUI Unreal Plugin Gap**:
-   - `Source/RA4UI` defines `RA4NoesisHUDViewModel.h` and `RA4NoesisHUDViewModel.cpp`, but the `Plugins/NoesisGUI` plugin is absent.
-   - Standard Unreal Build Tool (UBT) builds fail unless Noesis code is either guarded by preprocessor macros or Noesis plugin is restored.
-2. **Simulation World Snapshot Leaks**:
-   - `URA4PresentationSubsystem` polls `SimWorld` every frame to sync positions. High entity counts (>1000) show linear polling overhead. A delta-changed queue pattern is recommended.
+## 3. Module inventory (measured)
+
+| Module | Files | Lines | Engine-free | In CMake |
+| --- | --- | --- | --- | --- |
+| `RA4Core` | 11 | 1 064 | yes | yes |
+| `RA4Content` | 10 | 2 599 | yes | yes |
+| `RA4Simulation` | 8 | 4 191 | yes | yes |
+| `RA4Combat` | 4 | 186 | yes | yes |
+| `RA4Navigation` | 14 | 1 312 | yes | yes |
+| `RA4FogOfWar` | 4 | 210 | yes | yes |
+| `RA4AI` | 23 | 3 864 | yes | partially (4 files excluded) |
+| `RA4Replay` | 3 | 434 | yes | yes |
+| `RA4Campaign` | 7 | 1 794 | yes | yes |
+| `RA4Network` | 6 | 665 | yes | **no** |
+| `RA4Input` | 13 | 2 325 | yes | yes |
+| `RA4Presentation` | 5 | 1 052 | via stub | yes |
+| `RedAlert4` | 34 | 6 472 | no | no |
+| `RA4UI` | 52 | 7 120 | no | no |
+| `RA4Editor` | 14 | 1 053 | no (editor) | no |
+| `RA4Tests` | 23 | 7 436 | yes | yes (but not in UBT) |
+
+`RA4Network` is engine-free by design and is covered by 13 `Lockstep.*` tests compiled into
+`RA4Tests`, but the module itself is not a separate CMake library — its logic lives in
+`RA4Simulation/Private/LockstepSession.cpp`. The `Source/RA4Network/` module is the Unreal-side
+transport. Worth confirming these are not two implementations of the same protocol.
+
+## 4. Dependency direction
+
+No circular dependencies were observed in the CMake link graph:
+
+```
+RA4Core → RA4Content → RA4Navigation/RA4FogOfWar/RA4Combat → RA4Simulation
+                                                           → RA4Input, RA4Presentation, RA4AI, RA4Replay, RA4Campaign
+```
+
+`target_link_libraries(RA4Simulation PUBLIC RA4Content RA4Navigation RA4FogOfWar RA4Combat)`
+is the widest node and is the correct shape for this design.
+
+## 5. Recommendations (not actioned in this stage)
+
+1. Consolidate 33 ADRs into `Docs/Architecture/ADR/` with an index; supersede duplicates
+   explicitly rather than deleting them.
+2. Add `Source/RA4Tests/RA4Tests.Build.cs` and register the module so engine-side behaviour
+   becomes testable. This unblocks every "cannot verify" item in GAMEPLAY_AUDIT.md.
+3. Move campaign missions from `CampaignDatabase.cpp` into data, per ADR-0004.
+4. Either build the HTN planner or delete it and amend ADR-0008.
+5. Write an ADR covering `UnrealStub` and `RA4Presentation`'s dual-side position.

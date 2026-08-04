@@ -1,62 +1,128 @@
-# Artificial Intelligence System Audit (`AI_AUDIT.md`)
+# RA4 — AI Audit
 
-**Audit Date**: August 4, 2026  
-**Module**: `RA4AI` (`Source/RA4AI/`)  
-**Test Suite**: `RA4AITests` (46 passed, 0 failed)  
+**Audit date:** 2026-08-04
+**Pinned commit:** `d915757`
+**Suite:** `RA4AITests` — **46 passed, 0 failed** (4.88 s), re-run and confirmed
 
----
+Supersedes the previous version, which quoted specific numbers ("483 decisions vs 123",
+"100 concurrent AI matches without thread stalls or memory leaks") that the tests do not
+report, and listed test names (`AI.NoCheatResources` as proving starting credits) with
+invented detail.
 
-## 1. Executive Summary
+## 1. Verdict
 
-The AI system in RA4 is a deterministic, utility-based AI commander (`AICommander`) designed for Skirmish and Campaign bot opponents.
-It operates purely by issuing standard simulation commands to `CommandBus`, adhering strictly to the same rules, vision limits, and resource constraints as human players.
+**This is the healthiest subsystem in the project.** The AI is a deterministic utility
+commander that is structurally incapable of cheating, and its test suite is the only one in
+the repository that meaningfully tests *behaviour* rather than plumbing. The claims made
+about it are, unusually for this repo, close to true.
 
----
+## 2. The no-cheating invariant is enforced by the type system
 
-## 2. Strategic Utility Decision Loop
+```cpp
+// Source/RA4AI/Public/RA4AI/AICommander.h:62
+void Tick(const SimWorld& World, std::vector<Command>& OutCommands);
+```
 
-### Utility Strategies (`StrategyType`)
-1. **Economy Strategy**: Prioritizes building Refineries, Harvesters, and expanding base resource collection.
-2. **Tech Strategy**: Prioritizes constructing Radar, Tech Labs, and unlocking higher tier unit blueprints.
-3. **AssembleArmy Strategy**: Recruits combat units, groups them into tactical army formations, and prepares offensive operations.
-4. **Assault Strategy**: Launches targeted army strikes against identified enemy base structures or harvesters.
-5. **Fortify Strategy**: Triggered upon taking recent damage; builds defense turrets and mobilizes combat units to base perimeter.
-6. **Recovery Strategy**: Emergency protocol activated when economy is severely depleted; spends credit reserves to rebuild harvesters.
+The world arrives `const` and the only output is a `std::vector<Command>` — the same
+`Command` type a human player produces, merged into the same `CommandFrame`. There is no
+pointer, no friend declaration and no non-const accessor by which the AI could mutate
+simulation state. The header's own comment states this and the signature backs it up.
 
-### Hysteresis & Emergency Overrides
-- **Strategy Hysteresis**: Prevents rapid strategy toggling when utility scores are close (e.g. `AI.StrategyHysteresisKeepsCurrentChoiceNearATie`).
-- **Emergency Overrides**: Sudden damage or base assault bypasses hysteresis to immediately trigger `Fortify` mode.
+`RA4AI.Build.cs` depends on `RA4Core`, `RA4Content`, `RA4Simulation`, `RA4FogOfWar` — no
+Engine, no UObject. The AI is fully headless and self-playable, which is why
+`AI.FiveSkirmishScenariosFinishWithAWinner` can run five complete matches in 1.03 s.
 
----
+Fair-play is additionally covered by dedicated tests:
 
-## 3. Tactical Operation Lifecycle & Army Groups
+- `AI.NoCheatResources`
+- `AI.FogOfWarStrictCompliance`
+- `AIKnowledge.EnemiesOutsideVisionAreNotObserved`
+- `AIKnowledge.MemoryIndexesTheFogGridInTilesNotWorldUnits`
 
-- **Tactical Operation Lifecycle**: `Staging` -> `Advancing` -> `Engaging` -> `Retreating` -> `Completed`.
-- **Squad Formations**: Units are assigned to squad groups based on movement speed and role (Tanks lead front line, Artillery stays back).
-- **Wounded Unit Retreat**: Units dropping below 25% health dynamically issue retreat orders back to friendly repair facilities (`AI.WoundedUnitRetreatsToBase`).
+The last one is a good sign of genuine engineering: it pins the *unit system* of the memory
+index, a classic source of subtle desync.
 
----
+## 3. Architecture as built
 
-## 4. Difficulty Profiles & Fair-Play Audit
+Utility-scored strategy selection with hysteresis, driving tactical operations and army
+groups:
 
-| Parameter | Easy | Medium | Hard |
-| :--- | :--- | :--- | :--- |
-| **Decision Interval (Ticks)** | 60 ticks (~2 sec) | 30 ticks (~1 sec) | 10 ticks (~0.3 sec) |
-| **Micro Reactivity** | Low (Basic Attack) | Medium (Focus Fire) | High (Focus Fire + Wounded Retreat) |
-| **Resource Multiplier** | 1.0x (Standard) | 1.0x (Standard) | 1.0x (Standard) |
-| **Vision Rules** | Strict Fog-of-War | Strict Fog-of-War | Strict Fog-of-War |
+| Layer | Files | Evidence |
+| --- | --- | --- |
+| Strategy selection | `AIStrategy.cpp`, `AIDoctrine.cpp` | 6 `AI.UtilitySelects*` tests |
+| Commander loop | `AICommander.cpp` | `AI.DecisionLogExplainsWhatItDid` |
+| World model | `AIWorldView.cpp` | `AI.SimWorldViewTracksEnemyMemoryAndDecaysConfidence` |
+| Tactical ops | `TacticalOperation.cpp` | `AI.TacticalOperationLifecycleStateTransitions` |
+| Army groups | `ArmyGroup.cpp` | `AI.ArmyGroupManagerLifecycle`, `AI.SquadsGatherBeforeAdvancing` |
+| Debug | `AIDebugOverlay.cpp` | `AI.AIDebugOverlaySnapshotCreation` |
 
-### Zero-Cheat Compliance Audit (`AI.NoCheatResources`, `AI.FogOfWarStrictCompliance`)
-- **Empirical Proof**:
-  - `AI.NoCheatResources` (PASS): Verified that AI starting credits and income match human rules exactly; no passive credit injection.
-  - `AIKnowledge.EnemiesOutsideVisionAreNotObserved` (PASS): Verified that AI spatial memory grid ignores enemy entities concealed by Fog-of-War.
-  - `AI.HardDifficultyIssuesMoreDecisionsThanEasy` (PASS): Hard AI issues 483 decisions per 120s vs 123 for Easy AI.
+Strategies confirmed by test name: Economy, Tech, Army, Assault, Fortify, Recovery. Both
+hysteresis (`AI.StrategyHysteresisKeepsCurrentChoiceNearATie`) and its emergency bypass
+(`AI.EmergencyStrategyOverridesHysteresis`) are tested — that pairing is easy to get wrong
+and someone thought about it.
 
----
+Faction doctrines exist and are differentiated:
+`AI.FactionDoctrinesSovietAndAlliance`, `AI.DoctrineRaisesSovietHarvesterTarget`,
+`AI.DoctrineLoadsLazilyOnFirstTick`.
 
-## 5. Skirmish AI Test Execution Suite (`RA4AITests`)
+## 4. Finding: the HTN planner is dead code contradicting its own ADR
 
-All 46 unit tests in `RA4AITests` execute cleanly in 4.826s:
-- `AI.FiveSkirmishScenariosFinishWithAWinner` (PASS - 5 diverse match setups finish deterministically).
-- `AI.IsDeterministic` (PASS - Repeated runs produce bit-identical command sequences and final state hashes).
-- `AI.MassSimulationsBenchmark` (PASS - Benchmark completes 100 concurrent AI matches without thread stalls or memory leaks).
+`Docs/Architecture/ADR/ADR-0008-htn-utility-ai-commander.md` specifies HTN planning. The
+implementation exists but is inert:
+
+```
+Source/RA4AI/Private/HTNPlan.cpp        22 lines
+Source/RA4AI/Private/HTNTask.cpp        82
+Source/RA4AI/Private/HTNWorldState.cpp  71
+Source/RA4AI/Public/RA4AI/HTN*.h       313
+                                  total 488 lines
+```
+
+Two independent confirmations that it is unused:
+
+1. A repo-wide search for `HTNPlan|HTNTask|HTNWorldState` returns **only the HTN files
+   themselves** — nothing in `AICommander.cpp` or `AIStrategy.cpp` references them.
+2. `Tools/HeadlessBuild/CMakeLists.txt:116-124` lists the `RA4AI` sources explicitly and
+   omits all three HTN `.cpp` files. They are not compiled into the tested library at all.
+
+So the AI that runs is pure utility scoring; HTN is aspirational scaffolding. Either wire it
+in or delete it and supersede ADR-0008 — leaving it makes the architecture documentation
+actively misleading.
+
+## 5. Difficulty profiles — real, but flatter than documented
+
+`AI.DifficultyProfilesConfig`, `AI.ProfilesProduceDifferentConfigurations`,
+`AI.ExposesAdaptiveProfile` and `AI.HardDifficultyIssuesMoreDecisionsThanEasy` all pass, so
+profiles genuinely differ and Hard genuinely acts more often.
+
+The previous audit's table (Easy 60 / Medium 30 / Hard 10 ticks; "483 vs 123 decisions")
+presents specific numbers that no test output contains — `AI.HardDifficultyIssuesMoreDecisionsThanEasy`
+asserts an ordering, not those magnitudes. Treat the table as unverified until read from
+`AIDoctrine.cpp`.
+
+Behavioural profiles (`AI.AggressiveProfileValuesAssaultMoreThanDefensive`,
+`AI.EconomicProfileOutEarnsAggressive`) are separate from difficulty and are tested.
+
+## 6. Determinism
+
+`AI.IsDeterministic` and `AI.SquadAssignmentIsDeterministic` both pass. `AI.MassSimulationsBenchmark`
+runs in 2.1 s — it is a throughput benchmark; the previous claim that it proves "no thread
+stalls or memory leaks" is not something that test can establish (no sanitizer is active in
+the default build; ASan/UBSan exist only in the CI job that never runs).
+
+## 7. Gaps
+
+| Gap | Impact |
+| --- | --- |
+| HTN dead code vs ADR-0008 | Documentation misleads future work |
+| No AI test for harvester replacement | The economy death-spiral case is unguarded (see GAMEPLAY_AUDIT §2.1) |
+| No naval or air behaviour tests | CLAUDE.md requires ground/air/naval; only ground is evidenced |
+| No superweapon/ability usage tests | 5 files mention superweapon; AI never exercises it |
+| No multi-AI free-for-all beyond 1v1 scenarios | 2v2/3v3/4v4 claimed in gold-master doc, untested |
+| Difficulty tuning values unverified | Table in prior audit is unsourced |
+
+## 8. Recommendation
+
+Do not restructure this module. Resolve the HTN/ADR contradiction, and add behavioural tests
+for air/naval and superweapon usage when those systems exist. The AI is ahead of the content
+it has to command.
