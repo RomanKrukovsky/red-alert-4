@@ -22,6 +22,8 @@
 class ARA4CameraPawn;
 class URA4SimWorldSubsystem;
 class URA4MatchResultOverlayWidget;
+class URA4DirectControlSubsystem;
+class URA4DirectControlHUDViewModel;
 
 UCLASS()
 class REDALERT4_API ARA4PlayerController : public APlayerController
@@ -85,7 +87,7 @@ public:
     void ExitDirectControl();
 
     UFUNCTION(BlueprintCallable, Category = "RA4|DirectControl")
-    bool IsDirectControlActive() const { return bDirectControlActive; }
+    bool IsDirectControlActive() const;
 
     // --- Cheat Console -------------------------------------------------------
     UFUNCTION(BlueprintCallable, Category = "RA4|CheatConsole")
@@ -96,6 +98,8 @@ public:
 protected:
     void OnDirectControlTogglePressed();
     void UpdateDirectControl(float DeltaTime);
+
+    URA4DirectControlSubsystem* GetDirectControlSubsystem() const;
     // Drag shorter than this on the ground plane counts as a click. Measured in
     // world units rather than pixels so it means the same thing at every zoom.
     UPROPERTY(EditAnywhere, Category = "RA4|Input")
@@ -241,6 +245,12 @@ private:
 
     UPROPERTY(Transient)
     TObjectPtr<class URA4HoverTooltipWidget> HoverTooltip;
+
+    // First-person direct-control combat HUD ViewModel. Created on Enter,
+    // destroyed on Exit. The Blueprint widget that renders it is loaded from
+    // the active DirectControlProfile's HudWidgetClass soft reference.
+    UPROPERTY(Transient)
+    TObjectPtr<URA4DirectControlHUDViewModel> DirectControlHUDViewModel;
 
     // Which entity the cursor is resting on, and since when. The delay is what stops
     // the card flickering while the pointer sweeps across a crowded battlefield.

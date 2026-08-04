@@ -13,7 +13,10 @@
 #include "RA4HoverTooltipWidget.h"
 #include "RA4SidebarWidget.h"
 #include "RA4CheatConsoleWidget.h"
+#include "RA4DirectControlSubsystem.h"
 #include "RA4UIDataProviderSubsystem.h"
+#include "RA4DirectControlHUDViewModel.h"
+#include "RA4DirectControlProfile.h"
 #include "Blueprint/GameViewportSubsystem.h"
 #include "Blueprint/UserWidget.h"
 #include "Framework/Application/SlateApplication.h"
@@ -288,11 +291,6 @@ void ARA4PlayerController::PlayerTick(float DeltaTime)
 {
     Super::PlayerTick(DeltaTime);
 
-    // Press F at any time to toggle First-Person Direct Control
-    if (WasInputKeyJustPressed(EKeys::F))
-    {
-        ToggleDirectControl();
-    }
 
     if (!bMatchResultEventsBound)
     {
@@ -338,10 +336,18 @@ void ARA4PlayerController::PlayerTick(float DeltaTime)
     // of a list that is bounded by what a player can select.
     Subsystem->SetSelectedEntitiesForHUD(Selection.Get());
 
-    if (bDirectControlActive)
+    // Direct control is presentation-driven: the subsystem owns the phase
+    // machine and the camera. We branch here so RTS camera/selection input
+    // is completely suppressed while the player is inside a vehicle.
+    if (URA4DirectControlSubsystem* Dc = GetDirectControlSubsystem())
     {
-        UpdateDirectControl(DeltaTime);
-        return;
+        if (Dc->IsInDirectControl() ||
+            Dc->GetClientPhase() == ERA4DirectControlClientPhase::Entering ||
+            Dc->GetClientPhase() == ERA4DirectControlClientPhase::Exiting)
+        {
+            UpdateDirectControl(DeltaTime);
+            return;
+        }
     }
 
     UpdateCameraInput(DeltaTime);
@@ -592,7 +598,9 @@ void ARA4PlayerController::UpdateCameraInput(float DeltaTime)
     const bool bSpaceDown = IsInputKeyDown(EKeys::SpaceBar);
     const bool bAnyMouseDown = bRightMouseDown || bLeftMouseDown || IsInputKeyDown(EKeys::MiddleMouseButton);
 
-    if ((bSpaceDown && bAnyMouseDown) || bRotatingCamera)
+    // On macOS trackpads, clicking and dragging is cumbersome. 
+    // Allow rotating the camera by just holding Space and moving the cursor.
+    if (bSpaceDown || bRotatingCamera)
     {
         if (!bRotatingCamera)
         {
@@ -600,7 +608,7 @@ void ARA4PlayerController::UpdateCameraInput(float DeltaTime)
             RotateAnchorScreen = FVector2D(MouseX, MouseY);
         }
 
-        if (!bAnyMouseDown)
+        if (!bSpaceDown && !bAnyMouseDown)
         {
             bRotatingCamera = false;
         }
@@ -761,6 +769,7 @@ bool ARA4PlayerController::IsPointerOverUI() const
 
 void ARA4PlayerController::OnPrimaryPressed()
 {
+    if (bDirectControlActive) return;
     bPrimaryConsumedByUI = IsPointerOverUI();
     if (bPrimaryConsumedByUI)
     {
@@ -794,6 +803,7 @@ void ARA4PlayerController::OnPrimaryPressed()
 
 void ARA4PlayerController::OnPrimaryReleased()
 {
+    if (bDirectControlActive) return;
     if (bRotatingCamera)
     {
         bRotatingCamera = false;
@@ -1044,6 +1054,7 @@ void ARA4PlayerController::PlayVoiceForPrimary(const SimWorld& World, ERA4VoiceE
 
 void ARA4PlayerController::OnSecondaryPressed()
 {
+    if (bDirectControlActive) return;
     if (IsPointerOverUI())
     {
         return;
@@ -1073,6 +1084,7 @@ void ARA4PlayerController::OnSecondaryPressed()
 
 void ARA4PlayerController::OnSecondaryReleased()
 {
+    if (bDirectControlActive) return;
     // Releasing ends the gesture without issuing the order the button would normally
     // carry -- the drag was the whole intent.
     bRotatingCamera = false;
@@ -1101,6 +1113,7 @@ void ARA4PlayerController::OnMiddleReleased()
 
 void ARA4PlayerController::OnZoomIn()
 {
+    if (bDirectControlActive) return;
     if (ARA4CameraPawn* CameraPawn = GetCameraPawn())
     {
         CameraPawn->GetCameraController().AddZoomNotches(1.0f);
@@ -1109,6 +1122,7 @@ void ARA4PlayerController::OnZoomIn()
 
 void ARA4PlayerController::OnZoomOut()
 {
+    if (bDirectControlActive) return;
     if (ARA4CameraPawn* CameraPawn = GetCameraPawn())
     {
         CameraPawn->GetCameraController().AddZoomNotches(-1.0f);
@@ -1117,6 +1131,7 @@ void ARA4PlayerController::OnZoomOut()
 
 void ARA4PlayerController::OnStopPressed()
 {
+    if (bDirectControlActive) return;
     const URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
     const SimWorld* World = Subsystem != nullptr ? Subsystem->GetSimWorld() : nullptr;
     if (World == nullptr)
@@ -1143,6 +1158,7 @@ void ARA4PlayerController::OnStopPressed()
 
 void ARA4PlayerController::OnGuardPressed()
 {
+    if (bDirectControlActive) return;
     const URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
     const SimWorld* World = Subsystem != nullptr ? Subsystem->GetSimWorld() : nullptr;
     if (World == nullptr)
@@ -1169,6 +1185,7 @@ void ARA4PlayerController::OnGuardPressed()
 
 void ARA4PlayerController::OnAttackMovePressed()
 {
+    if (bDirectControlActive) return;
     const URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
     const SimWorld* World = Subsystem != nullptr ? Subsystem->GetSimWorld() : nullptr;
     if (World == nullptr)
@@ -1483,246 +1500,225 @@ void ARA4PlayerController::OnDirectControlTogglePressed()
 
 void ARA4PlayerController::ToggleDirectControl()
 {
-    if (bDirectControlActive)
+    URA4DirectControlSubsystem* Dc = GetDirectControlSubsystem();
+    if (Dc == nullptr)
     {
-        ExitDirectControl();
         return;
     }
-
-    // 1. Try selected entity
-    EntityId TargetEntity = Selection.GetPrimary();
-    if (!TargetEntity.IsValid())
+    if (Dc->IsInDirectControl())
     {
-        const auto& Selected = Selection.Get();
-        if (!Selected.empty())
-        {
-            TargetEntity = Selected[0];
-        }
-    }
-
-    if (TargetEntity.IsValid())
-    {
-        EnterDirectControl(static_cast<int64>(TargetEntity.Index));
+        Dc->RequestExit(this);
         return;
     }
-
-    // 2. Try any alive unit/building of local player from simulation
-    if (const URA4SimWorldSubsystem* Subsystem = GetSimSubsystem())
+    // Resolve the vehicle to enter: prefer the primary selection, then any
+    // owned alive unit. The subsystem re-validates ownership against the
+    // authoritative SimWorld before submitting the Enter command, so a stale
+    // selection or a just-died unit is rejected cleanly.
+    RA4::EntityId Target = Selection.GetPrimary();
+    if (!Target.IsValid())
     {
-        if (const SimWorld* World = Subsystem->GetSimWorld())
+        const auto& Sel = Selection.Get();
+        if (!Sel.empty())
         {
-            const auto& Cores = World->GetAllCores();
-            // First pass: local player units
-            for (size_t Index = 0; Index < Cores.size(); ++Index)
+            Target = Sel[0];
+        }
+    }
+    if (!Target.IsValid())
+    {
+        if (const URA4SimWorldSubsystem* Sim = GetSimSubsystem())
+        {
+            if (const SimWorld* World = Sim->GetSimWorld())
             {
-                if (Cores[Index].bAlive && Cores[Index].Owner == Selection.GetLocalPlayer() && Cores[Index].Kind == EntityKind::Unit)
+                const auto& Cores = World->GetAllCores();
+                for (size_t I = 0; I < Cores.size(); ++I)
                 {
-                    EnterDirectControl(static_cast<int64>(Index));
-                    return;
-                }
-            }
-            // Second pass: local player buildings / any owned entity
-            for (size_t Index = 0; Index < Cores.size(); ++Index)
-            {
-                if (Cores[Index].bAlive && Cores[Index].Owner == Selection.GetLocalPlayer())
-                {
-                    EnterDirectControl(static_cast<int64>(Index));
-                    return;
-                }
-            }
-            // Third pass: any alive entity in match
-            for (size_t Index = 0; Index < Cores.size(); ++Index)
-            {
-                if (Cores[Index].bAlive)
-                {
-                    EnterDirectControl(static_cast<int64>(Index));
-                    return;
+                    if (Cores[I].bAlive && Cores[I].Owner == Selection.GetLocalPlayer() &&
+                        Cores[I].Kind == EntityKind::Unit)
+                    {
+                        Target = World->MakeId(uint32_t(I));
+                        break;
+                    }
                 }
             }
         }
     }
-
-    // 3. Try any spawned ARA4EntityActor in Unreal World
-    if (UWorld* World = GetWorld())
+    if (Target.IsValid())
     {
-        for (TActorIterator<ARA4EntityActor> It(World); It; ++It)
+        if (Dc->RequestEnter(this, Target))
         {
-            if (*It != nullptr)
-            {
-                EnterDirectControl(static_cast<int64>((*It)->GetEntityIndex()));
-                return;
-            }
-        }
-    }
-
-    // 4. Fallback: First-Person Free-Cam mode on camera pawn
-    if (ARA4CameraPawn* CameraPawn = GetCameraPawn())
-    {
-        bDirectControlActive = true;
-        DirectControlCameraRotation = CameraPawn->GetActorRotation();
-        bShowMouseCursor = false;
-        SetInputMode(FInputModeGameOnly());
-
-        if (GEngine != nullptr)
-        {
-            GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green,
-                TEXT("[FPS MODE ON] Free-Cam Active (Press F or Esc to exit)"));
+            bDirectControlActive = true;
+            DirectControlEntityId = Target;
         }
     }
 }
 
 void ARA4PlayerController::EnterDirectControl(int64 EntityIdValue)
 {
-    URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
-    const uint32_t EntityIndex = static_cast<uint32_t>(EntityIdValue);
-    ARA4EntityActor* EntityActor = Subsystem != nullptr ? Subsystem->GetEntityActor(static_cast<int32>(EntityIndex)) : nullptr;
-    uint32_t EntityGen = 0;
-
-    if (EntityActor != nullptr)
+    if (URA4DirectControlSubsystem* Dc = GetDirectControlSubsystem())
     {
-        EntityGen = EntityActor->GetEntityGeneration();
-    }
-    else
-    {
-        if (UWorld* World = GetWorld())
-        {
-            for (TActorIterator<ARA4EntityActor> It(World); It; ++It)
-            {
-                if (*It != nullptr)
-                {
-                    EntityActor = *It;
-                    break;
-                }
-            }
-        }
-    }
-
-    EntityId TargetId(EntityActor != nullptr ? static_cast<uint32_t>(EntityActor->GetEntityIndex()) : EntityIndex,
-                      EntityActor != nullptr ? EntityActor->GetEntityGeneration() : 0u);
-
-    if (EntityActor != nullptr)
-    {
-        bDirectControlActive = true;
-        DirectControlEntityId = TargetId;
-        DirectControlCameraRotation = EntityActor->GetPossessionCameraRotation();
-
-        SetViewTargetWithBlend(EntityActor, 0.2f);
-        bShowMouseCursor = false;
-        SetInputMode(FInputModeGameOnly());
-
-        if (GEngine != nullptr)
-        {
-            GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green,
-                FString::Printf(TEXT("[FPS MODE ON] Controlling %s (Press F or Esc to exit)"), *EntityActor->GetName()));
-        }
-        UE_LOG(LogTemp, Display, TEXT("RA4 First Person Direct Control activated for entity %lld"), EntityIdValue);
+        const uint32_t Index = static_cast<uint32_t>(EntityIdValue);
+        RA4::EntityId Vehicle{Index, 0u};
+        Dc->RequestEnter(this, Vehicle);
     }
 }
 
 void ARA4PlayerController::ExitDirectControl()
 {
-    bDirectControlActive = false;
-    DirectControlEntityId = EntityId{};
-
-    if (ARA4CameraPawn* CameraPawn = GetCameraPawn())
+    if (URA4DirectControlSubsystem* Dc = GetDirectControlSubsystem())
     {
-        SetViewTargetWithBlend(CameraPawn, 0.2f);
+        Dc->RequestExit(this);
     }
-
-    bShowMouseCursor = true;
-    FInputModeGameAndUI InputMode;
-    InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-    InputMode.SetHideCursorDuringCapture(false);
-    SetInputMode(InputMode);
-
-    if (GEngine != nullptr)
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Yellow, TEXT("[FPS MODE OFF] RTS View Returned"));
-    }
-    UE_LOG(LogTemp, Display, TEXT("RA4 First Person Direct Control deactivated"));
 }
 
 void ARA4PlayerController::UpdateDirectControl(float DeltaTime)
 {
-    if (!bDirectControlActive)
+    URA4DirectControlSubsystem* Dc = GetDirectControlSubsystem();
+    if (Dc == nullptr)
     {
         return;
     }
+    Dc->TickInput(this, DeltaTime);
+    Dc->TickPresentation(this, DeltaTime);
 
     if (WasInputKeyJustPressed(EKeys::Escape))
     {
-        ExitDirectControl();
+        TogglePauseMenu();
         return;
     }
 
-    // Update Mouse rotation
-    float TurnX = 0.0f;
-    float TurnY = 0.0f;
-    GetInputMouseDelta(TurnX, TurnY);
-    DirectControlCameraRotation.Yaw += TurnX * 2.5f;
-    DirectControlCameraRotation.Pitch = FMath::Clamp(DirectControlCameraRotation.Pitch - TurnY * 2.5f, -80.0f, 80.0f);
-
-    URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
-    ARA4EntityActor* EntityActor = Subsystem != nullptr ? Subsystem->GetEntityActor(DirectControlEntityId) : nullptr;
-    if (EntityActor != nullptr)
+    // Lazily create the HUD ViewModel when we first enter direct control.
+    if (DirectControlHUDViewModel == nullptr && Dc->IsInDirectControl())
     {
-        if (UCameraComponent* FPCamera = EntityActor->GetFirstPersonCameraComponent())
+        DirectControlHUDViewModel = NewObject<URA4DirectControlHUDViewModel>(this);
+        UE_LOG(LogTemp, Display, TEXT("RA4 DirectControl: HUD ViewModel created"));
+    }
+
+    // Refresh the ViewModel from the authoritative SimWorld every frame.
+    // The ViewModel is presentation-only; the Blueprint widget binds to it
+    // and never touches the simulation.
+    if (DirectControlHUDViewModel != nullptr && Dc->IsInDirectControl())
+    {
+        if (const URA4SimWorldSubsystem* Sim = GetSimSubsystem())
         {
-            FPCamera->SetWorldRotation(DirectControlCameraRotation);
-        }
-        EntityActor->SetActorRotation(FRotator(0.0f, DirectControlCameraRotation.Yaw, 0.0f));
-        SetControlRotation(DirectControlCameraRotation);
+            if (const SimWorld* World = Sim->GetSimWorld())
+            {
+                const int32 VehIndex = Dc->GetControlledVehicleIndex();
+                if (VehIndex >= 0)
+                {
+                    const EntityId Vehicle{uint32_t(VehIndex), 0u};
+                    const HealthComp* Hp = World->GetHealth(Vehicle);
+                    const TransformComp* Tf = World->GetTransform(Vehicle);
+                    const MovementComp* Mv = World->GetMovement(Vehicle);
+                    const DirectControlComp* DcComp = World->GetDirectControl(Vehicle);
+                    const EntityCore* Core = World->GetCore(Vehicle);
+                    const ContentDatabase* Db = World->GetContent();
 
-        // WASD Movement
-        FVector MoveDir = FVector::ZeroVector;
-        if (IsInputKeyDown(EKeys::W)) MoveDir += DirectControlCameraRotation.Vector();
-        if (IsInputKeyDown(EKeys::S)) MoveDir -= DirectControlCameraRotation.Vector();
-        if (IsInputKeyDown(EKeys::D)) MoveDir += FRotationMatrix(DirectControlCameraRotation).GetScaledAxis(EAxis::Y);
-        if (IsInputKeyDown(EKeys::A)) MoveDir -= FRotationMatrix(DirectControlCameraRotation).GetScaledAxis(EAxis::Y);
+                    int32 VehicleHealth = 0, VehicleMaxHealth = 1;
+                    if (Hp != nullptr)
+                    {
+                        VehicleHealth = Hp->Current;
+                        VehicleMaxHealth = Hp->Max > 0 ? Hp->Max : 1;
+                    }
+                    float SpeedKph = 0.0f;
+                    if (Mv != nullptr)
+                    {
+                        SpeedKph = float(Mv->CurrentSpeed.ToDoubleUnsafe() / 100.0 * 3.6);
+                    }
+                    int32 TurretYaw = 0, HullYaw = 0;
+                    if (Tf != nullptr)
+                    {
+                        TurretYaw = int32(Tf->TurretFacing / 100) % 360;
+                        HullYaw = int32(Tf->Facing / 100) % 360;
+                    }
+                    bool bZoomed = false;
+                    int32 PrimaryCdPct = 0;
+                    bool bPrimaryReloading = false;
+                    ContentId VehicleDefId;
+                    if (Core != nullptr) { VehicleDefId = Core->Def; }
+                    const EntityDef* Def = (Db != nullptr && VehicleDefId.IsValid()) ? Db->FindEntity(VehicleDefId) : nullptr;
+                    if (DcComp != nullptr)
+                    {
+                        bZoomed = DcComp->bOpticsZoomed;
+                        if (Def != nullptr && Def->Weapon.IsValid() && Db != nullptr)
+                        {
+                            if (const WeaponDef* Wpn = Db->FindWeapon(Def->Weapon))
+                            {
+                                if (Wpn->CooldownTicks > 0)
+                                {
+                                    PrimaryCdPct = FMath::Clamp((DcComp->CooldownTicksPrimary * 100) / Wpn->CooldownTicks, 0, 100);
+                                    bPrimaryReloading = DcComp->CooldownTicksPrimary > 0;
+                                }
+                            }
+                        }
+                    }
+                    FText PrimaryName = FText::GetEmpty();
+                    FText SecondaryName = FText::GetEmpty();
+                    if (Def != nullptr && Db != nullptr)
+                    {
+                        if (Def->Weapon.IsValid())
+                        {
+                            if (const WeaponDef* Wpn = Db->FindWeapon(Def->Weapon))
+                            {
+                                PrimaryName = FText::FromString(UTF8_TO_TCHAR(Wpn->Name.c_str()));
+                            }
+                        }
+                        if (Def->SecondaryWeapon.IsValid())
+                        {
+                            if (const WeaponDef* Wpn = Db->FindWeapon(Def->SecondaryWeapon))
+                            {
+                                SecondaryName = FText::FromString(UTF8_TO_TCHAR(Wpn->Name.c_str()));
+                            }
+                        }
+                    }
+                    // Damage states inferred from HP percent (Stage 2 placeholder
+                    // until the sim has a proper subsystem-damage model).
+                    const int32 HpPct = (VehicleHealth * 100) / VehicleMaxHealth;
+                    const bool bEngineDamaged = HpPct < 25;
+                    const bool bTracksDamaged = HpPct < 50;
+                    const bool bTurretDamaged = HpPct < 10;
 
-        MoveDir.Z = 0.0f;
-        if (!MoveDir.IsNearlyZero())
-        {
-            MoveDir.Normalize();
-            const FVector CurrLoc = EntityActor->GetActorLocation();
-            const FVector TargetLoc = CurrLoc + MoveDir * 300.0f;
-
-            Command Cmd;
-            Cmd.Type = CommandType::Move;
-            Cmd.Issuer = Selection.GetLocalPlayer();
-            Cmd.Primary = DirectControlEntityId;
-            Cmd.Location = Vec2{Fixed::FromInt(static_cast<int64>(TargetLoc.X)), Fixed::FromInt(static_cast<int64>(TargetLoc.Y))};
-            SubmitOrders({Cmd});
-        }
-
-        // Left Click -> Attack
-        if (WasInputKeyJustPressed(EKeys::LeftMouseButton))
-        {
-            const FVector Start = EntityActor->GetPossessionCameraLocation();
-            const FVector Forward = DirectControlCameraRotation.Vector();
-            const FVector AimTarget = Start + Forward * 5000.0f;
-
-            Command Cmd;
-            Cmd.Type = CommandType::AttackMove;
-            Cmd.Issuer = Selection.GetLocalPlayer();
-            Cmd.Primary = DirectControlEntityId;
-            Cmd.Location = Vec2{Fixed::FromInt(static_cast<int64>(AimTarget.X)), Fixed::FromInt(static_cast<int64>(AimTarget.Y))};
-            SubmitOrders({Cmd});
+                    DirectControlHUDViewModel->Refresh(
+                        VehicleHealth, VehicleMaxHealth,
+                        SpeedKph,
+                        TurretYaw, HullYaw,
+                        0,       // target range (Stage 2: raycast from reticle)
+                        bZoomed,
+                        0,       // detected target count (Stage 2: fog-of-war query)
+                        PrimaryName,
+                        PrimaryCdPct, bPrimaryReloading,
+                        SecondaryName,
+                        bEngineDamaged, bTracksDamaged, bTurretDamaged,
+                        FText::GetEmpty(),  // current task (Stage 2)
+                        FText::GetEmpty()); // EVA message (Stage 2)
+                }
+            }
         }
     }
-    else if (ARA4CameraPawn* CameraPawn = GetCameraPawn())
-    {
-        // Free camera movement when no entity actor is possessed
-        CameraPawn->SetActorRotation(DirectControlCameraRotation);
-        FVector MoveDir = FVector::ZeroVector;
-        if (IsInputKeyDown(EKeys::W)) MoveDir += DirectControlCameraRotation.Vector();
-        if (IsInputKeyDown(EKeys::S)) MoveDir -= DirectControlCameraRotation.Vector();
-        if (IsInputKeyDown(EKeys::D)) MoveDir += FRotationMatrix(DirectControlCameraRotation).GetScaledAxis(EAxis::Y);
-        if (IsInputKeyDown(EKeys::A)) MoveDir -= FRotationMatrix(DirectControlCameraRotation).GetScaledAxis(EAxis::Y);
 
-        if (!MoveDir.IsNearlyZero())
+    // If the authoritative phase is back to RTS (vehicle destroyed or exit
+    // completed), restore the RTS view target and mouse cursor.
+    if (Dc->GetClientPhase() == ERA4DirectControlClientPhase::RTS ||
+        Dc->GetClientPhase() == ERA4DirectControlClientPhase::VehicleDestroyed)
+    {
+        if (ARA4CameraPawn* CameraPawn = GetCameraPawn())
         {
-            CameraPawn->AddActorWorldOffset(MoveDir.GetSafeNormal() * 1000.0f * DeltaTime);
+            SetViewTargetWithBlend(CameraPawn, 0.25f);
+        }
+        bShowMouseCursor = true;
+        FInputModeGameAndUI InputMode;
+        InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+        InputMode.SetHideCursorDuringCapture(false);
+        SetInputMode(InputMode);
+        bDirectControlActive = false;
+        DirectControlEntityId = EntityId{};
+        if (DirectControlHUDViewModel != nullptr)
+        {
+            DirectControlHUDViewModel = nullptr;
+        }
+        if (GEngine != nullptr)
+        {
+            GEngine->AddOnScreenDebugMessage(-1, 2.5f, FColor::Yellow,
+                TEXT("[DIRECT CONTROL OFF] RTS view restored"));
         }
     }
 }
@@ -1730,4 +1726,19 @@ void ARA4PlayerController::UpdateDirectControl(float DeltaTime)
 ARA4CameraPawn* ARA4PlayerController::GetCameraPawn() const
 {
     return Cast<ARA4CameraPawn>(GetPawn());
+}
+
+URA4DirectControlSubsystem* ARA4PlayerController::GetDirectControlSubsystem() const
+{
+    UWorld* World = GetWorld();
+    return World != nullptr ? World->GetSubsystem<URA4DirectControlSubsystem>() : nullptr;
+}
+
+bool ARA4PlayerController::IsDirectControlActive() const
+{
+    if (URA4DirectControlSubsystem* Dc = GetDirectControlSubsystem())
+    {
+        return Dc->IsInDirectControl();
+    }
+    return false;
 }

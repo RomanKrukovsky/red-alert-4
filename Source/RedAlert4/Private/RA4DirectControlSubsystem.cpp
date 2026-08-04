@@ -136,6 +136,18 @@ bool URA4DirectControlSubsystem::RequestEnter(APlayerController* PC, RA4::Entity
 
     ControlledVehicle = Vehicle;
     SetClientPhase(ERA4DirectControlClientPhase::Entering);
+
+    // Presentation-only view target switch. The simulation does not care
+    // which Actor the camera is attached to; this is purely for the local
+    // player's view. We blend over the profile's enter time so the camera
+    // moves inside the vehicle smoothly.
+    ARA4EntityActor* EntityActor = SimSubsystem->GetEntityActor(Vehicle);
+    if (EntityActor != nullptr)
+    {
+        PC->SetViewTargetWithBlend(EntityActor, ActiveProfile != nullptr ? ActiveProfile->EnterBlendTime : 0.35f);
+        PC->bShowMouseCursor = false;
+        PC->SetInputMode(FInputModeGameOnly());
+    }
     return true;
 }
 
@@ -156,6 +168,19 @@ bool URA4DirectControlSubsystem::RequestExit(APlayerController* PC)
     Cmd.Primary = ControlledVehicle;
     SubmitCommand(Cmd);
     SetClientPhase(ERA4DirectControlClientPhase::Exiting);
+
+    // Restore the RTS camera pawn as the view target. The blend time matches
+    // the profile's exit transition so the camera glides back out.
+    if (APawn* CamPawn = PC->GetPawn())
+    {
+        PC->SetViewTargetWithBlend(CamPawn, ActiveProfile != nullptr ? ActiveProfile->ExitBlendTime : 0.35f);
+    }
+    PC->bShowMouseCursor = true;
+    FInputModeGameAndUI InputMode;
+    InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+    InputMode.SetHideCursorDuringCapture(false);
+    PC->SetInputMode(InputMode);
+
     ControlledVehicle = RA4::EntityId{};
     ActiveProfile = nullptr;
     return true;
