@@ -86,11 +86,12 @@ turret is rejected with `DirectIneligibleUnit`.
 | Serialize/Deserialize | IMPLEMENTED |
 | Checksum | IMPLEMENTED |
 | Headless tests | IMPLEMENTED (8 passing) |
-| UE-side subsystem | DECLARED |
-| DirectControlProfile DataAsset | DECLARED |
-| DirectControlComponent (presentation) | DATA_ONLY (existing scaffolding in RA4PlayerController) |
+| UE-side subsystem | IMPLEMENTED |
+| DirectControlProfile DataAsset | IMPLEMENTED |
+| DirectControlComponent (presentation) | IMPLEMENTED (subsystem + controller wiring) |
 | Camera sockets on Granit mesh | DECLARED |
-| Combat HUD (UMG/MVVM) | DECLARED |
+| Combat HUD ViewModel | IMPLEMENTED (UMG/MVVM, no NoesisGUI plugin installed) |
+| Combat HUD Widget Blueprint | DECLARED |
 | MetaSound interior mix | DECLARED |
 | Network replication | DECLARED |
 | Test map | DECLARED |
