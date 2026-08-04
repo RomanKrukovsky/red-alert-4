@@ -94,27 +94,40 @@ public:
 
             float MarkerExtent = 4.0f;
             FLinearColor Colour;
+            FLinearColor GlowColour;
             if (Marker.Kind == ERA4RadarMarkerKind::Resource)
             {
                 MarkerExtent = 3.0f;
                 Colour = FLinearColor(0.96f, 0.78f, 0.20f, 1.0f);
+                GlowColour = FLinearColor(0.96f, 0.78f, 0.20f, 0.25f);
             }
             else if (Marker.Owner == LocalPlayer)
             {
                 MarkerExtent = Marker.Kind == ERA4RadarMarkerKind::Building ? 6.0f : 4.0f;
                 Colour = FLinearColor(0.20f, 0.92f, 0.38f, 1.0f);
+                GlowColour = FLinearColor(0.20f, 0.92f, 0.38f, 0.20f);
             }
             else
             {
                 MarkerExtent = Marker.Kind == ERA4RadarMarkerKind::Building ? 6.0f : 4.0f;
                 Colour = FLinearColor(0.96f, 0.22f, 0.16f, 1.0f);
+                GlowColour = FLinearColor(0.96f, 0.22f, 0.16f, 0.20f);
             }
+
+            // Glow halo behind marker
+            const float GlowRadius = MarkerExtent * 2.5f;
+            const FVector2D GlowSize(GlowRadius, GlowRadius);
+            FSlateDrawElement::MakeBox(
+                OutDrawElements, LayerId + 4,
+                AllottedGeometry.ToPaintGeometry(
+                    GlowSize, FSlateLayoutTransform(Centre - GlowSize * 0.5f)),
+                WhiteBrush, ESlateDrawEffect::None, GlowColour);
 
             if (Marker.bSelected)
             {
                 const FVector2D OutlineSize(MarkerExtent + 4.0f, MarkerExtent + 4.0f);
                 FSlateDrawElement::MakeBox(
-                    OutDrawElements, LayerId + 2,
+                    OutDrawElements, LayerId + 5,
                     AllottedGeometry.ToPaintGeometry(
                         OutlineSize, FSlateLayoutTransform(Centre - OutlineSize * 0.5f)),
                     WhiteBrush, ESlateDrawEffect::None, FLinearColor::White);
@@ -122,13 +135,20 @@ public:
 
             const FVector2D MarkerSize(MarkerExtent, MarkerExtent);
             FSlateDrawElement::MakeBox(
-                OutDrawElements, LayerId + 3,
+                OutDrawElements, LayerId + 6,
                 AllottedGeometry.ToPaintGeometry(
                     MarkerSize, FSlateLayoutTransform(Centre - MarkerSize * 0.5f)),
                 WhiteBrush, ESlateDrawEffect::None, Colour);
         }
 
-        return LayerId + 3;
+        // Scanline overlay on top of everything
+        const FLinearColor ScanOverlay(0.04f, 0.06f, 0.08f, 0.08f);
+        FSlateDrawElement::MakeBox(
+            OutDrawElements, LayerId + 7,
+            AllottedGeometry.ToPaintGeometry(Size, FSlateLayoutTransform()),
+            WhiteBrush, ESlateDrawEffect::None, ScanOverlay);
+
+        return LayerId + 7;
     }
 
     virtual FReply OnMouseButtonDown(const FGeometry& MyGeometry,
@@ -327,9 +347,8 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
 
     // --- minimap ------------------------------------------------------------
     {
-        UBorder* Frame = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("MinimapFrame"));
-        Frame->SetBrushColor(kPanelDeep);
-        Frame->SetPadding(FMargin(6.0f));
+        UBorder* Frame = MakeStyledPanel(WidgetTree, TEXT("MinimapFrame"), kPanelDeep);
+        Frame->SetPadding(FMargin(4.0f));
 
         RadarWidget = WidgetTree->ConstructWidget<URA4RadarWidget>(
             URA4RadarWidget::StaticClass(), TEXT("Radar"));
@@ -339,33 +358,41 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
         USizeBox* Sizer = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("MinimapSizer"));
         Sizer->SetHeightOverride(kMinimapHeight);
         Sizer->AddChild(Frame);
-        AddRow(Sizer, 6.0f);
+        AddRow(Sizer, 4.0f);
     }
 
     // --- credits and power --------------------------------------------------
     {
-        UBorder* Frame = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("ResourceFrame"));
-        Frame->SetBrushColor(kPanelDeep);
-        Frame->SetPadding(FMargin(8.0f, 6.0f));
+        UBorder* Frame = MakeStyledPanel(WidgetTree, TEXT("ResourceFrame"), kPanelDeep);
 
         UVerticalBox* Stack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("ResStack"));
 
+        // Credits with coin icon placeholder
+        UHorizontalBox* CreditsRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("CreditsRow"));
+        UTextBlock* CreditsIcon = MakeLabel(WidgetTree, TEXT("CreditsIcon"), kCredits, 14, false);
+        CreditsIcon->SetText(FText::FromString(TEXT("$")));
+        CreditsRow->AddChildToHorizontalBox(CreditsIcon);
         CreditsText = MakeLabel(WidgetTree, TEXT("SidebarCredits"), kCredits, 18, true);
         CreditsText->SetText(FText::AsNumber(0));
-        Stack->AddChildToVerticalBox(CreditsText);
+        CreditsRow->AddChildToHorizontalBox(CreditsText);
+        Stack->AddChildToVerticalBox(CreditsRow);
 
+        // Power with bar visualization
+        UHorizontalBox* PowerRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("PowerRow"));
+        UTextBlock* PowerIcon = MakeLabel(WidgetTree, TEXT("PowerIcon"), kPowerOk, 12, false);
+        PowerIcon->SetText(FText::FromString(TEXT("\x26A1"))); // Lightning bolt
+        PowerRow->AddChildToHorizontalBox(PowerIcon);
         PowerText = MakeLabel(WidgetTree, TEXT("SidebarPower"), kPowerOk, 11, false);
-        Stack->AddChildToVerticalBox(PowerText);
+        PowerRow->AddChildToHorizontalBox(PowerText);
+        Stack->AddChildToVerticalBox(PowerRow);
 
         Frame->AddChild(Stack);
-        AddRow(Frame, 6.0f);
+        AddRow(Frame, 4.0f);
     }
 
     // --- selected object info card ("OBJECT INFO") -------------------
     {
-        UBorder* Frame = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("SelectionFrame"));
-        Frame->SetBrushColor(kPanelDeep);
-        Frame->SetPadding(FMargin(8.0f, 6.0f));
+        UBorder* Frame = MakeStyledPanel(WidgetTree, TEXT("SelectionFrame"), kPanelDeep);
 
         UVerticalBox* Stack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("SelStack"));
 
@@ -394,7 +421,7 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
         Stack->AddChildToVerticalBox(SelectionDetailsText);
 
         Frame->AddChild(Stack);
-        AddRow(Frame, 6.0f);
+        AddRow(Frame, 4.0f);
     }
 
     // --- category tabs ------------------------------------------------------
@@ -424,14 +451,19 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
             }
             TabButtons.Add(Button);
         }
-        AddRow(TabRow, 6.0f);
+        AddRow(TabRow, 4.0f);
     }
 
     // --- build cards --------------------------------------------------------
     {
+        // Section header with hotkey hint
+        UTextBlock* BuildHeader = MakeLabel(WidgetTree, TEXT("BuildHeader"), kTextDim, 9, true);
+        BuildHeader->SetText(NSLOCTEXT("RA4", "Sidebar_BuildHeader", "BUILD"));
+        AddRow(BuildHeader, 2.0f);
+
         CardGrid = WidgetTree->ConstructWidget<UUniformGridPanel>(UUniformGridPanel::StaticClass(), TEXT("CardGrid"));
         CardGrid->SetSlotPadding(FMargin(2.0f));
-        UVerticalBoxSlot* Slot = AddRow(CardGrid, 6.0f);
+        UVerticalBoxSlot* Slot = AddRow(CardGrid, 4.0f);
         if (Slot != nullptr)
         {
             // The card grid takes the leftover height so the queue stays pinned to the
@@ -442,9 +474,13 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
 
     // --- production queue ---------------------------------------------------
     {
-        UBorder* Frame = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("QueueFrame"));
-        Frame->SetBrushColor(kPanelDeep);
-        Frame->SetPadding(FMargin(6.0f));
+        UBorder* Frame = MakeStyledPanel(WidgetTree, TEXT("QueueFrame"), kPanelDeep);
+        Frame->SetPadding(FMargin(4.0f));
+
+        // Queue header
+        UTextBlock* QueueHeader = MakeLabel(WidgetTree, TEXT("QueueHeader"), kTextDim, 9, true);
+        QueueHeader->SetText(NSLOCTEXT("RA4", "Sidebar_QueueHeader", "PRODUCTION QUEUE"));
+        Frame->AddChild(QueueHeader);
 
         QueueBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("QueueBox"));
         Frame->AddChild(QueueBox);

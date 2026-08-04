@@ -51,3 +51,10 @@ __pycache__/
 
 # Headless CMake build artifacts
 /Tools/HeadlessBuild/build/
+
+# Root-level CMake artifacts (accidental configure at repo root)
+/CMakeCache.txt
+/CMakeFiles/
+/CTestTestfile.cmake
+/Makefile
+/cmake_install.cmake
