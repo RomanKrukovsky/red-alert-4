@@ -62,6 +62,7 @@ struct TileCoord
 
     constexpr bool operator==(const TileCoord& O) const { return X == O.X && Y == O.Y; }
     constexpr bool operator!=(const TileCoord& O) const { return !(*this == O); }
+    constexpr bool IsValid() const { return X >= 0 && Y >= 0; }
 };
 
 } // namespace RA4

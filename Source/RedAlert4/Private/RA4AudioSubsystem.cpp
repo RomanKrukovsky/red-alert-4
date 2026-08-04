@@ -65,11 +65,17 @@ void URA4AudioSubsystem::Deinitialize()
 
 USoundBase* URA4AudioSubsystem::FindVoiceClip(const FString& VoiceId, ERA4VoiceEvent Event)
 {
+    const TCHAR* Folder = TEXT("Soviet");
+    if (VoiceId.StartsWith(TEXT("AL_"))) Folder = TEXT("Alliance");
+    else if (VoiceId.StartsWith(TEXT("CO_"))) Folder = TEXT("Coalition");
+    else if (VoiceId.StartsWith(TEXT("CH_"))) Folder = TEXT("Chrono");
+
     // e.g. .../Voice/Soviet/SU_RubezhRifleman/VO_RU_SU_RubezhRifleman_Selected_01
     const FString AssetName =
         FString::Printf(TEXT("VO_RU_%s_%s_01"), *VoiceId, ToEventName(Event));
     const FString ObjectPath =
-        FString::Printf(TEXT("%s/%s/%s.%s"), kVoiceRoot, *VoiceId, *AssetName, *AssetName);
+        FString::Printf(TEXT("/Game/RA4/Audio/Generated/Voice/%s/%s/%s.%s"),
+                         Folder, *VoiceId, *AssetName, *AssetName);
 
     if (TObjectPtr<USoundBase>* Cached = ClipCache.Find(ObjectPath))
     {
