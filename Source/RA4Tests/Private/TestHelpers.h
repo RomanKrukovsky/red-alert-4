@@ -24,6 +24,7 @@ constexpr ContentId SovConscript = MakeContentId("unit.sov.conscript");
 constexpr ContentId SovHeavyTank = MakeContentId("unit.sov.heavy_tank");
 
 constexpr ContentId AllConYard = MakeContentId("building.all.construction_yard");
+constexpr ContentId AllRefinery = MakeContentId("building.all.ore_refinery");
 constexpr ContentId AllRifleman = MakeContentId("unit.all.rifleman");
 constexpr ContentId AllLightTank = MakeContentId("unit.all.light_tank");
 
