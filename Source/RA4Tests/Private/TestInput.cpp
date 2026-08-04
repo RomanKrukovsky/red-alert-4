@@ -8,6 +8,7 @@
 #include "RA4Input/CameraController.h"
 #include "RA4Input/ControlScheme.h"
 #include "RA4Input/HitTest.h"
+#include "RA4Input/KeyBindings.h"
 #include "RA4Input/OrderResolver.h"
 #include "RA4Input/SelectionModel.h"
 
@@ -989,4 +990,204 @@ RA4_TEST(Camera, DKeyPansRightAndAKeyPansLeftOnScreen)
     Advance(Cam2, 0.5f);
     const float FocusAfterA = Cam2.GetFocus().X;
     RA4_EXPECT(FocusAfterA > Start.X);   // moves toward +X: the camera's left
+}
+
+// ---------------------------------------------------------------------------
+// Key bindings.
+//
+// The rules under test are the ones that decide whether a remapped keyboard does
+// what the player asked, and they are exactly the rules that are invisible in PIE
+// until someone edits a config file and the game stops responding.
+// ---------------------------------------------------------------------------
+
+RA4_TEST(KeyBindings, ClassicSchemeGivesAToAttackMoveNotToTheCamera)
+{
+    // The bug this pins down shipped: A was consumed by the camera, so attack-move
+    // was unreachable from the keyboard while the header advertised it on A.
+    KeyBindingTable Table;
+    Table.LoadDefaults(ControlScheme::ClassicRA);
+
+    RA4_EXPECT(Table.Resolve("A", false, false, false) == GameAction::AttackMove);
+    RA4_EXPECT(Table.Resolve("Left", false, false, false) == GameAction::CameraPanLeft);
+}
+
+RA4_TEST(KeyBindings, ModernSchemeGivesAToTheCameraAndAttackMoveToCtrlA)
+{
+    KeyBindingTable Table;
+    Table.LoadDefaults(ControlScheme::Modern);
+
+    RA4_EXPECT(Table.Resolve("A", false, false, false) == GameAction::CameraPanLeft);
+    RA4_EXPECT(Table.Resolve("A", true, false, false) == GameAction::AttackMove);
+}
+
+RA4_TEST(KeyBindings, ExactModifierMatchBeatsTheUnmodifiedBinding)
+{
+    KeyBindingTable Table;
+    Table.LoadDefaults(ControlScheme::ClassicRA);
+
+    KeyChord CtrlA;
+    CtrlA.Key = "A";
+    CtrlA.bCtrl = true;
+    Table.Bind(GameAction::Stop, CtrlA);
+
+    RA4_EXPECT(Table.Resolve("A", true, false, false) == GameAction::Stop);
+    // Adding a chord must not shadow the plain key it is built on.
+    RA4_EXPECT(Table.Resolve("A", false, false, false) == GameAction::AttackMove);
+}
+
+RA4_TEST(KeyBindings, ModifiedPressFallsBackToAnUnmodifiedBinding)
+{
+    // Ctrl+1 has no binding of its own; it has to reach ControlGroup1 so the
+    // controller can read Ctrl itself and choose between assign and recall. Without
+    // this fallback, assigning a control group silently does nothing.
+    KeyBindingTable Table;
+    Table.LoadDefaults(ControlScheme::ClassicRA);
+
+    RA4_EXPECT(Table.Resolve("One", false, false, false) == GameAction::ControlGroup1);
+    RA4_EXPECT(Table.Resolve("One", true, false, false) == GameAction::ControlGroup1);
+    RA4_EXPECT(Table.Resolve("One", false, true, false) == GameAction::ControlGroup1);
+}
+
+RA4_TEST(KeyBindings, ControlGroupSlotsFollowTheKeyRowNotTheLabel)
+{
+    RA4_EXPECT(ControlGroupIndexOf(GameAction::ControlGroup1) == 0);
+    RA4_EXPECT(ControlGroupIndexOf(GameAction::ControlGroup9) == 8);
+    RA4_EXPECT(ControlGroupIndexOf(GameAction::ControlGroup0) == 9);
+    RA4_EXPECT(ControlGroupIndexOf(GameAction::AttackMove) == -1);
+}
+
+RA4_TEST(KeyBindings, ChordParsingAcceptsModifiersInAnyOrderAndIgnoresSpaces)
+{
+    KeyChord Chord;
+    RA4_EXPECT(ParseChord("Ctrl+Shift+A", Chord));
+    RA4_EXPECT(Chord.bCtrl && Chord.bShift && !Chord.bAlt && Chord.Key == "A");
+
+    KeyChord Reordered;
+    RA4_EXPECT(ParseChord(" shift + ctrl + A ", Reordered));
+    RA4_EXPECT(Reordered.bCtrl && Reordered.bShift && Reordered.Key == "A");
+
+    KeyChord Bare;
+    RA4_EXPECT(ParseChord("SpaceBar", Bare));
+    RA4_EXPECT(!Bare.bCtrl && !Bare.bShift && !Bare.bAlt && Bare.Key == "SpaceBar");
+}
+
+RA4_TEST(KeyBindings, EmptyValueUnbindsButGarbageIsRejected)
+{
+    // The distinction matters: clearing a binding is something a player does on
+    // purpose, while a typo has to be reported rather than quietly swallowed.
+    KeyChord Cleared;
+    RA4_EXPECT(ParseChord("", Cleared));
+    RA4_EXPECT(!Cleared.IsBound());
+
+    KeyChord Broken;
+    RA4_EXPECT(!ParseChord("Ctrl+", Broken));
+    RA4_EXPECT(!ParseChord("A+B", Broken));
+    RA4_EXPECT(!ParseChord("+", Broken));
+}
+
+RA4_TEST(KeyBindings, ChordRoundTripsThroughItsText)
+{
+    KeyChord Source;
+    Source.Key = "F4";
+    Source.bCtrl = true;
+    Source.bAlt = true;
+
+    KeyChord Parsed;
+    RA4_EXPECT(ParseChord(ChordToString(Source), Parsed));
+    RA4_EXPECT(Parsed.Key == Source.Key && Parsed.bCtrl && Parsed.bAlt && !Parsed.bShift);
+}
+
+RA4_TEST(KeyBindings, EveryActionNameRoundTrips)
+{
+    for (int32_t Index = 1; Index < kGameActionCount; ++Index)
+    {
+        const GameAction Action = static_cast<GameAction>(Index);
+        RA4_EXPECT(ParseAction(ToString(Action)) == Action);
+    }
+}
+
+RA4_TEST(KeyBindings, FirstOverrideReplacesTheDefaultIncludingItsAlternate)
+{
+    // Rebinding pan-up to a single key must not leave W live underneath it, or the
+    // player is left with a binding they explicitly removed.
+    KeyBindingTable Table;
+    Table.LoadDefaults(ControlScheme::ClassicRA);
+    RA4_EXPECT(Table.Resolve("W", false, false, false) == GameAction::CameraPanUp);
+
+    RA4_EXPECT(Table.ApplyOverride("CameraPanUp", "I") == BindingParseResult::Applied);
+    RA4_EXPECT(Table.Resolve("I", false, false, false) == GameAction::CameraPanUp);
+    RA4_EXPECT(Table.Resolve("W", false, false, false) == GameAction::None);
+    RA4_EXPECT(Table.Resolve("Up", false, false, false) == GameAction::None);
+
+    // A second entry for the same action is how a config asks for two keys.
+    RA4_EXPECT(Table.ApplyOverride("CameraPanUp", "Up") == BindingParseResult::Applied);
+    RA4_EXPECT(Table.Resolve("I", false, false, false) == GameAction::CameraPanUp);
+    RA4_EXPECT(Table.Resolve("Up", false, false, false) == GameAction::CameraPanUp);
+}
+
+RA4_TEST(KeyBindings, BadConfigEntriesAreReportedRatherThanApplied)
+{
+    KeyBindingTable Table;
+    RA4_EXPECT(Table.ApplyOverride("NoSuchAction", "A") == BindingParseResult::UnknownAction);
+    RA4_EXPECT(Table.ApplyOverride("Stop", "Ctrl+") == BindingParseResult::MalformedChord);
+    // A rejected entry must leave the previous binding intact.
+    RA4_EXPECT(Table.Resolve("X", false, false, false) == GameAction::Stop);
+}
+
+RA4_TEST(KeyBindings, DistinctKeysDeduplicatesWithoutCaseSensitivity)
+{
+    KeyBindingTable Table;
+    Table.LoadDefaults(ControlScheme::ClassicRA);
+
+    const std::vector<std::string> Keys = Table.DistinctKeys();
+    for (size_t I = 0; I < Keys.size(); ++I)
+    {
+        for (size_t J = I + 1; J < Keys.size(); ++J)
+        {
+            RA4_EXPECT(!KeyNamesEqual(Keys[I], Keys[J]));
+        }
+    }
+    // The camera alone needs more than a handful, so an empty or truncated list is
+    // a real failure rather than a plausible one.
+    RA4_EXPECT(Keys.size() >= 20);
+}
+
+RA4_TEST(KeyBindings, ShippedDefaultsContainNoConflicts)
+{
+    // A collision in the defaults is a bug players cannot work around without
+    // editing config, so it is worth failing the build over.
+    KeyBindingTable Classic;
+    Classic.LoadDefaults(ControlScheme::ClassicRA);
+    RA4_EXPECT(Classic.FindConflicts().empty());
+
+    KeyBindingTable Modern;
+    Modern.LoadDefaults(ControlScheme::Modern);
+    RA4_EXPECT(Modern.FindConflicts().empty());
+}
+
+RA4_TEST(KeyBindings, ConflictingBindingsAreDetected)
+{
+    KeyBindingTable Table;
+    Table.LoadDefaults(ControlScheme::ClassicRA);
+
+    KeyChord Collide;
+    Collide.Key = "X";   // already Stop
+    Table.Bind(GameAction::Guard, Collide);
+
+    const std::vector<GameAction> Conflicts = Table.FindConflicts();
+    RA4_EXPECT(Conflicts.size() == 1);
+    RA4_EXPECT(!Conflicts.empty() && Conflicts[0] == GameAction::Guard);
+}
+
+RA4_TEST(KeyBindings, PanAndRotateArePolledWhileOrdersAreDispatchedOnPress)
+{
+    RA4_EXPECT(IsHeldAction(GameAction::CameraPanUp));
+    RA4_EXPECT(IsHeldAction(GameAction::CameraPanLeft));
+    RA4_EXPECT(IsHeldAction(GameAction::CameraRotate));
+    RA4_EXPECT(IsHeldAction(GameAction::CameraFastPan));
+
+    RA4_EXPECT(!IsHeldAction(GameAction::AttackMove));
+    RA4_EXPECT(!IsHeldAction(GameAction::Stop));
+    RA4_EXPECT(!IsHeldAction(GameAction::ControlGroup1));
+    RA4_EXPECT(!IsHeldAction(GameAction::CameraCenterOnSelection));
 }

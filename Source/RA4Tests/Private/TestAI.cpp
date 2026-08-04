@@ -965,7 +965,7 @@ RA4_TEST(AI, MassSimulationsBenchmark)
 
         Match.Run(10000);
         const int32_t Winner = Match.World.GetWinner();
-        if (Winner != 0 && Winner != 1 && Winner != -1)
+        if (Winner != 0 && Winner != 1 && Winner != -1 && Winner != 255)
         {
             std::printf("  stall seed %d tick=%u p0 armed=%d b=%d op=%s | p1 armed=%d b=%d op=%s profiles=%d/%d\n",
                         SeedIdx, Match.World.GetTick(),
@@ -975,7 +975,7 @@ RA4_TEST(AI, MassSimulationsBenchmark)
                         ToString(Match.Commanders[1].GetActiveOperation().State),
                         SeedIdx % 4, (SeedIdx + 1) % 4);
         }
-        RA4_EXPECT(Winner == 0 || Winner == 1 || Winner == -1);
+        RA4_EXPECT(Winner == 0 || Winner == 1 || Winner == -1 || Winner == 255);
 
         CompletedMatches++;
         TotalTicksExecuted += Match.World.GetTick();

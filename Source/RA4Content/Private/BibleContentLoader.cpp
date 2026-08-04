@@ -313,6 +313,16 @@ bool LoadBibleContent(ContentDatabase& Db, const std::string& JsonFilePath, std:
     std::ifstream File(JsonFilePath);
     if (!File.is_open())
     {
+        std::string Fallback = "../" + JsonFilePath;
+        File.open(Fallback);
+        if (!File.is_open())
+        {
+            Fallback = "../../" + JsonFilePath;
+            File.open(Fallback);
+        }
+    }
+    if (!File.is_open())
+    {
         OutErrors.push_back("Failed to open JSON file: " + JsonFilePath);
         return false;
     }
