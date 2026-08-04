@@ -31,10 +31,12 @@ Phrases such as *"almost finished"*, *"90% ready"*, or *"minor unresolved bugs"*
   - [X] UMG HUD widgets render resource bar, minimap, and build cards from live `SimWorld` snapshots.
 
 ### Gate 3: Systems Complete
+- **Status**: **PASSED** (Aug 4, 2026).
 - **Binary Criteria**:
-  - [ ] All 4 asymmetric factions implemented in C++ simulation kernel.
-  - [ ] Superweapons, veterancy ranks, and destructible environment triggers functional in `SimWorld`.
-  - [ ] AI Commander completes skirmish matches across all 3 difficulty profiles (Easy, Medium, Hard).
+  - [X] All 4 asymmetric factions (RSU, GDC, PAS, TRO) implemented in C++ simulation kernel.
+  - [X] Superweapons, veterancy ranks, and destructible environment triggers functional in `SimWorld`.
+  - [X] AI Commander completes skirmish matches across all 3 difficulty profiles (Easy, Medium, Hard).
+  - [X] 2,000 active entity stress benchmark passes within 10ms tick time budget.
 
 ### Gate 4: Content Complete
 - **Binary Criteria**:

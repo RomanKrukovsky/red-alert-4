@@ -124,4 +124,56 @@ RA4_TEST(ProvingGround, ForcedDesyncDetection)
     RA4_EXPECT(MainWorld.ComputeStateChecksum() != DesyncWorld.ComputeStateChecksum());
 }
 
+RA4_TEST(ProvingGround, HeadlessStressScenario1000Entities)
+{
+    ContentDatabase Db;
+    BuildDefaultContent(Db);
+
+    SimWorld World;
+    World.Initialize(&Db, MakeTestSetup(4096));
+
+    for (int i = 0; i < 500; ++i)
+    {
+        Vec2 PosP0 = Vec2::FromInts(1000 + (i % 50) * 8, 1000 + (i / 50) * 8);
+        World.SpawnUnit(Ids::SovConscript, 0, PosP0);
+
+        Vec2 PosP1 = Vec2::FromInts(5000 - (i % 50) * 8, 5000 - (i / 50) * 8);
+        World.SpawnUnit(Ids::AllRifleman, 1, PosP1);
+    }
+
+    RA4_EXPECT_EQ(World.GetEntityCapacity(), 1000);
+
+    // Run simulation for 100 ticks
+    RunTicks(World, 100);
+
+    uint64_t StateHash = World.ComputeStateChecksum();
+    RA4_EXPECT(StateHash != 0);
+}
+
+RA4_TEST(ProvingGround, HeadlessStressScenario2000Entities)
+{
+    ContentDatabase Db;
+    BuildDefaultContent(Db);
+
+    SimWorld World;
+    World.Initialize(&Db, MakeTestSetup(8192));
+
+    for (int i = 0; i < 1000; ++i)
+    {
+        Vec2 PosP0 = Vec2::FromInts(1000 + (i % 50) * 8, 1000 + (i / 50) * 8);
+        World.SpawnUnit(Ids::SovConscript, 0, PosP0);
+
+        Vec2 PosP1 = Vec2::FromInts(5000 - (i % 50) * 8, 5000 - (i / 50) * 8);
+        World.SpawnUnit(Ids::AllRifleman, 1, PosP1);
+    }
+
+    RA4_EXPECT_EQ(World.GetEntityCapacity(), 2000);
+
+    // Run simulation for 100 ticks
+    RunTicks(World, 100);
+
+    uint64_t StateHash = World.ComputeStateChecksum();
+    RA4_EXPECT(StateHash != 0);
+}
+
 } // namespace RA4
