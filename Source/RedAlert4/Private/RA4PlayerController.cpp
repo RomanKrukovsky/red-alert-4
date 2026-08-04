@@ -221,6 +221,16 @@ void ARA4PlayerController::DebugForceDefeat()
 // Input binding
 // ---------------------------------------------------------------------------
 
+bool ARA4PlayerController::InputKey(const FInputKeyParams& Params)
+{
+    if (Params.Event == IE_Pressed && Params.Key == EKeys::F)
+    {
+        ToggleDirectControl();
+        return true;
+    }
+    return Super::InputKey(Params);
+}
+
 void ARA4PlayerController::SetupInputComponent()
 {
     Super::SetupInputComponent();
