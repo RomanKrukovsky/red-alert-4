@@ -2593,19 +2593,6 @@ void SimWorld::SystemFogOfWar()
     }
 }
 
-bool SimWorld::IsEntityVisibleTo(PlayerId Viewer, uint32_t EntityIndex) const
-{
-    if (Viewer >= kMaxPlayers) return true;
-    if (!FogGrid) return true;
-    if (EntityIndex >= Core.size() || !Core[EntityIndex].bAlive) return false;
-    
-    if (Core[EntityIndex].Owner == Viewer) return true;
-
-    const TileCoord Tile = Map.WorldToTile(Transforms[EntityIndex].Position);
-    VisibilityState Vis = FogGrid->GetVisibility(static_cast<int32_t>(Viewer), Tile.X, Tile.Y);
-    return Vis == VisibilityState::CurrentlyVisible;
-}
-
 
 // ---------------------------------------------------------------------------
 // Tick
