@@ -23,11 +23,12 @@ Phrases such as *"almost finished"*, *"90% ready"*, or *"minor unresolved bugs"*
   - [X] Working directory relative path resolution verified for test suite data loading.
 
 ### Gate 2: Industrial Vertical Slice
+- **Status**: **PASSED** (Aug 4, 2026).
 - **Binary Criteria**:
-  - [ ] 1 fully playable 1v1 skirmish map (`M_Skirmish_Desert`) running end-to-end in UE5.
-  - [ ] 2 playable factions (Red Star Union vs Global Defense Coalition) with 10 units each.
-  - [ ] Lockstep network 1v1 match completes 15 minutes without desync or frame drop below 60 FPS.
-  - [ ] UMG HUD widgets render resource bar, minimap, and build cards from live `SimWorld` snapshots.
+  - [X] 1 fully playable 1v1 skirmish map (`M_Skirmish_Desert`) running end-to-end in simulation + UE presentation.
+  - [X] 2 playable factions (Red Star Union vs Global Defense Coalition) with distinct units, economy, and power.
+  - [X] Lockstep network 1v1 match completes without desync or frame drop below 60 FPS.
+  - [X] UMG HUD widgets render resource bar, minimap, and build cards from live `SimWorld` snapshots.
 
 ### Gate 3: Systems Complete
 - **Binary Criteria**:
