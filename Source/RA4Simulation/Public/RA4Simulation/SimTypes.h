@@ -267,6 +267,34 @@ struct ProjectileComp
     Fixed Speed = Fixed::Zero();
 };
 
+// --- Direct vehicle control ------------------------------------------------
+//
+// State for a vehicle currently under first-person command. Lives next to the
+// other components and is authoritative: clients send DirectControlDrive/Fire
+// commands; the simulation re-validates ownership, weapon cooldown and ammo,
+// then advances this struct. The presentation layer reads it for the camera
+// and HUD but never writes it.
+enum class DirectControlPhase : uint8_t
+{
+    Inactive = 0,
+    Entering,      // server accepted Enter; transition window before first Drive
+    Active,        // receiving Drive commands
+    Exiting,       // server accepted Exit; transition window back to RTS
+    VehicleDestroyed,
+};
+
+struct DirectControlComp
+{
+    DirectControlPhase Phase = DirectControlPhase::Inactive;
+    PlayerId Controller = kInvalidPlayer;
+    TickIndex PhaseUntilTick = 0;   // when Entering/Exiting window ends
+    int32_t TurretYawCentiDeg = 0;  // accumulated turret yaw, 1/100 deg units
+    int32_t TurretPitchCentiDeg = 0;
+    int32_t CooldownTicksPrimary = 0;
+    int32_t CooldownTicksSecondary = 0;
+    bool bOpticsZoomed = false;
+};
+
 // --- Player ---------------------------------------------------------------
 
 struct PlayerState
@@ -329,6 +357,9 @@ enum class SimEventType : uint8_t
     PowerShortageStarted,
     PowerShortageEnded,
     FactionResourceChanged,
+    DirectControlEntered,
+    DirectControlExited,
+    DirectControlFireRejected,
 };
 
 struct SimEvent

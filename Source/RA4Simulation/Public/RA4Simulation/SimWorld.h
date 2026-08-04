@@ -94,6 +94,7 @@ public:
     const MovementComp* GetMovement(EntityId Id) const;
     const CombatComp* GetCombat(EntityId Id) const;
     const OrderQueue* GetOrders(EntityId Id) const;
+    const DirectControlComp* GetDirectControl(EntityId Id) const;
 
     // Raw slot iteration for systems and for presentation sync. Callers must check
     // Core[i].bAlive; dead slots keep their component data until reused so that a
@@ -161,6 +162,7 @@ private:
     void SystemFogOfWar();
     void SystemVeterancy();
     void SystemFactionResources();
+    void SystemDirectControl();
     void SystemDeaths();
     void SystemVictory();
 
@@ -229,6 +231,7 @@ private:
     std::vector<ResourceNodeComp> ResourceNodes;
     std::vector<ProjectileComp> Projectiles;
     std::vector<OrderQueue> Orders;
+    std::vector<DirectControlComp> DirectControls;
 
     std::vector<uint32_t> FreeSlots;
     uint32_t HighWaterMark = 0;

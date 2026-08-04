@@ -23,6 +23,10 @@ const char* ToString(CommandType Type)
         case CommandType::SellBuilding: return "SellBuilding";
         case CommandType::RepairBuilding: return "RepairBuilding";
         case CommandType::Surrender: return "Surrender";
+        case CommandType::DirectControlEnter: return "DirectControlEnter";
+        case CommandType::DirectControlExit: return "DirectControlExit";
+        case CommandType::DirectControlDrive: return "DirectControlDrive";
+        case CommandType::DirectControlFire: return "DirectControlFire";
         default: return "Unknown";
     }
 }
@@ -47,6 +51,11 @@ const char* ToString(CommandReject Reason)
         case CommandReject::RateLimited: return "RateLimited";
         case CommandReject::CommandCapExceeded: return "CommandCapExceeded";
         case CommandReject::MatchOver: return "MatchOver";
+        case CommandReject::DirectIneligibleUnit: return "DirectIneligibleUnit";
+        case CommandReject::DirectAlreadyControlled: return "DirectAlreadyControlled";
+        case CommandReject::DirectNotControlling: return "DirectNotControlling";
+        case CommandReject::DirectWeaponCooldown: return "DirectWeaponCooldown";
+        case CommandReject::DirectWeaponEmpty: return "DirectWeaponEmpty";
         default: return "Unknown";
     }
 }
