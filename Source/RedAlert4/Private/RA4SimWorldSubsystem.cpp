@@ -583,19 +583,33 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
         return;
     }
 
+    // Audio is optional: it is absent in PIE sessions that start without the subsystem
+    // and in any headless-ish configuration. Bailing out here would also take every
+    // muzzle line and impact marker below with it, which is why combat used to render
+    // as nothing at all rather than as a silent fight. Each playback site checks
+    // instead, so sound can be missing without the fight becoming invisible.
     URA4AudioSubsystem* Audio = UnrealWorld->GetSubsystem<URA4AudioSubsystem>();
-    if (Audio == nullptr)
-    {
-        return;
-    }
 
     constexpr RA4::PlayerId LocalPlayer = 0;
     const RA4::PlayerState& Player = SimWorld->GetPlayer(LocalPlayer);
     const uint8 Faction = static_cast<uint8>(Player.Faction);
 
+    const auto PlayEVA =
+        [Audio, Faction](ERA4EVAEvent EVAEvent, bool bBypassCooldown = false)
+    {
+        if (Audio != nullptr)
+        {
+            Audio->PlayEVA(Faction, EVAEvent, bBypassCooldown);
+        }
+    };
+
     const auto PlayVoiceForContent =
         [this, Audio](RA4::ContentId ContentId, ERA4VoiceEvent VoiceEvent, bool bBypassCooldown)
     {
+        if (Audio == nullptr)
+        {
+            return;
+        }
         const RA4::VoiceSetDef* VoiceSet = Content->FindVoiceSet(ContentId);
         if (VoiceSet != nullptr && !VoiceSet->VoiceId.empty())
         {
@@ -618,7 +632,7 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
                     PlayVoiceForContent(Core->Def, ERA4VoiceEvent::Damaged, false);
                     if (Core->Kind == RA4::EntityKind::Building)
                     {
-                        Audio->PlayEVA(Faction, ERA4EVAEvent::BaseUnderAttack);
+                        PlayEVA(ERA4EVAEvent::BaseUnderAttack);
                     }
                 }
             }
@@ -630,7 +644,7 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
                 const RA4::EntityDef* Def = Content->FindEntity(Event.Content);
                 if (Def != nullptr && Def->Kind == RA4::EntityKind::Building)
                 {
-                    Audio->PlayEVA(Faction, ERA4EVAEvent::BuildingLost);
+                    PlayEVA(ERA4EVAEvent::BuildingLost);
                 }
                 else
                 {
@@ -655,14 +669,14 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
         case RA4::SimEventType::BuildingCompleted:
             if (Event.Player == LocalPlayer)
             {
-                Audio->PlayEVA(Faction, ERA4EVAEvent::ConstructionComplete);
+                PlayEVA(ERA4EVAEvent::ConstructionComplete);
             }
             break;
 
         case RA4::SimEventType::ProductionCompleted:
             if (Event.Player == LocalPlayer)
             {
-                Audio->PlayEVA(Faction, ERA4EVAEvent::UnitReady);
+                PlayEVA(ERA4EVAEvent::UnitReady);
             }
             break;
 
@@ -670,13 +684,12 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
             if (Event.Player == LocalPlayer &&
                 Event.Value == int32(RA4::CommandReject::InsufficientCredits))
             {
-                Audio->PlayEVA(Faction, ERA4EVAEvent::InsufficientFunds);
+                PlayEVA(ERA4EVAEvent::InsufficientFunds);
             }
             break;
 
         case RA4::SimEventType::MatchEnded:
-            Audio->PlayEVA(
-                Faction,
+            PlayEVA(
                 Event.Player == LocalPlayer ? ERA4EVAEvent::Victory : ERA4EVAEvent::Defeat,
                 true);
             break;
@@ -719,7 +732,7 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
         Player.PowerConsumed > 0 && Player.PowerProduced < Player.PowerConsumed;
     if (bPowerShortage && !bWasLocalPowerShortage)
     {
-        Audio->PlayEVA(Faction, ERA4EVAEvent::PowerLow);
+        PlayEVA(ERA4EVAEvent::PowerLow);
     }
     bWasLocalPowerShortage = bPowerShortage;
 }
@@ -768,9 +781,32 @@ void URA4SimWorldSubsystem::SyncPresentation()
             bool bNewActor = false;
             if (ARA4EntityActor** ActorPtr = EntityActors.Find(Index))
             {
-                Actor = *ActorPtr;
+                // The slot may have been recycled since this actor was bound. SimWorld
+                // frees a slot in the same breath as bumping its generation, so an
+                // entity that died and one that took its place between two syncs are
+                // indistinguishable by bAlive -- both read as alive at this index. Left
+                // unchecked, the dead unit's actor is silently handed to the new entity
+                // and keeps its mesh, scale and team colour. Retire it instead and let
+                // the spawn path below build the right one.
+                //
+                // IsValid comes first because this map holds raw pointers outside any
+                // UPROPERTY, so an entry can outlive the actor it names.
+                if (!IsValid(*ActorPtr))
+                {
+                    EntityActors.Remove(Index);
+                }
+                else if ((*ActorPtr)->GetEntityGeneration() == Cores[Index].Generation)
+                {
+                    Actor = *ActorPtr;
+                }
+                else
+                {
+                    (*ActorPtr)->Destroy();
+                    EntityActors.Remove(Index);
+                }
             }
-            else if (World)
+
+            if (Actor == nullptr && World)
             {
                 // Auto-spawn presentation actor if registered class is set
                 FActorSpawnParameters SpawnParams;

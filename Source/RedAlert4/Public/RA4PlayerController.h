@@ -132,6 +132,7 @@ private:
     void OnZoomOut();
     void OnStopPressed();
     void OnGuardPressed();
+    void OnAttackMovePressed();
     void OnControlGroupKeyByKey(FKey Key);
     void OnControlGroupKey(int32 GroupIndex);
 #if !UE_BUILD_SHIPPING

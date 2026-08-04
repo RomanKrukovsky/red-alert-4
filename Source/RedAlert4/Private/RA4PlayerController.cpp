@@ -243,18 +243,23 @@ void ARA4PlayerController::SetupInputComponent()
     InputComponent->BindKey(EKeys::MouseScrollUp, IE_Pressed, this, &ARA4PlayerController::OnZoomIn);
     InputComponent->BindKey(EKeys::MouseScrollDown, IE_Pressed, this, &ARA4PlayerController::OnZoomOut);
 
-    // Ensure WASD and arrow keys are tracked by PlayerInput for camera panning
+    // Ensure WASD and arrow keys are tracked by PlayerInput for camera panning.
+    // A is deliberately absent: it arms attack-move below, which is what the genre
+    // and this class's own documentation expect of it. Panning left is left to the
+    // arrow key, the screen edge and the middle-mouse drag.
     InputComponent->BindKey(EKeys::W, IE_Pressed, this, &ARA4PlayerController::OnDummyPanKey);
     InputComponent->BindKey(EKeys::S, IE_Pressed, this, &ARA4PlayerController::OnDummyPanKey);
-    InputComponent->BindKey(EKeys::A, IE_Pressed, this, &ARA4PlayerController::OnDummyPanKey);
     InputComponent->BindKey(EKeys::D, IE_Pressed, this, &ARA4PlayerController::OnDummyPanKey);
     InputComponent->BindKey(EKeys::Up, IE_Pressed, this, &ARA4PlayerController::OnDummyPanKey);
     InputComponent->BindKey(EKeys::Down, IE_Pressed, this, &ARA4PlayerController::OnDummyPanKey);
     InputComponent->BindKey(EKeys::Left, IE_Pressed, this, &ARA4PlayerController::OnDummyPanKey);
+    // Right was missing from this list while its three neighbours were present.
+    InputComponent->BindKey(EKeys::Right, IE_Pressed, this, &ARA4PlayerController::OnDummyPanKey);
     InputComponent->BindKey(EKeys::SpaceBar, IE_Pressed, this, &ARA4PlayerController::OnDummyPanKey);
     InputComponent->BindKey(EKeys::SpaceBar, IE_Released, this, &ARA4PlayerController::OnDummyPanKey);
 
     InputComponent->BindKey(EKeys::F, IE_Pressed, this, &ARA4PlayerController::OnDirectControlTogglePressed);
+    InputComponent->BindKey(EKeys::A, IE_Pressed, this, &ARA4PlayerController::OnAttackMovePressed);
     InputComponent->BindKey(EKeys::X, IE_Pressed, this, &ARA4PlayerController::OnStopPressed);
     InputComponent->BindKey(EKeys::G, IE_Pressed, this, &ARA4PlayerController::OnGuardPressed);
     InputComponent->BindKey(EKeys::Tilde, IE_Pressed, this, &ARA4PlayerController::ToggleCheatConsole);
@@ -307,7 +312,7 @@ void ARA4PlayerController::PlayerTick(float DeltaTime)
         }
     }
 
-    const URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
+    URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
     const SimWorld* World = Subsystem != nullptr ? Subsystem->GetSimWorld() : nullptr;
     if (World == nullptr)
     {
@@ -317,6 +322,13 @@ void ARA4PlayerController::PlayerTick(float DeltaTime)
     // A unit that died this tick has to leave the selection immediately, or the
     // next order references a stale handle and the server rejects it.
     Selection.PruneDead(*World);
+
+    // The HUD reads the selection out of the snapshot, not out of this controller,
+    // so it has to be handed over every frame. Doing it here rather than at each
+    // call site covers every way the selection can change -- click, marquee,
+    // control group, and the prune immediately above -- and costs one vector copy
+    // of a list that is bounded by what a player can select.
+    Subsystem->SetSelectedEntitiesForHUD(Selection.Get());
 
     if (bDirectControlActive)
     {
@@ -532,8 +544,10 @@ void ARA4PlayerController::UpdateCameraInput(float DeltaTime)
     }
     CameraController& Camera = CameraPawn->GetCameraController();
 
+    // A is not read here: it arms attack-move. Left is panned with the arrow key,
+    // the screen edge or the middle-mouse drag.
     const float Right = (IsInputKeyDown(EKeys::D) || IsInputKeyDown(EKeys::Right) ? 1.0f : 0.0f) -
-                        (IsInputKeyDown(EKeys::A) || IsInputKeyDown(EKeys::Left) ? 1.0f : 0.0f);
+                        (IsInputKeyDown(EKeys::Left) ? 1.0f : 0.0f);
     const float Up = (IsInputKeyDown(EKeys::W) || IsInputKeyDown(EKeys::Up) ? 1.0f : 0.0f) -
                      (IsInputKeyDown(EKeys::S) || IsInputKeyDown(EKeys::Down) ? 1.0f : 0.0f);
 
@@ -1143,6 +1157,30 @@ void ARA4PlayerController::OnGuardPressed()
         Commands.push_back(C);
     }
     SubmitOrders(Commands);
+}
+
+void ARA4PlayerController::OnAttackMovePressed()
+{
+    const URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
+    const SimWorld* World = Subsystem != nullptr ? Subsystem->GetSimWorld() : nullptr;
+    if (World == nullptr)
+    {
+        return;
+    }
+
+    // Arming with nothing to order would leave the cursor stuck in attack-move until
+    // the player found Escape: the click that follows resolves against an empty
+    // selection, issues no command, and so never clears the mode. Only units the
+    // player owns can carry the order, which is the same filter stop and guard use.
+    for (const EntityId& Id : Selection.Get())
+    {
+        const EntityCore* Core = World->GetCore(Id);
+        if (Core != nullptr && Core->Owner == Selection.GetLocalPlayer() && Core->Kind == EntityKind::Unit)
+        {
+            ArmAttackMove();
+            return;
+        }
+    }
 }
 
 // The cursor is the only feedback the player gets before committing a click, so it

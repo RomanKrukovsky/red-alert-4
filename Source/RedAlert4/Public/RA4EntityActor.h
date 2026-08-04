@@ -27,6 +27,12 @@ public:
     UFUNCTION(BlueprintPure, Category = "Simulation")
     int32 GetEntityIndex() const { return static_cast<int32>(EntityIndex); }
 
+    // Returns the generation this Actor was bound at. The simulation recycles entity
+    // slots, so the index alone does not identify an entity: a slot freed on one tick
+    // can be handed to a different unit before presentation next runs. The generation
+    // is what tells the two apart.
+    uint32 GetEntityGeneration() const { return EntityGeneration; }
+
     // Sets the static mesh representation for this entity actor.
     UFUNCTION(BlueprintCallable, Category = "Visuals")
     void SetEntityMesh(UStaticMesh* InMesh);
