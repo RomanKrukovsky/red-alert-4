@@ -4,11 +4,46 @@
 #include <chrono>
 #include <cstring>
 
+#if defined(_WIN32)
+#include <direct.h>
+#define RA4_CHDIR _chdir
+#else
+#include <unistd.h>
+#define RA4_CHDIR chdir
+#endif
+
+namespace
+{
+
+// Content-loading tests open paths relative to the repository root. Whether that
+// happens to be the working directory depends on where the binary was launched
+// from, so running out of the build directory used to fail eighteen tests on file
+// paths while reporting them as content errors. The root is baked in at configure
+// time and entered here, once, so no test has to care.
+void EnterRepositoryRoot()
+{
+#if defined(RA4_REPO_ROOT)
+    if (RA4_CHDIR(RA4_REPO_ROOT) != 0)
+    {
+        std::printf("[ WARN ] could not enter repository root %s; "
+                    "content-loading tests will fail on paths\n",
+                    RA4_REPO_ROOT);
+    }
+#else
+    std::printf("[ WARN ] RA4_REPO_ROOT not defined; content-loading tests depend on "
+                "the working directory\n");
+#endif
+}
+
+} // namespace
+
 int main(int argc, char** argv)
 {
     // Unbuffered: if a test crashes the harness, the name of the test that did it
     // must already be on the terminal.
     std::setvbuf(stdout, nullptr, _IONBF, 0);
+
+    EnterRepositoryRoot();
 
     const char* Filter = nullptr;
     bool bListOnly = false;

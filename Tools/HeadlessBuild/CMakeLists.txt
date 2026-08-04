@@ -16,6 +16,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 set(RA4_SOURCE_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../Source)
+get_filename_component(RA4_REPO_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../.. ABSOLUTE)
 
 # Warnings are errors here. The simulation is the one place where an implicit
 # narrowing conversion or an uninitialised field turns into a desync that only
@@ -38,6 +39,12 @@ endif()
 # its Unreal branch and reaching for CoreMinimal.h, which broke this build -- and with
 # it the determinism job that is the whole reason the build exists.
 add_compile_definitions(HEADLESS_BUILD=1 RA4_HEADLESS=1)
+
+# Content-loading tests open paths relative to the repository root. The test runner
+# enters this directory at startup so a run from the build tree and a run from the
+# repository root produce the same result -- otherwise eighteen tests fail on file
+# paths and report it as missing content.
+add_compile_definitions(RA4_REPO_ROOT="${RA4_REPO_ROOT}")
 
 add_library(RA4Core STATIC
     ${RA4_SOURCE_ROOT}/RA4Core/Private/FixedMath.cpp
