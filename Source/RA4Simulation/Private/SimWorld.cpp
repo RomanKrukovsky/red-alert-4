@@ -2229,17 +2229,25 @@ bool SimWorld::IsEntityVisibleTo(PlayerId Viewer, uint32_t EntityIndex) const
     // Fog is optional. A match configured without it, and every headless fixture that
     // never builds a grid, has to behave as though the map is in the open -- the
     // alternative is that absent fog blinds every side and combat stops entirely.
-    if (FogGrid == nullptr)
+    if (Viewer >= kMaxPlayers || FogGrid == nullptr)
     {
         return true;
     }
-    if (Viewer >= kMaxPlayers || int32_t(Viewer) >= FogGrid->GetNumPlayers())
+    if (int32_t(Viewer) >= FogGrid->GetNumPlayers())
     {
         return true;
     }
-    if (EntityIndex >= Transforms.size())
+    if (EntityIndex >= Core.size() || !Core[EntityIndex].bAlive)
     {
         return false;
+    }
+
+    // A side always sees its own. The grid is rebuilt from unit vision every tick, so
+    // asking it about a friendly unit is asking whether that unit reveals itself --
+    // true today, but not something the answer should depend on.
+    if (Core[EntityIndex].Owner == Viewer)
+    {
+        return true;
     }
 
     const TileCoord Tile = Map.WorldToTile(Transforms[EntityIndex].Position);
