@@ -21,8 +21,10 @@ Total execution time: 14.66 seconds
 
 All 15 module dylibs are produced in `Binaries/Mac/`, including
 `libUnrealEditor-RA4UI.dylib` (1.5 MB). The previous `BLOCKED_PLUGIN_MISSING` verdict for
-`RA4UI` is stale: Noesis was abandoned, `RA4UI` now builds against UMG/CommonUI/MVVM, and
-no `RA4NoesisHUDViewModel.*` file exists in `Source/RA4UI`.
+`RA4UI` is stale. `RA4NoesisHUDViewModel.h/.cpp` do still exist, but they include only
+`CoreMinimal.h` and `RA4HUDViewModel.h` — no Noesis headers whatsoever. The class is a
+plain `URA4HUDViewModel` subclass with a default constructor, so nothing links against a
+Noesis runtime and the build cannot be blocked by the missing plugin. See UI_AUDIT.md §2.
 
 ## 2. Engine version — resolve the ambiguity
 
