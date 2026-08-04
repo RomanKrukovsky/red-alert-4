@@ -70,6 +70,9 @@ public:
     UFUNCTION(BlueprintPure, Category = "DirectControl")
     class UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
 
+    UFUNCTION(BlueprintPure, Category = "DirectControl")
+    class USpringArmComponent* GetSpringArmComponent() const { return SpringArmComponent; }
+
 protected:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
@@ -79,6 +82,9 @@ protected:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     TObjectPtr<USkeletalMeshComponent> SkeletalMeshComponent;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    TObjectPtr<class USpringArmComponent> SpringArmComponent;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     TObjectPtr<class UCameraComponent> FirstPersonCameraComponent;

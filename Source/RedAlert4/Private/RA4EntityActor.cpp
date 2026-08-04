@@ -4,6 +4,7 @@
 #include "RA4Presentation/RA4ArtMapping.h"
 
 #include "Camera/CameraComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "Components/DecalComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/MeshComponent.h"
@@ -22,9 +23,16 @@ ARA4EntityActor::ARA4EntityActor()
     SetRootComponent(MeshComponent);
     MeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision); // Collision is handled by simulation core
 
+    SpringArmComponent = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArmComponent"));
+    SpringArmComponent->SetupAttachment(MeshComponent);
+    SpringArmComponent->TargetArmLength = 400.0f;
+    // To the left and slightly up
+    SpringArmComponent->SocketOffset = FVector(0.0f, -200.0f, 150.0f); 
+    SpringArmComponent->bDoCollisionTest = true;
+    SpringArmComponent->bUsePawnControlRotation = false;
+
     FirstPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCameraComponent"));
-    FirstPersonCameraComponent->SetupAttachment(MeshComponent);
-    FirstPersonCameraComponent->SetRelativeLocation(FVector(0.0f, 0.0f, 80.0f));
+    FirstPersonCameraComponent->SetupAttachment(SpringArmComponent);
     FirstPersonCameraComponent->bUsePawnControlRotation = false;
 
     SkeletalMeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalMeshComponent"));

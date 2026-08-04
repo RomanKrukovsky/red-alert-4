@@ -116,6 +116,8 @@ void AICommander::Reset()
     LastScoutOrderTick = 0;
     bHasScoutOrder = false;
     ActiveOperation = TacticalOperation();
+    Threats.Clear();
+    Values.Clear();
     DecisionLog.clear();
     // The doctrine is the only Reset exception: it depends on the commander's
     // faction, which is world state, so it is re-resolved on the next first Tick.
@@ -669,6 +671,14 @@ bool AICommander::FindKnownEnemyTarget(KnownTarget& Out) const
                     if (HasRole(Def->Roles, EntityRole::Harvester)) Score += 40;
                 }
             }
+        }
+
+        // Spatial awareness bonus from ValueMap: high-value positions score higher.
+        if (Values.IsValid())
+        {
+            const int32_t TileX = std::max(0, std::min(Mem.Position.X, Values.GetWidth() - 1));
+            const int32_t TileY = std::max(0, std::min(Mem.Position.Y, Values.GetHeight() - 1));
+            Score += Values.GetStrategicValue(TileCoord(TileX, TileY)) / 100;
         }
 
         if (BestTarget == nullptr || Score > BestScore ||

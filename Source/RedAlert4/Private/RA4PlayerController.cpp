@@ -23,6 +23,7 @@
 #include "UnrealClient.h"
 #include "EngineUtils.h"
 #include "Camera/CameraComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 
 #include "RA4Content/ContentDatabase.h"
 #include "RA4Core/SimConfig.h"
@@ -244,6 +245,7 @@ void ARA4PlayerController::SetupInputComponent()
 
     InputComponent->BindKey(EKeys::MouseScrollUp, IE_Pressed, this, &ARA4PlayerController::OnZoomIn);
     InputComponent->BindKey(EKeys::MouseScrollDown, IE_Pressed, this, &ARA4PlayerController::OnZoomOut);
+    InputComponent->BindKey(EKeys::F, IE_Pressed, this, &ARA4PlayerController::ToggleDirectControl);
 
     // Ensure WASD and arrow keys are tracked by PlayerInput for camera panning.
     // A is deliberately absent: it arms attack-move below, which is what the genre
@@ -1671,9 +1673,9 @@ void ARA4PlayerController::UpdateDirectControl(float DeltaTime)
     ARA4EntityActor* EntityActor = Subsystem != nullptr ? Subsystem->GetEntityActor(DirectControlEntityId) : nullptr;
     if (EntityActor != nullptr)
     {
-        if (UCameraComponent* FPCamera = EntityActor->GetFirstPersonCameraComponent())
+        if (USpringArmComponent* SpringArm = EntityActor->GetSpringArmComponent())
         {
-            FPCamera->SetWorldRotation(DirectControlCameraRotation);
+            SpringArm->SetWorldRotation(DirectControlCameraRotation);
         }
         EntityActor->SetActorRotation(FRotator(0.0f, DirectControlCameraRotation.Yaw, 0.0f));
         SetControlRotation(DirectControlCameraRotation);
