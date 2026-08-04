@@ -997,6 +997,22 @@ void URA4SimWorldSubsystem::UnregisterEntityActor(int32 EntityIndex)
     EntityActors.Remove(static_cast<uint32>(EntityIndex));
 }
 
+ARA4EntityActor* URA4SimWorldSubsystem::GetEntityActor(int32 EntityIndex) const
+{
+    if (EntityIndex < 0) return nullptr;
+    if (const ARA4EntityActor* const* ActorPtr = EntityActors.Find(static_cast<uint32>(EntityIndex)))
+    {
+        return *ActorPtr;
+    }
+    return nullptr;
+}
+
+ARA4EntityActor* URA4SimWorldSubsystem::GetEntityActor(RA4::EntityId Id) const
+{
+    if (!Id.IsValid()) return nullptr;
+    return GetEntityActor(static_cast<int32>(Id.Value));
+}
+
 void URA4SimWorldSubsystem::LoadBlockoutMesh(uint32 ContentIdValue, const TCHAR* AssetPath)
 {
     if (UStaticMesh* Mesh = Cast<UStaticMesh>(StaticLoadObject(UStaticMesh::StaticClass(), nullptr, AssetPath)))

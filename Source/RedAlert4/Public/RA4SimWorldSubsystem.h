@@ -58,6 +58,11 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Simulation")
     void UnregisterEntityActor(int32 EntityIndex);
 
+    // Returns the presentation actor for a given simulation entity ID
+    UFUNCTION(BlueprintCallable, Category = "Simulation")
+    ARA4EntityActor* GetEntityActor(int32 EntityIndex) const;
+    ARA4EntityActor* GetEntityActor(RA4::EntityId Id) const;
+
     // Read-only view of the authoritative state, for input picking and the HUD.
     // Nothing outside the simulation may mutate it directly.
     const RA4::SimWorld* GetSimWorld() const { return SimWorld; }

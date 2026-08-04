@@ -1519,6 +1519,7 @@ void ARA4PlayerController::EnterDirectControl(int64 EntityIdValue)
     ARA4EntityActor* EntityActor = Subsystem->GetEntityActor(TargetId);
     if (EntityActor == nullptr)
     {
+        UE_LOG(LogTemp, Warning, TEXT("RA4 Direct Control: No presentation actor for entity %lld"), EntityIdValue);
         return;
     }
 
@@ -1526,12 +1527,17 @@ void ARA4PlayerController::EnterDirectControl(int64 EntityIdValue)
     DirectControlEntityId = TargetId;
     DirectControlCameraRotation = EntityActor->GetPossessionCameraRotation();
 
-    SetViewTarget(EntityActor);
+    SetViewTargetWithBlend(EntityActor, 0.2f);
     bShowMouseCursor = false;
 
     FInputModeGameOnly InputMode;
     SetInputMode(InputMode);
 
+    if (GEngine != nullptr)
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green,
+            FString::Printf(TEXT("[FPS MODE ON] Direct Control active on Unit #%lld (Press F to exit)"), EntityIdValue));
+    }
     UE_LOG(LogTemp, Display, TEXT("RA4 First Person Direct Control activated for entity %lld"), EntityIdValue);
 }
 
@@ -1542,7 +1548,7 @@ void ARA4PlayerController::ExitDirectControl()
 
     if (ARA4CameraPawn* CameraPawn = GetCameraPawn())
     {
-        SetViewTarget(CameraPawn);
+        SetViewTargetWithBlend(CameraPawn, 0.2f);
     }
 
     bShowMouseCursor = true;
@@ -1551,6 +1557,10 @@ void ARA4PlayerController::ExitDirectControl()
     InputMode.SetHideCursorDuringCapture(false);
     SetInputMode(InputMode);
 
+    if (GEngine != nullptr)
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Yellow, TEXT("[FPS MODE OFF] RTS View Returned"));
+    }
     UE_LOG(LogTemp, Display, TEXT("RA4 First Person Direct Control deactivated"));
 }
 
