@@ -286,6 +286,12 @@ void ARA4PlayerController::PlayerTick(float DeltaTime)
 {
     Super::PlayerTick(DeltaTime);
 
+    // Press F at any time to toggle First-Person Direct Control
+    if (WasInputKeyJustPressed(EKeys::F))
+    {
+        ToggleDirectControl();
+    }
+
     if (!bMatchResultEventsBound)
     {
         BindMatchResultEvents();
@@ -328,11 +334,7 @@ void ARA4PlayerController::PlayerTick(float DeltaTime)
     // call site covers every way the selection can change -- click, marquee,
     // control group, and the prune immediately above -- and costs one vector copy
     // of a list that is bounded by what a player can select.
-    // Allow pressing F at any time to toggle First-Person Direct Control
-    if (WasInputKeyJustPressed(EKeys::F))
-    {
-        ToggleDirectControl();
-    }
+    Subsystem->SetSelectedEntitiesForHUD(Selection.Get());
 
     if (bDirectControlActive)
     {
@@ -1482,31 +1484,87 @@ void ARA4PlayerController::ToggleDirectControl()
     if (bDirectControlActive)
     {
         ExitDirectControl();
+        return;
     }
-    else
+
+    // 1. Try selected entity
+    EntityId TargetEntity = Selection.GetPrimary();
+    if (!TargetEntity.IsValid())
     {
-        const EntityId Primary = Selection.GetPrimary();
-        if (Primary.IsValid())
+        const auto& Selected = Selection.Get();
+        if (!Selected.empty())
         {
-            EnterDirectControl(static_cast<int64>(Primary.Value));
+            TargetEntity = Selected[0];
         }
-        else
+    }
+
+    if (TargetEntity.IsValid())
+    {
+        EnterDirectControl(static_cast<int64>(TargetEntity.Value));
+        return;
+    }
+
+    // 2. Try any alive unit/building of local player from simulation
+    if (const URA4SimWorldSubsystem* Subsystem = GetSimSubsystem())
+    {
+        if (const SimWorld* World = Subsystem->GetSimWorld())
         {
-            if (const URA4SimWorldSubsystem* Subsystem = GetSimSubsystem())
+            const auto& Cores = World->GetAllCores();
+            // First pass: local player units
+            for (size_t Index = 0; Index < Cores.size(); ++Index)
             {
-                if (const SimWorld* World = Subsystem->GetSimWorld())
+                if (Cores[Index].bAlive && Cores[Index].Owner == Selection.GetLocalPlayer() && Cores[Index].Kind == EntityKind::Unit)
                 {
-                    const auto& Cores = World->GetAllCores();
-                    for (size_t Index = 0; Index < Cores.size(); ++Index)
-                    {
-                        if (Cores[Index].bAlive && Cores[Index].Owner == Selection.GetLocalPlayer())
-                        {
-                            EnterDirectControl(static_cast<int64>(Index));
-                            return;
-                        }
-                    }
+                    EnterDirectControl(static_cast<int64>(Index));
+                    return;
                 }
             }
+            // Second pass: local player buildings / any owned entity
+            for (size_t Index = 0; Index < Cores.size(); ++Index)
+            {
+                if (Cores[Index].bAlive && Cores[Index].Owner == Selection.GetLocalPlayer())
+                {
+                    EnterDirectControl(static_cast<int64>(Index));
+                    return;
+                }
+            }
+            // Third pass: any alive entity in match
+            for (size_t Index = 0; Index < Cores.size(); ++Index)
+            {
+                if (Cores[Index].bAlive)
+                {
+                    EnterDirectControl(static_cast<int64>(Index));
+                    return;
+                }
+            }
+        }
+    }
+
+    // 3. Try any spawned ARA4EntityActor in Unreal World
+    if (UWorld* World = GetWorld())
+    {
+        for (TActorIterator<ARA4EntityActor> It(World); It; ++It)
+        {
+            if (*It != nullptr)
+            {
+                EnterDirectControl(static_cast<int64>((*It)->GetEntityIndex()));
+                return;
+            }
+        }
+    }
+
+    // 4. Fallback: First-Person Free-Cam mode on camera pawn
+    if (ARA4CameraPawn* CameraPawn = GetCameraPawn())
+    {
+        bDirectControlActive = true;
+        DirectControlCameraRotation = CameraPawn->GetActorRotation();
+        bShowMouseCursor = false;
+        SetInputMode(FInputModeGameOnly());
+
+        if (GEngine != nullptr)
+        {
+            GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green,
+                TEXT("[FPS MODE ON] Free-Cam Active (Press F or Esc to exit)"));
         }
     }
 }
@@ -1514,35 +1572,42 @@ void ARA4PlayerController::ToggleDirectControl()
 void ARA4PlayerController::EnterDirectControl(int64 EntityIdValue)
 {
     URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
-    if (Subsystem == nullptr)
-    {
-        return;
-    }
-
     EntityId TargetId(static_cast<uint32_t>(EntityIdValue));
-    ARA4EntityActor* EntityActor = Subsystem->GetEntityActor(TargetId);
+    ARA4EntityActor* EntityActor = Subsystem != nullptr ? Subsystem->GetEntityActor(TargetId) : nullptr;
+
     if (EntityActor == nullptr)
     {
-        UE_LOG(LogTemp, Warning, TEXT("RA4 Direct Control: No presentation actor for entity %lld"), EntityIdValue);
-        return;
+        if (UWorld* World = GetWorld())
+        {
+            for (TActorIterator<ARA4EntityActor> It(World); It; ++It)
+            {
+                if (*It != nullptr)
+                {
+                    EntityActor = *It;
+                    TargetId = EntityId(static_cast<uint32_t>(EntityActor->GetEntityIndex()));
+                    break;
+                }
+            }
+        }
     }
 
-    bDirectControlActive = true;
-    DirectControlEntityId = TargetId;
-    DirectControlCameraRotation = EntityActor->GetPossessionCameraRotation();
-
-    SetViewTargetWithBlend(EntityActor, 0.2f);
-    bShowMouseCursor = false;
-
-    FInputModeGameOnly InputMode;
-    SetInputMode(InputMode);
-
-    if (GEngine != nullptr)
+    if (EntityActor != nullptr)
     {
-        GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green,
-            FString::Printf(TEXT("[FPS MODE ON] Direct Control active on Unit #%lld (Press F to exit)"), EntityIdValue));
+        bDirectControlActive = true;
+        DirectControlEntityId = TargetId;
+        DirectControlCameraRotation = EntityActor->GetPossessionCameraRotation();
+
+        SetViewTargetWithBlend(EntityActor, 0.2f);
+        bShowMouseCursor = false;
+        SetInputMode(FInputModeGameOnly());
+
+        if (GEngine != nullptr)
+        {
+            GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green,
+                FString::Printf(TEXT("[FPS MODE ON] Controlling %s (Press F or Esc to exit)"), *EntityActor->GetName()));
+        }
+        UE_LOG(LogTemp, Display, TEXT("RA4 First Person Direct Control activated for entity %lld"), EntityIdValue);
     }
-    UE_LOG(LogTemp, Display, TEXT("RA4 First Person Direct Control activated for entity %lld"), EntityIdValue);
 }
 
 void ARA4PlayerController::ExitDirectControl()
@@ -1570,83 +1635,86 @@ void ARA4PlayerController::ExitDirectControl()
 
 void ARA4PlayerController::UpdateDirectControl(float DeltaTime)
 {
-    (void)DeltaTime;
+    if (!bDirectControlActive)
+    {
+        return;
+    }
+
     if (WasInputKeyJustPressed(EKeys::Escape))
     {
         ExitDirectControl();
         return;
     }
 
-    URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
-    const SimWorld* World = Subsystem != nullptr ? Subsystem->GetSimWorld() : nullptr;
-    if (World == nullptr)
-    {
-        ExitDirectControl();
-        return;
-    }
-
-    if (!World->IsAlive(DirectControlEntityId))
-    {
-        ExitDirectControl();
-        return;
-    }
-
-    ARA4EntityActor* EntityActor = Subsystem->GetEntityActor(DirectControlEntityId);
-    if (EntityActor == nullptr)
-    {
-        ExitDirectControl();
-        return;
-    }
-
-    // Update Mouse rotation (First-Person / Direct Control View)
+    // Update Mouse rotation
     float TurnX = 0.0f;
     float TurnY = 0.0f;
     GetInputMouseDelta(TurnX, TurnY);
     DirectControlCameraRotation.Yaw += TurnX * 2.5f;
     DirectControlCameraRotation.Pitch = FMath::Clamp(DirectControlCameraRotation.Pitch - TurnY * 2.5f, -80.0f, 80.0f);
 
-    if (UCameraComponent* FPCamera = EntityActor->GetFirstPersonCameraComponent())
+    URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
+    ARA4EntityActor* EntityActor = Subsystem != nullptr ? Subsystem->GetEntityActor(DirectControlEntityId) : nullptr;
+    if (EntityActor != nullptr)
     {
-        FPCamera->SetWorldRotation(DirectControlCameraRotation);
+        if (UCameraComponent* FPCamera = EntityActor->GetFirstPersonCameraComponent())
+        {
+            FPCamera->SetWorldRotation(DirectControlCameraRotation);
+        }
+        EntityActor->SetActorRotation(FRotator(0.0f, DirectControlCameraRotation.Yaw, 0.0f));
+        SetControlRotation(DirectControlCameraRotation);
+
+        // WASD Movement
+        FVector MoveDir = FVector::ZeroVector;
+        if (IsInputKeyDown(EKeys::W)) MoveDir += DirectControlCameraRotation.Vector();
+        if (IsInputKeyDown(EKeys::S)) MoveDir -= DirectControlCameraRotation.Vector();
+        if (IsInputKeyDown(EKeys::D)) MoveDir += FRotationMatrix(DirectControlCameraRotation).GetScaledAxis(EAxis::Y);
+        if (IsInputKeyDown(EKeys::A)) MoveDir -= FRotationMatrix(DirectControlCameraRotation).GetScaledAxis(EAxis::Y);
+
+        MoveDir.Z = 0.0f;
+        if (!MoveDir.IsNearlyZero())
+        {
+            MoveDir.Normalize();
+            const FVector CurrLoc = EntityActor->GetActorLocation();
+            const FVector TargetLoc = CurrLoc + MoveDir * 300.0f;
+
+            Command Cmd;
+            Cmd.Type = CommandType::Move;
+            Cmd.Issuer = Selection.GetLocalPlayer();
+            Cmd.Selection = {DirectControlEntityId};
+            Cmd.TargetLocation = Vec2{Fixed::FromDouble(TargetLoc.X), Fixed::FromDouble(TargetLoc.Y)};
+            SubmitOrders({Cmd});
+        }
+
+        // Left Click -> Attack
+        if (WasInputKeyJustPressed(EKeys::LeftMouseButton))
+        {
+            const FVector Start = EntityActor->GetPossessionCameraLocation();
+            const FVector Forward = DirectControlCameraRotation.Vector();
+            const FVector AimTarget = Start + Forward * 5000.0f;
+
+            Command Cmd;
+            Cmd.Type = CommandType::AttackMove;
+            Cmd.Issuer = Selection.GetLocalPlayer();
+            Cmd.Selection = {DirectControlEntityId};
+            Cmd.TargetLocation = Vec2{Fixed::FromDouble(AimTarget.X), Fixed::FromDouble(AimTarget.Y)};
+            SubmitOrders({Cmd});
+        }
     }
-    EntityActor->SetActorRotation(FRotator(0.0f, DirectControlCameraRotation.Yaw, 0.0f));
-    SetControlRotation(DirectControlCameraRotation);
-
-    // WASD Movement
-    FVector MoveDir = FVector::ZeroVector;
-    if (IsInputKeyDown(EKeys::W)) MoveDir += DirectControlCameraRotation.Vector();
-    if (IsInputKeyDown(EKeys::S)) MoveDir -= DirectControlCameraRotation.Vector();
-    if (IsInputKeyDown(EKeys::D)) MoveDir += FRotationMatrix(DirectControlCameraRotation).GetScaledAxis(EAxis::Y);
-    if (IsInputKeyDown(EKeys::A)) MoveDir -= FRotationMatrix(DirectControlCameraRotation).GetScaledAxis(EAxis::Y);
-
-    MoveDir.Z = 0.0f;
-    if (!MoveDir.IsNearlyZero())
+    else if (ARA4CameraPawn* CameraPawn = GetCameraPawn())
     {
-        MoveDir.Normalize();
-        const FVector CurrLoc = EntityActor->GetActorLocation();
-        const FVector TargetLoc = CurrLoc + MoveDir * 300.0f;
+        // Free camera movement when no entity actor is possessed
+        CameraPawn->SetActorRotation(DirectControlCameraRotation);
+        FVector MoveDir = FVector::ZeroVector;
+        if (IsInputKeyDown(EKeys::W)) MoveDir += DirectControlCameraRotation.Vector();
+        if (IsInputKeyDown(EKeys::S)) MoveDir -= DirectControlCameraRotation.Vector();
+        if (IsInputKeyDown(EKeys::D)) MoveDir += FRotationMatrix(DirectControlCameraRotation).GetScaledAxis(EAxis::Y);
+        if (IsInputKeyDown(EKeys::A)) MoveDir -= FRotationMatrix(DirectControlCameraRotation).GetScaledAxis(EAxis::Y);
 
-        Command Cmd;
-        Cmd.Type = CommandType::Move;
-        Cmd.Issuer = Selection.GetLocalPlayer();
-        Cmd.Selection = {DirectControlEntityId};
-        Cmd.TargetLocation = Vec2{Fixed::FromDouble(TargetLoc.X), Fixed::FromDouble(TargetLoc.Y)};
-        SubmitOrders({Cmd});
-    }
-
-    // Left Click -> Attack
-    if (WasInputKeyJustPressed(EKeys::LeftMouseButton))
-    {
-        const FVector Start = EntityActor->GetPossessionCameraLocation();
-        const FVector Forward = DirectControlCameraRotation.Vector();
-        const FVector AimTarget = Start + Forward * 5000.0f;
-
-        Command Cmd;
-        Cmd.Type = CommandType::AttackMove;
-        Cmd.Issuer = Selection.GetLocalPlayer();
-        Cmd.Selection = {DirectControlEntityId};
-        Cmd.TargetLocation = Vec2{Fixed::FromDouble(AimTarget.X), Fixed::FromDouble(AimTarget.Y)};
-        SubmitOrders({Cmd});
+        if (!MoveDir.IsNearlyZero())
+        {
+            CameraPawn->AddActorWorldOffset(MoveDir.GetSafeNormal() * 1000.0f * DeltaTime);
+        }
     }
 }
 
