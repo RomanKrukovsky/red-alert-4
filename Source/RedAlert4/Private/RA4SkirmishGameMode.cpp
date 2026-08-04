@@ -20,6 +20,8 @@
 #include "RA4GameState.h"
 #include "RA4PlayerState.h"
 #include "RA4SimWorldSubsystem.h"
+#include "RA4NetworkManager.h"
+#include "RA4NetworkChannel.h"
 #include "Kismet/GameplayStatics.h"
 
 #include "RA4Content/ContentTypes.h"
@@ -57,6 +59,15 @@ void ARA4SkirmishGameMode::BeginPlay()
     if (NumAI < 1)
     {
         NumAI = 1;
+    }
+
+    // ?NumPlayers>1 turns this into a lockstep match. At 1 nothing below runs and the
+    // simulation ticks locally exactly as it always has, which is what keeps the
+    // single-player path free of any dependency on the network being healthy.
+    ExpectedPlayers = UGameplayStatics::GetIntOption(Options, TEXT("NumPlayers"), 1);
+    if (ExpectedPlayers < 1)
+    {
+        ExpectedPlayers = 1;
     }
 
     const auto IsPlayableFaction = [](uint8 Faction)
@@ -239,4 +250,61 @@ void ARA4SkirmishGameMode::BeginPlay()
             }
         }
     }
+}
+
+void ARA4SkirmishGameMode::PostLogin(APlayerController* NewPlayer)
+{
+    Super::PostLogin(NewPlayer);
+
+    if (ExpectedPlayers <= 1 || NewPlayer == nullptr)
+    {
+        return;
+    }
+
+    if (NextPlayerSlot >= ExpectedPlayers)
+    {
+        // Slots are the lockstep protocol's addressing; there is no slot for this
+        // player, so admitting them would mean their orders had nowhere to go.
+        UE_LOG(LogTemp, Warning, TEXT("RA4 refusing extra player: match is full at %d."),
+               ExpectedPlayers);
+        return;
+    }
+
+    // The channel is the player's RPC endpoint. It lives on the PlayerController
+    // because that is the only actor with an owning connection per player, which is
+    // what lets the server address one client and attribute one client's submission.
+    URA4NetworkChannel* Channel = NewObject<URA4NetworkChannel>(NewPlayer);
+    Channel->RegisterComponent();
+
+    const int32 Slot = NextPlayerSlot++;
+    Channel->ConfigureAsServer(Slot, ExpectedPlayers, int32(RA4::Net::kDefaultInputDelay));
+
+    UE_LOG(LogTemp, Display, TEXT("RA4 player joined in slot %d of %d."), Slot, ExpectedPlayers);
+
+    TryStartNetworkedMatch();
+}
+
+void ARA4SkirmishGameMode::TryStartNetworkedMatch()
+{
+    if (bMatchStarted || NextPlayerSlot < ExpectedPlayers)
+    {
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    URA4NetworkManager* Network = World ? World->GetSubsystem<URA4NetworkManager>() : nullptr;
+    if (Network == nullptr)
+    {
+        return;
+    }
+
+    bMatchStarted = true;
+
+    // Slot 0 is the host. BeginMatch runs after every channel is registered, because
+    // it primes the first input-delay ticks with empty frames and those have to be
+    // able to reach the clients that are already waiting on them.
+    Network->BeginMatch(/*LocalPlayerIndex*/ 0, uint8(ExpectedPlayers), /*bIsServer*/ true,
+                        RA4::Net::kDefaultInputDelay);
+
+    UE_LOG(LogTemp, Display, TEXT("RA4 lockstep match started with %d players."), ExpectedPlayers);
 }

@@ -18,7 +18,7 @@ cd /Users/romanmolodyko/Documents/red-alert-4
 
 # Headless Core test suite (seconds)
 cmake -S Tools/HeadlessBuild -B build/hb && cmake --build build/hb -j8
-./build/hb/RA4Tests                    # 242 passed, 0 failed
+./build/hb/RA4Tests                    # 245 passed, 0 failed (verified 2026-08-04)
 ```
 
 ## Implemented & Verified Systems

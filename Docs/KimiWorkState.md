@@ -21,7 +21,8 @@
 ### Модули Source/
 RA4AI, RA4Campaign, RA4Combat, RA4Content, RA4Core, RA4Editor, RA4FogOfWar,
 RA4Input, RA4Navigation, RA4Network, RA4Presentation, RA4Replay, RA4Simulation,
-RA4Tests, RA4UI, RAAI. Targets: RedAlert4, Editor, Server.
+RA4Tests, RA4UI. Targets: RedAlert4, Editor, Server.
+(RAAI удалён 2026-08-04 — не собирался никогда, см. Documentation/AICommander/BASELINE_AUDIT.md § F-2.)
 
 ### Git baseline
 - main HEAD: 5f6c977 «feat(code, ui, audio): add camera controls, cheat console, update localizations…»

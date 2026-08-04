@@ -41,6 +41,7 @@ public class RedAlert4 : ModuleRules
 			"GameplayTags",
 			"GameplayTasks",
 			"NetCore",
+			"RA4Network",
 			"Projects",
 			"Landscape",
 			"Niagara",

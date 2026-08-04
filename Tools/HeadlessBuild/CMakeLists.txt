@@ -33,7 +33,11 @@ else()
     )
 endif()
 
-add_compile_definitions(HEADLESS_BUILD=1)
+# Two spellings, both load-bearing: RA4Presentation gates on HEADLESS_BUILD and
+# FogOfWarGrid.h on RA4_HEADLESS. Defining only the first left the fog header taking
+# its Unreal branch and reaching for CoreMinimal.h, which broke this build -- and with
+# it the determinism job that is the whole reason the build exists.
+add_compile_definitions(HEADLESS_BUILD=1 RA4_HEADLESS=1)
 
 add_library(RA4Core STATIC
     ${RA4_SOURCE_ROOT}/RA4Core/Private/FixedMath.cpp
@@ -76,6 +80,7 @@ target_link_libraries(RA4Combat PUBLIC RA4Content)
 add_library(RA4Simulation STATIC
     ${RA4_SOURCE_ROOT}/RA4Simulation/Private/SimWorld.cpp
     ${RA4_SOURCE_ROOT}/RA4Simulation/Private/CommandBus.cpp
+    ${RA4_SOURCE_ROOT}/RA4Simulation/Private/LockstepSession.cpp
 )
 target_include_directories(RA4Simulation PUBLIC ${RA4_SOURCE_ROOT}/RA4Simulation/Public)
 target_link_libraries(RA4Simulation PUBLIC RA4Content RA4Navigation RA4FogOfWar RA4Combat)
@@ -120,9 +125,12 @@ target_link_libraries(RA4Replay PUBLIC RA4Simulation)
 
 add_library(RA4Campaign STATIC
     ${RA4_SOURCE_ROOT}/RA4Campaign/Private/CampaignDatabase.cpp
+    ${RA4_SOURCE_ROOT}/RA4Campaign/Private/MissionRuntime.cpp
 )
 target_include_directories(RA4Campaign PUBLIC ${RA4_SOURCE_ROOT}/RA4Campaign/Public)
-target_link_libraries(RA4Campaign PUBLIC RA4Content)
+# MissionRuntime evaluates objectives against SimWorld, so the campaign layer now
+# depends on the simulation rather than on content alone.
+target_link_libraries(RA4Campaign PUBLIC RA4Simulation)
 
 add_executable(RA4Tests
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestMain.cpp
@@ -143,6 +151,7 @@ add_executable(RA4Tests
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/Test_RA3PipelineAndCommandBus.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/Test_HUDIntegrationAndGameState.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestProvingGround.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestNetwork.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestUI.cpp
 )
 

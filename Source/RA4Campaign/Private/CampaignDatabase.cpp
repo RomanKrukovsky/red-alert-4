@@ -39,56 +39,62 @@ void CampaignDatabase::InitializeDefaultCampaigns()
 
             if (M == 1)
             {
+                // Every objective below is spelled with an explicit empty
+                // ObjectiveCondition. These loop-generated missions are placeholders,
+                // and an unauthored condition is exactly what MissionRuntime treats as
+                // unsatisfiable -- so a mission nobody has authored fails a test rather
+                // than silently auto-winning. Writing it out also keeps the aggregate
+                // initialisers complete, which the headless build requires.
                 Def.Type = MissionType::LimitedForce;
-                Def.Objectives.push_back({"obj_secure_bunker", "mission.sov_1.obj_secure_bunker", true, ObjectiveState::Active});
-                Def.Objectives.push_back({"obj_contact_sokolov", "mission.sov_1.obj_contact_sokolov", true, ObjectiveState::Active});
+                Def.Objectives.push_back({"obj_secure_bunker", "mission.sov_1.obj_secure_bunker", true, ObjectiveState::Active, ObjectiveCondition{}});
+                Def.Objectives.push_back({"obj_contact_sokolov", "mission.sov_1.obj_contact_sokolov", true, ObjectiveState::Active, ObjectiveCondition{}});
                 Def.IntroCutscene = GetSokolovDemonstrationCutscene();
             }
             else if (M == 2)
             {
                 Def.Type = MissionType::BaseBuilding;
-                Def.Objectives.push_back({"obj_build_refinery", "mission.sov_2.obj_build_refinery", true, ObjectiveState::Active});
-                Def.Objectives.push_back({"obj_destroy_allied_outpost", "mission.sov_2.obj_destroy_outpost", true, ObjectiveState::Active});
+                Def.Objectives.push_back({"obj_build_refinery", "mission.sov_2.obj_build_refinery", true, ObjectiveState::Active, ObjectiveCondition{}});
+                Def.Objectives.push_back({"obj_destroy_allied_outpost", "mission.sov_2.obj_destroy_outpost", true, ObjectiveState::Active, ObjectiveCondition{}});
             }
             else if (M == 3)
             {
                 Def.Type = MissionType::StealthInfiltration;
-                Def.Objectives.push_back({"obj_infiltrate_lab", "mission.sov_3.obj_infiltrate_lab", true, ObjectiveState::Active});
+                Def.Objectives.push_back({"obj_infiltrate_lab", "mission.sov_3.obj_infiltrate_lab", true, ObjectiveState::Active, ObjectiveCondition{}});
             }
             else if (M == 4)
             {
                 Def.Type = MissionType::DefenseHold;
-                Def.Objectives.push_back({"obj_hold_chronosphere", "mission.sov_4.obj_hold_chronosphere", true, ObjectiveState::Active});
+                Def.Objectives.push_back({"obj_hold_chronosphere", "mission.sov_4.obj_hold_chronosphere", true, ObjectiveState::Active, ObjectiveCondition{}});
             }
             else if (M == 5)
             {
                 Def.Type = MissionType::EscortConvoy;
-                Def.Objectives.push_back({"obj_escort_mcv", "mission.sov_5.obj_escort_mcv", true, ObjectiveState::Active});
+                Def.Objectives.push_back({"obj_escort_mcv", "mission.sov_5.obj_escort_mcv", true, ObjectiveState::Active, ObjectiveCondition{}});
             }
             else if (M == 6)
             {
                 Def.Type = MissionType::ObjectCapture;
-                Def.Objectives.push_back({"obj_capture_radar", "mission.sov_6.obj_capture_radar", true, ObjectiveState::Active});
+                Def.Objectives.push_back({"obj_capture_radar", "mission.sov_6.obj_capture_radar", true, ObjectiveState::Active, ObjectiveCondition{}});
             }
             else if (M == 7)
             {
                 Def.Type = MissionType::MapDynamicShift;
-                Def.Objectives.push_back({"obj_survive_timeline_collapse", "mission.sov_7.obj_survive_collapse", true, ObjectiveState::Active});
+                Def.Objectives.push_back({"obj_survive_timeline_collapse", "mission.sov_7.obj_survive_collapse", true, ObjectiveState::Active, ObjectiveCondition{}});
             }
             else if (M == 8)
             {
                 Def.Type = MissionType::JointOperation;
-                Def.Objectives.push_back({"obj_coop_allied_defectors", "mission.sov_8.obj_coop", true, ObjectiveState::Active});
+                Def.Objectives.push_back({"obj_coop_allied_defectors", "mission.sov_8.obj_coop", true, ObjectiveState::Active, ObjectiveCondition{}});
             }
             else if (M == 9)
             {
                 Def.Type = MissionType::FactionCivilWar;
-                Def.Objectives.push_back({"obj_defeat_alternate_ussr", "mission.sov_9.obj_defeat_alt_ussr", true, ObjectiveState::Active});
+                Def.Objectives.push_back({"obj_defeat_alternate_ussr", "mission.sov_9.obj_defeat_alt_ussr", true, ObjectiveState::Active, ObjectiveCondition{}});
             }
             else
             {
                 Def.Type = MissionType::FinalClimax;
-                Def.Objectives.push_back({"obj_destroy_liberty_core", "mission.sov_10.obj_destroy_liberty", true, ObjectiveState::Active});
+                Def.Objectives.push_back({"obj_destroy_liberty_core", "mission.sov_10.obj_destroy_liberty", true, ObjectiveState::Active, ObjectiveCondition{}});
             }
 
             Sov.Missions.push_back(Def);
@@ -118,7 +124,7 @@ void CampaignDatabase::InitializeDefaultCampaigns()
             Def.PlayerFaction = FactionId::Alliance;
             Def.TargetDifficulty = std::min(M, 5);
 
-            Def.Objectives.push_back({"obj_primary", "mission.all_" + std::to_string(M) + ".obj_primary", true, ObjectiveState::Active});
+            Def.Objectives.push_back({"obj_primary", "mission.all_" + std::to_string(M) + ".obj_primary", true, ObjectiveState::Active, ObjectiveCondition{}});
             All.Missions.push_back(Def);
         }
         Chapters.push_back(All);
@@ -146,7 +152,7 @@ void CampaignDatabase::InitializeDefaultCampaigns()
             Def.PlayerFaction = FactionId::EasternCoalition;
             Def.TargetDifficulty = std::min(M, 5);
 
-            Def.Objectives.push_back({"obj_primary", "mission.eac_" + std::to_string(M) + ".obj_primary", true, ObjectiveState::Active});
+            Def.Objectives.push_back({"obj_primary", "mission.eac_" + std::to_string(M) + ".obj_primary", true, ObjectiveState::Active, ObjectiveCondition{}});
             Eac.Missions.push_back(Def);
         }
         Chapters.push_back(Eac);
@@ -175,7 +181,7 @@ void CampaignDatabase::InitializeDefaultCampaigns()
             Def.PlayerFaction = FactionId::ChronoLegion;
             Def.TargetDifficulty = std::min(M + 2, 5);
 
-            Def.Objectives.push_back({"obj_primary", "mission.chro_" + std::to_string(M) + ".obj_primary", true, ObjectiveState::Active});
+            Def.Objectives.push_back({"obj_primary", "mission.chro_" + std::to_string(M) + ".obj_primary", true, ObjectiveState::Active, ObjectiveCondition{}});
             Chro.Missions.push_back(Def);
         }
         Chapters.push_back(Chro);

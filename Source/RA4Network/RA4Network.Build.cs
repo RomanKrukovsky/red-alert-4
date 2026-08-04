@@ -16,7 +16,9 @@ public class RA4Network : ModuleRules
 			
 		PrivateDependencyModuleNames.AddRange(new string[] {
 			"CoreUObject",
-			"Engine"
+			"Engine",
+			// DOREPLIFETIME / FLifetimeProperty on URA4NetworkChannel.
+			"NetCore"
 		});
 	}
 }

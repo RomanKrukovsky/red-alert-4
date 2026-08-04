@@ -450,8 +450,10 @@ void ARA4EntityActor::ApplyPrimitiveComposition(const FString& InEntityId)
     // Art data keys are checked in two name spaces: the raw content id
     // (`unit.sov.conscript`) and the short bible key (`SU_Conscript`) so that either
     // authoring convention resolves without renaming every blockout asset.
+    // ToRawPtr on the first arm: TObjectPtr and a raw pointer convert both ways, so
+    // the ternary is ambiguous without pinning one side to a raw pointer.
     const URA4ArtMappingDataAsset* ArtData = ArtMapping
-        ? ArtMapping
+        ? ToRawPtr(ArtMapping)
         : LoadObject<URA4ArtMappingDataAsset>(nullptr, TEXT("/Game/RA4/Art/Generated/DA_RA4_ArtMappings.DA_RA4_ArtMappings"));
 
     auto ApplyUnitArt = [this](const FRA4UnitArtDefinition& UnitArt)

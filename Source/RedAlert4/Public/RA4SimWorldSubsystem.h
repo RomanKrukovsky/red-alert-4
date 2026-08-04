@@ -30,6 +30,8 @@ namespace RA4
 
 #include "RA4SimWorldSubsystem.generated.h"
 
+class URA4NetworkManager;
+
 UCLASS()
 class REDALERT4_API URA4SimWorldSubsystem : public UTickableWorldSubsystem
 {
@@ -88,6 +90,11 @@ private:
     void RegisterDefaultBlockoutMeshes();
     void FitGroundPlaneToMap();
     void TickSimulation();
+
+    // The network manager if a lockstep match is running, otherwise null. Null is the
+    // single-player case and is not an error: every networked branch in this file is
+    // written so that null means "run locally exactly as before".
+    URA4NetworkManager* GetActiveNetwork() const;
     void ProcessPresentationEvents();
     void SyncPresentation();
     // Height of the terrain surface at a world XY, or the flat sim ground level if

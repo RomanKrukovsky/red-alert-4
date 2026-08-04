@@ -1,6 +1,7 @@
 // Copyright (c) Red Alert 4 project.
 
 #include "RA4SimWorldSubsystem.h"
+#include "RA4NetworkManager.h"
 #include "RA4AI/AICommander.h"
 #include "RA4AI/AIStrategy.h"
 #include "RA4Simulation/SimWorld.h"
@@ -274,6 +275,19 @@ void URA4SimWorldSubsystem::Tick(float DeltaTime)
     // Fixed-step loop
     while (TimeSinceLastSimTick >= SimTickDelta)
     {
+        // In a lockstep match this peer may not run a tick whose frame has not
+        // arrived. Stalling here is the correct behaviour: running ahead locally would
+        // execute a different command stream than everyone else and end the match.
+        // The accumulator is not drained while stalled, so the peer catches up once
+        // the frame lands.
+        if (const URA4NetworkManager* Network = GetActiveNetwork())
+        {
+            if (!Network->CanAdvanceToTick(SimWorld->GetTick()))
+            {
+                break;
+            }
+        }
+
         TickSimulation();
         TimeSinceLastSimTick -= SimTickDelta;
     }
@@ -289,6 +303,16 @@ TStatId URA4SimWorldSubsystem::GetStatId() const
 
 void URA4SimWorldSubsystem::EnqueueCommand(const RA4::Command& Command)
 {
+    // In a lockstep match a command is not queued locally -- it is scheduled with the
+    // server and comes back in the authoritative frame alongside every other player's,
+    // input-delay ticks later. Applying it here as well would execute it twice on this
+    // peer and once everywhere else, which is a desync.
+    if (URA4NetworkManager* Network = GetActiveNetwork())
+    {
+        Network->SendCommandToServer(Command, SimWorld ? SimWorld->GetTick() : 0);
+        return;
+    }
+
     PendingCommands.push_back(Command);
 }
 
@@ -299,19 +323,59 @@ void URA4SimWorldSubsystem::SetSelectedEntitiesForHUD(const std::vector<RA4::Ent
 
 void URA4SimWorldSubsystem::TickSimulation()
 {
-    // Everything queued since the previous tick executes in one frame, in the order
-    // it was issued. The network layer replaces this local drain with the frame the
-    // server broadcasts, and nothing else about the tick changes.
-    RA4::CommandFrame Frame;
-    Frame.Tick = SimWorld->GetTick();
-    Frame.Commands.swap(PendingCommands);
-    PendingCommands.clear();
+    const uint32 CurrentTick = SimWorld->GetTick();
+    URA4NetworkManager* Network = GetActiveNetwork();
 
-    // The AI issues commands through exactly the same frame the player does, so it is
-    // bound by the same server-side validation and stays replay-compatible.
-    for (RA4::AI::AICommander* Commander : AICommanders)
+    RA4::CommandFrame Frame;
+
+    if (Network != nullptr)
     {
-        Commander->Tick(*SimWorld, Frame.Commands);
+        // Send this peer's slice first. Commands issued since the previous tick were
+        // scheduled onto CurrentTick + InputDelay, so that is the frame to post, and
+        // posting it before the tick rather than after keeps one tick of latency out
+        // of the round trip.
+        Network->FlushLocalFrame(CurrentTick + Network->GetInputDelay());
+
+        // The frame that actually runs is whatever the server broadcast. Tick() only
+        // calls in here once CanAdvanceToTick says it has landed, so a miss means the
+        // frame was consumed already; running an empty one in its place would drop
+        // every order in it.
+        if (!Network->ConsumeFrameForTick(CurrentTick, Frame))
+        {
+            return;
+        }
+
+        // The AI plans on the authority only, and its orders travel in the same frame
+        // as the players'. Ticking it on every peer instead would make the match
+        // depend on the AI being deterministic as well as the simulation -- a strictly
+        // stronger assumption, and one nothing currently tests.
+        if (Network->IsServer())
+        {
+            std::vector<RA4::Command> AICommands;
+            for (RA4::AI::AICommander* Commander : AICommanders)
+            {
+                Commander->Tick(*SimWorld, AICommands);
+            }
+            for (const RA4::Command& AICommand : AICommands)
+            {
+                Network->SendCommandToServer(AICommand, CurrentTick);
+            }
+        }
+    }
+    else
+    {
+        // Single player: everything queued since the previous tick executes in one
+        // frame, in the order it was issued.
+        Frame.Tick = CurrentTick;
+        Frame.Commands.swap(PendingCommands);
+        PendingCommands.clear();
+
+        // The AI issues commands through exactly the same frame the player does, so it
+        // is bound by the same validation and stays replay-compatible.
+        for (RA4::AI::AICommander* Commander : AICommanders)
+        {
+            Commander->Tick(*SimWorld, Frame.Commands);
+        }
     }
 
     SimWorld->Tick(&Frame);
@@ -335,6 +399,41 @@ void URA4SimWorldSubsystem::TickSimulation()
     }
 
     SimWorld->ClearEvents();
+
+    if (Network != nullptr)
+    {
+        // The checksum is what turns a desync from "the match slowly stopped making
+        // sense" into a report naming the tick and the player. It is taken after the
+        // tick has fully settled, so it covers the state the next frame will act on.
+        Network->SubmitStateChecksum(CurrentTick, SimWorld->ComputeStateChecksum());
+
+        // Retire bookkeeping well behind the playhead rather than at it. A client's
+        // checksum for a tick can arrive after the server has already ticked past it,
+        // and pruning the reference out from under it would let the late report become
+        // the new reference -- silently retiring the desync it was meant to catch.
+        constexpr uint32 PruneLagTicks = 200;
+        if (CurrentTick > PruneLagTicks)
+        {
+            Network->PruneUpToTick(CurrentTick - PruneLagTicks);
+        }
+    }
+}
+
+URA4NetworkManager* URA4SimWorldSubsystem::GetActiveNetwork() const
+{
+    if (UWorld* OwningWorld = GetWorld())
+    {
+        if (URA4NetworkManager* Network = OwningWorld->GetSubsystem<URA4NetworkManager>())
+        {
+            // A manager exists in every world; it only means anything once BeginMatch
+            // has run. Before that this is a single-player match.
+            if (Network->IsMatchActive())
+            {
+                return Network;
+            }
+        }
+    }
+    return nullptr;
 }
 
 void URA4SimWorldSubsystem::ProcessPresentationEvents()

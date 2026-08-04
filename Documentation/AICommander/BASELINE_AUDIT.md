@@ -88,6 +88,14 @@ Decision for this work: extend the live utility commander into a three-tier syst
 Do not revive either HTN path. Removal of dead code is deferred until the new system is
 proven, per the brief's "do not delete the old AI before the new one is demonstrated".
 
+**Resolved 2026-08-04.** The deferral condition is met: F-1 is closed (`AICommander`
+now reads enemies only through `SimWorldView`, see `AICommander.cpp:619`) and the
+46-test AI suite passes. Framework 3 has been deleted, together with the vestigial
+`red-alert-4.uproject` that listed `RAAI` as its only module and had no matching
+`.Target.cs`, so it could never build. Framework 2 (`Source/RA4AI/**/HTN*`, 7 files,
+488 lines) is still present and is now referenced by nothing at all — it was only ever
+reachable from the deleted module. It remains a candidate for removal.
+
 ### F-3 — target selection has no threat or value model
 
 `FindEnemyTarget` returns the *first* enemy building in entity-index order — not the

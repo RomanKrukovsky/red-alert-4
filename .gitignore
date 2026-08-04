@@ -48,3 +48,6 @@ __pycache__/
 # Kimi work-state reports must persist between iterations
 !Saved/Reports/
 !Saved/Reports/**
+
+# Headless CMake build artifacts
+/Tools/HeadlessBuild/build/
