@@ -328,7 +328,11 @@ void ARA4PlayerController::PlayerTick(float DeltaTime)
     // call site covers every way the selection can change -- click, marquee,
     // control group, and the prune immediately above -- and costs one vector copy
     // of a list that is bounded by what a player can select.
-    Subsystem->SetSelectedEntitiesForHUD(Selection.Get());
+    // Allow pressing F at any time to toggle First-Person Direct Control
+    if (WasInputKeyJustPressed(EKeys::F))
+    {
+        ToggleDirectControl();
+    }
 
     if (bDirectControlActive)
     {
@@ -1567,8 +1571,9 @@ void ARA4PlayerController::ExitDirectControl()
 void ARA4PlayerController::UpdateDirectControl(float DeltaTime)
 {
     (void)DeltaTime;
-    if (!bDirectControlActive)
+    if (WasInputKeyJustPressed(EKeys::Escape))
     {
+        ExitDirectControl();
         return;
     }
 
