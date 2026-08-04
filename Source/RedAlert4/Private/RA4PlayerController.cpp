@@ -1590,6 +1590,10 @@ void ARA4PlayerController::UpdateDirectControl(float DeltaTime)
     DirectControlCameraRotation.Yaw += TurnX * 2.5f;
     DirectControlCameraRotation.Pitch = FMath::Clamp(DirectControlCameraRotation.Pitch - TurnY * 2.5f, -80.0f, 80.0f);
 
+    if (UCameraComponent* FPCamera = EntityActor->GetFirstPersonCameraComponent())
+    {
+        FPCamera->SetWorldRotation(DirectControlCameraRotation);
+    }
     EntityActor->SetActorRotation(FRotator(0.0f, DirectControlCameraRotation.Yaw, 0.0f));
     SetControlRotation(DirectControlCameraRotation);
 

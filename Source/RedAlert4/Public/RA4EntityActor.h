@@ -67,6 +67,9 @@ public:
     UFUNCTION(BlueprintCallable, Category = "DirectControl")
     FRotator GetPossessionCameraRotation() const;
 
+    UFUNCTION(BlueprintPure, Category = "DirectControl")
+    class UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
+
 protected:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
@@ -76,6 +79,9 @@ protected:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     TObjectPtr<USkeletalMeshComponent> SkeletalMeshComponent;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    TObjectPtr<class UCameraComponent> FirstPersonCameraComponent;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     TObjectPtr<class UNiagaraComponent> VFXComponent;

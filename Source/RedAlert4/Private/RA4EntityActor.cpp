@@ -3,6 +3,7 @@
 #include "RA4EntityActor.h"
 #include "RA4Presentation/RA4ArtMapping.h"
 
+#include "Camera/CameraComponent.h"
 #include "Components/DecalComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/MeshComponent.h"
@@ -19,6 +20,11 @@ ARA4EntityActor::ARA4EntityActor()
     MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComponent"));
     SetRootComponent(MeshComponent);
     MeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision); // Collision is handled by simulation core
+
+    FirstPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCameraComponent"));
+    FirstPersonCameraComponent->SetupAttachment(MeshComponent);
+    FirstPersonCameraComponent->SetRelativeLocation(FVector(0.0f, 0.0f, 80.0f));
+    FirstPersonCameraComponent->bUsePawnControlRotation = false;
 
     SkeletalMeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalMeshComponent"));
     SkeletalMeshComponent->SetupAttachment(MeshComponent);
@@ -69,15 +75,19 @@ void ARA4EntityActor::SetSelected(bool bSelected)
 
 FVector ARA4EntityActor::GetPossessionCameraLocation() const
 {
-    if (SkeletalMeshComponent && SkeletalMeshComponent->IsVisible())
+    if (FirstPersonCameraComponent)
     {
-        return GetActorLocation() + FVector(0.0f, 0.0f, 65.0f);
+        return FirstPersonCameraComponent->GetComponentLocation();
     }
-    return GetActorLocation() + FVector(0.0f, 0.0f, 110.0f);
+    return GetActorLocation() + FVector(0.0f, 0.0f, 80.0f);
 }
 
 FRotator ARA4EntityActor::GetPossessionCameraRotation() const
 {
+    if (FirstPersonCameraComponent)
+    {
+        return FirstPersonCameraComponent->GetComponentRotation();
+    }
     return GetActorRotation();
 }
 
