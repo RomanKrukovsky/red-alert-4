@@ -98,6 +98,7 @@ add_library(RA4Input STATIC
     ${RA4_SOURCE_ROOT}/RA4Input/Private/OrderResolver.cpp
     ${RA4_SOURCE_ROOT}/RA4Input/Private/HitTest.cpp
     ${RA4_SOURCE_ROOT}/RA4Input/Private/ControlScheme.cpp
+    ${RA4_SOURCE_ROOT}/RA4Input/Private/KeyBindings.cpp
 )
 target_include_directories(RA4Input PUBLIC ${RA4_SOURCE_ROOT}/RA4Input/Public)
 target_link_libraries(RA4Input PUBLIC RA4Simulation)

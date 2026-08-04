@@ -266,6 +266,10 @@ void KeyBindingTable::LoadDefaults(ControlScheme Scheme)
     {
         Binding = ActionBinding();
     }
+    for (bool& Flag : bOverridden)
+    {
+        Flag = false;
+    }
 
     Bindings[int32_t(GameAction::CameraPanUp)] = {Chord("Up"), Chord("W")};
     Bindings[int32_t(GameAction::CameraPanDown)] = {Chord("Down"), Chord("S")};
