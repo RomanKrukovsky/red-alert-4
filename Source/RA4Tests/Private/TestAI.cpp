@@ -5,9 +5,12 @@
 #include "RA4AI/AICommander.h"
 #include "RA4AI/AIDebugOverlay.h"
 #include "RA4AI/AIDoctrine.h"
+#include "RA4AI/AISelfPlayLeague.h"
 #include "RA4AI/AIWorldView.h"
 #include "RA4AI/ArmyGroup.h"
+#include "RA4AI/BuildOrderPlanner.h"
 #include "RA4AI/TacticalOperation.h"
+#include "RA4AI/TaskBiddingSystem.h"
 #include "RA4Core/SimConfig.h"
 
 
@@ -1102,4 +1105,36 @@ RA4_TEST(AI, HierarchicalMultiPlanDefaultsToPlanA)
     AICommander Commander;
     Commander.Initialize(0, AIProfile::Balanced, 1001);
     RA4_EXPECT(Commander.GetActivePlan() == AICommander::PlanState::PlanA_Primary);
+}
+
+RA4_TEST(AI, TaskBiddingSystemSelectsBestGroup)
+{
+    std::vector<ArmyGroup> Groups;
+    ArmyGroup Group1;
+    Group1.GroupId = 1;
+    Group1.Role = GroupRole::MainAssault;
+    Group1.CombatReadiness = 90;
+    Groups.push_back(Group1);
+
+    TaskRequirement Req;
+    Req.TargetRole = GroupRole::MainAssault;
+
+    TaskBid Bid = TaskBiddingSystem::EvaluateBestBid(Groups, Req);
+    RA4_EXPECT(Bid.GroupId == 1);
+    RA4_EXPECT(Bid.SuitabilityScore > 50);
+}
+
+RA4_TEST(AI, BuildOrderPlannerResolvesPrerequisites)
+{
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    auto Steps = BuildOrderPlanner::ResolvePrerequisites(&Content, ContentId(1001));
+    RA4_EXPECT(!Steps.empty());
+}
+
+RA4_TEST(AI, AISelfPlayLeagueExecutesTournament)
+{
+    LeagueSummary Summary = AISelfPlayLeague::RunTournament(4, AIProfile::Balanced, AIProfile::Aggressive, 20260804);
+    RA4_EXPECT(Summary.TotalMatchesRun == 4);
+    RA4_EXPECT(Summary.Player0Wins + Summary.Player1Wins == 4);
 }
