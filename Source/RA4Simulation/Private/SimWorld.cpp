@@ -2224,6 +2224,34 @@ EntityId SimWorld::AcquireTarget(EntityId Attacker) const
     return Best;
 }
 
+bool SimWorld::IsEntityVisibleTo(PlayerId Viewer, uint32_t EntityIndex) const
+{
+    // Fog is optional. A match configured without it, and every headless fixture that
+    // never builds a grid, has to behave as though the map is in the open -- the
+    // alternative is that absent fog blinds every side and combat stops entirely.
+    if (FogGrid == nullptr)
+    {
+        return true;
+    }
+    if (Viewer >= kMaxPlayers || int32_t(Viewer) >= FogGrid->GetNumPlayers())
+    {
+        return true;
+    }
+    if (EntityIndex >= Transforms.size())
+    {
+        return false;
+    }
+
+    const TileCoord Tile = Map.WorldToTile(Transforms[EntityIndex].Position);
+    const VisibilityState Visibility = FogGrid->GetVisibility(int32_t(Viewer), Tile.X, Tile.Y);
+
+    // Only a live sighting is a firing solution. A radar contact is why the minimap
+    // draws a blip, but it does not aim a gun: counting it as sight would let radar
+    // coverage stand in for scouting and would make stealth worthless the moment any
+    // side built a radar. PreviouslySeen is a memory of a tile, not of an enemy.
+    return Visibility == VisibilityState::CurrentlyVisible;
+}
+
 void SimWorld::FireWeapon(EntityId Attacker, EntityId TargetId, const WeaponDef& Weapon)
 {
     const uint32_t A = Attacker.Index;
