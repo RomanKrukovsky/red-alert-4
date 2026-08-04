@@ -2205,6 +2205,15 @@ EntityId SimWorld::AcquireTarget(EntityId Attacker) const
         if (bTargetIsAir && !W->bCanTargetAir) { continue; }
         if (!bTargetIsAir && !W->bCanTargetGround) { continue; }
 
+        // A side does not open fire on what it cannot see. Player-level fog is also
+        // what makes a spotter matter: a weapon that outranges its carrier's own
+        // vision engages only what some friendly unit reveals, so artillery needs an
+        // escort without any separate spotter search existing in this loop.
+        if (!IsEntityVisibleTo(Core[A].Owner, I))
+        {
+            continue;
+        }
+
         const Fixed DistSq = DistanceSquared(Pos, Transforms[I].Position);
         if (DistSq <= SearchSq && DistSq < BestDistSq)
         {

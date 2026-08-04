@@ -182,6 +182,9 @@ private:
     EntityId FindNearestResourceNode(const Vec2& From, PlayerId Owner) const;
     EntityId FindNearestRefinery(const Vec2& From, PlayerId Owner) const;
     EntityId AcquireTarget(EntityId Attacker) const;
+    // Whether Viewer's fog currently shows the tile the entity stands on. Auto-target
+    // acquisition asks this so a side does not shoot at what it cannot see.
+    bool IsEntityVisibleTo(PlayerId Viewer, uint32_t EntityIndex) const;
     bool IsHostile(PlayerId A, PlayerId B) const;
     Vec2 FindFreeSpawnPoint(const BuildingComp& Producer, ContentId UnitDef) const;
     void EmitEvent(const SimEvent& Event) { Events.push_back(Event); }
