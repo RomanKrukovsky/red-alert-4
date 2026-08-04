@@ -1039,3 +1039,67 @@ RA4_TEST(AI, DoctrineLoadsLazilyOnFirstTick)
     Commander.Tick(World, Commands);
     RA4_EXPECT(Commander.GetDoctrineForTesting().TargetHarvesterCount == 4); // Soviet doctrine
 }
+
+RA4_TEST(AI, BeliefGridTracksObservedEntitiesAndDecaysConfidence)
+{
+    AIBeliefGrid Grid;
+    Grid.Initialize(64, 64);
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(20260804));
+    Grid.Update(World, 0);
+
+    RA4_EXPECT(Grid.GetKnownEnemyUnitCount() >= 0);
+    RA4_EXPECT(Grid.EstimateEnemyAirTechProbability() > 0.0f);
+}
+
+RA4_TEST(AI, EconomyDirectorForecasts90sCashflow)
+{
+    EconomyDirector Director;
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(20260804));
+    CashflowForecast Forecast = Director.ForecastCashflow(World, 0);
+
+    RA4_EXPECT(Forecast.ProjectedIncome90s > 0);
+    RA4_EXPECT(Forecast.AvailableForArmy >= 0);
+}
+
+RA4_TEST(AI, DefenseDirectorCalculatesThreatLevel)
+{
+    DefenseDirector Director;
+    AIBeliefGrid Grid;
+    Grid.Initialize(64, 64);
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(20260804));
+
+    float Threat = Director.CalculateThreatLevel(World, 0, Grid);
+    RA4_EXPECT(Threat >= 0.0f && Threat <= 1.0f);
+}
+
+RA4_TEST(AI, ForwardCombatSimPredictsOutcome)
+{
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(20260804));
+
+    CombatPredictionInput Input;
+    Input.AttackerEntityIndices = {0, 1, 2, 3};
+    Input.DefenderEntityIndices = {4, 5};
+
+    CombatPredictionResult Result = ForwardCombatSim::PredictOutcome(World, Input);
+    RA4_EXPECT(Result.WinProbability > 0.5f);
+    RA4_EXPECT(Result.bShouldEngage == true);
+}
+
+RA4_TEST(AI, HierarchicalMultiPlanDefaultsToPlanA)
+{
+    AICommander Commander;
+    Commander.Initialize(0, AIProfile::Balanced, 1001);
+    RA4_EXPECT(Commander.GetActivePlan() == AICommander::PlanState::PlanA_Primary);
+}

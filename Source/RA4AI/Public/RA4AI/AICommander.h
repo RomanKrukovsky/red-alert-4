@@ -13,9 +13,12 @@
 #include <string>
 #include <vector>
 
+#include "RA4AI/AIBeliefGrid.h"
 #include "RA4AI/AIDoctrine.h"
 #include "RA4AI/AIStrategy.h"
 #include "RA4AI/AIWorldView.h"
+#include "RA4AI/ForwardCombatSim.h"
+#include "RA4AI/StrategicDirectors.h"
 #include "RA4AI/TacticalOperation.h"
 #include "RA4Core/Command.h"
 #include "RA4Core/Ids.h"
@@ -178,8 +181,42 @@ private:
     TickIndex LastScoutOrderTick = 0;
     bool bHasScoutOrder = false;
 
+public:
+    enum class PlanState : uint8_t
+    {
+        PlanA_Primary = 0,
+        PlanB_Contingency = 1,
+        PlanC_EmergencyEvac = 2
+    };
+
+    PlanState GetActivePlan() const { return ActivePlan; }
+    const AIBeliefGrid& GetBeliefGrid() const { return BeliefGrid; }
+    const EconomyDirector& GetEconomyDirector() const { return EcoDirector; }
+    const ProductionDirector& GetProductionDirector() const { return ProdDirector; }
+    const IntelDirector& GetIntelDirector() const { return ScoutDirector; }
+    const DefenseDirector& GetDefenseDirector() const { return DefDirector; }
+    const OffenseDirector& GetOffenseDirector() const { return OffDirector; }
+    const AbilityDirector& GetAbilityDirector() const { return AbilDirector; }
+    uint32_t GetMaxAPMCap() const { return MaxAPMCap; }
+    uint32_t GetCurrentTickAPM() const { return CurrentTickAPM; }
+    TickIndex GetLastAPMResetTick() const { return LastAPMResetTick; }
+
+private:
     std::vector<AIDecision> DecisionLog;
     size_t DecisionLogLimit = 64;
+
+    PlanState ActivePlan = PlanState::PlanA_Primary;
+    AIBeliefGrid BeliefGrid;
+    EconomyDirector EcoDirector;
+    ProductionDirector ProdDirector;
+    IntelDirector ScoutDirector;
+    DefenseDirector DefDirector;
+    OffenseDirector OffDirector;
+    AbilityDirector AbilDirector;
+
+    uint32_t MaxAPMCap = 220;
+    uint32_t CurrentTickAPM = 0;
+    TickIndex LastAPMResetTick = 0;
 };
 
 } // namespace AI
