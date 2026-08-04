@@ -148,6 +148,7 @@ add_executable(RA4Tests
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestFactionResources.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestSaveSystem.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestCampaign.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestMissionRuntime.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/Test_RA3PipelineAndCommandBus.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/Test_HUDIntegrationAndGameState.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestProvingGround.cpp
