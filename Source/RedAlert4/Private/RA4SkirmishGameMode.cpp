@@ -47,6 +47,13 @@ ARA4SkirmishGameMode::ARA4SkirmishGameMode()
 void ARA4SkirmishGameMode::BeginPlay()
 {
     Super::BeginPlay();
+
+    StartSimulationMatch();
+    ApplySceneDressing();
+}
+
+void ARA4SkirmishGameMode::StartSimulationMatch()
+{
     UE_LOG(LogTemp, Display, TEXT("RA4 skirmish game mode started"));
 
     // Extract options from the URL (Main Menu passes them here)
@@ -96,7 +103,10 @@ void ARA4SkirmishGameMode::BeginPlay()
             SimSub->StartSkirmishMatch(PlayerFaction, EnemyFaction, Difficulty, NumAI, AISpot);
         }
     }
+}
 
+void ARA4SkirmishGameMode::ApplySceneDressing()
+{
     AStaticMeshActor* LargestFloorActor = nullptr;
     double LargestFloorArea = 0.0;
 

@@ -6,6 +6,8 @@
 #include "RA4AI/AIStrategy.h"
 #include "RA4Simulation/SimWorld.h"
 #include "RA4Content/ContentDatabase.h"
+#include "CampaignDatabase.h"
+#include "MissionRuntime.h"
 #include "RA4Presentation/HudSnapshot.h"
 #include "RA4Core/Command.h"
 #include "RA4Core/SimConfig.h"
@@ -93,26 +95,18 @@ RA4::AI::AIDifficulty MapIntToAIDifficulty(int32 Difficulty)
 }
 } // namespace
 
-void URA4SimWorldSubsystem::StartSkirmishMatch(uint8 PlayerFaction, uint8 EnemyFaction, int32 Difficulty, int32 NumAI, int32 AISpot)
+void URA4SimWorldSubsystem::AttachAICommanders(int32 Difficulty, uint64 Seed, RA4::PlayerId LocalPlayer)
 {
-    // The lobby or GameMode supplies the match setup.
-    FRA4MatchBootstrap::BuildSkirmish(*Content, *SimWorld, /*Seed*/ 20260728,
-        static_cast<RA4::FactionId>(PlayerFaction), static_cast<RA4::FactionId>(EnemyFaction),
-        NumAI, AISpot);
-    bWasLocalPowerShortage = false;
-
     const RA4::AI::AIDifficulty MappedDifficulty = MapIntToAIDifficulty(Difficulty);
 
-    // Every active player other than the local one gets a commander.
-    constexpr RA4::PlayerId kLocalPlayer = 0;
     for (RA4::PlayerId Player = 0; Player < RA4::kMaxPlayers; ++Player)
     {
-        if (Player == kLocalPlayer || !SimWorld->GetPlayer(Player).bActive)
+        if (Player == LocalPlayer || !SimWorld->GetPlayer(Player).bActive)
         {
             continue;
         }
         RA4::AI::AICommander* Commander = new RA4::AI::AICommander();
-        Commander->Initialize(Player, RA4::AI::AIProfile::Balanced, 20260728ull ^ (uint64(Player) * 0x9E3779B9ull));
+        Commander->Initialize(Player, RA4::AI::AIProfile::Balanced, Seed ^ (uint64(Player) * 0x9E3779B9ull));
         // Initialize builds the Normal-difficulty config; the URL-selected difficulty
         // refines it (decision cadence, memory cadence, Hard income bonus).
         Commander->SetConfig(RA4::AI::MakeProfileConfig(RA4::AI::AIProfile::Balanced, MappedDifficulty));
@@ -121,9 +115,89 @@ void URA4SimWorldSubsystem::StartSkirmishMatch(uint8 PlayerFaction, uint8 EnemyF
                int32(Player), UTF8_TO_TCHAR(RA4::AI::ToString(RA4::AI::AIProfile::Balanced)),
                UTF8_TO_TCHAR(RA4::AI::ToString(MappedDifficulty)));
     }
+}
+
+void URA4SimWorldSubsystem::StartSkirmishMatch(uint8 PlayerFaction, uint8 EnemyFaction, int32 Difficulty, int32 NumAI, int32 AISpot)
+{
+    // The lobby or GameMode supplies the match setup.
+    FRA4MatchBootstrap::BuildSkirmish(*Content, *SimWorld, /*Seed*/ 20260728,
+        static_cast<RA4::FactionId>(PlayerFaction), static_cast<RA4::FactionId>(EnemyFaction),
+        NumAI, AISpot);
+    bWasLocalPowerShortage = false;
+
+    AttachAICommanders(Difficulty, 20260728ull, /*LocalPlayer*/ 0);
 
     UE_LOG(LogTemp, Display, TEXT("RA4 skirmish initialized with %llu simulation entities"),
            static_cast<uint64>(SimWorld->GetAllCores().size()));
+}
+
+bool URA4SimWorldSubsystem::StartCampaignMission(const FString& MissionId, int32 Difficulty)
+{
+    if (SimWorld == nullptr || Content == nullptr)
+    {
+        return false;
+    }
+
+    if (Campaign == nullptr)
+    {
+        Campaign = new RA4::CampaignDatabase();
+    }
+
+    const std::string Id(TCHAR_TO_UTF8(*MissionId));
+    const RA4::CampaignMissionDef* Def = Campaign->FindMission(Id);
+    if (Def == nullptr)
+    {
+        // Deliberately not falling back to a default mission. Loading something the
+        // player did not pick is worse than not loading: the briefing, the objectives
+        // and the debrief would all describe a different mission than the one running.
+        UE_LOG(LogTemp, Error, TEXT("RA4 campaign: no mission '%s' in the database; no match started."),
+               *MissionId);
+        return false;
+    }
+
+    RA4::BuildDefaultContent(*Content);
+
+    std::vector<std::string> Errors;
+    if (!Content->Validate(Errors))
+    {
+        for (const std::string& Error : Errors)
+        {
+            UE_LOG(LogTemp, Error, TEXT("RA4 content validation: %s"), UTF8_TO_TCHAR(Error.c_str()));
+        }
+    }
+
+    // The mission describes its own match. This is the same pair of calls the headless
+    // mission tests make, so what plays here is what those tests proved playable.
+    SimWorld->Initialize(Content, RA4::BuildMissionMatchSetup(*Def));
+    const int32 Placed = RA4::SpawnMissionEntities(*SimWorld, *Def);
+    const int32 Declared = int32(Def->Setup.Spawns.size());
+
+    bWasLocalPowerShortage = false;
+    ActiveMissionId = MissionId;
+    bMissionResultReported = false;
+
+    if (Mission == nullptr)
+    {
+        Mission = new RA4::MissionRuntime();
+    }
+    Mission->Begin(*Def, /*LocalPlayer*/ 0, SimWorld->GetTick());
+
+    AttachAICommanders(Difficulty, RA4::MakeContentId(Def->MissionId.c_str()).Value, /*LocalPlayer*/ 0);
+
+    // A mission whose content this build does not have places fewer entities than it
+    // declares and is still brought up, because a half-populated map is diagnosable
+    // and a refusal to start is not. Eastern Coalition and Chrono Legion missions are
+    // in exactly this state until those factions exist in the content database.
+    if (Placed < Declared)
+    {
+        UE_LOG(LogTemp, Warning,
+               TEXT("RA4 campaign mission '%s': placed %d of %d declared spawns; the rest name content this build does not have."),
+               *MissionId, Placed, Declared);
+    }
+
+    UE_LOG(LogTemp, Display, TEXT("RA4 campaign mission '%s' started with %d entities and %llu objectives."),
+           *MissionId, Placed, static_cast<uint64>(Def->Objectives.size()));
+    return true;
 }
 
 // The map ships one ground plate, and it was sized for a smaller world than the one
@@ -239,6 +313,16 @@ void URA4SimWorldSubsystem::Deinitialize()
     {
         delete SimWorld;
         SimWorld = nullptr;
+    }
+    if (Mission)
+    {
+        delete Mission;
+        Mission = nullptr;
+    }
+    if (Campaign)
+    {
+        delete Campaign;
+        Campaign = nullptr;
     }
     if (Content)
     {
@@ -379,6 +463,7 @@ void URA4SimWorldSubsystem::TickSimulation()
     }
 
     SimWorld->Tick(&Frame);
+    EvaluateMission();
     ProcessPresentationEvents();
 
     if (SnapshotBuilder && LatestSnapshot && SimWorld)
@@ -417,6 +502,60 @@ void URA4SimWorldSubsystem::TickSimulation()
             Network->PruneUpToTick(CurrentTick - PruneLagTicks);
         }
     }
+}
+
+namespace
+{
+const TCHAR* ObjectiveStateName(RA4::ObjectiveState State)
+{
+    switch (State)
+    {
+    case RA4::ObjectiveState::Hidden:    return TEXT("hidden");
+    case RA4::ObjectiveState::Active:    return TEXT("active");
+    case RA4::ObjectiveState::Completed: return TEXT("completed");
+    case RA4::ObjectiveState::Failed:    return TEXT("failed");
+    }
+    return TEXT("unknown");
+}
+} // namespace
+
+void URA4SimWorldSubsystem::EvaluateMission()
+{
+    if (Mission == nullptr || SimWorld == nullptr)
+    {
+        return;
+    }
+
+    const RA4::MissionStatus Status = Mission->Evaluate(*SimWorld);
+
+    // Transitions are drained rather than read: each one is an announcement that
+    // happens once, and leaving them in the list would replay every completed
+    // objective on every tick for the rest of the mission.
+    for (const RA4::ObjectiveTransition& Transition : Mission->GetTransitions())
+    {
+        UE_LOG(LogTemp, Display, TEXT("RA4 objective '%s' -> %s at tick %u"),
+               UTF8_TO_TCHAR(Transition.ObjectiveId.c_str()), ObjectiveStateName(Transition.NewState),
+               Transition.Tick);
+    }
+    Mission->ClearTransitions();
+
+    if (bMissionResultReported || !Mission->IsFinished())
+    {
+        return;
+    }
+    bMissionResultReported = true;
+
+    if (Status == RA4::MissionStatus::Won)
+    {
+        UE_LOG(LogTemp, Display, TEXT("RA4 campaign mission '%s' won at tick %u."),
+               *ActiveMissionId, SimWorld->GetTick());
+        return;
+    }
+
+    // Which clause ended it, not just that it ended: "your construction yard was
+    // destroyed" and "the convoy was lost" are different missions to replay.
+    UE_LOG(LogTemp, Display, TEXT("RA4 campaign mission '%s' lost at tick %u (failure condition %d)."),
+           *ActiveMissionId, SimWorld->GetTick(), Mission->GetTriggeredFailure());
 }
 
 URA4NetworkManager* URA4SimWorldSubsystem::GetActiveNetwork() const

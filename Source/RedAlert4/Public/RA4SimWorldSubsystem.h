@@ -17,6 +17,8 @@ namespace RA4
 {
     class SimWorld;
     class ContentDatabase;
+    class CampaignDatabase;
+    class MissionRuntime;
     namespace Presentation
     {
         struct HudSnapshot;
@@ -68,6 +70,17 @@ public:
     void StartSkirmishMatch(uint8 PlayerFaction, uint8 EnemyFaction, int32 Difficulty,
                             int32 NumAI = 1, int32 AISpot = -1);
 
+    // Brings up a campaign mission by id: the mission's own MissionSetupDef decides
+    // the map, the player slots and the opening forces, so a mission is a match in
+    // its own right rather than a skirmish with a briefing on top. Returns false if
+    // the id is not in the campaign database, in which case no match is started.
+    bool StartCampaignMission(const FString& MissionId, int32 Difficulty);
+
+    // The objective runtime for the mission in progress, or null in a skirmish. The
+    // HUD reads objective state through this; nothing outside may advance it, because
+    // objectives must be evaluated exactly once per simulation tick.
+    const RA4::MissionRuntime* GetMissionRuntime() const { return Mission; }
+
     // Sets the local player's selection for HUD projection
     void SetSelectedEntitiesForHUD(const std::vector<RA4::EntityId>& Selection);
 
@@ -90,6 +103,17 @@ private:
     void RegisterDefaultBlockoutMeshes();
     void FitGroundPlaneToMap();
     void TickSimulation();
+
+    // One commander per active player other than LocalPlayer. Shared by the skirmish
+    // and campaign entry points so a mission's enemies are driven by the same AI a
+    // skirmish uses -- an unattended enemy base is not an opponent.
+    void AttachAICommanders(int32 Difficulty, uint64 Seed, RA4::PlayerId LocalPlayer);
+
+    // Advances objective state by exactly one tick and reports what changed. Called
+    // from TickSimulation immediately after the world tick, so objectives judge the
+    // state the next frame will act on -- the same order the headless mission tests
+    // use, which is what makes a mission play out identically in both.
+    void EvaluateMission();
 
     // The network manager if a lockstep match is running, otherwise null. Null is the
     // single-player case and is not an error: every networked branch in this file is
@@ -115,6 +139,20 @@ private:
     // Owned by the subsystem and outlives SimWorld, which holds a raw pointer to it
     // for the whole match.
     RA4::ContentDatabase* Content;
+
+    // Null in a skirmish. Both are owned here and freed in Deinitialize; the runtime
+    // holds copies of the mission's objectives rather than a pointer into the
+    // database, so their lifetimes are independent of each other.
+    RA4::CampaignDatabase* Campaign = nullptr;
+    RA4::MissionRuntime* Mission = nullptr;
+
+    // The mission's own id, kept for logging and for the debrief screen to name what
+    // was just played.
+    FString ActiveMissionId;
+
+    // A mission ends once. Without this the won/lost line would be logged twenty
+    // times a second for as long as the level stayed open.
+    bool bMissionResultReported = false;
 
     // Presentation HUD Snapshot builder & latest snapshot
     RA4::Presentation::HudSnapshotBuilder* SnapshotBuilder = nullptr;

@@ -8,7 +8,14 @@
 namespace RA4
 {
 
-class CampaignDatabase
+// Empty outside an Unreal build, where UnrealBuildTool defines it as the module's
+// import/export attribute. Without it the campaign's symbols are local to
+// libRA4Campaign and RedAlert4 fails to link against them.
+#ifndef RA4CAMPAIGN_API
+#define RA4CAMPAIGN_API
+#endif
+
+class RA4CAMPAIGN_API CampaignDatabase
 {
 public:
     CampaignDatabase();

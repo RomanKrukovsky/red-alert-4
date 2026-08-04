@@ -25,6 +25,7 @@ public class RedAlert4 : ModuleRules
 			"RA4Simulation",
 			"RA4Replay",
 			"RA4FogOfWar",
+			"RA4Campaign",
 		});
 
 

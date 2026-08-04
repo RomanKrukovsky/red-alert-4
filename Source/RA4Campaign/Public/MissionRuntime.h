@@ -21,6 +21,12 @@
 namespace RA4
 {
 
+// See CampaignDatabase.h: empty outside an Unreal build, the module's export
+// attribute inside one.
+#ifndef RA4CAMPAIGN_API
+#define RA4CAMPAIGN_API
+#endif
+
 enum class MissionStatus : uint8_t
 {
     NotStarted = 0,
@@ -38,7 +44,7 @@ struct ObjectiveTransition
     TickIndex Tick = 0;
 };
 
-class MissionRuntime
+class RA4CAMPAIGN_API MissionRuntime
 {
 public:
     /** Copies the mission's objectives and arms the runtime. LocalPlayer is the slot
@@ -90,12 +96,12 @@ private:
     SimWorld::Initialize takes. Kept separate from the runtime because setting a
     match up and judging it are different jobs, and the loader is also what a map
     editor or a test fixture wants on its own. */
-MatchSetup BuildMissionMatchSetup(const CampaignMissionDef& Mission);
+MatchSetup RA4CAMPAIGN_API BuildMissionMatchSetup(const CampaignMissionDef& Mission);
 
 /** Places the mission's opening units and buildings into an already-initialized
     world. Returns how many spawns were placed; a spawn whose ContentId is not in the
     content database is skipped rather than aborting the mission, and the shortfall in
     the return value is what a test asserts on. */
-int32_t SpawnMissionEntities(SimWorld& World, const CampaignMissionDef& Mission);
+int32_t RA4CAMPAIGN_API SpawnMissionEntities(SimWorld& World, const CampaignMissionDef& Mission);
 
 } // namespace RA4
