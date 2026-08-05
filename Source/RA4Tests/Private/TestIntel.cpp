@@ -39,6 +39,8 @@ struct PerceivedWorldTestAccess
     static bool Deserialize(PerceivedWorld& W, ByteReader& R) { return W.Deserialize(R); }
     static bool IsPhantom(const PerceivedWorld& W, TrackId Id) { return W.IsTrackPhantomInternal(Id); }
     static void SetPhantom(PerceivedWorld& W, TrackId Id, bool bP) { W.SetTrackPhantomInternal(Id, bP); }
+    static void SetDecayCursor(PerceivedWorld& W, uint32_t C) { W.DecayCursor = C; }
+    static uint32_t GetDecayCursor(const PerceivedWorld& W) { return W.DecayCursor; }
 };
 } // namespace Intel
 } // namespace RA4
@@ -357,6 +359,67 @@ RA4_TEST(Intel, PerceivedWorldSurvivesSerializationRoundTrip)
 
     // The recycled slot's generation survived, so the stale handle stays dead.
     RA4_EXPECT(!Restored.IsTrackAlive(Temp));
+}
+
+RA4_TEST(Intel, DecayCursorIsSimStateNotScratch)
+{
+    // I-B4: the amortized-sweep cursor decides WHICH TICK each track's
+    // confidence drops once decay math lands (M2). If it were scratch state,
+    // a save/load or a late-join would silently shift every subsequent decay
+    // event on one peer only -- a delayed-fuse desync. Pin all three
+    // properties now, while the phase is still empty.
+    Intel::PerceivedWorld World;
+    PerceivedWorldTestAccess::Initialize(World, 32, 32, 8);
+    (void)PerceivedWorldTestAccess::AllocateTrack(World);
+    PerceivedWorldTestAccess::SetDecayCursor(World, 5);
+
+    // 1. Survives the round trip.
+    ByteWriter W;
+    World.Serialize(W);
+    Intel::PerceivedWorld Restored;
+    ByteReader R(W.GetBuffer());
+    RA4_REQUIRE(PerceivedWorldTestAccess::Deserialize(Restored, R));
+    RA4_EXPECT(PerceivedWorldTestAccess::GetDecayCursor(Restored) == 5u);
+
+    // 2. Feeds the checksum: two worlds equal except for the cursor must hash
+    //    differently, or a cursor divergence would hide until it moved a track.
+    Intel::PerceivedWorld Other;
+    ByteReader R2(W.GetBuffer());
+    RA4_REQUIRE(PerceivedWorldTestAccess::Deserialize(Other, R2));
+    PerceivedWorldTestAccess::SetDecayCursor(Other, 6);
+    Hash64 HA, HB;
+    Restored.FeedChecksum(HA);
+    Other.FeedChecksum(HB);
+    RA4_EXPECT(HA.Get() != HB.Get());
+
+    // 3. Reset clears it with the rest of the world.
+    PerceivedWorldTestAccess::Initialize(Other, 16, 16, 4);
+    RA4_EXPECT(PerceivedWorldTestAccess::GetDecayCursor(Other) == 0u);
+}
+
+RA4_TEST(Intel, ValidatorRejectsBadTracksPerTickBudget)
+{
+    // I-B4: budget 0 stalls the sweep forever -- tracks never decay and never
+    // GC, which reads as "intel works" until the track cap fills. Above the cap
+    // is meaningless. The validator must catch both at load, not at minute 40.
+    {
+        Intel::IntelSettings S = MakeMinimalSettings(false);
+        S.Tracks.TracksPerTickBudget = 0;
+        std::vector<std::string> Errors;
+        RA4_EXPECT(!Intel::ValidateIntelSettings(S, Errors));
+    }
+    {
+        Intel::IntelSettings S = MakeMinimalSettings(false);
+        S.Tracks.TracksPerTickBudget = S.Tracks.MaxTracksPerPlayer + 1;
+        std::vector<std::string> Errors;
+        RA4_EXPECT(!Intel::ValidateIntelSettings(S, Errors));
+    }
+    {
+        // Sanity: the default passes.
+        Intel::IntelSettings S = MakeMinimalSettings(false);
+        std::vector<std::string> Errors;
+        RA4_EXPECT(Intel::ValidateIntelSettings(S, Errors));
+    }
 }
 
 RA4_TEST(Intel, SimWorldSaveLoadRoundTripsWithIntelEnabled)

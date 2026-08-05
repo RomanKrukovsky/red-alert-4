@@ -17,7 +17,7 @@ namespace
 // Serialization is versioned independently of the SimWorld save version so that
 // intel format changes (frequent while the feature matures) do not force a bump
 // of the outer save format every time.
-constexpr uint32_t kPerceivedWorldVersion = 2; // v2: phantom flag moved to core-internal side table
+constexpr uint32_t kPerceivedWorldVersion = 3; // v3: DecayCursor (I-B4); v2: phantom side table
 } // namespace
 
 void PerceivedWorld::Initialize(int32_t MapWidthTiles, int32_t MapHeightTiles, int32_t MaxTracks)
@@ -41,6 +41,7 @@ void PerceivedWorld::Reset()
     LastObserved.clear();
     HighWaterMark = 0;
     AliveCount = 0;
+    DecayCursor = 0;
     MapWidth = 0;
     MapHeight = 0;
 }
@@ -180,6 +181,7 @@ void PerceivedWorld::Serialize(ByteWriter& W) const
     W.WriteInt32(MapWidth);
     W.WriteInt32(MapHeight);
     W.WriteUInt32(HighWaterMark);
+    W.WriteUInt32(DecayCursor);
     W.WriteUInt32(uint32_t(Tracks.capacity()));
 
     for (uint32_t I = 0; I < HighWaterMark; ++I)
@@ -234,6 +236,7 @@ bool PerceivedWorld::Deserialize(ByteReader& R)
     MapWidth = R.ReadInt32();
     MapHeight = R.ReadInt32();
     HighWaterMark = R.ReadUInt32();
+    DecayCursor = R.ReadUInt32();
     const uint32_t Capacity = R.ReadUInt32();
     Tracks.reserve(Capacity);
     PhantomFlags.reserve(Capacity);
@@ -294,6 +297,7 @@ void PerceivedWorld::FeedChecksum(Hash64& H) const
     // it (M6): a divergent belief on one peer is a real desync and must be caught
     // on the tick it happens, not when it eventually changes a unit position.
     H.FeedUInt32(HighWaterMark);
+    H.FeedUInt32(DecayCursor);
     for (uint32_t I = 0; I < HighWaterMark; ++I)
     {
         const PerceivedTrack& T = Tracks[I];

@@ -295,6 +295,12 @@ bool ValidateIntelSettings(const IntelSettings& Settings, std::vector<std::strin
     CheckPerMilleRange(T.ConfidenceDecayPerSecondPerMille, "confidence_decay_per_second", OutErrors);
     CheckPerMilleRange(T.DropBelowConfidencePerMille, "drop_below_confidence", OutErrors);
     CheckPerMilleRange(T.AgreementConfidenceBonusPerMille, "agreement_confidence_bonus", OutErrors);
+    if (T.TracksPerTickBudget <= 0 || T.TracksPerTickBudget > T.MaxTracksPerPlayer)
+    {
+        // Zero would stall the sweep forever (tracks never decay, never GC);
+        // above the cap is meaningless and hides tuning mistakes.
+        OutErrors.push_back("track_tuning: tracks_per_tick_budget out of (0, max_tracks_per_player]");
+    }
 
     return OutErrors.size() == ErrorsBefore;
 }
@@ -359,6 +365,7 @@ bool LoadIntelSettingsFromJson(const std::string& JsonText, IntelSettings& OutSe
         T.MergeWindowTicks = ReadInt(*Tracks, "merge_window_ticks", T.MergeWindowTicks);
         T.AgreementConfidenceBonusPerMille = ReadPerMille(*Tracks, "agreement_confidence_bonus", T.AgreementConfidenceBonusPerMille);
         T.MaxTracksPerPlayer = ReadInt(*Tracks, "max_tracks_per_player", T.MaxTracksPerPlayer);
+        T.TracksPerTickBudget = ReadInt(*Tracks, "tracks_per_tick_budget", T.TracksPerTickBudget);
     }
 
     return ValidateIntelSettings(OutSettings, OutErrors);

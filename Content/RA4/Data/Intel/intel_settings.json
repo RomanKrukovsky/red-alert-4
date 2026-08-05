@@ -61,6 +61,7 @@
     "merge_radius_tiles": 3,
     "merge_window_ticks": 100,
     "agreement_confidence_bonus": 0.3,
-    "max_tracks_per_player": 4096
+    "max_tracks_per_player": 4096,
+    "tracks_per_tick_budget": 512
   }
 }

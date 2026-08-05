@@ -129,6 +129,16 @@ struct TrackTuning
     int32_t MergeWindowTicks = 100;                 // temporal merge window
     int32_t AgreementConfidenceBonusPerMille = 300; // superlinear boost on agreement
     int32_t MaxTracksPerPlayer = 4096;              // hard cap; memory budget guard
+
+    // Amortization budget for the decay sweep (ADR-0021 "amortized round-robin",
+    // I-B4). PhaseTrackUpdate visits at most this many track slots per tick,
+    // resuming from a persistent cursor, so a full sweep over MaxTracksPerPlayer
+    // completes in ceil(Max/Budget) ticks regardless of load spikes. 512 @ 4096
+    // cap = full sweep every 8 ticks (0.4 s at 20 Hz) -- far inside the decay
+    // timescale (-2%/s), so amortization is invisible to gameplay. Decay math
+    // itself lands in M2; the budget and cursor exist from M0 so the contract
+    // (and its serialization) cannot fall out of the design again.
+    int32_t TracksPerTickBudget = 512;
 };
 
 // --- Root settings ---------------------------------------------------------------

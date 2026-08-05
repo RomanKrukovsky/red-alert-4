@@ -95,6 +95,14 @@ private:
     uint32_t HighWaterMark = 0;
     uint32_t AliveCount = 0;
 
+    // Round-robin cursor for the amortized decay sweep (ADR-0021, I-B4).
+    // PhaseTrackUpdate (M2) resumes here and advances by TrackTuning::
+    // TracksPerTickBudget slots per tick, wrapping at HighWaterMark. Sim state:
+    // serialized and checksummed, because sweep position determines *which tick*
+    // a given track's confidence drops -- two peers with different cursors would
+    // diverge the moment decay math lands.
+    uint32_t DecayCursor = 0;
+
     std::vector<TickIndex> LastObserved;     // per-tile negative knowledge
     int32_t MapWidth = 0;
     int32_t MapHeight = 0;
