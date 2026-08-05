@@ -11,7 +11,7 @@ namespace Intel
 
 namespace
 {
-constexpr uint32_t kIntelSystemVersion = 1;
+constexpr uint32_t kIntelSystemVersion = 2; // v2: association tables are state (M1)
 } // namespace
 
 const char* PhaseName(Phase P)
@@ -56,20 +56,29 @@ void IntelSystem::Reset()
     }
     InFlightReports.clear();
     NextReportId = 1;
+    for (int32_t P = 0; P < kMaxPlayers; ++P)
+    {
+        PendingObservations[P].clear();
+        AssociationTrack[P].clear();
+        AssociationGeneration[P].clear();
+    }
+    EntityCapacity = 0;
     Stats = PhaseStats{};
 }
 
-void IntelSystem::Tick(TickIndex CurrentTick)
+void IntelSystem::Tick(TickIndex CurrentTick, const ObservationInput& Input)
 {
     if (!IsEnabled())
     {
         return;
     }
 
+    EnsureAssociationCapacity(Input.EntityCapacity);
+
     // Fixed phase order -- part of the replay compatibility contract, do not
     // reorder without a format version bump (same rule as SimWorld::Tick).
     PhaseMoraleUpdate(CurrentTick);
-    PhaseObservation(CurrentTick);
+    PhaseObservation(CurrentTick, Input);
     PhaseDistortion(CurrentTick);
     PhaseReportEmission(CurrentTick);
     PhasePropagation(CurrentTick);
@@ -91,15 +100,206 @@ const PerceivedWorld& IntelSystem::GetPerceivedWorld(PlayerId PlayerIdx) const
     return *Worlds[PlayerIdx];
 }
 
-// --- Phases (M0: deliberately empty, see header) -----------------------------
+// --- Phases ---------------------------------------------------------------------
+//
+// M1 implements the TRUTHFUL pipeline: what fog sees becomes an observation,
+// the observation becomes a report that arrives the same tick, and the report
+// becomes/updates a track that mirrors ground truth exactly. Zero distortion,
+// zero delay -- the baseline every distortion milestone is measured against,
+// and the proof that the architecture moves data end to end at all.
 
-void IntelSystem::PhaseMoraleUpdate(TickIndex) {}
-void IntelSystem::PhaseObservation(TickIndex) {}
-void IntelSystem::PhaseDistortion(TickIndex) {}
-void IntelSystem::PhaseReportEmission(TickIndex) {}
-void IntelSystem::PhasePropagation(TickIndex) {}
-void IntelSystem::PhaseAggregation(TickIndex) {}
-void IntelSystem::PhaseTrackUpdate(TickIndex) {}
+void IntelSystem::EnsureAssociationCapacity(uint32_t NewEntityCapacity)
+{
+    if (NewEntityCapacity <= EntityCapacity)
+    {
+        return;
+    }
+    EntityCapacity = NewEntityCapacity;
+    for (int32_t P = 0; P < kMaxPlayers; ++P)
+    {
+        if (Worlds[P] != nullptr)
+        {
+            AssociationTrack[P].resize(EntityCapacity, TrackId{});
+            AssociationGeneration[P].resize(EntityCapacity, 0);
+        }
+    }
+}
+
+void IntelSystem::PhaseMoraleUpdate(TickIndex)
+{
+    // M2 territory (fear/fatigue inputs to distortion). Deliberately empty.
+}
+
+void IntelSystem::PhaseObservation(TickIndex CurrentTick, const ObservationInput& Input)
+{
+    // Truthful observation: every entity the player's fog currently sees becomes
+    // one observation with perfect clarity. Distortion (M2) will transform these
+    // in PhaseDistortion; this phase must stay honest so the disable-flags path
+    // always has a truth to fall back to.
+    for (int32_t P = 0; P < kMaxPlayers; ++P)
+    {
+        if (Worlds[P] == nullptr)
+        {
+            continue;
+        }
+        PendingObservations[P].clear();
+        for (const ObservedEntity& Seen : Input.VisibleToPlayer[P])
+        {
+            Observation Obs;
+            Obs.Subject = Seen.Id;
+            Obs.ObservedClass = Seen.Class;
+            Obs.ObservedPosition = Seen.Position;
+            Obs.ObservedCount = 1;
+            Obs.Tick = CurrentTick;
+            Obs.Clarity = Fixed::FromInt(1);
+            PendingObservations[P].push_back(Obs);
+
+            Worlds[P]->SetLastObservedTick(Seen.TileX, Seen.TileY, CurrentTick);
+        }
+    }
+}
+
+void IntelSystem::PhaseDistortion(TickIndex)
+{
+    // M2 territory. In M1 observations pass through untouched.
+}
+
+void IntelSystem::PhaseReportEmission(TickIndex CurrentTick)
+{
+    // M1: one report per player per tick, arriving instantly. M3 replaces the
+    // instant arrival with per-reporter intervals and chain-of-command delays,
+    // which is why reports already carry EmitTick/ArrivalTick/HopsRemaining.
+    for (int32_t P = 0; P < kMaxPlayers; ++P)
+    {
+        if (Worlds[P] == nullptr || PendingObservations[P].empty())
+        {
+            continue;
+        }
+        IntelReport Report;
+        Report.ReportId = NextReportId;
+        NextReportId += 1;
+        Report.OwnerPlayer = PlayerId(P);
+        Report.EmitTick = CurrentTick;
+        Report.ArrivalTick = CurrentTick; // zero delay in the truthful pipeline
+        Report.HopsRemaining = 0;
+        Report.Reliability = Fixed::FromInt(1);
+        Report.Payload = PendingObservations[P]; // copy; pooling lands with M3's queue
+        InFlightReports.push_back(std::move(Report));
+    }
+}
+
+void IntelSystem::PhasePropagation(TickIndex)
+{
+    // M3 territory (hops, delays, blackout). With zero-delay reports there is
+    // nothing to advance.
+}
+
+void IntelSystem::PhaseAggregation(TickIndex CurrentTick)
+{
+    // Applies every report whose ArrivalTick has come. M1 keeps the merge rule
+    // trivial -- one GT entity maps to one track via the association table; the
+    // spatial merge of anonymous reports is M3's problem.
+    size_t WriteBack = 0;
+    for (size_t I = 0; I < InFlightReports.size(); ++I)
+    {
+        IntelReport& Report = InFlightReports[I];
+        if (Report.ArrivalTick > CurrentTick)
+        {
+            // Not yet arrived: keep in flight (stable order preserved).
+            if (WriteBack != I)
+            {
+                InFlightReports[WriteBack] = std::move(Report);
+            }
+            WriteBack += 1;
+            continue;
+        }
+
+        const PlayerId P = Report.OwnerPlayer;
+        PerceivedWorld* World = (P < kMaxPlayers) ? Worlds[P].get() : nullptr;
+        if (World == nullptr)
+        {
+            continue; // owner slot inactive; drop the report
+        }
+
+        for (const Observation& Obs : Report.Payload)
+        {
+            const uint32_t Slot = Obs.Subject.Index;
+            if (Slot >= EntityCapacity)
+            {
+                continue;
+            }
+
+            // GT slot reuse severs the association: the HQ cannot know that the
+            // unit it was tracking died and its slot now holds a stranger. The
+            // old track stays behind as last-known-position (frozen; decay and
+            // GC are TrackUpdate's job), and the stranger gets a fresh track.
+            TrackId& Assoc = AssociationTrack[P][Slot];
+            uint32_t& AssocGen = AssociationGeneration[P][Slot];
+            if (Assoc.IsValid() && AssocGen != Obs.Subject.Generation)
+            {
+                Assoc = TrackId{};
+            }
+
+            PerceivedTrack* Track = Assoc.IsValid() ? World->GetTrackMutable(Assoc) : nullptr;
+            if (Track == nullptr)
+            {
+                const TrackId NewId = World->AllocateTrack();
+                if (!NewId.IsValid())
+                {
+                    continue; // at hard cap; report is lost, which is honest
+                }
+                Assoc = NewId;
+                AssocGen = Obs.Subject.Generation;
+                Track = World->GetTrackMutable(NewId);
+            }
+
+            // Truthful update: direct observation overwrites, never averages
+            // (§4.5 -- and with zero distortion there is nothing to average).
+            Track->BelievedClass = Obs.ObservedClass;
+            Track->BelievedPosition = Obs.ObservedPosition;
+            Track->PositionErrorRadius = Fixed::Zero();
+            Track->BelievedCountMin = Obs.ObservedCount;
+            Track->BelievedCountMax = Obs.ObservedCount;
+            Track->LastUpdateTick = CurrentTick;
+            Track->Confidence = Fixed::FromInt(1);
+            Track->IndependentSourceCount = 1;
+            Track->bStale = false;
+            Track->bContested = false;
+            Track->ProvenanceReportIds[Track->ProvenanceCount % kTrackProvenanceSize] = Report.ReportId;
+            Track->ProvenanceCount = uint8_t((Track->ProvenanceCount + 1) % (kTrackProvenanceSize * 2));
+        }
+    }
+    InFlightReports.resize(WriteBack);
+}
+
+void IntelSystem::PhaseTrackUpdate(TickIndex CurrentTick)
+{
+    // M1 scope: stale marking only, so a track whose subject left our vision is
+    // visibly old data rather than a live contact. Confidence decay curves,
+    // error-radius growth and phantom refutation land with M2/M4 (I-B3/I-B4
+    // decide the decay model first).
+    for (int32_t P = 0; P < kMaxPlayers; ++P)
+    {
+        PerceivedWorld* World = Worlds[P].get();
+        if (World == nullptr)
+        {
+            continue;
+        }
+        const int32_t StaleAfter = Settings->Tracks.StaleAfterTicks;
+        for (uint32_t I = 0; I < World->GetTrackCapacity(); ++I)
+        {
+            PerceivedTrack& T = World->Tracks[I]; // friend access: phases are the writer
+            if (!T.bAlive || T.bStale)
+            {
+                continue;
+            }
+            if (CurrentTick >= T.LastUpdateTick && int32_t(CurrentTick - T.LastUpdateTick) >= StaleAfter)
+            {
+                T.bStale = true;
+            }
+        }
+    }
+}
 
 // --- Determinism plumbing ------------------------------------------------------
 
@@ -145,6 +345,25 @@ void IntelSystem::Serialize(ByteWriter& W) const
         if (bHasWorld)
         {
             Worlds[P]->Serialize(W);
+        }
+    }
+
+    // The track<->entity association decides whether the next report UPDATES a
+    // track or ALLOCATES a duplicate -- that is future-state-shaping, so it must
+    // survive a save exactly (a post-load duplicate contact is a desync AND a
+    // visible bug: two blips for one tank).
+    W.WriteUInt32(EntityCapacity);
+    for (int32_t P = 0; P < kMaxPlayers; ++P)
+    {
+        if (Worlds[P] == nullptr)
+        {
+            continue;
+        }
+        for (uint32_t I = 0; I < EntityCapacity; ++I)
+        {
+            W.WriteUInt32(AssociationTrack[P][I].Index);
+            W.WriteUInt32(AssociationTrack[P][I].Generation);
+            W.WriteUInt32(AssociationGeneration[P][I]);
         }
     }
 }
@@ -213,6 +432,23 @@ bool IntelSystem::Deserialize(ByteReader& R)
             return false;
         }
     }
+
+    EntityCapacity = R.ReadUInt32();
+    for (int32_t P = 0; P < kMaxPlayers; ++P)
+    {
+        if (Worlds[P] == nullptr)
+        {
+            continue;
+        }
+        AssociationTrack[P].assign(EntityCapacity, TrackId{});
+        AssociationGeneration[P].assign(EntityCapacity, 0);
+        for (uint32_t I = 0; I < EntityCapacity; ++I)
+        {
+            AssociationTrack[P][I].Index = R.ReadUInt32();
+            AssociationTrack[P][I].Generation = R.ReadUInt32();
+            AssociationGeneration[P][I] = R.ReadUInt32();
+        }
+    }
     return true;
 }
 
@@ -235,6 +471,24 @@ void IntelSystem::FeedChecksum(Hash64& H) const
         if (Worlds[P] != nullptr)
         {
             Worlds[P]->FeedChecksum(H);
+        }
+    }
+    H.FeedUInt32(EntityCapacity);
+    for (int32_t P = 0; P < kMaxPlayers; ++P)
+    {
+        if (Worlds[P] == nullptr)
+        {
+            continue;
+        }
+        for (uint32_t I = 0; I < EntityCapacity; ++I)
+        {
+            if (AssociationTrack[P][I].IsValid())
+            {
+                H.FeedUInt32(I);
+                H.FeedUInt32(AssociationTrack[P][I].Index);
+                H.FeedUInt32(AssociationTrack[P][I].Generation);
+                H.FeedUInt32(AssociationGeneration[P][I]);
+            }
         }
     }
 }

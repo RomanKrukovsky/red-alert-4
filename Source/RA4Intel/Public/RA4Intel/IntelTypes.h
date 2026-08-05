@@ -86,6 +86,7 @@ struct Observation
 struct IntelReport
 {
     uint32_t ReportId = 0;
+    PlayerId OwnerPlayer = kInvalidPlayer;  // whose HQ map this report feeds
     EntityId Author;
     TickIndex EmitTick = 0;
     TickIndex ArrivalTick = 0;

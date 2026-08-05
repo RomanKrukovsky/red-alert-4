@@ -33,6 +33,37 @@ class Hash64;
 namespace Intel
 {
 
+// What the simulation shows the intel layer each tick. SimWorld owns entity
+// storage and fog; RA4Intel must not depend on RA4Simulation (the dependency
+// points the other way), so the visible-entity view crosses the boundary as
+// plain data. The buffer is owned by SimWorld and reused across ticks -- no
+// per-tick allocation in steady state.
+struct ObservedEntity
+{
+    EntityId Id;            // ground truth; never escapes the intel core
+    ContentId Class;
+    Vec2 Position;
+    int32_t TileX = 0;
+    int32_t TileY = 0;
+};
+
+struct ObservationInput
+{
+    // Per viewing player: hostile/neutral entities their fog can currently see,
+    // in ascending entity-slot order (deterministic by construction).
+    std::vector<ObservedEntity> VisibleToPlayer[kMaxPlayers];
+    // Entity slot capacity, so per-entity association tables can size once.
+    uint32_t EntityCapacity = 0;
+
+    void Clear()
+    {
+        for (int32_t P = 0; P < kMaxPlayers; ++P)
+        {
+            VisibleToPlayer[P].clear();
+        }
+    }
+};
+
 // Fixed phase pipeline. Kept as an enum so profiling counters and debug output
 // can name phases without string duplication.
 enum class Phase : uint8_t
@@ -70,10 +101,10 @@ public:
 
     bool IsEnabled() const { return Settings != nullptr && Settings->bEnabled; }
 
-    // Advances one tick. Called by SimWorld::SystemIntel with the current tick.
-    // When the feature is disabled this returns immediately: zero cost, zero state,
-    // classic RTS behaviour (§4.7 requirement).
-    void Tick(TickIndex CurrentTick);
+    // Advances one tick. Called by SimWorld::SystemIntel with the current tick
+    // and this tick's visibility view. When the feature is disabled this returns
+    // immediately: zero cost, zero state, classic RTS behaviour (§4.7).
+    void Tick(TickIndex CurrentTick, const ObservationInput& Input);
 
     // The only read surface for belief state. PlayerIdx must be < kMaxPlayers.
     // There is deliberately no mutable counterpart: belief is written only by
@@ -88,15 +119,19 @@ public:
     const PhaseStats& GetStats() const { return Stats; }
 
 private:
-    // Phase bodies. Empty in M0; each milestone fills its own and MUST NOT touch
-    // the others (small reviewable packages, CLAUDE.md rule 10).
+    // Phase bodies. Filled milestone by milestone; a milestone MUST NOT touch
+    // phases it does not own (small reviewable packages, CLAUDE.md rule 10).
+    // M1 owns Observation/ReportEmission/Aggregation/TrackUpdate (truthful path).
     void PhaseMoraleUpdate(TickIndex CurrentTick);
-    void PhaseObservation(TickIndex CurrentTick);
+    void PhaseObservation(TickIndex CurrentTick, const ObservationInput& Input);
     void PhaseDistortion(TickIndex CurrentTick);
     void PhaseReportEmission(TickIndex CurrentTick);
     void PhasePropagation(TickIndex CurrentTick);
     void PhaseAggregation(TickIndex CurrentTick);
     void PhaseTrackUpdate(TickIndex CurrentTick);
+
+    // Grows the per-player association tables to cover EntityCapacity slots.
+    void EnsureAssociationCapacity(uint32_t NewEntityCapacity);
 
     const IntelSettings* Settings = nullptr;
 
@@ -107,6 +142,20 @@ private:
     // Reports in flight, ordered by ArrivalTick (min-heap over a vector, M3).
     std::vector<IntelReport> InFlightReports;
     uint32_t NextReportId = 1;
+
+    // This tick's truthful observations per player, produced by PhaseObservation
+    // and consumed by PhaseReportEmission. Member (not local) so capacity
+    // persists across ticks -- no steady-state allocation.
+    std::vector<Observation> PendingObservations[kMaxPlayers];
+
+    // track<->entity association, per player, indexed by GT entity slot. This is
+    // exactly the association INVARIANT 10 forbids on the read surface, which is
+    // why it lives here and not in PerceivedTrack. The generation table detects
+    // GT slot reuse: a recycled slot must get a NEW track, while the old track
+    // freezes as last-known-position -- the HQ has no idea the old unit is gone.
+    std::vector<TrackId> AssociationTrack[kMaxPlayers];
+    std::vector<uint32_t> AssociationGeneration[kMaxPlayers];
+    uint32_t EntityCapacity = 0;
 
     PhaseStats Stats;
 };

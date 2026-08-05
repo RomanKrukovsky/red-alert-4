@@ -41,4 +41,4 @@
 
 11. **INVARIANT 11: Belief Is Replay-Reconstructible** (ADR-0021 K2)
    - "What did player P believe at tick T" must be answerable from a replay plus a player id alone. Belief may not depend on any state that is not in the replay.
-   - **Not yet verified**: no test reconstructs a belief view from a replay. Gates M1.
+   - **Verified 2026-08-06**: `Intel.BeliefIsReplayReconstructible` reconstructs belief from (seed, command frames) in a second SimWorld and matches both per-tick state checksums and final track contents.

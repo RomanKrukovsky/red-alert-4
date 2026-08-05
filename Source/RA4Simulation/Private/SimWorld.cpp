@@ -2976,7 +2976,50 @@ void SimWorld::SystemIntel()
     // Runs right after fog of war: fog decides what is physically visible this
     // tick, intel turns that into (delayed, distorted) belief. Disabled layer
     // returns immediately -- classic perfect-information behaviour (ADR-0026).
-    IntelLayer.Tick(CurrentTick);
+    if (!IntelLayer.IsEnabled())
+    {
+        return;
+    }
+
+    // Build this tick's visibility view. Iteration is by entity slot and then by
+    // player, so the observation order is deterministic by construction. Only
+    // non-owned, non-projectile entities are observable: a player's own units are
+    // exact by decision D3 of ADR-0026 (own-troop self-report bias is M4 and
+    // touches info panels, not selection).
+    IntelInput.Clear();
+    IntelInput.EntityCapacity = uint32_t(Core.size());
+    for (uint32_t I = 0; I < HighWaterMark; ++I)
+    {
+        if (!Core[I].bAlive || Core[I].Kind == EntityKind::Projectile)
+        {
+            continue;
+        }
+        const TileCoord Tile = Map.WorldToTile(Transforms[I].Position);
+        for (PlayerId P = 0; P < kMaxPlayers; ++P)
+        {
+            if (!Players[P].bActive || Players[P].bDefeated)
+            {
+                continue;
+            }
+            if (Core[I].Owner == P)
+            {
+                continue; // own units are known exactly, not tracked as contacts
+            }
+            if (!IsEntityVisibleTo(P, I))
+            {
+                continue;
+            }
+            Intel::ObservedEntity Seen;
+            Seen.Id = MakeId(I);
+            Seen.Class = Core[I].Def;
+            Seen.Position = Transforms[I].Position;
+            Seen.TileX = Tile.X;
+            Seen.TileY = Tile.Y;
+            IntelInput.VisibleToPlayer[P].push_back(Seen);
+        }
+    }
+
+    IntelLayer.Tick(CurrentTick, IntelInput);
 }
 
 void SimWorld::SystemFactionResources()

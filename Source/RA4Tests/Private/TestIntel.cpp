@@ -459,10 +459,15 @@ RA4_TEST(Intel, SimWorldSaveLoadRoundTripsWithIntelEnabled)
     SimWorld World;
     World.Initialize(&Content, MakeTestSetup(999), &Enabled);
     World.SpawnUnit(Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    // A live enemy contact makes the save carry real belief state: a track AND
+    // its association-table entry. Without it this test round-trips only empty
+    // containers and would miss a forgotten field in either.
+    World.SpawnUnit(Ids::AllRifleman, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
     for (int32_t T = 0; T < 50; ++T)
     {
         World.Tick(nullptr);
     }
+    RA4_EXPECT(World.GetIntel().GetPerceivedWorld(0).GetAliveTrackCount() == 1);
 
     ByteWriter W;
     World.Serialize(W);
@@ -483,6 +488,9 @@ RA4_TEST(Intel, SimWorldSaveLoadRoundTripsWithIntelEnabled)
         World.Tick(nullptr);
         Restored.Tick(nullptr);
     }
+    // The association survived the load: the ongoing contact kept updating ONE
+    // track, it did not fork a duplicate blip after resume.
+    RA4_EXPECT(Restored.GetIntel().GetPerceivedWorld(0).GetAliveTrackCount() == 1);
     RA4_EXPECT(World.ComputeStateChecksum() == Restored.ComputeStateChecksum());
 }
 
@@ -512,4 +520,206 @@ RA4_TEST(Intel, PreIntelSaveIsRefusedWhenIntelEnabled)
     // v3 save with intel disabled into enabled session: IntelSystem::Deserialize
     // sees the enabled-ness mismatch and refuses.
     RA4_EXPECT(!Target.Deserialize(R, &Content));
+}
+
+// --- M1: truthful pipeline (PS == GT while nothing distorts) -----------------------
+
+namespace
+{
+
+// Both bases plus one hostile scout parked inside player 0's vision. Fog reveal
+// radius comes from unit VisionRange (600 units = 3 tiles), so 2 tiles apart
+// guarantees mutual visibility.
+void SpawnScoutContact(SimWorld& World)
+{
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::AllRifleman, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+}
+
+const Intel::PerceivedTrack* FindSingleTrack(const SimWorld& World, PlayerId P)
+{
+    std::vector<const Intel::PerceivedTrack*> Found;
+    World.GetIntel().GetPerceivedWorld(P).GetTracksInRegion(0, 0, 63, 63, Found);
+    return Found.size() == 1 ? Found[0] : nullptr;
+}
+
+} // namespace
+
+RA4_TEST(Intel, TruthfulPipelineMirrorsVisibleEnemy)
+{
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Intel::IntelSettings Enabled = MakeMinimalSettings(true);
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(555), &Enabled);
+    SpawnScoutContact(World);
+
+    World.Tick(nullptr); // fog reveals, intel observes, report arrives same tick
+
+    // Player 0 sees exactly one contact: the enemy rifleman, at its true position,
+    // true class, count interval collapsed to [1,1], full confidence.
+    const Intel::PerceivedTrack* T = FindSingleTrack(World, 0);
+    RA4_REQUIRE(T != nullptr);
+    RA4_EXPECT(T->BelievedClass == RA4Test::Ids::AllRifleman);
+    RA4_EXPECT(T->BelievedPosition.X == Fixed::FromInt(3400));
+    RA4_EXPECT(T->BelievedPosition.Y == Fixed::FromInt(3000));
+    RA4_EXPECT(T->BelievedCountMin == 1 && T->BelievedCountMax == 1);
+    RA4_EXPECT(T->Confidence == Fixed::FromInt(1));
+    RA4_EXPECT(T->PositionErrorRadius == Fixed::Zero());
+    RA4_EXPECT(!T->bStale);
+
+    // And symmetrically: player 1 tracks player 0's conscript.
+    const Intel::PerceivedTrack* T1 = FindSingleTrack(World, 1);
+    RA4_REQUIRE(T1 != nullptr);
+    RA4_EXPECT(T1->BelievedClass == RA4Test::Ids::SovConscript);
+}
+
+RA4_TEST(Intel, TrackFollowsMovingContactWithoutDuplicates)
+{
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Intel::IntelSettings Enabled = MakeMinimalSettings(true);
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(556), &Enabled);
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    const EntityId Enemy =
+        World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+
+    World.Tick(nullptr);
+    RA4_EXPECT(World.GetIntel().GetPerceivedWorld(0).GetAliveTrackCount() == 1);
+
+    // Order the tank to drive within vision; the same track must update in place
+    // (association table), not spawn a second contact per new position.
+    // Destination stays inside the conscript's 600-unit vision: this test pins
+    // in-place track UPDATES; leaving vision (the freeze case) is the next test.
+    Command Move = RA4Test::MakeCommand(CommandType::Move, 1);
+    Move.Primary = Enemy;
+    Move.Location = Vec2(Fixed::FromInt(3350), Fixed::FromInt(3300));
+    RA4_REQUIRE(World.ApplyCommand(Move).IsAccepted());
+
+    Vec2 LastBelieved(Fixed::Zero(), Fixed::Zero());
+    for (int32_t T = 0; T < 100; ++T)
+    {
+        World.Tick(nullptr);
+    }
+    RA4_EXPECT(World.GetIntel().GetPerceivedWorld(0).GetAliveTrackCount() == 1);
+
+    const Intel::PerceivedTrack* Track = FindSingleTrack(World, 0);
+    RA4_REQUIRE(Track != nullptr);
+    // The believed position tracked the movement: it is no longer the spawn point.
+    RA4_EXPECT(Track->BelievedPosition.X != Fixed::FromInt(3400) ||
+               Track->BelievedPosition.Y != Fixed::FromInt(3000));
+    // And with zero distortion it equals the true position exactly.
+    const TransformComp* True = World.GetTransform(Enemy);
+    RA4_REQUIRE(True != nullptr);
+    RA4_EXPECT(Track->BelievedPosition.X == True->Position.X);
+    RA4_EXPECT(Track->BelievedPosition.Y == True->Position.Y);
+    (void)LastBelieved;
+}
+
+RA4_TEST(Intel, LostContactFreezesAsLastKnownPositionAndGoesStale)
+{
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Intel::IntelSettings Enabled = MakeMinimalSettings(true);
+    Enabled.Tracks.StaleAfterTicks = 40; // 2 s, keeps the test fast
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(557), &Enabled);
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    const EntityId Enemy =
+        World.SpawnUnit(RA4Test::Ids::AllRifleman, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+    // Keeps player 1 alive after the rifleman dies -- a finished match stops
+    // ticking, and a stopped clock can never mark anything stale. Far corner:
+    // outside player 0's vision, so player 0 still tracks exactly one contact.
+    World.SpawnUnit(RA4Test::Ids::AllRifleman, 1, Vec2(Fixed::FromInt(11000), Fixed::FromInt(11000)));
+
+    World.Tick(nullptr);
+    const Intel::PerceivedTrack* Track = FindSingleTrack(World, 0);
+    RA4_REQUIRE(Track != nullptr);
+    const Vec2 LastKnown = Track->BelievedPosition;
+
+    // The enemy dies out of nowhere (debug damage). The HQ map must NOT learn
+    // this: the track freezes at last known position and only goes stale.
+    World.DebugDamage(Enemy, 1000000);
+    for (int32_t T = 0; T < 60; ++T)
+    {
+        World.Tick(nullptr);
+    }
+
+    RA4_EXPECT(!World.IsAlive(Enemy));
+    const Intel::PerceivedTrack* Frozen = FindSingleTrack(World, 0);
+    RA4_REQUIRE(Frozen != nullptr);
+    RA4_EXPECT(Frozen->BelievedPosition.X == LastKnown.X);
+    RA4_EXPECT(Frozen->BelievedPosition.Y == LastKnown.Y);
+    RA4_EXPECT(Frozen->bStale);
+}
+
+RA4_TEST(Intel, BeliefIsReplayReconstructible)
+{
+    // INVARIANT 11 / I-B5: "what did player P believe at tick T" must be
+    // answerable from (seed, command stream) alone. Two independent SimWorlds
+    // fed the same recorded frames must agree on the full state checksum --
+    // which includes every PerceivedWorld -- at every checkpoint, and on the
+    // exact belief contents at the end.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Intel::IntelSettings Enabled = MakeMinimalSettings(true);
+
+    MatchSetup Setup = MakeTestSetup(8181);
+
+    SimWorld Live;
+    Live.Initialize(&Content, Setup, &Enabled);
+    Live.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    const EntityId Enemy =
+        Live.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+
+    // Record the command stream exactly as a replay file stores it: the spawn
+    // above stands in for scenario setup, the move command is the player input.
+    std::vector<CommandFrame> Frames;
+    std::vector<uint64_t> Checkpoints;
+    for (int32_t T = 0; T < 120; ++T)
+    {
+        CommandFrame Frame;
+        Frame.Tick = Live.GetTick();
+        if (T == 10)
+        {
+            Command Move = RA4Test::MakeCommand(CommandType::Move, 1);
+            Move.Primary = Enemy;
+            Move.Location = Vec2(Fixed::FromInt(4200), Fixed::FromInt(3800));
+            Frame.Commands.push_back(Move);
+        }
+        Live.Tick(Frame.Commands.empty() ? nullptr : &Frame);
+        Frames.push_back(Frame);
+        Checkpoints.push_back(Live.ComputeStateChecksum());
+    }
+
+    // Reconstruction: fresh world, same seed, same scripted spawns, same frames.
+    SimWorld Replayed;
+    Replayed.Initialize(&Content, Setup, &Enabled);
+    Replayed.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    Replayed.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+
+    for (int32_t T = 0; T < 120; ++T)
+    {
+        const CommandFrame& Frame = Frames[size_t(T)];
+        Replayed.Tick(Frame.Commands.empty() ? nullptr : &Frame);
+        RA4_EXPECT(Replayed.ComputeStateChecksum() == Checkpoints[size_t(T)]);
+    }
+
+    // Belief-level comparison, not just hashes: player 0's HQ map is identical.
+    std::vector<const Intel::PerceivedTrack*> LiveTracks, ReplayTracks;
+    Live.GetIntel().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, LiveTracks);
+    Replayed.GetIntel().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, ReplayTracks);
+    RA4_REQUIRE(LiveTracks.size() == ReplayTracks.size());
+    for (size_t I = 0; I < LiveTracks.size(); ++I)
+    {
+        RA4_EXPECT(LiveTracks[I]->BelievedPosition.X == ReplayTracks[I]->BelievedPosition.X);
+        RA4_EXPECT(LiveTracks[I]->BelievedPosition.Y == ReplayTracks[I]->BelievedPosition.Y);
+        RA4_EXPECT(LiveTracks[I]->BelievedClass == ReplayTracks[I]->BelievedClass);
+        RA4_EXPECT(LiveTracks[I]->LastUpdateTick == ReplayTracks[I]->LastUpdateTick);
+        RA4_EXPECT(LiveTracks[I]->Confidence == ReplayTracks[I]->Confidence);
+    }
 }

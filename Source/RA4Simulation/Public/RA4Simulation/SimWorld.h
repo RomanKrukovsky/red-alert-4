@@ -233,6 +233,9 @@ private:
     // systems, or every pre-intel replay becomes unreplayable at once.
     Random IntelRng;
     Intel::IntelSystem IntelLayer;
+    // Reused per tick by SystemIntel; member so vector capacity persists and the
+    // steady state allocates nothing.
+    Intel::ObservationInput IntelInput;
     // Kept for Restart(), which re-runs Initialize with the original arguments.
     // Owned by the content layer, same lifetime contract as Content.
     const Intel::IntelSettings* IntelSettingsRef = nullptr;
