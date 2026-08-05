@@ -202,6 +202,12 @@ private:
     // buildings qualify is a content question (what can this thing produce), not a
     // hardcoded name list, so it is answered here from the definition.
     bool ProducerRunsAtCriticalPower(const EntityDef& Def) const;
+    // The single ADR-0013 verdict on "is this queue head stopped by the power state".
+    // Both SystemFlowPayment and SystemProduction ask it, because the two answering
+    // the question separately is what produced a blackout deadlock: payment kept
+    // charging for an item production refused to advance, and the money that should
+    // have finished the power plant went into a frozen queue instead.
+    bool IsProductionPowerStalled(uint32_t BuildingIndex) const;
     void BuildNavigationGrid();
     uint8_t GetNavigationPassability(const TileCoord& Tile) const;
     Nav::NavQuery MakeNavigationQuery(const EntityDef& Def) const;

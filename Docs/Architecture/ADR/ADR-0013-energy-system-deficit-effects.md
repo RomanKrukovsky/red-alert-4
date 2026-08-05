@@ -111,4 +111,75 @@ AI queries:
 
 ## Status
 
-**ACCEPTED**. Pending implementation. Will be validated by headless economy simulator.
+**PARTIALLY IMPLEMENTED.** Packages A and B are done and tested; C and D are pending.
+
+### Implemented (packages A and B)
+
+Tier bands and the construction/production/harvester rows of the effect matrix;
+`PowerTier` + `PowerTierForRatio` + `PowerSpeedPercentForTier` in `SimTypes.h`;
+`SimWorld::PowerSpeedPercent` as the single ratio→speed authority;
+`ProductionInfo::Tier` with the default content graded T0–T2; high-tech (T2+) pausing
+via `FlowPaymentState::EnergyThrottled`; edge-triggered `PowerShortageStarted/Ended`
+with `PlayerState::LastPowerTier` serialized (save v5) and hashed.
+
+### Pending
+
+- **Package C**: per-building power priority (the four levels in the Priority System
+  table above) and the player command to override it. Nothing currently reads or
+  assigns a priority, so that table is unimplemented in full.
+- **Package D**: radar/minimap shutdown at Moderate+, the repair system (the
+  `RepairBuilding` command is validated but has no effect yet), static-defence
+  fire-rate halving at Severe and shutdown at Critical.
+- **Superweapons** do not exist as a system, so the superweapon row is unreachable.
+
+### Amendments made during implementation
+
+**1. Construction continues at every tier, including Critical.**
+
+The effect matrix says building construction at Critical is "50% (barracks only)".
+Implemented literally that is incoherent: construction progress belongs to the
+building being built, not to a producer, so "barracks only" has no meaning on that
+row. Worse, freezing construction at Critical strands a half-built power plant and
+makes a blackout permanent. All in-progress construction therefore advances at the
+Critical rate. The row should read "50%".
+
+**2. The construction yard keeps producing at Critical.**
+
+The production row's "barracks only" is implemented as "infantry producers *and the
+construction yard*". Without the yard a blacked-out base cannot queue the power plant
+that ends the blackout — a deadlock rather than a difficulty. Membership is derived
+from content (which buildings appear in an Infantry-category item's `ProducedBy`)
+rather than from a name list, so renaming or adding an infantry building needs no code
+change.
+
+**3. Payment and production share one stall predicate.**
+
+Not a spec change but a correctness requirement discovered in review.
+`SimWorld::IsProductionPowerStalled` is the single verdict on whether the power state
+has stopped a queue head, and both `SystemFlowPayment` and `SystemProduction` consult
+it. When the two decided independently, payment charged a slice every tick for an item
+production refused to advance: the item froze at zero progress while draining the
+treasury that should have finished the power plant, and the base stayed dark
+permanently. Anything the power state stops must also stop being charged for.
+
+**4. Throttle recovery is the inverse of the trigger by construction.**
+
+An earlier attempt used a separate 50% recovery constant while the throttle fired
+below 40%, which trapped any item stalled between 40% and 49% — both throttled and
+refused recovery. There is no separate recovery threshold: reaching the
+`EnergyThrottled` case in the funding pass already means the throttle test said no.
+
+**5. Harvester scaling is approximate for small rates.**
+
+The Critical harvest rate is `max(1, HarvestPerTick / 2)`. The clamp prevents a rate
+of zero, which would be a deadlock rather than a penalty, so content with
+`HarvestPerTick` of 1 runs at full speed at Critical and a rate of 3 runs at 33%
+rather than 50%. Acceptable at current content values; worth revisiting if a faction
+ships a very low per-tick rate.
+
+**6. Deficit warnings are suppressed for defeated players.**
+
+Defeat does not clear `bActive`, and a defeated player's last building dying takes
+both power figures to zero — which `GetPowerRatioPercent` reports as a healthy 100%.
+The tier would jump to Normal and announce that power had been restored to a player
+who had just lost their base. The edge trigger therefore gates on `bDefeated` as well.

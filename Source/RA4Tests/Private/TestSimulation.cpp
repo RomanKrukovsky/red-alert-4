@@ -1469,16 +1469,32 @@ struct PowerFixture
 {
     ContentDatabase Content;
     SimWorld World;
+    // Captured rather than assumed. An earlier version of these tests reached for the
+    // yard as MakeId(1), which only worked because SpawnEnemyOutpost happens to take
+    // index 0 -- reordering the fixture would have silently retargeted commands at
+    // another building.
+    EntityId Yard;
 
     explicit PowerFixture(int32_t PowerPlants)
     {
         BuildDefaultContent(Content);
         World.Initialize(&Content, MakeTestSetup(31337));
         SpawnEnemyOutpost(World);
-        World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+        Yard = World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
         for (int32_t N = 0; N < PowerPlants; ++N)
         {
             World.SpawnBuilding(Ids::SovPower, 0, TileCoord(14 + N * 3, 10), true);
+        }
+    }
+
+    // Turrets are the cheapest way to add a known power draw: 40 each against a
+    // reactor's 150, so the caller can dial in a specific tier.
+    void AddPowerDraw(int32_t Turrets)
+    {
+        for (int32_t N = 0; N < Turrets; ++N)
+        {
+            World.SpawnBuilding(Ids::SovTurret, 0,
+                               TileCoord(20 + (N % 7) * 2, 24 + (N / 7) * 3), true);
         }
     }
 };
@@ -1557,9 +1573,9 @@ RA4_TEST(PowerTier, CriticalPowerStopsVehiclesButNotInfantryOrTheConstructionYar
     // A construction yard must keep working at Critical too, or a blacked-out base
     // could never build the power plant that ends the blackout.
     Command Plant = MakeCommand(CommandType::StartProduction, 0);
-    Plant.Primary = F.World.MakeId(1);   // the yard, spawned first by the fixture
+    Plant.Primary = F.Yard;
     Plant.Content = Ids::SovPower;
-    (void)F.World.ApplyCommand(Plant);
+    RA4_REQUIRE(F.World.ApplyCommand(Plant).IsAccepted());
 
     RunTicks(F.World, SecondsToTicks(90));
 
@@ -1663,29 +1679,43 @@ RA4_TEST(PowerTier, RememberedTierSurvivesSaveSoTheWarningIsNotRepeated)
     RA4_EXPECT(Restored.ComputeStateChecksum() == F.World.ComputeStateChecksum());
 }
 
-RA4_TEST(PowerTier, HarvestingOnlySlowsAtCriticalNotEarlier)
+RA4_TEST(PowerTier, HarvestingIsUntouchedUntilCriticalThenHalves)
 {
     // Harvest income is what buys the power plant that ends a blackout, so slowing it
-    // before Critical would make a deficit self-reinforcing.
-    const auto HarvestedBy = [](int32_t PowerPlants, int32_t Ticks) -> int32_t {
+    // before Critical would make a deficit self-reinforcing. The claim is therefore
+    // two-sided and needs a middle arm: an earlier version of this test compared only
+    // Normal against Critical, so a regression that slowed harvesting at Moderate
+    // would have passed it while breaking the property in its own name.
+    struct Arm { int32_t Harvested; PowerTier Tier; };
+    const auto Measure = [](int32_t PowerPlants, int32_t Turrets) -> Arm {
         PowerFixture F(PowerPlants);
         F.World.SpawnBuilding(Ids::SovRefinery, 0, TileCoord(10, 20), true);
+        F.AddPowerDraw(Turrets);
         F.World.SpawnResourceNode(Ids::OreField, TileCoord(13, 20), 100000);
         F.World.SpawnUnit(Ids::SovHarvester, 0, Vec2::FromInts(11 * 200, 20 * 200));
+        F.World.Tick(nullptr);
+        const PowerTier Tier = F.World.GetPlayer(0).GetPowerTier();
         const int32_t Before = F.World.GetPlayer(0).TotalHarvested;
-        RunTicks(F.World, Ticks);
-        return F.World.GetPlayer(0).TotalHarvested - Before;
+        RunTicks(F.World, SecondsToTicks(60));
+        return Arm{F.World.GetPlayer(0).TotalHarvested - Before, Tier};
     };
 
-    // Two plants cover the refinery: Normal. Zero plants with a refinery drawing:
-    // Critical.
-    const int32_t AtNormal = HarvestedBy(2, SecondsToTicks(60));
-    const int32_t AtCritical = HarvestedBy(0, SecondsToTicks(60));
+    const Arm Normal = Measure(2, 0);
+    const Arm Deficit = Measure(1, 4);   // reactor 150 against refinery 20 + 4x40
+    const Arm Critical = Measure(0, 0);  // nothing producing, refinery drawing
 
-    RA4_REQUIRE(AtNormal > 0);
-    // Still harvesting, just slower -- never zero.
-    RA4_EXPECT(AtCritical > 0);
-    RA4_EXPECT(AtCritical < AtNormal);
+    // Guard the premise of each arm, or the comparisons below measure the wrong thing.
+    RA4_REQUIRE(Normal.Tier == PowerTier::Normal);
+    RA4_REQUIRE(Deficit.Tier > PowerTier::Normal && Deficit.Tier < PowerTier::Critical);
+    RA4_REQUIRE(Critical.Tier == PowerTier::Critical);
+
+    RA4_REQUIRE(Normal.Harvested > 0);
+    // The middle arm is the actual "not earlier" claim: a partial deficit must not
+    // touch harvesting at all.
+    RA4_EXPECT_EQ(Deficit.Harvested, Normal.Harvested);
+    // Critical halves it, but never to zero -- a rate of nothing is a deadlock.
+    RA4_EXPECT(Critical.Harvested > 0);
+    RA4_EXPECT(Critical.Harvested < Normal.Harvested);
 }
 
 // ADR-0013 pauses "high tech" (T2+) outright during a deep deficit rather than merely
@@ -1704,10 +1734,7 @@ RA4_TEST(PowerTier, HighTechIsPausedAtSevereAndResumesWhenPowerReturns)
     // each turret adds 40. Thirteen turrets puts the ratio at 24% -- inside Severe,
     // where T2 is paused, without reaching Critical, where the separate Critical rule
     // would block the vehicle anyway and the test would prove nothing about tiers.
-    for (int32_t N = 0; N < 13; ++N)
-    {
-        F.World.SpawnBuilding(Ids::SovTurret, 0, TileCoord(20 + (N % 7) * 2, 24 + (N / 7) * 3), true);
-    }
+    F.AddPowerDraw(13);
 
     Command Start = MakeCommand(CommandType::StartProduction, 0);
     Start.Primary = Factory;
@@ -1761,10 +1788,7 @@ RA4_TEST(PowerTier, LowTechKeepsBuildingThroughADeficitInsteadOfPausing)
     // each turret adds 40. Thirteen turrets puts the ratio at 24% -- inside Severe,
     // where T2 is paused, without reaching Critical, where the separate Critical rule
     // would block the vehicle anyway and the test would prove nothing about tiers.
-    for (int32_t N = 0; N < 13; ++N)
-    {
-        F.World.SpawnBuilding(Ids::SovTurret, 0, TileCoord(20 + (N % 7) * 2, 24 + (N / 7) * 3), true);
-    }
+    F.AddPowerDraw(13);
 
     Command Start = MakeCommand(CommandType::StartProduction, 0);
     Start.Primary = Barracks;
@@ -1786,19 +1810,50 @@ RA4_TEST(PowerTier, LowTechKeepsBuildingThroughADeficitInsteadOfPausing)
 
 // Regression: an earlier version triggered the throttle below 40% but required 50% to
 // recover, so anything stalled in the 40-49% band was both throttled and refused
-// recovery -- frozen forever. Recovery is now the exact inverse of the trigger.
-RA4_TEST(PowerTier, ThrottleAndRecoveryUseTheSameBoundaryWithNoDeadBand)
+// recovery -- frozen forever. Recovery is now the exact inverse of the trigger, which
+// this test establishes by driving a real item through that exact band rather than by
+// restating the condition (an earlier version asserted `x != !x`, which cannot fail).
+RA4_TEST(PowerTier, ItemThrottledThenRecoveredIntoTheOldDeadBandResumes)
 {
-    // Sweep the whole ratio range and assert the two conditions are complementary at
-    // every point: an item is either throttled or eligible to fund, never both and
-    // never neither.
-    for (int32_t Ratio = 0; Ratio <= 120; ++Ratio)
+    PowerFixture F(1);
+    const EntityId Factory = F.World.SpawnBuilding(Ids::SovWarFactory, 0, TileCoord(10, 16), true);
+    RA4_REQUIRE(Factory.IsValid());
+    // Deep enough to throttle: reactor 150 against factory 50 plus 13 turrets.
+    F.AddPowerDraw(13);
+
+    Command Start = MakeCommand(CommandType::StartProduction, 0);
+    Start.Primary = Factory;
+    Start.Content = Ids::SovHeavyTank;   // T2
+    RA4_REQUIRE(F.World.ApplyCommand(Start).IsAccepted());
+    RunTicks(F.World, 10);
+    RA4_REQUIRE(F.World.GetPlayer(0).GetPowerTier() >= PowerTier::Severe);
+
+    const ProductionItem* Throttled = QueueHead(F.World, Factory);
+    RA4_REQUIRE(Throttled != nullptr);
+    RA4_REQUIRE(Throttled->State == FlowPaymentState::EnergyThrottled);
+
+    // Add power until the ratio lands inside the old dead band -- above the Severe
+    // trigger at 40 but below the retired 50% recovery constant. This is precisely the
+    // window in which the item used to freeze permanently.
+    int32_t Guard = 0;
+    while (F.World.GetPlayer(0).GetPowerTier() >= PowerTier::Severe && Guard < 10)
     {
-        const PowerTier Tier = PowerTierForRatio(Ratio);
-        const bool bWouldThrottle = Tier >= PowerTier::Severe;
-        const bool bWouldRecover = !bWouldThrottle;
-        RA4_EXPECT(bWouldThrottle != bWouldRecover);
+        F.World.SpawnBuilding(Ids::SovPower, 0, TileCoord(30 + Guard * 3, 10), true);
+        F.World.Tick(nullptr);
+        ++Guard;
     }
+    const int32_t Ratio = F.World.GetPlayer(0).GetPowerRatioPercent();
+    RA4_REQUIRE(Ratio >= kPowerTierModerateMinPercent);
+    RA4_REQUIRE(F.World.GetPlayer(0).GetPowerTier() < PowerTier::Severe);
+
+    // Out of Severe, so it must resume -- whatever the ratio is, and specifically even
+    // if it is still under 50.
+    RunTicks(F.World, 5);
+    const ProductionItem* Resumed = QueueHead(F.World, Factory);
+    RA4_REQUIRE(Resumed != nullptr);
+    RA4_EXPECT(Resumed->State != FlowPaymentState::EnergyThrottled);
+    RA4_EXPECT(Resumed->PaidCredits > 0);
+
     // And pin the boundary itself, so a later balance change has to move it knowingly.
     RA4_EXPECT(PowerTierForRatio(40) < PowerTier::Severe);   // Moderate: T2 still builds
     RA4_EXPECT(PowerTierForRatio(39) >= PowerTier::Severe);  // Severe: T2 paused
@@ -1817,10 +1872,7 @@ RA4_TEST(PowerTier, PlayerPauseOutranksTheEnergyThrottle)
     // each turret adds 40. Thirteen turrets puts the ratio at 24% -- inside Severe,
     // where T2 is paused, without reaching Critical, where the separate Critical rule
     // would block the vehicle anyway and the test would prove nothing about tiers.
-    for (int32_t N = 0; N < 13; ++N)
-    {
-        F.World.SpawnBuilding(Ids::SovTurret, 0, TileCoord(20 + (N % 7) * 2, 24 + (N / 7) * 3), true);
-    }
+    F.AddPowerDraw(13);
 
     Command Start = MakeCommand(CommandType::StartProduction, 0);
     Start.Primary = Factory;
@@ -1864,4 +1916,120 @@ RA4_TEST(Content, TechTierIsAssignedAndFeedsTheContentHash)
     Shifted.Production.Tier = TechTier::T3;
     B.AddEntity(Shifted);
     RA4_EXPECT(A.ComputeContentHash() != B.ComputeContentHash());
+}
+
+// Regression, and the reason IsProductionPowerStalled exists as one function. Payment
+// and production each decided independently whether the power state had stopped an
+// item, and they disagreed: SystemFlowPayment charged a slice every tick for a vehicle
+// that SystemProduction refused to advance at Critical. The item froze at zero progress
+// while draining the treasury that should have finished the power plant, so the base
+// stayed dark forever -- the exact deadlock the Critical carve-out was written to avoid.
+RA4_TEST(PowerTier, BlackoutIsEscapableEvenWithAFrozenVehicleInAnotherQueue)
+{
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    MatchSetup Setup = MakeTestSetup(7);
+    // Enough for the power plant and not much else, so the two queues genuinely
+    // compete: if the frozen one is funded, the plant can never finish.
+    Setup.Players[0].StartingCredits = 1000;
+
+    SimWorld World;
+    World.Initialize(&Content, Setup);
+    SpawnEnemyOutpost(World);
+    const EntityId Yard = World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    const EntityId Factory = World.SpawnBuilding(Ids::SovWarFactory, 0, TileCoord(10, 16), true);
+    World.SpawnBuilding(Ids::SovRefinery, 0, TileCoord(16, 20), true);
+    RA4_REQUIRE(Yard.IsValid() && Factory.IsValid());
+    // The factory sits at a *lower* entity index than nothing here, but the ordering
+    // matters in general: funding is sorted by index, so a frozen item ahead of the
+    // yard used to eat the money first.
+    World.Tick(nullptr);
+    RA4_REQUIRE(World.GetPlayer(0).GetPowerTier() == PowerTier::Critical);
+
+    // A T1 harvester: not high-tech, so only the Critical producer rule stops it.
+    Command Harvester = MakeCommand(CommandType::StartProduction, 0);
+    Harvester.Primary = Factory;
+    Harvester.Content = Ids::SovHarvester;
+    RA4_REQUIRE(World.ApplyCommand(Harvester).IsAccepted());
+
+    Command Plant = MakeCommand(CommandType::StartProduction, 0);
+    Plant.Primary = Yard;
+    Plant.Content = Ids::SovPower;
+    RA4_REQUIRE(World.ApplyCommand(Plant).IsAccepted());
+
+    RunTicks(World, SecondsToTicks(120));
+
+    // The frozen vehicle must have taken nothing at all: charging for a tick it did
+    // not advance is what created the deadlock.
+    const ProductionItem* Frozen = QueueHead(World, Factory);
+    RA4_REQUIRE(Frozen != nullptr);
+    RA4_EXPECT(Frozen->State == FlowPaymentState::EnergyThrottled);
+    RA4_EXPECT_EQ(Frozen->PaidCredits, 0);
+    RA4_EXPECT_EQ(Frozen->ProgressTicks, 0);
+
+    // And the plant must have been fully funded and finished.
+    const ProductionItem* PlantItem = QueueHead(World, Yard);
+    RA4_REQUIRE(PlantItem != nullptr);
+    RA4_EXPECT(PlantItem->State == FlowPaymentState::Completed);
+    RA4_EXPECT_EQ(PlantItem->PaidCredits, PlantItem->TotalCost);
+
+    // Place it and the blackout must actually end, with the frozen item resuming by
+    // itself -- the full escape path, not just the funding half.
+    Command Place = MakeCommand(CommandType::PlaceBuilding, 0);
+    Place.Content = Ids::SovPower;
+    Place.Tile = TileCoord(20, 10);
+    RA4_REQUIRE(World.ApplyCommand(Place).IsAccepted());
+    RunTicks(World, SecondsToTicks(60));
+
+    RA4_EXPECT(World.GetPlayer(0).GetPowerTier() < PowerTier::Critical);
+    const ProductionItem* Resumed = QueueHead(World, Factory);
+    RA4_REQUIRE(Resumed != nullptr);
+    RA4_EXPECT(Resumed->State != FlowPaymentState::EnergyThrottled);
+}
+
+// A defeated player's last building dying takes both power figures to zero, which
+// GetPowerRatioPercent reports as a healthy 100%. Without gating on bDefeated the game
+// would tell a player who just lost their base that their power had been restored.
+RA4_TEST(PowerTier, DefeatedPlayerIsNotToldTheirPowerCameBack)
+{
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    MatchSetup Setup = MakeTestSetup(11);
+    // Three players, so the match keeps running after one is defeated and the systems
+    // carry on ticking.
+    Setup.Players[2].bActive = true;
+    Setup.Players[2].Faction = FactionId::Soviet;
+    Setup.Players[2].StartingCredits = 10000;
+
+    SimWorld World;
+    World.Initialize(&Content, Setup);
+    SpawnEnemyOutpost(World);
+    World.SpawnBuilding(Ids::SovConYard, 2, TileCoord(40, 40), true);
+
+    // Player 0 owns one power-drawing building and nothing producing: Critical.
+    const EntityId Doomed = World.SpawnBuilding(Ids::SovWarFactory, 0, TileCoord(10, 16), true);
+    RA4_REQUIRE(Doomed.IsValid());
+    RunTicks(World, 3);
+    RA4_REQUIRE(World.GetPlayer(0).GetPowerTier() == PowerTier::Critical);
+
+    // Destroy it. Power produced and consumed both fall to zero.
+    const HealthComp* H = World.GetHealth(Doomed);
+    RA4_REQUIRE(H != nullptr);
+    World.DebugDamage(Doomed, H->Max * 4);
+
+    int32_t SpuriousRecoveries = 0;
+    for (int32_t T = 0; T < 20; ++T)
+    {
+        World.ClearEvents();
+        World.Tick(nullptr);
+        for (const SimEvent& Ev : World.GetEvents())
+        {
+            if (Ev.Type == SimEventType::PowerShortageEnded && Ev.Player == 0)
+            {
+                ++SpuriousRecoveries;
+            }
+        }
+    }
+    RA4_EXPECT(!World.IsAlive(Doomed));
+    RA4_EXPECT_EQ(SpuriousRecoveries, 0);
 }

@@ -484,6 +484,47 @@ bool SimWorld::ProducerRunsAtCriticalPower(const EntityDef& Def) const
     return false;
 }
 
+// ADR-0013. Whether the power state has stopped this building's queue head, for any
+// of the reasons in the tier table. Deliberately one function: SystemFlowPayment and
+// SystemProduction previously each decided this for themselves, and they disagreed --
+// payment charged a slice every tick for a vehicle that production refused to advance
+// at Critical, so the item froze at zero progress while draining the treasury that
+// should have finished the power plant. The base then stayed dark forever, which is
+// exactly the deadlock the Critical carve-out was written to prevent.
+bool SimWorld::IsProductionPowerStalled(uint32_t BuildingIndex) const
+{
+    if (BuildingIndex >= Core.size() || Core[BuildingIndex].Owner >= kMaxPlayers)
+    {
+        return false;
+    }
+    const BuildingComp& B = Buildings[BuildingIndex];
+    if (B.Queue.empty())
+    {
+        return false;
+    }
+    const PowerTier Tier = Players[Core[BuildingIndex].Owner].GetPowerTier();
+    if (Tier < PowerTier::Severe)
+    {
+        return false;   // Normal, Mild and Moderate slow production; they never stop it
+    }
+
+    // Severe and Critical pause high tech outright rather than merely slowing it.
+    const EntityDef* HeadDef = Content ? Content->FindEntity(B.Queue.front().Content) : nullptr;
+    if (HeadDef != nullptr && HeadDef->Production.Tier >= TechTier::T2)
+    {
+        return true;
+    }
+
+    // At Critical, everything except infantry production and the construction yard
+    // stops regardless of tier.
+    if (Tier == PowerTier::Critical)
+    {
+        const EntityDef* ProducerDef = Content ? Content->FindEntity(Core[BuildingIndex].Def) : nullptr;
+        return ProducerDef == nullptr || !ProducerRunsAtCriticalPower(*ProducerDef);
+    }
+    return false;
+}
+
 void SimWorld::OccupyTiles(const BuildingComp& B, bool bOccupy)
 {
     if (NavigationGrid != nullptr)
@@ -1780,7 +1821,11 @@ void SimWorld::SystemPower()
     for (PlayerId Owner = 0; Owner < kMaxPlayers; ++Owner)
     {
         PlayerState& P = Players[Owner];
-        if (!P.bActive)
+        // bDefeated as well as bActive: defeat never clears bActive, and a defeated
+        // player's last building dying takes both power figures to zero, which
+        // GetPowerRatioPercent reports as a healthy 100%. Without this the game would
+        // tell a player who just lost their base that their power had been restored.
+        if (!P.bActive || P.bDefeated)
         {
             continue;
         }
@@ -1856,28 +1901,19 @@ void SimWorld::SystemFlowPayment()
 
         ProductionItem& Head = B.Queue.front();
 
-        // ADR-0013: high-tech production is paused outright at Severe and Critical,
-        // rather than merely slowed like T0/T1. Checked before the state switch
-        // because a fully-funded item is in Paying and would otherwise skip straight
-        // past every check here and keep advancing through a blackout.
-        //
-        // A player pause outranks this: an item the player deliberately stopped must
-        // not silently change its reported reason to "power".
-        if (Core[I].Owner < kMaxPlayers && Head.State != FlowPaymentState::ManuallyPaused)
+        // ADR-0013: anything the power state has stopped must also stop *paying*. This
+        // is the same rule the PendingDestroy skip above enforces for a different
+        // reason: charging for a queue that cannot advance is money taken for nothing,
+        // and here it was money taken from the power plant that would have ended the
+        // blackout. A player pause outranks the throttle, so that an item the player
+        // deliberately stopped does not silently change its reported reason to "power".
+        if (Head.State != FlowPaymentState::ManuallyPaused && IsProductionPowerStalled(I))
         {
-            const EntityDef* HeadDef = Content ? Content->FindEntity(Head.Content) : nullptr;
-            const bool bHighTech = HeadDef != nullptr && HeadDef->Production.Tier >= TechTier::T2;
-            const bool bThrottleTier =
-                Players[Core[I].Owner].GetPowerTier() >= PowerTier::Severe;
-
-            if (bHighTech && bThrottleTier)
-            {
-                // Freeze in place. PaidCredits and ProgressTicks are untouched, so
-                // this is a pause and not a reset -- the same guarantee starvation
-                // gives, for the same determinism reason.
-                Head.State = FlowPaymentState::EnergyThrottled;
-                continue;
-            }
+            // Freeze in place. PaidCredits and ProgressTicks are untouched, so this is
+            // a pause and not a reset -- the same guarantee starvation gives, for the
+            // same determinism reason.
+            Head.State = FlowPaymentState::EnergyThrottled;
+            continue;
         }
 
         switch (Head.State)
@@ -2072,13 +2108,13 @@ void SimWorld::SystemProduction()
         // The yard is deliberately included: without it a blacked-out base could not
         // build the power plant that ends the blackout, which is a deadlock rather
         // than a penalty.
-        if (Owner < kMaxPlayers && Players[Owner].GetPowerTier() == PowerTier::Critical)
+        //
+        // Same predicate SystemFlowPayment uses, so a stalled item is never charged
+        // for a tick it did not advance. The two deciding this separately is what
+        // produced a blackout the player could not escape.
+        if (IsProductionPowerStalled(I))
         {
-            const EntityDef* ProducerDef = Content->FindEntity(Core[I].Def);
-            if (ProducerDef == nullptr || !ProducerRunsAtCriticalPower(*ProducerDef))
-            {
-                continue;
-            }
+            continue;
         }
 
         // Only the head of the queue advances; parallel queues are per building,
