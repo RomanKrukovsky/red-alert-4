@@ -2,7 +2,7 @@
 
 **Document Version**: 3.0  
 **Project Title**: *Iron Resonance: Command of Tomorrow*  
-**Engine Architecture**: Deterministic 60Hz C++ Simulation Core + UE5 Presentation Layer  
+**Engine Architecture**: Deterministic fixed-tick C++ Simulation Core (20 Hz) + UE5 Presentation Layer (60+ FPS interpolated)  
 
 ---
 
@@ -20,7 +20,7 @@ The technical architecture of *Iron Resonance* enforces a strict decoupling betw
                                          v
 +-----------------------------------------------------------------------------------+
 |                        DETERMINISTIC SIMULATION KERNEL                            |
-|   SimWorld (60Hz Fixed Tick) | CommandBus | LockstepSession | FixedPoint Math     |
+|   SimWorld (20 Hz Fixed Tick) | CommandBus | LockstepSession | Fixed.h Math       |
 |   RA4Combat | RA4Navigation (Flowfield) | RA4AI (HTN) | RA4FogOfWar                 |
 +-----------------------------------------------------------------------------------+
 ```
@@ -29,9 +29,9 @@ The technical architecture of *Iron Resonance* enforces a strict decoupling betw
 
 ## 2. Simulation Loop & Entity Component Layout
 
-### Fixed 60Hz Simulation Loop
+### Fixed 20 Hz Simulation Loop
 - **Tick Interval**: Fixed at 16.666 milliseconds (60 ticks/sec).
-- **Time Representation**: All time calculations use 60Hz tick indices (`TickIndex`).
+- **Time Representation**: All time calculations use 20 Hz tick indices (`TickIndex`); one tick is 50 ms. Convert rates with `PerSecondToPerTick()` / `SecondsToTicks()` rather than hardcoding.
 - **Math Engine**: Pure integer fixed-point arithmetic (`FixedPoint.h`) for all positions, velocities, hitboxes, and weapon ranges. Floating-point math is strictly forbidden in simulation code.
 
 ### Data-Oriented Component Model (`SimWorld`)

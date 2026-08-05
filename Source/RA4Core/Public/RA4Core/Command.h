@@ -41,7 +41,30 @@ enum class CommandType : uint8_t
     // Match flow
     Surrender = 40,
 
-    Max = 41,
+    // Direct vehicle control (authoritative, serialized, quantized). The
+    // simulation -- never the client -- owns movement, turret aiming, firing
+    // and exit. See Docs/Architecture/ADR/ADR-DirectControl.md.
+    DirectControlEnter = 50,
+    DirectControlExit  = 51,
+    DirectControlDrive = 52,   // hull throttle/steering + turret yaw/pitch + flags
+    DirectControlFire  = 53,   // primary/secondary/ability/optics toggle
+
+    Max = 54,
+};
+
+// Quantized input axes for DirectControlDrive. Stored as int8 (-127..127) so a
+// full drive command is fixed-size and deterministic across float ABIs. The
+// simulation re-scales these to Fixed using the profile's sensitivity and
+// limits, never trusting raw floats from a client.
+struct DirectControlAxes
+{
+    int8_t Throttle = 0;     // -127 full reverse .. +127 full forward
+    int8_t Steering = 0;     // -127 full left .. +127 full right
+    int8_t TurretYaw = 0;    // requested yaw rate, quantized
+    int8_t TurretPitch = 0;  // requested pitch rate, quantized
+    uint8_t Flags = 0;       // bit0: primary fire, bit1: secondary fire,
+                             // bit2: ability, bit3: optics toggle,
+                             // bit4: manual reload request
 };
 
 // Order queueing mode carried by movement-class commands (Shift-click chains).
@@ -67,6 +90,7 @@ struct Command
     Vec2 Location;                // world target
     TileCoord Tile;               // grid target for placement
     int32_t Param = 0;            // rotation for placement, count for production
+    DirectControlAxes DirectAxes; // only used by DirectControlDrive
 
     void Serialize(ByteWriter& W) const
     {
@@ -84,6 +108,11 @@ struct Command
         W.WriteInt32(Tile.X);
         W.WriteInt32(Tile.Y);
         W.WriteInt32(Param);
+        W.WriteInt8(DirectAxes.Throttle);
+        W.WriteInt8(DirectAxes.Steering);
+        W.WriteInt8(DirectAxes.TurretYaw);
+        W.WriteInt8(DirectAxes.TurretPitch);
+        W.WriteUInt8(DirectAxes.Flags);
     }
 
     static Command Deserialize(ByteReader& R)
@@ -103,6 +132,11 @@ struct Command
         C.Tile.X = R.ReadInt32();
         C.Tile.Y = R.ReadInt32();
         C.Param = R.ReadInt32();
+        C.DirectAxes.Throttle = R.ReadInt8();
+        C.DirectAxes.Steering = R.ReadInt8();
+        C.DirectAxes.TurretYaw = R.ReadInt8();
+        C.DirectAxes.TurretPitch = R.ReadInt8();
+        C.DirectAxes.Flags = R.ReadUInt8();
         return C;
     }
 };
@@ -160,6 +194,12 @@ enum class CommandReject : uint8_t
     RateLimited,
     CommandCapExceeded,
     MatchOver,
+    // Direct-control specific
+    DirectIneligibleUnit,     // unit has no DirectControlProfile / not vehicle
+    DirectAlreadyControlled,  // another player owns the slot
+    DirectNotControlling,      // exit/fire without active possession
+    DirectWeaponCooldown,      // fire rejected on cooldown
+    DirectWeaponEmpty,         // no ammo / no weapon
 };
 
 const char* ToString(CommandType Type);

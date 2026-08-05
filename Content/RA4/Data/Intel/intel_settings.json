@@ -1,0 +1,67 @@
+{
+  "_comment": "Unreliable Intelligence layer settings (ADR-0026). 'enabled: false' collapses the feature to classic perfect information. Fractions are authored as decimals and converted to per-mille integers at load; no float reaches simulation state.",
+  "enabled": false,
+  "active_distortion_profile": "profile.default",
+  "active_comms_profile": "comms.default",
+
+  "distortion_profiles": [
+    {
+      "name": "profile.default",
+      "clarity_enabled": true,
+      "min_clarity": 0.1,
+      "clarity_distance_falloff": 0.5,
+
+      "count_distortion_enabled": true,
+      "fear_count_bias_max": 1.5,
+      "competence_noise_max": 0.4,
+
+      "classification_error_enabled": true,
+
+      "position_error_enabled": true,
+      "position_error_max_tiles": 4,
+
+      "omission_enabled": true,
+      "omission_chance_max": 0.3,
+
+      "fabrication_enabled": true,
+      "fabrication_chance_max": 0.02,
+      "max_phantom_lifetime_ticks": 1200,
+
+      "self_report_bias_enabled": true,
+      "self_report_loss_understatement_max": 0.5
+    }
+  ],
+
+  "comms_profiles": [
+    {
+      "name": "comms.default",
+      "_levels": "0=courier, 1=field telephone, 2=radio, 3=encrypted network",
+      "hop_delay_seconds_by_level": [8.0, 4.0, 1.5, 0.25],
+      "officer_bias_max": 0.2
+    }
+  ],
+
+  "confusion_matrix": {
+    "_comment": "rows[true][observed], each row must sum to exactly 1.0. Light/heavy vehicles are confusable; infantry/aircraft almost never.",
+    "rows": {
+      "infantry":      { "infantry": 0.97, "light_vehicle": 0.03 },
+      "light_vehicle": { "light_vehicle": 0.85, "heavy_vehicle": 0.12, "infantry": 0.03 },
+      "heavy_vehicle": { "heavy_vehicle": 0.86, "light_vehicle": 0.13, "structure": 0.01 },
+      "aircraft":      { "aircraft": 0.98, "light_vehicle": 0.02 },
+      "ship":          { "ship": 0.95, "heavy_vehicle": 0.05 },
+      "structure":     { "structure": 0.97, "heavy_vehicle": 0.03 }
+    }
+  },
+
+  "track_tuning": {
+    "confidence_decay_per_second": 0.02,
+    "error_radius_growth_tiles_per_minute": 6,
+    "stale_after_ticks": 600,
+    "drop_below_confidence": 0.05,
+    "merge_radius_tiles": 3,
+    "merge_window_ticks": 100,
+    "agreement_confidence_bonus": 0.3,
+    "max_tracks_per_player": 4096,
+    "tracks_per_tick_budget": 512
+  }
+}

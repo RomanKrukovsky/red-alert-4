@@ -1,0 +1,375 @@
+// Copyright (c) Red Alert 4 project.
+#include "RA4Intel/IntelConfig.h"
+
+#include <cmath>
+
+#include "RA4Content/JsonParser.h"
+
+namespace RA4
+{
+namespace Intel
+{
+
+const DistortionProfile* IntelSettings::FindDistortionProfile(const std::string& InName) const
+{
+    for (const DistortionProfile& P : DistortionProfiles)
+    {
+        if (P.Name == InName)
+        {
+            return &P;
+        }
+    }
+    return nullptr;
+}
+
+const CommsProfile* IntelSettings::FindCommsProfile(const std::string& InName) const
+{
+    for (const CommsProfile& P : CommsProfiles)
+    {
+        if (P.Name == InName)
+        {
+            return &P;
+        }
+    }
+    return nullptr;
+}
+
+namespace
+{
+
+// Designers author human-readable fractions ("0.35"); simulation math wants exact
+// integers. The conversion happens exactly once, here, so no double ever reaches
+// sim state. Rounding is deterministic: decimal literals parse to the same IEEE
+// double on every platform, and llround of that is the same integer everywhere.
+int32_t ReadPerMille(const Json::Value& Parent, const char* Key, int32_t Default)
+{
+    const Json::Value* V = Parent.Find(Key);
+    if (V == nullptr || !V->IsNumber())
+    {
+        return Default;
+    }
+    return int32_t(std::llround(V->AsNumber() * 1000.0));
+}
+
+int32_t ReadInt(const Json::Value& Parent, const char* Key, int32_t Default)
+{
+    const Json::Value* V = Parent.Find(Key);
+    if (V == nullptr || !V->IsNumber())
+    {
+        return Default;
+    }
+    return V->AsInt();
+}
+
+bool ReadBool(const Json::Value& Parent, const char* Key, bool Default)
+{
+    const Json::Value* V = Parent.Find(Key);
+    if (V == nullptr || !V->IsBool())
+    {
+        return Default;
+    }
+    return V->AsBool();
+}
+
+std::string ReadString(const Json::Value& Parent, const char* Key, const std::string& Default)
+{
+    const Json::Value* V = Parent.Find(Key);
+    if (V == nullptr || !V->IsString())
+    {
+        return Default;
+    }
+    return V->AsString();
+}
+
+// Category names as authored in JSON. Order must match ObservedCategory.
+const char* kCategoryNames[kObservedCategoryCount] = {
+    "infantry", "light_vehicle", "heavy_vehicle", "aircraft", "ship", "structure",
+};
+
+int32_t CategoryIndexByName(const std::string& Name)
+{
+    for (int32_t I = 0; I < kObservedCategoryCount; ++I)
+    {
+        if (Name == kCategoryNames[I])
+        {
+            return I;
+        }
+    }
+    return -1;
+}
+
+void ParseDistortionProfile(const Json::Value& V, DistortionProfile& Out)
+{
+    Out.Name = ReadString(V, "name", "");
+
+    Out.bClarityEnabled = ReadBool(V, "clarity_enabled", Out.bClarityEnabled);
+    Out.MinClarityPerMille = ReadPerMille(V, "min_clarity", Out.MinClarityPerMille);
+    Out.ClarityDistanceFalloffPerMille = ReadPerMille(V, "clarity_distance_falloff", Out.ClarityDistanceFalloffPerMille);
+
+    Out.bCountDistortionEnabled = ReadBool(V, "count_distortion_enabled", Out.bCountDistortionEnabled);
+    Out.FearCountBiasMaxPerMille = ReadPerMille(V, "fear_count_bias_max", Out.FearCountBiasMaxPerMille);
+    Out.CompetenceNoiseMaxPerMille = ReadPerMille(V, "competence_noise_max", Out.CompetenceNoiseMaxPerMille);
+
+    Out.bClassificationErrorEnabled = ReadBool(V, "classification_error_enabled", Out.bClassificationErrorEnabled);
+
+    Out.bPositionErrorEnabled = ReadBool(V, "position_error_enabled", Out.bPositionErrorEnabled);
+    Out.PositionErrorMaxTiles = ReadInt(V, "position_error_max_tiles", Out.PositionErrorMaxTiles);
+
+    Out.bOmissionEnabled = ReadBool(V, "omission_enabled", Out.bOmissionEnabled);
+    Out.OmissionChanceMaxPerMille = ReadPerMille(V, "omission_chance_max", Out.OmissionChanceMaxPerMille);
+
+    Out.bFabricationEnabled = ReadBool(V, "fabrication_enabled", Out.bFabricationEnabled);
+    Out.FabricationChanceMaxPerMille = ReadPerMille(V, "fabrication_chance_max", Out.FabricationChanceMaxPerMille);
+    Out.MaxPhantomLifetimeTicks = ReadInt(V, "max_phantom_lifetime_ticks", Out.MaxPhantomLifetimeTicks);
+
+    Out.bSelfReportBiasEnabled = ReadBool(V, "self_report_bias_enabled", Out.bSelfReportBiasEnabled);
+    Out.SelfReportLossUnderstatementMaxPerMille =
+        ReadPerMille(V, "self_report_loss_understatement_max", Out.SelfReportLossUnderstatementMaxPerMille);
+}
+
+void ParseCommsProfile(const Json::Value& V, CommsProfile& Out)
+{
+    Out.Name = ReadString(V, "name", "");
+    Out.OfficerBiasMaxPerMille = ReadPerMille(V, "officer_bias_max", Out.OfficerBiasMaxPerMille);
+
+    const Json::Value* Delays = V.Find("hop_delay_seconds_by_level");
+    if (Delays != nullptr && Delays->IsArray())
+    {
+        Out.HopDelayTicksByLevel.clear();
+        for (const Json::Value& D : Delays->AsArray())
+        {
+            // Authored in seconds, stored in ticks: designers think in seconds,
+            // the simulation thinks in ticks, and the boundary is load time.
+            const int32_t Ticks = D.IsNumber() ? int32_t(std::llround(D.AsNumber() * 20.0)) : 0;
+            Out.HopDelayTicksByLevel.push_back(Ticks);
+        }
+    }
+}
+
+bool ParseConfusionMatrix(const Json::Value& V, ConfusionMatrix& Out, std::vector<std::string>& OutErrors)
+{
+    const Json::Value* Rows = V.Find("rows");
+    if (Rows == nullptr || !Rows->IsObject())
+    {
+        OutErrors.push_back("confusion_matrix: missing 'rows' object");
+        return false;
+    }
+
+    for (const auto& [TrueName, RowValue] : Rows->AsObject())
+    {
+        const int32_t TrueIdx = CategoryIndexByName(TrueName);
+        if (TrueIdx < 0)
+        {
+            OutErrors.push_back("confusion_matrix: unknown category '" + TrueName + "'");
+            return false;
+        }
+        if (!RowValue.IsObject())
+        {
+            OutErrors.push_back("confusion_matrix: row '" + TrueName + "' is not an object");
+            return false;
+        }
+        for (int32_t I = 0; I < kObservedCategoryCount; ++I)
+        {
+            Out.PerMille[TrueIdx][I] = 0;
+        }
+        for (const auto& [ObservedName, Cell] : RowValue.AsObject())
+        {
+            const int32_t ObservedIdx = CategoryIndexByName(ObservedName);
+            if (ObservedIdx < 0)
+            {
+                OutErrors.push_back("confusion_matrix: unknown category '" + ObservedName + "' in row '" + TrueName + "'");
+                return false;
+            }
+            if (!Cell.IsNumber())
+            {
+                OutErrors.push_back("confusion_matrix: non-numeric cell " + TrueName + "/" + ObservedName);
+                return false;
+            }
+            Out.PerMille[TrueIdx][ObservedIdx] = int32_t(std::llround(Cell.AsNumber() * 1000.0));
+        }
+    }
+    return true;
+}
+
+bool CheckPerMilleRange(int32_t Value, const char* Field, std::vector<std::string>& OutErrors)
+{
+    if (Value < 0 || Value > 10000) // up to 10x multipliers are legitimate tuning space
+    {
+        OutErrors.push_back(std::string(Field) + ": out of range [0, 10000] per-mille");
+        return false;
+    }
+    return true;
+}
+
+} // namespace
+
+bool ValidateIntelSettings(const IntelSettings& Settings, std::vector<std::string>& OutErrors)
+{
+    const size_t ErrorsBefore = OutErrors.size();
+
+    if (Settings.FindDistortionProfile(Settings.ActiveDistortionProfile) == nullptr)
+    {
+        OutErrors.push_back("intel_settings: active distortion profile '" + Settings.ActiveDistortionProfile +
+                            "' not found");
+    }
+    if (Settings.FindCommsProfile(Settings.ActiveCommsProfile) == nullptr)
+    {
+        OutErrors.push_back("intel_settings: active comms profile '" + Settings.ActiveCommsProfile + "' not found");
+    }
+
+    for (const DistortionProfile& P : Settings.DistortionProfiles)
+    {
+        if (P.Name.empty())
+        {
+            OutErrors.push_back("distortion profile with empty name");
+        }
+        CheckPerMilleRange(P.MinClarityPerMille, "min_clarity", OutErrors);
+        CheckPerMilleRange(P.ClarityDistanceFalloffPerMille, "clarity_distance_falloff", OutErrors);
+        CheckPerMilleRange(P.FearCountBiasMaxPerMille, "fear_count_bias_max", OutErrors);
+        CheckPerMilleRange(P.CompetenceNoiseMaxPerMille, "competence_noise_max", OutErrors);
+        CheckPerMilleRange(P.OmissionChanceMaxPerMille, "omission_chance_max", OutErrors);
+        CheckPerMilleRange(P.FabricationChanceMaxPerMille, "fabrication_chance_max", OutErrors);
+        CheckPerMilleRange(P.SelfReportLossUnderstatementMaxPerMille, "self_report_loss_understatement_max", OutErrors);
+        if (P.PositionErrorMaxTiles < 0)
+        {
+            OutErrors.push_back(P.Name + ": position_error_max_tiles is negative");
+        }
+        if (P.MaxPhantomLifetimeTicks <= 0)
+        {
+            // A phantom with no lifetime bound breaks the guaranteed-refutation
+            // contract (§4.5) -- the one rule that keeps players trusting the system.
+            OutErrors.push_back(P.Name + ": max_phantom_lifetime_ticks must be positive");
+        }
+    }
+
+    for (const CommsProfile& P : Settings.CommsProfiles)
+    {
+        if (P.Name.empty())
+        {
+            OutErrors.push_back("comms profile with empty name");
+        }
+        if (P.HopDelayTicksByLevel.empty())
+        {
+            OutErrors.push_back(P.Name + ": hop_delay_seconds_by_level is empty");
+        }
+        for (int32_t Delay : P.HopDelayTicksByLevel)
+        {
+            if (Delay < 0)
+            {
+                OutErrors.push_back(P.Name + ": negative hop delay");
+                break;
+            }
+        }
+    }
+
+    // Every confusion row must sum to exactly 1000 so sampling needs no
+    // normalisation and a typo cannot silently skew classification odds.
+    for (int32_t Row = 0; Row < kObservedCategoryCount; ++Row)
+    {
+        int32_t Sum = 0;
+        for (int32_t Col = 0; Col < kObservedCategoryCount; ++Col)
+        {
+            const int32_t Cell = Settings.Confusion.PerMille[Row][Col];
+            if (Cell < 0 || Cell > 1000)
+            {
+                OutErrors.push_back(std::string("confusion_matrix: cell out of [0,1000] in row ") + kCategoryNames[Row]);
+            }
+            Sum += Cell;
+        }
+        if (Sum != 1000)
+        {
+            OutErrors.push_back(std::string("confusion_matrix: row '") + kCategoryNames[Row] +
+                                "' sums to " + std::to_string(Sum) + " per-mille, expected 1000");
+        }
+    }
+
+    const TrackTuning& T = Settings.Tracks;
+    if (T.MaxTracksPerPlayer <= 0 || T.MaxTracksPerPlayer > 65536)
+    {
+        OutErrors.push_back("track_tuning: max_tracks_per_player out of (0, 65536]");
+    }
+    if (T.MergeRadiusTiles < 0 || T.MergeWindowTicks < 0)
+    {
+        OutErrors.push_back("track_tuning: negative merge window");
+    }
+    CheckPerMilleRange(T.ConfidenceDecayPerSecondPerMille, "confidence_decay_per_second", OutErrors);
+    CheckPerMilleRange(T.DropBelowConfidencePerMille, "drop_below_confidence", OutErrors);
+    CheckPerMilleRange(T.AgreementConfidenceBonusPerMille, "agreement_confidence_bonus", OutErrors);
+    if (T.TracksPerTickBudget <= 0 || T.TracksPerTickBudget > T.MaxTracksPerPlayer)
+    {
+        // Zero would stall the sweep forever (tracks never decay, never GC);
+        // above the cap is meaningless and hides tuning mistakes.
+        OutErrors.push_back("track_tuning: tracks_per_tick_budget out of (0, max_tracks_per_player]");
+    }
+
+    return OutErrors.size() == ErrorsBefore;
+}
+
+bool LoadIntelSettingsFromJson(const std::string& JsonText, IntelSettings& OutSettings,
+                               std::vector<std::string>& OutErrors)
+{
+    Json::Value Root;
+    std::string ParseError;
+    if (!Json::Parse(JsonText, Root, ParseError))
+    {
+        OutErrors.push_back("intel_settings: JSON parse error: " + ParseError);
+        return false;
+    }
+    if (!Root.IsObject())
+    {
+        OutErrors.push_back("intel_settings: root is not an object");
+        return false;
+    }
+
+    OutSettings = IntelSettings{};
+    OutSettings.bEnabled = ReadBool(Root, "enabled", false);
+    OutSettings.ActiveDistortionProfile = ReadString(Root, "active_distortion_profile", OutSettings.ActiveDistortionProfile);
+    OutSettings.ActiveCommsProfile = ReadString(Root, "active_comms_profile", OutSettings.ActiveCommsProfile);
+
+    if (const Json::Value* Profiles = Root.Find("distortion_profiles"); Profiles != nullptr && Profiles->IsArray())
+    {
+        for (const Json::Value& P : Profiles->AsArray())
+        {
+            DistortionProfile Profile;
+            ParseDistortionProfile(P, Profile);
+            OutSettings.DistortionProfiles.push_back(Profile);
+        }
+    }
+
+    if (const Json::Value* Profiles = Root.Find("comms_profiles"); Profiles != nullptr && Profiles->IsArray())
+    {
+        for (const Json::Value& P : Profiles->AsArray())
+        {
+            CommsProfile Profile;
+            ParseCommsProfile(P, Profile);
+            OutSettings.CommsProfiles.push_back(Profile);
+        }
+    }
+
+    if (const Json::Value* Matrix = Root.Find("confusion_matrix"); Matrix != nullptr)
+    {
+        if (!ParseConfusionMatrix(*Matrix, OutSettings.Confusion, OutErrors))
+        {
+            return false;
+        }
+    }
+
+    if (const Json::Value* Tracks = Root.Find("track_tuning"); Tracks != nullptr && Tracks->IsObject())
+    {
+        TrackTuning& T = OutSettings.Tracks;
+        T.ConfidenceDecayPerSecondPerMille = ReadPerMille(*Tracks, "confidence_decay_per_second", T.ConfidenceDecayPerSecondPerMille);
+        T.ErrorRadiusGrowthTilesPerMinute = ReadInt(*Tracks, "error_radius_growth_tiles_per_minute", T.ErrorRadiusGrowthTilesPerMinute);
+        T.StaleAfterTicks = ReadInt(*Tracks, "stale_after_ticks", T.StaleAfterTicks);
+        T.DropBelowConfidencePerMille = ReadPerMille(*Tracks, "drop_below_confidence", T.DropBelowConfidencePerMille);
+        T.MergeRadiusTiles = ReadInt(*Tracks, "merge_radius_tiles", T.MergeRadiusTiles);
+        T.MergeWindowTicks = ReadInt(*Tracks, "merge_window_ticks", T.MergeWindowTicks);
+        T.AgreementConfidenceBonusPerMille = ReadPerMille(*Tracks, "agreement_confidence_bonus", T.AgreementConfidenceBonusPerMille);
+        T.MaxTracksPerPlayer = ReadInt(*Tracks, "max_tracks_per_player", T.MaxTracksPerPlayer);
+        T.TracksPerTickBudget = ReadInt(*Tracks, "tracks_per_tick_budget", T.TracksPerTickBudget);
+    }
+
+    return ValidateIntelSettings(OutSettings, OutErrors);
+}
+
+} // namespace Intel
+} // namespace RA4

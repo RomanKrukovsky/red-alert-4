@@ -13,9 +13,12 @@
 #include <string>
 #include <vector>
 
+#include "RA4AI/AIDirectors.h"
 #include "RA4AI/AIDoctrine.h"
 #include "RA4AI/AIStrategy.h"
 #include "RA4AI/AIWorldView.h"
+#include "RA4AI/BattlePredictor.h"
+#include "RA4AI/OpponentModel.h"
 #include "RA4AI/ThreatMap.h"
 #include "RA4AI/TacticalOperation.h"
 #include "RA4AI/ValueMap.h"
@@ -73,6 +76,19 @@ public:
     // Spatial awareness maps, updated on decision ticks.
     const ThreatMap& GetThreatMap() const { return Threats; }
     const ValueMap& GetValueMap() const { return Values; }
+
+    // Behavioural profile of each observed opponent, accumulated from the SimEvents
+    // this commander was entitled to see. Not a fog bypass: it summarises what was
+    // done to us over time, never where the enemy currently is.
+    const OpponentModel& GetOpponentModel() const { return Opponents; }
+
+    // Last set of scored director recommendations. Exposed so the debug overlay can
+    // explain the choice and tests can assert the directors were actually consulted.
+    const DirectorBundle& GetDirectorRecs() const { return Directors; }
+
+    // Most recent pre-engagement forecast. Only meaningful once HasBattleForecast().
+    const BattleEstimate& GetBattleForecast() const { return BattleForecast; }
+    bool HasBattleForecast() const { return bHasBattleForecast; }
 
 private:
     // --- decision steps, in priority order -------------------------------
@@ -139,6 +155,16 @@ private:
     // Re-observes the world through the fog-limited view. Must be called before any
     // decision that depends on enemy information.
     void UpdateKnowledge(const SimWorld& World);
+
+    // Runs the four directors for this decision tick and stores the bundle.
+    void EvaluateDirectors(const SimWorld& World, const AIWorldAssessment& Assessment);
+
+    // Estimates the outcome of committing the assigned squad against TargetTile,
+    // using only remembered enemies. True when a forecast was produced.
+    bool ForecastAssault(const SimWorld& World, const TileCoord& TargetTile);
+
+    // Minimum win probability required before committing an assault.
+    int32_t AssaultCommitThreshold() const;
     bool IsUnderAttack(const SimWorld& World) const;
     AIWorldAssessment BuildAssessment(const SimWorld& World) const;
 
@@ -190,6 +216,18 @@ private:
     // Spatial awareness: threat from enemy forces and strategic value of positions.
     ThreatMap Threats;
     ValueMap Values;
+
+    // Opponent modelling, director layer and battle forecasting. All advisory: they
+    // bias scores and thresholds only, and still emit ordinary validated Commands.
+    OpponentModel Opponents;
+    DirectorBundle Directors;
+    EconomyDirector EconomyDir;
+    ScoutingDirector ScoutingDir;
+    DefenseDirector DefenseDir;
+    OffenseDirector OffenseDir;
+
+    BattleEstimate BattleForecast;
+    bool bHasBattleForecast = false;
 };
 
 } // namespace AI

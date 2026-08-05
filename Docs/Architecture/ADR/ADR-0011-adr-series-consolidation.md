@@ -1,5 +1,25 @@
 # ADR-0011: ADR Series Consolidation
 
+> **STATUS UPDATE (2026-08-05)**: this ADR's decisions were recorded but only partially executed.
+> Corrections and completion:
+> - **Executed now**: all 23 files in `Docs/ADR/` and `Docs/ADRs/` carry a SUPERSEDED banner
+>   (decision 3, previously unimplemented — no file had any marker).
+> - **Erratum to decision 4**: it states ADR-007 (Faction Economy) is superseded by "ADR-0019 (Faction
+>   Economy Extension Points)". Wrong number. That document was authored as ADR-0018 on
+>   `remediation/foundation-fixes` only, where it collided with `main`'s ADR-0018 ("No LLM In The Runtime
+>   Command Path"); it has been recovered and renumbered to **ADR-0027**. ADR-0019 is Chronolegion
+>   Temporal Debt.
+> - **Erratum to the Context section**: the directory counts are stale. `Docs/Architecture/ADR/` now
+>   holds 27 files, not 10.
+> - **Numbering collision**: this file and `ADR-0011-DirectControl.md` share the number ADR-0011 in the
+>   canonical directory — the exact defect this ADR set out to prevent. Neither is renamed here, because
+>   both are already cited by number elsewhere; the collision is recorded in NEXT_ACTIONS P-3 and must be
+>   resolved by renumbering the DirectControl ADR to a free number (0027+) with a redirect stub.
+> - **Executed now**: decision 5 — `Docs/integration/templates/ADR_INDEX.md` carries a warning banner.
+>   It was not merely stale: it reserved ADR numbers 0012–0021 for unwritten template decisions, and
+>   every one of those numbers is already occupied in the canonical series. Any agent following it would
+>   have created ten collisions. The next free canonical number is **ADR-0028**.
+
 ## Context
 
 Three parallel ADR directories exist in the repository:

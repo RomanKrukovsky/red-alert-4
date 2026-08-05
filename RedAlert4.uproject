@@ -15,6 +15,11 @@
 			"LoadingPhase": "PreDefault"
 		},
 		{
+			"Name": "RA4Intel",
+			"Type": "Runtime",
+			"LoadingPhase": "PreDefault"
+		},
+		{
 			"Name": "RA4Simulation",
 			"Type": "Runtime",
 			"LoadingPhase": "PreDefault"

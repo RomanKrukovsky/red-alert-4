@@ -1,5 +1,10 @@
 # ADR-0020: Economic Telemetry and Balance Metrics
 
+> **Provenance note (2026-08-05)**: recovered from `remediation/foundation-fixes` (a branch that does
+> not compile and has been superseded by `main`) so that references to it from ADR-0025 and
+> `PERCEPTION_WARFARE_DIRECTION.md` resolve. Any tick-derived figures below should be read against the
+> real 20 Hz tick rate (`kTicksPerSecond`, `SimConfig.h`).
+
 ## Context
 
 The economy design specifies extensive metrics for balance validation: income per minute, harvester utilization, expansion payback time, the moment a match becomes economically unrecoverable, and more. Without automated telemetry, balance tuning is guesswork. This ADR defines the telemetry system that records economic state every tick and produces post-match analysis reports for the headless simulator.

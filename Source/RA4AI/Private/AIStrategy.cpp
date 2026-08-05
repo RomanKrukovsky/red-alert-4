@@ -31,6 +31,10 @@ const char* ToString(AIProfile Profile)
         case AIProfile::Aggressive: return "Aggressive";
         case AIProfile::Defensive: return "Defensive";
         case AIProfile::Economic: return "Economic";
+        case AIProfile::Rush: return "Rush";
+        case AIProfile::Turtle: return "Turtle";
+        case AIProfile::AirSuperiority: return "AirSuperiority";
+        case AIProfile::Guerrilla: return "Guerrilla";
     }
     return "Invalid";
 }
@@ -42,6 +46,7 @@ const char* ToString(AIDifficulty Difficulty)
         case AIDifficulty::Easy: return "Easy";
         case AIDifficulty::Normal: return "Normal";
         case AIDifficulty::Hard: return "Hard";
+        case AIDifficulty::Expert: return "Expert";
     }
     return "Normal";
 }
@@ -57,17 +62,29 @@ AIConfig MakeProfileConfig(AIProfile Profile, AIDifficulty Difficulty)
         case AIDifficulty::Easy:
             Config.DecisionIntervalTicks = 20;
             Config.MemoryUpdateIntervalTicks = 10;
-            Config.CreditBonusMultiplier = 1.0f;
             break;
         case AIDifficulty::Normal:
             Config.DecisionIntervalTicks = 10;
             Config.MemoryUpdateIntervalTicks = 5;
-            Config.CreditBonusMultiplier = 1.0f;
             break;
         case AIDifficulty::Hard:
+            // Hard earns its advantage: faster reaction and observation only. It gets
+            // no income bonus -- difficulty must change how well the AI plays, never
+            // what it is handed. (The old +20% multiplier was also dead code: nothing
+            // ever read it, so removing it changes no behaviour, only the intent.)
             Config.DecisionIntervalTicks = 5;
             Config.MemoryUpdateIntervalTicks = 2;
-            Config.CreditBonusMultiplier = 1.20f; // Bounded +20% income bonus for Hard AI
+            break;
+        case AIDifficulty::Expert:
+            // Fastest reaction and observation of any tier, and deliberately NO
+            // credit bonus: Expert must win by playing better, not by being fed.
+            Config.DecisionIntervalTicks = 3;
+            Config.MemoryUpdateIntervalTicks = 1;
+            // Longer memory: an Expert commander keeps acting on older sightings
+            // instead of forgetting a base it scouted a minute ago.
+            Config.MemoryRetentionTicks = 900;
+            // Less thrash between strategies, so plans are carried through.
+            Config.StrategySwitchMargin = 140;
             break;
     }
 
@@ -75,6 +92,16 @@ AIConfig MakeProfileConfig(AIProfile Profile, AIDifficulty Difficulty)
     switch (Profile)
     {
         case AIProfile::Aggressive:
+            // Tuning note (league pass 2, 560 matches per variant): raising the
+            // commit floor was tried to stop unit pairs trickling into static
+            // defence, and MEASURABLY BACKFIRED at both floor 4 (a regression
+            // scenario stopped finishing at all) and floor 3 (win rate 40% -> 34%,
+            // first-blood rate 42% -> 21%, Defensive and Turtle rows went to 0%).
+            // Waiting for a third unit forfeits the early-pressure timing that IS
+            // this profile's identity: damage per game rose but arrived after
+            // walls existed. Kept at 2 deliberately -- the trickle is the cost of
+            // the timing, and fixing Aggressive-vs-Turtle belongs to the armor
+            // matrix / anti-building tools, not to slower openings.
             Config.TargetHarvesters = 2;
             Config.AttackArmySize = 4;
             Config.MinimumAttackSize = 2;
@@ -107,6 +134,91 @@ AIConfig MakeProfileConfig(AIProfile Profile, AIDifficulty Difficulty)
             Config.AssaultWeight = 90;
             Config.RecoveryWeight = 120;
             Config.StrategySwitchMargin = 120;
+            break;
+        case AIProfile::Rush:
+            // All-in early aggression: the smallest viable economy, the smallest
+            // committing force, and almost no reserve. Loses to anything that
+            // survives the opening, which is the intended counterplay.
+            //
+            // League pass 1 (560 matches, factions alternated): 36% win rate,
+            // the weakest profile. Root cause was not the aggression but the
+            // economy: one harvester cannot fund a second wave, so a single
+            // failed opening ended the match. Two harvesters keeps the identity
+            // (still the smallest economy of any profile) while making the rush
+            // repeatable instead of a coin flip.
+            Config.TargetHarvesters = 2;
+            Config.AttackArmySize = 3;
+            Config.MinimumAttackSize = 2;
+            Config.TargetDefences = 0;
+            Config.CreditReserve = 50;
+            Config.AssaultWeight = 150;
+            Config.ArmyWeight = 130;
+            Config.EconomyWeight = 60;
+            Config.DefenceWeight = 40;
+            Config.TechWeight = 50;
+            // Commits and stays committed: re-deciding mid-rush wastes the timing.
+            Config.StrategySwitchMargin = 40;
+            break;
+        case AIProfile::Turtle:
+            // Trades all early initiative for defence and tech, then attacks with a
+            // much larger force than any other profile fields.
+            //
+            // League pass 1: 72% win rate, the strongest profile. With the current
+            // content set six turrets are effectively uncrackable, so Turtle never
+            // paid a price for surrendering the initiative. Five keeps it the most
+            // fortified profile (Defensive holds four -- the profile invariant
+            // TurtleIsTheMostDefensive caught an attempt to tie them) while
+            // leaving attackers a real, expensive way through.
+            Config.TargetHarvesters = 4;
+            Config.AttackArmySize = 14;
+            Config.MinimumAttackSize = 8;
+            Config.TargetDefences = 5;
+            Config.CreditReserve = 600;
+            Config.DefenceWeight = 160;
+            Config.TechWeight = 125;
+            Config.EconomyWeight = 110;
+            Config.AssaultWeight = 60;
+            Config.ArmyWeight = 95;
+            Config.RecoveryWeight = 130;
+            // Very reluctant to abandon a fortified posture.
+            Config.StrategySwitchMargin = 180;
+            break;
+        case AIProfile::AirSuperiority:
+            // Prioritises tech to reach air, keeps a healthy bank to afford it, and
+            // declines early ground engagements it would lose.
+            Config.TargetHarvesters = 4;
+            Config.AttackArmySize = 8;
+            Config.MinimumAttackSize = 4;
+            Config.TargetDefences = 2;
+            Config.CreditReserve = 700;
+            Config.TechWeight = 165;
+            Config.EconomyWeight = 115;
+            Config.ArmyWeight = 100;
+            Config.AssaultWeight = 85;
+            Config.DefenceWeight = 105;
+            Config.StrategySwitchMargin = 130;
+            break;
+        case AIProfile::Guerrilla:
+            // Never masses for a decisive battle: many small raids, a low commit
+            // threshold, and a deliberately thin defensive line.
+            //
+            // League pass 2 telemetry: 42% win rate with the lowest share of
+            // damage landing on buildings (25%) -- raids that harass but never
+            // finish. Raid size 3 keeps the many-small-raids identity (still the
+            // smallest committing force alongside Rush's opening) while giving a
+            // raid enough punch to actually kill what it catches.
+            Config.TargetHarvesters = 3;
+            Config.AttackArmySize = 4;
+            Config.MinimumAttackSize = 3;
+            Config.TargetDefences = 1;
+            Config.CreditReserve = 200;
+            Config.AssaultWeight = 120;
+            Config.ArmyWeight = 108;
+            Config.EconomyWeight = 100;
+            Config.DefenceWeight = 75;
+            Config.RecoveryWeight = 115;
+            // Switches targets readily -- that mobility is the whole identity.
+            Config.StrategySwitchMargin = 50;
             break;
         case AIProfile::Adaptive:
             break;

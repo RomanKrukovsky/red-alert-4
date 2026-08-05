@@ -13,6 +13,12 @@
 namespace RA4
 {
 
+namespace
+{
+// Transition window (Entering/Exiting) before direct control is fully active.
+constexpr TickIndex kDirectControlEnterExitTicks = 4; // 200ms at 20Hz
+}
+
 static_assert(MapDescription::kTileSizeUnitsLocal == kTileSizeUnits,
               "MapDescription tile size must match the simulation tile size");
 
@@ -101,6 +107,7 @@ void SimWorld::Reset()
     FlowFieldBuildsThisTick = 0;
     MacroPathBuildsThisTick = 0;
     Stats = MovementStats{};
+    IntelLayer.Reset();
     Core.clear();
     Transforms.clear();
     Healths.clear();
@@ -111,6 +118,7 @@ void SimWorld::Reset()
     ResourceNodes.clear();
     Projectiles.clear();
     Orders.clear();
+    DirectControls.clear();
     FreeSlots.clear();
     PendingDestroy.clear();
     Events.clear();
@@ -129,6 +137,7 @@ void SimWorld::Reset()
     ResourceNodes.reserve(kMaxEntities);
     Projectiles.reserve(kMaxEntities);
     Orders.reserve(kMaxEntities);
+    DirectControls.reserve(kMaxEntities);
 
     HighWaterMark = 0;
     CurrentTick = 0;
@@ -140,7 +149,8 @@ void SimWorld::Reset()
     }
 }
 
-void SimWorld::Initialize(const ContentDatabase* InContent, const MatchSetup& Setup)
+void SimWorld::Initialize(const ContentDatabase* InContent, const MatchSetup& Setup,
+                          const Intel::IntelSettings* InIntelSettings)
 {
     Reset();
     Content = InContent;
@@ -152,6 +162,11 @@ void SimWorld::Initialize(const ContentDatabase* InContent, const MatchSetup& Se
 
     Router = std::make_unique<Nav::MNavRouter>(*NavigationGrid);
     Rng.Reset(Setup.Seed);
+    // Distinct sequence constant gives the intel layer an independent stream from
+    // the same match seed (see SimWorld.h for why isolation matters).
+    IntelRng.Reset(Setup.Seed, 0x496e74656cULL /* "Intel" */);
+    IntelSettingsRef = InIntelSettings;
+    IntelLayer.Initialize(InIntelSettings, Map.Width, Map.Height);
 
     for (PlayerId I = 0; I < kMaxPlayers; ++I)
     {
@@ -178,7 +193,8 @@ void SimWorld::Restart()
 {
     const ContentDatabase* SavedContent = Content;
     const MatchSetup SavedSetup = SetupConfig;
-    Initialize(SavedContent, SavedSetup);
+    const Intel::IntelSettings* SavedIntel = IntelSettingsRef;
+    Initialize(SavedContent, SavedSetup, SavedIntel);
 }
 
 // ---------------------------------------------------------------------------
@@ -210,6 +226,7 @@ EntityId SimWorld::AllocateEntity()
         ResourceNodes.emplace_back();
         Projectiles.emplace_back();
         Orders.emplace_back();
+        DirectControls.emplace_back();
         HighWaterMark = uint32_t(Core.size());
     }
 
@@ -228,7 +245,8 @@ EntityId SimWorld::AllocateEntity()
     ResourceNodes[Index] = ResourceNodeComp();
     Projectiles[Index] = ProjectileComp();
     Orders[Index].Clear();
-
+    DirectControls[Index] = DirectControlComp();
+ 
     return EntityId(Index, Generation);
 }
 
@@ -256,6 +274,7 @@ const ResourceNodeComp* SimWorld::GetResourceNode(EntityId Id) const { return Is
 const MovementComp* SimWorld::GetMovement(EntityId Id) const { return IsAlive(Id) ? &Movements[Id.Index] : nullptr; }
 const CombatComp* SimWorld::GetCombat(EntityId Id) const { return IsAlive(Id) ? &Combats[Id.Index] : nullptr; }
 const OrderQueue* SimWorld::GetOrders(EntityId Id) const { return IsAlive(Id) ? &Orders[Id.Index] : nullptr; }
+const DirectControlComp* SimWorld::GetDirectControl(EntityId Id) const { return IsAlive(Id) ? &DirectControls[Id.Index] : nullptr; }
 
 const PlayerState& SimWorld::GetPlayer(PlayerId Id) const
 {
@@ -1134,6 +1153,256 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
             break;
         }
 
+        // --- Direct vehicle control ----------------------------------------
+        // All four commands go through the same ownership/alive checks as
+        // ordinary orders. Enter/Exit mutate the DirectControlComp; Drive
+        // mutates movement/turret via the profile; Fire re-uses FireWeapon so
+        // damage, cooldown and ammo are identical to RTS fire.
+        case CommandType::DirectControlEnter:
+        {
+            if (!IsAlive(Cmd.Primary))
+            {
+                return Reject(CommandReject::NoSuchEntity);
+            }
+            if (Core[Cmd.Primary.Index].Owner != Cmd.Issuer)
+            {
+                return Reject(CommandReject::NotOwner);
+            }
+            if (Core[Cmd.Primary.Index].Kind != EntityKind::Unit)
+            {
+                return Reject(CommandReject::DirectIneligibleUnit);
+            }
+            // Only one driver per entity.
+            const DirectControlComp& Existing = DirectControls[Cmd.Primary.Index];
+            if (Existing.Phase == DirectControlPhase::Active ||
+                Existing.Phase == DirectControlPhase::Entering)
+            {
+                if (Existing.Controller == Cmd.Issuer)
+                {
+                    // Idempotent re-entry from same player: accept silently.
+                    break;
+                }
+                return Reject(CommandReject::DirectAlreadyControlled);
+            }
+            // Reject if the entity has no weapon and no turret (eligible check).
+            // We treat any armed vehicle or any vehicle with TurretTurnRate>0 as
+            // direct-controllable. The presentation profile gates which units the
+            // client will *offer*; the simulation only enforces safety.
+            const EntityDef* Def = Content ? Content->FindEntity(Core[Cmd.Primary.Index].Def) : nullptr;
+            if (Def == nullptr)
+            {
+                return Reject(CommandReject::UnknownContent);
+            }
+            if (!Def->Weapon.IsValid() && Def->Unit.TurretTurnRatePerSecond == 0)
+            {
+                return Reject(CommandReject::DirectIneligibleUnit);
+            }
+            DirectControlComp& Dc = DirectControls[Cmd.Primary.Index];
+            Dc.Phase = DirectControlPhase::Entering;
+            Dc.Controller = Cmd.Issuer;
+            Dc.PhaseUntilTick = CurrentTick + kDirectControlEnterExitTicks;
+            Dc.CooldownTicksPrimary = 0;
+            Dc.CooldownTicksSecondary = 0;
+            Dc.bOpticsZoomed = false;
+            // Clear current orders; the driver is now responsible for movement.
+            Orders[Cmd.Primary.Index].Clear();
+            Combats[Cmd.Primary.Index].Target = EntityId::Invalid();
+            Combats[Cmd.Primary.Index].bTargetIsForced = false;
+            {
+                SimEvent Ev;
+                Ev.Type = SimEventType::DirectControlEntered;
+                Ev.Tick = CurrentTick;
+                Ev.Entity = Cmd.Primary;
+                Ev.Player = Cmd.Issuer;
+                EmitEvent(Ev);
+            }
+            break;
+        }
+
+        case CommandType::DirectControlExit:
+        {
+            if (!IsAlive(Cmd.Primary))
+            {
+                return Reject(CommandReject::NoSuchEntity);
+            }
+            const DirectControlComp& Dc = DirectControls[Cmd.Primary.Index];
+            if (Dc.Phase != DirectControlPhase::Active &&
+                Dc.Phase != DirectControlPhase::Entering)
+            {
+                return Reject(CommandReject::DirectNotControlling);
+            }
+            if (Dc.Controller != Cmd.Issuer)
+            {
+                return Reject(CommandReject::NotOwner);
+            }
+            DirectControlComp& DcMut = DirectControls[Cmd.Primary.Index];
+            DcMut.Phase = DirectControlPhase::Exiting;
+            DcMut.PhaseUntilTick = CurrentTick + kDirectControlEnterExitTicks;
+            // Hand back to AI: leave a Stop order so the vehicle does not drift.
+            Orders[Cmd.Primary.Index].Clear();
+            Movements[Cmd.Primary.Index].bHasDestination = false;
+            Movements[Cmd.Primary.Index].CurrentSpeed = Fixed::Zero();
+            {
+                SimEvent Ev;
+                Ev.Type = SimEventType::DirectControlExited;
+                Ev.Tick = CurrentTick;
+                Ev.Entity = Cmd.Primary;
+                Ev.Player = Cmd.Issuer;
+                EmitEvent(Ev);
+            }
+            break;
+        }
+
+        case CommandType::DirectControlDrive:
+        {
+            if (!IsAlive(Cmd.Primary))
+            {
+                return Reject(CommandReject::NoSuchEntity);
+            }
+            DirectControlComp& Dc = DirectControls[Cmd.Primary.Index];
+            if (Dc.Phase != DirectControlPhase::Active &&
+                Dc.Phase != DirectControlPhase::Entering)
+            {
+                return Reject(CommandReject::DirectNotControlling);
+            }
+            if (Dc.Controller != Cmd.Issuer)
+            {
+                return Reject(CommandReject::NotOwner);
+            }
+            const EntityDef* Def = Content ? Content->FindEntity(Core[Cmd.Primary.Index].Def) : nullptr;
+            if (Def == nullptr)
+            {
+                return Reject(CommandReject::UnknownContent);
+            }
+            // Throttle -> forward movement. We use the same MovementComp the
+            // ordinary SystemMovement will integrate, so speed limits stay
+            // identical to RTS control.
+            const int32_t Throttle = std::clamp(int32_t(Cmd.DirectAxes.Throttle), -127, 127);
+            const int32_t Steering = std::clamp(int32_t(Cmd.DirectAxes.Steering), -127, 127);
+            if (Throttle > 0)
+            {
+                const Fixed Fwd = Def->Unit.MaxSpeed * Fixed::FromRatio(Throttle, 127);
+                // Reuse the order queue with a small forward waypoint, refreshed
+                // every tick. The arrive radius keeps the vehicle from fighting
+                // itself.
+                const Vec2 Pos = Transforms[Cmd.Primary.Index].Position;
+                const int32_t Facing = Transforms[Cmd.Primary.Index].Facing;
+                const Vec2 Dir = Vec2::FromAngle(Facing);
+                const Vec2 Dest = Pos + Dir * Fwd * Fixed::FromInt(2);
+                Orders[Cmd.Primary.Index].Clear();
+                Order O;
+                O.Type = OrderType::Move;
+                O.Location = Dest;
+                Orders[Cmd.Primary.Index].Push(O);
+            }
+            else if (Throttle < 0)
+            {
+                const Fixed Rev = Def->Unit.MaxSpeed * Fixed::FromRatio(-Throttle, 127) * Fixed::FromRatio(1, 2);
+                const Vec2 Pos = Transforms[Cmd.Primary.Index].Position;
+                const int32_t Facing = Transforms[Cmd.Primary.Index].Facing;
+                const Vec2 Dir = Vec2::FromAngle(Facing);
+                const Vec2 Dest = Pos - Dir * Rev * Fixed::FromInt(2);
+                Orders[Cmd.Primary.Index].Clear();
+                Order O;
+                O.Type = OrderType::Move;
+                O.Location = Dest;
+                Orders[Cmd.Primary.Index].Push(O);
+            }
+            else
+            {
+                // No throttle: stop.
+                Orders[Cmd.Primary.Index].Clear();
+                Movements[Cmd.Primary.Index].CurrentSpeed = Fixed::Zero();
+                Movements[Cmd.Primary.Index].bHasDestination = false;
+            }
+            // Steering -> hull facing delta (centi-degrees per tick).
+            if (Steering != 0 && Def->Unit.TurnRatePerSecond > 0)
+            {
+                const int32_t TurnPerTickCenti =
+                    (int32_t(Def->Unit.TurnRatePerSecond) * 100) / int32_t(kTicksPerSecond);
+                Transforms[Cmd.Primary.Index].Facing +=
+                    (Steering * TurnPerTickCenti) / 127;
+            }
+            // Turret yaw/pitch -> quantized; full integration in SystemDirectControl.
+            Dc.TurretYawCentiDeg += int32_t(Cmd.DirectAxes.TurretYaw) * 16; // scale applied here
+            Dc.TurretPitchCentiDeg = std::clamp(
+                Dc.TurretPitchCentiDeg + int32_t(Cmd.DirectAxes.TurretPitch) * 16,
+                -8000, 8000); // +/- 80 deg clamp
+            // Flags handled by Fire command in the same frame, not here.
+            const uint8_t Flags = Cmd.DirectAxes.Flags;
+            if (Flags & 0x08) { Dc.bOpticsZoomed = !Dc.bOpticsZoomed; }
+            // Promote Entering -> Active on first Drive.
+            if (Dc.Phase == DirectControlPhase::Entering)
+            {
+                Dc.Phase = DirectControlPhase::Active;
+                Dc.PhaseUntilTick = 0;
+            }
+            break;
+        }
+
+        case CommandType::DirectControlFire:
+        {
+            if (!IsAlive(Cmd.Primary))
+            {
+                return Reject(CommandReject::NoSuchEntity);
+            }
+            const DirectControlComp& Dc = DirectControls[Cmd.Primary.Index];
+            if (Dc.Phase != DirectControlPhase::Active &&
+                Dc.Phase != DirectControlPhase::Entering)
+            {
+                return Reject(CommandReject::DirectNotControlling);
+            }
+            if (Dc.Controller != Cmd.Issuer)
+            {
+                return Reject(CommandReject::NotOwner);
+            }
+            const EntityDef* Def = Content ? Content->FindEntity(Core[Cmd.Primary.Index].Def) : nullptr;
+            if (Def == nullptr || !Def->Weapon.IsValid())
+            {
+                return Reject(CommandReject::DirectWeaponEmpty);
+            }
+            const WeaponDef* Wpn = Content ? Content->FindWeapon(Def->Weapon) : nullptr;
+            if (Wpn == nullptr)
+            {
+                return Reject(CommandReject::DirectWeaponEmpty);
+            }
+            const uint8_t Flags = Cmd.DirectAxes.Flags;
+            const bool bSecondary = (Flags & 0x02) != 0;
+            const ContentId WpnId = bSecondary && Def->SecondaryWeapon.IsValid()
+                ? Def->SecondaryWeapon
+                : Def->Weapon;
+            const WeaponDef* WpnToFire = (WpnId == Def->Weapon) ? Wpn
+                : (Content ? Content->FindWeapon(WpnId) : nullptr);
+            if (WpnToFire == nullptr)
+            {
+                return Reject(CommandReject::DirectWeaponEmpty);
+            }
+            DirectControlComp& DcMut = DirectControls[Cmd.Primary.Index];
+            int32_t& Cooldown = (WpnId == Def->Weapon)
+                ? DcMut.CooldownTicksPrimary
+                : DcMut.CooldownTicksSecondary;
+            if (Cooldown > 0)
+            {
+                return Reject(CommandReject::DirectWeaponCooldown);
+            }
+            // Target: use forced target from Cmd.Target if alive & hostile;
+            // otherwise acquire via the existing system so first-person fire
+            // can never shoot through fog of war.
+            EntityId Target = Cmd.Target;
+            if (!IsAlive(Target) || !IsHostile(Cmd.Issuer, Core[Target.Index].Owner))
+            {
+                Target = AcquireTarget(Cmd.Primary);
+            }
+            if (!Target.IsValid())
+            {
+                return Reject(CommandReject::TargetInvalid);
+            }
+            // Same fire path as RTS: same damage, same cooldown, same projectile.
+            FireWeapon(Cmd.Primary, Target, *WpnToFire);
+            Cooldown = WpnToFire->CooldownTicks;
+            break;
+        }
+
         default:
             return Reject(CommandReject::UnknownType);
     }
@@ -1305,6 +1574,23 @@ void SimWorld::DestroyEntity(EntityId Id, EntityId Killer, bool bWasSold)
     Ev.Content = Core[Index].Def;
     Ev.Location = Transforms[Index].Position;
     EmitEvent(Ev);
+
+    // If this entity was under direct control, emit the exit event and mark
+    // the phase so the presentation layer knows the player was ejected by
+    // destruction rather than by an explicit Exit command.
+    if (DirectControls[Index].Phase == DirectControlPhase::Active ||
+        DirectControls[Index].Phase == DirectControlPhase::Entering)
+    {
+        SimEvent DcEv;
+        DcEv.Type = SimEventType::DirectControlExited;
+        DcEv.Tick = CurrentTick;
+        DcEv.Entity = Id;
+        DcEv.Player = DirectControls[Index].Controller;
+        EmitEvent(DcEv);
+        DirectControls[Index].Phase = DirectControlPhase::VehicleDestroyed;
+        DirectControls[Index].PhaseUntilTick = 0;
+        DirectControls[Index].Controller = kInvalidPlayer;
+    }
 
     Core[Index].bAlive = false;
     Core[Index].Generation += 1;
@@ -2903,6 +3189,65 @@ void SimWorld::SystemFogOfWar()
 // Tick
 // ---------------------------------------------------------------------------
 
+void SimWorld::SystemDirectControl()
+{
+    // Advance phase timers and cooldowns for all direct-control slots. This
+    // system owns the authoritative turret-facing integration for vehicles
+    // under human command; ordinary SystemCombat still runs but will find
+    // forced targets empty (cleared on Enter/Exit), so the two do not fight.
+    for (uint32_t I = 0; I < HighWaterMark; ++I)
+    {
+        if (!Core[I].bAlive)
+        {
+            continue;
+        }
+        DirectControlComp& Dc = DirectControls[I];
+        if (Dc.CooldownTicksPrimary > 0)   { --Dc.CooldownTicksPrimary; }
+        if (Dc.CooldownTicksSecondary > 0) { --Dc.CooldownTicksSecondary; }
+
+        if (Dc.Phase == DirectControlPhase::Inactive ||
+            Dc.Phase == DirectControlPhase::VehicleDestroyed)
+        {
+            continue;
+        }
+
+        // Phase timer expiry.
+        if (Dc.Phase == DirectControlPhase::Entering)
+        {
+            if (CurrentTick >= Dc.PhaseUntilTick)
+            {
+                Dc.Phase = DirectControlPhase::Active;
+                Dc.PhaseUntilTick = 0;
+            }
+        }
+        else if (Dc.Phase == DirectControlPhase::Exiting)
+        {
+            if (CurrentTick >= Dc.PhaseUntilTick)
+            {
+                Dc.Phase = DirectControlPhase::Inactive;
+                Dc.PhaseUntilTick = 0;
+                Dc.Controller = kInvalidPlayer;
+            }
+        }
+
+        // Authoritative turret facing integration while Active. The client
+        // requests a rate; the simulation enforces it per the UnitDef.
+        if (Dc.Phase == DirectControlPhase::Active)
+        {
+            const EntityDef* Def = Content ? Content->FindEntity(Core[I].Def) : nullptr;
+            if (Def != nullptr && Def->Unit.TurretTurnRatePerSecond > 0)
+            {
+                const int32_t MaxPerTickCenti =
+                    (int32_t(Def->Unit.TurretTurnRatePerSecond) * 100) / int32_t(kTicksPerSecond);
+                const int32_t Desired = Dc.TurretYawCentiDeg % 36000;
+                const int32_t Diff = Desired - Transforms[I].TurretFacing;
+                const int32_t Clamped = std::clamp(Diff, -MaxPerTickCenti, MaxPerTickCenti);
+                Transforms[I].TurretFacing += Clamped;
+            }
+        }
+    }
+}
+
 void SimWorld::Tick(const CommandFrame* Frame)
 {
     if (Phase != MatchPhase::Running)
@@ -2924,10 +3269,63 @@ void SimWorld::Tick(const CommandFrame* Frame)
     SystemProjectiles();
     SystemFactionResources();
     SystemFogOfWar();
+    SystemIntel();
+    SystemDirectControl();
     SystemDeaths();
     SystemVictory();
 
     CurrentTick += 1;
+}
+
+void SimWorld::SystemIntel()
+{
+    // Runs right after fog of war: fog decides what is physically visible this
+    // tick, intel turns that into (delayed, distorted) belief. Disabled layer
+    // returns immediately -- classic perfect-information behaviour (ADR-0026).
+    if (!IntelLayer.IsEnabled())
+    {
+        return;
+    }
+
+    // Build this tick's visibility view. Iteration is by entity slot and then by
+    // player, so the observation order is deterministic by construction. Only
+    // non-owned, non-projectile entities are observable: a player's own units are
+    // exact by decision D3 of ADR-0026 (own-troop self-report bias is M4 and
+    // touches info panels, not selection).
+    IntelInput.Clear();
+    IntelInput.EntityCapacity = uint32_t(Core.size());
+    for (uint32_t I = 0; I < HighWaterMark; ++I)
+    {
+        if (!Core[I].bAlive || Core[I].Kind == EntityKind::Projectile)
+        {
+            continue;
+        }
+        const TileCoord Tile = Map.WorldToTile(Transforms[I].Position);
+        for (PlayerId P = 0; P < kMaxPlayers; ++P)
+        {
+            if (!Players[P].bActive || Players[P].bDefeated)
+            {
+                continue;
+            }
+            if (Core[I].Owner == P)
+            {
+                continue; // own units are known exactly, not tracked as contacts
+            }
+            if (!IsEntityVisibleTo(P, I))
+            {
+                continue;
+            }
+            Intel::ObservedEntity Seen;
+            Seen.Id = MakeId(I);
+            Seen.Class = Core[I].Def;
+            Seen.Position = Transforms[I].Position;
+            Seen.TileX = Tile.X;
+            Seen.TileY = Tile.Y;
+            IntelInput.VisibleToPlayer[P].push_back(Seen);
+        }
+    }
+
+    IntelLayer.Tick(CurrentTick, IntelInput);
 }
 
 void SimWorld::SystemFactionResources()
@@ -2967,6 +3365,7 @@ uint64_t SimWorld::ComputeStateChecksum() const
     H.FeedUInt8(uint8_t(Phase));
     H.FeedUInt8(Winner);
     H.FeedUInt64(Rng.GetState());
+    H.FeedUInt64(IntelRng.GetState());
 
     for (PlayerId I = 0; I < kMaxPlayers; ++I)
     {
@@ -3009,6 +3408,12 @@ uint64_t SimWorld::ComputeStateChecksum() const
         H.FeedInt64(Movements[I].Destination.X.Raw);
         H.FeedInt64(Movements[I].Destination.Y.Raw);
         H.FeedInt32(Orders[I].Count);
+        H.FeedUInt8(uint8_t(DirectControls[I].Phase));
+        H.FeedUInt8(DirectControls[I].Controller);
+        H.FeedInt32(DirectControls[I].TurretYawCentiDeg);
+        H.FeedInt32(DirectControls[I].TurretPitchCentiDeg);
+        H.FeedInt32(DirectControls[I].CooldownTicksPrimary);
+        H.FeedInt32(DirectControls[I].CooldownTicksSecondary);
 
         if (Core[I].Kind == EntityKind::Building)
         {
@@ -3039,6 +3444,11 @@ uint64_t SimWorld::ComputeStateChecksum() const
             H.FeedInt32(ResourceNodes[I].Amount);
         }
     }
+
+    // Belief state influences future commands once the AI reads it (M6), so a
+    // divergent belief is a real desync and must be caught here, on this tick.
+    IntelLayer.FeedChecksum(H);
+
     return H.Get();
 }
 
@@ -3047,16 +3457,28 @@ uint64_t SimWorld::ComputeStateChecksum() const
 // ---------------------------------------------------------------------------
 
 constexpr uint32_t kSimSaveMagic = 0x52413453u; // "RA4S"
-// v2 (ADR-0012): ProductionItem gained FlowPaymentState, TotalCost and Priority.
-// v3 (ADR-0012): BuildingComp::bSelling is gone. It was tick-scoped intent held in
-//     durable state, so a save taken between the sell command and the death sweep
-//     reloaded a building flagged selling forever, which then silently forfeited its
-//     destruction refund. The intent now lives in the non-serialized PendingSales
-//     list. Older saves still load; the field is read and discarded.
-// Older saves are still readable; missing fields are reconstructed on load.
-constexpr uint32_t kSimSaveVersion = 3;
-constexpr uint32_t kSimSaveVersionFlowPayment = 2;
-constexpr uint32_t kSimSaveVersionNoSellingFlag = 3;
+// Both branches independently claimed v2 and v3 for different format changes, so the
+// merged format is v4. Two saves both stamped "3" but written by different branches
+// are not interchangeable, and a version number cannot express that -- v4 is the only
+// honest way to say "this is the format that has all four changes".
+//
+//   v2: DirectControlComp (main) and ProductionItem flow-payment fields (ADR-0012)
+//   v3: intel layer, IntelRng + IntelSystem (main); BuildingComp::bSelling removed
+//       (ADR-0012 -- it was tick-scoped intent held in durable state, so a save taken
+//       between the sell command and the death sweep reloaded a building flagged
+//       selling forever and then silently forfeited its destruction refund; the intent
+//       now lives in the non-serialized PendingSales list)
+//   v4: the union of the above
+//
+// Older saves are still readable; missing fields are reconstructed on load and
+// retired fields are read and discarded to keep the byte stream aligned.
+constexpr uint32_t kSimSaveVersion = 4;
+constexpr uint32_t kSimSaveVersionFlowPayment = 4;
+constexpr uint32_t kSimSaveVersionNoSellingFlag = 4;
+// The intel layer landed in v3 on main and is still present in v4, so its gate is a
+// minimum rather than an equality: named here so the two read sites do not carry a
+// bare 3 that nobody can tie back to a format change.
+constexpr uint32_t kSimSaveVersionIntel = 3;
 constexpr uint32_t kSimSaveVersionMinSupported = 1;
 
 void SimWorld::Serialize(ByteWriter& W) const
@@ -3068,6 +3490,8 @@ void SimWorld::Serialize(ByteWriter& W) const
     W.WriteUInt8(Winner);
     W.WriteUInt64(Rng.GetState());
     W.WriteUInt64(Rng.GetIncrement());
+    W.WriteUInt64(IntelRng.GetState());
+    W.WriteUInt64(IntelRng.GetIncrement());
 
     // Map description
     W.WriteString(Map.Name);
@@ -3194,7 +3618,21 @@ void SimWorld::Serialize(ByteWriter& W) const
             W.WriteUInt32(Ord.Target.Index);
             W.WriteUInt32(Ord.Target.Generation);
         }
+
+        const DirectControlComp& Dc = DirectControls[I];
+        W.WriteUInt8(static_cast<uint8_t>(Dc.Phase));
+        W.WriteUInt8(Dc.Controller);
+        W.WriteUInt32(uint32_t(Dc.PhaseUntilTick));
+        W.WriteInt32(Dc.TurretYawCentiDeg);
+        W.WriteInt32(Dc.TurretPitchCentiDeg);
+        W.WriteInt32(Dc.CooldownTicksPrimary);
+        W.WriteInt32(Dc.CooldownTicksSecondary);
+        W.WriteUInt8(Dc.bOpticsZoomed ? 1 : 0);
     }
+
+    // Belief state (ADR-0026). Serialized with the match: a save/load cycle that
+    // diverged GT from PS would be a critical bug, and this is what prevents it.
+    IntelLayer.Serialize(W);
 }
 
 bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
@@ -3204,6 +3642,11 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
         return false;
     }
     const uint32_t Version = R.ReadUInt32();
+    // A range rather than an equality list: every version from the minimum supported
+    // up to the current one is loadable, with each field-level change gated on its own
+    // named constant below. Pre-intel saves simply carry no belief payload; loading one
+    // into a session with intel enabled is refused further down, because a mid-match
+    // belief state cannot be invented from nothing.
     if (Version < kSimSaveVersionMinSupported || Version > kSimSaveVersion)
     {
         return false;
@@ -3218,6 +3661,12 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
     const uint64_t RState = R.ReadUInt64();
     const uint64_t RInc = R.ReadUInt64();
     Rng.SetState(RState, RInc);
+    if (Version >= kSimSaveVersionIntel)
+    {
+        const uint64_t IntelState = R.ReadUInt64();
+        const uint64_t IntelInc = R.ReadUInt64();
+        IntelRng.SetState(IntelState, IntelInc);
+    }
 
     Map.Name = R.ReadString();
     Map.Width = R.ReadInt32();
@@ -3380,6 +3829,16 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
             Ord.Target.Index = R.ReadUInt32();
             Ord.Target.Generation = R.ReadUInt32();
         }
+
+        DirectControlComp& Dc = DirectControls[I];
+        Dc.Phase = static_cast<DirectControlPhase>(R.ReadUInt8());
+        Dc.Controller = R.ReadUInt8();
+        Dc.PhaseUntilTick = static_cast<TickIndex>(R.ReadUInt32());
+        Dc.TurretYawCentiDeg = R.ReadInt32();
+        Dc.TurretPitchCentiDeg = R.ReadInt32();
+        Dc.CooldownTicksPrimary = R.ReadInt32();
+        Dc.CooldownTicksSecondary = R.ReadInt32();
+        Dc.bOpticsZoomed = (R.ReadUInt8() != 0);
     }
 
     BuildNavigationGrid();
@@ -3393,6 +3852,24 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
         {
             RefreshPlayerTech(P);
         }
+    }
+
+    // Reset() cleared the intel layer; re-arm it with the settings this session
+    // was initialized with before reading the belief payload. Enabled-ness must
+    // match the save or IntelSystem::Deserialize refuses (see its comment).
+    IntelLayer.Initialize(IntelSettingsRef, Map.Width, Map.Height);
+    if (Version >= kSimSaveVersionIntel)
+    {
+        if (!IntelLayer.Deserialize(R))
+        {
+            return false;
+        }
+    }
+    else if (IntelLayer.IsEnabled())
+    {
+        // A pre-intel save has no belief state to restore; refusing beats
+        // silently starting the HQ map empty mid-match.
+        return false;
     }
 
     return !R.HasError();

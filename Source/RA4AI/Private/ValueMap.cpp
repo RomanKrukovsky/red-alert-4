@@ -215,7 +215,6 @@ void ValueMap::UpdateFromWorld(const SimWorld& World, PlayerId Player,
             continue;
         }
 
-        const int32_t ConfidencePercent = static_cast<int32_t>((Mem.Confidence * Fixed::FromInt(100)).ToIntRound());
         const int32_t TileX = std::max(0, std::min(Mem.Position.X, Width - 1));
         const int32_t TileY = std::max(0, std::min(Mem.Position.Y, Height - 1));
 
@@ -283,6 +282,7 @@ void ValueMap::UpdateFromWorld(const SimWorld& World, PlayerId Player,
             continue;
         }
 
+        const int32_t ConfidencePercent = static_cast<int32_t>((Mem.Confidence * Fixed::FromInt(100)).ToIntRound());
         const int32_t ScaledValue = (Value * ConfidencePercent) / 100;
         const int32_t ScaledEcon = (Econ * ConfidencePercent) / 100;
         const int32_t ScaledMil = (Mil * ConfidencePercent) / 100;

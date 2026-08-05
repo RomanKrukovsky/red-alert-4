@@ -1,5 +1,11 @@
 # ADR-0019: Chronolegion Temporal Debt
 
+> **Provenance note (2026-08-05)**: this ADR existed only on `remediation/foundation-fixes`, a branch
+> that does not compile and has been superseded by `main`. It was recovered onto
+> `docs/perception-warfare-adrs` so that references to it from ADR-0021..0026 and
+> `PERCEPTION_WARFARE_DIRECTION.md` resolve. Its tick-derived duration was recalculated for the real
+> 20 Hz tick rate; see the parameter table.
+
 ## Context
 
 The Chronolegion faction's unique economic mechanic is "temporal debt": the ability to borrow future income for present use, with a repayment penalty. The economy design specifies: "Get 3000 credits now, but next 90 seconds produce 30% slower." This must be defined as explicit deterministic simulation state with exact stacking rules, maximum debt, duration, repayment curve, cancellation rules, serialization, save migration, state hashing, replay behavior, UI representation, AI evaluation, and interactions with income modifiers. All arithmetic must use integers/fixed-point and simulation ticks.
@@ -33,7 +39,7 @@ When a Chronolegion player activates "Temporal Borrowing" ability:
 | Parameter | Value |
 |---|---|
 | CreditsGranted | 3,000 |
-| RepaymentDurationTicks | 5,400 (90 seconds at 60Hz) |
+| RepaymentDurationTicks | **1,800** (90 seconds at the real 20 Hz tick; the original figure of 5,400 assumed 60Hz and would have made the debt window 4.5 minutes instead of the intended 90 seconds) |
 | IncomePenaltyBPS | 3,000 (30% penalty) |
 | TemporalStabilityCost | 30 |
 | CooldownTicks | 3,600 (60 seconds) |

@@ -19,6 +19,7 @@
 #include "RA4Core/Command.h"
 #include "RA4Core/Ids.h"
 #include "RA4Core/Random.h"
+#include "RA4Intel/IntelSystem.h"
 #include "RA4Navigation/FlowField.h"
 #include "RA4Navigation/MNavRouter.h"
 #include "RA4Navigation/ReservationGrid.h"
@@ -70,7 +71,11 @@ public:
     SimWorld() = default;
 
     // --- Lifecycle ---------------------------------------------------------
-    void Initialize(const ContentDatabase* InContent, const MatchSetup& Setup);
+    // InIntelSettings is optional: nullptr (or bEnabled=false inside) means the
+    // unreliable-intelligence layer is absent and the match behaves classically.
+    // Additive default parameter, so no existing caller changes (ADR-0026).
+    void Initialize(const ContentDatabase* InContent, const MatchSetup& Setup,
+                    const Intel::IntelSettings* InIntelSettings = nullptr);
     void Reset();
     void Restart();
 
@@ -94,6 +99,7 @@ public:
     const MovementComp* GetMovement(EntityId Id) const;
     const CombatComp* GetCombat(EntityId Id) const;
     const OrderQueue* GetOrders(EntityId Id) const;
+    const DirectControlComp* GetDirectControl(EntityId Id) const;
 
     // Raw slot iteration for systems and for presentation sync. Callers must check
     // Core[i].bAlive; dead slots keep their component data until reused so that a
@@ -106,6 +112,11 @@ public:
     const MapDescription& GetMap() const { return Map; }
     const ContentDatabase* GetContent() const { return Content; }
     const FFogOfWarGrid* GetFogGrid() const { return FogGrid.get(); }
+
+    // Belief state (unreliable intelligence, ADR-0026). Read-only outside the
+    // simulation; the UI and the AI commander query enemy information here and
+    // never through the entity getters above once the feature is enabled.
+    const Intel::IntelSystem& GetIntel() const { return IntelLayer; }
 
 
     // --- Spawning (server / mission scripts only) --------------------------
@@ -163,8 +174,10 @@ private:
     void SystemCombat();
     void SystemProjectiles();
     void SystemFogOfWar();
+    void SystemIntel();
     void SystemVeterancy();
     void SystemFactionResources();
+    void SystemDirectControl();
     void SystemDeaths();
     void SystemVictory();
 
@@ -224,6 +237,17 @@ private:
 
     MatchSetup SetupConfig;
     Random Rng;
+    // Separate stream for the intel layer, seeded from the match seed. Isolation
+    // is deliberate: intel draws must not shift the draw sequence of existing
+    // systems, or every pre-intel replay becomes unreplayable at once.
+    Random IntelRng;
+    Intel::IntelSystem IntelLayer;
+    // Reused per tick by SystemIntel; member so vector capacity persists and the
+    // steady state allocates nothing.
+    Intel::ObservationInput IntelInput;
+    // Kept for Restart(), which re-runs Initialize with the original arguments.
+    // Owned by the content layer, same lifetime contract as Content.
+    const Intel::IntelSettings* IntelSettingsRef = nullptr;
     TickIndex CurrentTick = 0;
     MatchPhase Phase = MatchPhase::NotStarted;
     PlayerId Winner = kInvalidPlayer;
@@ -238,6 +262,7 @@ private:
     std::vector<ResourceNodeComp> ResourceNodes;
     std::vector<ProjectileComp> Projectiles;
     std::vector<OrderQueue> Orders;
+    std::vector<DirectControlComp> DirectControls;
 
     std::vector<uint32_t> FreeSlots;
     uint32_t HighWaterMark = 0;

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "RA4EntityActor.h"
+#include "RA4Presentation/RA4ArtMapping.h"
 
 // Forward declare the C++ simulation classes without including their headers here
 // to minimize compile-time dependencies. Command.h is engine-free and cheap, and is
@@ -103,9 +104,18 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visuals")
     TSubclassOf<ARA4EntityActor> EntityActorClass;
 
+    // Data-driven art mapping asset that maps simulation IDs to presentation assets.
+    // Loaded at Initialize(); production meshes in this asset override blockout fallbacks.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Visuals")
+    TSoftObjectPtr<URA4ArtMappingDataAsset> ArtMappingAsset;
+
 private:
     void LoadBlockoutMesh(uint32 ContentIdValue, const TCHAR* AssetPath);
     void RegisterDefaultBlockoutMeshes();
+
+    // Resolves production meshes from ArtMappingAsset and overrides blockout entries
+    // in ContentMeshRegistry. Called once during Initialize after blockout registration.
+    void ApplyArtMapping();
     void FitGroundPlaneToMap();
     void TickSimulation();
 

@@ -1,5 +1,33 @@
 # ADR_INDEX
 
+> **STALE AND DANGEROUS — DO NOT USE FOR NUMBERING (marked 2026-08-05).**
+>
+> This index tracks the **legacy** `Docs/ADR/` series (now superseded — see ADR-0011). The
+> authoritative ADR directory is **`Docs/Architecture/ADR/`**.
+>
+> Critically, the "Required before template integration" table below reserves ADR numbers
+> **0012–0021, every one of which is already taken** in the canonical series by an unrelated
+> decision:
+>
+> | Reserved here | Actually occupied on `main` by |
+> | --- | --- |
+> | 0012 | Flow payment state machine |
+> | 0013 | Energy system deficit effects |
+> | 0014 | Soft command limit penalty |
+> | 0015 | Harvester state machine / fleet |
+> | 0016 | Resource depletion & regeneration |
+> | 0017 | Expansion investment payback |
+> | 0018 | No LLM in the runtime command path |
+> | 0019 | Chronolegion temporal debt |
+> | 0020 | Economic telemetry & balance metrics |
+> | 0021 | Knowledge Map / intel decay |
+>
+> An agent that allocated a number from the table below would create a collision. The next free
+> number in the canonical series is **ADR-0028** (0027 is Faction Economy Extension Points).
+>
+> The *questions* in that table are still legitimate open architecture decisions — they simply need
+> fresh numbers when written. Treat the table as a to-do list of topics, never as an allocation.
+
 ## Accepted
 
 | ADR | Title | Status |
@@ -16,7 +44,7 @@
 | 0010 | Production build pipeline and stripping | accepted |
 | 0011 | Player intent is engine-free | accepted, implemented |
 
-## Required before template integration (not yet written)
+## Open architecture questions (topics only — numbers below are INVALID, see banner)
 
 | ADR | Decision needed | Blocked by |
 | --- | --- | --- |
@@ -31,6 +59,8 @@
 | 0020 | Economy/production/UI ownership: incumbent vs RTS Template 25 | package inventory |
 | 0021 | Networking model: incumbent command pipeline vs template replication | package inventory |
 
-ADRs 0012–0016 are unblocked and address conflicts that **already exist in the tree**.
-They should be settled before any template arrives, so that template systems land in
-slots with a single, documented incumbent.
+The first five topics above are unblocked and address conflicts that **already exist in the tree**.
+They should be settled before any template arrives, so that template systems land in slots with a
+single, documented incumbent. When writing them, allocate numbers from ADR-0028 upward in
+`Docs/Architecture/ADR/` — the 0012–0021 numbers in the table are already in use and must not be
+reused.

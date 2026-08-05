@@ -265,6 +265,8 @@ struct EntityDef
     ContentId Weapon;                 // primary weapon; invalid means unarmed
     ContentId SecondaryWeapon;
 
+    std::string VoicePackId;          // maps to voice pack stable_id, e.g. "SU_RubezhRifleman"
+
     ProductionInfo Production;
     BuildingInfo Building;
     UnitInfo Unit;

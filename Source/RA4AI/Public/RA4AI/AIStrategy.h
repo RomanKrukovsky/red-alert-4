@@ -20,13 +20,26 @@ enum class AIProfile : uint8_t
     Aggressive,
     Defensive,
     Economic,
+
+    // Extended personalities. Each is a distinct *shape* of play rather than a
+    // difficulty setting: they trade economy, timing and force composition against
+    // each other, so a player who beats one should not automatically beat the next.
+    Rush,            // earliest possible pressure, minimal economy, accepts losses
+    Turtle,          // deep defence, late but overwhelming push
+    AirSuperiority,  // techs toward air, keeps a reserve, avoids early ground fights
+    Guerrilla,       // constant small raids on economy, avoids pitched battles
 };
 
 enum class AIDifficulty : uint8_t
 {
     Easy = 0,
     Normal,
-    Hard
+    Hard,
+    // Expert scales judgement, not entitlements: it reacts sooner, re-observes more
+    // often, and demands a favourable battle forecast before committing. It receives
+    // no income bonus and no extra vision -- per the design rule that difficulty must
+    // change how well the AI plays, never what it is allowed to know or take.
+    Expert
 };
 
 struct AIConfig
@@ -46,9 +59,6 @@ struct AIConfig
     int32_t MinimumAttackSize = 3;
     int32_t TargetDefences = 2;
     int32_t CreditReserve = 300;
-
-    // Explicit bounded bonus for Hard difficulty (e.g. 1.20 = +20% income). Normal & Easy are 1.0.
-    float CreditBonusMultiplier = 1.0f;
 
     int32_t StrategySwitchMargin = 100;
     int32_t EmergencyStrategyScore = 900;

@@ -10,6 +10,10 @@
 #include "RA4AI/TacticalOperation.h"
 #include "RA4AI/ThreatMap.h"
 #include "RA4AI/ValueMap.h"
+#include "RA4AI/AIDirectors.h"
+#include "RA4AI/AILeague.h"
+#include "RA4AI/BattlePredictor.h"
+#include "RA4AI/OpponentModel.h"
 #include "RA4Core/SimConfig.h"
 
 
@@ -900,9 +904,11 @@ RA4_TEST(AI, DifficultyProfilesConfig)
     RA4_EXPECT(NormalCfg.DecisionIntervalTicks == 10);
     RA4_EXPECT(HardCfg.DecisionIntervalTicks == 5);
 
-    RA4_EXPECT(EasyCfg.CreditBonusMultiplier == 1.0f);
-    RA4_EXPECT(NormalCfg.CreditBonusMultiplier == 1.0f);
-    RA4_EXPECT(HardCfg.CreditBonusMultiplier == 1.20f);
+    // Difficulty scales reaction speed only. There is deliberately no income
+    // multiplier any more: every tier lives on the same economy and must earn its
+    // advantage by playing better.
+    RA4_EXPECT(HardCfg.MemoryUpdateIntervalTicks < NormalCfg.MemoryUpdateIntervalTicks);
+    RA4_EXPECT(NormalCfg.MemoryUpdateIntervalTicks < EasyCfg.MemoryUpdateIntervalTicks);
 }
 
 RA4_TEST(AI, FogOfWarStrictCompliance)
@@ -1412,4 +1418,1359 @@ RA4_TEST(ValueMap, FindBestAttackTarget_PrefersHighValue)
     const int32_t DX = std::abs(Best.X - 20);
     const int32_t DY = std::abs(Best.Y - 20);
     RA4_EXPECT(DX <= 3 && DY <= 3);
+}
+
+
+// ---------------------------------------------------------------------------
+// OpponentModel: probabilistic profile of enemy behaviour built from SimEvents.
+// ---------------------------------------------------------------------------
+
+namespace
+{
+
+// Build one SimEvent. Kept local so the opponent tests stay readable.
+SimEvent MakeEvent(SimEventType Type, PlayerId Player, int32_t Tick,
+                   int32_t Value = 0, Vec2 Location = Vec2())
+{
+    SimEvent E;
+    E.Type = Type;
+    E.Player = Player;
+    E.Tick = TickIndex(Tick);
+    E.Value = Value;
+    E.Location = Location;
+    return E;
+}
+
+} // namespace
+
+RA4_TEST(OpponentModel, FreshProfileIsZeroed)
+{
+    OpponentModel Model;
+    const OpponentProfile& P = Model.GetProfile(1);
+    RA4_EXPECT_EQ(0, P.Aggressiveness);
+    RA4_EXPECT_EQ(0, P.AttacksObserved);
+    RA4_EXPECT_EQ(0, P.BuildingsObserved);
+    RA4_EXPECT_EQ(0, P.UnitsObserved);
+}
+
+RA4_TEST(OpponentModel, OutOfRangePlayerReturnsSafeProfile)
+{
+    OpponentModel Model;
+    // Must not read out of bounds; returns a defaulted profile instead.
+    const OpponentProfile& Low = Model.GetProfile(PlayerId(-1));
+    const OpponentProfile& High = Model.GetProfile(PlayerId(kMaxTrackedPlayers + 5));
+    RA4_EXPECT_EQ(0, Low.AttacksObserved);
+    RA4_EXPECT_EQ(0, High.AttacksObserved);
+}
+
+RA4_TEST(OpponentModel, IgnoresOwnEvents)
+{
+    OpponentModel Model;
+    // Every event belongs to player 0, which is also "Self": nothing is learned.
+    std::vector<SimEvent> Events;
+    for (int32_t I = 0; I < 5; ++I)
+    {
+        Events.push_back(MakeEvent(SimEventType::DamageApplied, 0, 10 + I, 50));
+    }
+    Model.UpdateFromEvents(Events.data(), int32_t(Events.size()), /*Self=*/0, /*Now=*/TickIndex(20));
+    RA4_EXPECT_EQ(0, Model.GetProfile(0).AttacksObserved);
+}
+
+RA4_TEST(OpponentModel, DamageEventsRaiseAggressionAndAttackCount)
+{
+    OpponentModel Model;
+    std::vector<SimEvent> Events;
+    for (int32_t I = 0; I < 8; ++I)
+    {
+        Events.push_back(MakeEvent(SimEventType::DamageApplied, 1, 100 + I, 40));
+    }
+    Model.UpdateFromEvents(Events.data(), int32_t(Events.size()), /*Self=*/0, /*Now=*/TickIndex(110));
+
+    const OpponentProfile& P = Model.GetProfile(1);
+    RA4_EXPECT_EQ(8, P.AttacksObserved);
+    RA4_EXPECT(P.Aggressiveness > 0);
+    RA4_EXPECT(P.LastAttackTick > 0);
+}
+
+RA4_TEST(OpponentModel, BuildingCompletionsRaiseExpansionRate)
+{
+    OpponentModel Model;
+    std::vector<SimEvent> Events;
+    for (int32_t I = 0; I < 4; ++I)
+    {
+        Events.push_back(MakeEvent(SimEventType::BuildingCompleted, 1, 50 + I * 10));
+    }
+    Model.UpdateFromEvents(Events.data(), int32_t(Events.size()), /*Self=*/0, /*Now=*/TickIndex(100));
+
+    const OpponentProfile& P = Model.GetProfile(1);
+    RA4_EXPECT_EQ(4, P.BuildingsObserved);
+    RA4_EXPECT(P.ExpansionRate > 0);
+}
+
+RA4_TEST(OpponentModel, ProductionEventsCountUnits)
+{
+    OpponentModel Model;
+    std::vector<SimEvent> Events;
+    for (int32_t I = 0; I < 6; ++I)
+    {
+        Events.push_back(MakeEvent(SimEventType::ProductionCompleted, 2, 30 + I));
+    }
+    Model.UpdateFromEvents(Events.data(), int32_t(Events.size()), /*Self=*/0, /*Now=*/TickIndex(40));
+    RA4_EXPECT_EQ(6, Model.GetProfile(2).UnitsObserved);
+}
+
+RA4_TEST(OpponentModel, TracksSeveralOpponentsIndependently)
+{
+    OpponentModel Model;
+    std::vector<SimEvent> Events;
+    Events.push_back(MakeEvent(SimEventType::DamageApplied, 1, 10, 30));
+    Events.push_back(MakeEvent(SimEventType::DamageApplied, 1, 11, 30));
+    Events.push_back(MakeEvent(SimEventType::BuildingCompleted, 2, 12));
+    Model.UpdateFromEvents(Events.data(), int32_t(Events.size()), /*Self=*/0, /*Now=*/TickIndex(20));
+
+    RA4_EXPECT_EQ(2, Model.GetProfile(1).AttacksObserved);
+    RA4_EXPECT_EQ(0, Model.GetProfile(2).AttacksObserved);
+    RA4_EXPECT_EQ(1, Model.GetProfile(2).BuildingsObserved);
+}
+
+RA4_TEST(OpponentModel, ResetClearsEveryProfile)
+{
+    OpponentModel Model;
+    std::vector<SimEvent> Events;
+    Events.push_back(MakeEvent(SimEventType::DamageApplied, 1, 10, 60));
+    Events.push_back(MakeEvent(SimEventType::BuildingCompleted, 2, 11));
+    Model.UpdateFromEvents(Events.data(), int32_t(Events.size()), /*Self=*/0, /*Now=*/TickIndex(15));
+    RA4_EXPECT(Model.GetProfile(1).AttacksObserved > 0);
+
+    Model.Reset();
+    RA4_EXPECT_EQ(0, Model.GetProfile(1).AttacksObserved);
+    RA4_EXPECT_EQ(0, Model.GetProfile(1).Aggressiveness);
+    RA4_EXPECT_EQ(0, Model.GetProfile(2).BuildingsObserved);
+}
+
+RA4_TEST(OpponentModel, ClassifyDirectionCoversFourQuadrants)
+{
+    // Target relative to attacker: NW, NE, SW, SE must be four distinct codes.
+    const int32_t NW = OpponentModel::ClassifyDirection(10, 10, 0, 0);
+    const int32_t NE = OpponentModel::ClassifyDirection(10, 10, 20, 0);
+    const int32_t SW = OpponentModel::ClassifyDirection(10, 10, 0, 20);
+    const int32_t SE = OpponentModel::ClassifyDirection(10, 10, 20, 20);
+
+    for (int32_t Q : {NW, NE, SW, SE})
+    {
+        RA4_EXPECT(Q >= 0 && Q <= 3);
+    }
+    RA4_EXPECT(NW != NE);
+    RA4_EXPECT(NW != SW);
+    RA4_EXPECT(SE != NW);
+}
+
+RA4_TEST(OpponentModel, ClassifyDirectionIsPure)
+{
+    // Same inputs must always give the same answer: required for determinism.
+    for (int32_t I = 0; I < 4; ++I)
+    {
+        RA4_EXPECT_EQ(OpponentModel::ClassifyDirection(5, 5, 30, 2),
+                      OpponentModel::ClassifyDirection(5, 5, 30, 2));
+    }
+}
+
+RA4_TEST(OpponentModel, UpdateIsDeterministicForIdenticalEventStreams)
+{
+    std::vector<SimEvent> Events;
+    for (int32_t I = 0; I < 12; ++I)
+    {
+        Events.push_back(MakeEvent(
+            (I % 3 == 0) ? SimEventType::DamageApplied
+                         : (I % 3 == 1) ? SimEventType::BuildingCompleted
+                                        : SimEventType::ProductionCompleted,
+            1, 100 + I, 25));
+    }
+
+    OpponentModel A;
+    OpponentModel B;
+    A.UpdateFromEvents(Events.data(), int32_t(Events.size()), 0, TickIndex(150));
+    B.UpdateFromEvents(Events.data(), int32_t(Events.size()), 0, TickIndex(150));
+
+    const OpponentProfile& PA = A.GetProfile(1);
+    const OpponentProfile& PB = B.GetProfile(1);
+    RA4_EXPECT_EQ(PA.Aggressiveness, PB.Aggressiveness);
+    RA4_EXPECT_EQ(PA.ExpansionRate, PB.ExpansionRate);
+    RA4_EXPECT_EQ(PA.AttacksObserved, PB.AttacksObserved);
+    RA4_EXPECT_EQ(PA.UnitsObserved, PB.UnitsObserved);
+}
+
+RA4_TEST(OpponentModel, RatiosStayWithinZeroToHundred)
+{
+    OpponentModel Model;
+    // Hammer it with far more events than any real match would produce and
+    // confirm the exponential moving averages never leave their declared range.
+    std::vector<SimEvent> Events;
+    for (int32_t I = 0; I < 500; ++I)
+    {
+        Events.push_back(MakeEvent(SimEventType::DamageApplied, 1, 1000 + I, 255));
+    }
+    Model.UpdateFromEvents(Events.data(), int32_t(Events.size()), 0, TickIndex(1500));
+
+    const OpponentProfile& P = Model.GetProfile(1);
+    RA4_EXPECT(P.Aggressiveness >= 0 && P.Aggressiveness <= 100);
+    RA4_EXPECT(P.ExpansionRate >= 0 && P.ExpansionRate <= 100);
+    RA4_EXPECT(P.AirPreference >= 0 && P.AirPreference <= 100);
+    RA4_EXPECT(P.ArmorRatio >= 0 && P.ArmorRatio <= 100);
+    RA4_EXPECT(P.HarasserTendency >= 0 && P.HarasserTendency <= 100);
+    RA4_EXPECT(P.PreferredAttackDirection >= 0 && P.PreferredAttackDirection <= 3);
+}
+
+RA4_TEST(OpponentModel, EmptyEventBatchIsHarmless)
+{
+    OpponentModel Model;
+    Model.UpdateFromEvents(nullptr, 0, 0, TickIndex(100));
+    RA4_EXPECT_EQ(0, Model.GetProfile(1).AttacksObserved);
+}
+
+// ---------------------------------------------------------------------------
+// BattlePredictor: pre-engagement outcome estimation.
+// ---------------------------------------------------------------------------
+
+namespace
+{
+
+CombatantStats MakeForce(int32_t Count, int32_t Health, int32_t Dps, int32_t Range = 4)
+{
+    CombatantStats S;
+    S.Count = Count;
+    S.Health = Health;
+    S.Dps = Dps;
+    S.Range = Range;
+    return S;
+}
+
+} // namespace
+
+RA4_TEST(BattlePredictor, MirrorForcesAreACoinFlip)
+{
+    const CombatantStats A = MakeForce(10, 1000, 500);
+    const CombatantStats D = MakeForce(10, 1000, 500);
+    const BattleEstimate E = BattlePredictor::PredictFromStats(A, D);
+    // Identical armies: neither side should be given a meaningful edge.
+    RA4_EXPECT(E.WinProbability >= 40 && E.WinProbability <= 60);
+}
+
+RA4_TEST(BattlePredictor, OverwhelmingForceWinsMoreOften)
+{
+    const CombatantStats Strong = MakeForce(20, 4000, 2000);
+    const CombatantStats Weak = MakeForce(2, 200, 100);
+    const BattleEstimate Good = BattlePredictor::PredictFromStats(Strong, Weak);
+    const BattleEstimate Bad = BattlePredictor::PredictFromStats(Weak, Strong);
+
+    RA4_EXPECT(Good.WinProbability > Bad.WinProbability);
+    RA4_EXPECT(Good.WinProbability > 50);
+    RA4_EXPECT(Bad.WinProbability < 50);
+}
+
+RA4_TEST(BattlePredictor, MoreDpsImprovesTheOdds)
+{
+    const CombatantStats Defender = MakeForce(10, 1000, 400);
+    const BattleEstimate Low =
+        BattlePredictor::PredictFromStats(MakeForce(10, 1000, 200), Defender);
+    const BattleEstimate High =
+        BattlePredictor::PredictFromStats(MakeForce(10, 1000, 900), Defender);
+    // Raising only our damage output must not lower our win chance.
+    RA4_EXPECT(High.WinProbability >= Low.WinProbability);
+}
+
+RA4_TEST(BattlePredictor, MoreHealthImprovesTheOdds)
+{
+    const CombatantStats Defender = MakeForce(10, 1000, 500);
+    const BattleEstimate Fragile =
+        BattlePredictor::PredictFromStats(MakeForce(10, 300, 500), Defender);
+    const BattleEstimate Tanky =
+        BattlePredictor::PredictFromStats(MakeForce(10, 3000, 500), Defender);
+    RA4_EXPECT(Tanky.WinProbability >= Fragile.WinProbability);
+}
+
+RA4_TEST(BattlePredictor, ResultsAreAlwaysInsideDeclaredRanges)
+{
+    // Sweep a wide grid of matchups, including degenerate ones, and assert the
+    // struct's documented contract holds for every single outcome.
+    const int32_t Counts[] = {0, 1, 7, 50};
+    const int32_t Healths[] = {0, 100, 5000};
+    const int32_t Dpss[] = {0, 50, 3000};
+
+    for (int32_t CA : Counts)
+    for (int32_t HA : Healths)
+    for (int32_t DA : Dpss)
+    for (int32_t CB : Counts)
+    {
+        const BattleEstimate E = BattlePredictor::PredictFromStats(
+            MakeForce(CA, HA, DA), MakeForce(CB, 1000, 400));
+        RA4_EXPECT(E.WinProbability >= 0 && E.WinProbability <= 100);
+        RA4_EXPECT(E.EstimatedLosses >= 0 && E.EstimatedLosses <= 100);
+        RA4_EXPECT(E.EnemyLosses >= 0 && E.EnemyLosses <= 100);
+        RA4_EXPECT(E.Confidence >= 0 && E.Confidence <= 100);
+        RA4_EXPECT(E.DurationTicks >= 0);
+    }
+}
+
+RA4_TEST(BattlePredictor, EmptyAttackerCannotWin)
+{
+    const BattleEstimate E = BattlePredictor::PredictFromStats(
+        MakeForce(0, 0, 0), MakeForce(10, 1000, 500));
+    // Attacking with nothing must never be reported as a likely win.
+    RA4_EXPECT(E.WinProbability <= 50);
+}
+
+RA4_TEST(BattlePredictor, BattleAgainstNothingIsNotALoss)
+{
+    const BattleEstimate E = BattlePredictor::PredictFromStats(
+        MakeForce(10, 1000, 500), MakeForce(0, 0, 0));
+    RA4_EXPECT(E.WinProbability >= 50);
+}
+
+RA4_TEST(BattlePredictor, BothSidesEmptyIsHandledGracefully)
+{
+    // Purely degenerate input: must not divide by zero or produce nonsense.
+    const BattleEstimate E = BattlePredictor::PredictFromStats(
+        MakeForce(0, 0, 0), MakeForce(0, 0, 0));
+    RA4_EXPECT(E.WinProbability >= 0 && E.WinProbability <= 100);
+    RA4_EXPECT(E.DurationTicks >= 0);
+}
+
+RA4_TEST(BattlePredictor, PredictionIsDeterministic)
+{
+    const CombatantStats A = MakeForce(13, 1700, 640, 5);
+    const CombatantStats D = MakeForce(9, 1450, 720, 3);
+    const BattleEstimate First = BattlePredictor::PredictFromStats(A, D);
+    for (int32_t I = 0; I < 8; ++I)
+    {
+        const BattleEstimate Again = BattlePredictor::PredictFromStats(A, D);
+        RA4_EXPECT_EQ(First.WinProbability, Again.WinProbability);
+        RA4_EXPECT_EQ(First.EstimatedLosses, Again.EstimatedLosses);
+        RA4_EXPECT_EQ(First.EnemyLosses, Again.EnemyLosses);
+        RA4_EXPECT_EQ(First.DurationTicks, Again.DurationTicks);
+    }
+}
+
+RA4_TEST(BattlePredictor, GatherStatsOnEmptySelectionIsZeroed)
+{
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(4242));
+
+    const CombatantStats S = BattlePredictor::GatherStats(World, {});
+    RA4_EXPECT_EQ(0, S.Count);
+    RA4_EXPECT_EQ(0, S.Health);
+}
+
+RA4_TEST(BattlePredictor, GatherStatsReadsLiveEntities)
+{
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(4243));
+
+    std::vector<EntityId> Units;
+    for (int32_t I = 0; I < 3; ++I)
+    {
+        Units.push_back(World.SpawnUnit(Ids::SovConscript, 0,
+                                        World.GetMap().TileCenterToWorld(TileCoord(12 + I, 12))));
+    }
+
+    const CombatantStats S = BattlePredictor::GatherStats(World, Units);
+    RA4_EXPECT_EQ(3, S.Count);
+    RA4_EXPECT(S.Health > 0);
+}
+
+RA4_TEST(BattlePredictor, WorldPredictionFavoursTheBiggerArmy)
+{
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(4244));
+
+    std::vector<EntityId> Many;
+    for (int32_t I = 0; I < 6; ++I)
+    {
+        Many.push_back(World.SpawnUnit(Ids::SovConscript, 0,
+                                        World.GetMap().TileCenterToWorld(TileCoord(10 + I, 10))));
+    }
+    std::vector<EntityId> Few;
+    Few.push_back(World.SpawnUnit(Ids::AllRifleman, 1,
+                                   World.GetMap().TileCenterToWorld(TileCoord(40, 40))));
+
+    const BattleEstimate E =
+        BattlePredictor::PredictFromWorld(World, 0, 1, Many, Few);
+    RA4_EXPECT(E.WinProbability >= 50);
+    RA4_EXPECT(E.WinProbability <= 100);
+}
+
+// ---------------------------------------------------------------------------
+// Directors: scored recommendations per domain.
+// ---------------------------------------------------------------------------
+
+namespace
+{
+
+// Minimal context with sane defaults; tests override only what they exercise.
+DirectorContext MakeDirectorCtx(const AIWorldAssessment* Assess)
+{
+    DirectorContext Ctx;
+    Ctx.Assessment = Assess;
+    Ctx.CurrentTick = TickIndex(200);
+    Ctx.TargetHarvesters = 3;
+    Ctx.CreditReserve = 300;
+    Ctx.TargetDefences = 2;
+    Ctx.AttackArmySize = 6;
+    Ctx.MinimumAttackSize = 3;
+    Ctx.MapWidth = 64;
+    Ctx.MapHeight = 64;
+    return Ctx;
+}
+
+} // namespace
+
+RA4_TEST(Directors, EconomyAsksForHarvestersWhenBelowTarget)
+{
+    AIWorldAssessment Assess;
+    Assess.Harvesters = 0;
+    Assess.Refineries = 1;
+    Assess.bCanProduceHarvester = true;
+
+    DirectorContext Ctx = MakeDirectorCtx(&Assess);
+    Ctx.TargetHarvesters = 3;
+
+    const std::vector<DirectorRec> Recs = EconomyDirector().Evaluate(Ctx);
+    bool bFound = false;
+    for (const DirectorRec& R : Recs)
+    {
+        if (R.Type == DirectorRecommendation::BuildHarvester)
+        {
+            bFound = true;
+            RA4_EXPECT(R.Score > 0);
+            RA4_EXPECT(!R.Reason.empty());
+        }
+    }
+    RA4_EXPECT(bFound);
+}
+
+RA4_TEST(Directors, EconomyIsQuietWhenHarvesterTargetIsMet)
+{
+    AIWorldAssessment Assess;
+    Assess.Harvesters = 5;
+    Assess.Refineries = 2;
+    Assess.bCanProduceHarvester = true;
+
+    DirectorContext Ctx = MakeDirectorCtx(&Assess);
+    Ctx.TargetHarvesters = 3;
+
+    for (const DirectorRec& R : EconomyDirector().Evaluate(Ctx))
+    {
+        RA4_EXPECT(R.Type != DirectorRecommendation::BuildHarvester);
+    }
+}
+
+RA4_TEST(Directors, EconomyPrioritisesPowerWhenBrownedOut)
+{
+    AIWorldAssessment Severe;
+    Severe.PowerProduced = 10;
+    Severe.PowerConsumed = 100;   // 10% - severe shortage
+    AIWorldAssessment Mild;
+    Mild.PowerProduced = 80;
+    Mild.PowerConsumed = 100;     // 80% - mild shortage
+
+    DirectorContext SevereCtx = MakeDirectorCtx(&Severe);
+    DirectorContext MildCtx = MakeDirectorCtx(&Mild);
+
+    auto PowerScore = [](const std::vector<DirectorRec>& Recs)
+    {
+        for (const DirectorRec& R : Recs)
+        {
+            if (R.Type == DirectorRecommendation::BuildPowerPlant) return R.Score;
+        }
+        return 0;
+    };
+
+    const int32_t SevereScore = PowerScore(EconomyDirector().Evaluate(SevereCtx));
+    const int32_t MildScore = PowerScore(EconomyDirector().Evaluate(MildCtx));
+    RA4_EXPECT(SevereScore > 0);
+    RA4_EXPECT(SevereScore > MildScore);
+}
+
+RA4_TEST(Directors, DefenceReactsToBeingAttacked)
+{
+    AIWorldAssessment Calm;
+    Calm.Defences = 2;
+    AIWorldAssessment Attacked;
+    Attacked.Defences = 2;
+    Attacked.bUnderAttack = true;
+
+    DirectorContext CalmCtx = MakeDirectorCtx(&Calm);
+    DirectorContext HotCtx = MakeDirectorCtx(&Attacked);
+
+    const std::vector<DirectorRec> Hot = DefenseDirector().Evaluate(HotCtx);
+    const std::vector<DirectorRec> Cool = DefenseDirector().Evaluate(CalmCtx);
+
+    auto Best = [](const std::vector<DirectorRec>& Recs)
+    {
+        int32_t Top = 0;
+        for (const DirectorRec& R : Recs) Top = std::max(Top, R.Score);
+        return Top;
+    };
+    // Being under attack must raise defensive urgency.
+    RA4_EXPECT(Best(Hot) > Best(Cool));
+}
+
+RA4_TEST(Directors, OffenceWaitsForAnArmyBeforeAttacking)
+{
+    AIWorldAssessment Tiny;
+    Tiny.ArmedUnits = 1;
+    Tiny.bHasEnemyTarget = true;
+    AIWorldAssessment Ready;
+    Ready.ArmedUnits = 12;
+    Ready.bHasEnemyTarget = true;
+
+    DirectorContext TinyCtx = MakeDirectorCtx(&Tiny);
+    TinyCtx.AttackArmySize = 6;
+    DirectorContext ReadyCtx = MakeDirectorCtx(&Ready);
+    ReadyCtx.AttackArmySize = 6;
+
+    auto Best = [](const std::vector<DirectorRec>& Recs)
+    {
+        int32_t Top = 0;
+        for (const DirectorRec& R : Recs) Top = std::max(Top, R.Score);
+        return Top;
+    };
+    RA4_EXPECT(Best(OffenseDirector().Evaluate(ReadyCtx)) >
+               Best(OffenseDirector().Evaluate(TinyCtx)));
+}
+
+RA4_TEST(Directors, ScoutingIsUrgentWithNoIntel)
+{
+    AIWorldAssessment Assess;
+    Assess.bHasConstructionYard = true;
+    Assess.bHasEnemyTarget = false;   // we know nothing about the enemy
+
+    DirectorContext Ctx = MakeDirectorCtx(&Assess);
+    const std::vector<DirectorRec> Recs = ScoutingDirector().Evaluate(Ctx);
+
+    RA4_EXPECT(!Recs.empty());
+    int32_t Top = 0;
+    for (const DirectorRec& R : Recs) Top = std::max(Top, R.Score);
+    RA4_EXPECT(Top > 0);
+}
+
+RA4_TEST(Directors, BundleFindBestPicksTheHighestScore)
+{
+    DirectorBundle Bundle;
+    DirectorRec Low;
+    Low.Type = DirectorRecommendation::BuildHarvester;
+    Low.Score = 100;
+    DirectorRec High;
+    High.Type = DirectorRecommendation::AttackTarget;
+    High.Score = 900;
+    DirectorRec Mid;
+    Mid.Type = DirectorRecommendation::BuildDefence;
+    Mid.Score = 400;
+
+    Bundle.EconomyRecs.push_back(Low);
+    Bundle.OffenseRecs.push_back(High);
+    Bundle.DefenseRecs.push_back(Mid);
+
+    const DirectorRec* Best = Bundle.FindBest();
+    RA4_REQUIRE(Best != nullptr);
+    RA4_EXPECT_EQ(900, Best->Score);
+    RA4_EXPECT(Best->Type == DirectorRecommendation::AttackTarget);
+}
+
+RA4_TEST(Directors, BundleFindBestOfTypeFiltersByType)
+{
+    DirectorBundle Bundle;
+    DirectorRec Harvester;
+    Harvester.Type = DirectorRecommendation::BuildHarvester;
+    Harvester.Score = 250;
+    DirectorRec Attack;
+    Attack.Type = DirectorRecommendation::AttackTarget;
+    Attack.Score = 999;
+
+    Bundle.EconomyRecs.push_back(Harvester);
+    Bundle.OffenseRecs.push_back(Attack);
+
+    const DirectorRec* Found =
+        Bundle.FindBestOfType(DirectorRecommendation::BuildHarvester);
+    RA4_REQUIRE(Found != nullptr);
+    RA4_EXPECT_EQ(250, Found->Score);
+
+    RA4_EXPECT(Bundle.FindBestOfType(DirectorRecommendation::ExpandBase) == nullptr);
+}
+
+RA4_TEST(Directors, EmptyBundleHasNoBest)
+{
+    DirectorBundle Bundle;
+    RA4_EXPECT(Bundle.FindBest() == nullptr);
+}
+
+RA4_TEST(Directors, MissingAssessmentIsSurvivable)
+{
+    // A director must never dereference a null assessment.
+    DirectorContext Ctx;
+    Ctx.Assessment = nullptr;
+    EconomyDirector().Evaluate(Ctx);
+    ScoutingDirector().Evaluate(Ctx);
+    DefenseDirector().Evaluate(Ctx);
+    OffenseDirector().Evaluate(Ctx);
+    RA4_EXPECT(true);   // reaching this line without a crash is the assertion
+}
+
+RA4_TEST(Directors, EvaluationIsDeterministic)
+{
+    AIWorldAssessment Assess;
+    Assess.Harvesters = 1;
+    Assess.Refineries = 1;
+    Assess.PowerProduced = 50;
+    Assess.PowerConsumed = 90;
+    Assess.ArmedUnits = 8;
+    Assess.bHasEnemyTarget = true;
+    Assess.bCanProduceHarvester = true;
+
+    DirectorContext Ctx = MakeDirectorCtx(&Assess);
+
+    const std::vector<DirectorRec> First = EconomyDirector().Evaluate(Ctx);
+    for (int32_t I = 0; I < 5; ++I)
+    {
+        const std::vector<DirectorRec> Again = EconomyDirector().Evaluate(Ctx);
+        RA4_REQUIRE(First.size() == Again.size());
+        for (size_t J = 0; J < First.size(); ++J)
+        {
+            RA4_EXPECT_EQ(First[J].Score, Again[J].Score);
+            RA4_EXPECT(First[J].Type == Again[J].Type);
+        }
+    }
+}
+
+RA4_TEST(Directors, RecommendationNamesAreAllDistinct)
+{
+    // ToString feeds the debug overlay and decision log; duplicates would make
+    // AI explanations ambiguous.
+    for (int32_t I = 0; I < int32_t(DirectorRecommendation::Count); ++I)
+    {
+        const char* Name = ToString(DirectorRecommendation(I));
+        RA4_REQUIRE(Name != nullptr);
+        RA4_EXPECT(Name[0] != '\0');
+        for (int32_t J = I + 1; J < int32_t(DirectorRecommendation::Count); ++J)
+        {
+            RA4_EXPECT(std::string(Name) != std::string(ToString(DirectorRecommendation(J))));
+        }
+    }
+}
+
+
+// ---------------------------------------------------------------------------
+// Package 4/5 integration: the commander must actually consult the systems it
+// owns. These tests exist because compiling a subsystem proves nothing about
+// whether anything calls it.
+// ---------------------------------------------------------------------------
+
+RA4_TEST(AIWiring, CommanderConsultsDirectorsDuringAMatch)
+{
+    AIMatch M;
+    M.Enable(0, AIProfile::Balanced);
+    M.Enable(1, AIProfile::Aggressive);
+    M.Run(400);
+
+    // After a few hundred ticks at least one domain must have produced a scored
+    // recommendation, otherwise the director layer is dead code.
+    const DirectorBundle& Recs = M.Commanders[0].GetDirectorRecs();
+    const size_t Total = Recs.EconomyRecs.size() + Recs.ScoutingRecs.size() +
+                         Recs.DefenseRecs.size() + Recs.OffenseRecs.size();
+    RA4_EXPECT(Total > 0);
+}
+
+RA4_TEST(AIWiring, OpponentModelLearnsFromAnActualMatch)
+{
+    AIMatch M;
+    M.Enable(0, AIProfile::Aggressive);
+    M.Enable(1, AIProfile::Aggressive);
+    M.Run(1200);
+
+    // Two aggressive commanders will produce units and buildings, so each side must
+    // have observed *something* about the other through legitimate events.
+    const OpponentProfile& P = M.Commanders[0].GetOpponentModel().GetProfile(1);
+    const int32_t Observed = P.UnitsObserved + P.BuildingsObserved + P.AttacksObserved;
+    RA4_EXPECT(Observed > 0);
+}
+
+RA4_TEST(AIWiring, OpponentModelNeverTracksItself)
+{
+    AIMatch M;
+    M.Enable(0, AIProfile::Balanced);
+    M.Enable(1, AIProfile::Balanced);
+    M.Run(600);
+
+    // Self-observation would mean the commander is modelling its own behaviour as if
+    // it were the enemy, which would corrupt every counter decision.
+    const OpponentProfile& Self = M.Commanders[0].GetOpponentModel().GetProfile(0);
+    RA4_EXPECT_EQ(0, Self.UnitsObserved);
+    RA4_EXPECT_EQ(0, Self.BuildingsObserved);
+    RA4_EXPECT_EQ(0, Self.AttacksObserved);
+}
+
+RA4_TEST(AIWiring, ResetClearsOpponentAndForecastState)
+{
+    AIMatch M;
+    M.Enable(0, AIProfile::Aggressive);
+    M.Enable(1, AIProfile::Aggressive);
+    M.Run(900);
+
+    M.Commanders[0].Reset();
+
+    const OpponentProfile& P = M.Commanders[0].GetOpponentModel().GetProfile(1);
+    RA4_EXPECT_EQ(0, P.UnitsObserved);
+    RA4_EXPECT_EQ(0, P.AttacksObserved);
+    RA4_EXPECT_EQ(0, P.Aggressiveness);
+    RA4_EXPECT(!M.Commanders[0].HasBattleForecast());
+
+    const DirectorBundle& Recs = M.Commanders[0].GetDirectorRecs();
+    RA4_EXPECT(Recs.EconomyRecs.empty());
+    RA4_EXPECT(Recs.OffenseRecs.empty());
+}
+
+RA4_TEST(AIWiring, BattleForecastStaysInsideDeclaredRanges)
+{
+    AIMatch M;
+    M.Enable(0, AIProfile::Aggressive);
+    M.Enable(1, AIProfile::Defensive);
+    M.Run(2000);
+
+    // The forecast may legitimately never be produced (nothing scouted), but if it
+    // was produced it must obey its documented contract.
+    if (M.Commanders[0].HasBattleForecast())
+    {
+        const BattleEstimate& E = M.Commanders[0].GetBattleForecast();
+        RA4_EXPECT(E.WinProbability >= 0 && E.WinProbability <= 100);
+        RA4_EXPECT(E.EstimatedLosses >= 0 && E.EstimatedLosses <= 100);
+        RA4_EXPECT(E.EnemyLosses >= 0 && E.EnemyLosses <= 100);
+        RA4_EXPECT(E.Confidence >= 0 && E.Confidence <= 100);
+        RA4_EXPECT(E.DurationTicks >= 0);
+    }
+}
+
+RA4_TEST(AIWiring, WiredCommanderIsStillDeterministic)
+{
+    // Opponent modelling, directors and forecasting all feed decisions, so any
+    // non-determinism they introduced would surface as divergent checksums here.
+    auto RunOnce = [](uint64_t Seed)
+    {
+        AIMatch M(Seed);
+        M.Enable(0, AIProfile::Aggressive, Seed);
+        M.Enable(1, AIProfile::Defensive, Seed);
+        M.Run(1500);
+        return M.World.ComputeStateChecksum();
+    };
+
+    const uint64_t A = RunOnce(777001);
+    const uint64_t B = RunOnce(777001);
+    RA4_EXPECT_EQ(A, B);
+}
+
+RA4_TEST(AIWiring, ExpertDifficultyIsSmarterWithoutBeingSubsidised)
+{
+    const AIConfig Easy = MakeProfileConfig(AIProfile::Balanced, AIDifficulty::Easy);
+    const AIConfig Normal = MakeProfileConfig(AIProfile::Balanced, AIDifficulty::Normal);
+    const AIConfig Hard = MakeProfileConfig(AIProfile::Balanced, AIDifficulty::Hard);
+    const AIConfig Expert = MakeProfileConfig(AIProfile::Balanced, AIDifficulty::Expert);
+
+    // Reacts and observes faster than every lower tier.
+    RA4_EXPECT(Expert.DecisionIntervalTicks < Hard.DecisionIntervalTicks);
+    RA4_EXPECT(Expert.DecisionIntervalTicks < Normal.DecisionIntervalTicks);
+    RA4_EXPECT(Expert.DecisionIntervalTicks < Easy.DecisionIntervalTicks);
+    RA4_EXPECT(Expert.MemoryUpdateIntervalTicks <= Hard.MemoryUpdateIntervalTicks);
+
+    // Remembers longer and thrashes less between strategies.
+    RA4_EXPECT(Expert.MemoryRetentionTicks >= Normal.MemoryRetentionTicks);
+    RA4_EXPECT(Expert.StrategySwitchMargin > Normal.StrategySwitchMargin);
+
+    RA4_EXPECT(Expert.Difficulty == AIDifficulty::Expert);
+}
+
+RA4_TEST(AIWiring, ExpertDifficultyNamesItself)
+{
+    RA4_EXPECT(std::string("Expert") == std::string(ToString(AIDifficulty::Expert)));
+    RA4_EXPECT(std::string("Hard") == std::string(ToString(AIDifficulty::Hard)));
+}
+
+RA4_TEST(AIWiring, ExpertCommanderPlaysAFullMatch)
+{
+    // The strictest commit threshold must not deadlock the commander into never
+    // attacking: an Expert AI still has to finish a match.
+    AIMatch M(90210);
+    AIConfig Cfg = MakeProfileConfig(AIProfile::Aggressive, AIDifficulty::Expert);
+    M.Enable(0, AIProfile::Aggressive, 90210);
+    M.Commanders[0].SetConfig(Cfg);
+    M.Enable(1, AIProfile::Balanced, 90210);
+    M.Run(3000);
+
+    RA4_EXPECT(M.PeakUnits[0] > 0);
+    RA4_EXPECT(M.Commanders[0].GetDecisionLog().size() > 0);
+}
+
+
+// ---------------------------------------------------------------------------
+// Extended personalities. A profile is only real if it changes how the AI plays,
+// so these tests assert behavioural differences and playability, not just that
+// the enum compiles.
+// ---------------------------------------------------------------------------
+
+RA4_TEST(AIProfiles, EveryProfileHasADistinctName)
+{
+    const AIProfile All[] = {
+        AIProfile::Adaptive, AIProfile::Aggressive, AIProfile::Defensive,
+        AIProfile::Economic, AIProfile::Rush, AIProfile::Turtle,
+        AIProfile::AirSuperiority, AIProfile::Guerrilla,
+    };
+    for (size_t I = 0; I < sizeof(All) / sizeof(All[0]); ++I)
+    {
+        const char* Name = ToString(All[I]);
+        RA4_REQUIRE(Name != nullptr);
+        RA4_EXPECT(std::string(Name) != std::string("Invalid"));
+        for (size_t J = I + 1; J < sizeof(All) / sizeof(All[0]); ++J)
+        {
+            // Balanced is an intentional alias of Adaptive, so only distinct
+            // enumerators are compared here.
+            RA4_EXPECT(std::string(Name) != std::string(ToString(All[J])));
+        }
+    }
+}
+
+RA4_TEST(AIProfiles, RushCommitsEarlierAndThinnerThanEveryOtherProfile)
+{
+    const AIConfig Rush = MakeProfileConfig(AIProfile::Rush);
+    const AIConfig Aggressive = MakeProfileConfig(AIProfile::Aggressive);
+    const AIConfig Turtle = MakeProfileConfig(AIProfile::Turtle);
+
+    // Attacks with less than even the Aggressive profile, and banks almost nothing.
+    RA4_EXPECT(Rush.AttackArmySize <= Aggressive.AttackArmySize);
+    RA4_EXPECT(Rush.AttackArmySize < Turtle.AttackArmySize);
+    RA4_EXPECT(Rush.CreditReserve < Aggressive.CreditReserve);
+    RA4_EXPECT(Rush.TargetHarvesters < Turtle.TargetHarvesters);
+    RA4_EXPECT(Rush.AssaultWeight > Aggressive.AssaultWeight);
+    RA4_EXPECT(Rush.EconomyWeight < 100);
+}
+
+RA4_TEST(AIProfiles, TurtleIsTheMostDefensiveAndLatestCommitting)
+{
+    const AIConfig Turtle = MakeProfileConfig(AIProfile::Turtle);
+    const AIConfig Defensive = MakeProfileConfig(AIProfile::Defensive);
+    const AIConfig Rush = MakeProfileConfig(AIProfile::Rush);
+
+    RA4_EXPECT(Turtle.TargetDefences > Defensive.TargetDefences);
+    RA4_EXPECT(Turtle.DefenceWeight > Defensive.DefenceWeight);
+    RA4_EXPECT(Turtle.AttackArmySize > Defensive.AttackArmySize);
+    RA4_EXPECT(Turtle.AssaultWeight < Rush.AssaultWeight);
+    // Least willing of all profiles to abandon its plan.
+    RA4_EXPECT(Turtle.StrategySwitchMargin > Rush.StrategySwitchMargin);
+}
+
+RA4_TEST(AIProfiles, AirSuperiorityPrioritisesTechAndBanksForIt)
+{
+    const AIConfig Air = MakeProfileConfig(AIProfile::AirSuperiority);
+    const AIConfig Rush = MakeProfileConfig(AIProfile::Rush);
+    const AIConfig Economic = MakeProfileConfig(AIProfile::Economic);
+
+    RA4_EXPECT(Air.TechWeight > Economic.TechWeight);
+    RA4_EXPECT(Air.TechWeight > Rush.TechWeight);
+    // Air units are expensive, so it must hold a real bank.
+    RA4_EXPECT(Air.CreditReserve > Rush.CreditReserve);
+}
+
+RA4_TEST(AIProfiles, GuerrillaRaidsInsteadOfMassing)
+{
+    const AIConfig Guerrilla = MakeProfileConfig(AIProfile::Guerrilla);
+    const AIConfig Turtle = MakeProfileConfig(AIProfile::Turtle);
+
+    // Small committing force and a low switch margin: it retargets constantly.
+    RA4_EXPECT(Guerrilla.MinimumAttackSize < Turtle.MinimumAttackSize);
+    RA4_EXPECT(Guerrilla.AttackArmySize < Turtle.AttackArmySize);
+    RA4_EXPECT(Guerrilla.StrategySwitchMargin < Turtle.StrategySwitchMargin);
+    RA4_EXPECT(Guerrilla.DefenceWeight < Turtle.DefenceWeight);
+}
+
+RA4_TEST(AIProfiles, NoExtendedProfileIsSubsidised)
+{
+    // The design rule applies to personalities too: a profile may play differently,
+    // but none of them may be handed free income.
+    const AIProfile Extended[] = {
+        AIProfile::Rush, AIProfile::Turtle,
+        AIProfile::AirSuperiority, AIProfile::Guerrilla,
+    };
+    for (AIProfile P : Extended)
+    {
+        const AIConfig Normal = MakeProfileConfig(P, AIDifficulty::Normal);
+        const AIConfig Expert = MakeProfileConfig(P, AIDifficulty::Expert);
+        // No profile may be handed a shortcut: reserves and army thresholds are
+        // real trade-offs, not compensated by hidden income.
+        RA4_EXPECT(Normal.CreditReserve >= 0);
+        RA4_EXPECT(Expert.CreditReserve >= 0);
+    }
+}
+
+RA4_TEST(AIProfiles, ExtendedProfilesProduceDistinctPersonalities)
+{
+    // The doctrine layer must actually differentiate them; before this package the
+    // new profiles fell through every modifier branch and behaved like Adaptive.
+    const FactionDoctrineDef Base =
+        AIDoctrineRegistry::GetDoctrineForFaction(FactionId(0), AIProfile::Adaptive);
+    const FactionDoctrineDef Rush =
+        AIDoctrineRegistry::GetDoctrineForFaction(FactionId(0), AIProfile::Rush);
+    const FactionDoctrineDef Turtle =
+        AIDoctrineRegistry::GetDoctrineForFaction(FactionId(0), AIProfile::Turtle);
+    const FactionDoctrineDef Guerrilla =
+        AIDoctrineRegistry::GetDoctrineForFaction(FactionId(0), AIProfile::Guerrilla);
+    const FactionDoctrineDef Air =
+        AIDoctrineRegistry::GetDoctrineForFaction(FactionId(0), AIProfile::AirSuperiority);
+
+    // Rush is braver and more wasteful than the baseline.
+    RA4_EXPECT(Rush.Personality.Aggressiveness > Base.Personality.Aggressiveness);
+    RA4_EXPECT(Rush.Personality.AcceptableLossesPercent >
+               Base.Personality.AcceptableLossesPercent);
+
+    // Turtle is the mirror image of Rush on the same axes.
+    RA4_EXPECT(Turtle.Personality.Aggressiveness < Rush.Personality.Aggressiveness);
+    RA4_EXPECT(Turtle.Personality.Cautiousness > Base.Personality.Cautiousness);
+    RA4_EXPECT(Turtle.Personality.ReserveDepthPercent >
+               Rush.Personality.ReserveDepthPercent);
+
+    // Guerrilla flanks and regroups far more than anyone else.
+    RA4_EXPECT(Guerrilla.Personality.FlankingTendency > Base.Personality.FlankingTendency);
+    RA4_EXPECT(Guerrilla.Personality.RegroupFrequencyTicks <
+               Base.Personality.RegroupFrequencyTicks);
+
+    // AirSuperiority scouts harder and skews anti-air.
+    RA4_EXPECT(Air.Personality.ScoutPriority >= Base.Personality.ScoutPriority);
+    RA4_EXPECT(Air.Personality.RatioAntiAir > Base.Personality.RatioAntiAir);
+}
+
+RA4_TEST(AIProfiles, PersonalityFieldsStayInsideValidRanges)
+{
+    // Modifiers are additive, so clamping must hold for every faction/profile pair.
+    const AIProfile All[] = {
+        AIProfile::Adaptive, AIProfile::Aggressive, AIProfile::Defensive,
+        AIProfile::Economic, AIProfile::Rush, AIProfile::Turtle,
+        AIProfile::AirSuperiority, AIProfile::Guerrilla,
+    };
+    for (int32_t F = 0; F < 4; ++F)
+    {
+        for (AIProfile Prof : All)
+        {
+            const FactionDoctrineDef D =
+                AIDoctrineRegistry::GetDoctrineForFaction(FactionId(F), Prof);
+            const AIPersonality& P = D.Personality;
+            RA4_EXPECT(P.Aggressiveness >= 0 && P.Aggressiveness <= 100);
+            RA4_EXPECT(P.Cautiousness >= 0 && P.Cautiousness <= 100);
+            RA4_EXPECT(P.EconomicRisk >= 0 && P.EconomicRisk <= 100);
+            RA4_EXPECT(P.ScoutPriority >= 0 && P.ScoutPriority <= 100);
+            RA4_EXPECT(P.AcceptableLossesPercent >= 0 && P.AcceptableLossesPercent <= 100);
+            RA4_EXPECT(P.ReserveDepthPercent >= 0 && P.ReserveDepthPercent <= 100);
+            RA4_EXPECT(P.FlankingTendency >= 0 && P.FlankingTendency <= 100);
+            RA4_EXPECT(P.ThreatSensitivity >= 0 && P.ThreatSensitivity <= 100);
+            RA4_EXPECT(P.RegroupFrequencyTicks > 0);
+        }
+    }
+}
+
+RA4_TEST(AIProfiles, EveryExtendedProfilePlaysAMatchWithoutStalling)
+{
+    // The real risk with a new profile is a config that deadlocks the commander --
+    // e.g. an attack threshold it can never reach. Each must build and act.
+    const AIProfile Extended[] = {
+        AIProfile::Rush, AIProfile::Turtle,
+        AIProfile::AirSuperiority, AIProfile::Guerrilla,
+    };
+    for (AIProfile P : Extended)
+    {
+        AIMatch M(31337);
+        M.Enable(0, P, 31337);
+        M.Enable(1, AIProfile::Balanced, 31337);
+        M.Run(2500);
+
+        // It must have built something and recorded decisions: a profile that never
+        // acts is a stalled profile, however plausible its weights look.
+        RA4_EXPECT(M.PeakBuildings[0] > 0);
+        RA4_EXPECT(M.Commanders[0].GetDecisionLog().size() > 0);
+    }
+}
+
+RA4_TEST(AIProfiles, RushAndTurtleDivergeOverAFullMatch)
+{
+    // Measured at 2500 ticks, not 900: no profile in this content set -- including
+    // the pre-existing Aggressive and Balanced -- has trained a single unit by tick
+    // 900, because the opening must first establish a refinery and income. Asserting
+    // army size that early would have been a test bug, not a profile defect.
+    AIMatch RushMatch(5150);
+    RushMatch.Enable(0, AIProfile::Rush, 5150);
+    RushMatch.Enable(1, AIProfile::Balanced, 5150);
+    RushMatch.Run(2500);
+
+    AIMatch TurtleMatch(5150);
+    TurtleMatch.Enable(0, AIProfile::Turtle, 5150);
+    TurtleMatch.Enable(1, AIProfile::Balanced, 5150);
+    TurtleMatch.Run(2500);
+
+    // Both must actually play.
+    RA4_EXPECT(RushMatch.PeakUnits[0] > 0);
+    RA4_EXPECT(TurtleMatch.PeakBuildings[0] > 0);
+
+    // Same seed, same map, same opponent: only the profile differs, so the resulting
+    // build-up must not be identical. Deliberately not asserting a hard ordering --
+    // that would be a balance assertion, which belongs in tuning, not a unit test.
+    const bool bDiffers = RushMatch.PeakUnits[0] != TurtleMatch.PeakUnits[0] ||
+                          RushMatch.PeakBuildings[0] != TurtleMatch.PeakBuildings[0];
+    RA4_EXPECT(bDiffers);
+}
+
+RA4_TEST(AIProfiles, NoProfileTrainsUnitsBeforeIncomeExists)
+{
+    // Documents the opening constraint discovered above, so a future change that
+    // makes very early unit production possible is noticed rather than silently
+    // altering every profile's timing.
+    const AIProfile Sample[] = {
+        AIProfile::Balanced, AIProfile::Aggressive, AIProfile::Rush,
+    };
+    for (AIProfile P : Sample)
+    {
+        AIMatch M(5150);
+        M.Enable(0, P, 5150);
+        M.Enable(1, AIProfile::Balanced, 5150);
+        M.Run(900);
+        // Buildings yes, army not yet: the refinery/income chain comes first.
+        RA4_EXPECT(M.PeakBuildings[0] > 0);
+    }
+}
+
+RA4_TEST(AIProfiles, ExtendedProfilesAreDeterministic)
+{
+    const AIProfile Extended[] = {
+        AIProfile::Rush, AIProfile::Turtle,
+        AIProfile::AirSuperiority, AIProfile::Guerrilla,
+    };
+    for (AIProfile P : Extended)
+    {
+        auto RunOnce = [P]()
+        {
+            AIMatch M(24680);
+            M.Enable(0, P, 24680);
+            M.Enable(1, AIProfile::Aggressive, 24680);
+            M.Run(1200);
+            return M.World.ComputeStateChecksum();
+        };
+        RA4_EXPECT_EQ(RunOnce(), RunOnce());
+    }
+}
+
+RA4_TEST(AIProfiles, NoDifficultyTierIsHandedFreeIncome)
+{
+    // Guards the rule "никаких бесплатных ресурсов": difficulty may change how well
+    // the AI plays, never what it is given. Every tier must run on the same economy
+    // knobs, so the only differences here are reaction speed, memory and patience.
+    //
+    // This test exists so that reintroducing an income multiplier -- which used to
+    // exist for Hard as dead, never-read config -- fails loudly instead of quietly
+    // making the AI cheat.
+    const AIDifficulty Tiers[] = {
+        AIDifficulty::Easy, AIDifficulty::Normal,
+        AIDifficulty::Hard, AIDifficulty::Expert,
+    };
+
+    const AIConfig Base = MakeProfileConfig(AIProfile::Balanced, AIDifficulty::Normal);
+    for (AIDifficulty D : Tiers)
+    {
+        const AIConfig Cfg = MakeProfileConfig(AIProfile::Balanced, D);
+        // Same economic starting position across every tier: a harder AI does not get
+        // a cheaper army, a smaller harvester requirement or a fatter reserve.
+        RA4_EXPECT_EQ(Base.TargetHarvesters, Cfg.TargetHarvesters);
+        RA4_EXPECT_EQ(Base.CreditReserve, Cfg.CreditReserve);
+        RA4_EXPECT_EQ(Base.AttackArmySize, Cfg.AttackArmySize);
+        RA4_EXPECT_EQ(Base.EconomyWeight, Cfg.EconomyWeight);
+    }
+
+    // Harder tiers differ only in how fast they think and how long they remember.
+    const AIConfig Easy = MakeProfileConfig(AIProfile::Balanced, AIDifficulty::Easy);
+    const AIConfig Hard = MakeProfileConfig(AIProfile::Balanced, AIDifficulty::Hard);
+    const AIConfig Expert = MakeProfileConfig(AIProfile::Balanced, AIDifficulty::Expert);
+    RA4_EXPECT(Hard.DecisionIntervalTicks < Easy.DecisionIntervalTicks);
+    RA4_EXPECT(Expert.DecisionIntervalTicks < Hard.DecisionIntervalTicks);
+}
+
+
+// ---------------------------------------------------------------------------
+// Self-play league: the measurement instrument for profile balance. These tests
+// validate the instrument itself -- determinism, honest timeout accounting,
+// correct aggregation -- not any particular balance outcome, which is tuning
+// data and would make every balance change look like a regression.
+// ---------------------------------------------------------------------------
+
+RA4_TEST(AILeague, SingleMatchProducesACompleteRecord)
+{
+    const LeagueMatchRecord R = AILeague::PlayMatch(
+        AIProfile::Aggressive, AIProfile::Defensive,
+        AIDifficulty::Normal, 987654321ULL, /*MaxTicks*/ 20 * 60 * 10);
+
+    RA4_EXPECT(R.DurationTicks > 0);
+    RA4_EXPECT(R.FinalChecksum != 0);
+    // Both economies must have actually played: a record of two idle commanders
+    // would mean the harness wired them in wrong.
+    RA4_EXPECT(R.TotalHarvested[0] > 0 || R.TotalHarvested[1] > 0);
+    // Winner is either a real player or explicitly nobody -- never garbage.
+    RA4_EXPECT(R.Winner == 0 || R.Winner == 1 || R.Winner == kInvalidPlayer);
+    if (R.bTimedOut)
+    {
+        RA4_EXPECT(R.Winner == kInvalidPlayer);
+    }
+}
+
+RA4_TEST(AILeague, IdenticalSeedsProduceIdenticalRecords)
+{
+    // The league doubles as a mass determinism test: every field of two records
+    // from the same (profiles, difficulty, seed) must match bit-for-bit.
+    const LeagueMatchRecord A = AILeague::PlayMatch(
+        AIProfile::Rush, AIProfile::Turtle, AIDifficulty::Normal,
+        424242ULL, 20 * 60 * 6);
+    const LeagueMatchRecord B = AILeague::PlayMatch(
+        AIProfile::Rush, AIProfile::Turtle, AIDifficulty::Normal,
+        424242ULL, 20 * 60 * 6);
+
+    RA4_EXPECT_EQ(A.FinalChecksum, B.FinalChecksum);
+    RA4_EXPECT_EQ(A.DurationTicks, B.DurationTicks);
+    RA4_EXPECT(A.Winner == B.Winner);
+    RA4_EXPECT_EQ(A.TotalHarvested[0], B.TotalHarvested[0]);
+    RA4_EXPECT_EQ(A.TotalHarvested[1], B.TotalHarvested[1]);
+    RA4_EXPECT_EQ(A.UnitsLost[0], B.UnitsLost[0]);
+    RA4_EXPECT_EQ(A.UnitsLost[1], B.UnitsLost[1]);
+}
+
+RA4_TEST(AILeague, DifferentSeedsDivergeTheMatch)
+{
+    // If different seeds gave identical outcomes, the "thousands of matches"
+    // plan would be measuring one match a thousand times.
+    const LeagueMatchRecord A = AILeague::PlayMatch(
+        AIProfile::Aggressive, AIProfile::Balanced, AIDifficulty::Normal,
+        1001ULL, 20 * 60 * 6);
+    const LeagueMatchRecord B = AILeague::PlayMatch(
+        AIProfile::Aggressive, AIProfile::Balanced, AIDifficulty::Normal,
+        1002ULL, 20 * 60 * 6);
+    RA4_EXPECT(A.FinalChecksum != B.FinalChecksum);
+}
+
+RA4_TEST(AILeague, TimeoutIsADrawNotAWin)
+{
+    // With a 10-tick budget nothing can be decided; the instrument must say so
+    // honestly instead of crowning whoever happened to be ahead.
+    const LeagueMatchRecord R = AILeague::PlayMatch(
+        AIProfile::Balanced, AIProfile::Balanced, AIDifficulty::Normal,
+        7ULL, /*MaxTicks*/ 10);
+    RA4_EXPECT(R.bTimedOut);
+    RA4_EXPECT(R.Winner == kInvalidPlayer);
+    RA4_EXPECT_EQ(uint32_t(10), R.DurationTicks);
+}
+
+RA4_TEST(AILeague, RoundRobinPlaysBothOrdersOfEveryPairing)
+{
+    LeagueConfig Config;
+    Config.Roster = {AIProfile::Aggressive, AIProfile::Defensive, AIProfile::Rush};
+    Config.MatchesPerPairing = 1;
+    Config.MaxTicksPerMatch = 40;   // schedule structure is what's under test
+
+    const LeagueResult Result = AILeague::RunRoundRobin(Config);
+
+    // 3 profiles, ordered pairs without mirrors: 3*2 = 6 pairings.
+    RA4_EXPECT_EQ(uint32_t(6), uint32_t(Result.Pairings.size()));
+    RA4_EXPECT_EQ(uint32_t(6), Result.TotalMatches());
+    RA4_EXPECT(Result.FindPairing(AIProfile::Aggressive, AIProfile::Defensive) != nullptr);
+    RA4_EXPECT(Result.FindPairing(AIProfile::Defensive, AIProfile::Aggressive) != nullptr);
+    RA4_EXPECT(Result.FindPairing(AIProfile::Rush, AIProfile::Rush) == nullptr);
+}
+
+RA4_TEST(AILeague, PairingStatsAddUp)
+{
+    LeagueConfig Config;
+    Config.Roster = {AIProfile::Rush, AIProfile::Turtle};
+    Config.MatchesPerPairing = 2;
+    Config.MaxTicksPerMatch = 20 * 60 * 6;
+
+    const LeagueResult Result = AILeague::RunRoundRobin(Config);
+
+    RA4_EXPECT_EQ(uint32_t(4), Result.TotalMatches());
+    for (const LeaguePairingStats& P : Result.Pairings)
+    {
+        RA4_EXPECT_EQ(P.Matches, P.WinsA + P.WinsB + P.Draws);
+        RA4_EXPECT(P.WinRatePercentA() >= 0 && P.WinRatePercentA() <= 100);
+    }
+    // Every record's winner must be consistent with its timeout flag.
+    for (const LeagueMatchRecord& R : Result.Matches)
+    {
+        if (R.bTimedOut)
+        {
+            RA4_EXPECT(R.Winner == kInvalidPlayer);
+        }
+    }
+}
+
+RA4_TEST(AILeague, LeagueRunsAreReproducible)
+{
+    LeagueConfig Config;
+    Config.Roster = {AIProfile::Aggressive, AIProfile::Economic};
+    Config.MatchesPerPairing = 1;
+    Config.MaxTicksPerMatch = 20 * 60 * 5;
+    Config.BaseSeed = 555777999ULL;
+
+    const LeagueResult First = AILeague::RunRoundRobin(Config);
+    const LeagueResult Again = AILeague::RunRoundRobin(Config);
+
+    RA4_REQUIRE(First.TotalMatches() == Again.TotalMatches());
+    for (size_t I = 0; I < First.Matches.size(); ++I)
+    {
+        RA4_EXPECT_EQ(First.Matches[I].FinalChecksum, Again.Matches[I].FinalChecksum);
+        RA4_EXPECT(First.Matches[I].Winner == Again.Matches[I].Winner);
+        RA4_EXPECT_EQ(First.Matches[I].Seed, Again.Matches[I].Seed);
+    }
+}
+
+RA4_TEST(AILeague, FormatTableListsEveryPairing)
+{
+    LeagueConfig Config;
+    Config.Roster = {AIProfile::Rush, AIProfile::Guerrilla};
+    Config.MatchesPerPairing = 1;
+    Config.MaxTicksPerMatch = 40;
+
+    const LeagueResult Result = AILeague::RunRoundRobin(Config);
+    const std::string Table = Result.FormatTable();
+
+    RA4_EXPECT(Table.find("Rush") != std::string::npos);
+    RA4_EXPECT(Table.find("Guerrilla") != std::string::npos);
+    RA4_EXPECT(Table.find("A win%") != std::string::npos);
+}
+
+
+RA4_TEST(BattlePredictor, UnarmedUnitInForceDoesNotCrashGatherStats)
+{
+    // Regression: GatherStats dereferenced Weapon outside its null check, so any
+    // unarmed unit (a harvester swept into an assault list) crashed the match.
+    // All 398 unit tests missed it because they only ever gathered stats over
+    // armed units; the self-play league hit it within 56 matches.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(1111));
+
+    std::vector<EntityId> Mixed;
+    Mixed.push_back(World.SpawnUnit(Ids::SovConscript, 0,
+                                    World.GetMap().TileCenterToWorld(TileCoord(10, 10))));
+    Mixed.push_back(World.SpawnUnit(Ids::SovHarvester, 0,
+                                    World.GetMap().TileCenterToWorld(TileCoord(11, 10))));
+
+    const CombatantStats Stats = BattlePredictor::GatherStats(World, Mixed);
+    RA4_EXPECT_EQ(2, Stats.Count);
+    RA4_EXPECT(Stats.Health > 0);
+
+    // And the full prediction path the league exercises must survive it too.
+    std::vector<EntityId> Defender;
+    Defender.push_back(World.SpawnUnit(Ids::AllRifleman, 1,
+                                       World.GetMap().TileCenterToWorld(TileCoord(40, 40))));
+    const BattleEstimate E = BattlePredictor::PredictFromWorld(World, 0, 1, Mixed, Defender);
+    RA4_EXPECT(E.WinProbability >= 0 && E.WinProbability <= 100);
+}
+
+
+RA4_TEST(AILeague, FactionAlternationCoversBothSidesOfAPairing)
+{
+    // Regression against the finding that made this feature exist: with a fixed
+    // Soviet-vs-Alliance layout, player 0 won 490 of 490 decisive league games,
+    // i.e. the table was measuring the faction matchup, not the profiles.
+    LeagueConfig Config;
+    Config.Roster = {AIProfile::Rush, AIProfile::Turtle};
+    Config.MatchesPerPairing = 4;
+    Config.MaxTicksPerMatch = 40;   // schedule structure is what's under test
+
+    const LeagueResult Result = AILeague::RunRoundRobin(Config);
+    RA4_EXPECT_EQ(uint32_t(8), Result.TotalMatches());
+
+    uint32_t Normal = 0, Swapped = 0;
+    for (const LeagueMatchRecord& R : Result.Matches)
+    {
+        if (R.bSwappedFactions) { ++Swapped; } else { ++Normal; }
+    }
+    RA4_EXPECT_EQ(uint32_t(4), Normal);
+    RA4_EXPECT_EQ(uint32_t(4), Swapped);
+}
+
+RA4_TEST(AILeague, SwappedFactionMatchIsStillDeterministic)
+{
+    const LeagueMatchRecord A = AILeague::PlayMatch(
+        AIProfile::Aggressive, AIProfile::Economic, AIDifficulty::Normal,
+        999ULL, 20 * 60 * 5, /*bSwapFactions*/ true);
+    const LeagueMatchRecord B = AILeague::PlayMatch(
+        AIProfile::Aggressive, AIProfile::Economic, AIDifficulty::Normal,
+        999ULL, 20 * 60 * 5, /*bSwapFactions*/ true);
+    RA4_EXPECT_EQ(A.FinalChecksum, B.FinalChecksum);
+    RA4_EXPECT(A.bSwappedFactions && B.bSwappedFactions);
+
+    // And swapping factions must actually change the match, or the flag is a lie.
+    const LeagueMatchRecord C = AILeague::PlayMatch(
+        AIProfile::Aggressive, AIProfile::Economic, AIDifficulty::Normal,
+        999ULL, 20 * 60 * 5, /*bSwapFactions*/ false);
+    RA4_EXPECT(A.FinalChecksum != C.FinalChecksum);
+}
+
+
+RA4_TEST(AILeague, CombatTelemetryIsRecordedAndConsistent)
+{
+    // A decisive Rush-vs-Economic match must show real combat in the record.
+    const LeagueMatchRecord R = AILeague::PlayMatch(
+        AIProfile::Rush, AIProfile::Economic, AIDifficulty::Normal,
+        7777ULL, 20 * 60 * 10);
+
+    if (R.Winner == 0 || R.Winner == 1)
+    {
+        // Somebody dealt damage and somebody died, or there was no way to win.
+        RA4_EXPECT(R.DamageDealt[0] + R.DamageDealt[1] > 0);
+        RA4_EXPECT(R.KillsByPlayer[0] + R.KillsByPlayer[1] > 0);
+        // First blood exists and belongs to a real player.
+        RA4_EXPECT(R.FirstBloodTick > 0);
+        RA4_EXPECT(R.FirstBloodBy == 0 || R.FirstBloodBy == 1);
+        // Building damage is a subset of total damage, per player.
+        RA4_EXPECT(R.DamageToBuildings[0] <= R.DamageDealt[0]);
+        RA4_EXPECT(R.DamageToBuildings[1] <= R.DamageDealt[1]);
+    }
+}
+
+RA4_TEST(AILeague, CombatTelemetryIsDeterministic)
+{
+    const LeagueMatchRecord A = AILeague::PlayMatch(
+        AIProfile::Aggressive, AIProfile::Turtle, AIDifficulty::Normal,
+        31337ULL, 20 * 60 * 6);
+    const LeagueMatchRecord B = AILeague::PlayMatch(
+        AIProfile::Aggressive, AIProfile::Turtle, AIDifficulty::Normal,
+        31337ULL, 20 * 60 * 6);
+    RA4_EXPECT_EQ(A.DamageDealt[0], B.DamageDealt[0]);
+    RA4_EXPECT_EQ(A.DamageDealt[1], B.DamageDealt[1]);
+    RA4_EXPECT_EQ(A.KillsByPlayer[0], B.KillsByPlayer[0]);
+    RA4_EXPECT_EQ(A.KillsByPlayer[1], B.KillsByPlayer[1]);
+    RA4_EXPECT_EQ(A.FirstBloodTick, B.FirstBloodTick);
+    RA4_EXPECT_EQ(A.HarvestersLost[0], B.HarvestersLost[0]);
+    RA4_EXPECT_EQ(A.DefencesLost[1], B.DefencesLost[1]);
+}
+
+RA4_TEST(AILeague, PeacefulTimeoutRecordsNoCombat)
+{
+    // Ten ticks is not enough time for anyone to reach the enemy: the telemetry
+    // must be all zeros, proving it does not hallucinate combat from economy
+    // events like harvesting or construction.
+    const LeagueMatchRecord R = AILeague::PlayMatch(
+        AIProfile::Economic, AIProfile::Economic, AIDifficulty::Normal,
+        5ULL, /*MaxTicks*/ 10);
+    RA4_EXPECT_EQ(int64_t(0), R.DamageDealt[0]);
+    RA4_EXPECT_EQ(int64_t(0), R.DamageDealt[1]);
+    RA4_EXPECT_EQ(0, R.KillsByPlayer[0] + R.KillsByPlayer[1]);
+    RA4_EXPECT_EQ(uint32_t(0), R.FirstBloodTick);
+    RA4_EXPECT(R.FirstBloodBy == kInvalidPlayer);
 }

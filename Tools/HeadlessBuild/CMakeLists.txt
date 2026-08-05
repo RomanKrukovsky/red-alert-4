@@ -84,13 +84,21 @@ add_library(RA4Combat STATIC
 target_include_directories(RA4Combat PUBLIC ${RA4_SOURCE_ROOT}/RA4Combat/Public)
 target_link_libraries(RA4Combat PUBLIC RA4Content)
 
+add_library(RA4Intel STATIC
+    ${RA4_SOURCE_ROOT}/RA4Intel/Private/IntelConfig.cpp
+    ${RA4_SOURCE_ROOT}/RA4Intel/Private/IntelSystem.cpp
+    ${RA4_SOURCE_ROOT}/RA4Intel/Private/PerceivedWorld.cpp
+)
+target_include_directories(RA4Intel PUBLIC ${RA4_SOURCE_ROOT}/RA4Intel/Public)
+target_link_libraries(RA4Intel PUBLIC RA4Content RA4FogOfWar)
+
 add_library(RA4Simulation STATIC
     ${RA4_SOURCE_ROOT}/RA4Simulation/Private/SimWorld.cpp
     ${RA4_SOURCE_ROOT}/RA4Simulation/Private/CommandBus.cpp
     ${RA4_SOURCE_ROOT}/RA4Simulation/Private/LockstepSession.cpp
 )
 target_include_directories(RA4Simulation PUBLIC ${RA4_SOURCE_ROOT}/RA4Simulation/Public)
-target_link_libraries(RA4Simulation PUBLIC RA4Content RA4Navigation RA4FogOfWar RA4Combat)
+target_link_libraries(RA4Simulation PUBLIC RA4Content RA4Navigation RA4FogOfWar RA4Combat RA4Intel)
 
 add_library(RA4Input STATIC
     ${RA4_SOURCE_ROOT}/RA4Input/Private/CameraController.cpp
@@ -123,6 +131,10 @@ add_library(RA4AI STATIC
     ${RA4_SOURCE_ROOT}/RA4AI/Private/AIDebugOverlay.cpp
     ${RA4_SOURCE_ROOT}/RA4AI/Private/ThreatMap.cpp
     ${RA4_SOURCE_ROOT}/RA4AI/Private/ValueMap.cpp
+    ${RA4_SOURCE_ROOT}/RA4AI/Private/AIDirectors.cpp
+    ${RA4_SOURCE_ROOT}/RA4AI/Private/OpponentModel.cpp
+    ${RA4_SOURCE_ROOT}/RA4AI/Private/BattlePredictor.cpp
+    ${RA4_SOURCE_ROOT}/RA4AI/Private/AILeague.cpp
 )
 target_include_directories(RA4AI PUBLIC ${RA4_SOURCE_ROOT}/RA4AI/Public)
 target_link_libraries(RA4AI PUBLIC RA4Simulation)
@@ -162,7 +174,9 @@ add_executable(RA4Tests
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/Test_RA3PipelineAndCommandBus.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/Test_HUDIntegrationAndGameState.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestProvingGround.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestDirectControl.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestNetwork.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestIntel.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestUI.cpp
 )
 
@@ -203,3 +217,8 @@ set_tests_properties(ai PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 # Plays an AI-versus-AI match and writes it out for Tools/MatchViewer/render.py.
 add_executable(RA4MatchDump ${CMAKE_CURRENT_SOURCE_DIR}/../MatchViewer/dump_match.cpp)
 target_link_libraries(RA4MatchDump PRIVATE RA4AI)
+
+# AI self-play league: plays real headless matches between profiles and prints
+# the balance table. Deterministic per argument set.
+add_executable(RA4League ${CMAKE_CURRENT_SOURCE_DIR}/../League/run_league.cpp)
+target_link_libraries(RA4League PRIVATE RA4AI)
