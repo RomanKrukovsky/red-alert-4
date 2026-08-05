@@ -179,7 +179,6 @@ add_executable(RA4Tests
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestDirectControl.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestNetwork.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestRecon.cpp
-    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestDbg2.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestUI.cpp
 )
 

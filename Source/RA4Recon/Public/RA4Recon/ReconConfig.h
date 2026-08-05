@@ -17,6 +17,7 @@
 
 #include "RA4Core/Fixed.h"
 #include "RA4Core/Ids.h"
+#include "RA4Recon/ReconCategories.h"
 
 #ifndef RA4RECON_API
 #define RA4RECON_API
@@ -42,6 +43,7 @@ struct DistortionProfile
     // Stage 1: clarity gate.
     bool bClarityEnabled = true;
     int32_t MinClarityPerMille = 100;        // below this, no observation at all
+    int32_t IdentifyClarityPerMille = 350;   // below this, contact is anonymous ("something moves")
     int32_t ClarityDistanceFalloffPerMille = 500; // clarity lost at max observation range
 
     // Stage 2: count distortion. Asymmetric by design: fear exaggerates,
@@ -74,22 +76,8 @@ struct DistortionProfile
 
 // --- Confusion matrix (§4.3 stage 3) ------------------------------------------
 
-// Designer-authored probabilities of misidentifying one unit category as another.
-// Categories are coarse on purpose: per-unit-type matrices would be an authoring
-// burden nobody sustains across four factions.
-enum class ObservedCategory : uint8_t
-{
-    Infantry = 0,
-    LightVehicle,
-    HeavyVehicle,
-    Aircraft,
-    Ship,
-    Structure,
-    Count,
-};
-
-constexpr int32_t kObservedCategoryCount = int32_t(ObservedCategory::Count);
-
+// Designer-authored probabilities of misidentifying one unit category as another
+// (categories in ReconCategories.h).
 struct ConfusionMatrix
 {
     // Rows[true][observed], per-mille; each row must sum to exactly 1000 so the

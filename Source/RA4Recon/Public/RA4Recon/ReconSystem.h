@@ -16,6 +16,7 @@
 
 #include "RA4Core/Ids.h"
 #include "RA4Recon/ReconConfig.h"
+#include "RA4Core/Random.h"
 #include "RA4Recon/ReconTypes.h"
 #include "RA4Recon/PerceivedWorld.h"
 
@@ -40,11 +41,23 @@ namespace Recon
 // per-tick allocation in steady state.
 struct ObservedEntity
 {
-    EntityId Id;            // ground truth; never escapes the intel core
+    EntityId Id;            // ground truth; never escapes the recon core
     ContentId Class;
     Vec2 Position;
     int32_t TileX = 0;
     int32_t TileY = 0;
+    ObservedCategory Category = ObservedCategory::LightVehicle; // for the confusion matrix
+};
+
+// One friendly observer this tick. M2 uses per-PLAYER aggregate observers (one
+// virtual observer per player, the mean state of its live units); per-unit
+// observers land with M3's report chains, where authorship starts to matter.
+struct ObserverSnapshot
+{
+    Fixed Competence = Fixed::FromInt(1);
+    Fixed Morale = Fixed::FromInt(1);
+    Fixed Fatigue = Fixed::Zero();
+    Fixed Suppression = Fixed::Zero();
 };
 
 struct ObservationInput
@@ -52,6 +65,8 @@ struct ObservationInput
     // Per viewing player: hostile/neutral entities their fog can currently see,
     // in ascending entity-slot order (deterministic by construction).
     std::vector<ObservedEntity> VisibleToPlayer[kMaxPlayers];
+    // Per-player aggregate observer state (see ObserverSnapshot).
+    ObserverSnapshot Observers[kMaxPlayers];
     // Entity slot capacity, so per-entity association tables can size once.
     uint32_t EntityCapacity = 0;
 
@@ -60,6 +75,7 @@ struct ObservationInput
         for (int32_t P = 0; P < kMaxPlayers; ++P)
         {
             VisibleToPlayer[P].clear();
+            Observers[P] = ObserverSnapshot{};
         }
     }
 };
@@ -104,7 +120,7 @@ public:
     // Advances one tick. Called by SimWorld::SystemRecon with the current tick
     // and this tick's visibility view. When the feature is disabled this returns
     // immediately: zero cost, zero state, classic RTS behaviour (§4.7).
-    void Tick(TickIndex CurrentTick, const ObservationInput& Input);
+    void Tick(TickIndex CurrentTick, const ObservationInput& Input, Random& Rng);
 
     // The only read surface for belief state. PlayerIdx must be < kMaxPlayers.
     // There is deliberately no mutable counterpart: belief is written only by
@@ -147,6 +163,15 @@ private:
     // and consumed by PhaseReportEmission. Member (not local) so capacity
     // persists across ticks -- no steady-state allocation.
     std::vector<Observation> PendingObservations[kMaxPlayers];
+    // TRUE categories ride in a parallel array: they are the input to the
+    // confusion roll and must survive next to the (rewritten) observation.
+    std::vector<ObservedCategory> PendingCategories[kMaxPlayers];
+
+    // Tick-scoped borrows from SimWorld; never outlive Tick(). Raw pointers by
+    // design: storing them longer would be a lifetime bug, and phases already
+    // cannot run outside Tick().
+    Random* TickRng = nullptr;
+    const ObservationInput* TickInput = nullptr;
 
     // track<->entity association, per player, indexed by GT entity slot. This is
     // exactly the association INVARIANT 10 forbids on the read surface, which is

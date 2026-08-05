@@ -14,6 +14,8 @@
 #include "RA4Core/Ids.h"
 #include "RA4Core/Vector.h"
 
+#include "RA4Recon/ReconCategories.h"
+
 #ifndef RA4RECON_API
 #define RA4RECON_API
 #endif
@@ -73,12 +75,16 @@ struct MoraleComp
 struct Observation
 {
     EntityId Subject;                       // GT association, core-internal only
-    ContentId ObservedClass;                // what the observer believes it is
+    ContentId ObservedClass;                // exact believed type; invalid when misidentified
+    ObservedCategory Category = ObservedCategory::LightVehicle; // coarse believed category
     Vec2 ObservedPosition;
     int32_t ObservedCount = 1;
     TickIndex Tick = 0;
     Fixed Clarity = Fixed::Zero();          // 0..1, gate and error scale
     bool bPhantom = false;                  // fabricated by a panicking observer (M4)
+    // Contact seen but not identified (clarity below the identify threshold, or a
+    // future radar return): position without class. "Something is moving out there."
+    bool bAnonymous = false;
 };
 
 // One report travelling up the chain of command. Created at emission time,
@@ -111,7 +117,8 @@ constexpr uint32_t kTrackProvenanceSize = 4;
 struct PerceivedTrack
 {
     TrackId Id;
-    ContentId BelievedClass;
+    ContentId BelievedClass;                // invalid when only the category is known
+    ObservedCategory BelievedCategory = ObservedCategory::LightVehicle;
     Vec2 BelievedPosition;
     Fixed PositionErrorRadius = Fixed::Zero();
     int32_t BelievedCountMin = 0;           // count is an interval, never one number
@@ -121,6 +128,9 @@ struct PerceivedTrack
     uint8_t IndependentSourceCount = 0;
     bool bStale = false;                    // no fresh reports for a while
     bool bContested = false;                // independent sources disagree (ADR-0026)
+    // Unidentified contact: BelievedClass is meaningless, UI shows "unknown".
+    // Belief about our own knowledge, not ground truth -- fine on the read surface.
+    bool bAnonymous = false;
     uint32_t ProvenanceReportIds[kTrackProvenanceSize] = {0, 0, 0, 0};
     uint8_t ProvenanceCount = 0;            // ring write cursor lives in ProvenanceCount % size
 

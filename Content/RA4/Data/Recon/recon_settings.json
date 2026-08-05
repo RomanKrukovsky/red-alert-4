@@ -9,6 +9,7 @@
       "name": "profile.default",
       "clarity_enabled": true,
       "min_clarity": 0.1,
+      "identify_clarity": 0.35,
       "clarity_distance_falloff": 0.5,
 
       "count_distortion_enabled": true,
@@ -40,6 +41,24 @@
       "officer_bias_max": 0.2
     }
   ],
+
+  "morale_tuning": {
+    "_comment": "Owner decisions 2026-08-06: damage, suppression, prolonged combat, nearby ally deaths and visible superiority lower morale; recovery is time out of fire. Superiority uses raw visible counts (anti-runaway).",
+    "damage_morale_penalty": 0.03,
+    "damage_suppression": 0.12,
+    "ally_death_morale_penalty": 0.08,
+    "ally_death_radius_tiles": 6,
+    "superiority_ratio_threshold": 2.0,
+    "superiority_morale_penalty_per_tick": 0.002,
+    "superiority_radius_tiles": 8,
+    "fatigue_per_tick_under_fire": 0.004,
+    "morale_regen_per_tick": 0.001,
+    "fatigue_regen_per_tick": 0.002,
+    "suppression_decay_per_tick": 0.01,
+    "out_of_fire_delay_ticks": 60,
+    "default_competence": 0.7,
+    "scout_competence": 0.95
+  },
 
   "confusion_matrix": {
     "_comment": "rows[true][observed], each row must sum to exactly 1.0. Light/heavy vehicles are confusable; infantry/aircraft almost never.",

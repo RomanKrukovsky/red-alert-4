@@ -3,6 +3,7 @@
 
 #include "RA4Core/ByteStream.h"
 #include "RA4Core/Checksum.h"
+#include "RA4Recon/DistortionPipeline.h"
 
 namespace RA4
 {
@@ -11,7 +12,7 @@ namespace Recon
 
 namespace
 {
-constexpr uint32_t kReconSystemVersion = 2; // v2: association tables are state (M1)
+constexpr uint32_t kReconSystemVersion = 3; // v3: category/anonymous in observations (M2); v2: association tables (M1)
 } // namespace
 
 const char* PhaseName(Phase P)
@@ -66,13 +67,15 @@ void ReconSystem::Reset()
     Stats = PhaseStats{};
 }
 
-void ReconSystem::Tick(TickIndex CurrentTick, const ObservationInput& Input)
+void ReconSystem::Tick(TickIndex CurrentTick, const ObservationInput& Input, Random& Rng)
 {
     if (!IsEnabled())
     {
         return;
     }
 
+    TickRng = &Rng;
+    TickInput = &Input;
     EnsureAssociationCapacity(Input.EntityCapacity);
 
     // Fixed phase order -- part of the replay compatibility contract, do not
@@ -143,6 +146,7 @@ void ReconSystem::PhaseObservation(TickIndex CurrentTick, const ObservationInput
             continue;
         }
         PendingObservations[P].clear();
+        PendingCategories[P].clear();
         for (const ObservedEntity& Seen : Input.VisibleToPlayer[P])
         {
             Observation Obs;
@@ -152,7 +156,9 @@ void ReconSystem::PhaseObservation(TickIndex CurrentTick, const ObservationInput
             Obs.ObservedCount = 1;
             Obs.Tick = CurrentTick;
             Obs.Clarity = Fixed::FromInt(1);
+            Obs.Category = Seen.Category;
             PendingObservations[P].push_back(Obs);
+            PendingCategories[P].push_back(Seen.Category);
 
             Worlds[P]->SetLastObservedTick(Seen.TileX, Seen.TileY, CurrentTick);
         }
@@ -161,7 +167,88 @@ void ReconSystem::PhaseObservation(TickIndex CurrentTick, const ObservationInput
 
 void ReconSystem::PhaseDistortion(TickIndex)
 {
-    // M2 territory. In M1 observations pass through untouched.
+    // Stages 1-5 of ADR-0026 §4.3, per observation, all math on Fixed and the
+    // isolated ReconRng. The truthful M1 path is exactly this function with the
+    // active profile's stages disabled -- there is no second code path to drift.
+    const DistortionProfile* Profile = Settings->FindDistortionProfile(Settings->ActiveDistortionProfile);
+    if (Profile == nullptr || TickRng == nullptr || TickInput == nullptr)
+    {
+        return; // validated at load; belt and braces at runtime
+    }
+
+    const Fixed MinClarity = PerMilleToFixed(Profile->MinClarityPerMille);
+    const Fixed IdentifyClarity = PerMilleToFixed(Profile->IdentifyClarityPerMille);
+
+    for (int32_t P = 0; P < kMaxPlayers; ++P)
+    {
+        if (Worlds[P] == nullptr || PendingObservations[P].empty())
+        {
+            continue;
+        }
+
+        // One virtual observer per player in M2 (mean of its live units);
+        // per-unit authorship arrives with M3's report chains.
+        ObserverState Observer;
+        Observer.Competence = TickInput->Observers[P].Competence;
+        Observer.Morale = TickInput->Observers[P].Morale;
+        Observer.Fatigue = TickInput->Observers[P].Fatigue;
+        Observer.Suppression = TickInput->Observers[P].Suppression;
+        Observer.DistanceRatio = Fixed::FromRatio(1, 2); // aggregate: mid-range until M3 geometry
+
+        size_t Write = 0;
+        for (size_t I = 0; I < PendingObservations[P].size(); ++I)
+        {
+            Observation Obs = PendingObservations[P][I];
+            const ObservedCategory TrueCategory = PendingCategories[P][I];
+
+            // Stage 1: clarity gate. Below MinClarity the observation dies here.
+            const Fixed Clarity = StageClarity(Observer, *Profile);
+            if (Clarity < MinClarity)
+            {
+                continue;
+            }
+            Obs.Clarity = Clarity;
+
+            // Stage 2: numbers, inflated by fear.
+            Obs.ObservedCount = StageCountDistortion(Obs.ObservedCount, Observer, *Profile, *TickRng);
+
+            // Stage 3: identity, rolled against the confusion matrix.
+            const ObservedCategory Rolled =
+                StageClassification(TrueCategory, Clarity, Settings->Confusion, *Profile, *TickRng);
+            Obs.Category = Rolled;
+            if (Rolled != TrueCategory)
+            {
+                // Misidentified: the observer names a CATEGORY he believes
+                // ("heavy armour!") but no exact type. An invalid class id is the
+                // honest encoding -- inventing a concrete wrong ContentId would
+                // leak content-table knowledge the observer does not have.
+                Obs.ObservedClass = ContentId();
+            }
+
+            // Stage 4: position, smeared inside the error circle.
+            const Vec2 Offset = StagePositionError(Clarity, Observer, *Profile, *TickRng);
+            Obs.ObservedPosition = Vec2(Obs.ObservedPosition.X + Offset.X, Obs.ObservedPosition.Y + Offset.Y);
+
+            // Stage 5: or the sighting is simply never written down.
+            if (StageOmission(Clarity, Observer, *Profile, *TickRng))
+            {
+                continue;
+            }
+
+            // Identify threshold: a contact seen too dimly to name stays a
+            // contact -- "something is moving out there".
+            if (Clarity < IdentifyClarity)
+            {
+                Obs.bAnonymous = true;
+            }
+
+            PendingObservations[P][Write] = Obs;
+            PendingCategories[P][Write] = TrueCategory;
+            Write += 1;
+        }
+        PendingObservations[P].resize(Write);
+        PendingCategories[P].resize(Write);
+    }
 }
 
 void ReconSystem::PhaseReportEmission(TickIndex CurrentTick)
@@ -256,6 +343,8 @@ void ReconSystem::PhaseAggregation(TickIndex CurrentTick)
             // Truthful update: direct observation overwrites, never averages
             // (§4.5 -- and with zero distortion there is nothing to average).
             Track->BelievedClass = Obs.ObservedClass;
+            Track->BelievedCategory = Obs.Category;
+            Track->bAnonymous = Obs.bAnonymous;
             Track->BelievedPosition = Obs.ObservedPosition;
             Track->PositionErrorRadius = Fixed::Zero();
             Track->BelievedCountMin = Obs.ObservedCount;
@@ -335,6 +424,8 @@ void ReconSystem::Serialize(ByteWriter& W) const
             W.WriteUInt32(Obs.Tick);
             W.WriteInt64(Obs.Clarity.Raw);
             W.WriteBool(Obs.bPhantom);
+            W.WriteUInt8(uint8_t(Obs.Category));
+            W.WriteBool(Obs.bAnonymous);
         }
     }
 
@@ -415,6 +506,8 @@ bool ReconSystem::Deserialize(ByteReader& R)
             Obs.Tick = R.ReadUInt32();
             Obs.Clarity = Fixed::FromRaw(R.ReadInt64());
             Obs.bPhantom = R.ReadBool();
+            Obs.Category = ObservedCategory(R.ReadUInt8());
+            Obs.bAnonymous = R.ReadBool();
             Report.Payload.push_back(Obs);
         }
         InFlightReports.push_back(std::move(Report));

@@ -10,6 +10,8 @@
 #include "RA4Core/Checksum.h"
 #include "RA4Core/SimConfig.h"
 #include "RA4Recon/ReconConfig.h"
+#include "RA4Recon/DistortionPipeline.h"
+#include "RA4Recon/MoraleModel.h"
 #include "RA4Recon/ReconSystem.h"
 #include "RA4Recon/PerceivedWorld.h"
 #include "RA4Replay/Replay.h"
@@ -78,12 +80,21 @@ std::string ReadRepoFile(const std::string& RelativePath)
 }
 
 // Minimal valid settings for tests that do not want to depend on shipped content.
+// The profile is TRUTHFUL (every stage disabled): M1-contract tests assert
+// PS == GT exactly, and each M2 test switches on precisely the stage it pins.
 Recon::ReconSettings MakeMinimalSettings(bool bEnabled)
 {
     Recon::ReconSettings S;
     S.bEnabled = bEnabled;
     Recon::DistortionProfile P;
     P.Name = "profile.default";
+    P.bClarityEnabled = false;
+    P.bCountDistortionEnabled = false;
+    P.bClassificationErrorEnabled = false;
+    P.bPositionErrorEnabled = false;
+    P.bOmissionEnabled = false;
+    P.bFabricationEnabled = false;
+    P.bSelfReportBiasEnabled = false;
     S.DistortionProfiles.push_back(P);
     Recon::CommsProfile C;
     C.Name = "comms.default";
@@ -1054,4 +1065,327 @@ RA4_TEST(Recon, ObjectiveStateFunnelInventory)
             __FILE__, __LINE__);
     }
     RA4_EXPECT(Offenders.empty());
+}
+
+// --- M2: distortion pipeline unit tests (each stage in isolation, §8) ---------------
+
+namespace
+{
+
+Recon::ObserverState MakeObserver(int32_t MoralePM, int32_t CompetencePM, int32_t FatiguePM = 0,
+                                  int32_t SuppressionPM = 0, int32_t DistancePM = 500)
+{
+    Recon::ObserverState O;
+    O.Morale = Recon::PerMilleToFixed(MoralePM);
+    O.Competence = Recon::PerMilleToFixed(CompetencePM);
+    O.Fatigue = Recon::PerMilleToFixed(FatiguePM);
+    O.Suppression = Recon::PerMilleToFixed(SuppressionPM);
+    O.DistanceRatio = Recon::PerMilleToFixed(DistancePM);
+    return O;
+}
+
+Recon::DistortionProfile MakeProfile()
+{
+    Recon::DistortionProfile P;
+    P.Name = "profile.test";
+    return P;
+}
+
+} // namespace
+
+RA4_TEST(Recon, PerfectObserverReportsTruthBitwise)
+{
+    // Morale 1, competence 1, clarity 1 => the report equals the truth exactly
+    // (§8 acceptance). Every stage must be an identity for the perfect observer.
+    Recon::DistortionProfile P = MakeProfile();
+    Recon::ObserverState O = MakeObserver(1000, 1000, 0, 0, 0);
+    Random Rng(42);
+
+    const Fixed Clarity = Recon::StageClarity(O, P);
+    RA4_EXPECT(Clarity == Fixed::FromInt(1));
+
+    for (int32_t Count : {1, 7, 250})
+    {
+        RA4_EXPECT(Recon::StageCountDistortion(Count, O, P, Rng) == Count);
+    }
+
+    Recon::ConfusionMatrix Identity; // defaults to identity rows
+    for (int32_t C = 0; C < Recon::kObservedCategoryCount; ++C)
+    {
+        RA4_EXPECT(Recon::StageClassification(Recon::ObservedCategory(C), Clarity, Identity, P, Rng) ==
+                   Recon::ObservedCategory(C));
+    }
+
+    const Vec2 Offset = Recon::StagePositionError(Clarity, O, P, Rng);
+    RA4_EXPECT(Offset.X == Fixed::Zero() && Offset.Y == Fixed::Zero());
+
+    // Omission chance is (fatigue/2 + (1-clarity)/2) * max: zero for the rested
+    // perfect observer regardless of the roll.
+    for (int32_t I = 0; I < 100; ++I)
+    {
+        RA4_EXPECT(!Recon::StageOmission(Clarity, O, P, Rng));
+    }
+}
+
+RA4_TEST(Recon, FearInflatesCountsMonotonicallyAndNeverBelowTruthAlone)
+{
+    // §8: as morale falls, E[PerceivedCount] grows strictly; and with fear as
+    // the only distortion (perfect competence => zero symmetric noise) the
+    // perceived count NEVER drops below truth -- the asymmetry contract §4.3.2.
+    Recon::DistortionProfile P = MakeProfile();
+    const int32_t TrueCount = 100;
+    const int32_t Samples = 2000;
+
+    int64_t PrevMean = -1;
+    for (int32_t MoralePM : {1000, 750, 500, 250, 0})
+    {
+        Recon::ObserverState O = MakeObserver(MoralePM, 1000);
+        Random Rng(777); // same stream per morale level: paired comparison
+        int64_t Sum = 0;
+        int32_t Min = INT32_MAX;
+        for (int32_t I = 0; I < Samples; ++I)
+        {
+            const int32_t V = Recon::StageCountDistortion(TrueCount, O, P, Rng);
+            Sum += V;
+            Min = V < Min ? V : Min;
+        }
+        RA4_EXPECT(Min >= TrueCount); // fear only ever inflates
+        const int64_t Mean = Sum / Samples;
+        if (PrevMean >= 0)
+        {
+            RA4_EXPECT(Mean >= PrevMean); // monotone in falling morale
+        }
+        if (MoralePM == 0)
+        {
+            RA4_EXPECT(Mean > PrevMean); // strictly at the extreme
+        }
+        PrevMean = Mean;
+    }
+}
+
+RA4_TEST(Recon, IncompetenceNoiseIsSymmetricAroundTruth)
+{
+    // A calm but green observer errs both ways: mean stays near truth, spread
+    // grows as competence falls.
+    Recon::DistortionProfile P = MakeProfile();
+    Recon::ObserverState O = MakeObserver(1000, 0); // zero competence, full morale
+    Random Rng(1234);
+
+    const int32_t TrueCount = 100;
+    const int32_t Samples = 4000;
+    int64_t Sum = 0;
+    int32_t SawBelow = 0, SawAbove = 0;
+    for (int32_t I = 0; I < Samples; ++I)
+    {
+        const int32_t V = Recon::StageCountDistortion(TrueCount, O, P, Rng);
+        Sum += V;
+        SawBelow += V < TrueCount ? 1 : 0;
+        SawAbove += V > TrueCount ? 1 : 0;
+    }
+    const int64_t Mean = Sum / Samples;
+    RA4_EXPECT(Mean > TrueCount - 8 && Mean < TrueCount + 8); // centred (±8%)
+    RA4_EXPECT(SawBelow > Samples / 8 && SawAbove > Samples / 8); // genuinely two-sided
+}
+
+RA4_TEST(Recon, ConfusionMatrixHoldsAuthoredProbabilities)
+{
+    // §8: chi-squared check on 10^5 rolls against an authored row. At clarity 0
+    // every roll consults the matrix, so observed frequencies must match the
+    // authored per-milles within statistical noise.
+    Recon::DistortionProfile P = MakeProfile();
+    Recon::ConfusionMatrix M;
+    // Authored row for HeavyVehicle: 60% right, 25% light vehicle, 10% structure,
+    // 5% infantry -- the designer's "tanks get mistaken for trucks" row.
+    const int32_t Row = int32_t(Recon::ObservedCategory::HeavyVehicle);
+    for (int32_t C = 0; C < Recon::kObservedCategoryCount; ++C) { M.PerMille[Row][C] = 0; }
+    M.PerMille[Row][int32_t(Recon::ObservedCategory::HeavyVehicle)] = 600;
+    M.PerMille[Row][int32_t(Recon::ObservedCategory::LightVehicle)] = 250;
+    M.PerMille[Row][int32_t(Recon::ObservedCategory::Structure)] = 100;
+    M.PerMille[Row][int32_t(Recon::ObservedCategory::Infantry)] = 50;
+
+    Random Rng(31337);
+    const int32_t N = 100000;
+    int32_t Counts[Recon::kObservedCategoryCount] = {};
+    for (int32_t I = 0; I < N; ++I)
+    {
+        const Recon::ObservedCategory C = Recon::StageClassification(
+            Recon::ObservedCategory::HeavyVehicle, Fixed::Zero(), M, P, Rng);
+        Counts[int32_t(C)] += 1;
+    }
+
+    // Chi-squared statistic over the four non-zero cells. Critical value for
+    // 3 degrees of freedom at p=0.001 is 16.27; integer math scaled by 1000.
+    int64_t ChiSquaredMilli = 0;
+    for (int32_t C = 0; C < Recon::kObservedCategoryCount; ++C)
+    {
+        const int64_t Expected = int64_t(M.PerMille[Row][C]) * N / 1000;
+        if (Expected == 0)
+        {
+            RA4_EXPECT(Counts[C] == 0); // authored-zero cells must never fire
+            continue;
+        }
+        const int64_t Delta = Counts[C] - Expected;
+        ChiSquaredMilli += Delta * Delta * 1000 / Expected;
+    }
+    RA4_EXPECT(ChiSquaredMilli < 16270);
+}
+
+RA4_TEST(Recon, DistortionIsDeterministicPerSeed)
+{
+    // Same seed => bitwise identical outputs, across two independent rng streams
+    // (stands in for the two-process determinism requirement, which the lockstep
+    // suite covers at the SimWorld level).
+    Recon::DistortionProfile P = MakeProfile();
+    Recon::ObserverState O = MakeObserver(300, 400, 600, 500);
+    Random A(2026), B(2026);
+    for (int32_t I = 0; I < 500; ++I)
+    {
+        RA4_EXPECT(Recon::StageCountDistortion(50, O, P, A) == Recon::StageCountDistortion(50, O, P, B));
+        const Vec2 Pa = Recon::StagePositionError(Fixed::FromRatio(1, 2), O, P, A);
+        const Vec2 Pb = Recon::StagePositionError(Fixed::FromRatio(1, 2), O, P, B);
+        RA4_EXPECT(Pa.X == Pb.X && Pa.Y == Pb.Y);
+        RA4_EXPECT(Recon::StageOmission(Fixed::FromRatio(1, 4), O, P, A) ==
+                   Recon::StageOmission(Fixed::FromRatio(1, 4), O, P, B));
+    }
+}
+
+RA4_TEST(Recon, EveryStageHonoursItsDisableFlag)
+{
+    // §4.7: playtests must be able to kill exactly one stage. Disabled stages are
+    // identities even for the worst observer.
+    Recon::DistortionProfile P = MakeProfile();
+    P.bClarityEnabled = false;
+    P.bCountDistortionEnabled = false;
+    P.bClassificationErrorEnabled = false;
+    P.bPositionErrorEnabled = false;
+    P.bOmissionEnabled = false;
+
+    Recon::ObserverState Worst = MakeObserver(0, 0, 1000, 1000, 1000);
+    Random Rng(1);
+
+    RA4_EXPECT(Recon::StageClarity(Worst, P) == Fixed::FromInt(1));
+    RA4_EXPECT(Recon::StageCountDistortion(10, Worst, P, Rng) == 10);
+    Recon::ConfusionMatrix Chaos;
+    for (int32_t R = 0; R < Recon::kObservedCategoryCount; ++R)
+        for (int32_t C = 0; C < Recon::kObservedCategoryCount; ++C)
+            Chaos.PerMille[R][C] = (C == (R + 1) % Recon::kObservedCategoryCount) ? 1000 : 0;
+    RA4_EXPECT(Recon::StageClassification(Recon::ObservedCategory::Infantry, Fixed::Zero(), Chaos, P, Rng) ==
+               Recon::ObservedCategory::Infantry);
+    const Vec2 Off = Recon::StagePositionError(Fixed::Zero(), Worst, P, Rng);
+    RA4_EXPECT(Off.X == Fixed::Zero() && Off.Y == Fixed::Zero());
+    RA4_EXPECT(!Recon::StageOmission(Fixed::Zero(), Worst, P, Rng));
+}
+
+// --- M2: morale model unit tests ---------------------------------------------------
+
+RA4_TEST(Recon, MoraleFallsUnderFireAndRecoversInQuiet)
+{
+    Recon::MoraleTuning T; // defaults from config header
+    Recon::MoraleComp M;
+
+    Recon::MoraleApplyDamage(M, 100, T);
+    const Fixed AfterHit = M.Morale;
+    RA4_EXPECT(AfterHit < Fixed::FromInt(1));
+    RA4_EXPECT(M.Suppression > Fixed::Zero());
+    RA4_EXPECT(M.TicksUnderFire == 0);
+
+    // Under continuous stimuli fatigue climbs and no recovery happens.
+    for (int32_t I = 0; I < 30; ++I)
+    {
+        Recon::MoraleMarkUnderFire(M);
+        Recon::MoraleTickRecovery(M, T);
+    }
+    RA4_EXPECT(M.Fatigue > Fixed::Zero());
+    RA4_EXPECT(M.Morale == AfterHit); // no regen while in contact
+
+    // Quiet: after the out-of-fire delay, morale climbs and fatigue falls.
+    for (int32_t I = 0; I < T.OutOfFireDelayTicks + 200; ++I)
+    {
+        Recon::MoraleTickRecovery(M, T);
+    }
+    RA4_EXPECT(M.Morale > AfterHit);
+    RA4_EXPECT(M.Suppression == Fixed::Zero());
+}
+
+RA4_TEST(Recon, AllyDeathHurtsMoreThanAScratch)
+{
+    Recon::MoraleTuning T;
+    Recon::MoraleComp Scratched, Bereaved;
+    Recon::MoraleApplyDamage(Scratched, 10, T);   // a 10-point scratch
+    Recon::MoraleApplyAllyDeath(Bereaved, T);     // watching a neighbour die
+    RA4_EXPECT(Bereaved.Morale < Scratched.Morale);
+}
+
+RA4_TEST(Recon, SuperiorityDreadNeedsThresholdAndIsBounded)
+{
+    Recon::MoraleTuning T;
+    Recon::MoraleComp M;
+
+    // Below threshold (equal numbers): no effect.
+    Recon::MoraleApplySuperiority(M, 10, 10, T);
+    RA4_EXPECT(M.Morale == Fixed::FromInt(1));
+
+    // 3x outnumbered: erodes per tick, clamped at zero, and does NOT reset the
+    // quiet counter (dread is not a shellburst).
+    M.TicksUnderFire = -1;
+    for (int32_t I = 0; I < 5000; ++I)
+    {
+        Recon::MoraleApplySuperiority(M, 30, 10, T);
+    }
+    RA4_EXPECT(M.Morale == Fixed::Zero());
+    RA4_EXPECT(M.TicksUnderFire == -1);
+}
+
+RA4_TEST(Recon, ScaredPlayerSeesInflatedContacts)
+{
+    // Integration: a frightened force overstates what it sees. Two identical
+    // worlds, but in one the observing player's units have been shelled; its
+    // belief about enemy COUNT must (in expectation) exceed the calm one's.
+    // Uses the count interval on tracks after the full in-sim pipeline.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Enabled = MakeMinimalSettings(true);
+    Recon::DistortionProfile& Profile = Enabled.DistortionProfiles[0];
+    Profile.bCountDistortionEnabled = true; // the one stage under test
+    Profile.FearCountBiasMaxPerMille = 3000; // up to 4x at full fear
+    Profile.CompetenceNoiseMaxPerMille = 0;   // fear only
+    // Crater morale fast without killing the victim: many weak hits, huge
+    // per-hit penalty, no regen. A true count of 1 only inflates once the
+    // multiplier crosses 2, which needs morale near zero (FearLevel 0.5).
+    Enabled.Morale.DamageMoralePenaltyPerMille = 5000;
+    Enabled.Morale.MoraleRegenPerTickPerMille = 0;
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(9090), &Enabled);
+    World.SpawnUnit(Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    const EntityId Enemy =
+        World.SpawnUnit(Ids::AllRifleman, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+    (void)Enemy;
+
+    // Shell the conscript into the dirt (without killing it) to crater morale.
+    const EntityId Victim = World.MakeId(0);
+    for (int32_t I = 0; I < 15; ++I)
+    {
+        World.DebugDamage(Victim, 2); // 30 total: far below lethal
+        World.Tick(nullptr);
+    }
+    RA4_REQUIRE(World.IsAlive(Victim)); // a dead observer reports nothing
+
+    // Across a window of ticks, the scared observer's believed count must
+    // exceed truth at least once (fear is stochastic per report, bias is up).
+    bool SawInflation = false;
+    for (int32_t I = 0; I < 40 && !SawInflation; ++I)
+    {
+        World.Tick(nullptr);
+        std::vector<const Recon::PerceivedTrack*> Found;
+        World.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, Found);
+        for (const Recon::PerceivedTrack* Tr : Found)
+        {
+            if (Tr->BelievedCountMax > 1)
+            {
+                SawInflation = true;
+            }
+        }
+    }
+    RA4_EXPECT(SawInflation);
 }

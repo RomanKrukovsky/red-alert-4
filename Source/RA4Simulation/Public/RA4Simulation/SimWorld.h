@@ -19,6 +19,7 @@
 #include "RA4Core/Command.h"
 #include "RA4Core/Ids.h"
 #include "RA4Core/Random.h"
+#include "RA4Recon/MoraleModel.h"
 #include "RA4Recon/ReconSystem.h"
 #include "RA4Navigation/FlowField.h"
 #include "RA4Navigation/MNavRouter.h"
@@ -254,6 +255,10 @@ private:
     std::vector<ProjectileComp> Projectiles;
     std::vector<OrderQueue> Orders;
     std::vector<DirectControlComp> DirectControls;
+    // Psychological state per entity (RA4Recon reads it through the aggregate
+    // observer; only SystemRecon writes it). Sized with the other component
+    // vectors; meaningful only for units.
+    std::vector<Recon::MoraleComp> Morales;
 
     std::vector<uint32_t> FreeSlots;
     uint32_t HighWaterMark = 0;
