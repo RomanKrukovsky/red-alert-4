@@ -101,6 +101,22 @@ core.
 | **V-4** | Repath CityPark material references | Level load produces no `LoadErrors`. |
 | **V-5** | Replace blockout map art | Requires licensed tropical foliage, cliff meshes, and beach textures. Blocked on asset acquisition; needs a decision from the project owner. |
 
+## Unreliable Intelligence layer (ADR-0026, branch `feat/intel-unreliable`)
+
+M0 (skeleton) is done and verified: `RA4Intel` module, JSON config + validator,
+empty phase pipeline wired into `SimWorld` after fog of war, save v3 with v2
+migration, checksum coverage, 14 `Intel.*` tests (suite: 331 passed / 0 failed;
+UE 5.8 editor target: `Result: Succeeded`). Feature ships disabled by default.
+
+| Task ID | Task | Acceptance criteria |
+| :--- | :--- | :--- |
+| **I-M1** | Truthful pipeline (Observation→Report→Track, zero distortion/delay) | PS matches GT exactly while enabled; two-instance lockstep stays green; tests |
+| **I-M2** | Distortion stages 1–5 + unit tests each + two-map debug overlay | χ² on confusion matrix; fear monotonicity; per-stage disable flags honoured |
+| **I-M3** | Chain of command: hops, delays, aggregation, `bContested`, blackout freeze | Blackout keeps last-known data, error radius grows monotonically |
+| **I-M4** | Fabrication + self-report bias + guaranteed phantom refutation | Phantom always cleared within `MaxPhantomLifetimeTicks` by clean observation |
+| **I-M5** | Profiling vs budgets (≤0.8 ms/tick @ 5000 entities), post-match report | Numbers from real runs recorded in PERFORMANCE_BUDGETS.md |
+| **I-M6** | AI commander plays from belief (`GetIntel()`), not GT scans | Zero-cheat structural; AI strength delta measured before/after |
+
 ---
 
 ## Execution Guidelines for Agents

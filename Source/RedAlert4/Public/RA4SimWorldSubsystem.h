@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "RA4EntityActor.h"
-#include "RA4ArtMapping.h"
+#include "RA4Presentation/RA4ArtMapping.h"
 
 // Forward declare the C++ simulation classes without including their headers here
 // to minimize compile-time dependencies. Command.h is engine-free and cheap, and is
