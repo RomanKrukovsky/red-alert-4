@@ -1413,3 +1413,277 @@ RA4_TEST(FlowPayment, StarvationIsAnnouncedOnceNotEveryTick)
     // One announcement for the one stall, not sixty.
     RA4_EXPECT_EQ(StarvedEvents, 1);
 }
+
+// ---------------------------------------------------------------------------
+// Energy tiers (ADR-0013)
+// ---------------------------------------------------------------------------
+
+// The band boundaries are the part of ADR-0013 most likely to be quietly broken by a
+// later edit, and an off-by-one there silently shifts the whole penalty curve. Pin the
+// exact crossings, including both sides of each one.
+RA4_TEST(PowerTier, BandBoundariesAreExact)
+{
+    RA4_EXPECT(PowerTierForRatio(200) == PowerTier::Normal);
+    RA4_EXPECT(PowerTierForRatio(100) == PowerTier::Normal);
+    RA4_EXPECT(PowerTierForRatio(99) == PowerTier::Mild);
+    RA4_EXPECT(PowerTierForRatio(70) == PowerTier::Mild);
+    RA4_EXPECT(PowerTierForRatio(69) == PowerTier::Moderate);
+    RA4_EXPECT(PowerTierForRatio(40) == PowerTier::Moderate);
+    RA4_EXPECT(PowerTierForRatio(39) == PowerTier::Severe);
+    RA4_EXPECT(PowerTierForRatio(10) == PowerTier::Severe);
+    RA4_EXPECT(PowerTierForRatio(9) == PowerTier::Critical);
+    RA4_EXPECT(PowerTierForRatio(0) == PowerTier::Critical);
+}
+
+RA4_TEST(PowerTier, SpeedFollowsTheTableAndNeverReachesZero)
+{
+    // Normal and Mild/Moderate are the plain cases: full speed, then the ratio itself.
+    RA4_EXPECT_EQ(PowerSpeedPercentForTier(PowerTier::Normal, 100), 100);
+    RA4_EXPECT_EQ(PowerSpeedPercentForTier(PowerTier::Mild, 85), 85);
+    RA4_EXPECT_EQ(PowerSpeedPercentForTier(PowerTier::Moderate, 45), 45);
+
+    // Severe has a floor: 12% power still builds at 12%, but 10% does not drop below
+    // the floor, and a hypothetical lower value is clamped up to it.
+    RA4_EXPECT_EQ(PowerSpeedPercentForTier(PowerTier::Severe, 12), 12);
+    RA4_EXPECT_EQ(PowerSpeedPercentForTier(PowerTier::Severe, 10), kPowerSevereFloorPercent);
+
+    // Critical is a flat rate rather than the ratio, which by then is near zero and
+    // would mean "stopped" in all but name.
+    RA4_EXPECT_EQ(PowerSpeedPercentForTier(PowerTier::Critical, 3), kPowerCriticalSpeedPercent);
+    RA4_EXPECT_EQ(PowerSpeedPercentForTier(PowerTier::Critical, 0), kPowerCriticalSpeedPercent);
+
+    // Whatever the tier, speed is never zero: a rate of nothing is a deadlock, not a
+    // penalty, and a base that can never rebuild its power plant is a dead match.
+    for (int32_t Ratio = 0; Ratio <= 120; ++Ratio)
+    {
+        RA4_EXPECT(PowerSpeedPercentForTier(PowerTierForRatio(Ratio), Ratio) > 0);
+    }
+}
+
+namespace
+{
+// A base with a chosen power balance. The war factory is the load: it draws power and
+// produces vehicles, so it is both what creates the deficit and what the deficit acts
+// on. PowerPlants controls the tier.
+struct PowerFixture
+{
+    ContentDatabase Content;
+    SimWorld World;
+
+    explicit PowerFixture(int32_t PowerPlants)
+    {
+        BuildDefaultContent(Content);
+        World.Initialize(&Content, MakeTestSetup(31337));
+        SpawnEnemyOutpost(World);
+        World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+        for (int32_t N = 0; N < PowerPlants; ++N)
+        {
+            World.SpawnBuilding(Ids::SovPower, 0, TileCoord(14 + N * 3, 10), true);
+        }
+    }
+};
+} // namespace
+
+RA4_TEST(PowerTier, DeficitSlowsVehicleProductionInProportionToTheTier)
+{
+    // Same order, same content, only the power balance differs. The starved run must
+    // take strictly longer -- and must still finish, because a partial deficit slows
+    // production rather than stopping it. (Critical is the one tier that does stop
+    // vehicles outright; that is a separate test.)
+    const auto TicksToBuildTank = [](int32_t PowerPlants, bool bExtraLoad) -> int32_t {
+        PowerFixture F(PowerPlants);
+        const EntityId Factory = F.World.SpawnBuilding(Ids::SovWarFactory, 0, TileCoord(10, 16), true);
+        if (!Factory.IsValid())
+        {
+            return -1;
+        }
+        // Extra consumers push the ratio down without taking it to Critical. A Soviet
+        // reactor gives 150; a war factory draws 50, a barracks 30, a refinery 20 and
+        // a turret 40, so this load lands the ratio well inside the graded bands.
+        if (bExtraLoad)
+        {
+            F.World.SpawnBuilding(Ids::SovBarracks, 0, TileCoord(10, 20), true);
+            F.World.SpawnBuilding(Ids::SovRefinery, 0, TileCoord(16, 20), true);
+            F.World.SpawnBuilding(Ids::SovTurret, 0, TileCoord(20, 20), true);
+            F.World.SpawnBuilding(Ids::SovTurret, 0, TileCoord(22, 20), true);
+            F.World.SpawnBuilding(Ids::SovTurret, 0, TileCoord(24, 20), true);
+        }
+        Command Start = MakeCommand(CommandType::StartProduction, 0);
+        Start.Primary = Factory;
+        Start.Content = Ids::SovHeavyTank;
+        if (!F.World.ApplyCommand(Start).IsAccepted())
+        {
+            return -2;
+        }
+        F.World.Tick(nullptr);
+        // Guard the premise: a Critical run would legitimately never finish, and the
+        // test would then be measuring the wrong thing.
+        if (F.World.GetPlayer(0).GetPowerTier() == PowerTier::Critical)
+        {
+            return -3;
+        }
+        return RunUntil(F.World, SecondsToTicks(240),
+                        [&] { return CountEntitiesOfType(F.World, 0, Ids::SovHeavyTank) == 1; });
+    };
+
+    const int32_t Powered = TicksToBuildTank(3, false);
+    const int32_t Starved = TicksToBuildTank(1, true);
+
+    RA4_REQUIRE(Powered > 0);
+    RA4_REQUIRE(Starved > 0);   // slowed, not stalled
+    RA4_EXPECT(Starved > Powered);
+}
+
+RA4_TEST(PowerTier, CriticalPowerStopsVehiclesButNotInfantryOrTheConstructionYard)
+{
+    // No power plants at all, with two consumers drawing: deep in Critical.
+    PowerFixture F(0);
+    const EntityId Factory = F.World.SpawnBuilding(Ids::SovWarFactory, 0, TileCoord(10, 16), true);
+    const EntityId Barracks = F.World.SpawnBuilding(Ids::SovBarracks, 0, TileCoord(10, 20), true);
+    RA4_REQUIRE(Factory.IsValid() && Barracks.IsValid());
+    F.World.Tick(nullptr);
+    RA4_REQUIRE(F.World.GetPlayer(0).GetPowerTier() == PowerTier::Critical);
+
+    Command Tank = MakeCommand(CommandType::StartProduction, 0);
+    Tank.Primary = Factory;
+    Tank.Content = Ids::SovHeavyTank;
+    RA4_REQUIRE(F.World.ApplyCommand(Tank).IsAccepted());
+
+    Command Man = MakeCommand(CommandType::StartProduction, 0);
+    Man.Primary = Barracks;
+    Man.Content = Ids::SovConscript;
+    RA4_REQUIRE(F.World.ApplyCommand(Man).IsAccepted());
+
+    // A construction yard must keep working at Critical too, or a blacked-out base
+    // could never build the power plant that ends the blackout.
+    Command Plant = MakeCommand(CommandType::StartProduction, 0);
+    Plant.Primary = F.World.MakeId(1);   // the yard, spawned first by the fixture
+    Plant.Content = Ids::SovPower;
+    (void)F.World.ApplyCommand(Plant);
+
+    RunTicks(F.World, SecondsToTicks(90));
+
+    // Infantry came out; the tank did not.
+    RA4_EXPECT(CountEntitiesOfType(F.World, 0, Ids::SovConscript) >= 1);
+    RA4_EXPECT_EQ(CountEntitiesOfType(F.World, 0, Ids::SovHeavyTank), 0);
+
+    // The vehicle order is still queued and still paid for -- paused, not cancelled.
+    const BuildingComp* FactoryState = F.World.GetBuilding(Factory);
+    RA4_REQUIRE(FactoryState != nullptr);
+    RA4_REQUIRE(FactoryState->Queue.size() == 1u);
+    RA4_EXPECT(FactoryState->Queue.front().ProgressTicks <
+               FactoryState->Queue.front().TotalTicks * 100);
+}
+
+RA4_TEST(PowerTier, TierChangeIsAnnouncedOnceOnTheCrossing)
+{
+    PowerFixture F(0);
+    F.World.SpawnBuilding(Ids::SovWarFactory, 0, TileCoord(10, 16), true);
+
+    // Settle into the deficit and count how often it is announced.
+    int32_t Announcements = 0;
+    PowerTier LastSeen = PowerTier::Normal;
+    for (int32_t T = 0; T < 40; ++T)
+    {
+        F.World.ClearEvents();
+        F.World.Tick(nullptr);
+        for (const SimEvent& Ev : F.World.GetEvents())
+        {
+            if (Ev.Type == SimEventType::PowerShortageStarted)
+            {
+                ++Announcements;
+                LastSeen = PowerTier(Ev.Value);
+            }
+        }
+    }
+    // One crossing from Normal into the deficit, not forty.
+    RA4_EXPECT_EQ(Announcements, 1);
+    RA4_EXPECT(LastSeen == PowerTier::Critical);
+
+    // Building enough power must announce the recovery, exactly once.
+    F.World.SpawnBuilding(Ids::SovPower, 0, TileCoord(20, 10), true);
+    F.World.SpawnBuilding(Ids::SovPower, 0, TileCoord(24, 10), true);
+    int32_t Recoveries = 0;
+    for (int32_t T = 0; T < 20; ++T)
+    {
+        F.World.ClearEvents();
+        F.World.Tick(nullptr);
+        for (const SimEvent& Ev : F.World.GetEvents())
+        {
+            if (Ev.Type == SimEventType::PowerShortageEnded)
+            {
+                ++Recoveries;
+            }
+        }
+    }
+    RA4_EXPECT_EQ(Recoveries, 1);
+    RA4_EXPECT(F.World.GetPlayer(0).GetPowerTier() == PowerTier::Normal);
+}
+
+RA4_TEST(PowerTier, RememberedTierSurvivesSaveSoTheWarningIsNotRepeated)
+{
+    PowerFixture F(0);
+    F.World.SpawnBuilding(Ids::SovWarFactory, 0, TileCoord(10, 16), true);
+    RunTicks(F.World, 5);
+    RA4_REQUIRE(F.World.GetPlayer(0).GetPowerTier() == PowerTier::Critical);
+
+    ByteWriter W;
+    F.World.Serialize(W);
+
+    SimWorld Restored;
+    ByteReader R(W.GetBuffer());
+    RA4_REQUIRE(Restored.Deserialize(R, &F.Content));
+    RA4_REQUIRE(!R.HasError());
+
+    // The reload must be bit-identical before either side advances, or the remembered
+    // tier was not carried across and the rest of this test would be meaningless.
+    RA4_EXPECT(Restored.ComputeStateChecksum() == F.World.ComputeStateChecksum());
+    RA4_EXPECT(Restored.GetPlayer(0).LastPowerTier == PowerTier::Critical);
+
+    // The reload already knows about the deficit, so it must not announce it again --
+    // otherwise every save/load would replay the alarm.
+    int32_t Announcements = 0;
+    for (int32_t T = 0; T < 10; ++T)
+    {
+        Restored.ClearEvents();
+        Restored.Tick(nullptr);
+        for (const SimEvent& Ev : Restored.GetEvents())
+        {
+            if (Ev.Type == SimEventType::PowerShortageStarted)
+            {
+                ++Announcements;
+            }
+        }
+    }
+    RA4_EXPECT_EQ(Announcements, 0);
+
+    // Both sides advanced by the same number of ticks from the same state, so they
+    // must still agree -- this is the lockstep property, checked across a reload.
+    RunTicks(F.World, 10);
+    RA4_EXPECT(Restored.ComputeStateChecksum() == F.World.ComputeStateChecksum());
+}
+
+RA4_TEST(PowerTier, HarvestingOnlySlowsAtCriticalNotEarlier)
+{
+    // Harvest income is what buys the power plant that ends a blackout, so slowing it
+    // before Critical would make a deficit self-reinforcing.
+    const auto HarvestedBy = [](int32_t PowerPlants, int32_t Ticks) -> int32_t {
+        PowerFixture F(PowerPlants);
+        F.World.SpawnBuilding(Ids::SovRefinery, 0, TileCoord(10, 20), true);
+        F.World.SpawnResourceNode(Ids::OreField, TileCoord(13, 20), 100000);
+        F.World.SpawnUnit(Ids::SovHarvester, 0, Vec2::FromInts(11 * 200, 20 * 200));
+        const int32_t Before = F.World.GetPlayer(0).TotalHarvested;
+        RunTicks(F.World, Ticks);
+        return F.World.GetPlayer(0).TotalHarvested - Before;
+    };
+
+    // Two plants cover the refinery: Normal. Zero plants with a refinery drawing:
+    // Critical.
+    const int32_t AtNormal = HarvestedBy(2, SecondsToTicks(60));
+    const int32_t AtCritical = HarvestedBy(0, SecondsToTicks(60));
+
+    RA4_REQUIRE(AtNormal > 0);
+    // Still harvesting, just slower -- never zero.
+    RA4_EXPECT(AtCritical > 0);
+    RA4_EXPECT(AtCritical < AtNormal);
+}

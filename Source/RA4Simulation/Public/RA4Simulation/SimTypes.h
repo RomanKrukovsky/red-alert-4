@@ -337,6 +337,63 @@ struct DirectControlComp
 
 // --- Player ---------------------------------------------------------------
 
+// --- Energy (ADR-0013) ----------------------------------------------------
+
+// Power is not a stored resource but a ratio recomputed every tick, and the ratio
+// alone is a poor thing to scatter comparisons against: "< 40" appearing in six
+// systems is six chances to write a different bound. Naming the bands once means a
+// balance change moves one table, and the UI, the AI and the tests all agree on
+// where "Moderate" begins.
+enum class PowerTier : uint8_t
+{
+    Normal = 0,    // >= 100%: no penalties
+    Mild,          // 70-99%:  build and production speed scale with the ratio
+    Moderate,      // 40-69%:  radar off, repair halved
+    Severe,        // 10-39%:  repair off, high-tech paused, defences slowed
+    Critical,      // < 10%:   only barracks and harvesters, at half speed
+};
+
+// Band boundaries, expressed as the lowest ratio still inside each band.
+constexpr int32_t kPowerTierMildMinPercent = 70;
+constexpr int32_t kPowerTierModerateMinPercent = 40;
+constexpr int32_t kPowerTierSevereMinPercent = 10;
+
+inline constexpr PowerTier PowerTierForRatio(int32_t RatioPercent)
+{
+    if (RatioPercent >= 100) { return PowerTier::Normal; }
+    if (RatioPercent >= kPowerTierMildMinPercent) { return PowerTier::Mild; }
+    if (RatioPercent >= kPowerTierModerateMinPercent) { return PowerTier::Moderate; }
+    if (RatioPercent >= kPowerTierSevereMinPercent) { return PowerTier::Severe; }
+    return PowerTier::Critical;
+}
+
+// Speed floor inside Severe. A deficit should hurt, but a base that can never
+// rebuild its power plant is a dead match rather than a hard one.
+constexpr int32_t kPowerSevereFloorPercent = 10;
+// At Critical the few things still running do so at a flat rate rather than at the
+// ratio, which by then is near zero and would mean "stopped" in all but name.
+constexpr int32_t kPowerCriticalSpeedPercent = 50;
+
+// Speed multiplier (percent) that construction and production run at in a tier.
+// Critical returns the flat rate; whether a given producer is allowed to run at all
+// at Critical is a separate question the caller answers, because it depends on what
+// the building is.
+inline constexpr int32_t PowerSpeedPercentForTier(PowerTier Tier, int32_t RatioPercent)
+{
+    switch (Tier)
+    {
+        case PowerTier::Normal:   return 100;
+        case PowerTier::Mild:     return RatioPercent;
+        case PowerTier::Moderate: return RatioPercent;
+        case PowerTier::Severe:   return RatioPercent > kPowerSevereFloorPercent
+                                             ? RatioPercent : kPowerSevereFloorPercent;
+        case PowerTier::Critical: return kPowerCriticalSpeedPercent;
+    }
+    return 100;
+}
+
+const char* ToString(PowerTier Tier);
+
 struct PlayerState
 {
     bool bActive = false;
@@ -364,12 +421,23 @@ struct PlayerState
     // losing a war factory immediately removes access to tanks with no bookkeeping.
     std::vector<ContentId> CompletedBuildingTypes;
 
+    // ADR-0013: the tier as of the end of last tick. Unlike the tier itself this is
+    // NOT derivable -- it is the memory that makes the warning edge-triggered, so it
+    // is serialized and hashed. Without it a reloaded save would either re-announce
+    // a deficit the player already knows about or stay silent about one they do not.
+    PowerTier LastPowerTier = PowerTier::Normal;
+
     int32_t GetPowerRatioPercent() const
     {
         if (PowerConsumed <= 0) { return 100; }
         if (PowerProduced >= PowerConsumed) { return 100; }
         return int32_t((int64_t(PowerProduced) * 100) / PowerConsumed);
     }
+
+    // ADR-0013. Derived from the ratio every time it is asked for rather than stored,
+    // so it cannot go stale against PowerProduced/PowerConsumed and does not need to
+    // be serialized or hashed.
+    PowerTier GetPowerTier() const { return PowerTierForRatio(GetPowerRatioPercent()); }
 };
 
 // --- Events ---------------------------------------------------------------
@@ -399,6 +467,10 @@ enum class SimEventType : uint8_t
     MatchEnded,
     CommandRejected,
     EntityVeterancyPromoted,
+    // ADR-0013: emitted when a player's power tier changes, with SimEvent::Value
+    // carrying the new PowerTier. Started means the tier got worse, Ended means it
+    // improved; both are edge-triggered on the crossing, so a base sitting at 45%
+    // power produces one event, not one per tick.
     PowerShortageStarted,
     PowerShortageEnded,
     FactionResourceChanged,

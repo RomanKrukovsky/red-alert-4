@@ -35,15 +35,11 @@ constexpr int32_t kTurretAlignTolerance = 64;
 // How close a harvester must get to the *edge* of its target to dock.
 constexpr int64_t kDockDistanceUnits = 260;
 
-// Under-powered bases still make some progress; a full stall makes a lost power
-// plant unrecoverable, which is not the intent of the mechanic.
-constexpr int32_t kMinPowerRatioPercent = 20;
-
-// Ratio at or above which an EnergyThrottled production item resumes funding. This
-// is deliberately NOT kMinPowerRatioPercent: that is a speed floor applied to
-// ordinary production, whereas this is the recovery threshold for the high-tech and
-// superweapon categories ADR-0013 pauses outright. Reusing the floor here would let a
-// throttled item resume at 20% power, undoing the pause ADR-0013 had just applied.
+// Ratio at or above which an EnergyThrottled production item resumes funding. This is
+// deliberately not the Severe band's speed floor: that scales ordinary production,
+// whereas this is the recovery threshold for the high-tech and superweapon categories
+// ADR-0013 pauses outright. Reusing the floor would let a throttled item resume at 10%
+// power, undoing the pause ADR-0013 had just applied.
 constexpr int32_t kEnergyThrottleRecoverPercent = 50;
 
 // Docking is measured to the target's centre, but a building occupies tiles that no
@@ -433,6 +429,66 @@ EntityId SimWorld::SpawnResourceNode(ContentId Def, const TileCoord& Tile, int32
     Map.SetTileFlag(Tile.X, Tile.Y, Tile_Resource, true);
 
     return Id;
+}
+
+// ADR-0013. The single place that turns a power ratio into a speed, so that the
+// construction and production systems cannot disagree about what "Moderate" costs.
+const char* ToString(PowerTier Tier)
+{
+    switch (Tier)
+    {
+        case PowerTier::Normal:   return "Normal";
+        case PowerTier::Mild:     return "Mild";
+        case PowerTier::Moderate: return "Moderate";
+        case PowerTier::Severe:   return "Severe";
+        case PowerTier::Critical: return "Critical";
+    }
+    return "Unknown";
+}
+
+// ADR-0013. The single place that turns a power ratio into a speed, so that the
+// construction and production systems cannot disagree about what "Moderate" costs.
+int32_t SimWorld::PowerSpeedPercent(PlayerId Owner) const
+{
+    if (Owner >= kMaxPlayers)
+    {
+        return 100;
+    }
+    const PlayerState& P = Players[Owner];
+    const int32_t Ratio = P.GetPowerRatioPercent();
+    return PowerSpeedPercentForTier(PowerTierForRatio(Ratio), Ratio);
+}
+
+// At Critical the base is effectively dark: only infantry production and harvesting
+// continue. Membership is decided from what the building can actually produce rather
+// than from its name, so a faction that calls its barracks something else, or a mod
+// that adds a second infantry building, needs no code change here.
+bool SimWorld::ProducerRunsAtCriticalPower(const EntityDef& Def) const
+{
+    if (Content == nullptr)
+    {
+        return false;
+    }
+    // A construction yard is included so a blacked-out base can still queue the power
+    // plant that ends the blackout. Excluding it would be a deadlock: no power means
+    // no yard output, and no yard output means no power.
+    if (Def.Building.bIsConstructionYard)
+    {
+        return true;
+    }
+    for (const EntityDef& Product : Content->GetEntities())
+    {
+        if (Product.Production.Category != ProductionCategory::Infantry)
+        {
+            continue;
+        }
+        if (std::find(Product.Production.ProducedBy.begin(), Product.Production.ProducedBy.end(),
+                      Def.Id) != Product.Production.ProducedBy.end())
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 void SimWorld::OccupyTiles(const BuildingComp& B, bool bOccupy)
@@ -1724,6 +1780,35 @@ void SimWorld::SystemPower()
             P.FactionResource = std::min(100, P.FactionResource + 1);
         }
     }
+
+    // ADR-0013: announce tier crossings. Edge-triggered, because a base parked at 45%
+    // power would otherwise emit an event every tick and bury the alert feed -- the
+    // same reason ProductionStarved is edge-triggered.
+    for (PlayerId Owner = 0; Owner < kMaxPlayers; ++Owner)
+    {
+        PlayerState& P = Players[Owner];
+        if (!P.bActive)
+        {
+            continue;
+        }
+        const PowerTier Tier = P.GetPowerTier();
+        if (Tier == P.LastPowerTier)
+        {
+            continue;
+        }
+
+        SimEvent Ev;
+        // "Started" reads as "the shortage got worse", so the direction is decided by
+        // which way the tier moved, not by whether a shortage exists at all.
+        Ev.Type = Tier > P.LastPowerTier ? SimEventType::PowerShortageStarted
+                                         : SimEventType::PowerShortageEnded;
+        Ev.Tick = CurrentTick;
+        Ev.Player = Owner;
+        Ev.Value = int32_t(Tier);
+        EmitEvent(Ev);
+
+        P.LastPowerTier = Tier;
+    }
 }
 
 // ADR-0012. Draws credits for queued production a slice at a time instead of
@@ -1898,15 +1983,17 @@ void SimWorld::SystemConstruction()
         }
 
         const PlayerId Owner = Core[I].Owner;
-        const int32_t Ratio = Owner < kMaxPlayers
-                                  ? std::max(kMinPowerRatioPercent, Players[Owner].GetPowerRatioPercent())
-                                  : 100;
-
         const EntityDef* D = Content->FindEntity(Core[I].Def);
         if (D == nullptr)
         {
             continue;
         }
+
+        // ADR-0013 tier table replaces the old flat floor. A building already under
+        // construction keeps making progress at every tier, including Critical --
+        // freezing it outright would strand a half-built power plant and make a
+        // blackout unrecoverable, which is the one outcome the tiers must not produce.
+        const int32_t Ratio = Owner < kMaxPlayers ? PowerSpeedPercent(Owner) : 100;
 
         const int64_t Total = std::max<int64_t>(1, int64_t(B.ConstructionTotalTicks) * kProgressScale);
         const int64_t PrevProgress = std::min<int64_t>(B.ConstructionProgressTicks, Total);
@@ -1959,9 +2046,23 @@ void SimWorld::SystemProduction()
         }
 
         const PlayerId Owner = Core[I].Owner;
-        const int32_t Ratio = Owner < kMaxPlayers
-                                  ? std::max(kMinPowerRatioPercent, Players[Owner].GetPowerRatioPercent())
-                                  : 100;
+        // ADR-0013: speed follows the tier table. Whether this producer is allowed to
+        // run at all at Critical is decided below -- it depends on what the building
+        // is, not just on the ratio.
+        const int32_t Ratio = Owner < kMaxPlayers ? PowerSpeedPercent(Owner) : 100;
+
+        // At Critical only infantry production and the construction yard keep going.
+        // The yard is deliberately included: without it a blacked-out base could not
+        // build the power plant that ends the blackout, which is a deadlock rather
+        // than a penalty.
+        if (Owner < kMaxPlayers && Players[Owner].GetPowerTier() == PowerTier::Critical)
+        {
+            const EntityDef* ProducerDef = Content->FindEntity(Core[I].Def);
+            if (ProducerDef == nullptr || !ProducerRunsAtCriticalPower(*ProducerDef))
+            {
+                continue;
+            }
+        }
 
         // Only the head of the queue advances; parallel queues are per building,
         // matching the original games.
@@ -2214,7 +2315,18 @@ void SimWorld::SystemHarvesters()
                 }
                 ResourceNodeComp& Node = ResourceNodes[H.AssignedNode.Index];
                 const int32_t Space = D->Unit.CargoCapacity - H.Cargo;
-                const int32_t Take = std::min({D->Unit.HarvestPerTick, Space, Node.Amount});
+                // ADR-0013: harvesting is the last thing a deficit touches -- it runs
+                // at full rate until Critical, then at half. Slowing it earlier would
+                // make a blackout self-reinforcing, since income is what buys the
+                // power plant that ends it.
+                int32_t PerTick = D->Unit.HarvestPerTick;
+                if (Owner < kMaxPlayers && Players[Owner].GetPowerTier() == PowerTier::Critical)
+                {
+                    // Never round down to zero: a rate of nothing is a stall, not a
+                    // penalty, and it would deadlock the economy.
+                    PerTick = std::max(1, (PerTick * kPowerCriticalSpeedPercent) / 100);
+                }
+                const int32_t Take = std::min({PerTick, Space, Node.Amount});
                 Node.Amount -= Take;
                 H.Cargo += Take;
 
@@ -3376,6 +3488,10 @@ uint64_t SimWorld::ComputeStateChecksum() const
         H.FeedInt32(P.PowerProduced);
         H.FeedInt32(P.PowerConsumed);
         H.FeedInt32(P.TotalHarvested);
+        // ADR-0013: the remembered tier decides whether a warning fires, so a peer
+        // that disagrees about it has genuinely diverged. The current tier is derived
+        // from PowerProduced/PowerConsumed above and is deliberately not fed.
+        H.FeedUInt8(uint8_t(P.LastPowerTier));
         for (const ContentId& C : P.CompletedBuildingTypes)
         {
             H.FeedUInt32(C.Value);
@@ -3469,12 +3585,14 @@ constexpr uint32_t kSimSaveMagic = 0x52413453u; // "RA4S"
 //       selling forever and then silently forfeited its destruction refund; the intent
 //       now lives in the non-serialized PendingSales list)
 //   v4: the union of the above
+//   v5: PlayerState::LastPowerTier (ADR-0013 edge-triggered deficit warning)
 //
 // Older saves are still readable; missing fields are reconstructed on load and
 // retired fields are read and discarded to keep the byte stream aligned.
-constexpr uint32_t kSimSaveVersion = 4;
+constexpr uint32_t kSimSaveVersion = 5;
 constexpr uint32_t kSimSaveVersionFlowPayment = 4;
 constexpr uint32_t kSimSaveVersionNoSellingFlag = 4;
+constexpr uint32_t kSimSaveVersionPowerTier = 5;
 // The intel layer landed in v3 on main and is still present in v4, so its gate is a
 // minimum rather than an equality: named here so the two read sites do not carry a
 // bare 3 that nobody can tie back to a format change.
@@ -3518,6 +3636,9 @@ void SimWorld::Serialize(ByteWriter& W) const
         W.WriteInt32(S.UnitsLost);
         W.WriteInt32(S.BuildingsLost);
         W.WriteInt32(S.TotalHarvested);
+        // ADR-0013: the tier itself is derived, but the *remembered* tier is what makes
+        // the deficit warning edge-triggered, so it has to survive a reload.
+        W.WriteUInt8(static_cast<uint8_t>(S.LastPowerTier));
         W.WriteUInt32(static_cast<uint32_t>(S.CompletedBuildingTypes.size()));
         for (const ContentId& C : S.CompletedBuildingTypes)
         {
@@ -3692,6 +3813,17 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
         S.UnitsLost = R.ReadInt32();
         S.BuildingsLost = R.ReadInt32();
         S.TotalHarvested = R.ReadInt32();
+        if (Version >= kSimSaveVersionPowerTier)
+        {
+            S.LastPowerTier = static_cast<PowerTier>(R.ReadUInt8());
+        }
+        else
+        {
+            // Older saves have no memory of the tier. Deriving it from the power
+            // figures just read is better than defaulting to Normal: that would
+            // re-announce an ongoing deficit the player already knows about.
+            S.LastPowerTier = S.GetPowerTier();
+        }
         const uint32_t TechCount = R.ReadUInt32();
         S.CompletedBuildingTypes.resize(TechCount);
         for (uint32_t T = 0; T < TechCount; ++T)

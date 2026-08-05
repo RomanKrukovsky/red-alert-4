@@ -195,6 +195,13 @@ private:
                            int32_t FalloffPercent, EntityId Source, PlayerId SourcePlayer);
 
     void OccupyTiles(const BuildingComp& B, bool bOccupy);
+    // ADR-0013 tier speed for a player, as a percentage. One place decides it so the
+    // construction and production systems cannot drift apart.
+    int32_t PowerSpeedPercent(PlayerId Owner) const;
+    // At Critical only barracks-class producers and harvesters keep working. Which
+    // buildings qualify is a content question (what can this thing produce), not a
+    // hardcoded name list, so it is answered here from the definition.
+    bool ProducerRunsAtCriticalPower(const EntityDef& Def) const;
     void BuildNavigationGrid();
     uint8_t GetNavigationPassability(const TileCoord& Tile) const;
     Nav::NavQuery MakeNavigationQuery(const EntityDef& Def) const;
