@@ -2720,3 +2720,57 @@ RA4_TEST(AILeague, SwappedFactionMatchIsStillDeterministic)
         999ULL, 20 * 60 * 5, /*bSwapFactions*/ false);
     RA4_EXPECT(A.FinalChecksum != C.FinalChecksum);
 }
+
+
+RA4_TEST(AILeague, CombatTelemetryIsRecordedAndConsistent)
+{
+    // A decisive Rush-vs-Economic match must show real combat in the record.
+    const LeagueMatchRecord R = AILeague::PlayMatch(
+        AIProfile::Rush, AIProfile::Economic, AIDifficulty::Normal,
+        7777ULL, 20 * 60 * 10);
+
+    if (R.Winner == 0 || R.Winner == 1)
+    {
+        // Somebody dealt damage and somebody died, or there was no way to win.
+        RA4_EXPECT(R.DamageDealt[0] + R.DamageDealt[1] > 0);
+        RA4_EXPECT(R.KillsByPlayer[0] + R.KillsByPlayer[1] > 0);
+        // First blood exists and belongs to a real player.
+        RA4_EXPECT(R.FirstBloodTick > 0);
+        RA4_EXPECT(R.FirstBloodBy == 0 || R.FirstBloodBy == 1);
+        // Building damage is a subset of total damage, per player.
+        RA4_EXPECT(R.DamageToBuildings[0] <= R.DamageDealt[0]);
+        RA4_EXPECT(R.DamageToBuildings[1] <= R.DamageDealt[1]);
+    }
+}
+
+RA4_TEST(AILeague, CombatTelemetryIsDeterministic)
+{
+    const LeagueMatchRecord A = AILeague::PlayMatch(
+        AIProfile::Aggressive, AIProfile::Turtle, AIDifficulty::Normal,
+        31337ULL, 20 * 60 * 6);
+    const LeagueMatchRecord B = AILeague::PlayMatch(
+        AIProfile::Aggressive, AIProfile::Turtle, AIDifficulty::Normal,
+        31337ULL, 20 * 60 * 6);
+    RA4_EXPECT_EQ(A.DamageDealt[0], B.DamageDealt[0]);
+    RA4_EXPECT_EQ(A.DamageDealt[1], B.DamageDealt[1]);
+    RA4_EXPECT_EQ(A.KillsByPlayer[0], B.KillsByPlayer[0]);
+    RA4_EXPECT_EQ(A.KillsByPlayer[1], B.KillsByPlayer[1]);
+    RA4_EXPECT_EQ(A.FirstBloodTick, B.FirstBloodTick);
+    RA4_EXPECT_EQ(A.HarvestersLost[0], B.HarvestersLost[0]);
+    RA4_EXPECT_EQ(A.DefencesLost[1], B.DefencesLost[1]);
+}
+
+RA4_TEST(AILeague, PeacefulTimeoutRecordsNoCombat)
+{
+    // Ten ticks is not enough time for anyone to reach the enemy: the telemetry
+    // must be all zeros, proving it does not hallucinate combat from economy
+    // events like harvesting or construction.
+    const LeagueMatchRecord R = AILeague::PlayMatch(
+        AIProfile::Economic, AIProfile::Economic, AIDifficulty::Normal,
+        5ULL, /*MaxTicks*/ 10);
+    RA4_EXPECT_EQ(int64_t(0), R.DamageDealt[0]);
+    RA4_EXPECT_EQ(int64_t(0), R.DamageDealt[1]);
+    RA4_EXPECT_EQ(0, R.KillsByPlayer[0] + R.KillsByPlayer[1]);
+    RA4_EXPECT_EQ(uint32_t(0), R.FirstBloodTick);
+    RA4_EXPECT(R.FirstBloodBy == kInvalidPlayer);
+}

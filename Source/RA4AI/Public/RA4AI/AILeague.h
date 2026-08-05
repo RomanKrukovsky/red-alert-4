@@ -61,6 +61,18 @@ struct LeagueMatchRecord
     int32_t BuildingsBuilt[2] = {0, 0};
     int32_t BuildingsLost[2] = {0, 0};
 
+    // Combat telemetry, accumulated from SimEvents during the match. This is what
+    // turns "profile X loses" into "profile X's damage all lands on Building armor"
+    // -- the difference between a tuning lead and a config guess. Read-only over
+    // the event stream: the simulation is not modified to produce it.
+    int64_t DamageDealt[2] = {0, 0};          // sum of DamageApplied.Value by attacker
+    int64_t DamageToBuildings[2] = {0, 0};    // portion of the above vs buildings
+    int32_t KillsByPlayer[2] = {0, 0};        // enemy entities destroyed
+    int32_t HarvestersLost[2] = {0, 0};       // economy kills suffered
+    int32_t DefencesLost[2] = {0, 0};         // turrets etc. lost
+    uint32_t FirstBloodTick = 0;              // first combat damage; 0 = never
+    PlayerId FirstBloodBy = kInvalidPlayer;   // who drew it
+
     // Final state checksum: two records with equal seeds and setups must match
     // bit-for-bit, so a league run doubles as a mass determinism test.
     uint64_t FinalChecksum = 0;
