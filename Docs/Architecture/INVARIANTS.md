@@ -1,6 +1,6 @@
 # Architectural Invariants (`INVARIANTS.md`)
 
-**Document Version**: 3.0  
+**Document Version**: 3.1 (corrected against Source/RA4Core/SimConfig.h — prior version claimed 60Hz/16.66ms and FixedPoint.h, contradicting the actual code)  
 **Project Title**: *Iron Resonance: Command of Tomorrow*  
 
 ---
@@ -11,16 +11,16 @@
    - `RA4Simulation` and `RA4Core` must contain zero UObjects, zero Unreal Engine headers, and zero direct engine API calls.
 
 2. **INVARIANT 2: Deterministic Fixed-Point Arithmetic**
-   - All simulation calculations (positions, velocities, hitboxes, ranges) MUST use `FixedPoint.h`. Usage of `float` or `double` in simulation code is prohibited.
+   - All simulation calculations (positions, velocities, hitboxes, ranges) MUST use `RA4Core/Fixed.h` (`RA4::Fixed`). Usage of `float` or `double` in simulation code is prohibited.
 
 3. **INVARIANT 3: One-Way State Access**
    - The Presentation layer (`RA4PresentationSubsystem`) reads `SimWorld` snapshots to update visual actors. Visual actors MUST NEVER mutate `SimWorld` memory directly.
 
-4. **INVARIANT 4: 60Hz Lockstep Execution**
-   - All simulation state updates occur strictly within fixed 16.66ms tick steps. No logic may execute outside `CommandBus::DispatchTick`.
+4. **INVARIANT 4: Fixed-Tick Lockstep Execution (20 Hz)**
+   - All simulation state updates occur strictly within fixed 50 ms tick steps (`kTicksPerSecond = 20`, `SimConfig.h`). The presentation layer may render at 60+ FPS by interpolation; render rate never changes simulation results. No logic may execute outside `CommandBus::DispatchTick`.
 
 5. **INVARIANT 5: 64-Bit State Hash Validation**
-   - State hashes are calculated every 10 ticks and validated across all peers in lockstep frames. Divergence triggers immediate desync abort.
+   - State hashes are calculated every 20 ticks (`kChecksumIntervalTicks`, `SimConfig.h`) and validated across all peers in lockstep frames. Divergence triggers immediate desync abort.
 
 6. **INVARIANT 6: Belief State Is Simulation State** (ADR-0026)
    - Each player's perceived world (`RA4Intel`) is deterministic simulation state: fixed-point only, updated only inside the tick, serialized with saves and fed into the state hash. Belief divergence between peers is a desync.
