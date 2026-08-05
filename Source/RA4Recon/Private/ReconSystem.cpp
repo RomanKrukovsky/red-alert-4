@@ -1,17 +1,17 @@
 // Copyright (c) Red Alert 4 project.
-#include "RA4Intel/IntelSystem.h"
+#include "RA4Recon/ReconSystem.h"
 
 #include "RA4Core/ByteStream.h"
 #include "RA4Core/Checksum.h"
 
 namespace RA4
 {
-namespace Intel
+namespace Recon
 {
 
 namespace
 {
-constexpr uint32_t kIntelSystemVersion = 2; // v2: association tables are state (M1)
+constexpr uint32_t kReconSystemVersion = 2; // v2: association tables are state (M1)
 } // namespace
 
 const char* PhaseName(Phase P)
@@ -29,7 +29,7 @@ const char* PhaseName(Phase P)
     }
 }
 
-void IntelSystem::Initialize(const IntelSettings* InSettings, int32_t MapWidthTiles, int32_t MapHeightTiles)
+void ReconSystem::Initialize(const ReconSettings* InSettings, int32_t MapWidthTiles, int32_t MapHeightTiles)
 {
     Reset();
     Settings = InSettings;
@@ -47,7 +47,7 @@ void IntelSystem::Initialize(const IntelSettings* InSettings, int32_t MapWidthTi
     }
 }
 
-void IntelSystem::Reset()
+void ReconSystem::Reset()
 {
     Settings = nullptr;
     for (int32_t P = 0; P < kMaxPlayers; ++P)
@@ -66,7 +66,7 @@ void IntelSystem::Reset()
     Stats = PhaseStats{};
 }
 
-void IntelSystem::Tick(TickIndex CurrentTick, const ObservationInput& Input)
+void ReconSystem::Tick(TickIndex CurrentTick, const ObservationInput& Input)
 {
     if (!IsEnabled())
     {
@@ -88,7 +88,7 @@ void IntelSystem::Tick(TickIndex CurrentTick, const ObservationInput& Input)
     Stats.TicksMeasured += 1;
 }
 
-const PerceivedWorld& IntelSystem::GetPerceivedWorld(PlayerId PlayerIdx) const
+const PerceivedWorld& ReconSystem::GetPerceivedWorld(PlayerId PlayerIdx) const
 {
     // A caller asking for belief state while the feature is disabled is a logic
     // error upstream; returning an empty static keeps the read surface total.
@@ -108,7 +108,7 @@ const PerceivedWorld& IntelSystem::GetPerceivedWorld(PlayerId PlayerIdx) const
 // zero delay -- the baseline every distortion milestone is measured against,
 // and the proof that the architecture moves data end to end at all.
 
-void IntelSystem::EnsureAssociationCapacity(uint32_t NewEntityCapacity)
+void ReconSystem::EnsureAssociationCapacity(uint32_t NewEntityCapacity)
 {
     if (NewEntityCapacity <= EntityCapacity)
     {
@@ -125,12 +125,12 @@ void IntelSystem::EnsureAssociationCapacity(uint32_t NewEntityCapacity)
     }
 }
 
-void IntelSystem::PhaseMoraleUpdate(TickIndex)
+void ReconSystem::PhaseMoraleUpdate(TickIndex)
 {
     // M2 territory (fear/fatigue inputs to distortion). Deliberately empty.
 }
 
-void IntelSystem::PhaseObservation(TickIndex CurrentTick, const ObservationInput& Input)
+void ReconSystem::PhaseObservation(TickIndex CurrentTick, const ObservationInput& Input)
 {
     // Truthful observation: every entity the player's fog currently sees becomes
     // one observation with perfect clarity. Distortion (M2) will transform these
@@ -159,12 +159,12 @@ void IntelSystem::PhaseObservation(TickIndex CurrentTick, const ObservationInput
     }
 }
 
-void IntelSystem::PhaseDistortion(TickIndex)
+void ReconSystem::PhaseDistortion(TickIndex)
 {
     // M2 territory. In M1 observations pass through untouched.
 }
 
-void IntelSystem::PhaseReportEmission(TickIndex CurrentTick)
+void ReconSystem::PhaseReportEmission(TickIndex CurrentTick)
 {
     // M1: one report per player per tick, arriving instantly. M3 replaces the
     // instant arrival with per-reporter intervals and chain-of-command delays,
@@ -175,7 +175,7 @@ void IntelSystem::PhaseReportEmission(TickIndex CurrentTick)
         {
             continue;
         }
-        IntelReport Report;
+        ReconReport Report;
         Report.ReportId = NextReportId;
         NextReportId += 1;
         Report.OwnerPlayer = PlayerId(P);
@@ -188,13 +188,13 @@ void IntelSystem::PhaseReportEmission(TickIndex CurrentTick)
     }
 }
 
-void IntelSystem::PhasePropagation(TickIndex)
+void ReconSystem::PhasePropagation(TickIndex)
 {
     // M3 territory (hops, delays, blackout). With zero-delay reports there is
     // nothing to advance.
 }
 
-void IntelSystem::PhaseAggregation(TickIndex CurrentTick)
+void ReconSystem::PhaseAggregation(TickIndex CurrentTick)
 {
     // Applies every report whose ArrivalTick has come. M1 keeps the merge rule
     // trivial -- one GT entity maps to one track via the association table; the
@@ -202,7 +202,7 @@ void IntelSystem::PhaseAggregation(TickIndex CurrentTick)
     size_t WriteBack = 0;
     for (size_t I = 0; I < InFlightReports.size(); ++I)
     {
-        IntelReport& Report = InFlightReports[I];
+        ReconReport& Report = InFlightReports[I];
         if (Report.ArrivalTick > CurrentTick)
         {
             // Not yet arrived: keep in flight (stable order preserved).
@@ -272,7 +272,7 @@ void IntelSystem::PhaseAggregation(TickIndex CurrentTick)
     InFlightReports.resize(WriteBack);
 }
 
-void IntelSystem::PhaseTrackUpdate(TickIndex CurrentTick)
+void ReconSystem::PhaseTrackUpdate(TickIndex CurrentTick)
 {
     // M1 scope: stale marking only, so a track whose subject left our vision is
     // visibly old data rather than a live contact. Confidence decay curves,
@@ -303,9 +303,9 @@ void IntelSystem::PhaseTrackUpdate(TickIndex CurrentTick)
 
 // --- Determinism plumbing ------------------------------------------------------
 
-void IntelSystem::Serialize(ByteWriter& W) const
+void ReconSystem::Serialize(ByteWriter& W) const
 {
-    W.WriteUInt32(kIntelSystemVersion);
+    W.WriteUInt32(kReconSystemVersion);
     W.WriteBool(IsEnabled());
     if (!IsEnabled())
     {
@@ -314,7 +314,7 @@ void IntelSystem::Serialize(ByteWriter& W) const
 
     W.WriteUInt32(NextReportId);
     W.WriteUInt32(uint32_t(InFlightReports.size()));
-    for (const IntelReport& Report : InFlightReports)
+    for (const ReconReport& Report : InFlightReports)
     {
         W.WriteUInt32(Report.ReportId);
         W.WriteUInt32(Report.Author.Index);
@@ -368,9 +368,9 @@ void IntelSystem::Serialize(ByteWriter& W) const
     }
 }
 
-bool IntelSystem::Deserialize(ByteReader& R)
+bool ReconSystem::Deserialize(ByteReader& R)
 {
-    if (R.ReadUInt32() != kIntelSystemVersion)
+    if (R.ReadUInt32() != kReconSystemVersion)
     {
         return false;
     }
@@ -393,7 +393,7 @@ bool IntelSystem::Deserialize(ByteReader& R)
     InFlightReports.reserve(ReportCount);
     for (uint32_t I = 0; I < ReportCount; ++I)
     {
-        IntelReport Report;
+        ReconReport Report;
         Report.ReportId = R.ReadUInt32();
         Report.Author.Index = R.ReadUInt32();
         Report.Author.Generation = R.ReadUInt32();
@@ -452,7 +452,7 @@ bool IntelSystem::Deserialize(ByteReader& R)
     return true;
 }
 
-void IntelSystem::FeedChecksum(Hash64& H) const
+void ReconSystem::FeedChecksum(Hash64& H) const
 {
     H.FeedBool(IsEnabled());
     if (!IsEnabled())
@@ -461,7 +461,7 @@ void IntelSystem::FeedChecksum(Hash64& H) const
     }
     H.FeedUInt32(NextReportId);
     H.FeedUInt32(uint32_t(InFlightReports.size()));
-    for (const IntelReport& Report : InFlightReports)
+    for (const ReconReport& Report : InFlightReports)
     {
         H.FeedUInt32(Report.ReportId);
         H.FeedUInt32(Report.ArrivalTick);
@@ -493,5 +493,5 @@ void IntelSystem::FeedChecksum(Hash64& H) const
     }
 }
 
-} // namespace Intel
+} // namespace Recon
 } // namespace RA4

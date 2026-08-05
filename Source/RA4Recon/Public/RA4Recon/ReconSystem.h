@@ -15,12 +15,12 @@
 #include <vector>
 
 #include "RA4Core/Ids.h"
-#include "RA4Intel/IntelConfig.h"
-#include "RA4Intel/IntelTypes.h"
-#include "RA4Intel/PerceivedWorld.h"
+#include "RA4Recon/ReconConfig.h"
+#include "RA4Recon/ReconTypes.h"
+#include "RA4Recon/PerceivedWorld.h"
 
-#ifndef RA4INTEL_API
-#define RA4INTEL_API
+#ifndef RA4RECON_API
+#define RA4RECON_API
 #endif
 
 namespace RA4
@@ -30,11 +30,11 @@ class ByteWriter;
 class ByteReader;
 class Hash64;
 
-namespace Intel
+namespace Recon
 {
 
 // What the simulation shows the intel layer each tick. SimWorld owns entity
-// storage and fog; RA4Intel must not depend on RA4Simulation (the dependency
+// storage and fog; RA4Recon must not depend on RA4Simulation (the dependency
 // points the other way), so the visible-entity view crosses the boundary as
 // plain data. The buffer is owned by SimWorld and reused across ticks -- no
 // per-tick allocation in steady state.
@@ -79,7 +79,7 @@ enum class Phase : uint8_t
 };
 
 constexpr int32_t kPhaseCount = int32_t(Phase::Count);
-RA4INTEL_API const char* PhaseName(Phase P);
+RA4RECON_API const char* PhaseName(Phase P);
 
 // Per-tick cost bookkeeping so the performance budget (≤0.8 ms per sim tick for
 // the whole layer) is measured from day one, not asserted at M5.
@@ -90,18 +90,18 @@ struct PhaseStats
     uint32_t TicksMeasured = 0;
 };
 
-class RA4INTEL_API IntelSystem
+class RA4RECON_API ReconSystem
 {
 public:
     // Settings are owned by the content layer and outlive the system, matching how
     // SimWorld holds ContentDatabase. MaxPlayers perceived worlds are created; the
     // inactive ones stay empty and cost nothing.
-    void Initialize(const IntelSettings* InSettings, int32_t MapWidthTiles, int32_t MapHeightTiles);
+    void Initialize(const ReconSettings* InSettings, int32_t MapWidthTiles, int32_t MapHeightTiles);
     void Reset();
 
     bool IsEnabled() const { return Settings != nullptr && Settings->bEnabled; }
 
-    // Advances one tick. Called by SimWorld::SystemIntel with the current tick
+    // Advances one tick. Called by SimWorld::SystemRecon with the current tick
     // and this tick's visibility view. When the feature is disabled this returns
     // immediately: zero cost, zero state, classic RTS behaviour (§4.7).
     void Tick(TickIndex CurrentTick, const ObservationInput& Input);
@@ -133,14 +133,14 @@ private:
     // Grows the per-player association tables to cover EntityCapacity slots.
     void EnsureAssociationCapacity(uint32_t NewEntityCapacity);
 
-    const IntelSettings* Settings = nullptr;
+    const ReconSettings* Settings = nullptr;
 
     // One belief state per player slot. unique_ptr keeps PerceivedWorld movable
     // out of this header and the empty slots cheap.
     std::unique_ptr<PerceivedWorld> Worlds[kMaxPlayers];
 
     // Reports in flight, ordered by ArrivalTick (min-heap over a vector, M3).
-    std::vector<IntelReport> InFlightReports;
+    std::vector<ReconReport> InFlightReports;
     uint32_t NextReportId = 1;
 
     // This tick's truthful observations per player, produced by PhaseObservation
@@ -160,5 +160,5 @@ private:
     PhaseStats Stats;
 };
 
-} // namespace Intel
+} // namespace Recon
 } // namespace RA4

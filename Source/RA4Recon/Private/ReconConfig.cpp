@@ -1,5 +1,5 @@
 // Copyright (c) Red Alert 4 project.
-#include "RA4Intel/IntelConfig.h"
+#include "RA4Recon/ReconConfig.h"
 
 #include <cmath>
 
@@ -7,10 +7,10 @@
 
 namespace RA4
 {
-namespace Intel
+namespace Recon
 {
 
-const DistortionProfile* IntelSettings::FindDistortionProfile(const std::string& InName) const
+const DistortionProfile* ReconSettings::FindDistortionProfile(const std::string& InName) const
 {
     for (const DistortionProfile& P : DistortionProfiles)
     {
@@ -22,7 +22,7 @@ const DistortionProfile* IntelSettings::FindDistortionProfile(const std::string&
     return nullptr;
 }
 
-const CommsProfile* IntelSettings::FindCommsProfile(const std::string& InName) const
+const CommsProfile* ReconSettings::FindCommsProfile(const std::string& InName) const
 {
     for (const CommsProfile& P : CommsProfiles)
     {
@@ -203,18 +203,18 @@ bool CheckPerMilleRange(int32_t Value, const char* Field, std::vector<std::strin
 
 } // namespace
 
-bool ValidateIntelSettings(const IntelSettings& Settings, std::vector<std::string>& OutErrors)
+bool ValidateReconSettings(const ReconSettings& Settings, std::vector<std::string>& OutErrors)
 {
     const size_t ErrorsBefore = OutErrors.size();
 
     if (Settings.FindDistortionProfile(Settings.ActiveDistortionProfile) == nullptr)
     {
-        OutErrors.push_back("intel_settings: active distortion profile '" + Settings.ActiveDistortionProfile +
+        OutErrors.push_back("recon_settings: active distortion profile '" + Settings.ActiveDistortionProfile +
                             "' not found");
     }
     if (Settings.FindCommsProfile(Settings.ActiveCommsProfile) == nullptr)
     {
-        OutErrors.push_back("intel_settings: active comms profile '" + Settings.ActiveCommsProfile + "' not found");
+        OutErrors.push_back("recon_settings: active comms profile '" + Settings.ActiveCommsProfile + "' not found");
     }
 
     for (const DistortionProfile& P : Settings.DistortionProfiles)
@@ -305,23 +305,23 @@ bool ValidateIntelSettings(const IntelSettings& Settings, std::vector<std::strin
     return OutErrors.size() == ErrorsBefore;
 }
 
-bool LoadIntelSettingsFromJson(const std::string& JsonText, IntelSettings& OutSettings,
+bool LoadReconSettingsFromJson(const std::string& JsonText, ReconSettings& OutSettings,
                                std::vector<std::string>& OutErrors)
 {
     Json::Value Root;
     std::string ParseError;
     if (!Json::Parse(JsonText, Root, ParseError))
     {
-        OutErrors.push_back("intel_settings: JSON parse error: " + ParseError);
+        OutErrors.push_back("recon_settings: JSON parse error: " + ParseError);
         return false;
     }
     if (!Root.IsObject())
     {
-        OutErrors.push_back("intel_settings: root is not an object");
+        OutErrors.push_back("recon_settings: root is not an object");
         return false;
     }
 
-    OutSettings = IntelSettings{};
+    OutSettings = ReconSettings{};
     OutSettings.bEnabled = ReadBool(Root, "enabled", false);
     OutSettings.ActiveDistortionProfile = ReadString(Root, "active_distortion_profile", OutSettings.ActiveDistortionProfile);
     OutSettings.ActiveCommsProfile = ReadString(Root, "active_comms_profile", OutSettings.ActiveCommsProfile);
@@ -368,8 +368,8 @@ bool LoadIntelSettingsFromJson(const std::string& JsonText, IntelSettings& OutSe
         T.TracksPerTickBudget = ReadInt(*Tracks, "tracks_per_tick_budget", T.TracksPerTickBudget);
     }
 
-    return ValidateIntelSettings(OutSettings, OutErrors);
+    return ValidateReconSettings(OutSettings, OutErrors);
 }
 
-} // namespace Intel
+} // namespace Recon
 } // namespace RA4

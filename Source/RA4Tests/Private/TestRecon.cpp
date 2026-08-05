@@ -9,16 +9,16 @@
 #include "RA4Core/ByteStream.h"
 #include "RA4Core/Checksum.h"
 #include "RA4Core/SimConfig.h"
-#include "RA4Intel/IntelConfig.h"
-#include "RA4Intel/IntelSystem.h"
-#include "RA4Intel/PerceivedWorld.h"
+#include "RA4Recon/ReconConfig.h"
+#include "RA4Recon/ReconSystem.h"
+#include "RA4Recon/PerceivedWorld.h"
 
 #include <fstream>
 #include <sstream>
 
 namespace RA4
 {
-namespace Intel
+namespace Recon
 {
 // The friend bridge declared in PerceivedWorld.h. Belief writes are structural
 // (INVARIANT 9): production code cannot reach these, the deterministic test
@@ -42,10 +42,10 @@ struct PerceivedWorldTestAccess
     static void SetDecayCursor(PerceivedWorld& W, uint32_t C) { W.DecayCursor = C; }
     static uint32_t GetDecayCursor(const PerceivedWorld& W) { return W.DecayCursor; }
 };
-} // namespace Intel
+} // namespace Recon
 } // namespace RA4
 
-using RA4::Intel::PerceivedWorldTestAccess;
+using RA4::Recon::PerceivedWorldTestAccess;
 
 // Tile centre in world units without dragging MapDescription into these tests.
 static RA4::Vec2 TileCentre(int32_t X, int32_t Y)
@@ -75,14 +75,14 @@ std::string ReadRepoFile(const std::string& RelativePath)
 }
 
 // Minimal valid settings for tests that do not want to depend on shipped content.
-Intel::IntelSettings MakeMinimalSettings(bool bEnabled)
+Recon::ReconSettings MakeMinimalSettings(bool bEnabled)
 {
-    Intel::IntelSettings S;
+    Recon::ReconSettings S;
     S.bEnabled = bEnabled;
-    Intel::DistortionProfile P;
+    Recon::DistortionProfile P;
     P.Name = "profile.default";
     S.DistortionProfiles.push_back(P);
-    Intel::CommsProfile C;
+    Recon::CommsProfile C;
     C.Name = "comms.default";
     C.HopDelayTicksByLevel = {160, 80, 30, 5};
     S.CommsProfiles.push_back(C);
@@ -93,14 +93,14 @@ Intel::IntelSettings MakeMinimalSettings(bool bEnabled)
 
 // --- Config loading -----------------------------------------------------------
 
-RA4_TEST(Intel, ShippedSettingsFileLoadsAndValidates)
+RA4_TEST(Recon, ShippedSettingsFileLoadsAndValidates)
 {
-    const std::string Text = ReadRepoFile("Content/RA4/Data/Intel/intel_settings.json");
+    const std::string Text = ReadRepoFile("Content/RA4/Data/Recon/recon_settings.json");
     RA4_EXPECT(!Text.empty());
 
-    Intel::IntelSettings Settings;
+    Recon::ReconSettings Settings;
     std::vector<std::string> Errors;
-    const bool bLoaded = Intel::LoadIntelSettingsFromJson(Text, Settings, Errors);
+    const bool bLoaded = Recon::LoadReconSettingsFromJson(Text, Settings, Errors);
     for (const std::string& E : Errors)
     {
         std::fprintf(stderr, "  intel config error: %s\n", E.c_str());
@@ -119,46 +119,46 @@ RA4_TEST(Intel, ShippedSettingsFileLoadsAndValidates)
     RA4_EXPECT(Settings.CommsProfiles[0].HopDelayTicksByLevel[0] == 160);
 }
 
-RA4_TEST(Intel, ValidatorRejectsBrokenConfusionMatrixRow)
+RA4_TEST(Recon, ValidatorRejectsBrokenConfusionMatrixRow)
 {
-    Intel::IntelSettings S = MakeMinimalSettings(false);
+    Recon::ReconSettings S = MakeMinimalSettings(false);
     // Row no longer sums to 1000.
     S.Confusion.PerMille[0][0] = 900;
 
     std::vector<std::string> Errors;
-    RA4_EXPECT(!Intel::ValidateIntelSettings(S, Errors));
+    RA4_EXPECT(!Recon::ValidateReconSettings(S, Errors));
     RA4_EXPECT(!Errors.empty());
 }
 
-RA4_TEST(Intel, ValidatorRejectsMissingActiveProfile)
+RA4_TEST(Recon, ValidatorRejectsMissingActiveProfile)
 {
-    Intel::IntelSettings S = MakeMinimalSettings(false);
+    Recon::ReconSettings S = MakeMinimalSettings(false);
     S.ActiveDistortionProfile = "profile.does_not_exist";
 
     std::vector<std::string> Errors;
-    RA4_EXPECT(!Intel::ValidateIntelSettings(S, Errors));
+    RA4_EXPECT(!Recon::ValidateReconSettings(S, Errors));
 }
 
-RA4_TEST(Intel, ValidatorRejectsUnboundedPhantomLifetime)
+RA4_TEST(Recon, ValidatorRejectsUnboundedPhantomLifetime)
 {
-    Intel::IntelSettings S = MakeMinimalSettings(false);
+    Recon::ReconSettings S = MakeMinimalSettings(false);
     S.DistortionProfiles[0].MaxPhantomLifetimeTicks = 0;
 
     std::vector<std::string> Errors;
-    RA4_EXPECT(!Intel::ValidateIntelSettings(S, Errors));
+    RA4_EXPECT(!Recon::ValidateReconSettings(S, Errors));
 }
 
-RA4_TEST(Intel, LoaderRejectsMalformedJson)
+RA4_TEST(Recon, LoaderRejectsMalformedJson)
 {
-    Intel::IntelSettings S;
+    Recon::ReconSettings S;
     std::vector<std::string> Errors;
-    RA4_EXPECT(!Intel::LoadIntelSettingsFromJson("{ not json", S, Errors));
+    RA4_EXPECT(!Recon::LoadReconSettingsFromJson("{ not json", S, Errors));
     RA4_EXPECT(!Errors.empty());
 }
 
 // --- Kill switch (§4.7): disabled layer is genuinely absent ---------------------
 
-RA4_TEST(Intel, DisabledLayerDoesNotChangeSimulationResults)
+RA4_TEST(Recon, DisabledLayerDoesNotChangeSimulationResults)
 {
     ContentDatabase Content;
     BuildDefaultContent(Content);
@@ -166,7 +166,7 @@ RA4_TEST(Intel, DisabledLayerDoesNotChangeSimulationResults)
     // Same seed, same commands (none): a world without the intel argument and a
     // world with a disabled settings object must stay bit-identical. This is the
     // regression gate that lets the rest of the game ignore this module.
-    Intel::IntelSettings Disabled = MakeMinimalSettings(false);
+    Recon::ReconSettings Disabled = MakeMinimalSettings(false);
 
     SimWorld A;
     A.Initialize(&Content, MakeTestSetup(777));
@@ -184,11 +184,11 @@ RA4_TEST(Intel, DisabledLayerDoesNotChangeSimulationResults)
     RA4_EXPECT(A.ComputeStateChecksum() == B.ComputeStateChecksum());
 }
 
-RA4_TEST(Intel, EnabledEmptyLayerTicksWithoutStateDrift)
+RA4_TEST(Recon, EnabledEmptyLayerTicksWithoutStateDrift)
 {
     ContentDatabase Content;
     BuildDefaultContent(Content);
-    Intel::IntelSettings Enabled = MakeMinimalSettings(true);
+    Recon::ReconSettings Enabled = MakeMinimalSettings(true);
 
     // M0 phases are empty, so two enabled worlds from one seed must stay in
     // lockstep; this pins the plumbing (rng stream, checksum, tick order) before
@@ -204,17 +204,17 @@ RA4_TEST(Intel, EnabledEmptyLayerTicksWithoutStateDrift)
         B.Tick(nullptr);
         RA4_EXPECT(A.ComputeStateChecksum() == B.ComputeStateChecksum());
     }
-    RA4_EXPECT(A.GetIntel().IsEnabled());
+    RA4_EXPECT(A.GetRecon().IsEnabled());
 }
 
 // --- PerceivedWorld slot lifetime ------------------------------------------------
 
-RA4_TEST(Intel, TrackHandlesAreGenerational)
+RA4_TEST(Recon, TrackHandlesAreGenerational)
 {
-    Intel::PerceivedWorld World;
+    Recon::PerceivedWorld World;
     PerceivedWorldTestAccess::Initialize(World, 64, 64, 16);
 
-    const Intel::TrackId First = PerceivedWorldTestAccess::AllocateTrack(World);
+    const Recon::TrackId First = PerceivedWorldTestAccess::AllocateTrack(World);
     RA4_EXPECT(First.IsValid());
     RA4_EXPECT(World.IsTrackAlive(First));
 
@@ -222,7 +222,7 @@ RA4_TEST(Intel, TrackHandlesAreGenerational)
     RA4_EXPECT(!World.IsTrackAlive(First));
 
     // Slot is recycled with a bumped generation: the stale handle must stay dead.
-    const Intel::TrackId Second = PerceivedWorldTestAccess::AllocateTrack(World);
+    const Recon::TrackId Second = PerceivedWorldTestAccess::AllocateTrack(World);
     RA4_EXPECT(Second.IsValid());
     RA4_EXPECT(Second.Index == First.Index);
     RA4_EXPECT(Second.Generation != First.Generation);
@@ -230,9 +230,9 @@ RA4_TEST(Intel, TrackHandlesAreGenerational)
     RA4_EXPECT(World.IsTrackAlive(Second));
 }
 
-RA4_TEST(Intel, TrackAllocationRespectsHardCap)
+RA4_TEST(Recon, TrackAllocationRespectsHardCap)
 {
-    Intel::PerceivedWorld World;
+    Recon::PerceivedWorld World;
     PerceivedWorldTestAccess::Initialize(World, 64, 64, 4);
 
     for (int32_t I = 0; I < 4; ++I)
@@ -244,25 +244,25 @@ RA4_TEST(Intel, TrackAllocationRespectsHardCap)
     RA4_EXPECT(World.GetAliveTrackCount() == 4);
 }
 
-RA4_TEST(Intel, RegionQueryFindsOnlyTracksInside)
+RA4_TEST(Recon, RegionQueryFindsOnlyTracksInside)
 {
-    Intel::PerceivedWorld World;
+    Recon::PerceivedWorld World;
     PerceivedWorldTestAccess::Initialize(World, 64, 64, 16);
 
-    const Intel::TrackId Inside = PerceivedWorldTestAccess::AllocateTrack(World);
+    const Recon::TrackId Inside = PerceivedWorldTestAccess::AllocateTrack(World);
     PerceivedWorldTestAccess::GetTrackMutable(World, Inside)->BelievedPosition = TileCentre(5, 5);
-    const Intel::TrackId Outside = PerceivedWorldTestAccess::AllocateTrack(World);
+    const Recon::TrackId Outside = PerceivedWorldTestAccess::AllocateTrack(World);
     PerceivedWorldTestAccess::GetTrackMutable(World, Outside)->BelievedPosition = TileCentre(40, 40);
 
-    std::vector<const Intel::PerceivedTrack*> Found;
+    std::vector<const Recon::PerceivedTrack*> Found;
     World.GetTracksInRegion(0, 0, 10, 10, Found);
     RA4_EXPECT(Found.size() == 1);
     RA4_EXPECT(Found[0]->Id == Inside);
 }
 
-RA4_TEST(Intel, NegativeKnowledgeDistinguishesNeverSeenFromSeen)
+RA4_TEST(Recon, NegativeKnowledgeDistinguishesNeverSeenFromSeen)
 {
-    Intel::PerceivedWorld World;
+    Recon::PerceivedWorld World;
     PerceivedWorldTestAccess::Initialize(World, 64, 64, 16);
 
     RA4_EXPECT(World.GetLastObservedTick(10, 10) == 0); // never observed
@@ -271,12 +271,12 @@ RA4_TEST(Intel, NegativeKnowledgeDistinguishesNeverSeenFromSeen)
     RA4_EXPECT(World.GetLastObservedTick(11, 10) == 0); // neighbour untouched
 }
 
-RA4_TEST(Intel, PhantomTruthLivesOutsideTheReadSurface)
+RA4_TEST(Recon, PhantomTruthLivesOutsideTheReadSurface)
 {
-    Intel::PerceivedWorld World;
+    Recon::PerceivedWorld World;
     PerceivedWorldTestAccess::Initialize(World, 64, 64, 16);
 
-    const Intel::TrackId Id = PerceivedWorldTestAccess::AllocateTrack(World);
+    const Recon::TrackId Id = PerceivedWorldTestAccess::AllocateTrack(World);
     PerceivedWorldTestAccess::SetPhantom(World, Id, true);
     RA4_EXPECT(PerceivedWorldTestAccess::IsPhantom(World, Id));
 
@@ -286,7 +286,7 @@ RA4_TEST(Intel, PhantomTruthLivesOutsideTheReadSurface)
     // build review immediately instead of leaking quietly.
     struct ExpectedReadSurface
     {
-        Intel::TrackId Id;
+        Recon::TrackId Id;
         ContentId BelievedClass;
         Vec2 BelievedPosition;
         Fixed PositionErrorRadius;
@@ -297,30 +297,30 @@ RA4_TEST(Intel, PhantomTruthLivesOutsideTheReadSurface)
         uint8_t IndependentSourceCount;
         bool bStale;
         bool bContested;
-        uint32_t ProvenanceReportIds[Intel::kTrackProvenanceSize];
+        uint32_t ProvenanceReportIds[Recon::kTrackProvenanceSize];
         uint8_t ProvenanceCount;
         bool bAlive;
     };
-    static_assert(sizeof(Intel::PerceivedTrack) == sizeof(ExpectedReadSurface),
+    static_assert(sizeof(Recon::PerceivedTrack) == sizeof(ExpectedReadSurface),
                   "PerceivedTrack layout changed: verify no ground-truth field was added "
                   "to the belief read surface (INVARIANT 10) before updating this mirror");
 
     // Recycling the slot must clear the internal phantom flag with it.
     PerceivedWorldTestAccess::ReleaseTrack(World, Id);
-    const Intel::TrackId Reused = PerceivedWorldTestAccess::AllocateTrack(World);
+    const Recon::TrackId Reused = PerceivedWorldTestAccess::AllocateTrack(World);
     RA4_EXPECT(Reused.Index == Id.Index);
     RA4_EXPECT(!PerceivedWorldTestAccess::IsPhantom(World, Reused));
 }
 
 // --- Serialization round-trip -----------------------------------------------------
 
-RA4_TEST(Intel, PerceivedWorldSurvivesSerializationRoundTrip)
+RA4_TEST(Recon, PerceivedWorldSurvivesSerializationRoundTrip)
 {
-    Intel::PerceivedWorld World;
+    Recon::PerceivedWorld World;
     PerceivedWorldTestAccess::Initialize(World, 32, 32, 8);
 
-    const Intel::TrackId Id = PerceivedWorldTestAccess::AllocateTrack(World);
-    Intel::PerceivedTrack* T = PerceivedWorldTestAccess::GetTrackMutable(World, Id);
+    const Recon::TrackId Id = PerceivedWorldTestAccess::AllocateTrack(World);
+    Recon::PerceivedTrack* T = PerceivedWorldTestAccess::GetTrackMutable(World, Id);
     T->BelievedClass = Ids::SovHeavyTank;
     T->BelievedPosition = TileCentre(7, 9);
     T->BelievedCountMin = 3;
@@ -331,13 +331,13 @@ RA4_TEST(Intel, PerceivedWorldSurvivesSerializationRoundTrip)
     PerceivedWorldTestAccess::SetLastObservedTick(World, 7, 9, 123);
 
     // Release-then-allocate so the free list and generations are non-trivial.
-    const Intel::TrackId Temp = PerceivedWorldTestAccess::AllocateTrack(World);
+    const Recon::TrackId Temp = PerceivedWorldTestAccess::AllocateTrack(World);
     PerceivedWorldTestAccess::ReleaseTrack(World, Temp);
 
     ByteWriter W;
     World.Serialize(W);
 
-    Intel::PerceivedWorld Restored;
+    Recon::PerceivedWorld Restored;
     ByteReader R(W.GetBuffer());
     RA4_EXPECT(PerceivedWorldTestAccess::Deserialize(Restored, R));
 
@@ -348,7 +348,7 @@ RA4_TEST(Intel, PerceivedWorldSurvivesSerializationRoundTrip)
     Restored.FeedChecksum(HB);
     RA4_EXPECT(HA.Get() == HB.Get());
 
-    const Intel::PerceivedTrack* RT = Restored.GetTrack(Id);
+    const Recon::PerceivedTrack* RT = Restored.GetTrack(Id);
     RA4_REQUIRE(RT != nullptr);
     RA4_EXPECT(RT->BelievedClass == Ids::SovHeavyTank);
     RA4_EXPECT(RT->BelievedCountMin == 3);
@@ -361,14 +361,14 @@ RA4_TEST(Intel, PerceivedWorldSurvivesSerializationRoundTrip)
     RA4_EXPECT(!Restored.IsTrackAlive(Temp));
 }
 
-RA4_TEST(Intel, DecayCursorIsSimStateNotScratch)
+RA4_TEST(Recon, DecayCursorIsSimStateNotScratch)
 {
     // I-B4: the amortized-sweep cursor decides WHICH TICK each track's
     // confidence drops once decay math lands (M2). If it were scratch state,
     // a save/load or a late-join would silently shift every subsequent decay
     // event on one peer only -- a delayed-fuse desync. Pin all three
     // properties now, while the phase is still empty.
-    Intel::PerceivedWorld World;
+    Recon::PerceivedWorld World;
     PerceivedWorldTestAccess::Initialize(World, 32, 32, 8);
     // Cursor must stay within [0, HighWaterMark): allocate enough slots that 5
     // is a legal position, or the load-time corruption clamp rewrites it.
@@ -381,7 +381,7 @@ RA4_TEST(Intel, DecayCursorIsSimStateNotScratch)
     // 1. Survives the round trip.
     ByteWriter W;
     World.Serialize(W);
-    Intel::PerceivedWorld Restored;
+    Recon::PerceivedWorld Restored;
     ByteReader R(W.GetBuffer());
     RA4_REQUIRE(PerceivedWorldTestAccess::Deserialize(Restored, R));
     RA4_EXPECT(PerceivedWorldTestAccess::GetDecayCursor(Restored) == 5u);
@@ -389,13 +389,13 @@ RA4_TEST(Intel, DecayCursorIsSimStateNotScratch)
     // 1b. The corruption clamp: an out-of-range cursor in the byte stream is
     // wrapped deterministically on load, never trusted.
     {
-        Intel::PerceivedWorld Tiny;
+        Recon::PerceivedWorld Tiny;
         PerceivedWorldTestAccess::Initialize(Tiny, 16, 16, 4);
         (void)PerceivedWorldTestAccess::AllocateTrack(Tiny); // HighWaterMark = 1
         PerceivedWorldTestAccess::SetDecayCursor(Tiny, 3);   // out of range on purpose
         ByteWriter TW;
         Tiny.Serialize(TW);
-        Intel::PerceivedWorld TinyRestored;
+        Recon::PerceivedWorld TinyRestored;
         ByteReader TR(TW.GetBuffer());
         RA4_REQUIRE(PerceivedWorldTestAccess::Deserialize(TinyRestored, TR));
         RA4_EXPECT(PerceivedWorldTestAccess::GetDecayCursor(TinyRestored) == 0u); // 3 % 1
@@ -403,7 +403,7 @@ RA4_TEST(Intel, DecayCursorIsSimStateNotScratch)
 
     // 2. Feeds the checksum: two worlds equal except for the cursor must hash
     //    differently, or a cursor divergence would hide until it moved a track.
-    Intel::PerceivedWorld Other;
+    Recon::PerceivedWorld Other;
     ByteReader R2(W.GetBuffer());
     RA4_REQUIRE(PerceivedWorldTestAccess::Deserialize(Other, R2));
     PerceivedWorldTestAccess::SetDecayCursor(Other, 6);
@@ -417,44 +417,44 @@ RA4_TEST(Intel, DecayCursorIsSimStateNotScratch)
     RA4_EXPECT(PerceivedWorldTestAccess::GetDecayCursor(Other) == 0u);
 }
 
-RA4_TEST(Intel, ValidatorRejectsBadTracksPerTickBudget)
+RA4_TEST(Recon, ValidatorRejectsBadTracksPerTickBudget)
 {
     // I-B4: budget 0 stalls the sweep forever -- tracks never decay and never
     // GC, which reads as "intel works" until the track cap fills. Above the cap
     // is meaningless. The validator must catch both at load, not at minute 40.
     {
-        Intel::IntelSettings S = MakeMinimalSettings(false);
+        Recon::ReconSettings S = MakeMinimalSettings(false);
         S.Tracks.TracksPerTickBudget = 0;
         std::vector<std::string> Errors;
-        RA4_EXPECT(!Intel::ValidateIntelSettings(S, Errors));
+        RA4_EXPECT(!Recon::ValidateReconSettings(S, Errors));
     }
     {
-        Intel::IntelSettings S = MakeMinimalSettings(false);
+        Recon::ReconSettings S = MakeMinimalSettings(false);
         S.Tracks.TracksPerTickBudget = S.Tracks.MaxTracksPerPlayer + 1;
         std::vector<std::string> Errors;
-        RA4_EXPECT(!Intel::ValidateIntelSettings(S, Errors));
+        RA4_EXPECT(!Recon::ValidateReconSettings(S, Errors));
     }
     {
         // Sanity: the default passes.
-        Intel::IntelSettings S = MakeMinimalSettings(false);
+        Recon::ReconSettings S = MakeMinimalSettings(false);
         std::vector<std::string> Errors;
-        RA4_EXPECT(Intel::ValidateIntelSettings(S, Errors));
+        RA4_EXPECT(Recon::ValidateReconSettings(S, Errors));
     }
     {
         // Boundary accept-case: budget == cap is legal (a full sweep every
         // tick). Pins the validator's > against an accidental >=.
-        Intel::IntelSettings S = MakeMinimalSettings(false);
+        Recon::ReconSettings S = MakeMinimalSettings(false);
         S.Tracks.TracksPerTickBudget = S.Tracks.MaxTracksPerPlayer;
         std::vector<std::string> Errors;
-        RA4_EXPECT(Intel::ValidateIntelSettings(S, Errors));
+        RA4_EXPECT(Recon::ValidateReconSettings(S, Errors));
     }
 }
 
-RA4_TEST(Intel, SimWorldSaveLoadRoundTripsWithIntelEnabled)
+RA4_TEST(Recon, SimWorldSaveLoadRoundTripsWithReconEnabled)
 {
     ContentDatabase Content;
     BuildDefaultContent(Content);
-    Intel::IntelSettings Enabled = MakeMinimalSettings(true);
+    Recon::ReconSettings Enabled = MakeMinimalSettings(true);
 
     SimWorld World;
     World.Initialize(&Content, MakeTestSetup(999), &Enabled);
@@ -467,7 +467,7 @@ RA4_TEST(Intel, SimWorldSaveLoadRoundTripsWithIntelEnabled)
     {
         World.Tick(nullptr);
     }
-    RA4_EXPECT(World.GetIntel().GetPerceivedWorld(0).GetAliveTrackCount() == 1);
+    RA4_EXPECT(World.GetRecon().GetPerceivedWorld(0).GetAliveTrackCount() == 1);
 
     ByteWriter W;
     World.Serialize(W);
@@ -490,11 +490,11 @@ RA4_TEST(Intel, SimWorldSaveLoadRoundTripsWithIntelEnabled)
     }
     // The association survived the load: the ongoing contact kept updating ONE
     // track, it did not fork a duplicate blip after resume.
-    RA4_EXPECT(Restored.GetIntel().GetPerceivedWorld(0).GetAliveTrackCount() == 1);
+    RA4_EXPECT(Restored.GetRecon().GetPerceivedWorld(0).GetAliveTrackCount() == 1);
     RA4_EXPECT(World.ComputeStateChecksum() == Restored.ComputeStateChecksum());
 }
 
-RA4_TEST(Intel, PreIntelSaveIsRefusedWhenIntelEnabled)
+RA4_TEST(Recon, PreReconSaveIsRefusedWhenReconEnabled)
 {
     // A v2 (pre-intel) save cannot provide belief state; loading it into an
     // intel-enabled session must fail loudly, not start with an empty HQ map.
@@ -513,11 +513,11 @@ RA4_TEST(Intel, PreIntelSaveIsRefusedWhenIntelEnabled)
     ByteWriter W;
     Classic.Serialize(W);
 
-    Intel::IntelSettings Enabled = MakeMinimalSettings(true);
+    Recon::ReconSettings Enabled = MakeMinimalSettings(true);
     SimWorld Target;
     Target.Initialize(&Content, MakeTestSetup(31337), &Enabled);
     ByteReader R(W.GetBuffer());
-    // v3 save with intel disabled into enabled session: IntelSystem::Deserialize
+    // v3 save with intel disabled into enabled session: ReconSystem::Deserialize
     // sees the enabled-ness mismatch and refuses.
     RA4_EXPECT(!Target.Deserialize(R, &Content));
 }
@@ -536,20 +536,20 @@ void SpawnScoutContact(SimWorld& World)
     World.SpawnUnit(RA4Test::Ids::AllRifleman, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
 }
 
-const Intel::PerceivedTrack* FindSingleTrack(const SimWorld& World, PlayerId P)
+const Recon::PerceivedTrack* FindSingleTrack(const SimWorld& World, PlayerId P)
 {
-    std::vector<const Intel::PerceivedTrack*> Found;
-    World.GetIntel().GetPerceivedWorld(P).GetTracksInRegion(0, 0, 63, 63, Found);
+    std::vector<const Recon::PerceivedTrack*> Found;
+    World.GetRecon().GetPerceivedWorld(P).GetTracksInRegion(0, 0, 63, 63, Found);
     return Found.size() == 1 ? Found[0] : nullptr;
 }
 
 } // namespace
 
-RA4_TEST(Intel, TruthfulPipelineMirrorsVisibleEnemy)
+RA4_TEST(Recon, TruthfulPipelineMirrorsVisibleEnemy)
 {
     ContentDatabase Content;
     BuildDefaultContent(Content);
-    Intel::IntelSettings Enabled = MakeMinimalSettings(true);
+    Recon::ReconSettings Enabled = MakeMinimalSettings(true);
 
     SimWorld World;
     World.Initialize(&Content, MakeTestSetup(555), &Enabled);
@@ -559,7 +559,7 @@ RA4_TEST(Intel, TruthfulPipelineMirrorsVisibleEnemy)
 
     // Player 0 sees exactly one contact: the enemy rifleman, at its true position,
     // true class, count interval collapsed to [1,1], full confidence.
-    const Intel::PerceivedTrack* T = FindSingleTrack(World, 0);
+    const Recon::PerceivedTrack* T = FindSingleTrack(World, 0);
     RA4_REQUIRE(T != nullptr);
     RA4_EXPECT(T->BelievedClass == RA4Test::Ids::AllRifleman);
     RA4_EXPECT(T->BelievedPosition.X == Fixed::FromInt(3400));
@@ -570,16 +570,16 @@ RA4_TEST(Intel, TruthfulPipelineMirrorsVisibleEnemy)
     RA4_EXPECT(!T->bStale);
 
     // And symmetrically: player 1 tracks player 0's conscript.
-    const Intel::PerceivedTrack* T1 = FindSingleTrack(World, 1);
+    const Recon::PerceivedTrack* T1 = FindSingleTrack(World, 1);
     RA4_REQUIRE(T1 != nullptr);
     RA4_EXPECT(T1->BelievedClass == RA4Test::Ids::SovConscript);
 }
 
-RA4_TEST(Intel, TrackFollowsMovingContactWithoutDuplicates)
+RA4_TEST(Recon, TrackFollowsMovingContactWithoutDuplicates)
 {
     ContentDatabase Content;
     BuildDefaultContent(Content);
-    Intel::IntelSettings Enabled = MakeMinimalSettings(true);
+    Recon::ReconSettings Enabled = MakeMinimalSettings(true);
 
     SimWorld World;
     World.Initialize(&Content, MakeTestSetup(556), &Enabled);
@@ -588,7 +588,7 @@ RA4_TEST(Intel, TrackFollowsMovingContactWithoutDuplicates)
         World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
 
     World.Tick(nullptr);
-    RA4_EXPECT(World.GetIntel().GetPerceivedWorld(0).GetAliveTrackCount() == 1);
+    RA4_EXPECT(World.GetRecon().GetPerceivedWorld(0).GetAliveTrackCount() == 1);
 
     // Order the tank to drive within vision; the same track must update in place
     // (association table), not spawn a second contact per new position.
@@ -604,9 +604,9 @@ RA4_TEST(Intel, TrackFollowsMovingContactWithoutDuplicates)
     {
         World.Tick(nullptr);
     }
-    RA4_EXPECT(World.GetIntel().GetPerceivedWorld(0).GetAliveTrackCount() == 1);
+    RA4_EXPECT(World.GetRecon().GetPerceivedWorld(0).GetAliveTrackCount() == 1);
 
-    const Intel::PerceivedTrack* Track = FindSingleTrack(World, 0);
+    const Recon::PerceivedTrack* Track = FindSingleTrack(World, 0);
     RA4_REQUIRE(Track != nullptr);
     // The believed position tracked the movement: it is no longer the spawn point.
     RA4_EXPECT(Track->BelievedPosition.X != Fixed::FromInt(3400) ||
@@ -619,11 +619,11 @@ RA4_TEST(Intel, TrackFollowsMovingContactWithoutDuplicates)
     (void)LastBelieved;
 }
 
-RA4_TEST(Intel, LostContactFreezesAsLastKnownPositionAndGoesStale)
+RA4_TEST(Recon, LostContactFreezesAsLastKnownPositionAndGoesStale)
 {
     ContentDatabase Content;
     BuildDefaultContent(Content);
-    Intel::IntelSettings Enabled = MakeMinimalSettings(true);
+    Recon::ReconSettings Enabled = MakeMinimalSettings(true);
     Enabled.Tracks.StaleAfterTicks = 40; // 2 s, keeps the test fast
 
     SimWorld World;
@@ -637,7 +637,7 @@ RA4_TEST(Intel, LostContactFreezesAsLastKnownPositionAndGoesStale)
     World.SpawnUnit(RA4Test::Ids::AllRifleman, 1, Vec2(Fixed::FromInt(11000), Fixed::FromInt(11000)));
 
     World.Tick(nullptr);
-    const Intel::PerceivedTrack* Track = FindSingleTrack(World, 0);
+    const Recon::PerceivedTrack* Track = FindSingleTrack(World, 0);
     RA4_REQUIRE(Track != nullptr);
     const Vec2 LastKnown = Track->BelievedPosition;
 
@@ -650,14 +650,14 @@ RA4_TEST(Intel, LostContactFreezesAsLastKnownPositionAndGoesStale)
     }
 
     RA4_EXPECT(!World.IsAlive(Enemy));
-    const Intel::PerceivedTrack* Frozen = FindSingleTrack(World, 0);
+    const Recon::PerceivedTrack* Frozen = FindSingleTrack(World, 0);
     RA4_REQUIRE(Frozen != nullptr);
     RA4_EXPECT(Frozen->BelievedPosition.X == LastKnown.X);
     RA4_EXPECT(Frozen->BelievedPosition.Y == LastKnown.Y);
     RA4_EXPECT(Frozen->bStale);
 }
 
-RA4_TEST(Intel, BeliefIsReplayReconstructible)
+RA4_TEST(Recon, BeliefIsReplayReconstructible)
 {
     // INVARIANT 11 / I-B5: "what did player P believe at tick T" must be
     // answerable from (seed, command stream) alone. Two independent SimWorlds
@@ -666,7 +666,7 @@ RA4_TEST(Intel, BeliefIsReplayReconstructible)
     // exact belief contents at the end.
     ContentDatabase Content;
     BuildDefaultContent(Content);
-    Intel::IntelSettings Enabled = MakeMinimalSettings(true);
+    Recon::ReconSettings Enabled = MakeMinimalSettings(true);
 
     MatchSetup Setup = MakeTestSetup(8181);
 
@@ -710,9 +710,9 @@ RA4_TEST(Intel, BeliefIsReplayReconstructible)
     }
 
     // Belief-level comparison, not just hashes: player 0's HQ map is identical.
-    std::vector<const Intel::PerceivedTrack*> LiveTracks, ReplayTracks;
-    Live.GetIntel().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, LiveTracks);
-    Replayed.GetIntel().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, ReplayTracks);
+    std::vector<const Recon::PerceivedTrack*> LiveTracks, ReplayTracks;
+    Live.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, LiveTracks);
+    Replayed.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, ReplayTracks);
     RA4_REQUIRE(LiveTracks.size() == ReplayTracks.size());
     for (size_t I = 0; I < LiveTracks.size(); ++I)
     {

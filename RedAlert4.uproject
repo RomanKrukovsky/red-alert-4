@@ -15,7 +15,7 @@
 			"LoadingPhase": "PreDefault"
 		},
 		{
-			"Name": "RA4Intel",
+			"Name": "RA4Recon",
 			"Type": "Runtime",
 			"LoadingPhase": "PreDefault"
 		},
