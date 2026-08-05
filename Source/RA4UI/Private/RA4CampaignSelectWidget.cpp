@@ -269,11 +269,13 @@ void URA4CampaignSelectWidget::BuildLayout()
         UVerticalBox::StaticClass(), TEXT("CampaignProfile"));
     Profile->AddChildToVerticalBox(MakeText(
         WidgetTree, LOCTEXT("ProfileCommander", "TOVARIShch KOMANDIR"), 15, SovietRed, TEXT("ProfileCommander")));
+    // Level and XP ratio must match the SC-02 commander card (Level 25,
+    // 45,780 / 75,000): the same profile is shown on both screens.
     Profile->AddChildToVerticalBox(MakeText(
-        WidgetTree, LOCTEXT("ProfileLevel", "UROVEN 47  //  SET PODKLYuChENA"), 11, TextMuted, TEXT("ProfileLevel"), false));
+        WidgetTree, LOCTEXT("ProfileLevel", "UROVEN 25  //  SET PODKLYuChENA"), 11, TextMuted, TEXT("ProfileLevel"), false));
     UProgressBar* ProfileProgress = WidgetTree->ConstructWidget<UProgressBar>(
         UProgressBar::StaticClass(), TEXT("ProfileProgress"));
-    ProfileProgress->SetPercent(0.54f);
+    ProfileProgress->SetPercent(45780.0f / 75000.0f);
     ProfileProgress->SetFillColorAndOpacity(SovietRed);
     Profile->AddChildToVerticalBox(ProfileProgress)->SetPadding(FMargin(0.0f, 8.0f));
     Place(
@@ -476,7 +478,7 @@ void URA4CampaignSelectWidget::SelectFaction(const int32 FactionIndex)
     };
     const FText Mottos[] = {
         LOCTEXT("USSRMotto", "SLAVA RODINE. BUDUShchEE ZA NAMI."),
-        LOCTEXT("AllianceMotto", "SVDEFDA. TOChNOST. PREVOSKhODSTVO."),
+        LOCTEXT("AllianceMotto", "SVOBODA. TOChNOST. PREVOSKhODSTVO."),
         LOCTEXT("EasternMotto", "EDINSTVO SOZDAYoT POBEDU."),
         LOCTEXT("ChronoMotto", "VREMYa — NAShE ORUZhIE.")
     };
