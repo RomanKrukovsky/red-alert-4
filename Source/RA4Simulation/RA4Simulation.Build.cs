@@ -15,7 +15,7 @@ public class RA4Simulation : ModuleRules
 		PublicIncludePaths.Add(ModuleDirectory + "/Public");
 		PrivateIncludePaths.Add(ModuleDirectory + "/Private");
 
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "RA4Core", "RA4Content", "RA4Navigation", "RA4FogOfWar" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "RA4Core", "RA4Content", "RA4Navigation", "RA4FogOfWar", "RA4Intel" });
 
 
 		// No exceptions and no RTTI in the simulation: both add non-determinism
