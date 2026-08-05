@@ -118,6 +118,16 @@ Discovered and fixed while completing the above, not part of the original plan:
 This package was authored while the main working copy was in continuous use by other sessions —
 during the work its branch changed four times (`remediation/foundation-fixes` →
 `feat/archipelago-skirmish-map` → `feat/intel-unreliable` → `feature/kimi-skirmish-production`) and
-the documents were at one point swept into a stash by an external tool. They were recovered and are
-now committed on `docs/perception-warfare-adrs`, which is based on `main` and touches only `Docs/`, so
-it can be merged independently of any code branch.
+the documents were at one point swept into a stash by an external tool. They were recovered, and a
+parallel session has since landed ADR-0021..0026 on `main` directly.
+
+`docs/perception-warfare-adrs` is therefore rebased on `main` and contains only what is *not* yet
+there: GDD sections 8-11, PRODUCT_VISION problems 5-7, RISK-11..19,
+PERFORMANCE_BUDGETS.md section 4, the tick-rate corrections across nine documents, the recovered
+ADR-0019/0020, and the resolution of the ADR-0022 DirectControl question. It touches only `Docs/` and
+can be merged independently of any code branch.
+
+Two ADRs were recovered from `remediation/foundation-fixes` in the process. That branch does not
+compile (5 errors in `TestAI.cpp`: `TileCoord::IsValid` and `Ids::AllRefinery` do not exist on it) and
+`main` had already superseded it by 12 commits, but it was the sole home of ADR-0019 and ADR-0020.
+Archiving it without extracting them would have silently broken every reference from this package.
