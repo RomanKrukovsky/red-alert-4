@@ -15,6 +15,7 @@
 #include "RA4Replay/Replay.h"
 
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 
@@ -964,4 +965,93 @@ RA4_TEST(Recon, PerceivedWorldRefusesForeignVersion)
     Recon::PerceivedWorld Restored;
     ByteReader R(Bytes);
     RA4_EXPECT(!PerceivedWorldTestAccess::Deserialize(Restored, R));
+}
+
+// --- P-6: objective-state funnel inventory (leak detector, static half) ----------
+
+RA4_TEST(Recon, ObjectiveStateFunnelInventory)
+{
+    // Docs/Architecture/VISIBILITY_CALLSITE_INVENTORY.md classifies every file
+    // that reads objective entity state (GetAllCores / GetAllTransforms). This
+    // test pins that list: a NEW file reaching for objective state fails here
+    // until a human classifies it in the inventory and extends the whitelist.
+    // It deliberately cannot judge HOW the data is used -- its job is to turn
+    // "forgot to classify" from a silent leak into a build failure (RISK-17).
+    // The runtime detector (per-read whitelisted-funnel enforcement) lands with
+    // I-M6 and needs SimWorld instrumentation hooks.
+    namespace fs = std::filesystem;
+
+    static const char* Whitelist[] = {
+        // Classified in VISIBILITY_CALLSITE_INVENTORY.md -- keep sorted.
+        "Source/RA4AI/Private/AICommander.cpp",        // OWN x13
+        "Source/RA4AI/Private/AIDebugOverlay.cpp",     // OMNISCIENT-BY-DESIGN (debug)
+        "Source/RA4AI/Private/AIWorldView.cpp",        // FOG-GATED funnel (I-M6 site)
+        "Source/RA4AI/Private/ValueMap.cpp",           // OWN
+        "Source/RA4Campaign/Private/MissionRuntime.cpp", // OMNISCIENT-BY-DESIGN (referee)
+        "Source/RA4Presentation/Private/HudSnapshot.cpp", // OWN + FOG-GATED minimap
+        "Source/RA4Recon/Private/ReconSystem.cpp",     // OMNISCIENT-BY-DESIGN (produces belief)
+        "Source/RA4Simulation/Private/SimWorld.cpp",   // the truth itself
+        "Source/RA4Simulation/Public/RA4Simulation/SimWorld.h",
+        "Source/RedAlert4/Private/RA4PlayerController.cpp", // OWN x2 + LEAK V-B (picking)
+        "Source/RedAlert4/Private/RA4SimWorldSubsystem.cpp", // LEAK V-A (actor sync)
+    };
+
+    const fs::path Root = fs::current_path() / "Source";
+    if (!fs::exists(Root))
+    {
+        RA4Test::ReportFailure("Source/ not found from test cwd", __FILE__, __LINE__);
+        return;
+    }
+
+    std::vector<std::string> Offenders;
+    for (auto It = fs::recursive_directory_iterator(Root); It != fs::recursive_directory_iterator(); ++It)
+    {
+        if (!It->is_regular_file())
+        {
+            continue;
+        }
+        const fs::path& Path = It->path();
+        const std::string Ext = Path.extension().string();
+        if (Ext != ".cpp" && Ext != ".h")
+        {
+            continue;
+        }
+        // Normalize to repo-relative with forward slashes.
+        std::string Rel = fs::relative(Path, fs::current_path()).generic_string();
+        if (Rel.rfind("Source/RA4Tests/", 0) == 0)
+        {
+            continue; // tests may read anything; they are not a player
+        }
+
+        std::ifstream F(Path);
+        std::string Text((std::istreambuf_iterator<char>(F)), std::istreambuf_iterator<char>());
+        if (Text.find("GetAllCores") == std::string::npos &&
+            Text.find("GetAllTransforms") == std::string::npos)
+        {
+            continue;
+        }
+
+        bool bListed = false;
+        for (const char* W : Whitelist)
+        {
+            if (Rel == W)
+            {
+                bListed = true;
+                break;
+            }
+        }
+        if (!bListed)
+        {
+            Offenders.push_back(Rel);
+        }
+    }
+
+    for (const std::string& O : Offenders)
+    {
+        RA4Test::ReportFailure(
+            "unclassified objective-state reader: " + O +
+                " -- classify it in Docs/Architecture/VISIBILITY_CALLSITE_INVENTORY.md and extend the whitelist",
+            __FILE__, __LINE__);
+    }
+    RA4_EXPECT(Offenders.empty());
 }
