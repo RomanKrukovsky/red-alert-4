@@ -285,6 +285,28 @@ bool ValidateReconSettings(const ReconSettings& Settings, std::vector<std::strin
         }
     }
 
+    const MoraleTuning& MT = Settings.Morale;
+    CheckPerMilleRange(MT.DamageMoralePenaltyPerMille, "damage_morale_penalty", OutErrors);
+    CheckPerMilleRange(MT.DamageSuppressionPerMille, "damage_suppression", OutErrors);
+    CheckPerMilleRange(MT.AllyDeathMoralePenaltyPerMille, "ally_death_morale_penalty", OutErrors);
+    CheckPerMilleRange(MT.SuperiorityMoralePenaltyPerTickPerMille, "superiority_morale_penalty_per_tick", OutErrors);
+    CheckPerMilleRange(MT.FatiguePerTickUnderFirePerMille, "fatigue_per_tick_under_fire", OutErrors);
+    CheckPerMilleRange(MT.MoraleRegenPerTickPerMille, "morale_regen_per_tick", OutErrors);
+    CheckPerMilleRange(MT.FatigueRegenPerTickPerMille, "fatigue_regen_per_tick", OutErrors);
+    CheckPerMilleRange(MT.SuppressionDecayPerTickPerMille, "suppression_decay_per_tick", OutErrors);
+    CheckPerMilleRange(MT.DefaultCompetencePerMille, "default_competence", OutErrors);
+    CheckPerMilleRange(MT.ScoutCompetencePerMille, "scout_competence", OutErrors);
+    if (MT.AllyDeathRadiusTiles < 0 || MT.SuperiorityRadiusTiles < 0 || MT.OutOfFireDelayTicks < 0)
+    {
+        OutErrors.push_back("morale_tuning: negative radius or delay");
+    }
+    if (MT.SuperiorityRatioThresholdPerMille < 1000)
+    {
+        // A threshold below 1x means being merely EQUAL scares troops; that is a
+        // designer mistake, not a tuning choice.
+        OutErrors.push_back("morale_tuning: superiority_ratio_threshold below 1.0x");
+    }
+
     const TrackTuning& T = Settings.Tracks;
     if (T.MaxTracksPerPlayer <= 0 || T.MaxTracksPerPlayer > 65536)
     {
@@ -354,6 +376,25 @@ bool LoadReconSettingsFromJson(const std::string& JsonText, ReconSettings& OutSe
         {
             return false;
         }
+    }
+
+    if (const Json::Value* M = Root.Find("morale_tuning"); M != nullptr && M->IsObject())
+    {
+        MoraleTuning& T = OutSettings.Morale;
+        T.DamageMoralePenaltyPerMille = ReadPerMille(*M, "damage_morale_penalty", T.DamageMoralePenaltyPerMille);
+        T.DamageSuppressionPerMille = ReadPerMille(*M, "damage_suppression", T.DamageSuppressionPerMille);
+        T.AllyDeathMoralePenaltyPerMille = ReadPerMille(*M, "ally_death_morale_penalty", T.AllyDeathMoralePenaltyPerMille);
+        T.AllyDeathRadiusTiles = ReadInt(*M, "ally_death_radius_tiles", T.AllyDeathRadiusTiles);
+        T.SuperiorityRatioThresholdPerMille = ReadPerMille(*M, "superiority_ratio_threshold", T.SuperiorityRatioThresholdPerMille);
+        T.SuperiorityMoralePenaltyPerTickPerMille = ReadPerMille(*M, "superiority_morale_penalty_per_tick", T.SuperiorityMoralePenaltyPerTickPerMille);
+        T.SuperiorityRadiusTiles = ReadInt(*M, "superiority_radius_tiles", T.SuperiorityRadiusTiles);
+        T.FatiguePerTickUnderFirePerMille = ReadPerMille(*M, "fatigue_per_tick_under_fire", T.FatiguePerTickUnderFirePerMille);
+        T.MoraleRegenPerTickPerMille = ReadPerMille(*M, "morale_regen_per_tick", T.MoraleRegenPerTickPerMille);
+        T.FatigueRegenPerTickPerMille = ReadPerMille(*M, "fatigue_regen_per_tick", T.FatigueRegenPerTickPerMille);
+        T.SuppressionDecayPerTickPerMille = ReadPerMille(*M, "suppression_decay_per_tick", T.SuppressionDecayPerTickPerMille);
+        T.OutOfFireDelayTicks = ReadInt(*M, "out_of_fire_delay_ticks", T.OutOfFireDelayTicks);
+        T.DefaultCompetencePerMille = ReadPerMille(*M, "default_competence", T.DefaultCompetencePerMille);
+        T.ScoutCompetencePerMille = ReadPerMille(*M, "scout_competence", T.ScoutCompetencePerMille);
     }
 
     if (const Json::Value* Tracks = Root.Find("track_tuning"); Tracks != nullptr && Tracks->IsObject())

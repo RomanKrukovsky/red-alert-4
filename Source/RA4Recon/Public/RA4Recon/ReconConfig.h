@@ -117,6 +117,42 @@ struct CommsProfile
     int32_t OfficerBiasMaxPerMille = 200;      // distortion a low-quality node may add
 };
 
+// --- Morale model (inputs of the distortion pipeline, M2) -----------------------
+
+// Owner decisions (2026-08-06): morale falls from incoming damage, suppression,
+// prolonged combat, nearby allied deaths, comms blackout (M3) and VISIBLE enemy
+// numerical superiority; it recovers with time out of fire. Superiority reads
+// raw visible counts, never distorted ones -- otherwise fear inflates counts,
+// inflated counts feed fear, and the loop runs away.
+struct MoraleTuning
+{
+    // Per damage event: penalty scaled by (damage / 100) as a per-mille fraction.
+    int32_t DamageMoralePenaltyPerMille = 30;
+    int32_t DamageSuppressionPerMille = 120;
+
+    // Nearby allied death: stronger than taking a hit yourself.
+    int32_t AllyDeathMoralePenaltyPerMille = 80;
+    int32_t AllyDeathRadiusTiles = 6;
+
+    // Visible superiority: applies when visible enemies outnumber the player's
+    // live units by more than the threshold ratio (per-mille: 2000 = 2x).
+    int32_t SuperiorityRatioThresholdPerMille = 2000;
+    int32_t SuperiorityMoralePenaltyPerTickPerMille = 2;
+    int32_t SuperiorityRadiusTiles = 8;
+
+    // Fatigue accrues while under fire; morale/fatigue recover out of contact.
+    int32_t FatiguePerTickUnderFirePerMille = 4;
+    int32_t MoraleRegenPerTickPerMille = 1;
+    int32_t FatigueRegenPerTickPerMille = 2;
+    int32_t SuppressionDecayPerTickPerMille = 10;
+    int32_t OutOfFireDelayTicks = 60;   // 3 s of quiet before recovery starts
+
+    // Observer competence until per-unit content fields land: scouts see better.
+    // Data-driven here rather than defaulted in code (no magic numbers rule).
+    int32_t DefaultCompetencePerMille = 700;
+    int32_t ScoutCompetencePerMille = 950;
+};
+
 // --- Track lifecycle tuning -----------------------------------------------------
 
 struct TrackTuning
@@ -154,6 +190,7 @@ struct ReconSettings
     std::string ActiveCommsProfile = "comms.default";
 
     TrackTuning Tracks;
+    MoraleTuning Morale;
     std::vector<DistortionProfile> DistortionProfiles;
     std::vector<CommsProfile> CommsProfiles;
     ConfusionMatrix Confusion;

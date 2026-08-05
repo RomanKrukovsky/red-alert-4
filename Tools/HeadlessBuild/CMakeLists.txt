@@ -88,6 +88,8 @@ add_library(RA4Recon STATIC
     ${RA4_SOURCE_ROOT}/RA4Recon/Private/ReconConfig.cpp
     ${RA4_SOURCE_ROOT}/RA4Recon/Private/ReconSystem.cpp
     ${RA4_SOURCE_ROOT}/RA4Recon/Private/PerceivedWorld.cpp
+    ${RA4_SOURCE_ROOT}/RA4Recon/Private/DistortionPipeline.cpp
+    ${RA4_SOURCE_ROOT}/RA4Recon/Private/MoraleModel.cpp
 )
 target_include_directories(RA4Recon PUBLIC ${RA4_SOURCE_ROOT}/RA4Recon/Public)
 target_link_libraries(RA4Recon PUBLIC RA4Content RA4FogOfWar)
@@ -177,6 +179,7 @@ add_executable(RA4Tests
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestDirectControl.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestNetwork.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestRecon.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestDbg2.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestUI.cpp
 )
 
