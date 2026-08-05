@@ -139,6 +139,15 @@ private:
     void OnAttackMovePressed();
     void OnControlGroupKeyByKey(FKey Key);
     void OnControlGroupKey(int32 GroupIndex);
+
+    /**
+     * Keys that commit build cards, in the same grid order as the badges the sidebar
+     * draws. One table so a badge can never promise a key that is not bound; the two
+     * table lengths are asserted against each other the first time this is read.
+     */
+    static const TArray<FKey>& GetBuildCardHotkeys();
+    void OnBuildCardKeyByKey(FKey Key);
+    void OnBuildCardHotkey(int32 CardIndex);
 #if !UE_BUILD_SHIPPING
     void DebugForceVictory();
     void DebugForceDefeat();

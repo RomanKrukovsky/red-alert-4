@@ -91,16 +91,20 @@ void ARA4PlayerController::BeginPlay()
         {
             Sidebar->OnBuildCardClicked.AddUObject(this, &ARA4PlayerController::HandleBuildCardClicked);
             Sidebar->OnRadarClicked.AddUObject(this, &ARA4PlayerController::HandleRadarClicked);
+            // The reserved strip and the widget's own width come from the same helper. If
+            // they ever disagree the world is drawn under the column, or a band of
+            // background shows beside it.
+            const float ReservedWidth = URA4SidebarWidget::ComputeSidebarWidth(this);
             FGameViewportWidgetSlot Slot;
             Slot.Anchors = FAnchors(1.0f, 0.0f, 1.0f, 1.0f);
-            Slot.Offsets = FMargin(0.0f, 0.0f, URA4SidebarWidget::SidebarWidth, 0.0f);
+            Slot.Offsets = FMargin(0.0f, 0.0f, ReservedWidth, 0.0f);
             Slot.Alignment = FVector2D(1.0f, 0.0f);
             Slot.ZOrder = 10;
             const bool bAdded = ViewportSubsystem != nullptr &&
                                 ViewportSubsystem->AddWidget(Sidebar, Slot);
             UE_LOG(LogTemp, Display,
                    TEXT("RA4 HUD: production sidebar viewport add=%d width=%.0f"),
-                   bAdded ? 1 : 0, URA4SidebarWidget::SidebarWidth);
+                   bAdded ? 1 : 0, ReservedWidth);
         }
         else
         {
@@ -277,6 +281,57 @@ void ARA4PlayerController::SetupInputComponent()
     {
         InputComponent->BindKey(GroupKeys[Index], IE_Pressed, this, &ARA4PlayerController::OnControlGroupKeyByKey);
     }
+
+    // Build card hotkeys, in the same grid order as the badges the sidebar draws.
+    for (const FKey& Key : GetBuildCardHotkeys())
+    {
+        InputComponent->BindKey(Key, IE_Pressed, this, &ARA4PlayerController::OnBuildCardKeyByKey);
+    }
+}
+
+const TArray<FKey>& ARA4PlayerController::GetBuildCardHotkeys()
+{
+    // Deliberately not the digits: those are control groups above, and the ordinary RTS
+    // reflex of pressing a number to recall a squad has to keep working. Order matches
+    // URA4SidebarWidget's badge table, and the assert catches a key added to one table
+    // and not the other rather than leaving a badge that does nothing.
+    static const TArray<FKey> Keys = {
+        EKeys::Q, EKeys::E, EKeys::R, EKeys::T,
+        EKeys::Y, EKeys::U, EKeys::I, EKeys::O,
+        EKeys::P, EKeys::H, EKeys::J, EKeys::K,
+    };
+    checkf(Keys.Num() == URA4SidebarWidget::GetCardHotkeyCount(),
+           TEXT("Build card hotkey table and sidebar badge table disagree (%d vs %d)"),
+           Keys.Num(), URA4SidebarWidget::GetCardHotkeyCount());
+    return Keys;
+}
+
+void ARA4PlayerController::OnBuildCardKeyByKey(const FKey Key)
+{
+    const TArray<FKey>& Keys = GetBuildCardHotkeys();
+    for (int32 Index = 0; Index < Keys.Num(); ++Index)
+    {
+        if (Keys[Index] == Key)
+        {
+            OnBuildCardHotkey(Index);
+            return;
+        }
+    }
+}
+
+void ARA4PlayerController::OnBuildCardHotkey(int32 CardIndex)
+{
+    // The console is eating letter keys while it is open, and a possessed unit is being
+    // driven with them. Neither should be queueing structures.
+    if (bCheatConsoleOpen || IsDirectControlActive() || Sidebar == nullptr)
+    {
+        return;
+    }
+
+    // Delegated rather than resolved here: which content a grid position maps to, and
+    // whether that card is buildable at all, is the sidebar's business. This only turns a
+    // key into an index, which is what an adapter is for.
+    Sidebar->ActivateCardByIndex(CardIndex);
 }
 
 void ARA4PlayerController::OnDummyPanKey()
