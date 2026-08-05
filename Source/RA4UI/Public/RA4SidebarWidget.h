@@ -112,6 +112,16 @@ public:
     UFUNCTION(BlueprintPure, Category = "RA4|UI")
     int32 GetActiveCategory() const { return ActiveCategory; }
 
+    /**
+     * Activates the build card at the given grid index (row-major, same as hotkey
+     * labels). If the card exists and is available, broadcasts OnBuildCardClicked.
+     * Returns true if the card was activated.
+     */
+    bool ActivateCardByIndex(int32 CardIndex);
+
+    /** Number of cards currently visible in the active category. */
+    int32 GetVisibleCardCount() const { return CardContentIds.Num(); }
+
 private:
     URA4UIDataProviderSubsystem* GetProvider() const;
 
@@ -123,6 +133,11 @@ private:
     void HandleTabClicked(int32 TabIndex);
     void HandleCardClicked(int32 CardIndex);
     void HandleRadarClicked(FVector2D WorldPosition);
+
+    /** Hotkey handler called by the player controller when a card hotkey is pressed. */
+    void OnBuildCardHotkey(int32 HotkeyIndex);
+
+    virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
     // Widgets rebuilt on refresh rather than kept in sync one by one: the card grid is
     // at most a couple of dozen entries and only changes when availability does.
@@ -150,6 +165,13 @@ private:
     UPROPERTY(Transient)
     TObjectPtr<UTextBlock> SelectionDetailsText;
 
+    // Power ratio bar shown under the power text in the resource section.
+    UPROPERTY(Transient)
+    TObjectPtr<UProgressBar> PowerRatioBar;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UTextBlock> SupplyText;
+
     UPROPERTY(Transient)
     TObjectPtr<URA4RadarWidget> RadarWidget;
 
@@ -167,6 +189,9 @@ private:
 
     // What the card grid was last built from. See RefreshCards.
     uint32 CardsSignature = 0;
+
+    // Per-card hover progress for animated scale (0 = idle, 1 = hovered).
+    TArray<float> CardHoverProgress;
 
     FDelegateHandle ResourceChangeHandle;
     FDelegateHandle ProductionChangeHandle;
