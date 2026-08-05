@@ -223,6 +223,24 @@ UTextBlock* MakeLabel(UWidgetTree* Tree, FName Name, const FLinearColor& Colour,
     return Text;
 }
 
+// Shared chrome for the sidebar cards: a rounded panel with a subtle outline so the
+// minimap, resources, selection and queue read as one family of framed blocks.
+UBorder* MakeStyledPanel(UWidgetTree* Tree, const FName Name, const FLinearColor& Fill)
+{
+    UBorder* Frame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), Name);
+
+    FSlateBrush Brush;
+    Brush.DrawAs = ESlateBrushDrawType::RoundedBox;
+    Brush.TintColor = FSlateColor(Fill);
+    Brush.OutlineSettings.RoundingType = ESlateBrushRoundingType::FixedRadius;
+    Brush.OutlineSettings.CornerRadii = FVector4(4.0f, 4.0f, 4.0f, 4.0f);
+    Brush.OutlineSettings.Width = 1.0f;
+    Brush.OutlineSettings.Color = FSlateColor(FLinearColor(0.16f, 0.19f, 0.24f, 1.0f));
+    Frame->SetBrush(Brush);
+    Frame->SetPadding(FMargin(8.0f, 6.0f));
+    return Frame;
+}
+
 void StyleButton(UButton* Button, const FLinearColor& Base)
 {
     FButtonStyle Style = Button->GetStyle();
@@ -517,6 +535,39 @@ void URA4SidebarWidget::NativeConstruct()
         RefreshResources();
         RefreshCards();
         RefreshSelection();
+    }
+}
+
+void URA4SidebarWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+    Super::NativeTick(MyGeometry, InDeltaTime);
+
+    // Smoothly scale hovered build cards. A render-transform tween is cheap (no
+    // relayout, no Slate invalidation cascade) and gives the grid the same tactile
+    // feedback the menu buttons already have via URA4ButtonBase.
+    constexpr float kHoverScale = 1.05f;
+    constexpr float kAnimSpeed = 10.0f;
+
+    CardHoverProgress.SetNum(CardButtons.Num());
+    for (int32 Index = 0; Index < CardButtons.Num(); ++Index)
+    {
+        URA4IndexedButton* Button = CardButtons[Index];
+        if (Button == nullptr)
+        {
+            continue;
+        }
+
+        const float Target = Button->IsHovered() ? 1.0f : 0.0f;
+        float& Progress = CardHoverProgress[Index];
+        if (FMath::IsNearlyEqual(Progress, Target, 0.001f))
+        {
+            continue;
+        }
+
+        Progress = FMath::FInterpTo(Progress, Target, InDeltaTime, kAnimSpeed);
+        const float Scale = FMath::Lerp(1.0f, kHoverScale, Progress);
+        Button->SetRenderTransformPivot(FVector2D(0.5f, 0.5f));
+        Button->SetRenderScale(FVector2D(Scale, Scale));
     }
 }
 

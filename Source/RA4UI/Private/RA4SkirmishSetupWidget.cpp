@@ -5,6 +5,7 @@
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
+#include "Components/ButtonSlot.h"
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
 #include "Components/ComboBoxString.h"
@@ -13,6 +14,7 @@
 #include "Components/Image.h"
 #include "Components/Overlay.h"
 #include "Components/OverlaySlot.h"
+#include "Components/ScaleBox.h"
 #include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
@@ -64,6 +66,38 @@ void PlaceSetupWidget(UCanvasPanel* Canvas, UWidget* Widget, const FVector2D Pos
     Slot->SetAlignment(FVector2D::ZeroVector);
     Slot->SetZOrder(ZOrder);
 }
+
+// Metal edge + dim red glow + dark interior, matching the main menu chrome so the
+// skirmish screen no longer looks like an unstyled placeholder next to it.
+UBorder* MakeFramedSetupPanel(UWidgetTree* Tree, UWidget* Content, const FName Name,
+                              const FMargin Padding = FMargin(16.0f))
+{
+    UBorder* Metal = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), FName(Name.ToString() + TEXT("_Metal")));
+    Metal->SetBrushColor(MetalEdge);
+    Metal->SetPadding(FMargin(2.0f));
+
+    UBorder* Glow = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), FName(Name.ToString() + TEXT("_Glow")));
+    Glow->SetBrushColor(RedDim);
+    Glow->SetPadding(FMargin(2.0f));
+    Metal->SetContent(Glow);
+
+    UBorder* Interior = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), Name);
+    Interior->SetBrushColor(Panel);
+    Interior->SetPadding(Padding);
+    Glow->SetContent(Interior);
+    Interior->SetContent(Content);
+    return Metal;
+}
+
+void StyleSetupButton(UButton* Button, const FLinearColor& Base)
+{
+    FButtonStyle Style = Button->GetStyle();
+    Style.Normal.TintColor = FSlateColor(Base);
+    Style.Hovered.TintColor = FSlateColor(Base * 1.45f);
+    Style.Pressed.TintColor = FSlateColor(Base * 0.70f);
+    Style.Disabled.TintColor = FSlateColor(Base * 0.45f);
+    Button->SetStyle(Style);
+}
 }
 
 URA4SkirmishSetupWidget::URA4SkirmishSetupWidget(const FObjectInitializer& ObjectInitializer)
@@ -97,10 +131,23 @@ void URA4SkirmishSetupWidget::BuildLayout()
     BgSlot->SetHorizontalAlignment(HAlign_Fill);
     BgSlot->SetVerticalAlignment(VAlign_Fill);
 
+    // Scale the fixed 1920x1080 reference layout to any viewport instead of
+    // letting canvas positions overflow (or float) at non-1080p resolutions.
+    // Mirrors the pattern already used by the main menu and campaign screens.
+    UScaleBox* ScaleBox = WidgetTree->ConstructWidget<UScaleBox>(UScaleBox::StaticClass(), TEXT("ResponsiveScale"));
+    ScaleBox->SetStretch(EStretch::ScaleToFit);
+    ScaleBox->SetStretchDirection(EStretchDirection::Both);
+    UOverlaySlot* ScaleSlot = Root->AddChildToOverlay(ScaleBox);
+    ScaleSlot->SetHorizontalAlignment(HAlign_Fill);
+    ScaleSlot->SetVerticalAlignment(VAlign_Fill);
+
+    USizeBox* ReferenceFrame = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("ReferenceFrame"));
+    ReferenceFrame->SetWidthOverride(ReferenceSize.X);
+    ReferenceFrame->SetHeightOverride(ReferenceSize.Y);
+    ScaleBox->SetContent(ReferenceFrame);
+
     MainCanvas = WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), TEXT("MainCanvas"));
-    UOverlaySlot* CanvasSlot = Root->AddChildToOverlay(MainCanvas);
-    CanvasSlot->SetHorizontalAlignment(HAlign_Fill);
-    CanvasSlot->SetVerticalAlignment(VAlign_Fill);
+    ReferenceFrame->SetContent(MainCanvas);
 
     // Title Header
     UTextBlock* Title = MakeSetupText(WidgetTree, LOCTEXT("Title", "NASTROYKA SKhVATKI (SKIRMISH)"), 36, Red, TEXT("TitleText"));
@@ -136,7 +183,7 @@ void URA4SkirmishSetupWidget::BuildLayout()
     LeftBox->AddChildToVerticalBox(CreditsCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 16.0f));
 
     // AI Difficulty
-    UTextBlock* DiffLabel = MakeSetupText(WidgetTree, LOCTEXT("DiffLabel", "DIFFICULTY II"), 16, TextColor, TEXT("DiffLabelText"));
+    UTextBlock* DiffLabel = MakeSetupText(WidgetTree, LOCTEXT("DiffLabel", "SLOZhNOST II (AI)"), 16, TextColor, TEXT("DiffLabelText"));
     LeftBox->AddChildToVerticalBox(DiffLabel)->SetPadding(FMargin(0.0f, 10.0f, 0.0f, 4.0f));
 
     DifficultyCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("DifficultyCombo"));
@@ -148,10 +195,7 @@ void URA4SkirmishSetupWidget::BuildLayout()
     DifficultyCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
     LeftBox->AddChildToVerticalBox(DifficultyCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 16.0f));
 
-    UBorder* LeftPanel = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("LeftPanel"));
-    LeftPanel->SetBrushColor(Panel);
-    LeftPanel->SetPadding(FMargin(16.0f));
-    LeftPanel->SetContent(LeftBox);
+    UBorder* LeftPanel = MakeFramedSetupPanel(WidgetTree, LeftBox, TEXT("LeftPanel"));
     PlaceSetupWidget(MainCanvas, LeftPanel, FVector2D(80.0f, 140.0f), FVector2D(520.0f, 520.0f), 2);
 
     // Right Column: Player & AI Setup
@@ -215,17 +259,10 @@ void URA4SkirmishSetupWidget::BuildLayout()
     AISpotCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
     RightBox->AddChildToVerticalBox(AISpotCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 16.0f));
 
-    UBorder* RightPanel = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("RightPanel"));
-    RightPanel->SetBrushColor(Panel);
-    RightPanel->SetPadding(FMargin(16.0f));
-    RightPanel->SetContent(RightBox);
+    UBorder* RightPanel = MakeFramedSetupPanel(WidgetTree, RightBox, TEXT("RightPanel"));
     PlaceSetupWidget(MainCanvas, RightPanel, FVector2D(640.0f, 140.0f), FVector2D(520.0f, 520.0f), 2);
 
     // Validation & Action Banner (Bottom)
-    ValidationBanner = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("ValidationBanner"));
-    ValidationBanner->SetBrushColor(FLinearColor(0.04f, 0.01f, 0.01f, 0.95f));
-    ValidationBanner->SetPadding(FMargin(16.0f, 12.0f));
-
     UVerticalBox* BannerStack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("BannerStack"));
 
     ValidationWarningText = MakeSetupText(
@@ -235,18 +272,32 @@ void URA4SkirmishSetupWidget::BuildLayout()
     UHorizontalBox* ActionRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("ActionRow"));
 
     UButton* BackButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("BackButton"));
-    BackButton->AddChild(MakeSetupText(WidgetTree, LOCTEXT("Back", "BACK V MENYu"), 18, TextColor, TEXT("BackLabel")));
+    StyleSetupButton(BackButton, MetalEdge);
+    UTextBlock* BackLabel = MakeSetupText(WidgetTree, LOCTEXT("Back", "NAZAD V MENYu"), 18, TextColor, TEXT("BackLabel"));
+    BackButton->AddChild(BackLabel);
+    if (UButtonSlot* BackSlot = Cast<UButtonSlot>(BackLabel->Slot))
+    {
+        BackSlot->SetPadding(FMargin(24.0f, 10.0f));
+        BackSlot->SetHorizontalAlignment(HAlign_Center);
+        BackSlot->SetVerticalAlignment(VAlign_Center);
+    }
     BackButton->OnClicked.AddDynamic(this, &URA4SkirmishSetupWidget::HandleBackClicked);
     ActionRow->AddChildToHorizontalBox(BackButton)->SetPadding(FMargin(0.0f, 0.0f, 16.0f, 0.0f));
 
     StartButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("StartButton"));
-    StartButton->SetBackgroundColor(RedDim);
-    StartButton->AddChild(MakeSetupText(WidgetTree, LOCTEXT("StartMatch", "NAChAT MATCh"), 20, TextColor, TEXT("StartMatchLabel")));
+    StyleSetupButton(StartButton, Red);
+    UTextBlock* StartLabel = MakeSetupText(WidgetTree, LOCTEXT("StartMatch", "NAChAT MATCh"), 20, TextColor, TEXT("StartMatchLabel"));
+    StartButton->AddChild(StartLabel);
+    if (UButtonSlot* StartSlot = Cast<UButtonSlot>(StartLabel->Slot))
+    {
+        StartSlot->SetPadding(FMargin(32.0f, 10.0f));
+        StartSlot->SetHorizontalAlignment(HAlign_Center);
+        StartSlot->SetVerticalAlignment(VAlign_Center);
+    }
     StartButton->OnClicked.AddDynamic(this, &URA4SkirmishSetupWidget::HandleStartMatchClicked);
     ActionRow->AddChildToHorizontalBox(StartButton);
 
-    BannerStack->AddChildToVerticalBox(ActionRow);
-    ValidationBanner->SetContent(BannerStack);
+    ValidationBanner = MakeFramedSetupPanel(WidgetTree, BannerStack, TEXT("ValidationBanner"), FMargin(16.0f, 12.0f));
     PlaceSetupWidget(MainCanvas, ValidationBanner, FVector2D(80.0f, 680.0f), FVector2D(1080.0f, 140.0f), 2);
 }
 
