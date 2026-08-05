@@ -119,9 +119,12 @@ RA4_TEST(Hud, CreditDeltaTracksSpending)
 
     F.Step(SecondsToTicks(9), {Yard});
     RA4_EXPECT_EQ(F.Snapshot.Resources.Credits, 9200);
-    // The delta is a per-refresh figure, so it reports the last slice drawn, not the
-    // whole price. What matters is that it is negative while money is going out.
-    RA4_EXPECT(F.Snapshot.Resources.CreditsDelta <= 0);
+    // The queue card must be able to show the funding progress, not just the build
+    // progress, or the player cannot see where the money went.
+    RA4_REQUIRE(F.Snapshot.Production.Queue.size() == 1u);
+    RA4_EXPECT_EQ(F.Snapshot.Production.Queue[0].TotalCost, 800);
+    RA4_EXPECT_EQ(F.Snapshot.Production.Queue[0].PaidCredits, 800);
+    RA4_EXPECT(!F.Snapshot.Production.Queue[0].bStarvedForCredits);
 }
 
 RA4_TEST(Hud, PowerShortageIsReportedNotInvented)
@@ -285,7 +288,11 @@ RA4_TEST(Hud, BuildCardsReportWhyTheyAreBlocked)
     }
 }
 
-RA4_TEST(Hud, AffordabilityIsReportedSeparatelyFromTech)
+// Under ADR-0012 being poor no longer blocks an order: the simulation accepts it and
+// funds it as income arrives. A HUD that greyed the card out would forbid a command
+// the simulation would take, so affordability must not be a block reason -- while a
+// genuinely unbuildable item still is.
+RA4_TEST(Hud, PovertyDoesNotBlockTheCardButMissingTechStillDoes)
 {
     ContentDatabase Content;
     BuildDefaultContent(Content);
@@ -304,14 +311,28 @@ RA4_TEST(Hud, AffordabilityIsReportedSeparatelyFromTech)
     Builder.Build(World, {}, Snapshot);
 
     const BuildOption* Power = nullptr;
+    const BuildOption* Tank = nullptr;
     for (const BuildOption& O : Snapshot.Production.Options)
     {
         if (O.Content == Ids::SovPower) { Power = &O; }
+        if (O.Content == Ids::SovHeavyTank) { Tank = &O; }
     }
+
+    // 800-cost reactor with 100 credits: tech and producer are fine, so the player
+    // is allowed to queue it and watch it fund slowly.
     RA4_REQUIRE(Power != nullptr);
-    // Tech is satisfied; only the money is missing, and the card must say so.
-    RA4_EXPECT(!Power->bAvailable);
-    RA4_EXPECT(Power->BlockReason == BuildBlockReason::InsufficientCredits);
+    RA4_EXPECT(Power->bAvailable);
+    RA4_EXPECT(Power->BlockReason == BuildBlockReason::None);
+    // The simulation must agree, or the HUD is lying about what is possible.
+    Command Start = MakeCommand(CommandType::StartProduction, 0);
+    Start.Content = Ids::SovPower;
+    RA4_EXPECT(World.ApplyCommand(Start).IsAccepted());
+
+    // A heavy tank needs a war factory that does not exist, and that still blocks.
+    RA4_REQUIRE(Tank != nullptr);
+    RA4_EXPECT(!Tank->bAvailable);
+    RA4_EXPECT(Tank->BlockReason != BuildBlockReason::None);
+    RA4_EXPECT(Tank->BlockReason != BuildBlockReason::InsufficientCredits);
 }
 
 RA4_TEST(Hud, QueueReportsProgressAndRemainingTime)

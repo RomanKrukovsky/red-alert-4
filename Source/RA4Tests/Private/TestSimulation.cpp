@@ -6,6 +6,7 @@
 #include "RA4Core/SimConfig.h"
 
 #include <utility>
+#include <vector>
 
 using namespace RA4;
 using namespace RA4Test;
@@ -987,34 +988,6 @@ RA4_TEST(FlowPayment, StarvedItemKeepsItsProgressAndResumesWhenIncomeReturns)
     RA4_EXPECT(Finished->ProgressTicks >= FrozenProgress);
 }
 
-RA4_TEST(FlowPayment, HigherPriorityQueueIsFundedFirstWhenCreditsAreScarce)
-{
-    // Two producers, and only enough money for roughly one of them.
-    FlowFixture F(400);
-    const EntityId YardA = F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
-    const EntityId YardB = F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(20, 20), true);
-
-    Command StartA = MakeCommand(CommandType::StartProduction, 0);
-    StartA.Primary = YardA;
-    StartA.Content = Ids::SovPower;
-    RA4_REQUIRE(F.World.ApplyCommand(StartA).IsAccepted());
-
-    Command StartB = MakeCommand(CommandType::StartProduction, 0);
-    StartB.Primary = YardB;
-    StartB.Content = Ids::SovPower;
-    RA4_REQUIRE(F.World.ApplyCommand(StartB).IsAccepted());
-
-    // With equal priority the lower entity index wins the tie, deterministically.
-    RunTicks(F.World, 200);
-    const ProductionItem* A = QueueHead(F.World, YardA);
-    const ProductionItem* B = QueueHead(F.World, YardB);
-    RA4_REQUIRE(A != nullptr && B != nullptr);
-    RA4_EXPECT_EQ(F.World.GetPlayer(0).Credits, 0);
-    RA4_EXPECT(A->PaidCredits >= B->PaidCredits);
-    // Every credit went somewhere; none evaporated.
-    RA4_EXPECT_EQ(A->PaidCredits + B->PaidCredits, 400);
-}
-
 RA4_TEST(FlowPayment, DestroyedProducerRefundsHalfOfWhatTheQueueHadPaid)
 {
     FlowFixture F(10000);
@@ -1134,6 +1107,66 @@ RA4_TEST(FlowPayment, MidFundingStateSurvivesSaveAndReload)
     RA4_EXPECT(Restored.ComputeStateChecksum() == SavedChecksum);
 }
 
+RA4_TEST(FlowPayment, ScarceCreditsGoToTheLowerEntityIndexAndNothingIsLost)
+{
+    // Two producers competing for less money than one tick's combined demand. That
+    // is the only situation in which the allocation order is observable, and the
+    // documented order is priority (all equal today) then entity index -- never the
+    // order the collection loop happened to visit buildings in.
+    FlowFixture F(7);
+    const EntityId First = F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    const EntityId Second = F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(20, 20), true);
+    RA4_REQUIRE(First.IsValid() && Second.IsValid());
+    RA4_REQUIRE(First.Index != Second.Index);
+
+    for (const EntityId Producer : {First, Second})
+    {
+        Command Start = MakeCommand(CommandType::StartProduction, 0);
+        Start.Primary = Producer;
+        Start.Content = Ids::SovPower;
+        RA4_REQUIRE(F.World.ApplyCommand(Start).IsAccepted());
+    }
+
+    RunTicks(F.World, 1);
+
+    const ProductionItem* A = QueueHead(F.World, First);
+    const ProductionItem* B = QueueHead(F.World, Second);
+    RA4_REQUIRE(A != nullptr && B != nullptr);
+
+    // Seven credits cannot cover two five-credit slices, so one queue is served in
+    // full and the other gets the remainder -- an even split would mean the order was
+    // not being applied at all.
+    const ProductionItem* Winner = (First.Index < Second.Index) ? A : B;
+    const ProductionItem* Loser = (First.Index < Second.Index) ? B : A;
+    RA4_EXPECT_EQ(Winner->PaidCredits, 5);
+    RA4_EXPECT_EQ(Loser->PaidCredits, 2);
+
+    // Every credit is accounted for: none evaporated and none was conjured.
+    RA4_EXPECT_EQ(A->PaidCredits + B->PaidCredits + F.World.GetPlayer(0).Credits, 7);
+    // The loser could not buy a whole slice, so it must say so rather than sitting
+    // in an unexplained Funding state.
+    RA4_EXPECT(Loser->State == FlowPaymentState::Starved);
+
+    // Replaying the same scenario must award the credits the same way, or two peers
+    // handed the identical command stream would diverge on who got paid.
+    FlowFixture G(7);
+    const EntityId GFirst = G.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    const EntityId GSecond = G.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(20, 20), true);
+    for (const EntityId Producer : {GFirst, GSecond})
+    {
+        Command Start = MakeCommand(CommandType::StartProduction, 0);
+        Start.Primary = Producer;
+        Start.Content = Ids::SovPower;
+        RA4_REQUIRE(G.World.ApplyCommand(Start).IsAccepted());
+    }
+    RunTicks(G.World, 1);
+    const ProductionItem* GA = QueueHead(G.World, GFirst);
+    const ProductionItem* GB = QueueHead(G.World, GSecond);
+    RA4_REQUIRE(GA != nullptr && GB != nullptr);
+    RA4_EXPECT_EQ(GA->PaidCredits, A->PaidCredits);
+    RA4_EXPECT_EQ(GB->PaidCredits, B->PaidCredits);
+}
+
 RA4_TEST(FlowPayment, IdenticalCommandStreamsProduceIdenticalChecksums)
 {
     const auto RunOne = [](uint64_t Seed) {
@@ -1155,4 +1188,95 @@ RA4_TEST(FlowPayment, IdenticalCommandStreamsProduceIdenticalChecksums)
     // Same seed and same commands must land on the same state, including which of
     // two competing queues won the scarce credits.
     RA4_EXPECT(RunOne(777) == RunOne(777));
+}
+
+// Regression: the funding pass once collected candidates into an array sized by
+// kMaxProductionQueueLength (9), which is a per-building queue-depth cap, not a
+// bound on how many buildings a player can own. Every producer past the ninth was
+// silently dropped -- its item never paid a credit and so never advanced, stalling
+// forever with nothing shown to the player.
+RA4_TEST(FlowPayment, EveryProducerIsFundedEvenBeyondTheQueueLengthCap)
+{
+    FlowFixture F(200000);
+
+    // Comfortably more producers than kMaxProductionQueueLength.
+    constexpr int32_t kProducerCount = 14;
+    std::vector<EntityId> Barracks;
+    F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(4, 4), true);
+    for (int32_t N = 0; N < kProducerCount; ++N)
+    {
+        const EntityId B = F.World.SpawnBuilding(Ids::SovPower, 0, TileCoord(4 + N * 3, 10), true);
+        RA4_REQUIRE(B.IsValid());
+        const EntityId Bar = F.World.SpawnBuilding(Ids::SovBarracks, 0, TileCoord(4 + N * 3, 16), true);
+        RA4_REQUIRE(Bar.IsValid());
+        Barracks.push_back(Bar);
+    }
+
+    for (const EntityId Producer : Barracks)
+    {
+        Command Start = MakeCommand(CommandType::StartProduction, 0);
+        Start.Primary = Producer;
+        Start.Content = Ids::SovConscript;
+        RA4_REQUIRE(F.World.ApplyCommand(Start).IsAccepted());
+    }
+
+    RunTicks(F.World, 20);
+
+    // With a large treasury every single queue must be drawing credits. Before the
+    // fix the last five sat at zero paid, zero progress, forever.
+    for (size_t N = 0; N < Barracks.size(); ++N)
+    {
+        const ProductionItem* Item = QueueHead(F.World, Barracks[N]);
+        if (Item == nullptr)
+        {
+            continue;   // already finished and popped, which is also fine
+        }
+        RA4_EXPECT(Item->PaidCredits > 0);
+        RA4_EXPECT(Item->State != FlowPaymentState::Queued);
+    }
+}
+
+// Selling is OwnershipChanged, which carries no queue refund: the sale price is
+// already the compensation. Paying the destroyed-producer refund on top made selling
+// a loaded factory strictly better than keeping it.
+RA4_TEST(FlowPayment, SellingAProducerDoesNotAlsoPayTheDestroyedQueueRefund)
+{
+    FlowFixture F(10000);
+    F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    F.World.SpawnBuilding(Ids::SovPower, 0, TileCoord(14, 10), true);
+    const EntityId Barracks = F.World.SpawnBuilding(Ids::SovBarracks, 0, TileCoord(10, 14), true);
+    RA4_REQUIRE(Barracks.IsValid());
+
+    Command Start = MakeCommand(CommandType::StartProduction, 0);
+    Start.Primary = Barracks;
+    Start.Content = Ids::SovConscript;
+    RA4_REQUIRE(F.World.ApplyCommand(Start).IsAccepted());
+    RunTicks(F.World, 10);
+
+    // Freeze funding so the arithmetic is exact.
+    Command Pause = MakeCommand(CommandType::PauseProduction, 0);
+    Pause.Primary = Barracks;
+    Pause.Slot = 0;
+    RA4_REQUIRE(F.World.ApplyCommand(Pause).IsAccepted());
+    RunTicks(F.World, 2);
+
+    const ProductionItem* Frozen = QueueHead(F.World, Barracks);
+    RA4_REQUIRE(Frozen != nullptr);
+    RA4_EXPECT(Frozen->PaidCredits > 0);
+
+    const EntityDef* BarracksDef = F.Content.FindEntity(Ids::SovBarracks);
+    RA4_REQUIRE(BarracksDef != nullptr);
+    const int32_t SalePrice =
+        (BarracksDef->Production.Cost * BarracksDef->Building.SellRefundPercent) / 100;
+
+    const int32_t Before = F.World.GetPlayer(0).Credits;
+
+    Command Sell = MakeCommand(CommandType::SellBuilding, 0);
+    Sell.Primary = Barracks;
+    RA4_REQUIRE(F.World.ApplyCommand(Sell).IsAccepted());
+    RunTicks(F.World, 2);
+
+    RA4_EXPECT(!F.World.IsAlive(Barracks));
+    // Exactly the sale price, with nothing added for the queue that went with it.
+    RA4_EXPECT_EQ(F.World.GetPlayer(0).Credits, Before + SalePrice);
 }

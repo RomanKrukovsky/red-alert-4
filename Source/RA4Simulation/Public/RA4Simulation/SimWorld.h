@@ -246,6 +246,17 @@ private:
 
     std::vector<SimEvent> Events;
 
+    // ADR-0012 credit-allocation scratch, reused every tick so the funding pass does
+    // not allocate. Rebuilt from scratch each call, so it is not simulation state and
+    // is deliberately absent from Serialize and ComputeStateChecksum.
+    struct FundingCandidate
+    {
+        uint32_t BuildingIndex = 0;
+        int32_t Priority = 0;
+        PlayerId Owner = kInvalidPlayer;
+    };
+    std::vector<FundingCandidate> FundingCandidates;
+
     // Per-player command budget, reset every tick. A client that exceeds it is
     // throttled rather than trusted; see Docs/ThreatModel.md.
     int32_t CommandsThisTick[kMaxPlayers] = {};

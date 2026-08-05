@@ -209,15 +209,20 @@ above should be read with `TickAccumulator` folded into `ProgressTicks`.
 
 ### Deferred to other ADRs
 
-- `EnergyThrottled` is defined and honoured by `SystemFlowPayment` (a throttled item
-  neither funds nor advances) but nothing sets it yet. Ordinary production *scales*
-  with the power ratio rather than freezing, per the ADR-0013 effect matrix; the state
-  is for the high-tech and superweapon categories ADR-0013 pauses outright. Note that
-  `kMinPowerRatioPercent` in `SimWorld.cpp` is 20, not the 50 quoted above, and it is
-  a floor multiplier rather than a freeze threshold.
-- `PrerequisiteLost` and `OwnershipChanged` are defined but unreachable: nothing
-  currently re-checks prerequisites for in-flight items, and selling does not yet
-  transfer queues. Their refund rules (80% and none) are unimplemented.
+- `EnergyThrottled` is defined and honoured by `SystemFlowPayment` but nothing sets
+  it yet. Ordinary production *scales* with the power ratio rather than freezing, per
+  the ADR-0013 effect matrix; the state is for the high-tech and superweapon
+  categories ADR-0013 pauses outright. Recovery (`EnergyThrottled → Funding` once the
+  ratio is back above `kMinPowerRatioPercent`) is already implemented here rather than
+  left to ADR-0013, so the state cannot become a permanent trap for whoever sets it
+  first. Note that `kMinPowerRatioPercent` in `SimWorld.cpp` is 20, not the 50 quoted
+  above, and it is a floor multiplier rather than a freeze threshold.
+- `PrerequisiteLost` is defined but unreachable: nothing currently re-checks
+  prerequisites for in-flight items, so its 80% refund is unimplemented.
+- `OwnershipChanged` is not yet used as a *state*, but its rule is enforced:
+  `SellBuilding` marks `BuildingComp::bSelling` and `DestroyEntity` skips the queue
+  refund for a sale, so selling returns the sale price only. Capture does not exist
+  yet.
 - `Priority` is stored, serialized, hashed and honoured by the allocation order, but
   no command sets it — every item is priority 0 and ties break on entity index. The
   command to set it belongs with the UI work.
@@ -225,3 +230,19 @@ above should be read with `TickAccumulator` folded into `ProgressTicks`.
 `TotalCost` is serialized despite being derivable from `ContentId`, so that a save
 made before a balance change still loads at the price the player agreed to pay. It
 remains excluded from the state hash.
+
+### Consequences outside the simulation
+
+- `kReplayFormatVersion` is bumped to 2. `SystemFlowPayment` changed the tick order
+  and the state hash gained the payment fields, so a v1 replay would replay to a
+  different hash; without the bump it would be reported as a desync rather than as an
+  old file.
+- Affordability is no longer a HUD block reason. The simulation accepts an order the
+  player cannot yet pay for, so greying the card out would forbid a command the
+  simulation would take and make gradual payment unreachable through the UI.
+  `CommandReject::InsufficientCredits` is consequently no longer produced for
+  production; it is left in the enum because removing a public value is a separate
+  interface change.
+- `QueueEntry` carries `PaymentState`, `PaidCredits`, `TotalCost` and
+  `bStarvedForCredits` so the sidebar can distinguish "out of money" from "you pressed
+  pause" — the distinction the state enum exists for.

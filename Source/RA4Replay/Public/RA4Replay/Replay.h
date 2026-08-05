@@ -19,7 +19,11 @@ namespace RA4
 
 // Bump on any change to the tick order, the command layout or the checksum
 // contents. Old replays are then rejected up front instead of desyncing.
-constexpr uint32_t kReplayFormatVersion = 1;
+//
+// v2 (ADR-0012): SystemFlowPayment was inserted into the tick order and the state
+// checksum gained the per-item payment state, so a v1 replay would replay to a
+// different hash and be reported as a desync rather than as an old file.
+constexpr uint32_t kReplayFormatVersion = 2;
 constexpr uint32_t kReplayMagic = 0x34414952;   // 'RA4R'
 
 struct ReplayHeader

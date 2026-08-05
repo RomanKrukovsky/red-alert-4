@@ -261,6 +261,10 @@ void HudSnapshotBuilder::BuildProduction(const SimWorld& World, const SelectionS
                 Entry.Content = Item.Content;
                 Entry.SlotIndex = int32_t(Slot);
                 Entry.bPaused = Item.bPaused;
+                Entry.PaymentState = Item.State;
+                Entry.PaidCredits = Item.PaidCredits;
+                Entry.TotalCost = Item.TotalCost;
+                Entry.bStarvedForCredits = Item.State == FlowPaymentState::Starved;
                 Entry.ProgressPercent = int32_t((int64_t(Clamped) * 100) / Total);
                 Entry.RemainingTicks = (Total - Clamped) / kProductionProgressScale;
 
@@ -325,10 +329,17 @@ void HudSnapshotBuilder::BuildProduction(const SimWorld& World, const SelectionS
 
         // Reasons are reported in the order the player can act on them: tech first,
         // because no amount of money fixes a missing war factory.
+        //
+        // Affordability is deliberately NOT a block reason. Under ADR-0012 the
+        // simulation accepts an order the player cannot yet pay for and funds it a
+        // slice per tick, so greying the card out here would forbid a command the
+        // simulation would happily take -- and make gradual payment unreachable
+        // through the actual UI. The card stays clickable; the queue entry then
+        // reports Starved so the player can see the money, not the button, is the
+        // constraint.
         if (bMatchOver) { Option.BlockReason = BuildBlockReason::MatchOver; }
         else if (!World.HasPrerequisites(LocalPlayer, Def)) { Option.BlockReason = BuildBlockReason::MissingPrerequisite; }
         else if (!Option.Producer.IsValid()) { Option.BlockReason = BuildBlockReason::NoProducer; }
-        else if (Player.Credits < Def.Production.Cost) { Option.BlockReason = BuildBlockReason::InsufficientCredits; }
         else
         {
             const BuildingComp* Building = World.GetBuilding(Option.Producer);

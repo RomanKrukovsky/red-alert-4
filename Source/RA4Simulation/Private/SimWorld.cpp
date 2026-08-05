@@ -1094,6 +1094,11 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
             {
                 Player.Credits += (D->Production.Cost * D->Building.SellRefundPercent) / 100;
             }
+            // ADR-0012 treats a sale as OwnershipChanged, which carries no queue
+            // refund: the sale price already compensates the player, and paying the
+            // destroyed-producer refund on top would make selling a loaded factory a
+            // money faucet. DestroyEntity reads this flag to tell the two apart.
+            Buildings[Cmd.Primary.Index].bSelling = true;
             PendingDestroy.push_back(Cmd.Primary);
             break;
         }
@@ -1241,7 +1246,11 @@ void SimWorld::DestroyEntity(EntityId Id, EntityId Killer)
         // for it are partially returned. Without this, losing a war factory mid-run
         // silently confiscates everything paid so far -- a compounding punishment on
         // top of losing the building, and one the player has no way to see.
-        if (Owner < kMaxPlayers)
+        //
+        // A voluntary sale is excluded: that is OwnershipChanged, and the sale price
+        // is already the compensation. Refunding here as well would make selling a
+        // loaded factory strictly better than keeping it.
+        if (Owner < kMaxPlayers && !Buildings[Index].bSelling)
         {
             int32_t Refunded = 0;
             for (const ProductionItem& Item : Buildings[Index].Queue)
@@ -1441,15 +1450,15 @@ void SimWorld::SystemFlowPayment()
     // Only the head of each queue draws credits. Funding the whole queue in
     // parallel would spread a thin treasury across everything and finish nothing,
     // which is precisely the failure the flow-payment model exists to avoid.
-    struct FundingCandidate
-    {
-        uint32_t BuildingIndex;
-        int32_t Priority;
-    };
-    static_assert(kMaxPlayers > 0, "player table must be non-empty");
-
-    FundingCandidate Candidates[kMaxPlayers][kMaxProductionQueueLength];
-    int32_t CandidateCount[kMaxPlayers] = {};
+    //
+    // The candidate list is a member vector rather than a fixed array: a player may
+    // own any number of producing buildings, and an earlier fixed bound silently
+    // dropped every producer past the ninth -- those items never paid a credit and
+    // so never advanced, stalling forever with nothing shown to the player. Worse,
+    // the drop happened before the priority sort, so a high-priority item at a high
+    // entity index lost to low-priority ones. The storage is reused across ticks to
+    // keep this allocation-free in the steady state.
+    FundingCandidates.clear();
 
     for (uint32_t I = 0; I < Core.size(); ++I)
     {
@@ -1465,7 +1474,6 @@ void SimWorld::SystemFlowPayment()
         }
 
         ProductionItem& Head = B.Queue.front();
-        const PlayerId Owner = Core[I].Owner;
 
         switch (Head.State)
         {
@@ -1476,14 +1484,21 @@ void SimWorld::SystemFlowPayment()
                 break;
             case FlowPaymentState::Funding:
                 break;
+            case FlowPaymentState::EnergyThrottled:
+                // ADR-0013 owns when this is set. Recovery is handled here rather
+                // than there so the state can never become a permanent trap: if the
+                // deficit has lifted, the item rejoins funding this tick.
+                if (Players[Core[I].Owner].GetPowerRatioPercent() < kMinPowerRatioPercent)
+                {
+                    continue;
+                }
+                break;
             case FlowPaymentState::Paying:
             case FlowPaymentState::Completed:
                 // Already paid in full. SystemProduction advances these.
                 continue;
             case FlowPaymentState::ManuallyPaused:
                 // A deliberate player decision; never override it.
-                continue;
-            case FlowPaymentState::EnergyThrottled:
                 continue;
             default:
                 // Terminal states are removed by the code that sets them; if one is
@@ -1499,71 +1514,51 @@ void SimWorld::SystemFlowPayment()
             continue;
         }
 
-        const int32_t Count = CandidateCount[Owner];
-        if (Count < kMaxProductionQueueLength)
-        {
-            Candidates[Owner][Count] = FundingCandidate{I, Head.Priority};
-            CandidateCount[Owner] = Count + 1;
-        }
+        FundingCandidates.push_back(FundingCandidate{I, Head.Priority, Core[I].Owner});
     }
 
-    for (PlayerId Owner = 0; Owner < kMaxPlayers; ++Owner)
+    // Higher priority first, entity index breaking ties. Both keys come from
+    // simulation state, so every peer produces the same order; the collection
+    // order is an implementation detail, so the tie-break is an explicit key
+    // rather than a reliance on sort stability.
+    std::sort(FundingCandidates.begin(), FundingCandidates.end(),
+              [](const FundingCandidate& A, const FundingCandidate& B)
+              {
+                  if (A.Owner != B.Owner) { return A.Owner < B.Owner; }
+                  if (A.Priority != B.Priority) { return A.Priority > B.Priority; }
+                  return A.BuildingIndex < B.BuildingIndex;
+              });
+
+    for (const FundingCandidate& Candidate : FundingCandidates)
     {
-        const int32_t Count = CandidateCount[Owner];
-        if (Count == 0)
-        {
-            continue;
-        }
-        PlayerState& Player = Players[Owner];
+        PlayerState& Player = Players[Candidate.Owner];
+        ProductionItem& Head = Buildings[Candidate.BuildingIndex].Queue.front();
 
-        // Insertion sort: higher priority first, entity index breaking ties. Both
-        // keys come from simulation state, so every peer produces the same order.
-        // Stability is not enough on its own here -- the collection loop's order is
-        // an implementation detail, so the tie-break must be an explicit key.
-        for (int32_t A = 1; A < Count; ++A)
+        // Never charge past the remaining balance, and never overdraw the
+        // treasury: Credits must not go negative, or the AI budget checks and
+        // the HUD both start reporting nonsense.
+        const int32_t Wanted = std::min(Head.CostPerTick(), Head.CreditsRemaining());
+        const int32_t Charged = std::min(Wanted, std::max(0, Player.Credits));
+
+        if (Charged > 0)
         {
-            const FundingCandidate Key = Candidates[Owner][A];
-            int32_t B = A - 1;
-            while (B >= 0 && (Candidates[Owner][B].Priority < Key.Priority ||
-                              (Candidates[Owner][B].Priority == Key.Priority &&
-                               Candidates[Owner][B].BuildingIndex > Key.BuildingIndex)))
-            {
-                Candidates[Owner][B + 1] = Candidates[Owner][B];
-                --B;
-            }
-            Candidates[Owner][B + 1] = Key;
+            Player.Credits -= Charged;
+            Head.PaidCredits += Charged;
         }
 
-        for (int32_t C = 0; C < Count; ++C)
+        if (Head.IsFullyFunded())
         {
-            ProductionItem& Head = Buildings[Candidates[Owner][C].BuildingIndex].Queue.front();
-
-            // Never charge past the remaining balance, and never overdraw the
-            // treasury: Credits must not go negative, or the AI budget checks and
-            // the HUD both start reporting nonsense.
-            const int32_t Wanted = std::min(Head.CostPerTick(), Head.CreditsRemaining());
-            const int32_t Charged = std::min(Wanted, std::max(0, Player.Credits));
-
-            if (Charged > 0)
-            {
-                Player.Credits -= Charged;
-                Head.PaidCredits += Charged;
-            }
-
-            if (Head.IsFullyFunded())
-            {
-                Head.State = FlowPaymentState::Paying;
-            }
-            else if (Charged < Wanted)
-            {
-                // Could not buy a full slice this tick. Partial payment is kept --
-                // this is the "pauses rather than resets" requirement.
-                Head.State = FlowPaymentState::Starved;
-            }
-            else
-            {
-                Head.State = FlowPaymentState::Funding;
-            }
+            Head.State = FlowPaymentState::Paying;
+        }
+        else if (Charged < Wanted)
+        {
+            // Could not buy a full slice this tick. Partial payment is kept --
+            // this is the "pauses rather than resets" requirement.
+            Head.State = FlowPaymentState::Starved;
+        }
+        else
+        {
+            Head.State = FlowPaymentState::Funding;
         }
     }
 }
@@ -1689,10 +1684,11 @@ void SimWorld::SystemProduction()
             {
                 continue;
             }
-            // Progress reached the end. Under low power the ratio is smaller than
-            // the funding slice, so progress can arrive first; hold the item one
-            // tick short until the last credit is paid rather than handing over
-            // something that was never fully bought.
+            // Belt and braces: nothing is ever handed over unpaid. Ceiling division
+            // means payment normally lands on or before the last progress tick, and
+            // Starved items are already excluded above, so this should be
+            // unreachable -- but the alternative to holding back is delivering a
+            // unit the player did not finish buying, so the check stays.
             if (!QueueItem.IsFullyFunded())
             {
                 QueueItem.ProgressTicks = Complete - 1;
@@ -1704,6 +1700,23 @@ void SimWorld::SystemProduction()
         const EntityDef* Item = Content->FindEntity(QueueItem.Content);
         if (Item == nullptr)
         {
+            // The content vanished under us (a hot-reload or a bad save). The player
+            // was charged for this a slice at a time and watched the money go, so
+            // refund it in full and say so, rather than deleting the entry and
+            // leaving an unexplained drain.
+            if (Owner < kMaxPlayers && QueueItem.PaidCredits > 0)
+            {
+                Players[Owner].Credits += QueueItem.PaidCredits;
+
+                SimEvent Lost;
+                Lost.Type = SimEventType::ProductionCancelled;
+                Lost.Tick = CurrentTick;
+                Lost.Entity = MakeId(I);
+                Lost.Player = Owner;
+                Lost.Content = QueueItem.Content;
+                Lost.Value = QueueItem.PaidCredits;
+                EmitEvent(Lost);
+            }
             B.Queue.erase(B.Queue.begin());
             continue;
         }

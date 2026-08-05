@@ -168,6 +168,14 @@ struct QueueEntry
     bool bPaused = false;
     bool bAwaitingPlacement = false;   // finished structure waiting for a click
     int32_t SlotIndex = 0;
+    // ADR-0012. The whole point of the payment state is that the card can say *why*
+    // an item stopped, so it is carried through verbatim rather than collapsed into
+    // bPaused -- "you are out of money" and "you pressed pause" need different UI.
+    FlowPaymentState PaymentState = FlowPaymentState::Queued;
+    // How much of the price has been paid so far, for the funding bar.
+    int32_t PaidCredits = 0;
+    int32_t TotalCost = 0;
+    bool bStarvedForCredits = false;
 };
 
 struct ProductionState
