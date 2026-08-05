@@ -16,7 +16,9 @@
 #include "RA4AI/AIDoctrine.h"
 #include "RA4AI/AIStrategy.h"
 #include "RA4AI/AIWorldView.h"
+#include "RA4AI/ThreatMap.h"
 #include "RA4AI/TacticalOperation.h"
+#include "RA4AI/ValueMap.h"
 #include "RA4Core/Command.h"
 #include "RA4Core/Ids.h"
 #include "RA4Core/Random.h"
@@ -67,6 +69,10 @@ public:
     // Test hook: the doctrine/personality resolved from the commander's faction.
     // Invalid until the first Tick, when the world is ready.
     const FactionDoctrineDef& GetDoctrineForTesting() const { return Doctrine; }
+
+    // Spatial awareness maps, updated on decision ticks.
+    const ThreatMap& GetThreatMap() const { return Threats; }
+    const ValueMap& GetValueMap() const { return Values; }
 
 private:
     // --- decision steps, in priority order -------------------------------
@@ -180,6 +186,10 @@ private:
 
     std::vector<AIDecision> DecisionLog;
     size_t DecisionLogLimit = 64;
+
+    // Spatial awareness: threat from enemy forces and strategic value of positions.
+    ThreatMap Threats;
+    ValueMap Values;
 };
 
 } // namespace AI

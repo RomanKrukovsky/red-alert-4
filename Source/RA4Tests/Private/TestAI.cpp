@@ -8,6 +8,8 @@
 #include "RA4AI/AIWorldView.h"
 #include "RA4AI/ArmyGroup.h"
 #include "RA4AI/TacticalOperation.h"
+#include "RA4AI/ThreatMap.h"
+#include "RA4AI/ValueMap.h"
 #include "RA4Core/SimConfig.h"
 
 
@@ -1038,4 +1040,376 @@ RA4_TEST(AI, DoctrineLoadsLazilyOnFirstTick)
     std::vector<Command> Commands;
     Commander.Tick(World, Commands);
     RA4_EXPECT(Commander.GetDoctrineForTesting().TargetHarvesterCount == 4); // Soviet doctrine
+}
+
+// ===========================================================================
+// ThreatMap tests
+// ===========================================================================
+
+RA4_TEST(ThreatMap, EmptyMap_HasNoThreat)
+{
+    ThreatMap Map(64, 64);
+    for (int32_t Y = 0; Y < 64; ++Y)
+    {
+        for (int32_t X = 0; X < 64; ++X)
+        {
+            RA4_EXPECT_EQ(Map.GetThreat(TileCoord(X, Y)), 0);
+        }
+    }
+    RA4_EXPECT(!Map.FindHighestThreatTile().IsValid());
+}
+
+RA4_TEST(ThreatMap, SingleEnemyUnit_AddsThreatAtPosition)
+{
+    ThreatMap Map(64, 64);
+
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+
+    // Heavy tank: DPS = 90*100/40 = 225, range = 9m = 900 units / 200 = 4 tiles
+    std::vector<EnemyMemory> Enemies;
+    EnemyMemory Mem;
+    Mem.Entity = EntityId(100, 1);
+    Mem.Position = TileCoord(32, 32);
+    Mem.LastSeenTick = 100;
+    Mem.DefId = Ids::SovHeavyTank;
+    Mem.Kind = EntityKind::Unit;
+    Mem.Confidence = Fixed::FromInt(1);
+    Enemies.push_back(Mem);
+
+    Map.UpdateFromMemory(Enemies, &Content, MakeTestSetup().Map, 100);
+
+    // The source tile should have nonzero threat.
+    RA4_EXPECT(Map.GetThreat(TileCoord(32, 32)) > 0);
+}
+
+RA4_TEST(ThreatMap, ThreatDecaysWithDistance)
+{
+    ThreatMap Map(64, 64);
+
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+
+    std::vector<EnemyMemory> Enemies;
+    EnemyMemory Mem;
+    Mem.Entity = EntityId(100, 1);
+    Mem.Position = TileCoord(32, 32);
+    Mem.LastSeenTick = 100;
+    Mem.DefId = Ids::SovHeavyTank;
+    Mem.Kind = EntityKind::Unit;
+    Mem.Confidence = Fixed::FromInt(1);
+    Enemies.push_back(Mem);
+
+    Map.UpdateFromMemory(Enemies, &Content, MakeTestSetup().Map, 100);
+
+    const int32_t ThreatCenter = Map.GetThreat(TileCoord(32, 32));
+    const int32_t ThreatNearby = Map.GetThreat(TileCoord(33, 32));
+    const int32_t ThreatFar = Map.GetThreat(TileCoord(40, 32));
+
+    RA4_EXPECT(ThreatCenter > 0);
+    RA4_EXPECT(ThreatNearby <= ThreatCenter);
+    RA4_EXPECT(ThreatFar < ThreatNearby);
+}
+
+RA4_TEST(ThreatMap, ConfidenceAffectsThreat)
+{
+    ThreatMap FreshMap(64, 64);
+    ThreatMap StaleMap(64, 64);
+
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+
+    std::vector<EnemyMemory> Enemies;
+
+    // Fresh sighting (confidence 1.0)
+    EnemyMemory Fresh;
+    Fresh.Entity = EntityId(100, 1);
+    Fresh.Position = TileCoord(32, 32);
+    Fresh.LastSeenTick = 100;
+    Fresh.DefId = Ids::SovHeavyTank;
+    Fresh.Kind = EntityKind::Unit;
+    Fresh.Confidence = Fixed::FromInt(1);
+    Enemies.push_back(Fresh);
+    FreshMap.UpdateFromMemory(Enemies, &Content, MakeTestSetup().Map, 100);
+    Enemies.clear();
+
+    // Stale sighting (confidence 0.3 = 30%)
+    EnemyMemory Stale;
+    Stale.Entity = EntityId(101, 1);
+    Stale.Position = TileCoord(32, 32);
+    Stale.LastSeenTick = 100;
+    Stale.DefId = Ids::SovHeavyTank;
+    Stale.Kind = EntityKind::Unit;
+    Stale.Confidence = Fixed::FromRatio(30, 100);
+    Enemies.push_back(Stale);
+    StaleMap.UpdateFromMemory(Enemies, &Content, MakeTestSetup().Map, 100);
+
+    RA4_EXPECT(FreshMap.GetThreat(TileCoord(32, 32)) >
+               StaleMap.GetThreat(TileCoord(32, 32)));
+}
+
+RA4_TEST(ThreatMap, DefenceBuilding_AddsStructuralThreat)
+{
+    ThreatMap Map(64, 64);
+
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+
+    std::vector<EnemyMemory> Enemies;
+    EnemyMemory Mem;
+    Mem.Entity = EntityId(200, 1);
+    Mem.Position = TileCoord(40, 40);
+    Mem.LastSeenTick = 100;
+    Mem.DefId = Ids::SovTurret;
+    Mem.Kind = EntityKind::Building;
+    Mem.Confidence = Fixed::FromInt(1);
+    Enemies.push_back(Mem);
+
+    Map.UpdateFromMemory(Enemies, &Content, MakeTestSetup().Map, 100);
+
+    RA4_EXPECT(Map.GetStructuralThreat(TileCoord(40, 40)) > 0);
+    RA4_EXPECT(Map.GetThreat(TileCoord(40, 40)) > 0);
+}
+
+RA4_TEST(ThreatMap, UnarmedUnit_AddsNoThreat)
+{
+    ThreatMap Map(64, 64);
+
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+
+    // Harvester has no weapon — should produce zero threat.
+    std::vector<EnemyMemory> Enemies;
+    EnemyMemory Mem;
+    Mem.Entity = EntityId(300, 1);
+    Mem.Position = TileCoord(20, 20);
+    Mem.LastSeenTick = 100;
+    Mem.DefId = Ids::SovHarvester;
+    Mem.Kind = EntityKind::Unit;
+    Mem.Confidence = Fixed::FromInt(1);
+    Enemies.push_back(Mem);
+
+    Map.UpdateFromMemory(Enemies, &Content, MakeTestSetup().Map, 100);
+
+    RA4_EXPECT_EQ(Map.GetThreat(TileCoord(20, 20)), 0);
+}
+
+RA4_TEST(ThreatMap, GetAreaThreat_SumsRadius)
+{
+    ThreatMap Map(64, 64);
+
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+
+    std::vector<EnemyMemory> Enemies;
+    EnemyMemory Mem;
+    Mem.Entity = EntityId(100, 1);
+    Mem.Position = TileCoord(32, 32);
+    Mem.LastSeenTick = 100;
+    Mem.DefId = Ids::SovHeavyTank;
+    Mem.Kind = EntityKind::Unit;
+    Mem.Confidence = Fixed::FromInt(1);
+    Enemies.push_back(Mem);
+
+    Map.UpdateFromMemory(Enemies, &Content, MakeTestSetup().Map, 100);
+
+    const int32_t AreaThreat0 = Map.GetAreaThreat(TileCoord(32, 32), 0);
+    const int32_t AreaThreat2 = Map.GetAreaThreat(TileCoord(32, 32), 2);
+    const int32_t AreaThreat5 = Map.GetAreaThreat(TileCoord(32, 32), 5);
+
+    RA4_EXPECT(AreaThreat0 > 0);
+    RA4_EXPECT(AreaThreat2 >= AreaThreat0);
+    RA4_EXPECT(AreaThreat5 >= AreaThreat2);
+}
+
+RA4_TEST(ThreatMap, Clear_ResetsAllCells)
+{
+    ThreatMap Map(64, 64);
+
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+
+    std::vector<EnemyMemory> Enemies;
+    EnemyMemory Mem;
+    Mem.Entity = EntityId(100, 1);
+    Mem.Position = TileCoord(32, 32);
+    Mem.LastSeenTick = 100;
+    Mem.DefId = Ids::SovHeavyTank;
+    Mem.Kind = EntityKind::Unit;
+    Mem.Confidence = Fixed::FromInt(1);
+    Enemies.push_back(Mem);
+
+    Map.UpdateFromMemory(Enemies, &Content, MakeTestSetup().Map, 100);
+    RA4_EXPECT(Map.GetThreat(TileCoord(32, 32)) > 0);
+
+    Map.Clear();
+    RA4_EXPECT_EQ(Map.GetThreat(TileCoord(32, 32)), 0);
+}
+
+// ===========================================================================
+// ValueMap tests
+// ===========================================================================
+
+RA4_TEST(ValueMap, EmptyMap_HasNoValue)
+{
+    ValueMap Map(64, 64);
+    for (int32_t Y = 0; Y < 64; ++Y)
+    {
+        for (int32_t X = 0; X < 64; ++X)
+        {
+            RA4_EXPECT_EQ(Map.GetStrategicValue(TileCoord(X, Y)), 0);
+        }
+    }
+    RA4_EXPECT(!Map.FindHighestValueTarget().IsValid());
+}
+
+RA4_TEST(ValueMap, ConstructionYard_HighestStrategicValue)
+{
+    // Build two maps: one with a construction yard, one with a refinery.
+    // The construction yard should produce higher strategic value.
+    ValueMap YardMap(64, 64);
+    ValueMap RefMap(64, 64);
+
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+
+    MatchSetup Setup = MakeTestSetup();
+    SimWorld YardWorld;
+    YardWorld.Initialize(&Content, Setup);
+    SpawnEnemyOutpost(YardWorld, 1);
+
+    SimWorld RefWorld;
+    RefWorld.Initialize(&Content, Setup);
+    SpawnEnemyOutpost(RefWorld, 1);
+
+    // Place an enemy construction yard at (30,30) for YardMap.
+    YardWorld.SpawnBuilding(Ids::AllConYard, 1, TileCoord(30, 30), true);
+
+    // Place an enemy refinery at (30,30) for RefMap.
+    RefWorld.SpawnBuilding(Ids::AllRefinery, 1, TileCoord(30, 30), true);
+
+    std::vector<EnemyMemory> YardEnemies;
+    {
+        EnemyMemory Mem;
+        Mem.Entity = YardWorld.MakeId(1);  // the ConYard
+        Mem.Position = TileCoord(30, 30);
+        Mem.LastSeenTick = 100;
+        Mem.DefId = Ids::AllConYard;
+        Mem.Kind = EntityKind::Building;
+        Mem.Confidence = Fixed::FromInt(1);
+        YardEnemies.push_back(Mem);
+    }
+
+    std::vector<EnemyMemory> RefEnemies;
+    {
+        EnemyMemory Mem;
+        Mem.Entity = RefWorld.MakeId(1);  // the Refinery
+        Mem.Position = TileCoord(30, 30);
+        Mem.LastSeenTick = 100;
+        Mem.DefId = Ids::AllRefinery;
+        Mem.Kind = EntityKind::Building;
+        Mem.Confidence = Fixed::FromInt(1);
+        RefEnemies.push_back(Mem);
+    }
+
+    YardMap.UpdateFromWorld(YardWorld, 0, YardEnemies, &Content, 100);
+    RefMap.UpdateFromWorld(RefWorld, 0, RefEnemies, &Content, 100);
+
+    RA4_EXPECT(YardMap.GetStrategicValue(TileCoord(30, 30)) >
+               RefMap.GetStrategicValue(TileCoord(30, 30)));
+}
+
+RA4_TEST(ValueMap, ProductionBuilding_AddsMilitaryValue)
+{
+    ValueMap Map(64, 64);
+
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+
+    MatchSetup Setup = MakeTestSetup();
+    SimWorld World;
+    World.Initialize(&Content, Setup);
+    SpawnEnemyOutpost(World, 1);
+    World.SpawnBuilding(Ids::AllConYard, 1, TileCoord(58, 58), true);
+
+    std::vector<EnemyMemory> Enemies;
+    EnemyMemory Mem;
+    Mem.Entity = World.MakeId(0);
+    Mem.Position = TileCoord(25, 25);
+    Mem.LastSeenTick = 100;
+    Mem.DefId = Ids::AllConYard;
+    Mem.Kind = EntityKind::Building;
+    Mem.Confidence = Fixed::FromInt(1);
+    Enemies.push_back(Mem);
+
+    Map.UpdateFromWorld(World, 0, Enemies, &Content, 100);
+
+    RA4_EXPECT(Map.GetMilitaryValue(TileCoord(25, 25)) > 0);
+    RA4_EXPECT(Map.GetStrategicValue(TileCoord(25, 25)) > 0);
+}
+
+RA4_TEST(ValueMap, Clear_ResetsAllCells)
+{
+    ValueMap Map(64, 64);
+
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+
+    MatchSetup Setup = MakeTestSetup();
+    SimWorld World;
+    World.Initialize(&Content, Setup);
+    SpawnEnemyOutpost(World, 1);
+
+    std::vector<EnemyMemory> Enemies;
+    EnemyMemory Mem;
+    Mem.Entity = World.MakeId(0);
+    Mem.Position = TileCoord(30, 30);
+    Mem.LastSeenTick = 100;
+    Mem.DefId = Ids::AllConYard;
+    Mem.Kind = EntityKind::Building;
+    Mem.Confidence = Fixed::FromInt(1);
+    Enemies.push_back(Mem);
+
+    Map.UpdateFromWorld(World, 0, Enemies, &Content, 100);
+    RA4_EXPECT(Map.GetStrategicValue(TileCoord(30, 30)) > 0);
+
+    Map.Clear();
+    RA4_EXPECT_EQ(Map.GetStrategicValue(TileCoord(30, 30)), 0);
+}
+
+RA4_TEST(ValueMap, FindBestAttackTarget_PrefersHighValue)
+{
+    ValueMap Map(64, 64);
+    ThreatMap Threats(64, 64);  // empty threats
+
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+
+    MatchSetup Setup = MakeTestSetup();
+    SimWorld World;
+    World.Initialize(&Content, Setup);
+    SpawnEnemyOutpost(World, 1);
+
+    std::vector<EnemyMemory> Enemies;
+
+    // Construction yard at (20,20) — high value
+    {
+        EnemyMemory Mem;
+        Mem.Entity = World.MakeId(0);
+        Mem.Position = TileCoord(20, 20);
+        Mem.LastSeenTick = 100;
+        Mem.DefId = Ids::AllConYard;
+        Mem.Kind = EntityKind::Building;
+        Mem.Confidence = Fixed::FromInt(1);
+        Enemies.push_back(Mem);
+    }
+
+    Map.UpdateFromWorld(World, 0, Enemies, &Content, 100);
+
+    TileCoord Best = Map.FindBestAttackTarget(Threats);
+    RA4_EXPECT(Best.IsValid());
+    // The best target should be near the construction yard (within spread radius).
+    const int32_t DX = std::abs(Best.X - 20);
+    const int32_t DY = std::abs(Best.Y - 20);
+    RA4_EXPECT(DX <= 3 && DY <= 3);
 }

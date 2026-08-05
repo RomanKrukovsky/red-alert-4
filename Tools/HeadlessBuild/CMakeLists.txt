@@ -121,6 +121,11 @@ add_library(RA4AI STATIC
     ${RA4_SOURCE_ROOT}/RA4AI/Private/ArmyGroup.cpp
     ${RA4_SOURCE_ROOT}/RA4AI/Private/AIDoctrine.cpp
     ${RA4_SOURCE_ROOT}/RA4AI/Private/AIDebugOverlay.cpp
+    ${RA4_SOURCE_ROOT}/RA4AI/Private/ThreatMap.cpp
+    ${RA4_SOURCE_ROOT}/RA4AI/Private/ValueMap.cpp
+    ${RA4_SOURCE_ROOT}/RA4AI/Private/AIDirectors.cpp
+    ${RA4_SOURCE_ROOT}/RA4AI/Private/OpponentModel.cpp
+    ${RA4_SOURCE_ROOT}/RA4AI/Private/BattlePredictor.cpp
 )
 target_include_directories(RA4AI PUBLIC ${RA4_SOURCE_ROOT}/RA4AI/Public)
 target_link_libraries(RA4AI PUBLIC RA4Simulation RA4FogOfWar)
