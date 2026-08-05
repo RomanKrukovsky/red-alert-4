@@ -118,6 +118,10 @@ void AICommander::Reset()
     ActiveOperation = TacticalOperation();
     Threats.Clear();
     Values.Clear();
+    Opponents.Reset();
+    Directors = DirectorBundle();
+    BattleForecast = BattleEstimate();
+    bHasBattleForecast = false;
     DecisionLog.clear();
     // The doctrine is the only Reset exception: it depends on the commander's
     // faction, which is world state, so it is re-resolved on the next first Tick.
@@ -309,6 +313,25 @@ ContentId AICommander::FindCombatUnit(const SimWorld& World) const
         if (bEnemyHasAir && HasRole(Def.Roles, EntityRole::AntiAir))
         {
             Score += 150;
+        }
+
+        // The opponent model reinforces what the current sighting list already hints
+        // at. It is a longer-baseline signal: a raider we have not seen this minute
+        // still shaped the profile, so counters keep being built between sightings.
+        for (PlayerId Enemy = 0; Enemy < PlayerId(kMaxPlayers); ++Enemy)
+        {
+            if (Enemy == Player)
+            {
+                continue;
+            }
+            if (Opponents.EnemyPrefersAir(Enemy) && HasRole(Def.Roles, EntityRole::AntiAir))
+            {
+                Score += 120;
+            }
+            if (Opponents.EnemyPrefersArmor(Enemy) && HasRole(Def.Roles, EntityRole::AntiArmor))
+            {
+                Score += 120;
+            }
         }
 
         if (Score > BestScore)
@@ -1460,6 +1483,127 @@ bool AICommander::TryHarassRaid(const SimWorld& World, int32_t ArmySize,
     return true;
 }
 
+void AICommander::EvaluateDirectors(const SimWorld& World,
+                                   const AIWorldAssessment& Assessment)
+{
+    DirectorContext Ctx;
+    Ctx.Assessment = &Assessment;
+    Ctx.Threats = Threats.IsValid() ? &Threats : nullptr;
+    Ctx.Values = Values.IsValid() ? &Values : nullptr;
+    Ctx.KnownEnemies = (Knowledge != nullptr) ? &Knowledge->GetKnownEnemies() : nullptr;
+    Ctx.CurrentTick = World.GetTick();
+    Ctx.TargetHarvesters = EffectiveTargetHarvesters();
+    Ctx.CreditReserve = Config.CreditReserve;
+    Ctx.TargetDefences = Config.TargetDefences;
+    Ctx.AttackArmySize = EffectiveAssaultArmySize();
+    Ctx.MinimumAttackSize = Config.MinimumAttackSize;
+    Ctx.MapWidth = World.GetMap().Width;
+    Ctx.MapHeight = World.GetMap().Height;
+
+    const EntityId Yard = FindOwnConstructionYard(World);
+    if (Yard.IsValid())
+    {
+        const TransformComp* T = World.GetTransform(Yard);
+        if (T != nullptr)
+        {
+            Ctx.OwnBaseTile = World.GetMap().WorldToTile(T->Position);
+        }
+    }
+
+    Directors.EconomyRecs = EconomyDir.Evaluate(Ctx);
+    Directors.ScoutingRecs = ScoutingDir.Evaluate(Ctx);
+    Directors.DefenseRecs = DefenseDir.Evaluate(Ctx);
+    Directors.OffenseRecs = OffenseDir.Evaluate(Ctx);
+}
+
+int32_t AICommander::AssaultCommitThreshold() const
+{
+    // Difficulty changes judgement, not entitlements: a weaker commander throws its
+    // army at worse odds, which is what makes it beatable. No tier gets extra vision
+    // or free resources here.
+    int32_t Threshold = 0;
+    switch (Config.Difficulty)
+    {
+        case AIDifficulty::Easy:   Threshold = 0;  break;   // commits regardless
+        case AIDifficulty::Normal: Threshold = 20; break;
+        case AIDifficulty::Hard:   Threshold = 30; break;
+        case AIDifficulty::Expert: Threshold = 40; break;
+    }
+
+    // A doctrine that tolerates heavy losses is willing to accept worse odds.
+    if (bDoctrineLoaded && Personality.AcceptableLossesPercent > 50)
+    {
+        Threshold -= 10;
+    }
+    return Threshold < 0 ? 0 : Threshold;
+}
+
+bool AICommander::ForecastAssault(const SimWorld& World, const TileCoord& TargetTile)
+{
+    if (World.GetContent() == nullptr || Knowledge == nullptr)
+    {
+        return false;
+    }
+
+    // Our side: the units actually committed to this operation.
+    std::vector<EntityId> Attackers;
+    Attackers.reserve(ActiveOperation.AssignedUnits.size());
+    for (const EntityId& Id : ActiveOperation.AssignedUnits)
+    {
+        if (World.IsAlive(Id))
+        {
+            Attackers.push_back(Id);
+        }
+    }
+    if (Attackers.empty())
+    {
+        return false;
+    }
+
+    // Their side: only remembered enemies near the objective. Enumerating live enemy
+    // entities would be a fog bypass, so the forecast is deliberately built from
+    // memory and is therefore only as good as our reconnaissance.
+    constexpr int32_t kDefenderRadiusTiles = 12;
+    std::vector<EntityId> Defenders;
+    PlayerId EnemyPlayer = Player;
+    for (const EnemyMemory& Mem : Knowledge->GetKnownEnemies())
+    {
+        const int32_t DX = std::abs(Mem.Position.X - TargetTile.X);
+        const int32_t DY = std::abs(Mem.Position.Y - TargetTile.Y);
+        if (DX > kDefenderRadiusTiles || DY > kDefenderRadiusTiles)
+        {
+            continue;
+        }
+        if (!World.IsAlive(Mem.Entity))
+        {
+            continue;   // remembered but since destroyed
+        }
+        Defenders.push_back(Mem.Entity);
+        if (EnemyPlayer == Player)
+        {
+            // Ownership was observed at sighting time, so reading it is not a leak.
+            const EntityCore* Core = World.GetCore(Mem.Entity);
+            if (Core != nullptr)
+            {
+                EnemyPlayer = Core->Owner;
+            }
+        }
+    }
+
+    BattleForecast = BattlePredictor::PredictFromWorld(World, Player, EnemyPlayer,
+                                                      Attackers, Defenders);
+
+    // An empty defender list almost always means "we have not scouted it", not "it is
+    // undefended", so the estimate must not be trusted as if it were observed.
+    if (Defenders.empty())
+    {
+        BattleForecast.Confidence =
+            BattleForecast.Confidence < 30 ? BattleForecast.Confidence : 30;
+    }
+    bHasBattleForecast = true;
+    return true;
+}
+
 void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
 {
     const ContentDatabase* Content = World.GetContent();
@@ -1625,7 +1769,34 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
             if (ActiveOperation.AssignedUnits.size() >=
                 size_t(ActiveOperation.MinRetreatUnits))
             {
-                ActiveOperation.TransitionTo(OperationState::Staging, World.GetTick());
+                // Before spending the army, forecast the engagement. A confident
+                // prediction of defeat means keep gathering rather than feeding units
+                // in piecemeal. Low-confidence forecasts (typically unscouted
+                // objectives) must not veto the attack, or a commander that has seen
+                // nothing would never move.
+                bool bCommit = true;
+                if (ForecastAssault(World, ActiveOperation.TargetLocation))
+                {
+                    const int32_t Threshold = AssaultCommitThreshold();
+                    if (BattleForecast.Confidence >= 50 &&
+                        BattleForecast.WinProbability < Threshold &&
+                        ActiveOperation.AssignedUnits.size() <
+                            size_t(ActiveOperation.RequiredCombatUnits))
+                    {
+                        bCommit = false;
+                        Log(World.GetTick(), CommandType::None, ContentId(),
+                            "assault delayed: forecast unfavourable");
+                    }
+                }
+
+                if (bCommit)
+                {
+                    ActiveOperation.TransitionTo(OperationState::Staging, World.GetTick());
+                }
+                else
+                {
+                    break;   // stay in Gathering and keep reinforcing
+                }
             }
             else
             {
@@ -1841,6 +2012,19 @@ void AICommander::Tick(const SimWorld& World, std::vector<Command>& OutCommands)
     // be remembered.
     UpdateKnowledge(World);
 
+    // Opponent modelling runs on the observation cadence, not the decision cadence:
+    // events are cleared by the host each tick, so a decision-gated read would miss
+    // most of them. Events are the record of what was done to us, which is legitimate
+    // knowledge -- this is not a fog bypass.
+    {
+        const std::vector<SimEvent>& Events = World.GetEvents();
+        if (!Events.empty())
+        {
+            Opponents.UpdateFromEvents(Events.data(), int32_t(Events.size()),
+                                       Player, World.GetTick());
+        }
+    }
+
     if (++TicksSinceDecision < Config.DecisionIntervalTicks)
     {
         return;
@@ -1852,6 +2036,11 @@ void AICommander::Tick(const SimWorld& World, std::vector<Command>& OutCommands)
     {
         Assessment.bAssaultActive = false;
     }
+
+    // Directors score their own domains from the same assessment. Advisory only:
+    // strategy selection still owns the final decision, but the recommendations are
+    // recorded so the overlay and tests can see what each domain wanted.
+    EvaluateDirectors(World, Assessment);
 
     const std::vector<AIStrategyScore> Scores =
         ScoreStrategies(Assessment, Config);

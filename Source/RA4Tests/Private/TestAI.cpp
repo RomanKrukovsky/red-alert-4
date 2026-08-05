@@ -2060,3 +2060,157 @@ RA4_TEST(Directors, RecommendationNamesAreAllDistinct)
         }
     }
 }
+
+
+// ---------------------------------------------------------------------------
+// Package 4/5 integration: the commander must actually consult the systems it
+// owns. These tests exist because compiling a subsystem proves nothing about
+// whether anything calls it.
+// ---------------------------------------------------------------------------
+
+RA4_TEST(AIWiring, CommanderConsultsDirectorsDuringAMatch)
+{
+    AIMatch M;
+    M.Enable(0, AIProfile::Balanced);
+    M.Enable(1, AIProfile::Aggressive);
+    M.Run(400);
+
+    // After a few hundred ticks at least one domain must have produced a scored
+    // recommendation, otherwise the director layer is dead code.
+    const DirectorBundle& Recs = M.Commanders[0].GetDirectorRecs();
+    const size_t Total = Recs.EconomyRecs.size() + Recs.ScoutingRecs.size() +
+                         Recs.DefenseRecs.size() + Recs.OffenseRecs.size();
+    RA4_EXPECT(Total > 0);
+}
+
+RA4_TEST(AIWiring, OpponentModelLearnsFromAnActualMatch)
+{
+    AIMatch M;
+    M.Enable(0, AIProfile::Aggressive);
+    M.Enable(1, AIProfile::Aggressive);
+    M.Run(1200);
+
+    // Two aggressive commanders will produce units and buildings, so each side must
+    // have observed *something* about the other through legitimate events.
+    const OpponentProfile& P = M.Commanders[0].GetOpponentModel().GetProfile(1);
+    const int32_t Observed = P.UnitsObserved + P.BuildingsObserved + P.AttacksObserved;
+    RA4_EXPECT(Observed > 0);
+}
+
+RA4_TEST(AIWiring, OpponentModelNeverTracksItself)
+{
+    AIMatch M;
+    M.Enable(0, AIProfile::Balanced);
+    M.Enable(1, AIProfile::Balanced);
+    M.Run(600);
+
+    // Self-observation would mean the commander is modelling its own behaviour as if
+    // it were the enemy, which would corrupt every counter decision.
+    const OpponentProfile& Self = M.Commanders[0].GetOpponentModel().GetProfile(0);
+    RA4_EXPECT_EQ(0, Self.UnitsObserved);
+    RA4_EXPECT_EQ(0, Self.BuildingsObserved);
+    RA4_EXPECT_EQ(0, Self.AttacksObserved);
+}
+
+RA4_TEST(AIWiring, ResetClearsOpponentAndForecastState)
+{
+    AIMatch M;
+    M.Enable(0, AIProfile::Aggressive);
+    M.Enable(1, AIProfile::Aggressive);
+    M.Run(900);
+
+    M.Commanders[0].Reset();
+
+    const OpponentProfile& P = M.Commanders[0].GetOpponentModel().GetProfile(1);
+    RA4_EXPECT_EQ(0, P.UnitsObserved);
+    RA4_EXPECT_EQ(0, P.AttacksObserved);
+    RA4_EXPECT_EQ(0, P.Aggressiveness);
+    RA4_EXPECT(!M.Commanders[0].HasBattleForecast());
+
+    const DirectorBundle& Recs = M.Commanders[0].GetDirectorRecs();
+    RA4_EXPECT(Recs.EconomyRecs.empty());
+    RA4_EXPECT(Recs.OffenseRecs.empty());
+}
+
+RA4_TEST(AIWiring, BattleForecastStaysInsideDeclaredRanges)
+{
+    AIMatch M;
+    M.Enable(0, AIProfile::Aggressive);
+    M.Enable(1, AIProfile::Defensive);
+    M.Run(2000);
+
+    // The forecast may legitimately never be produced (nothing scouted), but if it
+    // was produced it must obey its documented contract.
+    if (M.Commanders[0].HasBattleForecast())
+    {
+        const BattleEstimate& E = M.Commanders[0].GetBattleForecast();
+        RA4_EXPECT(E.WinProbability >= 0 && E.WinProbability <= 100);
+        RA4_EXPECT(E.EstimatedLosses >= 0 && E.EstimatedLosses <= 100);
+        RA4_EXPECT(E.EnemyLosses >= 0 && E.EnemyLosses <= 100);
+        RA4_EXPECT(E.Confidence >= 0 && E.Confidence <= 100);
+        RA4_EXPECT(E.DurationTicks >= 0);
+    }
+}
+
+RA4_TEST(AIWiring, WiredCommanderIsStillDeterministic)
+{
+    // Opponent modelling, directors and forecasting all feed decisions, so any
+    // non-determinism they introduced would surface as divergent checksums here.
+    auto RunOnce = [](uint64_t Seed)
+    {
+        AIMatch M(Seed);
+        M.Enable(0, AIProfile::Aggressive, Seed);
+        M.Enable(1, AIProfile::Defensive, Seed);
+        M.Run(1500);
+        return M.World.ComputeStateChecksum();
+    };
+
+    const uint64_t A = RunOnce(777001);
+    const uint64_t B = RunOnce(777001);
+    RA4_EXPECT_EQ(A, B);
+}
+
+RA4_TEST(AIWiring, ExpertDifficultyIsSmarterWithoutBeingSubsidised)
+{
+    const AIConfig Easy = MakeProfileConfig(AIProfile::Balanced, AIDifficulty::Easy);
+    const AIConfig Normal = MakeProfileConfig(AIProfile::Balanced, AIDifficulty::Normal);
+    const AIConfig Hard = MakeProfileConfig(AIProfile::Balanced, AIDifficulty::Hard);
+    const AIConfig Expert = MakeProfileConfig(AIProfile::Balanced, AIDifficulty::Expert);
+
+    // Reacts and observes faster than every lower tier.
+    RA4_EXPECT(Expert.DecisionIntervalTicks < Hard.DecisionIntervalTicks);
+    RA4_EXPECT(Expert.DecisionIntervalTicks < Normal.DecisionIntervalTicks);
+    RA4_EXPECT(Expert.DecisionIntervalTicks < Easy.DecisionIntervalTicks);
+    RA4_EXPECT(Expert.MemoryUpdateIntervalTicks <= Hard.MemoryUpdateIntervalTicks);
+
+    // Remembers longer and thrashes less between strategies.
+    RA4_EXPECT(Expert.MemoryRetentionTicks >= Normal.MemoryRetentionTicks);
+    RA4_EXPECT(Expert.StrategySwitchMargin > Normal.StrategySwitchMargin);
+
+    // The core design rule: no free resources. Expert must not be subsidised, and
+    // must not be subsidised more than Hard already is.
+    RA4_EXPECT(Expert.CreditBonusMultiplier <= 1.0f);
+    RA4_EXPECT(Expert.CreditBonusMultiplier < Hard.CreditBonusMultiplier);
+    RA4_EXPECT(Expert.Difficulty == AIDifficulty::Expert);
+}
+
+RA4_TEST(AIWiring, ExpertDifficultyNamesItself)
+{
+    RA4_EXPECT(std::string("Expert") == std::string(ToString(AIDifficulty::Expert)));
+    RA4_EXPECT(std::string("Hard") == std::string(ToString(AIDifficulty::Hard)));
+}
+
+RA4_TEST(AIWiring, ExpertCommanderPlaysAFullMatch)
+{
+    // The strictest commit threshold must not deadlock the commander into never
+    // attacking: an Expert AI still has to finish a match.
+    AIMatch M(90210);
+    AIConfig Cfg = MakeProfileConfig(AIProfile::Aggressive, AIDifficulty::Expert);
+    M.Enable(0, AIProfile::Aggressive, 90210);
+    M.Commanders[0].SetConfig(Cfg);
+    M.Enable(1, AIProfile::Balanced, 90210);
+    M.Run(3000);
+
+    RA4_EXPECT(M.PeakUnits[0] > 0);
+    RA4_EXPECT(M.Commanders[0].GetDecisionLog().size() > 0);
+}

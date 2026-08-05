@@ -26,7 +26,12 @@ enum class AIDifficulty : uint8_t
 {
     Easy = 0,
     Normal,
-    Hard
+    Hard,
+    // Expert scales judgement, not entitlements: it reacts sooner, re-observes more
+    // often, and demands a favourable battle forecast before committing. It receives
+    // no income bonus and no extra vision -- per the design rule that difficulty must
+    // change how well the AI plays, never what it is allowed to know or take.
+    Expert
 };
 
 struct AIConfig

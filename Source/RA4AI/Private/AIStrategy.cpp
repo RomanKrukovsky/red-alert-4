@@ -42,6 +42,7 @@ const char* ToString(AIDifficulty Difficulty)
         case AIDifficulty::Easy: return "Easy";
         case AIDifficulty::Normal: return "Normal";
         case AIDifficulty::Hard: return "Hard";
+        case AIDifficulty::Expert: return "Expert";
     }
     return "Normal";
 }
@@ -68,6 +69,18 @@ AIConfig MakeProfileConfig(AIProfile Profile, AIDifficulty Difficulty)
             Config.DecisionIntervalTicks = 5;
             Config.MemoryUpdateIntervalTicks = 2;
             Config.CreditBonusMultiplier = 1.20f; // Bounded +20% income bonus for Hard AI
+            break;
+        case AIDifficulty::Expert:
+            // Fastest reaction and observation of any tier, and deliberately NO
+            // credit bonus: Expert must win by playing better, not by being fed.
+            Config.DecisionIntervalTicks = 3;
+            Config.MemoryUpdateIntervalTicks = 1;
+            Config.CreditBonusMultiplier = 1.0f;
+            // Longer memory: an Expert commander keeps acting on older sightings
+            // instead of forgetting a base it scouted a minute ago.
+            Config.MemoryRetentionTicks = 900;
+            // Less thrash between strategies, so plans are carried through.
+            Config.StrategySwitchMargin = 140;
             break;
     }
 
