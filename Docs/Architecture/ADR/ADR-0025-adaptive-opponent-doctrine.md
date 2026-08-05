@@ -1,10 +1,9 @@
 # ADR-0025: Adaptive Opponent — Cross-Match Player Modeling and Doctrine Counter-Selection
 
-**Status**: Proposed — review changes **applied 2026-08-05** (canonical DoctrineBias encoding
-specified: Fixed weights, ascending key order, dropped-entry accounting, version-skew rules; section 0
-states how this extends `OpponentModel`/`AIDoctrine`/`AIStrategy` rather than duplicating them; the
-digital-twin "free by-product" claim was already withdrawn earlier). Ready for acceptance decision. No
-implementation authorized until Accepted.
+**Status**: **ACCEPTED 2026-08-05** (product owner, after independent review APPROVE-WITH-CHANGES and
+application of all required changes: canonical encoding, extension-not-duplication statement, twin
+claim withdrawn). Implementation sequenced LAST among the five systems (needs the replay analyzer
+tooling and benefits from systems 1-4 as doctrine levers).
 **Depends on**: ADR-0008 (HTN/utility AI), ADR-0020 (economic telemetry & balance metrics — recovered
 from the non-compiling remediation branch, see its provenance note), ADR-0021 (Knowledge Map),
 ADR-0005 (replay format — the analyzer reads `Source/RA4Replay/Public/RA4Replay/Replay.h`)

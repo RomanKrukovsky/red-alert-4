@@ -114,9 +114,12 @@ Discovered and fixed while completing the above, not part of the original plan:
 
 - **No code, content or test changes by this work stream.** The only code in this direction is
   ADR-0026's M0, written by a different session.
-- **No ADR is Accepted.** ADR-0022..0025 are Proposed with review changes outstanding; ADR-0021 is
-  Superseded in part by ADR-0026; only ADR-0026's M0 scope is Accepted, and even that carries two
-  invariant violations to fix before M1.
+- **ADR statuses (updated 2026-08-05)**: ADR-0022..0025 are **Accepted** — independent review
+  passed, all required changes applied, product owner sign-off recorded in each Status line.
+  ADR-0021 is Superseded in part by ADR-0026 (which carries the rejection log). ADR-0026's M0 is
+  Accepted and its two invariant violations are FIXED (commit e557128, re-verified independently:
+  391/391 tests, leak-detector test present). Acceptance authorizes *scheduling*; sequencing in §2
+  still governs what may start when.
 - **No implementation is authorized** for systems 2-5 (Command Network, Deception, Battlefield Memory,
   Adaptive Opponent).
 - **Provisional budgets are not measurements.** Every `(p)` figure in PERFORMANCE_BUDGETS.md section 4

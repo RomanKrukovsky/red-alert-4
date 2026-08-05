@@ -1,9 +1,9 @@
 # ADR-0024: Battlefield Memory — Persistent Terrain State and Wreck Salvage
 
-**Status**: Proposed — review changes **applied 2026-08-05** (flow-field invalidation contract
-specified: per-tick batch phase, ascending-index recompute order, budget charged to the existing
-pathfinding line; incremental per-region rolling hash specified for checksum and delta saves). Ready
-for acceptance decision. No implementation authorized until Accepted.
+**Status**: **ACCEPTED 2026-08-05** (product owner, after independent review APPROVE-WITH-CHANGES and
+application of all required changes: flow-field invalidation contract, per-region rolling hash).
+Implementation may be scheduled; independent of the intel stream, parallel-safe per
+PERCEPTION_WARFARE_DIRECTION §2.
 **Depends on**: ADR-0003 (entity/component model), ADR-0005 (replay/checkpointing), ADR-0009 (data-driven content), SAVE_AND_REPLAY.md
 
 ## Context

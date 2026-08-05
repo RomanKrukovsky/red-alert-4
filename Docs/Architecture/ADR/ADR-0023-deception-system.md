@@ -1,9 +1,9 @@
 # ADR-0023: Deception System — Signatures, Decoys and Information Attacks
 
-**Status**: Proposed — review changes **applied 2026-08-05** (scope estimate corrected; ADR-0022
-dependency added; phantom physicality rules defined — belief-only, no nav/reservation/cap footprint;
-fabrication boundary with ADR-0026 delimited). Ready for acceptance decision. No implementation
-authorized until Accepted.
+**Status**: **ACCEPTED 2026-08-05** (product owner, after independent review APPROVE-WITH-CHANGES and
+application of all required changes: corrected scope estimate, ADR-0022 dependency, phantom
+physicality rules, fabrication boundary). Implementation gated on its hard dependency: ADR-0021/0026
+intel milestones through I-M4 (fabrication plumbing) must exist first.
 **Depends on**: ADR-0021 (Knowledge Map — hard dependency), ADR-0022 (Command Network — `EmissionLevel` feeds CommandGraph detection, and jamming interacts with signature masking), ADR-0009 (data-driven content), ADR-0008 (AI zero-cheat)
 
 ## Context
