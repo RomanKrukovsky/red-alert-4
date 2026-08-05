@@ -1,6 +1,6 @@
 # Agent Active Action Queue (`NEXT_ACTIONS.md`)
 
-**Document Version**: 12.0
+**Document Version**: 12.1
 **Actual Project Status**: **PRE-ALPHA.** Deterministic C++ core is healthy and
 well tested. There is no runnable game build. The prior "commercial launch
 live" claim was false.
@@ -108,6 +108,11 @@ empty phase pipeline wired into `SimWorld` after fog of war, save v3 with v2
 migration, checksum coverage, 14 `Intel.*` tests (suite: 331 passed / 0 failed;
 UE 5.8 editor target: `Result: Succeeded`). Feature ships disabled by default.
 
+This M0 claim was independently re-verified on 2026-08-05 by a second session
+that built the headless target and ran the suite itself: clean build, 331
+passed / 0 failed, 14 `Intel.*` tests present. It is TRUE — a notable exception
+in a repository with a history of fabricated status claims.
+
 | Task ID | Task | Acceptance criteria |
 | :--- | :--- | :--- |
 | **I-M1** | Truthful pipeline (Observation→Report→Track, zero distortion/delay) | PS matches GT exactly while enabled; two-instance lockstep stays green; tests |
@@ -116,6 +121,35 @@ UE 5.8 editor target: `Result: Succeeded`). Feature ships disabled by default.
 | **I-M4** | Fabrication + self-report bias + guaranteed phantom refutation | Phantom always cleared within `MaxPhantomLifetimeTicks` by clean observation |
 | **I-M5** | Profiling vs budgets (≤0.8 ms/tick @ 5000 entities), post-match report | Numbers from real runs recorded in PERFORMANCE_BUDGETS.md |
 | **I-M6** | AI commander plays from belief (`GetIntel()`), not GT scans | Zero-cheat structural; AI strength delta measured before/after |
+
+**Budget note**: I-M5's target of ≤0.8 ms/tick @ 5,000 entities is stricter than
+the 2,000-entity baseline in `PERFORMANCE_BUDGETS.md` section 4.1. Reconcile the
+two before profiling so one number governs: either the entity baseline rises to
+5,000 across all budgets, or I-M5 measures at 2,000.
+
+### Perception-warfare stream — design and process (ADR-0021..0026)
+
+The wider direction this layer belongs to is documented on
+`docs/perception-warfare-adrs`: ADR-0021 (Knowledge Map — design intent behind
+ADR-0026), ADR-0022 (Command Network), ADR-0023 (Deception), ADR-0024
+(Battlefield Memory), ADR-0025 (Adaptive Opponent), plus
+`PERCEPTION_WARFARE_DIRECTION.md`, GDD sections 8-11, PRODUCT_VISION problems
+5-7, RISK-11..19, and PERFORMANCE_BUDGETS.md section 4. ADR-0026's intel layer
+is system 1 of five; systems 2-5 have no code and none is authorized yet.
+
+| Task ID | Task | Acceptance criteria |
+| :--- | :--- | :--- |
+| **P-1** | Independent review of ADR-0021..0026 | A reviewer that authored none of them files verdicts per ADR with BLOCKER/MAJOR/MINOR findings. Three attempts have failed on inference-gateway 524 timeouts; retry required. No Proposed ADR moves to Accepted before this. |
+| **P-2** | Reconcile ADR-0021 against ADR-0026 | Every point where the implementation diverges from the design intent is recorded in ADR-0026's rejection log, including the data model (`IntelRecord` vs `PerceivedTrack`) and decay scheduling. ADR-0026 is authoritative on implemented behaviour; ADR-0021 on intent. |
+| **P-3** | Consolidate duplicate ADR numbering | `Docs/ADRs/` (11 files, `ADR-0NN-Title` style) and `Docs/Architecture/ADR/` (20+ files, `ADR-00NN-title` style) both exist, and `ADR-0011` is used twice in the latter. Pick one directory and one scheme; leave redirect stubs. |
+| **P-4** | ~~Audit 60Hz claims~~ — **DONE for docs; economy rebalance OUTSTANDING** | Corrected: INVARIANTS, GDD, PRODUCT_VISION, ARCHITECTURE, CONTENT_ARCHITECTURE, NETWORK_ARCHITECTURE, HIERARCHICAL_AI_ARCHITECTURE, DATA_FLOW, TECHNICAL_DESIGN_DOCUMENT, PERFORMANCE_BUDGETS; errata on ADR-0001, ADR-0016, ADR-0019. Remaining 60Hz strings sit inside errata or historical Milestone/Audit reports, which are records of past claims and must not be rewritten. **Open**: ADR-0016 regeneration rates were computed at 60Hz and its arithmetic self-contradicted; at 20 Hz `RegenPerTick` 12 = 240 credits/s, far above intent. An economy designer must set intended rates and convert with `PerSecondToPerTick()`. Also confirm no code hardcodes a 60-tick assumption. |
+| **P-5** | UI_UX_BIBLE uncertainty language | Before any intel UI is built: confidence encoded redundantly (numeric + icon fill + timestamp), never colour or opacity alone; high-contrast intel mode; per RISK-11 and RISK-19. |
+| **P-6** | Visibility-query call-site inventory | Produce the list of every place that asks "is this visible" before migrating any of them, plus the instrumented leak detector that fails a test build on any read of objective state for a non-owned entity. Per RISK-17; the item most likely to be underestimated, and a precondition for I-M6. |
+| **P-7** | Measure the provisional budgets | Replace every `(p)` figure in PERFORMANCE_BUDGETS.md section 4 with a measured number at an agreed entity baseline (see the budget note above). One renegotiation with evidence is permitted, then the numbers freeze. |
+
+Sequencing: P-1 is the gate for ADR acceptance and runs independently of the
+I-M milestones. P-2 requires P-1. P-3, P-4 and P-5 can proceed in parallel at
+any time. P-6 gates I-M6. P-7 gates I-M2 and later.
 
 ---
 
