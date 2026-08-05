@@ -31,6 +31,10 @@ const char* ToString(AIProfile Profile)
         case AIProfile::Aggressive: return "Aggressive";
         case AIProfile::Defensive: return "Defensive";
         case AIProfile::Economic: return "Economic";
+        case AIProfile::Rush: return "Rush";
+        case AIProfile::Turtle: return "Turtle";
+        case AIProfile::AirSuperiority: return "AirSuperiority";
+        case AIProfile::Guerrilla: return "Guerrilla";
     }
     return "Invalid";
 }
@@ -120,6 +124,71 @@ AIConfig MakeProfileConfig(AIProfile Profile, AIDifficulty Difficulty)
             Config.AssaultWeight = 90;
             Config.RecoveryWeight = 120;
             Config.StrategySwitchMargin = 120;
+            break;
+        case AIProfile::Rush:
+            // All-in early aggression: the smallest viable economy, the smallest
+            // committing force, and almost no reserve. Loses to anything that
+            // survives the opening, which is the intended counterplay.
+            Config.TargetHarvesters = 1;
+            Config.AttackArmySize = 3;
+            Config.MinimumAttackSize = 2;
+            Config.TargetDefences = 0;
+            Config.CreditReserve = 50;
+            Config.AssaultWeight = 150;
+            Config.ArmyWeight = 130;
+            Config.EconomyWeight = 60;
+            Config.DefenceWeight = 40;
+            Config.TechWeight = 50;
+            // Commits and stays committed: re-deciding mid-rush wastes the timing.
+            Config.StrategySwitchMargin = 40;
+            break;
+        case AIProfile::Turtle:
+            // Trades all early initiative for defence and tech, then attacks with a
+            // much larger force than any other profile fields.
+            Config.TargetHarvesters = 4;
+            Config.AttackArmySize = 14;
+            Config.MinimumAttackSize = 8;
+            Config.TargetDefences = 6;
+            Config.CreditReserve = 600;
+            Config.DefenceWeight = 160;
+            Config.TechWeight = 125;
+            Config.EconomyWeight = 110;
+            Config.AssaultWeight = 60;
+            Config.ArmyWeight = 95;
+            Config.RecoveryWeight = 130;
+            // Very reluctant to abandon a fortified posture.
+            Config.StrategySwitchMargin = 180;
+            break;
+        case AIProfile::AirSuperiority:
+            // Prioritises tech to reach air, keeps a healthy bank to afford it, and
+            // declines early ground engagements it would lose.
+            Config.TargetHarvesters = 4;
+            Config.AttackArmySize = 8;
+            Config.MinimumAttackSize = 4;
+            Config.TargetDefences = 2;
+            Config.CreditReserve = 700;
+            Config.TechWeight = 165;
+            Config.EconomyWeight = 115;
+            Config.ArmyWeight = 100;
+            Config.AssaultWeight = 85;
+            Config.DefenceWeight = 105;
+            Config.StrategySwitchMargin = 130;
+            break;
+        case AIProfile::Guerrilla:
+            // Never masses for a decisive battle: many small raids, a low commit
+            // threshold, and a deliberately thin defensive line.
+            Config.TargetHarvesters = 3;
+            Config.AttackArmySize = 4;
+            Config.MinimumAttackSize = 2;
+            Config.TargetDefences = 1;
+            Config.CreditReserve = 200;
+            Config.AssaultWeight = 120;
+            Config.ArmyWeight = 108;
+            Config.EconomyWeight = 100;
+            Config.DefenceWeight = 75;
+            Config.RecoveryWeight = 115;
+            // Switches targets readily -- that mobility is the whole identity.
+            Config.StrategySwitchMargin = 50;
             break;
         case AIProfile::Adaptive:
             break;

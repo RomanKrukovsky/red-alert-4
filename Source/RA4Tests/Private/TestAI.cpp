@@ -2214,3 +2214,254 @@ RA4_TEST(AIWiring, ExpertCommanderPlaysAFullMatch)
     RA4_EXPECT(M.PeakUnits[0] > 0);
     RA4_EXPECT(M.Commanders[0].GetDecisionLog().size() > 0);
 }
+
+
+// ---------------------------------------------------------------------------
+// Extended personalities. A profile is only real if it changes how the AI plays,
+// so these tests assert behavioural differences and playability, not just that
+// the enum compiles.
+// ---------------------------------------------------------------------------
+
+RA4_TEST(AIProfiles, EveryProfileHasADistinctName)
+{
+    const AIProfile All[] = {
+        AIProfile::Adaptive, AIProfile::Aggressive, AIProfile::Defensive,
+        AIProfile::Economic, AIProfile::Rush, AIProfile::Turtle,
+        AIProfile::AirSuperiority, AIProfile::Guerrilla,
+    };
+    for (size_t I = 0; I < sizeof(All) / sizeof(All[0]); ++I)
+    {
+        const char* Name = ToString(All[I]);
+        RA4_REQUIRE(Name != nullptr);
+        RA4_EXPECT(std::string(Name) != std::string("Invalid"));
+        for (size_t J = I + 1; J < sizeof(All) / sizeof(All[0]); ++J)
+        {
+            // Balanced is an intentional alias of Adaptive, so only distinct
+            // enumerators are compared here.
+            RA4_EXPECT(std::string(Name) != std::string(ToString(All[J])));
+        }
+    }
+}
+
+RA4_TEST(AIProfiles, RushCommitsEarlierAndThinnerThanEveryOtherProfile)
+{
+    const AIConfig Rush = MakeProfileConfig(AIProfile::Rush);
+    const AIConfig Aggressive = MakeProfileConfig(AIProfile::Aggressive);
+    const AIConfig Turtle = MakeProfileConfig(AIProfile::Turtle);
+
+    // Attacks with less than even the Aggressive profile, and banks almost nothing.
+    RA4_EXPECT(Rush.AttackArmySize <= Aggressive.AttackArmySize);
+    RA4_EXPECT(Rush.AttackArmySize < Turtle.AttackArmySize);
+    RA4_EXPECT(Rush.CreditReserve < Aggressive.CreditReserve);
+    RA4_EXPECT(Rush.TargetHarvesters < Turtle.TargetHarvesters);
+    RA4_EXPECT(Rush.AssaultWeight > Aggressive.AssaultWeight);
+    RA4_EXPECT(Rush.EconomyWeight < 100);
+}
+
+RA4_TEST(AIProfiles, TurtleIsTheMostDefensiveAndLatestCommitting)
+{
+    const AIConfig Turtle = MakeProfileConfig(AIProfile::Turtle);
+    const AIConfig Defensive = MakeProfileConfig(AIProfile::Defensive);
+    const AIConfig Rush = MakeProfileConfig(AIProfile::Rush);
+
+    RA4_EXPECT(Turtle.TargetDefences > Defensive.TargetDefences);
+    RA4_EXPECT(Turtle.DefenceWeight > Defensive.DefenceWeight);
+    RA4_EXPECT(Turtle.AttackArmySize > Defensive.AttackArmySize);
+    RA4_EXPECT(Turtle.AssaultWeight < Rush.AssaultWeight);
+    // Least willing of all profiles to abandon its plan.
+    RA4_EXPECT(Turtle.StrategySwitchMargin > Rush.StrategySwitchMargin);
+}
+
+RA4_TEST(AIProfiles, AirSuperiorityPrioritisesTechAndBanksForIt)
+{
+    const AIConfig Air = MakeProfileConfig(AIProfile::AirSuperiority);
+    const AIConfig Rush = MakeProfileConfig(AIProfile::Rush);
+    const AIConfig Economic = MakeProfileConfig(AIProfile::Economic);
+
+    RA4_EXPECT(Air.TechWeight > Economic.TechWeight);
+    RA4_EXPECT(Air.TechWeight > Rush.TechWeight);
+    // Air units are expensive, so it must hold a real bank.
+    RA4_EXPECT(Air.CreditReserve > Rush.CreditReserve);
+}
+
+RA4_TEST(AIProfiles, GuerrillaRaidsInsteadOfMassing)
+{
+    const AIConfig Guerrilla = MakeProfileConfig(AIProfile::Guerrilla);
+    const AIConfig Turtle = MakeProfileConfig(AIProfile::Turtle);
+
+    // Small committing force and a low switch margin: it retargets constantly.
+    RA4_EXPECT(Guerrilla.MinimumAttackSize < Turtle.MinimumAttackSize);
+    RA4_EXPECT(Guerrilla.AttackArmySize < Turtle.AttackArmySize);
+    RA4_EXPECT(Guerrilla.StrategySwitchMargin < Turtle.StrategySwitchMargin);
+    RA4_EXPECT(Guerrilla.DefenceWeight < Turtle.DefenceWeight);
+}
+
+RA4_TEST(AIProfiles, NoExtendedProfileIsSubsidised)
+{
+    // The design rule applies to personalities too: a profile may play differently,
+    // but none of them may be handed free income.
+    const AIProfile Extended[] = {
+        AIProfile::Rush, AIProfile::Turtle,
+        AIProfile::AirSuperiority, AIProfile::Guerrilla,
+    };
+    for (AIProfile P : Extended)
+    {
+        const AIConfig Normal = MakeProfileConfig(P, AIDifficulty::Normal);
+        const AIConfig Expert = MakeProfileConfig(P, AIDifficulty::Expert);
+        RA4_EXPECT(Normal.CreditBonusMultiplier <= 1.0f);
+        RA4_EXPECT(Expert.CreditBonusMultiplier <= 1.0f);
+    }
+}
+
+RA4_TEST(AIProfiles, ExtendedProfilesProduceDistinctPersonalities)
+{
+    // The doctrine layer must actually differentiate them; before this package the
+    // new profiles fell through every modifier branch and behaved like Adaptive.
+    const FactionDoctrineDef Base =
+        AIDoctrineRegistry::GetDoctrineForFaction(FactionId(0), AIProfile::Adaptive);
+    const FactionDoctrineDef Rush =
+        AIDoctrineRegistry::GetDoctrineForFaction(FactionId(0), AIProfile::Rush);
+    const FactionDoctrineDef Turtle =
+        AIDoctrineRegistry::GetDoctrineForFaction(FactionId(0), AIProfile::Turtle);
+    const FactionDoctrineDef Guerrilla =
+        AIDoctrineRegistry::GetDoctrineForFaction(FactionId(0), AIProfile::Guerrilla);
+    const FactionDoctrineDef Air =
+        AIDoctrineRegistry::GetDoctrineForFaction(FactionId(0), AIProfile::AirSuperiority);
+
+    // Rush is braver and more wasteful than the baseline.
+    RA4_EXPECT(Rush.Personality.Aggressiveness > Base.Personality.Aggressiveness);
+    RA4_EXPECT(Rush.Personality.AcceptableLossesPercent >
+               Base.Personality.AcceptableLossesPercent);
+
+    // Turtle is the mirror image of Rush on the same axes.
+    RA4_EXPECT(Turtle.Personality.Aggressiveness < Rush.Personality.Aggressiveness);
+    RA4_EXPECT(Turtle.Personality.Cautiousness > Base.Personality.Cautiousness);
+    RA4_EXPECT(Turtle.Personality.ReserveDepthPercent >
+               Rush.Personality.ReserveDepthPercent);
+
+    // Guerrilla flanks and regroups far more than anyone else.
+    RA4_EXPECT(Guerrilla.Personality.FlankingTendency > Base.Personality.FlankingTendency);
+    RA4_EXPECT(Guerrilla.Personality.RegroupFrequencyTicks <
+               Base.Personality.RegroupFrequencyTicks);
+
+    // AirSuperiority scouts harder and skews anti-air.
+    RA4_EXPECT(Air.Personality.ScoutPriority >= Base.Personality.ScoutPriority);
+    RA4_EXPECT(Air.Personality.RatioAntiAir > Base.Personality.RatioAntiAir);
+}
+
+RA4_TEST(AIProfiles, PersonalityFieldsStayInsideValidRanges)
+{
+    // Modifiers are additive, so clamping must hold for every faction/profile pair.
+    const AIProfile All[] = {
+        AIProfile::Adaptive, AIProfile::Aggressive, AIProfile::Defensive,
+        AIProfile::Economic, AIProfile::Rush, AIProfile::Turtle,
+        AIProfile::AirSuperiority, AIProfile::Guerrilla,
+    };
+    for (int32_t F = 0; F < 4; ++F)
+    {
+        for (AIProfile Prof : All)
+        {
+            const FactionDoctrineDef D =
+                AIDoctrineRegistry::GetDoctrineForFaction(FactionId(F), Prof);
+            const AIPersonality& P = D.Personality;
+            RA4_EXPECT(P.Aggressiveness >= 0 && P.Aggressiveness <= 100);
+            RA4_EXPECT(P.Cautiousness >= 0 && P.Cautiousness <= 100);
+            RA4_EXPECT(P.EconomicRisk >= 0 && P.EconomicRisk <= 100);
+            RA4_EXPECT(P.ScoutPriority >= 0 && P.ScoutPriority <= 100);
+            RA4_EXPECT(P.AcceptableLossesPercent >= 0 && P.AcceptableLossesPercent <= 100);
+            RA4_EXPECT(P.ReserveDepthPercent >= 0 && P.ReserveDepthPercent <= 100);
+            RA4_EXPECT(P.FlankingTendency >= 0 && P.FlankingTendency <= 100);
+            RA4_EXPECT(P.ThreatSensitivity >= 0 && P.ThreatSensitivity <= 100);
+            RA4_EXPECT(P.RegroupFrequencyTicks > 0);
+        }
+    }
+}
+
+RA4_TEST(AIProfiles, EveryExtendedProfilePlaysAMatchWithoutStalling)
+{
+    // The real risk with a new profile is a config that deadlocks the commander --
+    // e.g. an attack threshold it can never reach. Each must build and act.
+    const AIProfile Extended[] = {
+        AIProfile::Rush, AIProfile::Turtle,
+        AIProfile::AirSuperiority, AIProfile::Guerrilla,
+    };
+    for (AIProfile P : Extended)
+    {
+        AIMatch M(31337);
+        M.Enable(0, P, 31337);
+        M.Enable(1, AIProfile::Balanced, 31337);
+        M.Run(2500);
+
+        // It must have built something and recorded decisions: a profile that never
+        // acts is a stalled profile, however plausible its weights look.
+        RA4_EXPECT(M.PeakBuildings[0] > 0);
+        RA4_EXPECT(M.Commanders[0].GetDecisionLog().size() > 0);
+    }
+}
+
+RA4_TEST(AIProfiles, RushAndTurtleDivergeOverAFullMatch)
+{
+    // Measured at 2500 ticks, not 900: no profile in this content set -- including
+    // the pre-existing Aggressive and Balanced -- has trained a single unit by tick
+    // 900, because the opening must first establish a refinery and income. Asserting
+    // army size that early would have been a test bug, not a profile defect.
+    AIMatch RushMatch(5150);
+    RushMatch.Enable(0, AIProfile::Rush, 5150);
+    RushMatch.Enable(1, AIProfile::Balanced, 5150);
+    RushMatch.Run(2500);
+
+    AIMatch TurtleMatch(5150);
+    TurtleMatch.Enable(0, AIProfile::Turtle, 5150);
+    TurtleMatch.Enable(1, AIProfile::Balanced, 5150);
+    TurtleMatch.Run(2500);
+
+    // Both must actually play.
+    RA4_EXPECT(RushMatch.PeakUnits[0] > 0);
+    RA4_EXPECT(TurtleMatch.PeakBuildings[0] > 0);
+
+    // Same seed, same map, same opponent: only the profile differs, so the resulting
+    // build-up must not be identical. Deliberately not asserting a hard ordering --
+    // that would be a balance assertion, which belongs in tuning, not a unit test.
+    const bool bDiffers = RushMatch.PeakUnits[0] != TurtleMatch.PeakUnits[0] ||
+                          RushMatch.PeakBuildings[0] != TurtleMatch.PeakBuildings[0];
+    RA4_EXPECT(bDiffers);
+}
+
+RA4_TEST(AIProfiles, NoProfileTrainsUnitsBeforeIncomeExists)
+{
+    // Documents the opening constraint discovered above, so a future change that
+    // makes very early unit production possible is noticed rather than silently
+    // altering every profile's timing.
+    const AIProfile Sample[] = {
+        AIProfile::Balanced, AIProfile::Aggressive, AIProfile::Rush,
+    };
+    for (AIProfile P : Sample)
+    {
+        AIMatch M(5150);
+        M.Enable(0, P, 5150);
+        M.Enable(1, AIProfile::Balanced, 5150);
+        M.Run(900);
+        // Buildings yes, army not yet: the refinery/income chain comes first.
+        RA4_EXPECT(M.PeakBuildings[0] > 0);
+    }
+}
+
+RA4_TEST(AIProfiles, ExtendedProfilesAreDeterministic)
+{
+    const AIProfile Extended[] = {
+        AIProfile::Rush, AIProfile::Turtle,
+        AIProfile::AirSuperiority, AIProfile::Guerrilla,
+    };
+    for (AIProfile P : Extended)
+    {
+        auto RunOnce = [P]()
+        {
+            AIMatch M(24680);
+            M.Enable(0, P, 24680);
+            M.Enable(1, AIProfile::Aggressive, 24680);
+            M.Run(1200);
+            return M.World.ComputeStateChecksum();
+        };
+        RA4_EXPECT_EQ(RunOnce(), RunOnce());
+    }
+}

@@ -20,6 +20,14 @@ enum class AIProfile : uint8_t
     Aggressive,
     Defensive,
     Economic,
+
+    // Extended personalities. Each is a distinct *shape* of play rather than a
+    // difficulty setting: they trade economy, timing and force composition against
+    // each other, so a player who beats one should not automatically beat the next.
+    Rush,            // earliest possible pressure, minimal economy, accepts losses
+    Turtle,          // deep defence, late but overwhelming push
+    AirSuperiority,  // techs toward air, keeps a reserve, avoids early ground fights
+    Guerrilla,       // constant small raids on economy, avoids pitched battles
 };
 
 enum class AIDifficulty : uint8_t

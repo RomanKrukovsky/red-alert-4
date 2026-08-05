@@ -148,6 +148,61 @@ AIPersonality AIDoctrineRegistry::CreatePersonality(AIDoctrineType Doctrine, AIP
         P.EconomicRisk += 25;
         P.ReserveDepthPercent += 10;
     }
+    else if (Profile == AIProfile::Rush)
+    {
+        // Maximum pressure, minimum patience: throws its force in and expects to
+        // trade badly. Scouting matters less because the plan barely adapts.
+        P.Aggressiveness = std::min(100, P.Aggressiveness + 35);
+        P.Cautiousness = std::max(5, P.Cautiousness - 35);
+        P.AcceptableLossesPercent = std::min(95, P.AcceptableLossesPercent + 35);
+        P.ReserveDepthPercent = std::max(0, P.ReserveDepthPercent - 15);
+        P.ScoutPriority = std::max(10, P.ScoutPriority - 20);
+        P.ThreatSensitivity = std::max(10, P.ThreatSensitivity - 20);
+        // Cheap bodies now beat a balanced composition later.
+        P.RatioInfantry = std::min(100, P.RatioInfantry + 25);
+        P.RatioArtillery = std::max(0, P.RatioArtillery - 10);
+        P.RatioAntiAir = std::max(0, P.RatioAntiAir - 10);
+    }
+    else if (Profile == AIProfile::Turtle)
+    {
+        // Values its own units highly and reacts strongly to threats, at the cost of
+        // almost never seizing the initiative.
+        P.Aggressiveness = std::max(5, P.Aggressiveness - 30);
+        P.Cautiousness = std::min(100, P.Cautiousness + 30);
+        P.AcceptableLossesPercent = std::max(5, P.AcceptableLossesPercent - 20);
+        P.ReserveDepthPercent = std::min(90, P.ReserveDepthPercent + 30);
+        P.ThreatSensitivity = std::min(100, P.ThreatSensitivity + 25);
+        // Static firepower and artillery over mobile pushes.
+        P.RatioArtillery = std::min(100, P.RatioArtillery + 15);
+        P.RatioAntiArmor = std::min(100, P.RatioAntiArmor + 10);
+    }
+    else if (Profile == AIProfile::AirSuperiority)
+    {
+        // Invests heavily and needs intelligence to time the air transition, so it
+        // scouts hard and keeps a deep reserve while teching.
+        P.EconomicRisk = std::min(100, P.EconomicRisk + 15);
+        P.ScoutPriority = std::min(100, P.ScoutPriority + 25);
+        P.Cautiousness = std::min(100, P.Cautiousness + 15);
+        P.ReserveDepthPercent = std::min(90, P.ReserveDepthPercent + 20);
+        // Skews toward anti-air and support so its own air arm survives contact.
+        P.RatioAntiAir = std::min(100, P.RatioAntiAir + 30);
+        P.RatioSupport = std::min(100, P.RatioSupport + 10);
+        P.RatioInfantry = std::max(0, P.RatioInfantry - 20);
+    }
+    else if (Profile == AIProfile::Guerrilla)
+    {
+        // Avoids pitched battles: highly mobile, flanks constantly, regroups often
+        // and withdraws early rather than trading evenly.
+        P.Aggressiveness = std::min(100, P.Aggressiveness + 15);
+        P.FlankingTendency = std::min(100, P.FlankingTendency + 40);
+        P.ScoutPriority = std::min(100, P.ScoutPriority + 20);
+        P.AcceptableLossesPercent = std::max(5, P.AcceptableLossesPercent - 15);
+        P.RegroupFrequencyTicks = std::max(5, P.RegroupFrequencyTicks / 2);
+        P.ThreatSensitivity = std::min(100, P.ThreatSensitivity + 15);
+        // Fast, cheap harassers rather than a siege line.
+        P.RatioInfantry = std::min(100, P.RatioInfantry + 15);
+        P.RatioArtillery = std::max(0, P.RatioArtillery - 10);
+    }
 
     return P;
 }
