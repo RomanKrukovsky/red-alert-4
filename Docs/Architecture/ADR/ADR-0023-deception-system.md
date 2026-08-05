@@ -1,11 +1,10 @@
 # ADR-0023: Deception System — Signatures, Decoys and Information Attacks
 
-**Status**: Proposed — independent review 2026-08-05 returned **APPROVE-WITH-CHANGES**. Required
-before Accepted (NEXT_ACTIONS P-9): withdraw the "pure data, no new engine systems" estimate (per-observer
-sensor-vs-signature resolution is an Intel-layer rework); add ADR-0022 to Depends on; define phantom
-contacts' status in the navigation and reservation grids and against entity caps; delimit responsibility
-against ADR-0026's fabrication stage. No implementation authorized.
-**Depends on**: ADR-0021 (Knowledge Map — hard dependency), ADR-0009 (data-driven content), ADR-0008 (AI zero-cheat)
+**Status**: Proposed — review changes **applied 2026-08-05** (scope estimate corrected; ADR-0022
+dependency added; phantom physicality rules defined — belief-only, no nav/reservation/cap footprint;
+fabrication boundary with ADR-0026 delimited). Ready for acceptance decision. No implementation
+authorized until Accepted.
+**Depends on**: ADR-0021 (Knowledge Map — hard dependency), ADR-0022 (Command Network — `EmissionLevel` feeds CommandGraph detection, and jamming interacts with signature masking), ADR-0009 (data-driven content), ADR-0008 (AI zero-cheat)
 
 ## Context
 
@@ -33,7 +32,19 @@ Observation resolves through the observer's sensor type against the target's pro
 Only three deception tools ship in the first iteration — each maps to one signature axis:
 
 1. **Decoy structure** — cheap building broadcasting a false RadarArchetype (e.g. superweapon signature). Dies in one hit; sustained visual contact exposes it.
-2. **Phantom column** — projector unit emitting N fake visual contacts that move on scripted paths; contacts have low max confidence and never survive close observation.
+2. **Phantom column** — projector unit emitting N fake visual contacts that move on scripted paths;
+   contacts have low max confidence and never survive close observation.
+   **Physicality rules (review P-9)**: phantom contacts are *belief-only* — they occupy **no**
+   navigation cells, **no** reservation slots, and do **not** count against entity caps or the
+   soft command limit (ADR-0014). They exist as entries in observers' perceived worlds, nothing
+   else; enemy units path *through* a phantom's believed position unimpeded, which is itself one of
+   the exposure mechanics. The projector unit is an ordinary entity and counts normally.
+   **Boundary with ADR-0026 fabrication (review P-9)**: ADR-0026's fabrication stage models
+   *unintentional* false contacts (a panicking observer inventing tanks); this ADR models
+   *deliberate, player-purchased* deception. They share the phantom-track plumbing (a fabricated
+   track is a fabricated track), but their sources never mix: fabrication rates come from observer
+   psychology tuning, deception contacts come from a projector entity with an owner, a cost and a
+   counter. ADR-0026's guaranteed-refutation rule (`MaxPhantomLifetimeTicks`) applies to both.
 3. **Signature masking** — module (via unit modification path) lowering EmissionLevel/ThermalMagnitude at an energy cost.
 
 Explicitly out of v1 (recorded for later ADRs, not to be smuggled in): fake resource counts, fake attack notifications, icon substitution in enemy UI, forged radio chatter. These touch UI-truthfulness and accessibility concerns and each needs its own decision.
@@ -52,12 +63,30 @@ All resolution (sensor vs signature, confidence thresholds, phantom paths) is fi
 
 ## Consequences
 
-**Positive**: transforms scouting into an information game; the three v1 tools are cheap because they are pure data + KnowledgeMap writes — no new engine systems.
+**Positive**: transforms scouting into an information game.
+
+**Scope correction (review P-9)**: the original claim that v1 tools are "pure data + KnowledgeMap
+writes — no new engine systems" was an underestimate and is withdrawn. Resolving each observer's
+sensor grade against each target's `SignatureProfile` is a **new sensor-resolution model** inside the
+intel observation phase, with O(observers × targets) worst-case cost per sensor pass — i.e. a rework
+of ADR-0026's observation stage, not a data drop-in. What remains cheap is the *content*: once the
+resolution model exists, each deception tool is data. Budget impact goes to PERFORMANCE_BUDGETS §4.1
+(the intel row absorbs sensor resolution; it needs its own measured sub-line at P-7 time).
 
 **Negative / risks**:
 - Frustration risk: being deceived must feel like *my scouting failed*, not *the game lied*. Mitigation: all deceptions are exposable, confidence is always displayed, post-match documentary (future) reveals what was real.
 - Balance surface expands multiplicatively with faction asymmetry — v1 tools should be shared-tech before faction-specific variants.
 - Test surface: needs scenario tests, not just unit tests.
+
+**Additional design risks (review P-12)**:
+- **Spectator readability under mass fakes**: a screen full of phantom contacts is unreadable for
+  casters and replays. Rule: the spectator/objective view renders ground truth with deceptions
+  *marked* (distinct silhouette), never the deceived view by default; a caster can toggle into any
+  player's perceived view. Interacts with ADR-0010's delay buffer — marked deceptions reveal
+  nothing actionable at 3+ minutes delay.
+- **Transparency-of-counters teaching gaming**: documenting "every deception has two counters" also
+  documents how to bait counters. Accepted: that is the intended mind-game layer, and it is
+  symmetric.
 
 ## Verification plan
 

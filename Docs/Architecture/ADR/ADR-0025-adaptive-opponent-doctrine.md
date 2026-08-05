@@ -1,10 +1,10 @@
 # ADR-0025: Adaptive Opponent — Cross-Match Player Modeling and Doctrine Counter-Selection
 
-**Status**: Proposed — independent review 2026-08-05 returned **APPROVE-WITH-CHANGES**. Required
-before Accepted (NEXT_ACTIONS P-11): a canonical DoctrineBias encoding (key order, Fixed weights, unknown
-mapId, version skew); a statement of how this extends the existing `OpponentModel`/`AIDoctrine`/`AIStrategy`
-in RA4AI rather than duplicating them; and removal of the "free by-product" framing of the digital twin.
-No implementation authorized.
+**Status**: Proposed — review changes **applied 2026-08-05** (canonical DoctrineBias encoding
+specified: Fixed weights, ascending key order, dropped-entry accounting, version-skew rules; section 0
+states how this extends `OpponentModel`/`AIDoctrine`/`AIStrategy` rather than duplicating them; the
+digital-twin "free by-product" claim was already withdrawn earlier). Ready for acceptance decision. No
+implementation authorized until Accepted.
 **Depends on**: ADR-0008 (HTN/utility AI), ADR-0020 (economic telemetry & balance metrics — recovered
 from the non-compiling remediation branch, see its provenance note), ADR-0021 (Knowledge Map),
 ADR-0005 (replay format — the analyzer reads `Source/RA4Replay/Public/RA4Replay/Replay.h`)
@@ -16,6 +16,25 @@ Direction: the AI opponent learns the *player's habits* between matches — heav
 Hard architectural constraint: the sim is deterministic. Any learning artifact that influences a match must be an **input** to the match, fixed before tick 0 — never something mutating during the match from out-of-sim data.
 
 ## Decision
+
+### 0. Relationship to existing RA4AI types (review P-11)
+
+`RA4AI` already contains `OpponentModel` (`OpponentProfile` — the in-match estimate of the enemy
+built from the AI's own scouting), `AIDoctrine` (`AIDoctrineType`, `AIPersonality`,
+`FactionDoctrineDef`, `AIDoctrineRegistry` — the static per-faction doctrine definitions) and
+`AIStrategy`. **This ADR extends those types; it does not duplicate them** (a parallel subsystem is
+forbidden by project rules):
+
+- `PlayerProfile` (new, out-of-sim) is the *cross-match* analogue of the in-match `OpponentProfile`.
+  They are different lifetimes of the same idea and must share field vocabulary where they overlap
+  (army-composition ratios, timing histograms) so the analyzer and the in-match estimator do not
+  drift apart.
+- `DoctrineBias` does not define doctrines. It **reweights the selection** among doctrines already
+  registered in `AIDoctrineRegistry` and shifts `AIPersonality` scalars within clamps. If a desired
+  bias cannot be expressed as a reweight of an existing `FactionDoctrineDef`, the answer is a new
+  doctrine definition in the registry — not a bypass channel.
+- The utility priors in `ThreatPriors[]` land in the same utility inputs `AIStrategy` already
+  consumes; no second scoring path is added.
 
 ### 1. Two-loop separation
 
@@ -40,6 +59,21 @@ DoctrineBias {
 ```
 
 - Passed as match-setup data (like difficulty), hashed into match seed material, recorded in the replay header ⇒ replays remain exactly reproducible.
+- **Canonical encoding (review P-11)** — required for cross-platform hash identity:
+  - All weights and priors are `RA4::Fixed`, never float, serialized via the existing `ByteWriter`
+    fixed-width path.
+  - `MapRoutePriors` and every other keyed table serialize in **ascending key order** (mapId as
+    uint64, route index ascending); iteration during play also follows that order, so behaviour
+    never depends on hash-map layout.
+  - **Unknown `mapId`** at load: the entry is dropped and counted in a `DroppedEntries` field that
+    itself feeds the header hash — two peers disagreeing about what was dropped is a desync at tick
+    0, not a silent divergence mid-match.
+  - **Version skew**: a reader encountering `ProfileVersion` *older* than its own applies documented
+    per-version upgrades (same discipline as save migration); encountering a *newer* version, it
+    refuses the blob and starts unbiased — never a partial read. Refusal is recorded in the replay
+    header.
+  - Blob cap 64 KB enforced at write time; an over-cap profile is truncated by dropping
+    lowest-weight entries in canonical order, deterministically.
 - Bounded influence: biases reweight existing utility scores within clamped ranges; they cannot grant resources, vision, or new capabilities (zero-cheat preserved).
 
 ### 4. "Digital twin" (stretch, same architecture)
@@ -63,6 +97,20 @@ idea as a research direction, not a deliverable of this ADR.
 - Fun risk: hard-countering the player's favorite style can feel punitive. Mitigation: bias clamps + difficulty-gated adaptation strength + the transparency screen teaching the player to vary.
 - Analyzer quality: garbage classification ⇒ nonsense adaptation. The analyzer needs its own labeled-replay test corpus.
 - Scope: the replay analyzer is a real tool (Tools/ stream), estimate as such — this is the largest cost item of the five perception-warfare systems.
+
+**Additional design risks (review P-12)**:
+- **Profile poisoning**: a player can deliberately play 10 "all air" matches to teach the AI to
+  over-invest in AA, then switch. Accepted as *legitimate metagaming* — outwitting the adaptation
+  is playing the system as designed — with one guard: bias clamps mean the poisoned counter never
+  exceeds the clamp, so the exploit yields an edge, not a free win. The transparency screen makes
+  the same play available to everyone.
+- **Newcomer hostility**: 3–5 matches at low difficulty must not produce a confident profile.
+  Adaptation strength scales with sample size (below N=8 matches, DoctrineBias influence is zero)
+  and is off entirely at the two lowest difficulties (already in RISK-14 mitigations; restated here
+  as a hard rule of this ADR).
+- **Transparency screen as an instruction manual**: showing "what the enemy learned" also shows how
+  to manipulate it. Accepted consciously — see profile poisoning above; the alternative (hidden
+  model) fails RISK-14 worse.
 
 ## Verification plan
 

@@ -1,9 +1,9 @@
 # ADR-0022: Command Network — Physical Order Propagation and Autonomy Fallback
 
-**Status**: Proposed — independent review 2026-08-05 returned **APPROVE-WITH-CHANGES**. Required
-before Accepted (NEXT_ACTIONS P-8): restate the latency budget to include lockstep input delay; specify
-the order-supersede rule instead of describing it as needed; pin the CommandGraph recompute tick phase
-and traversal order. No implementation authorized.
+**Status**: Proposed — review changes **applied 2026-08-05** (latency budget restated end-to-end
+including lockstep input delay; order-supersede rule fully specified; CommandGraph recompute tick
+phase and traversal order pinned). Ready for acceptance decision. No implementation authorized until
+Accepted.
 **Depends on**: ADR-0001 (fixed-tick lockstep, 20 Hz), ADR-0003 (command protocol), ADR-0008 (HTN/utility AI), ADR-0021 (Knowledge Map)
 
 ## Context
@@ -30,7 +30,17 @@ DeliveryTick = AdmissionTick + PropagationLatency(path from nearest command node
 ### 2. CommandGraph
 
 - Nodes: HQ, relay structures, command vehicles, satellite uplinks — all are ordinary sim entities with a `CommandNode` component (data-driven via JSON content, per ADR-0009).
-- Edges: derived deterministically from range/LOS rules each K ticks (amortized recompute, event-triggered on node create/destroy).
+- Edges: derived deterministically from range/LOS rules. **Recompute contract (per review P-8)**:
+  - **Tick phase**: CommandGraph maintenance runs as a fixed phase inside `SimWorld::Tick`,
+    immediately *after* entity create/destroy processing and *before* order-delivery advancement,
+    so a node destroyed at tick T affects deliveries from tick T, never retroactively.
+  - **Traversal order**: nodes are processed in ascending `EntityId`; edges are evaluated in
+    (lower id, higher id) pair order. Latency lookup is a BFS from the group's nearest node,
+    visiting neighbours in ascending `EntityId` — identical on every peer by construction.
+  - **Amortization**: full recompute is event-triggered (node created/destroyed/jammed); between
+    events, K-tick refresh (K = 20, one checksum interval) revalidates range/LOS in id order,
+    1/Kth of nodes per tick. Both paths are hash-covered, so any divergence is a desync at the
+    next checksum tick, not a silent drift.
 - Jamming: an area effect that raises edge latency or severs edges — implemented as a component state, not as RNG.
 
 ### 3. Autonomy fallback (no new AI stack)
@@ -39,7 +49,13 @@ Units without a live order link execute their **standing doctrine** — a small,
 
 ### 4. UX contract (anti-frustration)
 
-- Default multiplayer latency for a healthy network: ≤ 4 ticks (200 ms at 20 Hz) — barely perceptible; the mechanic becomes visible only under attack on infrastructure.
+- **End-to-end latency budget (includes lockstep input delay, per review P-8)**: total
+  click-to-execution time is `InputDelayTicks + PropagationTicks`. LockstepSession's input delay is
+  2 ticks (100 ms) in a healthy session; the propagation budget for a healthy CommandGraph is
+  therefore **≤ 2 ticks (100 ms)**, keeping the end-to-end total at **≤ 4 ticks (200 ms)** — the
+  threshold below which order latency is imperceptible in an RTS. Under degraded infrastructure,
+  propagation may grow without bound (that is the mechanic); the *healthy-path* number is the CI
+  gate. `Classic` mode sets propagation to 0, making end-to-end equal to bare lockstep.
 - UI must show per-group link status (connected / degraded / autonomous) sourced from sim state.
 - Skirmish option `CommandNetwork=Classic` disables Stage B entirely (latency 0) — needed for balance A/B and esports mode. This is a sim parameter, hash-relevant, recorded in replay header.
 
@@ -55,7 +71,19 @@ Units without a live order link execute their **standing doctrine** — a small,
 
 **Negative / risks**:
 - Balance risk is high: order delay is felt as input lag if tuned badly. Mitigation: healthy-path latency budget above + telemetry (ADR-0020 hooks).
-- Pathological micro cases (rapid re-orders creating in-flight order floods) — need an order-supersede rule: a newer order to the same group cancels older undelivered ones.
+- Pathological micro cases (rapid re-orders creating in-flight order floods) — closed by the
+  **order-supersede rule**, specified here (per review P-8):
+  - Key: `(IssuingPlayer, TargetGroupId)`. At most **one** undelivered order per key exists in the
+    graph at any time.
+  - On admission of a new order with the same key, the older undelivered order is cancelled *at
+    admission tick*, deterministically, regardless of where in the graph it currently is. Cancelled
+    orders are counted (telemetry) but produce no unit-visible effect.
+  - An order that has already **delivered** is never affected — supersede applies to in-flight
+    orders only; changing a unit's current activity requires the new order to arrive.
+  - Queued-orders (shift-queue) form a single composite order under one key; superseding replaces
+    the whole queue, matching what players expect from re-issuing commands.
+  - Bound: in-flight order storage is therefore ≤ (players × alive groups), which fixes the memory
+    budget in PERFORMANCE_BUDGETS §4.2 without a separate cap.
 - Interaction with DirectControl (ADR-0011-DirectControl): **resolved — a possessed unit bypasses the
   graph entirely.** The commander is physically present in that vehicle, so there is no radio link to
   model, and adding delay to a first-person control scheme would be indefensible as a control feel.
@@ -63,6 +91,17 @@ Units without a live order link execute their **standing doctrine** — a small,
   exactly one unit while the rest of the army runs on standing doctrine — a real tradeoff rather than
   an exemption. On unpossession the unit rejoins the graph and its next order propagates normally.
   Recorded in GDD section 9.
+
+**Additional design risks (review P-12)**:
+- **Spectator/caster readability**: link-status states and delayed orders are invisible to a
+  spectator watching the objective view; a caster cannot explain why an army ignored a command.
+  The spectator overlay (ADR-0010 delay buffer) must be able to render any player's link status —
+  accepted as a UI requirement, not a sim change.
+- **Snowball coupling**: losing map control also degrades command, compounding defeat. Partially
+  intended (infrastructure is a stake), but doctrine autonomy is the designed floor: a fully
+  disconnected army still fights via standing doctrine, never becomes inert. Playtest gate: a
+  disconnected-but-doctrined army must retain ≥70% of its connected combat effectiveness in a
+  defensive stance.
 
 ## Verification plan
 
