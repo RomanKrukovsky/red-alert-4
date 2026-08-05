@@ -102,9 +102,11 @@ struct IntelReport
 constexpr uint32_t kTrackProvenanceSize = 4;
 
 // One entry on the HQ map. This is the ONLY shape of enemy information that the
-// UI and the AI commander are allowed to read. It deliberately has no EntityId:
-// the track<->entity association lives in a core-internal table so that belief
-// cannot leak ground truth through the interface (ADR-0026 threat model).
+// UI and the AI commander are allowed to read. It deliberately has no EntityId
+// and no phantom flag: both the track<->entity association and the "is this
+// contact real" truth live in core-internal side tables inside PerceivedWorld,
+// because a field in this struct IS the read surface -- a comment calling it
+// internal would not make it internal (INVARIANT 10, ADR-0026 review BLOCKER 1).
 struct PerceivedTrack
 {
     TrackId Id;
@@ -117,7 +119,6 @@ struct PerceivedTrack
     Fixed Confidence = Fixed::Zero();       // 0..1, decays over time
     uint8_t IndependentSourceCount = 0;
     bool bStale = false;                    // no fresh reports for a while
-    bool bPhantom = false;                  // core-internal truth flag, never shown to UI
     bool bContested = false;                // independent sources disagree (ADR-0026)
     uint32_t ProvenanceReportIds[kTrackProvenanceSize] = {0, 0, 0, 0};
     uint8_t ProvenanceCount = 0;            // ring write cursor lives in ProvenanceCount % size

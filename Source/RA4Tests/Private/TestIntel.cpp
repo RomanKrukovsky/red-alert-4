@@ -16,6 +16,35 @@
 #include <fstream>
 #include <sstream>
 
+namespace RA4
+{
+namespace Intel
+{
+// The friend bridge declared in PerceivedWorld.h. Belief writes are structural
+// (INVARIANT 9): production code cannot reach these, the deterministic test
+// harness can -- through this one named door, not through a public accessor.
+struct PerceivedWorldTestAccess
+{
+    static void Initialize(PerceivedWorld& W, int32_t Width, int32_t Height, int32_t MaxTracks)
+    {
+        W.Initialize(Width, Height, MaxTracks);
+    }
+    static TrackId AllocateTrack(PerceivedWorld& W) { return W.AllocateTrack(); }
+    static void ReleaseTrack(PerceivedWorld& W, TrackId Id) { W.ReleaseTrack(Id); }
+    static PerceivedTrack* GetTrackMutable(PerceivedWorld& W, TrackId Id) { return W.GetTrackMutable(Id); }
+    static void SetLastObservedTick(PerceivedWorld& W, int32_t X, int32_t Y, TickIndex T)
+    {
+        W.SetLastObservedTick(X, Y, T);
+    }
+    static bool Deserialize(PerceivedWorld& W, ByteReader& R) { return W.Deserialize(R); }
+    static bool IsPhantom(const PerceivedWorld& W, TrackId Id) { return W.IsTrackPhantomInternal(Id); }
+    static void SetPhantom(PerceivedWorld& W, TrackId Id, bool bP) { W.SetTrackPhantomInternal(Id, bP); }
+};
+} // namespace Intel
+} // namespace RA4
+
+using RA4::Intel::PerceivedWorldTestAccess;
+
 // Tile centre in world units without dragging MapDescription into these tests.
 static RA4::Vec2 TileCentre(int32_t X, int32_t Y)
 {
@@ -181,17 +210,17 @@ RA4_TEST(Intel, EnabledEmptyLayerTicksWithoutStateDrift)
 RA4_TEST(Intel, TrackHandlesAreGenerational)
 {
     Intel::PerceivedWorld World;
-    World.Initialize(64, 64, 16);
+    PerceivedWorldTestAccess::Initialize(World, 64, 64, 16);
 
-    const Intel::TrackId First = World.AllocateTrack();
+    const Intel::TrackId First = PerceivedWorldTestAccess::AllocateTrack(World);
     RA4_EXPECT(First.IsValid());
     RA4_EXPECT(World.IsTrackAlive(First));
 
-    World.ReleaseTrack(First);
+    PerceivedWorldTestAccess::ReleaseTrack(World, First);
     RA4_EXPECT(!World.IsTrackAlive(First));
 
     // Slot is recycled with a bumped generation: the stale handle must stay dead.
-    const Intel::TrackId Second = World.AllocateTrack();
+    const Intel::TrackId Second = PerceivedWorldTestAccess::AllocateTrack(World);
     RA4_EXPECT(Second.IsValid());
     RA4_EXPECT(Second.Index == First.Index);
     RA4_EXPECT(Second.Generation != First.Generation);
@@ -202,26 +231,26 @@ RA4_TEST(Intel, TrackHandlesAreGenerational)
 RA4_TEST(Intel, TrackAllocationRespectsHardCap)
 {
     Intel::PerceivedWorld World;
-    World.Initialize(64, 64, 4);
+    PerceivedWorldTestAccess::Initialize(World, 64, 64, 4);
 
     for (int32_t I = 0; I < 4; ++I)
     {
-        RA4_EXPECT(World.AllocateTrack().IsValid());
+        RA4_EXPECT(PerceivedWorldTestAccess::AllocateTrack(World).IsValid());
     }
     // Cap reached: allocation refuses instead of growing (memory budget guard).
-    RA4_EXPECT(!World.AllocateTrack().IsValid());
+    RA4_EXPECT(!PerceivedWorldTestAccess::AllocateTrack(World).IsValid());
     RA4_EXPECT(World.GetAliveTrackCount() == 4);
 }
 
 RA4_TEST(Intel, RegionQueryFindsOnlyTracksInside)
 {
     Intel::PerceivedWorld World;
-    World.Initialize(64, 64, 16);
+    PerceivedWorldTestAccess::Initialize(World, 64, 64, 16);
 
-    const Intel::TrackId Inside = World.AllocateTrack();
-    World.GetTrack(Inside)->BelievedPosition = TileCentre(5, 5);
-    const Intel::TrackId Outside = World.AllocateTrack();
-    World.GetTrack(Outside)->BelievedPosition = TileCentre(40, 40);
+    const Intel::TrackId Inside = PerceivedWorldTestAccess::AllocateTrack(World);
+    PerceivedWorldTestAccess::GetTrackMutable(World, Inside)->BelievedPosition = TileCentre(5, 5);
+    const Intel::TrackId Outside = PerceivedWorldTestAccess::AllocateTrack(World);
+    PerceivedWorldTestAccess::GetTrackMutable(World, Outside)->BelievedPosition = TileCentre(40, 40);
 
     std::vector<const Intel::PerceivedTrack*> Found;
     World.GetTracksInRegion(0, 0, 10, 10, Found);
@@ -232,12 +261,53 @@ RA4_TEST(Intel, RegionQueryFindsOnlyTracksInside)
 RA4_TEST(Intel, NegativeKnowledgeDistinguishesNeverSeenFromSeen)
 {
     Intel::PerceivedWorld World;
-    World.Initialize(64, 64, 16);
+    PerceivedWorldTestAccess::Initialize(World, 64, 64, 16);
 
     RA4_EXPECT(World.GetLastObservedTick(10, 10) == 0); // never observed
-    World.SetLastObservedTick(10, 10, 500);
+    PerceivedWorldTestAccess::SetLastObservedTick(World, 10, 10, 500);
     RA4_EXPECT(World.GetLastObservedTick(10, 10) == 500);
     RA4_EXPECT(World.GetLastObservedTick(11, 10) == 0); // neighbour untouched
+}
+
+RA4_TEST(Intel, PhantomTruthLivesOutsideTheReadSurface)
+{
+    Intel::PerceivedWorld World;
+    PerceivedWorldTestAccess::Initialize(World, 64, 64, 16);
+
+    const Intel::TrackId Id = PerceivedWorldTestAccess::AllocateTrack(World);
+    PerceivedWorldTestAccess::SetPhantom(World, Id, true);
+    RA4_EXPECT(PerceivedWorldTestAccess::IsPhantom(World, Id));
+
+    // The instrumented leak detector for INVARIANT 10: the read-surface struct
+    // must be exactly its documented fields. If someone adds a truth flag (or an
+    // EntityId) back into PerceivedTrack, the size changes and this fails the
+    // build review immediately instead of leaking quietly.
+    struct ExpectedReadSurface
+    {
+        Intel::TrackId Id;
+        ContentId BelievedClass;
+        Vec2 BelievedPosition;
+        Fixed PositionErrorRadius;
+        int32_t BelievedCountMin;
+        int32_t BelievedCountMax;
+        TickIndex LastUpdateTick;
+        Fixed Confidence;
+        uint8_t IndependentSourceCount;
+        bool bStale;
+        bool bContested;
+        uint32_t ProvenanceReportIds[Intel::kTrackProvenanceSize];
+        uint8_t ProvenanceCount;
+        bool bAlive;
+    };
+    static_assert(sizeof(Intel::PerceivedTrack) == sizeof(ExpectedReadSurface),
+                  "PerceivedTrack layout changed: verify no ground-truth field was added "
+                  "to the belief read surface (INVARIANT 10) before updating this mirror");
+
+    // Recycling the slot must clear the internal phantom flag with it.
+    PerceivedWorldTestAccess::ReleaseTrack(World, Id);
+    const Intel::TrackId Reused = PerceivedWorldTestAccess::AllocateTrack(World);
+    RA4_EXPECT(Reused.Index == Id.Index);
+    RA4_EXPECT(!PerceivedWorldTestAccess::IsPhantom(World, Reused));
 }
 
 // --- Serialization round-trip -----------------------------------------------------
@@ -245,28 +315,29 @@ RA4_TEST(Intel, NegativeKnowledgeDistinguishesNeverSeenFromSeen)
 RA4_TEST(Intel, PerceivedWorldSurvivesSerializationRoundTrip)
 {
     Intel::PerceivedWorld World;
-    World.Initialize(32, 32, 8);
+    PerceivedWorldTestAccess::Initialize(World, 32, 32, 8);
 
-    const Intel::TrackId Id = World.AllocateTrack();
-    Intel::PerceivedTrack* T = World.GetTrack(Id);
+    const Intel::TrackId Id = PerceivedWorldTestAccess::AllocateTrack(World);
+    Intel::PerceivedTrack* T = PerceivedWorldTestAccess::GetTrackMutable(World, Id);
     T->BelievedClass = Ids::SovHeavyTank;
     T->BelievedPosition = TileCentre(7, 9);
     T->BelievedCountMin = 3;
     T->BelievedCountMax = 8;
     T->Confidence = Fixed::FromRatio(750, 1000);
     T->bContested = true;
-    World.SetLastObservedTick(7, 9, 123);
+    PerceivedWorldTestAccess::SetPhantom(World, Id, true);
+    PerceivedWorldTestAccess::SetLastObservedTick(World, 7, 9, 123);
 
     // Release-then-allocate so the free list and generations are non-trivial.
-    const Intel::TrackId Temp = World.AllocateTrack();
-    World.ReleaseTrack(Temp);
+    const Intel::TrackId Temp = PerceivedWorldTestAccess::AllocateTrack(World);
+    PerceivedWorldTestAccess::ReleaseTrack(World, Temp);
 
     ByteWriter W;
     World.Serialize(W);
 
     Intel::PerceivedWorld Restored;
     ByteReader R(W.GetBuffer());
-    RA4_EXPECT(Restored.Deserialize(R));
+    RA4_EXPECT(PerceivedWorldTestAccess::Deserialize(Restored, R));
 
     // Checksums must match bit-for-bit: this is the "no GT/PS divergence after
     // load" contract from the spec, at the unit level.
@@ -281,6 +352,7 @@ RA4_TEST(Intel, PerceivedWorldSurvivesSerializationRoundTrip)
     RA4_EXPECT(RT->BelievedCountMin == 3);
     RA4_EXPECT(RT->BelievedCountMax == 8);
     RA4_EXPECT(RT->bContested);
+    RA4_EXPECT(PerceivedWorldTestAccess::IsPhantom(Restored, Id));
     RA4_EXPECT(Restored.GetLastObservedTick(7, 9) == 123);
 
     // The recycled slot's generation survived, so the stale handle stays dead.

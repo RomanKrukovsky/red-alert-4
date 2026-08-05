@@ -28,22 +28,23 @@ class Hash64;
 namespace Intel
 {
 
+class IntelSystem;
+
+// Test scaffolding needs the writer API without going through a full match.
+// Declared here, defined only in the test binary; a friend declaration is the
+// narrowest possible opening (INVARIANT 9 allows writes from RA4Intel and its
+// deterministic tests, never from presentation/UI/AI).
+struct PerceivedWorldTestAccess;
+
 class RA4INTEL_API PerceivedWorld
 {
 public:
-    void Initialize(int32_t MapWidthTiles, int32_t MapHeightTiles, int32_t MaxTracks);
-    void Reset();
-
-    // --- Track slots (generational, recycled) --------------------------------
-    TrackId AllocateTrack();
-    void ReleaseTrack(TrackId Id);
+    // --- Read surface (the ONLY thing presentation/UI/AI may touch) ----------
     bool IsTrackAlive(TrackId Id) const;
-    PerceivedTrack* GetTrack(TrackId Id);
     const PerceivedTrack* GetTrack(TrackId Id) const;
     uint32_t GetAliveTrackCount() const { return AliveCount; }
     uint32_t GetTrackCapacity() const { return uint32_t(Tracks.size()); }
 
-    // --- Queries (UI/AI read surface, §4.6) -----------------------------------
     // Appends alive tracks intersecting the tile rectangle. Output order is slot
     // order, which is deterministic because allocation and recycling are.
     void GetTracksInRegion(int32_t MinTileX, int32_t MinTileY, int32_t MaxTileX, int32_t MaxTileY,
@@ -53,14 +54,35 @@ public:
     // 0 means "never" -- an unscouted region reads differently from a scouted-empty
     // one, and the UI must be able to show that difference.
     TickIndex GetLastObservedTick(int32_t TileX, int32_t TileY) const;
-    void SetLastObservedTick(int32_t TileX, int32_t TileY, TickIndex Tick);
 
-    // --- Determinism plumbing --------------------------------------------------
+    // --- Determinism plumbing (const half) -----------------------------------
     void Serialize(ByteWriter& W) const;
-    bool Deserialize(ByteReader& R);
     void FeedChecksum(Hash64& H) const;
 
 private:
+    // --- Writer API: structural, not disciplinary (INVARIANT 9) --------------
+    // Only the intel phases (IntelSystem) and the deterministic test harness may
+    // mutate belief. Everything below being private is the fix for review
+    // BLOCKER 2 -- a public mutable accessor was the violation, regardless of
+    // how politely its comment asked callers not to use it.
+    friend class IntelSystem;
+    friend struct PerceivedWorldTestAccess;
+
+    void Initialize(int32_t MapWidthTiles, int32_t MapHeightTiles, int32_t MaxTracks);
+    void Reset();
+    TrackId AllocateTrack();
+    void ReleaseTrack(TrackId Id);
+    PerceivedTrack* GetTrackMutable(TrackId Id);
+    void SetLastObservedTick(int32_t TileX, int32_t TileY, TickIndex Tick);
+    bool Deserialize(ByteReader& R);
+
+    // Ground-truth phantom bookkeeping. Lives OUTSIDE PerceivedTrack on purpose:
+    // the struct is the read surface, and a truth flag inside it leaks whether a
+    // contact is real to any UI/AI caller (INVARIANT 10, review BLOCKER 1). The
+    // refutation logic (M4) and the debug overlay are the only readers.
+    bool IsTrackPhantomInternal(TrackId Id) const;
+    void SetTrackPhantomInternal(TrackId Id, bool bPhantom);
+
     int32_t TileIndex(int32_t X, int32_t Y) const { return Y * MapWidth + X; }
     bool IsTileInside(int32_t X, int32_t Y) const
     {
@@ -68,6 +90,7 @@ private:
     }
 
     std::vector<PerceivedTrack> Tracks;      // dense slots; bAlive marks occupancy
+    std::vector<uint8_t> PhantomFlags;       // parallel to Tracks; core-internal truth
     std::vector<uint32_t> FreeSlots;         // LIFO recycle, same scheme as SimWorld
     uint32_t HighWaterMark = 0;
     uint32_t AliveCount = 0;

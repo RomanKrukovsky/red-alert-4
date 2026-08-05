@@ -17,7 +17,7 @@ namespace
 // Serialization is versioned independently of the SimWorld save version so that
 // intel format changes (frequent while the feature matures) do not force a bump
 // of the outer save format every time.
-constexpr uint32_t kPerceivedWorldVersion = 1;
+constexpr uint32_t kPerceivedWorldVersion = 2; // v2: phantom flag moved to core-internal side table
 } // namespace
 
 void PerceivedWorld::Initialize(int32_t MapWidthTiles, int32_t MapHeightTiles, int32_t MaxTracks)
@@ -29,12 +29,14 @@ void PerceivedWorld::Initialize(int32_t MapWidthTiles, int32_t MapHeightTiles, i
     // Reserve the hard cap up front: track allocation must never allocate in the
     // steady state (performance budget: zero hot-path allocations).
     Tracks.reserve(size_t(MaxTracks));
+    PhantomFlags.reserve(size_t(MaxTracks));
     FreeSlots.reserve(size_t(MaxTracks));
 }
 
 void PerceivedWorld::Reset()
 {
     Tracks.clear();
+    PhantomFlags.clear();
     FreeSlots.clear();
     LastObserved.clear();
     HighWaterMark = 0;
@@ -63,6 +65,7 @@ TrackId PerceivedWorld::AllocateTrack()
         Index = HighWaterMark;
         HighWaterMark += 1;
         Tracks.emplace_back();
+        PhantomFlags.push_back(0);
     }
 
     PerceivedTrack& T = Tracks[Index];
@@ -71,13 +74,14 @@ TrackId PerceivedWorld::AllocateTrack()
     T.Id.Index = Index;
     T.Id.Generation = Generation;
     T.bAlive = true;
+    PhantomFlags[Index] = 0;
     AliveCount += 1;
     return T.Id;
 }
 
 void PerceivedWorld::ReleaseTrack(TrackId Id)
 {
-    PerceivedTrack* T = GetTrack(Id);
+    PerceivedTrack* T = GetTrackMutable(Id);
     if (T == nullptr)
     {
         return;
@@ -92,7 +96,7 @@ bool PerceivedWorld::IsTrackAlive(TrackId Id) const
     return GetTrack(Id) != nullptr;
 }
 
-PerceivedTrack* PerceivedWorld::GetTrack(TrackId Id)
+PerceivedTrack* PerceivedWorld::GetTrackMutable(TrackId Id)
 {
     if (!Id.IsValid() || Id.Index >= Tracks.size())
     {
@@ -108,7 +112,21 @@ PerceivedTrack* PerceivedWorld::GetTrack(TrackId Id)
 
 const PerceivedTrack* PerceivedWorld::GetTrack(TrackId Id) const
 {
-    return const_cast<PerceivedWorld*>(this)->GetTrack(Id);
+    return const_cast<PerceivedWorld*>(this)->GetTrackMutable(Id);
+}
+
+bool PerceivedWorld::IsTrackPhantomInternal(TrackId Id) const
+{
+    const PerceivedTrack* T = GetTrack(Id);
+    return T != nullptr && PhantomFlags[Id.Index] != 0;
+}
+
+void PerceivedWorld::SetTrackPhantomInternal(TrackId Id, bool bPhantom)
+{
+    if (GetTrackMutable(Id) != nullptr)
+    {
+        PhantomFlags[Id.Index] = bPhantom ? 1 : 0;
+    }
 }
 
 void PerceivedWorld::GetTracksInRegion(int32_t MinTileX, int32_t MinTileY, int32_t MaxTileX, int32_t MaxTileY,
@@ -183,7 +201,7 @@ void PerceivedWorld::Serialize(ByteWriter& W) const
         W.WriteInt64(T.Confidence.Raw);
         W.WriteUInt8(T.IndependentSourceCount);
         W.WriteBool(T.bStale);
-        W.WriteBool(T.bPhantom);
+        W.WriteBool(PhantomFlags[I] != 0); // side table, serialized in slot order
         W.WriteBool(T.bContested);
         for (uint32_t P = 0; P < kTrackProvenanceSize; ++P)
         {
@@ -218,8 +236,10 @@ bool PerceivedWorld::Deserialize(ByteReader& R)
     HighWaterMark = R.ReadUInt32();
     const uint32_t Capacity = R.ReadUInt32();
     Tracks.reserve(Capacity);
+    PhantomFlags.reserve(Capacity);
     FreeSlots.reserve(Capacity);
     Tracks.resize(HighWaterMark);
+    PhantomFlags.assign(HighWaterMark, 0);
 
     AliveCount = 0;
     for (uint32_t I = 0; I < HighWaterMark; ++I)
@@ -244,7 +264,7 @@ bool PerceivedWorld::Deserialize(ByteReader& R)
         T.Confidence = Fixed::FromRaw(R.ReadInt64());
         T.IndependentSourceCount = R.ReadUInt8();
         T.bStale = R.ReadBool();
-        T.bPhantom = R.ReadBool();
+        PhantomFlags[I] = R.ReadBool() ? 1 : 0;
         T.bContested = R.ReadBool();
         for (uint32_t P = 0; P < kTrackProvenanceSize; ++P)
         {
@@ -294,7 +314,7 @@ void PerceivedWorld::FeedChecksum(Hash64& H) const
         H.FeedInt64(T.Confidence.Raw);
         H.FeedUInt8(T.IndependentSourceCount);
         H.FeedBool(T.bStale);
-        H.FeedBool(T.bPhantom);
+        H.FeedBool(PhantomFlags[I] != 0);
         H.FeedBool(T.bContested);
     }
     // LastObserved is hashed coarsely (size only): per-tile hashing of a 256x256
