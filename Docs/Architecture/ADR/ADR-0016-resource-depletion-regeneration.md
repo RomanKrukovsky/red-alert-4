@@ -65,12 +65,31 @@ which is far too fast for "regenerate slowly" — a starter field's 9,000-credit
 in 38 seconds. The delay figures were also computed at 60 Hz: `RegenDelayTicks` of 3,600 is 180 seconds
 at 20 Hz, not 60.
 
-**These numbers require rebalancing against the intended rates, not mechanical conversion.** Until an
-economy designer sets them, treat the table as intent-only: slow trickle regeneration after a delay,
-capped at ~20% of the node's maximum. Intended-rate targets to convert with
-`PerSecondToPerTick()`: starter fields ~0.5 credits/second (`RegenPerTick` = 0 at integer precision —
-needs sub-integer accumulation or a longer interval), delay 60 seconds = `RegenDelayTicks` 1,200.
-Tracked as NEXT_ACTIONS P-4.
+**RESOLVED (2026-08-05, product owner decision).** The rebalanced values, chosen against the
+constraint that regeneration must never compete with expansion (harvester income ≈ 35 credits/s per
+ADR-0017; expansion payback 2.5–4 min):
+
+| Type | RegenDelayTicks | Regen rate | Mechanism | Cap refill time |
+|---|---|---|---|---|
+| StandardOre | 1,200 (60 s at 20 Hz) | **2 credits/s** (~6% of one harvester) | +1 credit every `RegenIntervalTicks = 10` | 9,000 cap in ~75 min |
+| RichOre | 1,200 (60 s) | **3 credits/s** | +1 credit every `RegenIntervalTicks ≈ 7` | 15,000 cap in ~83 min |
+
+Design meaning: a mined-out field is not dead forever, but sitting on one base is never an
+alternative to expanding. Rejected alternatives: 5 credits/s (regen ≈14% of a harvester — weakens
+expansion pressure) and 10 credits/s (≈29% — makes turtling viable, directly conflicting with
+ADR-0017).
+
+Implementation notes:
+- At 20 Hz an integer `RegenPerTick = 1` is already 20 credits/s — too fast. The unit therefore
+  changes from `RegenPerTick` to **`RegenIntervalTicks`** (+1 credit every N ticks): integer,
+  deterministic, same style as `RegenDelayTicks`. `ContentTypes.h` field to be renamed/migrated
+  accordingly when this ADR is implemented; the JSON validator must reject `RegenIntervalTicks = 0`.
+- Consequence for the table above this erratum: read `RegenPerTick 12/15` as void; the two rows
+  are superseded by this block.
+- **LateGameNode interaction**: infinite late-game nodes yield ~2 credits/s — identical to a
+  regenerated StandardOre field. Accepted consciously: a regen-capped field holds at most 20% of
+  MaxAmount and must first be mined out, so the two are not interchangeable in practice. If
+  playtests show otherwise, raise LateGameNode to 4–5 credits/s rather than lowering field regen.
 
 ### Depletion Behavior (Revised)
 
