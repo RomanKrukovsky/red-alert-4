@@ -1,7 +1,7 @@
 # ADR-0021: Knowledge Map — Per-Player Belief State with Intel Decay
 
 **Status**: Proposed (blocked until remediation/foundation-fixes is green; no implementation authorized)
-**Depends on**: ADR-0001 (60Hz lockstep), ADR-0002 (pure C++ sim), ADR-0004 (state hashing), ADR-0008 (AI zero-cheat fog compliance)
+**Depends on**: ADR-0001 (fixed-tick lockstep; NOTE: actual rate is 20 Hz per SimConfig.h kTicksPerSecond, not the 60Hz claimed in ADR-0001), ADR-0002 (pure C++ sim), ADR-0004 (state hashing), ADR-0008 (AI zero-cheat fog compliance)
 
 ## Context
 
@@ -30,7 +30,7 @@ Each player (human or AI) owns a `KnowledgeMap` inside `RA4Simulation`:
 struct IntelRecord {
     EntityId    Subject;          // 0 = unresolved contact
     uint32      LastConfirmedTick;
-    FixedVec2   LastKnownPos;
+    Vec2        LastKnownPos;      // RA4::Vec2 (fixed-point), see RA4Core/Vector.h
     uint16      ObservedArchetype; // what the observer THINKS it is (deception hook)
     uint8       Confidence;        // 255 = currently in sensor range
     uint8       SourceType;        // visual / radar / report / inference
@@ -41,7 +41,7 @@ struct IntelRecord {
 
 ### 3. Decay rules (deterministic, tick-driven)
 
-- Confidence decays on a fixed schedule per source type (e.g. visual contact: −1 per 30 ticks after loss of contact; radar: faster).
+- Confidence decays on a fixed schedule per source type (e.g. visual contact: −1 per 10 ticks (0.5 s at 20 Hz) after loss of contact; radar: faster).
 - Position uncertainty radius grows stepwise with decay; UI renders range/area instead of a point below defined thresholds.
 - Records below a floor confidence are garbage-collected deterministically (same tick on all peers).
 - Decay evaluation is amortized (1/N of records per tick, round-robin by index) to bound per-tick cost.
@@ -61,7 +61,7 @@ struct IntelRecord {
 
 ## Consequences
 
-**Positive**: makes Deception (ADR-0023) and honest AI structurally possible; unique selling point; belief state becomes testable ("after 3000 ticks without contact, confidence ≤ X").
+**Positive**: makes Deception (ADR-0023) and honest AI structurally possible; unique selling point; belief state becomes testable ("after 1200 ticks (60 s at 20 Hz) without contact, confidence ≤ X").
 
 **Negative / risks**:
 - Sim state grows ~O(players × entities); hash cost grows accordingly — needs a performance budget entry before implementation.

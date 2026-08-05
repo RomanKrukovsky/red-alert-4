@@ -1,7 +1,7 @@
 # ADR-0022: Command Network — Physical Order Propagation and Autonomy Fallback
 
 **Status**: Proposed (blocked until remediation/foundation-fixes is green; no implementation authorized)
-**Depends on**: ADR-0001 (60Hz lockstep), ADR-0003 (command protocol), ADR-0008 (HTN/utility AI), ADR-0021 (Knowledge Map)
+**Depends on**: ADR-0001 (fixed-tick lockstep; NOTE: actual rate is 20 Hz per SimConfig.h kTicksPerSecond, not the 60Hz claimed in ADR-0001), ADR-0003 (command protocol), ADR-0008 (HTN/utility AI), ADR-0021 (Knowledge Map)
 
 ## Context
 
@@ -36,7 +36,7 @@ Units without a live order link execute their **standing doctrine** — a small,
 
 ### 4. UX contract (anti-frustration)
 
-- Default multiplayer latency for a healthy network: ≤ 12 ticks (200 ms) — barely perceptible; the mechanic becomes visible only under attack on infrastructure.
+- Default multiplayer latency for a healthy network: ≤ 4 ticks (200 ms at 20 Hz) — barely perceptible; the mechanic becomes visible only under attack on infrastructure.
 - UI must show per-group link status (connected / degraded / autonomous) sourced from sim state.
 - Skirmish option `CommandNetwork=Classic` disables Stage B entirely (latency 0) — needed for balance A/B and esports mode. This is a sim parameter, hash-relevant, recorded in replay header.
 
