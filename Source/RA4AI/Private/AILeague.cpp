@@ -55,6 +55,103 @@ const char* ShortName(AIProfile P)
     return ToString(P);
 }
 
+// Folds one tick's events into the record. Event semantics (from SimWorld):
+//   DamageApplied:  Entity=victim, Other=source, Player=ATTACKER, Value=damage
+//   EntityDestroyed: Entity=victim, Other=killer, Player=VICTIM owner, Content=def
+// The victim entity is still readable during its destruction tick (destruction is
+// deferred), so kind/role lookups here are safe.
+void AccumulateCombatTelemetry(const SimWorld& World, LeagueMatchRecord& Record)
+{
+    const ContentDatabase* Content = World.GetContent();
+
+    // Deferred destruction erases the killer: SystemDeaths destroys with
+    // Killer=Invalid, so EntityDestroyed.Other is Invalid for every combat death
+    // too (verified in SimWorld.cpp:2781). But the fatal DamageApplied and the
+    // EntityDestroyed always land in the SAME tick's batch, so a victim that took
+    // enemy damage in this batch and then died in this batch died in combat.
+    // First pass: who was hit by an enemy this tick.
+    std::vector<uint64_t> DamagedByEnemy;
+    for (const SimEvent& Ev : World.GetEvents())
+    {
+        if (Ev.Type == SimEventType::DamageApplied && Ev.Player <= 1)
+        {
+            DamagedByEnemy.push_back(
+                (uint64_t(Ev.Entity.Index) << 32) | Ev.Entity.Generation);
+        }
+    }
+    auto WasHitThisTick = [&DamagedByEnemy](const EntityId& Id)
+    {
+        const uint64_t Key = (uint64_t(Id.Index) << 32) | Id.Generation;
+        for (uint64_t K : DamagedByEnemy)
+        {
+            if (K == Key)
+            {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    for (const SimEvent& Ev : World.GetEvents())
+    {
+        if (Ev.Type == SimEventType::DamageApplied)
+        {
+            if (Ev.Player > 1)
+            {
+                continue;   // neutral / invalid attacker
+            }
+            Record.DamageDealt[Ev.Player] += Ev.Value;
+            const EntityCore* Victim = World.GetCore(Ev.Entity);
+            if (Victim != nullptr && Victim->Kind == EntityKind::Building)
+            {
+                Record.DamageToBuildings[Ev.Player] += Ev.Value;
+            }
+            if (Record.FirstBloodTick == 0)
+            {
+                const EntityCore* V = World.GetCore(Ev.Entity);
+                // Only combat between the two players counts as first blood.
+                if (V != nullptr && V->Owner <= 1 && V->Owner != Ev.Player)
+                {
+                    Record.FirstBloodTick = uint32_t(Ev.Tick);
+                    Record.FirstBloodBy = Ev.Player;
+                }
+            }
+        }
+        else if (Ev.Type == SimEventType::EntityDestroyed)
+        {
+            const PlayerId VictimOwner = Ev.Player;
+            if (VictimOwner > 1)
+            {
+                continue;   // projectiles, ore nodes, neutrals
+            }
+            // A combat kill is a death preceded by combat damage in the same
+            // batch. Sold buildings and exhausted ore nodes die without a
+            // DamageApplied, so they are excluded; crediting the enemy for our
+            // own demolitions would corrupt the aggression metrics.
+            if (!Ev.Other.IsValid() && !WasHitThisTick(Ev.Entity))
+            {
+                continue;
+            }
+            Record.KillsByPlayer[1 - VictimOwner] += 1;
+            if (Content != nullptr)
+            {
+                const EntityDef* Def = Content->FindEntity(Ev.Content);
+                if (Def != nullptr)
+                {
+                    if (Def->Kind == EntityKind::Unit && Def->Unit.bIsHarvester)
+                    {
+                        Record.HarvestersLost[VictimOwner] += 1;
+                    }
+                    if (Def->Kind == EntityKind::Building && Def->Weapon.IsValid())
+                    {
+                        Record.DefencesLost[VictimOwner] += 1;
+                    }
+                }
+            }
+        }
+    }
+}
+
 } // namespace
 
 LeagueMatchRecord AILeague::PlayMatch(AIProfile ProfileA, AIProfile ProfileB,
@@ -101,10 +198,17 @@ LeagueMatchRecord AILeague::PlayMatch(AIProfile ProfileA, AIProfile ProfileB,
             Commanders[P].Tick(World, Frame.Commands);
         }
         // Commanders consume the previous tick's events (opponent modelling);
-        // clear only after both have observed them. Same contract as AIMatch.
+        // telemetry reads the same batch, then it is cleared. Same contract as
+        // AIMatch, with the league as one more read-only observer.
+        AccumulateCombatTelemetry(World, Record);
         World.ClearEvents();
         World.Tick(Frame.Commands.empty() ? nullptr : &Frame);
     }
+
+    // The final tick's events (the killing blow, MatchEnded) are emitted inside
+    // the last World.Tick, after the in-loop accumulation ran -- fold them in now
+    // or every match would under-report exactly its decisive moment.
+    AccumulateCombatTelemetry(World, Record);
 
     Record.DurationTicks = uint32_t(Tick);
     Record.bTimedOut = World.GetPhase() == MatchPhase::Running;

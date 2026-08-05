@@ -60,6 +60,41 @@ int main(int argc, char** argv)
                     Games ? int((uint64_t(Wins) * 100) / Games) : 50);
     }
 
+    // Combat diagnostics per profile: turns "profile X is weak" into a mechanism.
+    std::printf("\ncombat diagnostics (per profile, averaged over its games):\n");
+    std::printf("  %-16s %10s %8s %8s %9s %10s %10s\n",
+                "profile", "dmg/game", "kills", "deaths", "harv lost", "bldg dmg%", "1st blood%");
+    for (AIProfile P : All)
+    {
+        int64_t Dmg = 0, BldgDmg = 0;
+        int32_t Kills = 0, Deaths = 0, HarvLost = 0, Games = 0, FirstBloods = 0, FbGames = 0;
+        for (const LeagueMatchRecord& R : Result.Matches)
+        {
+            for (int Side = 0; Side < 2; ++Side)
+            {
+                if (R.Profiles[Side] != P) { continue; }
+                ++Games;
+                Dmg += R.DamageDealt[Side];
+                BldgDmg += R.DamageToBuildings[Side];
+                Kills += R.KillsByPlayer[Side];
+                Deaths += R.KillsByPlayer[1 - Side];
+                HarvLost += R.HarvestersLost[Side];
+                if (R.FirstBloodTick > 0)
+                {
+                    ++FbGames;
+                    if (R.FirstBloodBy == Side) { ++FirstBloods; }
+                }
+            }
+        }
+        if (Games == 0) { continue; }
+        std::printf("  %-16s %10lld %8d %8d %9d %9lld%% %9d%%\n",
+                    ToString(P),
+                    static_cast<long long>(Dmg / Games),
+                    Kills / Games, Deaths / Games, HarvLost / Games,
+                    Dmg > 0 ? static_cast<long long>((BldgDmg * 100) / Dmg) : 0,
+                    FbGames > 0 ? (FirstBloods * 100) / FbGames : 0);
+    }
+
     uint32_t TimedOut = 0;
     for (const LeagueMatchRecord& R : Result.Matches) { if (R.bTimedOut) { ++TimedOut; } }
     std::printf("\n%u matches total, %u timed out (draw)\n",
