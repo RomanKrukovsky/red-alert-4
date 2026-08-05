@@ -88,7 +88,6 @@ add_library(RA4Simulation STATIC
     ${RA4_SOURCE_ROOT}/RA4Simulation/Private/SimWorld.cpp
     ${RA4_SOURCE_ROOT}/RA4Simulation/Private/CommandBus.cpp
     ${RA4_SOURCE_ROOT}/RA4Simulation/Private/LockstepSession.cpp
-    ${RA4_SOURCE_ROOT}/RA4Simulation/Private/EconomySimulator.cpp
 )
 target_include_directories(RA4Simulation PUBLIC ${RA4_SOURCE_ROOT}/RA4Simulation/Public)
 target_link_libraries(RA4Simulation PUBLIC RA4Content RA4Navigation RA4FogOfWar RA4Combat)
@@ -164,7 +163,6 @@ add_executable(RA4Tests
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestDirectControl.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestNetwork.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestUI.cpp
-    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestEconomySimulator.cpp
 )
 
 target_link_libraries(RA4Tests PRIVATE RA4Replay RA4Campaign RA4Input RA4Presentation RA4AI RA4FogOfWar)
