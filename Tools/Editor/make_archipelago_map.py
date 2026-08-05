@@ -67,8 +67,23 @@ Every number below was measured against a live landscape, not guessed.
 6. Saves fail SILENTLY when the disk is full. save_current_level() and
    save_dirty_packages() both return True while writing nothing, leaving the
    .umap byte-identical on disk. This destroyed an earlier hand-built pass.
-   verify_saved_to_disk() below compares the on-disk size before and after,
-   so a failed write is reported instead of trusted.
+   save_and_verify() below compares on-disk mtime and size, so a failed write
+   is reported instead of trusted.
+
+7. The editor viewport renders terrain BLACK in this MCP-driven session, and
+   that is a viewport limitation, not a map defect. Evidence, measured as mean
+   pixel brightness over the terrain region of a screencapture:
+       Lit            6.4
+       LightingOnly   8.4
+       Unlit         73.3      <- geometry and base colours are correct
+   Ruled out as causes: landscape material (swapping to the known-good
+   M_RA4Ground_Lit changed nothing), sun intensity/colour/affects_world,
+   sun rotation (re-aiming -48/145 -> -45/135 changed nothing), and
+   post-process exposure (bounds are a sane 0.03..8.0).
+   Root cause: ViewportService.set_realtime(True) does not stick - it reads
+   back False immediately - so the viewport never runs a lit real-time pass
+   while driven over HTTP. Use view mode "Unlit" for visual checks from a
+   script, or open the map interactively to judge lighting.
 """
 
 import unreal
