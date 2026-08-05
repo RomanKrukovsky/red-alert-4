@@ -370,7 +370,12 @@ RA4_TEST(Intel, DecayCursorIsSimStateNotScratch)
     // properties now, while the phase is still empty.
     Intel::PerceivedWorld World;
     PerceivedWorldTestAccess::Initialize(World, 32, 32, 8);
-    (void)PerceivedWorldTestAccess::AllocateTrack(World);
+    // Cursor must stay within [0, HighWaterMark): allocate enough slots that 5
+    // is a legal position, or the load-time corruption clamp rewrites it.
+    for (int I = 0; I < 6; ++I)
+    {
+        (void)PerceivedWorldTestAccess::AllocateTrack(World);
+    }
     PerceivedWorldTestAccess::SetDecayCursor(World, 5);
 
     // 1. Survives the round trip.
@@ -380,6 +385,21 @@ RA4_TEST(Intel, DecayCursorIsSimStateNotScratch)
     ByteReader R(W.GetBuffer());
     RA4_REQUIRE(PerceivedWorldTestAccess::Deserialize(Restored, R));
     RA4_EXPECT(PerceivedWorldTestAccess::GetDecayCursor(Restored) == 5u);
+
+    // 1b. The corruption clamp: an out-of-range cursor in the byte stream is
+    // wrapped deterministically on load, never trusted.
+    {
+        Intel::PerceivedWorld Tiny;
+        PerceivedWorldTestAccess::Initialize(Tiny, 16, 16, 4);
+        (void)PerceivedWorldTestAccess::AllocateTrack(Tiny); // HighWaterMark = 1
+        PerceivedWorldTestAccess::SetDecayCursor(Tiny, 3);   // out of range on purpose
+        ByteWriter TW;
+        Tiny.Serialize(TW);
+        Intel::PerceivedWorld TinyRestored;
+        ByteReader TR(TW.GetBuffer());
+        RA4_REQUIRE(PerceivedWorldTestAccess::Deserialize(TinyRestored, TR));
+        RA4_EXPECT(PerceivedWorldTestAccess::GetDecayCursor(TinyRestored) == 0u); // 3 % 1
+    }
 
     // 2. Feeds the checksum: two worlds equal except for the cursor must hash
     //    differently, or a cursor divergence would hide until it moved a track.
@@ -417,6 +437,14 @@ RA4_TEST(Intel, ValidatorRejectsBadTracksPerTickBudget)
     {
         // Sanity: the default passes.
         Intel::IntelSettings S = MakeMinimalSettings(false);
+        std::vector<std::string> Errors;
+        RA4_EXPECT(Intel::ValidateIntelSettings(S, Errors));
+    }
+    {
+        // Boundary accept-case: budget == cap is legal (a full sweep every
+        // tick). Pins the validator's > against an accidental >=.
+        Intel::IntelSettings S = MakeMinimalSettings(false);
+        S.Tracks.TracksPerTickBudget = S.Tracks.MaxTracksPerPlayer;
         std::vector<std::string> Errors;
         RA4_EXPECT(Intel::ValidateIntelSettings(S, Errors));
     }

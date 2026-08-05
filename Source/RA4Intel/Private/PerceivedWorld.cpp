@@ -237,6 +237,16 @@ bool PerceivedWorld::Deserialize(ByteReader& R)
     MapHeight = R.ReadInt32();
     HighWaterMark = R.ReadUInt32();
     DecayCursor = R.ReadUInt32();
+    if (HighWaterMark > 0 && DecayCursor >= HighWaterMark)
+    {
+        // A corrupt or hand-edited save must not park the sweep out of range;
+        // wrapping here matches the M2 sweep's own wrap rule, deterministically.
+        DecayCursor %= HighWaterMark;
+    }
+    if (HighWaterMark == 0)
+    {
+        DecayCursor = 0;
+    }
     const uint32_t Capacity = R.ReadUInt32();
     Tracks.reserve(Capacity);
     PhantomFlags.reserve(Capacity);
