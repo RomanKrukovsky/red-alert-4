@@ -60,9 +60,6 @@ struct AIConfig
     int32_t TargetDefences = 2;
     int32_t CreditReserve = 300;
 
-    // Explicit bounded bonus for Hard difficulty (e.g. 1.20 = +20% income). Normal & Easy are 1.0.
-    float CreditBonusMultiplier = 1.0f;
-
     int32_t StrategySwitchMargin = 100;
     int32_t EmergencyStrategyScore = 900;
     int32_t UnderAttackMemoryTicks = 100;

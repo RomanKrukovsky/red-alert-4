@@ -62,24 +62,24 @@ AIConfig MakeProfileConfig(AIProfile Profile, AIDifficulty Difficulty)
         case AIDifficulty::Easy:
             Config.DecisionIntervalTicks = 20;
             Config.MemoryUpdateIntervalTicks = 10;
-            Config.CreditBonusMultiplier = 1.0f;
             break;
         case AIDifficulty::Normal:
             Config.DecisionIntervalTicks = 10;
             Config.MemoryUpdateIntervalTicks = 5;
-            Config.CreditBonusMultiplier = 1.0f;
             break;
         case AIDifficulty::Hard:
+            // Hard earns its advantage: faster reaction and observation only. It gets
+            // no income bonus -- difficulty must change how well the AI plays, never
+            // what it is handed. (The old +20% multiplier was also dead code: nothing
+            // ever read it, so removing it changes no behaviour, only the intent.)
             Config.DecisionIntervalTicks = 5;
             Config.MemoryUpdateIntervalTicks = 2;
-            Config.CreditBonusMultiplier = 1.20f; // Bounded +20% income bonus for Hard AI
             break;
         case AIDifficulty::Expert:
             // Fastest reaction and observation of any tier, and deliberately NO
             // credit bonus: Expert must win by playing better, not by being fed.
             Config.DecisionIntervalTicks = 3;
             Config.MemoryUpdateIntervalTicks = 1;
-            Config.CreditBonusMultiplier = 1.0f;
             // Longer memory: an Expert commander keeps acting on older sightings
             // instead of forgetting a base it scouted a minute ago.
             Config.MemoryRetentionTicks = 900;

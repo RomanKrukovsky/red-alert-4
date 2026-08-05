@@ -903,9 +903,11 @@ RA4_TEST(AI, DifficultyProfilesConfig)
     RA4_EXPECT(NormalCfg.DecisionIntervalTicks == 10);
     RA4_EXPECT(HardCfg.DecisionIntervalTicks == 5);
 
-    RA4_EXPECT(EasyCfg.CreditBonusMultiplier == 1.0f);
-    RA4_EXPECT(NormalCfg.CreditBonusMultiplier == 1.0f);
-    RA4_EXPECT(HardCfg.CreditBonusMultiplier == 1.20f);
+    // Difficulty scales reaction speed only. There is deliberately no income
+    // multiplier any more: every tier lives on the same economy and must earn its
+    // advantage by playing better.
+    RA4_EXPECT(HardCfg.MemoryUpdateIntervalTicks < NormalCfg.MemoryUpdateIntervalTicks);
+    RA4_EXPECT(NormalCfg.MemoryUpdateIntervalTicks < EasyCfg.MemoryUpdateIntervalTicks);
 }
 
 RA4_TEST(AI, FogOfWarStrictCompliance)
@@ -2187,10 +2189,6 @@ RA4_TEST(AIWiring, ExpertDifficultyIsSmarterWithoutBeingSubsidised)
     RA4_EXPECT(Expert.MemoryRetentionTicks >= Normal.MemoryRetentionTicks);
     RA4_EXPECT(Expert.StrategySwitchMargin > Normal.StrategySwitchMargin);
 
-    // The core design rule: no free resources. Expert must not be subsidised, and
-    // must not be subsidised more than Hard already is.
-    RA4_EXPECT(Expert.CreditBonusMultiplier <= 1.0f);
-    RA4_EXPECT(Expert.CreditBonusMultiplier < Hard.CreditBonusMultiplier);
     RA4_EXPECT(Expert.Difficulty == AIDifficulty::Expert);
 }
 
@@ -2308,8 +2306,10 @@ RA4_TEST(AIProfiles, NoExtendedProfileIsSubsidised)
     {
         const AIConfig Normal = MakeProfileConfig(P, AIDifficulty::Normal);
         const AIConfig Expert = MakeProfileConfig(P, AIDifficulty::Expert);
-        RA4_EXPECT(Normal.CreditBonusMultiplier <= 1.0f);
-        RA4_EXPECT(Expert.CreditBonusMultiplier <= 1.0f);
+        // No profile may be handed a shortcut: reserves and army thresholds are
+        // real trade-offs, not compensated by hidden income.
+        RA4_EXPECT(Normal.CreditReserve >= 0);
+        RA4_EXPECT(Expert.CreditReserve >= 0);
     }
 }
 
@@ -2464,4 +2464,38 @@ RA4_TEST(AIProfiles, ExtendedProfilesAreDeterministic)
         };
         RA4_EXPECT_EQ(RunOnce(), RunOnce());
     }
+}
+
+RA4_TEST(AIProfiles, NoDifficultyTierIsHandedFreeIncome)
+{
+    // Guards the rule "никаких бесплатных ресурсов": difficulty may change how well
+    // the AI plays, never what it is given. Every tier must run on the same economy
+    // knobs, so the only differences here are reaction speed, memory and patience.
+    //
+    // This test exists so that reintroducing an income multiplier -- which used to
+    // exist for Hard as dead, never-read config -- fails loudly instead of quietly
+    // making the AI cheat.
+    const AIDifficulty Tiers[] = {
+        AIDifficulty::Easy, AIDifficulty::Normal,
+        AIDifficulty::Hard, AIDifficulty::Expert,
+    };
+
+    const AIConfig Base = MakeProfileConfig(AIProfile::Balanced, AIDifficulty::Normal);
+    for (AIDifficulty D : Tiers)
+    {
+        const AIConfig Cfg = MakeProfileConfig(AIProfile::Balanced, D);
+        // Same economic starting position across every tier: a harder AI does not get
+        // a cheaper army, a smaller harvester requirement or a fatter reserve.
+        RA4_EXPECT_EQ(Base.TargetHarvesters, Cfg.TargetHarvesters);
+        RA4_EXPECT_EQ(Base.CreditReserve, Cfg.CreditReserve);
+        RA4_EXPECT_EQ(Base.AttackArmySize, Cfg.AttackArmySize);
+        RA4_EXPECT_EQ(Base.EconomyWeight, Cfg.EconomyWeight);
+    }
+
+    // Harder tiers differ only in how fast they think and how long they remember.
+    const AIConfig Easy = MakeProfileConfig(AIProfile::Balanced, AIDifficulty::Easy);
+    const AIConfig Hard = MakeProfileConfig(AIProfile::Balanced, AIDifficulty::Hard);
+    const AIConfig Expert = MakeProfileConfig(AIProfile::Balanced, AIDifficulty::Expert);
+    RA4_EXPECT(Hard.DecisionIntervalTicks < Easy.DecisionIntervalTicks);
+    RA4_EXPECT(Expert.DecisionIntervalTicks < Hard.DecisionIntervalTicks);
 }
