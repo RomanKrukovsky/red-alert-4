@@ -3,6 +3,7 @@
   "enabled": false,
   "active_distortion_profile": "profile.default",
   "active_comms_profile": "comms.default",
+  "radar_range_tiles": 24,
 
   "distortion_profiles": [
     {
