@@ -22,6 +22,7 @@
 #include "RA4SidebarWidget.generated.h"
 
 class UProgressBar;
+class USizeBox;
 class UTextBlock;
 class UVerticalBox;
 class UUniformGridPanel;
@@ -95,8 +96,35 @@ class RA4UI_API URA4SidebarWidget : public UUserWidget
     GENERATED_BODY()
 
 public:
-    /** Fixed column width in slate units; the viewport slot needs it to size itself. */
+    /**
+     * Reference column width in slate units, measured against a 1080p-tall viewport.
+     * The sidebar is a fixed slice of screen by design -- players reach for cards by
+     * muscle memory, so it must not reflow as the queue grows -- but a slice sized for
+     * 1080p eats a third of a small window and shrinks to a sliver on a 4K panel.
+     * ComputeSidebarWidth applies a clamped scale so the column keeps the same visual
+     * weight at any resolution.
+     */
     static constexpr float SidebarWidth = 232.0f;
+
+    /** Scale factor for the viewport the given object lives in. Never returns 0. */
+    static float ComputeSidebarScale(const UObject* WorldContextObject);
+
+    /**
+     * Actual column width for this viewport. The player controller reserves the same
+     * width in its viewport slot, so both sides must go through this one function or
+     * the world will be drawn under the sidebar.
+     */
+    static float ComputeSidebarWidth(const UObject* WorldContextObject);
+
+    /** How many build cards can be reached from the keyboard. */
+    static int32 GetCardHotkeyCount();
+
+    /**
+     * The key that activates the card at the given grid index, as shown on the card's
+     * badge. One table serves both the label and the binding, so a badge can never
+     * advertise a key that does nothing. Returns nullptr past the end of the table.
+     */
+    static const TCHAR* GetCardHotkeyLabel(int32 CardIndex);
 
     virtual TSharedRef<SWidget> RebuildWidget() override;
     virtual void NativeConstruct() override;
@@ -112,6 +140,18 @@ public:
     UFUNCTION(BlueprintPure, Category = "RA4|UI")
     int32 GetActiveCategory() const { return ActiveCategory; }
 
+    /**
+     * Commits the build card at the given grid index (row-major, matching the hotkey
+     * badges). Broadcasts OnBuildCardClicked when the card exists and is available;
+     * returns whether it did, so a caller can fall through to another binding.
+     */
+    UFUNCTION(BlueprintCallable, Category = "RA4|UI")
+    bool ActivateCardByIndex(int32 CardIndex);
+
+    /** Number of cards currently visible in the active category. */
+    UFUNCTION(BlueprintPure, Category = "RA4|UI")
+    int32 GetVisibleCardCount() const { return CardContentIds.Num(); }
+
 private:
     URA4UIDataProviderSubsystem* GetProvider() const;
 
@@ -124,6 +164,13 @@ private:
     void HandleCardClicked(int32 CardIndex);
     void HandleRadarClicked(FVector2D WorldPosition);
 
+    /**
+     * Drives the hover swell on the cards and follows viewport resizes. Both are
+     * frame-rate concerns rather than simulation state, which is why they live here
+     * and not on the provider's change delegates.
+     */
+    virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+
     // Widgets rebuilt on refresh rather than kept in sync one by one: the card grid is
     // at most a couple of dozen entries and only changes when availability does.
     UPROPERTY(Transient)
@@ -133,13 +180,27 @@ private:
     TObjectPtr<UVerticalBox> QueueBox;
 
     UPROPERTY(Transient)
+    TObjectPtr<UTextBlock> QueueHeader;
+
+    UPROPERTY(Transient)
     TObjectPtr<UTextBlock> CreditsText;
 
     UPROPERTY(Transient)
     TObjectPtr<UTextBlock> PowerText;
 
+    // Reads "+40 SPARE" or "-15 DEFICIT": the number that decides whether the next
+    // structure can be powered, which the produced/consumed pair only implies.
+    UPROPERTY(Transient)
+    TObjectPtr<UTextBlock> PowerSurplusText;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UTextBlock> SelectionKindText;
+
     UPROPERTY(Transient)
     TObjectPtr<UTextBlock> SelectionNameText;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UTextBlock> SelectionCountText;
 
     UPROPERTY(Transient)
     TObjectPtr<UTextBlock> SelectionHealthText;
@@ -149,6 +210,22 @@ private:
 
     UPROPERTY(Transient)
     TObjectPtr<UTextBlock> SelectionDetailsText;
+
+    // One row per unit type in a multi-selection, as the reference HUD groups them.
+    UPROPERTY(Transient)
+    TObjectPtr<UVerticalBox> SelectionGroupBox;
+
+    // Power headroom at a glance, under the produced/consumed line.
+    UPROPERTY(Transient)
+    TObjectPtr<UProgressBar> PowerRatioBar;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UTextBlock> SupplyText;
+
+    // The scaling wrapper, kept so a resized window can be followed without rebuilding
+    // the widget tree.
+    UPROPERTY(Transient)
+    TObjectPtr<USizeBox> WidthBox;
 
     UPROPERTY(Transient)
     TObjectPtr<URA4RadarWidget> RadarWidget;
@@ -161,12 +238,28 @@ private:
     UPROPERTY(Transient)
     TArray<TObjectPtr<URA4IndexedButton>> CardButtons;
 
+    // Parallel to CardButtons: the widget that carries the hover swell, since a
+    // UButton's own render transform is overwritten by its style states.
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UWidget>> CardHoverTargets;
+
     TArray<int64> CardContentIds;
 
     int32 ActiveCategory = 0;
 
     // What the card grid was last built from. See RefreshCards.
     uint32 CardsSignature = 0;
+
+    // What the queue box was last built from, for the same reason. See RefreshQueue.
+    uint32 QueueSignature = 0;
+
+    // Per-card hover swell, 0 idle to 1 hovered. Eased in NativeTick so the grid reads
+    // as physical rather than snapping between two states.
+    TArray<float> CardHoverProgress;
+
+    // Last width pushed into WidthBox, so the override is only written when the
+    // viewport actually changed size.
+    float AppliedSidebarWidth = 0.0f;
 
     FDelegateHandle ResourceChangeHandle;
     FDelegateHandle ProductionChangeHandle;
