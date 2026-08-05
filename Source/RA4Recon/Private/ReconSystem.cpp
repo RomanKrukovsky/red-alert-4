@@ -2,6 +2,8 @@
 #include "RA4Recon/ReconSystem.h"
 
 #include "RA4Core/ByteStream.h"
+
+#include <chrono>
 #include "RA4Core/Checksum.h"
 #include "RA4Recon/DistortionPipeline.h"
 
@@ -80,13 +82,27 @@ void ReconSystem::Tick(TickIndex CurrentTick, const ObservationInput& Input, Ran
 
     // Fixed phase order -- part of the replay compatibility contract, do not
     // reorder without a format version bump (same rule as SimWorld::Tick).
-    PhaseMoraleUpdate(CurrentTick);
-    PhaseObservation(CurrentTick, Input);
-    PhaseDistortion(CurrentTick);
-    PhaseReportEmission(CurrentTick);
-    PhasePropagation(CurrentTick);
-    PhaseAggregation(CurrentTick);
-    PhaseTrackUpdate(CurrentTick);
+    //
+    // Phase timing fills PhaseStats, which existed since M0 but was never
+    // written (found by the P-7 benchmark reading zeros). Wall-clock reads are
+    // observation only -- nothing here feeds back into simulation state, so
+    // determinism is untouched.
+    const auto TimePhase = [this](Phase Ph, auto&& Fn)
+    {
+        const auto T0 = std::chrono::steady_clock::now();
+        Fn();
+        const auto T1 = std::chrono::steady_clock::now();
+        const int64_t Us = std::chrono::duration_cast<std::chrono::microseconds>(T1 - T0).count();
+        Stats.LastTickMicroseconds[int32_t(Ph)] = Us;
+        Stats.TotalMicroseconds[int32_t(Ph)] += Us;
+    };
+    TimePhase(Phase::MoraleUpdate, [&] { PhaseMoraleUpdate(CurrentTick); });
+    TimePhase(Phase::Observation, [&] { PhaseObservation(CurrentTick, Input); });
+    TimePhase(Phase::Distortion, [&] { PhaseDistortion(CurrentTick); });
+    TimePhase(Phase::ReportEmission, [&] { PhaseReportEmission(CurrentTick); });
+    TimePhase(Phase::Propagation, [&] { PhasePropagation(CurrentTick); });
+    TimePhase(Phase::Aggregation, [&] { PhaseAggregation(CurrentTick); });
+    TimePhase(Phase::TrackUpdate, [&] { PhaseTrackUpdate(CurrentTick); });
 
     Stats.TicksMeasured += 1;
 }
