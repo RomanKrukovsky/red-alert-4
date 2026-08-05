@@ -5,6 +5,7 @@
 #include "RA4CampaignSelectWidget.h"
 #include "RA4CommandCentreMenuWidget.h"
 #include "RA4ShowcaseWidget.h"
+#include "RA4SkirmishSetupWidget.h"
 #include "Blueprint/UserWidget.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
@@ -49,6 +50,13 @@ void ARA4UIShowcaseGameMode::ShowInterface(APlayerController* PlayerController)
         RootWidget = CreateWidget<URA4CampaignSelectWidget>(
             PlayerController, URA4CampaignSelectWidget::StaticClass());
     }
+    else if (RequestedScreen == 100)
+    {
+        // Real production widget rather than a showcase mock: QA screenshots must
+        // show the screen the player actually gets.
+        RootWidget = CreateWidget<URA4SkirmishSetupWidget>(
+            PlayerController, URA4SkirmishSetupWidget::StaticClass());
+    }
     else
     {
         if (URA4ShowcaseWidget* ScreenWidget = CreateWidget<URA4ShowcaseWidget>(
@@ -82,8 +90,14 @@ void ARA4UIShowcaseGameMode::ShowInterface(APlayerController* PlayerController)
 
 void ARA4UIShowcaseGameMode::CaptureInterfaceForQA()
 {
+    int32 RequestedScreen = 0;
+    FParse::Value(FCommandLine::Get(), TEXT("RA4Screen="), RequestedScreen);
+
+    // One file per screen so a batch capture over all screens does not overwrite
+    // itself; QA diffs need every screen side by side.
     const FString ScreenshotPath = FPaths::Combine(
-        FPaths::ProjectSavedDir(), TEXT("Screenshots/MacEditor/RA4_UI_QA.png"));
+        FPaths::ProjectSavedDir(),
+        FString::Printf(TEXT("Screenshots/MacEditor/RA4_UI_QA_Screen%02d.png"), RequestedScreen));
     FScreenshotRequest::RequestScreenshot(ScreenshotPath, true, false);
     UE_LOG(LogTemp, Display, TEXT("RA4 UI QA screenshot requested: %s"), *ScreenshotPath);
 }
