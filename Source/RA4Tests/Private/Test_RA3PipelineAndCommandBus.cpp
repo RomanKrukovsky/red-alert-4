@@ -86,8 +86,12 @@ RA4_TEST(CommandBus, DispatchTickAppliesAProductionFrameExactlyOnce)
     RA4_REQUIRE(YardState != nullptr);
 
     RA4_EXPECT_EQ(Accepted, 1);
-    RA4_EXPECT_EQ(F.World.GetPlayer(0).Credits, BeforeCredits - 800);
+    // The frame was applied once, so exactly one item is queued. ADR-0012 draws the
+    // price per tick rather than upfront, so queue length -- not a credit delta -- is
+    // what proves the command was applied exactly once.
     RA4_EXPECT_EQ(int32_t(YardState->Queue.size()), 1);
+    RA4_EXPECT_EQ(YardState->Queue.front().TotalCost, 800);
+    RA4_EXPECT(F.World.GetPlayer(0).Credits <= BeforeCredits);
 }
 
 RA4_TEST(CommandBus, DispatchTickReturnsZeroForRejectedCommands)
@@ -175,8 +179,9 @@ RA4_TEST(CommandBus, DispatchTickConsumesItsBufferedFrame)
 
     RA4_EXPECT_EQ(FirstAccepted, 1);
     RA4_EXPECT_EQ(SecondAccepted, 0);
-    RA4_EXPECT_EQ(CreditsAfterFirst, BeforeCredits - 800);
-    RA4_EXPECT_EQ(F.World.GetPlayer(0).Credits, CreditsAfterFirst);
+    // A second dispatch of a consumed frame must not queue the item again. Under
+    // ADR-0012 nothing is charged at queue time, so queue length is the observable.
+    RA4_EXPECT(CreditsAfterFirst <= BeforeCredits);
     RA4_EXPECT_EQ(int32_t(YardAfterFirst->Queue.size()), 1);
     RA4_EXPECT_EQ(int32_t(YardAfterSecond->Queue.size()), 1);
 }

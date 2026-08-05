@@ -112,9 +112,16 @@ RA4_TEST(Hud, CreditDeltaTracksSpending)
     Start.Content = Ids::SovPower;   // costs 800
     RA4_REQUIRE(F.World.ApplyCommand(Start).IsAccepted());
 
+    // ADR-0012: the order itself costs nothing; the HUD must show money leaving as
+    // the item builds, not a single lump the instant the button is clicked.
     F.Refresh();
-    RA4_EXPECT_EQ(F.Snapshot.Resources.CreditsDelta, -800);
+    RA4_EXPECT_EQ(F.Snapshot.Resources.Credits, 10000);
+
+    F.Step(SecondsToTicks(9), {Yard});
     RA4_EXPECT_EQ(F.Snapshot.Resources.Credits, 9200);
+    // The delta is a per-refresh figure, so it reports the last slice drawn, not the
+    // whole price. What matters is that it is negative while money is going out.
+    RA4_EXPECT(F.Snapshot.Resources.CreditsDelta <= 0);
 }
 
 RA4_TEST(Hud, PowerShortageIsReportedNotInvented)

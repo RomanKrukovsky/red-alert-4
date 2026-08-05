@@ -151,6 +151,10 @@ private:
     // --- Systems, executed in this order every tick ------------------------
     void SystemApplyCommands(const CommandFrame* Frame);
     void SystemPower();
+    // Runs after SystemPower so the throttle decisions it makes read this tick's
+    // power balance, and before SystemProduction so an item funded this tick can
+    // begin advancing on the same tick it becomes fully paid.
+    void SystemFlowPayment();
     void SystemConstruction();
     void SystemProduction();
     void SystemHarvesters();

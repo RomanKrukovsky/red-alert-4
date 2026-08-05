@@ -206,13 +206,54 @@ enum class ConstructionState : uint8_t
     UnderConstruction,
 };
 
+// ADR-0012: every way a queued item can be interrupted gets its own state, so the
+// UI can say *why* something stopped instead of showing an unexplained paused bar,
+// and so the AI can tell "I cannot afford this" from "I have no power" from "the
+// player paused it". Credits are charged incrementally across the build, not as a
+// lump sum at queue time.
+enum class FlowPaymentState : uint8_t
+{
+    Queued            = 0,  // in the queue, not yet drawing credits
+    Funding           = 1,  // credits being deducted incrementally
+    Paying            = 2,  // fully funded; production ticks advance
+    Starved           = 3,  // funding interrupted because the treasury hit zero
+    EnergyThrottled   = 4,  // funded, but a power deficit halts this category
+    ManuallyPaused    = 5,  // the player paused this item
+    Completed         = 6,  // finished; a building waits here for placement
+    Cancelled         = 7,  // player cancelled; refund issued
+    ProducerDestroyed = 8,  // the producing building died
+    PrerequisiteLost  = 9,  // a required tech building died
+    OwnershipChanged  = 10, // the producer was sold or captured
+};
+
+// Credits charged per tick. Ceiling division so the last tick never leaves a
+// remainder unpaid: an item that reaches full progress is always fully paid for.
+inline constexpr int32_t FlowPaymentCostPerTick(int32_t TotalCost, int32_t TotalTicks)
+{
+    return (TotalTicks > 0) ? (TotalCost + TotalTicks - 1) / TotalTicks : TotalCost;
+}
+
 struct ProductionItem
 {
     ContentId Content;
+    // ADR-0012 progression: Queued -> Funding -> Paying -> Completed, with
+    // Starved / EnergyThrottled / ManuallyPaused as resumable detours. Progress
+    // never regresses; an interrupted item freezes and later continues.
+    FlowPaymentState State = FlowPaymentState::Queued;
+    // Captured at queue time so a mid-build content hot-reload or a price change
+    // cannot alter what the player already agreed to pay.
+    int32_t TotalCost = 0;
+    int32_t PaidCredits = 0;
     int32_t ProgressTicks = 0;
     int32_t TotalTicks = 0;
-    int32_t PaidCredits = 0;
+    int32_t Priority = 0;      // higher is funded first when credits are scarce
+    // Retained so existing pause UI keeps working, but State is authoritative:
+    // it distinguishes a player pause from starvation, which this flag cannot.
     bool bPaused = false;
+
+    int32_t CostPerTick() const { return FlowPaymentCostPerTick(TotalCost, TotalTicks); }
+    int32_t CreditsRemaining() const { return TotalCost > PaidCredits ? TotalCost - PaidCredits : 0; }
+    bool IsFullyFunded() const { return PaidCredits >= TotalCost; }
 };
 
 struct BuildingComp
