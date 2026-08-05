@@ -1,6 +1,6 @@
 # ADR-0025: Adaptive Opponent — Cross-Match Player Modeling and Doctrine Counter-Selection
 
-**Status**: Proposed (blocked until remediation/foundation-fixes is green; no implementation authorized)
+**Status**: Proposed (pending independent review — NEXT_ACTIONS P-1; no implementation authorized)
 **Depends on**: ADR-0008 (HTN/utility AI), ADR-0020 (economic telemetry), ADR-0021 (Knowledge Map)
 
 ## Context

@@ -1,6 +1,6 @@
 # ADR-0021: Knowledge Map — Per-Player Belief State with Intel Decay
 
-**Status**: Proposed (blocked until remediation/foundation-fixes is green; no implementation authorized)
+**Status**: Proposed (pending independent review — NEXT_ACTIONS P-1; no implementation authorized)
 **Depends on**: ADR-0001 (fixed-tick lockstep; NOTE: actual rate is 20 Hz per SimConfig.h kTicksPerSecond, not the 60Hz claimed in ADR-0001), ADR-0002 (pure C++ sim), ADR-0004 (state hashing), ADR-0008 (AI zero-cheat fog compliance)
 
 ## Context

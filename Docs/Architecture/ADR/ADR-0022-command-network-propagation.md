@@ -1,6 +1,6 @@
 # ADR-0022: Command Network — Physical Order Propagation and Autonomy Fallback
 
-**Status**: Proposed (blocked until remediation/foundation-fixes is green; no implementation authorized)
+**Status**: Proposed (pending independent review — NEXT_ACTIONS P-1; no implementation authorized)
 **Depends on**: ADR-0001 (fixed-tick lockstep; NOTE: actual rate is 20 Hz per SimConfig.h kTicksPerSecond, not the 60Hz claimed in ADR-0001), ADR-0003 (command protocol), ADR-0008 (HTN/utility AI), ADR-0021 (Knowledge Map)
 
 ## Context
@@ -53,7 +53,13 @@ Units without a live order link execute their **standing doctrine** — a small,
 **Negative / risks**:
 - Balance risk is high: order delay is felt as input lag if tuned badly. Mitigation: healthy-path latency budget above + telemetry (ADR-0020 hooks).
 - Pathological micro cases (rapid re-orders creating in-flight order floods) — need an order-supersede rule: a newer order to the same group cancels older undelivered ones.
-- Interaction with DirectControl (ADR-0011-DirectControl): possessed units bypass the graph? Decision deferred; flagged as open question, must be resolved before implementation.
+- Interaction with DirectControl (ADR-0011-DirectControl): **resolved — a possessed unit bypasses the
+  graph entirely.** The commander is physically present in that vehicle, so there is no radio link to
+  model, and adding delay to a first-person control scheme would be indefensible as a control feel.
+  Consequences: possession becomes a deliberate counter to being jammed, at the cost of controlling
+  exactly one unit while the rest of the army runs on standing doctrine — a real tradeoff rather than
+  an exemption. On unpossession the unit rejoins the graph and its next order propagates normally.
+  Recorded in GDD section 9.
 
 ## Verification plan
 

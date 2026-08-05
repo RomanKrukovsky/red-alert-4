@@ -1,6 +1,6 @@
 # ADR-0023: Deception System — Signatures, Decoys and Information Attacks
 
-**Status**: Proposed (blocked until remediation/foundation-fixes is green; no implementation authorized)
+**Status**: Proposed (pending independent review — NEXT_ACTIONS P-1; no implementation authorized)
 **Depends on**: ADR-0021 (Knowledge Map — hard dependency), ADR-0009 (data-driven content), ADR-0008 (AI zero-cheat)
 
 ## Context
