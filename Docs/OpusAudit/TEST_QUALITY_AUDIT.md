@@ -1,8 +1,8 @@
 # Opus Audit — Test Quality Audit
 
 **Auditor**: Claude Fable 5
-**Date**: 2026-08-04
-**Baseline**: `cae7b36`
+**Date**: 2026-08-05 (updated)
+**Baseline**: `1fe9f58` (HEAD of feat/soviet-asset-integration)
 
 ---
 
@@ -10,8 +10,8 @@
 
 | Metric | Value |
 |--------|-------|
-| Total RA4_TEST macros | 297 |
-| Test files | 21 |
+| Total RA4_TEST macros | 308 |
+| Test files | 22 |
 | All compiled into RA4Tests | Yes (confirmed in CMakeLists.txt) |
 | All pass on clean build | Yes (ctest: 4/4 suites pass) |
 | Build from clean state | Yes (cmake configure + build from /tmp) |
@@ -97,7 +97,7 @@ These tests exercise real behavior and would fail if the system broke:
 
 ## Critical Test Gaps
 
-1. **No 500/1000/2000 entity stress tests** — claimed in Gemini docs but not in code
+1. **Stress tests exist but are basic** — `ProvingGround.HeadlessStressScenario{500,1000,2000}Entities` pass but only run for a fixed number of ticks without asserting gameplay correctness
 2. **No malformed command tests** — `ServerSubmitFrame_Validate` checks payload size but no test exercises it
 3. **No packet loss / jitter simulation** — LockstepSession tests use direct method calls, not simulated network
 4. **No save/load roundtrip with complex state** — only 1 test in TestSaveSystem.cpp

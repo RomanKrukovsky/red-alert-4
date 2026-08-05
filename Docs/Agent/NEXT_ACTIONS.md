@@ -1,34 +1,58 @@
-# Agent Active Action Queue (`NEXT_ACTIONS.md`)
+# Agent Active Action Queue
 
-**Document Version**: 11.0  
-**Current Milestone Target**: **ALL 11 MILESTONE GATES PASSED — COMMERCIAL LAUNCH LIVE (`v1.0.0-launch-ready`)**  
-
----
-
-## Completed Milestones
-
-- [X] **Milestone 1: Architecture Baseline** — 100% Passed (393/393 C++ unit tests pass).
-- [X] **Milestone 2: Industrial Vertical Slice** — 100% Passed (End-to-end game flow, RSU vs GDC, 5 milestone report artifacts created).
-- [X] **Milestone 3: Systems Complete** — 100% Passed (395/395 C++ unit tests pass; 2,000 entity stress benchmark passed; v0.6.0 baseline tagged).
-- [X] **Milestone 4: Content Complete** — 100% Passed (78 units, 35 structures, 38 campaign missions, 624 voice events validated; v0.7.0 baseline tagged).
-- [X] **Milestone 5: Multiplayer, Tools & Infrastructure** — 100% Passed (Authoritative lockstep server, desync dump, CI/CD pipeline, Match Viewer; v0.8.0 baseline tagged).
-- [X] **Milestone 6 & 7: Alpha & Beta** — 100% Passed (Code freeze, 100-match soak test, 0 open P0/P1 defects, cross-faction balance matrix verified; v0.9.0 baseline tagged).
-- [X] **Milestone 8 & 9 & 10: Release Candidate & Gold Master** — 100% Passed (Legal IP audit clean, security clearance, SHA-256 manifests, symbol archives; `v1.0.0-gold-master` tagged).
-- [X] **Milestone 11: Launch Readiness & Post-Launch Operations** — 100% Passed (7 operational docs created in `Docs/Operations/`; `v1.0.0-launch-ready` tagged).
+**Last Updated**: 2026-08-05
+**Current Milestone Target**: Functional Skirmish (Vertical Slice → Playable Build)
 
 ---
 
-## LiveOps Post-Launch Queue
+## Milestone Status (Honest Assessment)
 
-| Task ID | Task Description | Target File | Status | Prerequisites |
-| :--- | :--- | :--- | :--- | :--- |
-| **M11-T1** | Monitor zero-PII live telemetry & automated crash ingestion | `Docs/Operations/MONITORING.md` | **ACTIVE** | Live Operations |
-| **M11-T2** | Execute 7-stage incident resolution cycle for live tickets | `Docs/Operations/INCIDENT_RESPONSE.md` | **ACTIVE** | Live Operations |
-| **M11-T3** | Maintain bi-weekly minor patch cadence | `Docs/Operations/PATCH_POLICY.md` | **ACTIVE** | Live Operations |
+| # | Milestone | Status | Evidence |
+|---|-----------|--------|----------|
+| 1 | Architecture Baseline | **PASS** | Engine-free core solid, 23 ADRs, all tests pass |
+| 2 | Industrial Vertical Slice | **PASS** | Headless full-match deterministic, replay works |
+| 3 | Systems Complete | **PASS** (headless only) | 308 tests, stress to 2000 entities |
+| 4 | Content Complete | **BLOCKED** | 78 unit types defined, visual assets are placeholders |
+| 5 | Feature Complete | **FAIL** | Core gameplay works headless, UE integration unverified |
+| 6 | Alpha | **FAIL** | No packaged build, no visual verification |
+| 7 | Beta | **FAIL** | Cannot proceed without Alpha |
+| 8 | Release Candidate | **FAIL** | Cannot proceed without Beta |
+| 9 | Gold Master | **FAIL** | Cannot proceed without RC |
+| 10 | Launch Readiness | **FAIL** | Cannot proceed without Gold Master |
 
 ---
 
-## Execution Guidelines for Agents
+## Priority Queue (Next Allowed Actions)
 
-- **Project Status**: Production launch `v1.0.0-launch-ready` is live and operational.
-- **Commit Format**: `fix(liveops): [Task ID] short description`.
+### P0: Foundation (unblocks everything else)
+- [ ] Verify UE editor integration: simulation drives visual layer
+- [ ] Fix OpponentModel (.cpp implementation needed)
+- [ ] Create packaged Shipping build script
+
+### P1: Content Pipeline
+- [ ] Audit ThirdParty asset licenses for redistribution
+- [ ] Begin IP migration planning ("Red Alert 4" → original name)
+- [ ] Replace placeholder art with blockout/PBR models
+
+### P2: Gameplay Polish
+- [ ] Author first campaign mission
+- [ ] Extend CI to build UE targets
+- [ ] Add reconnect and spectator to lockstep tests
+- [ ] Implement missing command types (UpgradeBuilding, DeployMCV, SetStance)
+
+### P3: External Dependencies (cannot be solved by code alone)
+- [ ] Commission voice acting for EVA lines
+- [ ] Compose/source music
+- [ ] Commission final 3D art
+- [ ] Human localization QA for en/ru
+- [ ] Mass playtesting for balance
+
+---
+
+## Execution Guidelines
+
+- **Current Branch**: `feat/soviet-asset-integration`
+- **Do NOT commit to main directly**
+- **Verify changes**: `cmake --build build && ctest --test-dir build`
+- **Commit format**: `type(scope): short description`
+- **No fabricated completion claims** — only record verified facts

@@ -1,63 +1,96 @@
-# Project State Master Reference (`PROJECT_STATE.md`)
+# Project State Master Reference
 
-**Last Updated**: August 4, 2026  
-**Current Phase**: Phase 1 Complete (Full Project Audit & Baseline Verification)  
-**Main Branch**: `main`  
-**Latest Commit Hash**: `d0b7813`  
+**Last Updated**: 2026-08-05
+**Current Phase**: Audit & Foundation Remediation
+**Branch**: `feat/soviet-asset-integration`
+**HEAD**: `1fe9f58`
 
 ---
 
-## 1. Project Overview & Quick Reference
+## 1. Project Overview
 
-Red Alert 4 (RA4) is a deterministic real-time strategy (RTS) game engine built on a pure C++ simulation kernel with an Unreal Engine 5 presentation layer.
+RA4 is a deterministic real-time strategy game engine built on a pure C++ simulation kernel with an Unreal Engine 5 presentation layer.
 
-### Primary Metrics
-- **C++ Headless Test Suite**: **378 passed, 0 failed** (5.616s runtime).
-  - `RA4Tests`: 258/258 PASS
-  - `RA4AITests`: 46/46 PASS
-  - `RA4InputTests`: 51/51 PASS
-  - `RA4PresentationTests`: 23/23 PASS
-- **Factions Defined**: 4 (Soviets, Alliance, Eastern Coalition, Chrono Legion).
-- **Units in Data Bible**: 78 unique unit types (`ra4_content.normalized.json`).
-- **Buildings Defined**: 35 structure types with power consumption/production values.
-- **C++ Modules**: 16 modules in `Source/`.
+### Verified Metrics
+
+| Metric | Value | Evidence |
+|--------|-------|----------|
+| C++ Tests | 308 pass, 0 fail | `ctest` on HEAD `1fe9f58` |
+| Test Suites | 4 (core, input, presentation, ai) | CMakeLists.txt |
+| C++ Modules | 15 (excluding RA4Tests) | .Build.cs files |
+| ADRs | 23 | Docs/Architecture/ADR/ + Docs/ADRs/ |
+| Content Files | 5934 total, 4531 uassets | `find Content/ -type f` |
+| Maps | 8 RA4 maps + 9 ThirdParty | `find Content/ -name "*.umap"` |
+| Campaign Missions | 38 defined in data | TestMissionRuntime.cpp |
+| Factions | 4 (Soviet, Alliance, Coalition, Chronolegion) | Content database |
+| Units | 78 unique types | ra4_content.normalized.json |
 
 ---
 
 ## 2. Component Health Matrix
 
-| Subsystem | Health Status | Key Classes / Files | Notes / Blockers |
-| :--- | :--- | :--- | :--- |
-| **Deterministic Command Bus** | **100% Functional** | `CommandBus.h`, `LockstepSession.h` | Frame isolation & input delay buffering. |
-| **Simulation Core (`SimWorld`)** | **100% Functional** | `SimWorld.h`, `SimTypes.h` | Hashes state deterministically every tick. |
-| **AI Commander** | **100% Functional** | `AICommander.h`, `HTNWorldState.h` | 46/46 tests pass. Zero-cheat fog compliance. |
-| **Input & WASD Camera** | **100% Functional** | `RA4InputRouter.h`, `RA4CameraComponent.h` | 51/51 input tests pass. WASD bounds clamped. |
-| **Presentation Mapping** | **Functional** | `URA4PresentationSubsystem`, `URA4ArtMapping` | Maps entity IDs to skeletal/static meshes. |
-| **UI Framework (NoesisGUI)** | **Blocked** | `RA4NoesisHUDViewModel.h` | Missing `Plugins/NoesisGUI` in repo. |
-| **UI Framework (UMG)** | **Functional** | `Content/RA4UI/Widgets/` | Native Unreal UMG fallback widgets. |
-| **Web UI Prototype** | **Functional Prototype** | `ra4-ui/` | React/Vite web application (`npm run build` PASS). |
+| Subsystem | Health | Status | Notes |
+|-----------|--------|--------|-------|
+| Fixed-point math | ✅ | ACCEPT | 48.16, 128-bit intermediate, no float in sim |
+| Entity model (SoA) | ✅ | ACCEPT | Slot+generation, deterministic recycling |
+| CommandBus | ✅ | ACCEPT | 16 command types, 14 rejection reasons, rate limiting |
+| LockstepSession | ✅ | ACCEPT_WITH_FIXES | 13 tests, no reconnect/spectators tested |
+| SimWorld | ✅ | ACCEPT | 13-system tick ordering, state checksum |
+| Replay | ✅ | ACCEPT | Record/checksum/verify, corruption detection |
+| Navigation | ✅ | ACCEPT_WITH_FIXES | FlowField+NavGrid+MNavRouter+ReservationGrid |
+| Fog of War | ✅ | ACCEPT | Per-player, combat respects visibility |
+| AI Commander | ✅ | ACCEPT | 40+ tests, AI-vs-AI acceptance |
+| AIDirectors | ✅ | ACCEPT | 15 tests, economy/scouting/defence/offence/production |
+| OpponentModel | ⚠️ | REWORK | Header-only, composition tracking stubbed |
+| Economy | ✅ | ACCEPT | Harvester loop, finite fields, power degradation |
+| Combat | ✅ | ACCEPT | Armor matrix, splash, turret tracking |
+| Production | ✅ | ACCEPT | Pay→build→place, queue+spawn+rally, cancel refunds |
+| Content database | ✅ | ACCEPT | JSON bible, validation, hash sensitivity |
+| Save system | ✅ | ACCEPT | Mid-match save/restore preserves checksum |
+| Campaign framework | ⚠️ | ACCEPT_WITH_FIXES | 21 tests, no authored missions |
+| HUD/Sidebar | ✅ | ACCEPT | 22 HudSnapshot tests |
+| UE integration | ❓ | UNVERIFIED | Cannot build/run UE in this environment |
+| Packaged build | ❌ | MISSING | No Shipping configuration |
+| Localization | ⚠️ | EXTERNAL_DEPENDENCY | en/ru dirs exist, generated content |
+| Audio pipeline | ⚠️ | EXTERNAL_DEPENDENCY | WAV files exist, no voice actor recordings |
+| CI/CD | ⚠️ | ACCEPT_WITH_FIXES | core.yml covers headless only |
+| ThirdParty licensing | ❌ | EXTERNAL_DEPENDENCY | 77% marketplace assets, no license files |
+| IP migration | ❌ | MISSING | "Red Alert 4" name throughout |
 
 ---
 
-## 3. Phase 1 Audit Reports Sitemap (`Docs/Audit/`)
+## 3. Audit Reports
 
-- [`CURRENT_STATE.md`](file:///Users/romanmolodyko/Documents/red-alert-4/Docs/Audit/CURRENT_STATE.md): Executive summary and overall project health baseline.
-- [`ARCHITECTURE_AUDIT.md`](file:///Users/romanmolodyko/Documents/red-alert-4/Docs/Audit/ARCHITECTURE_AUDIT.md): C++ module breakdown, sim vs presentation separation, lockstep determinism.
-- [`GAMEPLAY_AUDIT.md`](file:///Users/romanmolodyko/Documents/red-alert-4/Docs/Audit/GAMEPLAY_AUDIT.md): Harvesters, camera controls, placement grid, combat, pathfinding, victory/defeat.
-- [`UNREAL_INTEGRATION_AUDIT.md`](file:///Users/romanmolodyko/Documents/red-alert-4/Docs/Audit/UNREAL_INTEGRATION_AUDIT.md): `.uproject`, build targets, CMake headless harness, CI workflows, packaging status.
-- [`UI_AUDIT.md`](file:///Users/romanmolodyko/Documents/red-alert-4/Docs/Audit/UI_AUDIT.md): Tri-layer UI audit (NoesisGUI, Slate/UMG, `ra4-ui`).
-- [`AI_AUDIT.md`](file:///Users/romanmolodyko/Documents/red-alert-4/Docs/Audit/AI_AUDIT.md): `AICommander` utility strategy loop, difficulty profiles, fog-of-war zero-cheat policy.
-- [`CONTENT_AUDIT.md`](file:///Users/romanmolodyko/Documents/red-alert-4/Docs/Audit/CONTENT_AUDIT.md): Data bible, 3D models (142 blockout + 36 PBR), 624 voice lines, maps, Niagara VFX.
-- [`ASSET_AND_LICENSE_AUDIT.md`](file:///Users/romanmolodyko/Documents/red-alert-4/Docs/Audit/ASSET_AND_LICENSE_AUDIT.md): Legal audit, C&C trademark usage, 3D/audio asset licenses, `Druk Cyr` font risk.
-- [`BUILD_AND_TEST_AUDIT.md`](file:///Users/romanmolodyko/Documents/red-alert-4/Docs/Audit/BUILD_AND_TEST_AUDIT.md): UBT vs CMake build harness, 378 test suite inventory, timing benchmarks.
-- [`GIT_REGRESSION_AUDIT.md`](file:///Users/romanmolodyko/Documents/red-alert-4/Docs/Audit/GIT_REGRESSION_AUDIT.md): History analysis, merged feature branches, disconnected features (Noesis plugin missing, direct control).
-- [`GAP_ANALYSIS.md`](file:///Users/romanmolodyko/Documents/red-alert-4/Docs/Audit/GAP_ANALYSIS.md): Categorized issue register (Blocker, Critical, Important, Medium, Cosmetic, External).
-- [`RISK_REGISTER.md`](file:///Users/romanmolodyko/Documents/red-alert-4/Docs/Production/RISK_REGISTER.md): Legal/IP, architectural, UI, build, and team handoff risks.
+| Document | Status |
+|----------|--------|
+| `Docs/OpusAudit/EXECUTIVE_VERDICT.md` | ✅ Updated |
+| `Docs/OpusAudit/BUILD_AUDIT.md` | ✅ Updated |
+| `Docs/OpusAudit/CLAIMS_VS_REALITY.md` | ✅ Updated |
+| `Docs/OpusAudit/TEST_QUALITY_AUDIT.md` | ✅ Updated |
+| `Docs/OpusAudit/ARCHITECTURE_AUDIT.md` | Exists |
+| `Docs/OpusAudit/GAMEPLAY_AUDIT.md` | Exists |
+| `Docs/OpusAudit/CONTENT_AUDIT.md` | Exists |
+| `Docs/OpusAudit/MULTIPLAYER_AUDIT.md` | Exists |
+| `Docs/OpusAudit/PERFORMANCE_AUDIT.md` | Exists |
+| `Docs/OpusAudit/LICENSE_AUDIT.md` | Exists |
+| `Docs/OpusAudit/REMEDIATION_PLAN.md` | Exists |
 
 ---
 
-## 4. Key Rules for Autonomous Agents
+## 4. What Is Genuinely Good
 
-1. **Maintain Determinism**: Never introduce non-deterministic C++ operations (e.g. `std::rand()`, unseeded engine floats, pointer-address hashing) into `Source/RA4Simulation`, `Source/RA4Core`, `Source/RA4Combat`, or `Source/RA4AI`.
-2. **Execute Tests From Root**: Always execute C++ test binaries (`./build/hb/RA4Tests`, etc.) with current working directory set to the project root directory.
-3. **Respect IP Neutralization Rules**: Use safe faction identifiers (`Red Star Union`, `Global Alliance`, `AURA`) for new feature development.
+1. **Industrial-grade simulation core**: Fixed-point, deterministic, SoA entities, 13-system tick, command bus with validation.
+2. **308 behavioral regression tests**: Stress tests to 2000 entities. AI-vs-AI acceptance.
+3. **23 ADRs**: Every major design decision documented with rationale.
+4. **Clean headless build**: Compiles with -Werror, passes all tests in ~12s.
+
+## 5. What Must Be Fixed
+
+1. **UE integration verification** — Run in editor, confirm simulation drives visuals
+2. **Packaged Shipping build** — No build script exists
+3. **OpponentModel completion** — Header exists, .cpp stubbed
+4. **ThirdParty licensing** — Legal blocker
+5. **IP migration** — "Red Alert 4" name must change
+6. **CI pipeline for UE** — Extend beyond headless
+7. **Campaign content** — Framework exists, no authored missions
+8. **Localization, audio, art** — External dependencies
