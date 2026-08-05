@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 
-class FRA4IntelModule : public IModuleInterface
+class FRA4ReconModule : public IModuleInterface
 {
 public:
 	virtual void StartupModule() override;

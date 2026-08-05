@@ -1,5 +1,5 @@
 // Copyright (c) Red Alert 4 project.
-#include "RA4Intel/PerceivedWorld.h"
+#include "RA4Recon/PerceivedWorld.h"
 
 #include <algorithm>
 
@@ -9,7 +9,7 @@
 
 namespace RA4
 {
-namespace Intel
+namespace Recon
 {
 
 namespace
@@ -337,5 +337,5 @@ void PerceivedWorld::FeedChecksum(Hash64& H) const
     H.FeedUInt32(uint32_t(LastObserved.size()));
 }
 
-} // namespace Intel
+} // namespace Recon
 } // namespace RA4

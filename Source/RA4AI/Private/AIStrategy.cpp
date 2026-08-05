@@ -92,6 +92,16 @@ AIConfig MakeProfileConfig(AIProfile Profile, AIDifficulty Difficulty)
     switch (Profile)
     {
         case AIProfile::Aggressive:
+            // Tuning note (league pass 2, 560 matches per variant): raising the
+            // commit floor was tried to stop unit pairs trickling into static
+            // defence, and MEASURABLY BACKFIRED at both floor 4 (a regression
+            // scenario stopped finishing at all) and floor 3 (win rate 40% -> 34%,
+            // first-blood rate 42% -> 21%, Defensive and Turtle rows went to 0%).
+            // Waiting for a third unit forfeits the early-pressure timing that IS
+            // this profile's identity: damage per game rose but arrived after
+            // walls existed. Kept at 2 deliberately -- the trickle is the cost of
+            // the timing, and fixing Aggressive-vs-Turtle belongs to the armor
+            // matrix / anti-building tools, not to slower openings.
             Config.TargetHarvesters = 2;
             Config.AttackArmySize = 4;
             Config.MinimumAttackSize = 2;
@@ -191,9 +201,15 @@ AIConfig MakeProfileConfig(AIProfile Profile, AIDifficulty Difficulty)
         case AIProfile::Guerrilla:
             // Never masses for a decisive battle: many small raids, a low commit
             // threshold, and a deliberately thin defensive line.
+            //
+            // League pass 2 telemetry: 42% win rate with the lowest share of
+            // damage landing on buildings (25%) -- raids that harass but never
+            // finish. Raid size 3 keeps the many-small-raids identity (still the
+            // smallest committing force alongside Rush's opening) while giving a
+            // raid enough punch to actually kill what it catches.
             Config.TargetHarvesters = 3;
             Config.AttackArmySize = 4;
-            Config.MinimumAttackSize = 2;
+            Config.MinimumAttackSize = 3;
             Config.TargetDefences = 1;
             Config.CreditReserve = 200;
             Config.AssaultWeight = 120;

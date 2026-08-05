@@ -71,7 +71,7 @@ void SimWorld::Reset()
     FlowFieldBuildsThisTick = 0;
     MacroPathBuildsThisTick = 0;
     Stats = MovementStats{};
-    IntelLayer.Reset();
+    ReconLayer.Reset();
     Core.clear();
     Transforms.clear();
     Healths.clear();
@@ -114,7 +114,7 @@ void SimWorld::Reset()
 }
 
 void SimWorld::Initialize(const ContentDatabase* InContent, const MatchSetup& Setup,
-                          const Intel::IntelSettings* InIntelSettings)
+                          const Recon::ReconSettings* InReconSettings)
 {
     Reset();
     Content = InContent;
@@ -128,9 +128,9 @@ void SimWorld::Initialize(const ContentDatabase* InContent, const MatchSetup& Se
     Rng.Reset(Setup.Seed);
     // Distinct sequence constant gives the intel layer an independent stream from
     // the same match seed (see SimWorld.h for why isolation matters).
-    IntelRng.Reset(Setup.Seed, 0x496e74656cULL /* "Intel" */);
-    IntelSettingsRef = InIntelSettings;
-    IntelLayer.Initialize(InIntelSettings, Map.Width, Map.Height);
+    ReconRng.Reset(Setup.Seed, 0x496e74656cULL /* "Recon" */);
+    ReconSettingsRef = InReconSettings;
+    ReconLayer.Initialize(InReconSettings, Map.Width, Map.Height);
 
     for (PlayerId I = 0; I < kMaxPlayers; ++I)
     {
@@ -157,8 +157,8 @@ void SimWorld::Restart()
 {
     const ContentDatabase* SavedContent = Content;
     const MatchSetup SavedSetup = SetupConfig;
-    const Intel::IntelSettings* SavedIntel = IntelSettingsRef;
-    Initialize(SavedContent, SavedSetup, SavedIntel);
+    const Recon::ReconSettings* SavedRecon = ReconSettingsRef;
+    Initialize(SavedContent, SavedSetup, SavedRecon);
 }
 
 // ---------------------------------------------------------------------------
@@ -2963,7 +2963,7 @@ void SimWorld::Tick(const CommandFrame* Frame)
     SystemProjectiles();
     SystemFactionResources();
     SystemFogOfWar();
-    SystemIntel();
+    SystemRecon();
     SystemDirectControl();
     SystemDeaths();
     SystemVictory();
@@ -2971,12 +2971,55 @@ void SimWorld::Tick(const CommandFrame* Frame)
     CurrentTick += 1;
 }
 
-void SimWorld::SystemIntel()
+void SimWorld::SystemRecon()
 {
     // Runs right after fog of war: fog decides what is physically visible this
     // tick, intel turns that into (delayed, distorted) belief. Disabled layer
     // returns immediately -- classic perfect-information behaviour (ADR-0026).
-    IntelLayer.Tick(CurrentTick);
+    if (!ReconLayer.IsEnabled())
+    {
+        return;
+    }
+
+    // Build this tick's visibility view. Iteration is by entity slot and then by
+    // player, so the observation order is deterministic by construction. Only
+    // non-owned, non-projectile entities are observable: a player's own units are
+    // exact by decision D3 of ADR-0026 (own-troop self-report bias is M4 and
+    // touches info panels, not selection).
+    ReconInput.Clear();
+    ReconInput.EntityCapacity = uint32_t(Core.size());
+    for (uint32_t I = 0; I < HighWaterMark; ++I)
+    {
+        if (!Core[I].bAlive || Core[I].Kind == EntityKind::Projectile)
+        {
+            continue;
+        }
+        const TileCoord Tile = Map.WorldToTile(Transforms[I].Position);
+        for (PlayerId P = 0; P < kMaxPlayers; ++P)
+        {
+            if (!Players[P].bActive || Players[P].bDefeated)
+            {
+                continue;
+            }
+            if (Core[I].Owner == P)
+            {
+                continue; // own units are known exactly, not tracked as contacts
+            }
+            if (!IsEntityVisibleTo(P, I))
+            {
+                continue;
+            }
+            Recon::ObservedEntity Seen;
+            Seen.Id = MakeId(I);
+            Seen.Class = Core[I].Def;
+            Seen.Position = Transforms[I].Position;
+            Seen.TileX = Tile.X;
+            Seen.TileY = Tile.Y;
+            ReconInput.VisibleToPlayer[P].push_back(Seen);
+        }
+    }
+
+    ReconLayer.Tick(CurrentTick, ReconInput);
 }
 
 void SimWorld::SystemFactionResources()
@@ -3016,7 +3059,7 @@ uint64_t SimWorld::ComputeStateChecksum() const
     H.FeedUInt8(uint8_t(Phase));
     H.FeedUInt8(Winner);
     H.FeedUInt64(Rng.GetState());
-    H.FeedUInt64(IntelRng.GetState());
+    H.FeedUInt64(ReconRng.GetState());
 
     for (PlayerId I = 0; I < kMaxPlayers; ++I)
     {
@@ -3091,7 +3134,7 @@ uint64_t SimWorld::ComputeStateChecksum() const
 
     // Belief state influences future commands once the AI reads it (M6), so a
     // divergent belief is a real desync and must be caught here, on this tick.
-    IntelLayer.FeedChecksum(H);
+    ReconLayer.FeedChecksum(H);
 
     return H.Get();
 }
@@ -3101,7 +3144,7 @@ uint64_t SimWorld::ComputeStateChecksum() const
 // ---------------------------------------------------------------------------
 
 constexpr uint32_t kSimSaveMagic = 0x52413453u; // "RA4S"
-constexpr uint32_t kSimSaveVersion = 3; // v2: DirectControlComp; v3: intel layer (IntelRng + IntelSystem)
+constexpr uint32_t kSimSaveVersion = 3; // v2: DirectControlComp; v3: intel layer (ReconRng + ReconSystem)
 
 void SimWorld::Serialize(ByteWriter& W) const
 {
@@ -3112,8 +3155,8 @@ void SimWorld::Serialize(ByteWriter& W) const
     W.WriteUInt8(Winner);
     W.WriteUInt64(Rng.GetState());
     W.WriteUInt64(Rng.GetIncrement());
-    W.WriteUInt64(IntelRng.GetState());
-    W.WriteUInt64(IntelRng.GetIncrement());
+    W.WriteUInt64(ReconRng.GetState());
+    W.WriteUInt64(ReconRng.GetIncrement());
 
     // Map description
     W.WriteString(Map.Name);
@@ -3249,7 +3292,7 @@ void SimWorld::Serialize(ByteWriter& W) const
 
     // Belief state (ADR-0026). Serialized with the match: a save/load cycle that
     // diverged GT from PS would be a critical bug, and this is what prevents it.
-    IntelLayer.Serialize(W);
+    ReconLayer.Serialize(W);
 }
 
 bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
@@ -3278,9 +3321,9 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
     Rng.SetState(RState, RInc);
     if (Version >= 3)
     {
-        const uint64_t IntelState = R.ReadUInt64();
-        const uint64_t IntelInc = R.ReadUInt64();
-        IntelRng.SetState(IntelState, IntelInc);
+        const uint64_t ReconState = R.ReadUInt64();
+        const uint64_t ReconInc = R.ReadUInt64();
+        ReconRng.SetState(ReconState, ReconInc);
     }
 
     Map.Name = R.ReadString();
@@ -3442,16 +3485,16 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
 
     // Reset() cleared the intel layer; re-arm it with the settings this session
     // was initialized with before reading the belief payload. Enabled-ness must
-    // match the save or IntelSystem::Deserialize refuses (see its comment).
-    IntelLayer.Initialize(IntelSettingsRef, Map.Width, Map.Height);
+    // match the save or ReconSystem::Deserialize refuses (see its comment).
+    ReconLayer.Initialize(ReconSettingsRef, Map.Width, Map.Height);
     if (Version >= 3)
     {
-        if (!IntelLayer.Deserialize(R))
+        if (!ReconLayer.Deserialize(R))
         {
             return false;
         }
     }
-    else if (IntelLayer.IsEnabled())
+    else if (ReconLayer.IsEnabled())
     {
         // A pre-intel save has no belief state to restore; refusing beats
         // silently starting the HQ map empty mid-match.

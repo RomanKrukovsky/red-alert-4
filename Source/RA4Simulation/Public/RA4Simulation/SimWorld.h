@@ -19,7 +19,7 @@
 #include "RA4Core/Command.h"
 #include "RA4Core/Ids.h"
 #include "RA4Core/Random.h"
-#include "RA4Intel/IntelSystem.h"
+#include "RA4Recon/ReconSystem.h"
 #include "RA4Navigation/FlowField.h"
 #include "RA4Navigation/MNavRouter.h"
 #include "RA4Navigation/ReservationGrid.h"
@@ -71,11 +71,11 @@ public:
     SimWorld() = default;
 
     // --- Lifecycle ---------------------------------------------------------
-    // InIntelSettings is optional: nullptr (or bEnabled=false inside) means the
+    // InReconSettings is optional: nullptr (or bEnabled=false inside) means the
     // unreliable-intelligence layer is absent and the match behaves classically.
     // Additive default parameter, so no existing caller changes (ADR-0026).
     void Initialize(const ContentDatabase* InContent, const MatchSetup& Setup,
-                    const Intel::IntelSettings* InIntelSettings = nullptr);
+                    const Recon::ReconSettings* InReconSettings = nullptr);
     void Reset();
     void Restart();
 
@@ -116,7 +116,7 @@ public:
     // Belief state (unreliable intelligence, ADR-0026). Read-only outside the
     // simulation; the UI and the AI commander query enemy information here and
     // never through the entity getters above once the feature is enabled.
-    const Intel::IntelSystem& GetIntel() const { return IntelLayer; }
+    const Recon::ReconSystem& GetRecon() const { return ReconLayer; }
 
 
     // --- Spawning (server / mission scripts only) --------------------------
@@ -170,7 +170,7 @@ private:
     void SystemCombat();
     void SystemProjectiles();
     void SystemFogOfWar();
-    void SystemIntel();
+    void SystemRecon();
     void SystemVeterancy();
     void SystemFactionResources();
     void SystemDirectControl();
@@ -231,11 +231,14 @@ private:
     // Separate stream for the intel layer, seeded from the match seed. Isolation
     // is deliberate: intel draws must not shift the draw sequence of existing
     // systems, or every pre-intel replay becomes unreplayable at once.
-    Random IntelRng;
-    Intel::IntelSystem IntelLayer;
+    Random ReconRng;
+    Recon::ReconSystem ReconLayer;
+    // Reused per tick by SystemRecon; member so vector capacity persists and the
+    // steady state allocates nothing.
+    Recon::ObservationInput ReconInput;
     // Kept for Restart(), which re-runs Initialize with the original arguments.
     // Owned by the content layer, same lifetime contract as Content.
-    const Intel::IntelSettings* IntelSettingsRef = nullptr;
+    const Recon::ReconSettings* ReconSettingsRef = nullptr;
     TickIndex CurrentTick = 0;
     MatchPhase Phase = MatchPhase::NotStarted;
     PlayerId Winner = kInvalidPlayer;

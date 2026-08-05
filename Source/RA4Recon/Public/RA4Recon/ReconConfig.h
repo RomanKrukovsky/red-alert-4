@@ -18,13 +18,13 @@
 #include "RA4Core/Fixed.h"
 #include "RA4Core/Ids.h"
 
-#ifndef RA4INTEL_API
-#define RA4INTEL_API
+#ifndef RA4RECON_API
+#define RA4RECON_API
 #endif
 
 namespace RA4
 {
-namespace Intel
+namespace Recon
 {
 
 // Per-mille helper: designers author "0.35" in JSON, the loader converts to 350
@@ -143,7 +143,7 @@ struct TrackTuning
 
 // --- Root settings ---------------------------------------------------------------
 
-struct IntelSettings
+struct ReconSettings
 {
     // Master switch. False = the perceived world mirrors ground truth exactly and
     // the distortion/propagation phases do not run. Default OFF until M2 ships so
@@ -160,17 +160,25 @@ struct IntelSettings
 
     const DistortionProfile* FindDistortionProfile(const std::string& InName) const;
     const CommsProfile* FindCommsProfile(const std::string& InName) const;
+
+    // Deterministic digest of every gameplay-relevant field, in declaration
+    // order. Recorded in the replay header (ADR-0022: the recon configuration
+    // is part of the match ruleset) so that playback against different settings
+    // is refused up front instead of desyncing at the first checkpoint. Two
+    // settings objects with equal hashes replay identically; the blob itself is
+    // not stored because settings are data-driven and shipped with the build.
+    uint64_t ComputeSettingsHash() const;
 };
 
-// Loads settings from a JSON document (see Content/RA4/Data/Intel/intel_settings.json).
+// Loads settings from a JSON document (see Content/RA4/Data/Recon/recon_settings.json).
 // Returns false and fills OutErrors on any authoring mistake; a bad config must
 // fail loudly at load, never surface as weird mid-match behaviour (CLAUDE.md).
-RA4INTEL_API bool LoadIntelSettingsFromJson(const std::string& JsonText, IntelSettings& OutSettings,
+RA4RECON_API bool LoadReconSettingsFromJson(const std::string& JsonText, ReconSettings& OutSettings,
                                             std::vector<std::string>& OutErrors);
 
 // Validates ranges and cross-references (row sums, profile name resolution,
 // non-negative delays). Called by the loader and directly by tests.
-RA4INTEL_API bool ValidateIntelSettings(const IntelSettings& Settings, std::vector<std::string>& OutErrors);
+RA4RECON_API bool ValidateReconSettings(const ReconSettings& Settings, std::vector<std::string>& OutErrors);
 
-} // namespace Intel
+} // namespace Recon
 } // namespace RA4

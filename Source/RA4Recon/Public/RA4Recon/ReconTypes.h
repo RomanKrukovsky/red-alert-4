@@ -14,13 +14,13 @@
 #include "RA4Core/Ids.h"
 #include "RA4Core/Vector.h"
 
-#ifndef RA4INTEL_API
-#define RA4INTEL_API
+#ifndef RA4RECON_API
+#define RA4RECON_API
 #endif
 
 namespace RA4
 {
-namespace Intel
+namespace Recon
 {
 
 // --- Handles ----------------------------------------------------------------
@@ -44,7 +44,7 @@ struct TrackId
 
 // The ability of an entity to act as an intelligence source. Values come from
 // the entity's JSON definition; the simulation never invents them.
-struct IntelReporterComp
+struct ReconReporterComp
 {
     Fixed Competence = Fixed::FromInt(1);   // 0..1: how accurately it observes
     Fixed Discipline = Fixed::FromInt(1);   // 0..1: how honestly it self-reports
@@ -83,9 +83,10 @@ struct Observation
 
 // One report travelling up the chain of command. Created at emission time,
 // applied to the HQ map when the simulation reaches ArrivalTick.
-struct IntelReport
+struct ReconReport
 {
     uint32_t ReportId = 0;
+    PlayerId OwnerPlayer = kInvalidPlayer;  // whose HQ map this report feeds
     EntityId Author;
     TickIndex EmitTick = 0;
     TickIndex ArrivalTick = 0;
@@ -126,5 +127,5 @@ struct PerceivedTrack
     bool bAlive = false;                    // slot occupancy, managed by PerceivedWorld
 };
 
-} // namespace Intel
+} // namespace Recon
 } // namespace RA4

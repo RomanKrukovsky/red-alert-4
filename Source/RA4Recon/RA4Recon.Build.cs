@@ -1,12 +1,12 @@
 // Copyright (c) Red Alert 4 project.
 using UnrealBuildTool;
 
-// RA4Intel is part of the deterministic simulation layer: no UObject, no Actor, no
+// RA4Recon is part of the deterministic simulation layer: no UObject, no Actor, no
 // rendering type. The same sources compile in the standalone CMake harness under
 // Tools/HeadlessBuild. Dependencies are the minimum the phases actually use.
-public class RA4Intel : ModuleRules
+public class RA4Recon : ModuleRules
 {
-	public RA4Intel(ReadOnlyTargetRules Target) : base(Target)
+	public RA4Recon(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 		CppStandard = CppStandardVersion.Cpp20;

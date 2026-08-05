@@ -1,5 +1,7 @@
 // Copyright (c) Red Alert 4 project.
-#include "RA4Intel/IntelConfig.h"
+#include "RA4Recon/ReconConfig.h"
+
+#include "RA4Core/Checksum.h"
 
 #include <cmath>
 
@@ -7,10 +9,10 @@
 
 namespace RA4
 {
-namespace Intel
+namespace Recon
 {
 
-const DistortionProfile* IntelSettings::FindDistortionProfile(const std::string& InName) const
+const DistortionProfile* ReconSettings::FindDistortionProfile(const std::string& InName) const
 {
     for (const DistortionProfile& P : DistortionProfiles)
     {
@@ -22,7 +24,7 @@ const DistortionProfile* IntelSettings::FindDistortionProfile(const std::string&
     return nullptr;
 }
 
-const CommsProfile* IntelSettings::FindCommsProfile(const std::string& InName) const
+const CommsProfile* ReconSettings::FindCommsProfile(const std::string& InName) const
 {
     for (const CommsProfile& P : CommsProfiles)
     {
@@ -203,18 +205,18 @@ bool CheckPerMilleRange(int32_t Value, const char* Field, std::vector<std::strin
 
 } // namespace
 
-bool ValidateIntelSettings(const IntelSettings& Settings, std::vector<std::string>& OutErrors)
+bool ValidateReconSettings(const ReconSettings& Settings, std::vector<std::string>& OutErrors)
 {
     const size_t ErrorsBefore = OutErrors.size();
 
     if (Settings.FindDistortionProfile(Settings.ActiveDistortionProfile) == nullptr)
     {
-        OutErrors.push_back("intel_settings: active distortion profile '" + Settings.ActiveDistortionProfile +
+        OutErrors.push_back("recon_settings: active distortion profile '" + Settings.ActiveDistortionProfile +
                             "' not found");
     }
     if (Settings.FindCommsProfile(Settings.ActiveCommsProfile) == nullptr)
     {
-        OutErrors.push_back("intel_settings: active comms profile '" + Settings.ActiveCommsProfile + "' not found");
+        OutErrors.push_back("recon_settings: active comms profile '" + Settings.ActiveCommsProfile + "' not found");
     }
 
     for (const DistortionProfile& P : Settings.DistortionProfiles)
@@ -305,23 +307,23 @@ bool ValidateIntelSettings(const IntelSettings& Settings, std::vector<std::strin
     return OutErrors.size() == ErrorsBefore;
 }
 
-bool LoadIntelSettingsFromJson(const std::string& JsonText, IntelSettings& OutSettings,
+bool LoadReconSettingsFromJson(const std::string& JsonText, ReconSettings& OutSettings,
                                std::vector<std::string>& OutErrors)
 {
     Json::Value Root;
     std::string ParseError;
     if (!Json::Parse(JsonText, Root, ParseError))
     {
-        OutErrors.push_back("intel_settings: JSON parse error: " + ParseError);
+        OutErrors.push_back("recon_settings: JSON parse error: " + ParseError);
         return false;
     }
     if (!Root.IsObject())
     {
-        OutErrors.push_back("intel_settings: root is not an object");
+        OutErrors.push_back("recon_settings: root is not an object");
         return false;
     }
 
-    OutSettings = IntelSettings{};
+    OutSettings = ReconSettings{};
     OutSettings.bEnabled = ReadBool(Root, "enabled", false);
     OutSettings.ActiveDistortionProfile = ReadString(Root, "active_distortion_profile", OutSettings.ActiveDistortionProfile);
     OutSettings.ActiveCommsProfile = ReadString(Root, "active_comms_profile", OutSettings.ActiveCommsProfile);
@@ -368,8 +370,79 @@ bool LoadIntelSettingsFromJson(const std::string& JsonText, IntelSettings& OutSe
         T.TracksPerTickBudget = ReadInt(*Tracks, "tracks_per_tick_budget", T.TracksPerTickBudget);
     }
 
-    return ValidateIntelSettings(OutSettings, OutErrors);
+    return ValidateReconSettings(OutSettings, OutErrors);
 }
 
-} // namespace Intel
+uint64_t ReconSettings::ComputeSettingsHash() const
+{
+    // Field order below is the hash contract and follows declaration order.
+    // Adding ANY field changes every settings hash -- deliberately: a new
+    // tunable is a new ruleset, and old replays must be refused rather than
+    // replayed under silently different rules. Strings feed length+bytes.
+    const auto FeedString = [](Hash64& InH, const std::string& Str)
+    {
+        InH.FeedUInt32(uint32_t(Str.size()));
+        InH.Feed(Str.data(), Str.size());
+    };
+
+    Hash64 H;
+    H.FeedBool(bEnabled);
+    FeedString(H, ActiveDistortionProfile);
+    FeedString(H, ActiveCommsProfile);
+
+    H.FeedUInt32(uint32_t(Tracks.ConfidenceDecayPerSecondPerMille));
+    H.FeedUInt32(uint32_t(Tracks.ErrorRadiusGrowthTilesPerMinute));
+    H.FeedUInt32(uint32_t(Tracks.StaleAfterTicks));
+    H.FeedUInt32(uint32_t(Tracks.DropBelowConfidencePerMille));
+    H.FeedUInt32(uint32_t(Tracks.MergeRadiusTiles));
+    H.FeedUInt32(uint32_t(Tracks.MergeWindowTicks));
+    H.FeedUInt32(uint32_t(Tracks.AgreementConfidenceBonusPerMille));
+    H.FeedUInt32(uint32_t(Tracks.MaxTracksPerPlayer));
+    H.FeedUInt32(uint32_t(Tracks.TracksPerTickBudget));
+
+    H.FeedUInt32(uint32_t(DistortionProfiles.size()));
+    for (const DistortionProfile& P : DistortionProfiles)
+    {
+        FeedString(H, P.Name);
+        H.FeedBool(P.bClarityEnabled);
+        H.FeedUInt32(uint32_t(P.MinClarityPerMille));
+        H.FeedUInt32(uint32_t(P.ClarityDistanceFalloffPerMille));
+        H.FeedBool(P.bCountDistortionEnabled);
+        H.FeedUInt32(uint32_t(P.FearCountBiasMaxPerMille));
+        H.FeedUInt32(uint32_t(P.CompetenceNoiseMaxPerMille));
+        H.FeedBool(P.bClassificationErrorEnabled);
+        H.FeedBool(P.bPositionErrorEnabled);
+        H.FeedUInt32(uint32_t(P.PositionErrorMaxTiles));
+        H.FeedBool(P.bOmissionEnabled);
+        H.FeedUInt32(uint32_t(P.OmissionChanceMaxPerMille));
+        H.FeedBool(P.bFabricationEnabled);
+        H.FeedUInt32(uint32_t(P.FabricationChanceMaxPerMille));
+        H.FeedUInt32(uint32_t(P.MaxPhantomLifetimeTicks));
+        H.FeedBool(P.bSelfReportBiasEnabled);
+        H.FeedUInt32(uint32_t(P.SelfReportLossUnderstatementMaxPerMille));
+    }
+
+    H.FeedUInt32(uint32_t(CommsProfiles.size()));
+    for (const CommsProfile& P : CommsProfiles)
+    {
+        FeedString(H, P.Name);
+        H.FeedUInt32(uint32_t(P.HopDelayTicksByLevel.size()));
+        for (int32_t D : P.HopDelayTicksByLevel)
+        {
+            H.FeedUInt32(uint32_t(D));
+        }
+        H.FeedUInt32(uint32_t(P.OfficerBiasMaxPerMille));
+    }
+
+    for (int32_t Row = 0; Row < kObservedCategoryCount; ++Row)
+    {
+        for (int32_t Col = 0; Col < kObservedCategoryCount; ++Col)
+        {
+            H.FeedUInt32(uint32_t(Confusion.PerMille[Row][Col]));
+        }
+    }
+    return H.Get();
+}
+
+} // namespace Recon
 } // namespace RA4

@@ -12,10 +12,10 @@
 
 #include "RA4Core/Ids.h"
 #include "RA4Core/Vector.h"
-#include "RA4Intel/IntelTypes.h"
+#include "RA4Recon/ReconTypes.h"
 
-#ifndef RA4INTEL_API
-#define RA4INTEL_API
+#ifndef RA4RECON_API
+#define RA4RECON_API
 #endif
 
 namespace RA4
@@ -25,18 +25,18 @@ class ByteWriter;
 class ByteReader;
 class Hash64;
 
-namespace Intel
+namespace Recon
 {
 
-class IntelSystem;
+class ReconSystem;
 
 // Test scaffolding needs the writer API without going through a full match.
 // Declared here, defined only in the test binary; a friend declaration is the
-// narrowest possible opening (INVARIANT 9 allows writes from RA4Intel and its
+// narrowest possible opening (INVARIANT 9 allows writes from RA4Recon and its
 // deterministic tests, never from presentation/UI/AI).
 struct PerceivedWorldTestAccess;
 
-class RA4INTEL_API PerceivedWorld
+class RA4RECON_API PerceivedWorld
 {
 public:
     // --- Read surface (the ONLY thing presentation/UI/AI may touch) ----------
@@ -61,11 +61,11 @@ public:
 
 private:
     // --- Writer API: structural, not disciplinary (INVARIANT 9) --------------
-    // Only the intel phases (IntelSystem) and the deterministic test harness may
+    // Only the intel phases (ReconSystem) and the deterministic test harness may
     // mutate belief. Everything below being private is the fix for review
     // BLOCKER 2 -- a public mutable accessor was the violation, regardless of
     // how politely its comment asked callers not to use it.
-    friend class IntelSystem;
+    friend class ReconSystem;
     friend struct PerceivedWorldTestAccess;
 
     void Initialize(int32_t MapWidthTiles, int32_t MapHeightTiles, int32_t MaxTracks);
@@ -108,5 +108,5 @@ private:
     int32_t MapHeight = 0;
 };
 
-} // namespace Intel
+} // namespace Recon
 } // namespace RA4
