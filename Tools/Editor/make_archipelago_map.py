@@ -55,6 +55,20 @@ Every number below was measured against a live landscape, not guessed.
    Passing amplitude into the world_radius slot returns success=True while
    reporting vertices_modified=0 - a silent no-op. Always check
    result.vertices_modified.
+
+5. Do NOT call LevelEditorSubsystem.load_level() from inside an MCP/HTTP
+   request. Tearing down the world while the HTTP handler is still on the
+   stack crashes the editor:
+       Fatal error: [File:./Editor/UnrealEd/Private/EditorServer.cpp]
+       [Line: 1951]  SIGSEGV: invalid attempt to access memory at 0x3
+   Load the level interactively, or from a headless -ExecutePythonScript run,
+   before invoking this generator.
+
+6. Saves fail SILENTLY when the disk is full. save_current_level() and
+   save_dirty_packages() both return True while writing nothing, leaving the
+   .umap byte-identical on disk. This destroyed an earlier hand-built pass.
+   verify_saved_to_disk() below compares the on-disk size before and after,
+   so a failed write is reported instead of trusted.
 """
 
 import unreal
@@ -357,8 +371,17 @@ def add_ore_fields():
     in for green/blue ore. Replace when real ore art lands.
     """
     cube = "/Engine/BasicShapes/Cube"
-    green = unreal.load_asset("/Game/ThirdParty/CityPark/Materials/MI_Grass01")
-    blue = unreal.load_asset("/Game/ThirdParty/CityPark/Materials/MI_Water1")
+    # CityPark materials are nested (Materials/Flora/Grass, Materials/BaseMaterial),
+    # not flat under Materials/. The flat paths silently resolve to None, which
+    # previously left the marker count at 0 while cubes were in fact spawned.
+    green = unreal.load_asset(
+        "/Game/ThirdParty/CityPark/Materials/Flora/Grass/MI_Grass01"
+    )
+    blue = unreal.load_asset(
+        "/Game/ThirdParty/CityPark/Materials/BaseMaterial/M_WaterShader_V_01"
+    )
+    if green is None or blue is None:
+        print("  [warn] ore tint material missing; markers will be untinted")
     scale = unreal.Vector(3.0, 3.0, 1.5)
 
     placed = 0
@@ -374,11 +397,14 @@ def add_ore_fields():
                 cube, x, y, terrain_z(x, y) + 50.0 * scale.z, 0.0, scale,
                 "Ore_%s_%d_%d" % (kind, int(x), int(y)),
             )
-            if actor and mat:
+            if actor is None:
+                continue
+            # Count the marker itself; tinting is cosmetic and must not gate it.
+            placed += 1
+            if mat:
                 actor.get_component_by_class(
                     unreal.StaticMeshComponent
                 ).set_material(0, mat)
-                placed += 1
     print("Placed %d ore markers (placeholder cubes)" % placed)
 
 
@@ -485,6 +511,91 @@ def height_map_ascii(width=64, height=32):
 
 
 # --------------------------------------------------------------------- main ---
+PLAYER_START_CLEARANCE = 50.0                # spawn capsule clearance above ground
+
+
+def snap_player_starts():
+    """Lift PlayerStarts onto the sculpted island tops.
+
+    The generator raises the base islands to ~890, but PlayerStarts keep
+    whatever Z the level already had (50, from when the map was flat), which
+    buries them ~840 uu underground. Their XY must not move: (2400,2400) and
+    (10400,10400) are contract values shared with the simulation bootstrap.
+    """
+    moved = 0
+    for actor in editor_actors().get_all_level_actors():
+        if not isinstance(actor, unreal.PlayerStart):
+            continue
+        loc = actor.get_actor_location()
+        target_z = terrain_z(loc.x, loc.y) + PLAYER_START_CLEARANCE
+        if abs(loc.z - target_z) > 1.0:
+            actor.set_actor_location(
+                unreal.Vector(loc.x, loc.y, target_z), False, True
+            )
+            moved += 1
+        print("  PlayerStart (%.0f,%.0f) z %.0f -> %.0f"
+              % (loc.x, loc.y, loc.z, target_z))
+    print("Snapped %d PlayerStarts" % moved)
+
+
+def verify_player_starts():
+    """Fail if any PlayerStart is underground or over water."""
+    problems = []
+    for actor in editor_actors().get_all_level_actors():
+        if not isinstance(actor, unreal.PlayerStart):
+            continue
+        loc = actor.get_actor_location()
+        tz = terrain_z(loc.x, loc.y)
+        if tz < SEA_LEVEL:
+            problems.append("PlayerStart at (%.0f,%.0f) is over water" % (loc.x, loc.y))
+        elif loc.z < tz:
+            problems.append(
+                "PlayerStart at (%.0f,%.0f) is %.0f uu underground"
+                % (loc.x, loc.y, tz - loc.z)
+            )
+    for p in problems:
+        print("  PROBLEM: %s" % p)
+    return len(problems)
+
+
+def save_and_verify():
+    """Save the level and prove the bytes actually reached disk.
+
+    save_current_level() returns True even when the write silently fails on a
+    full disk, which previously left the .umap byte-identical and destroyed a
+    whole build. Compare the on-disk file before and after instead.
+    """
+    import os
+
+    umap = os.path.join(
+        unreal.Paths.project_content_dir(), "Maps", "RA4_Skirmish_Production.umap"
+    )
+    umap = os.path.abspath(umap)
+    before_size = os.path.getsize(umap) if os.path.exists(umap) else -1
+    before_mtime = os.path.getmtime(umap) if os.path.exists(umap) else -1
+
+    unreal.get_editor_subsystem(unreal.LevelEditorSubsystem).save_current_level()
+
+    if not os.path.exists(umap):
+        raise RuntimeError("save reported success but %s does not exist" % umap)
+    after_size = os.path.getsize(umap)
+    after_mtime = os.path.getmtime(umap)
+
+    print("umap %d -> %d bytes" % (before_size, after_size))
+    if after_mtime == before_mtime:
+        raise RuntimeError(
+            "save did not touch %s (mtime unchanged) - disk full or read-only?"
+            % umap
+        )
+    # A landscape plus 40 actors is far larger than the bare stub level.
+    if after_size < 100 * 1024:
+        raise RuntimeError(
+            "umap is only %d bytes; landscape/actor data did not persist "
+            "(check free disk space)" % after_size
+        )
+    print("Level saved and verified on disk")
+
+
 def main():
     print("=== Building archipelago skirmish map ===")
     clear_static_meshes()
@@ -496,11 +607,11 @@ def main():
     add_buildings()
     add_ore_fields()
     scatter_foliage()
-    problems = verify()
+    snap_player_starts()
+    problems = verify() + verify_player_starts()
     height_map_ascii()
 
-    unreal.get_editor_subsystem(unreal.LevelEditorSubsystem).save_current_level()
-    print("Level saved")
+    save_and_verify()
 
     if problems:
         raise RuntimeError("%d placement problems; map not clean" % problems)
