@@ -129,7 +129,14 @@ AIConfig MakeProfileConfig(AIProfile Profile, AIDifficulty Difficulty)
             // All-in early aggression: the smallest viable economy, the smallest
             // committing force, and almost no reserve. Loses to anything that
             // survives the opening, which is the intended counterplay.
-            Config.TargetHarvesters = 1;
+            //
+            // League pass 1 (560 matches, factions alternated): 36% win rate,
+            // the weakest profile. Root cause was not the aggression but the
+            // economy: one harvester cannot fund a second wave, so a single
+            // failed opening ended the match. Two harvesters keeps the identity
+            // (still the smallest economy of any profile) while making the rush
+            // repeatable instead of a coin flip.
+            Config.TargetHarvesters = 2;
             Config.AttackArmySize = 3;
             Config.MinimumAttackSize = 2;
             Config.TargetDefences = 0;
@@ -145,10 +152,17 @@ AIConfig MakeProfileConfig(AIProfile Profile, AIDifficulty Difficulty)
         case AIProfile::Turtle:
             // Trades all early initiative for defence and tech, then attacks with a
             // much larger force than any other profile fields.
+            //
+            // League pass 1: 72% win rate, the strongest profile. With the current
+            // content set six turrets are effectively uncrackable, so Turtle never
+            // paid a price for surrendering the initiative. Five keeps it the most
+            // fortified profile (Defensive holds four -- the profile invariant
+            // TurtleIsTheMostDefensive caught an attempt to tie them) while
+            // leaving attackers a real, expensive way through.
             Config.TargetHarvesters = 4;
             Config.AttackArmySize = 14;
             Config.MinimumAttackSize = 8;
-            Config.TargetDefences = 6;
+            Config.TargetDefences = 5;
             Config.CreditReserve = 600;
             Config.DefenceWeight = 160;
             Config.TechWeight = 125;

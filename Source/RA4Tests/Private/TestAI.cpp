@@ -2679,3 +2679,44 @@ RA4_TEST(BattlePredictor, UnarmedUnitInForceDoesNotCrashGatherStats)
     const BattleEstimate E = BattlePredictor::PredictFromWorld(World, 0, 1, Mixed, Defender);
     RA4_EXPECT(E.WinProbability >= 0 && E.WinProbability <= 100);
 }
+
+
+RA4_TEST(AILeague, FactionAlternationCoversBothSidesOfAPairing)
+{
+    // Regression against the finding that made this feature exist: with a fixed
+    // Soviet-vs-Alliance layout, player 0 won 490 of 490 decisive league games,
+    // i.e. the table was measuring the faction matchup, not the profiles.
+    LeagueConfig Config;
+    Config.Roster = {AIProfile::Rush, AIProfile::Turtle};
+    Config.MatchesPerPairing = 4;
+    Config.MaxTicksPerMatch = 40;   // schedule structure is what's under test
+
+    const LeagueResult Result = AILeague::RunRoundRobin(Config);
+    RA4_EXPECT_EQ(uint32_t(8), Result.TotalMatches());
+
+    uint32_t Normal = 0, Swapped = 0;
+    for (const LeagueMatchRecord& R : Result.Matches)
+    {
+        if (R.bSwappedFactions) { ++Swapped; } else { ++Normal; }
+    }
+    RA4_EXPECT_EQ(uint32_t(4), Normal);
+    RA4_EXPECT_EQ(uint32_t(4), Swapped);
+}
+
+RA4_TEST(AILeague, SwappedFactionMatchIsStillDeterministic)
+{
+    const LeagueMatchRecord A = AILeague::PlayMatch(
+        AIProfile::Aggressive, AIProfile::Economic, AIDifficulty::Normal,
+        999ULL, 20 * 60 * 5, /*bSwapFactions*/ true);
+    const LeagueMatchRecord B = AILeague::PlayMatch(
+        AIProfile::Aggressive, AIProfile::Economic, AIDifficulty::Normal,
+        999ULL, 20 * 60 * 5, /*bSwapFactions*/ true);
+    RA4_EXPECT_EQ(A.FinalChecksum, B.FinalChecksum);
+    RA4_EXPECT(A.bSwappedFactions && B.bSwappedFactions);
+
+    // And swapping factions must actually change the match, or the flag is a lie.
+    const LeagueMatchRecord C = AILeague::PlayMatch(
+        AIProfile::Aggressive, AIProfile::Economic, AIDifficulty::Normal,
+        999ULL, 20 * 60 * 5, /*bSwapFactions*/ false);
+    RA4_EXPECT(A.FinalChecksum != C.FinalChecksum);
+}

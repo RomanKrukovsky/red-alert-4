@@ -24,17 +24,17 @@ const ContentId kSovYard = MakeContentId("building.sov.construction_yard");
 const ContentId kAllYard = MakeContentId("building.all.construction_yard");
 const ContentId kOreField = MakeContentId("resource.ore_field");
 
-MatchSetup MakeLeagueSetup(uint64_t Seed)
+MatchSetup MakeLeagueSetup(uint64_t Seed, bool bSwapFactions)
 {
     MatchSetup Setup;
     Setup.Seed = Seed;
     Setup.Map.Name = "league.plains";
     Setup.Map.Resize(64, 64, Tile_GroundPassable);
     Setup.Players[0].bActive = true;
-    Setup.Players[0].Faction = FactionId::Soviet;
+    Setup.Players[0].Faction = bSwapFactions ? FactionId::Alliance : FactionId::Soviet;
     Setup.Players[0].StartingCredits = 10000;
     Setup.Players[1].bActive = true;
-    Setup.Players[1].Faction = FactionId::Alliance;
+    Setup.Players[1].Faction = bSwapFactions ? FactionId::Soviet : FactionId::Alliance;
     Setup.Players[1].StartingCredits = 10000;
     return Setup;
 }
@@ -59,21 +59,22 @@ const char* ShortName(AIProfile P)
 
 LeagueMatchRecord AILeague::PlayMatch(AIProfile ProfileA, AIProfile ProfileB,
                                       AIDifficulty Difficulty, uint64_t Seed,
-                                      int32_t MaxTicks)
+                                      int32_t MaxTicks, bool bSwapFactions)
 {
     LeagueMatchRecord Record;
     Record.Seed = Seed;
     Record.Profiles[0] = ProfileA;
     Record.Profiles[1] = ProfileB;
     Record.Difficulty = Difficulty;
+    Record.bSwappedFactions = bSwapFactions;
 
     ContentDatabase Content;
     BuildDefaultContent(Content);
 
     SimWorld World;
-    World.Initialize(&Content, MakeLeagueSetup(Seed));
-    World.SpawnBuilding(kSovYard, 0, TileCoord(10, 10), true);
-    World.SpawnBuilding(kAllYard, 1, TileCoord(48, 48), true);
+    World.Initialize(&Content, MakeLeagueSetup(Seed, bSwapFactions));
+    World.SpawnBuilding(bSwapFactions ? kAllYard : kSovYard, 0, TileCoord(10, 10), true);
+    World.SpawnBuilding(bSwapFactions ? kSovYard : kAllYard, 1, TileCoord(48, 48), true);
     for (int32_t X = 0; X < 3; ++X)
     {
         for (int32_t Y = 0; Y < 3; ++Y)
@@ -152,8 +153,11 @@ LeagueResult AILeague::RunRoundRobin(const LeagueConfig& Config)
             for (uint32_t I = 0; I < Config.MatchesPerPairing; ++I)
             {
                 const uint64_t Seed = DeriveMatchSeed(Config.BaseSeed, MatchIndex);
+                // Odd repeats swap factions so half of every pairing is played
+                // from each side of the faction matchup.
+                const bool bSwap = Config.bAlternateFactions && (I % 2u) == 1u;
                 LeagueMatchRecord Record = PlayMatch(A, B, Config.Difficulty, Seed,
-                                                     Config.MaxTicksPerMatch);
+                                                     Config.MaxTicksPerMatch, bSwap);
                 Record.MatchIndex = MatchIndex;
                 ++MatchIndex;
 

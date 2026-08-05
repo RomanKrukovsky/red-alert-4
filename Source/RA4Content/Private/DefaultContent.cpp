@@ -115,7 +115,14 @@ void BuildWeapons(ContentDatabase& Db)
         W.Name = "weapon.turret_cannon";
         W.Damage = 70;
         W.Warhead = WarheadClass::ArmorPiercing;
-        W.MaxRange = Metres(11);
+        // League pass 1 found static defence literally uncrackable: at 11 m the
+        // turret out-ranged every unit in the game (heavy tank 9 m), so attackers
+        // died without firing a shot and the Turtle profile finished 560 matches
+        // without losing a single decisive game. 9 m lets the heaviest tank trade
+        // at parity; the turret keeps its damage edge (70 vs 90 per 30 vs 40
+        // ticks), Defense armor and 500 HP, so a wall is still strong -- just no
+        // longer a mathematical dead end.
+        W.MaxRange = Metres(9);
         W.CooldownTicks = 30;
         W.ProjectileSpeed = Metres(90);
         Db.AddWeapon(W);

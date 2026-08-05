@@ -43,6 +43,12 @@ struct LeagueMatchRecord
     AIProfile Profiles[2] = {AIProfile::Balanced, AIProfile::Balanced};
     AIDifficulty Difficulty = AIDifficulty::Normal;
 
+    // Which faction each player fielded this match. The league alternates them
+    // between repeats of a pairing, because faction strength would otherwise be
+    // indistinguishable from profile strength (found the hard way: an early run
+    // reported player 0 winning 490:0, which was the Soviet roster, not the AI).
+    bool bSwappedFactions = false;
+
     // kInvalidPlayer means the tick budget expired with both sides alive: a draw.
     PlayerId Winner = kInvalidPlayer;
     uint32_t DurationTicks = 0;
@@ -96,6 +102,11 @@ struct LeagueConfig
     AIDifficulty Difficulty = AIDifficulty::Normal;
     uint64_t BaseSeed = 20260805;
 
+    // Alternate which profile plays which faction between repeats of a pairing,
+    // so faction strength averages out of the profile comparison instead of
+    // masquerading as it. Off = every match is ProfileA-as-Soviet.
+    bool bAlternateFactions = true;
+
     // Profiles that enter the round-robin. Empty = all eight.
     std::vector<AIProfile> Roster;
 };
@@ -124,7 +135,8 @@ public:
     // single cell of the table cheaply and tools can shard big runs.
     static LeagueMatchRecord PlayMatch(AIProfile ProfileA, AIProfile ProfileB,
                                        AIDifficulty Difficulty, uint64_t Seed,
-                                       int32_t MaxTicks);
+                                       int32_t MaxTicks,
+                                       bool bSwapFactions = false);
 };
 
 } // namespace AI
