@@ -1,6 +1,8 @@
 // Copyright (c) Red Alert 4 project.
 #include "RA4Recon/ReconConfig.h"
 
+#include "RA4Core/Checksum.h"
+
 #include <cmath>
 
 #include "RA4Content/JsonParser.h"
@@ -369,6 +371,77 @@ bool LoadReconSettingsFromJson(const std::string& JsonText, ReconSettings& OutSe
     }
 
     return ValidateReconSettings(OutSettings, OutErrors);
+}
+
+uint64_t ReconSettings::ComputeSettingsHash() const
+{
+    // Field order below is the hash contract and follows declaration order.
+    // Adding ANY field changes every settings hash -- deliberately: a new
+    // tunable is a new ruleset, and old replays must be refused rather than
+    // replayed under silently different rules. Strings feed length+bytes.
+    const auto FeedString = [](Hash64& InH, const std::string& Str)
+    {
+        InH.FeedUInt32(uint32_t(Str.size()));
+        InH.Feed(Str.data(), Str.size());
+    };
+
+    Hash64 H;
+    H.FeedBool(bEnabled);
+    FeedString(H, ActiveDistortionProfile);
+    FeedString(H, ActiveCommsProfile);
+
+    H.FeedUInt32(uint32_t(Tracks.ConfidenceDecayPerSecondPerMille));
+    H.FeedUInt32(uint32_t(Tracks.ErrorRadiusGrowthTilesPerMinute));
+    H.FeedUInt32(uint32_t(Tracks.StaleAfterTicks));
+    H.FeedUInt32(uint32_t(Tracks.DropBelowConfidencePerMille));
+    H.FeedUInt32(uint32_t(Tracks.MergeRadiusTiles));
+    H.FeedUInt32(uint32_t(Tracks.MergeWindowTicks));
+    H.FeedUInt32(uint32_t(Tracks.AgreementConfidenceBonusPerMille));
+    H.FeedUInt32(uint32_t(Tracks.MaxTracksPerPlayer));
+    H.FeedUInt32(uint32_t(Tracks.TracksPerTickBudget));
+
+    H.FeedUInt32(uint32_t(DistortionProfiles.size()));
+    for (const DistortionProfile& P : DistortionProfiles)
+    {
+        FeedString(H, P.Name);
+        H.FeedBool(P.bClarityEnabled);
+        H.FeedUInt32(uint32_t(P.MinClarityPerMille));
+        H.FeedUInt32(uint32_t(P.ClarityDistanceFalloffPerMille));
+        H.FeedBool(P.bCountDistortionEnabled);
+        H.FeedUInt32(uint32_t(P.FearCountBiasMaxPerMille));
+        H.FeedUInt32(uint32_t(P.CompetenceNoiseMaxPerMille));
+        H.FeedBool(P.bClassificationErrorEnabled);
+        H.FeedBool(P.bPositionErrorEnabled);
+        H.FeedUInt32(uint32_t(P.PositionErrorMaxTiles));
+        H.FeedBool(P.bOmissionEnabled);
+        H.FeedUInt32(uint32_t(P.OmissionChanceMaxPerMille));
+        H.FeedBool(P.bFabricationEnabled);
+        H.FeedUInt32(uint32_t(P.FabricationChanceMaxPerMille));
+        H.FeedUInt32(uint32_t(P.MaxPhantomLifetimeTicks));
+        H.FeedBool(P.bSelfReportBiasEnabled);
+        H.FeedUInt32(uint32_t(P.SelfReportLossUnderstatementMaxPerMille));
+    }
+
+    H.FeedUInt32(uint32_t(CommsProfiles.size()));
+    for (const CommsProfile& P : CommsProfiles)
+    {
+        FeedString(H, P.Name);
+        H.FeedUInt32(uint32_t(P.HopDelayTicksByLevel.size()));
+        for (int32_t D : P.HopDelayTicksByLevel)
+        {
+            H.FeedUInt32(uint32_t(D));
+        }
+        H.FeedUInt32(uint32_t(P.OfficerBiasMaxPerMille));
+    }
+
+    for (int32_t Row = 0; Row < kObservedCategoryCount; ++Row)
+    {
+        for (int32_t Col = 0; Col < kObservedCategoryCount; ++Col)
+        {
+            H.FeedUInt32(uint32_t(Confusion.PerMille[Row][Col]));
+        }
+    }
+    return H.Get();
 }
 
 } // namespace Recon

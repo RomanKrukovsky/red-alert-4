@@ -12,7 +12,9 @@
 #include "RA4Recon/ReconConfig.h"
 #include "RA4Recon/ReconSystem.h"
 #include "RA4Recon/PerceivedWorld.h"
+#include "RA4Replay/Replay.h"
 
+#include <cstring>
 #include <fstream>
 #include <sstream>
 
@@ -722,4 +724,244 @@ RA4_TEST(Recon, BeliefIsReplayReconstructible)
         RA4_EXPECT(LiveTracks[I]->LastUpdateTick == ReplayTracks[I]->LastUpdateTick);
         RA4_EXPECT(LiveTracks[I]->Confidence == ReplayTracks[I]->Confidence);
     }
+}
+// --- I-B5: belief is replay-reconstructible (INVARIANT 11) -----------------------
+
+namespace
+{
+// Records a short recon-enabled match and returns its bytes plus the belief
+// checksum captured at every tick. The scenario seeds nothing outside the
+// header, so playback rebuilds it exactly (same rule as
+// Replay.PlaybackReproducesEveryCheckpointChecksum).
+struct BeliefTimeline
+{
+    std::vector<uint8_t> ReplayBytes;
+    std::vector<uint64_t> BeliefChecksumPerTick; // index = tick, player 0's world
+};
+
+BeliefTimeline RecordReconMatch(const ContentDatabase& Content, const Recon::ReconSettings& Settings,
+                                uint64_t Seed, int32_t Ticks)
+{
+    BeliefTimeline Out;
+    MatchSetup Setup = MakeTestSetup(Seed);
+    SimWorld World;
+    World.Initialize(&Content, Setup, &Settings);
+
+    ReplayRecorder Recorder;
+    Recorder.Begin(MakeHeaderFromSetup(Setup, Content, "test", &Settings));
+
+    for (int32_t I = 0; I < Ticks; ++I)
+    {
+        CommandFrame Frame;
+        Frame.Tick = World.GetTick();
+        // The stream must contain real commands so the replayed sim (and the
+        // fog input the recon phases read) evolves: an empty-world timeline
+        // would pass reconstruction trivially (review finding on I-B5). Two
+        // construction yards appear from the command stream itself, so the
+        // rebuilt run owes ALL of its state to the replay bytes.
+        if (I == 3)
+        {
+            Command C;
+            C.Type = CommandType::PlaceBuilding;
+            C.Issuer = 0;
+            C.Content = Ids::SovConYard;
+            C.Tile = TileCoord(10, 10);
+            Frame.Commands.push_back(C);
+        }
+        if (I == 5)
+        {
+            Command C;
+            C.Type = CommandType::PlaceBuilding;
+            C.Issuer = 1;
+            C.Content = Ids::AllConYard;
+            C.Tile = TileCoord(50, 50);
+            Frame.Commands.push_back(C);
+        }
+        World.Tick(Frame.Commands.empty() ? nullptr : &Frame);
+        World.ClearEvents();
+        Recorder.RecordFrame(Frame);
+        if ((World.GetTick() % kChecksumIntervalTicks) == 0)
+        {
+            Recorder.RecordCheckpoint(World.GetTick(), World.ComputeStateChecksum());
+        }
+        Hash64 H;
+        World.GetRecon().GetPerceivedWorld(0).FeedChecksum(H);
+        Out.BeliefChecksumPerTick.push_back(H.Get());
+    }
+    Recorder.End(World.GetTick(), World.GetWinner());
+    Out.ReplayBytes = Recorder.Serialize();
+    return Out;
+}
+} // namespace
+
+RA4_TEST(Recon, BeliefIsReconstructibleFromReplayAlone)
+{
+    // INVARIANT 11: "what did player P believe at tick T" must be answerable
+    // from (replay, playerId). We record a live match, then rebuild the belief
+    // timeline from nothing but the replay bytes and the settings the header
+    // identifies -- every per-tick belief checksum must match the live run.
+    //
+    // M2 OBLIGATION: while the recon phases are M0-empty, belief only changes
+    // through plumbing (map dims, enabled-ness, structures arriving from the
+    // command stream). Once observation/distortion land, this test MUST be
+    // extended with a tuning-swap case: replaying under settings with a
+    // DIFFERENT hash must produce a DIFFERENT belief timeline, or the hash
+    // gate is decorative. Tracked in NEXT_ACTIONS I-M2 acceptance criteria.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+
+    const BeliefTimeline Live = RecordReconMatch(Content, Settings, 90210, 120);
+
+    ReplayData Data;
+    std::string Error;
+    RA4_REQUIRE(DeserializeReplay(Live.ReplayBytes, Data, Error));
+    RA4_REQUIRE(Data.Header.bReconEnabled);
+    RA4_EXPECT(Data.Header.ReconSettingsHash == Settings.ComputeSettingsHash());
+
+    // Reconstruction: header -> setup -> tick the command stream, reading
+    // player 0's perceived world at every tick.
+    MatchSetup Setup;
+    Setup.Seed = Data.Header.Seed;
+    Setup.Map.Name = Data.Header.MapName;
+    Setup.Map.Width = Data.Header.MapWidth;
+    Setup.Map.Height = Data.Header.MapHeight;
+    Setup.Map.Tiles = Data.Header.MapTiles;
+    for (int32_t I = 0; I < kMaxPlayers; ++I)
+    {
+        Setup.Players[I].bActive = Data.Header.Players[I].bActive;
+        Setup.Players[I].Faction = FactionId(Data.Header.Players[I].Faction);
+        Setup.Players[I].StartingCredits = Data.Header.Players[I].StartingCredits;
+    }
+    // An INDEPENDENTLY CONSTRUCTED settings object with an equal hash: this is
+    // the contract the header pins ("equal hashes replay identically") -- reusing
+    // the recording's own object would prove nothing about it.
+    Recon::ReconSettings Reconstructed = MakeMinimalSettings(true);
+    RA4_REQUIRE(Reconstructed.ComputeSettingsHash() == Data.Header.ReconSettingsHash);
+
+    SimWorld Rebuilt;
+    Rebuilt.Initialize(&Content, Setup, &Reconstructed);
+
+    size_t NextFrame = 0;
+    for (TickIndex Tick = 0; Tick < Data.FinalTick; ++Tick)
+    {
+        const CommandFrame* Frame = nullptr;
+        if (NextFrame < Data.Frames.size() && Data.Frames[NextFrame].Tick == Tick)
+        {
+            Frame = &Data.Frames[NextFrame];
+            ++NextFrame;
+        }
+        Rebuilt.Tick(Frame);
+        Rebuilt.ClearEvents();
+
+        Hash64 H;
+        Rebuilt.GetRecon().GetPerceivedWorld(0).FeedChecksum(H);
+        RA4_REQUIRE(size_t(Tick) < Live.BeliefChecksumPerTick.size());
+        if (H.Get() != Live.BeliefChecksumPerTick[Tick])
+        {
+            RA4Test::ReportFailure("belief diverged from live run at tick " + std::to_string(Tick),
+                                   __FILE__, __LINE__);
+            return;
+        }
+    }
+}
+
+RA4_TEST(Recon, ReplayRefusesReconRulesetMismatch)
+{
+    // The three refusal modes, each as loud as a content-hash mismatch:
+    // enabled-recording vs no settings, disabled-recording vs settings,
+    // enabled-recording vs different tunables.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+
+    const BeliefTimeline Live = RecordReconMatch(Content, Settings, 555, 60);
+    ReplayData Data;
+    std::string Error;
+    RA4_REQUIRE(DeserializeReplay(Live.ReplayBytes, Data, Error));
+
+    // 1. Recon recording, verifier given nothing.
+    {
+        const ReplayVerifyResult V = VerifyReplay(Data, Content, nullptr);
+        RA4_EXPECT(!V.bSucceeded);
+        RA4_EXPECT(V.Error.find("recon") != std::string::npos);
+    }
+    // 1b. Recon recording, settings object present but disabled: same refusal
+    //     path as nullptr (disabled == absent), message must still say "intel".
+    {
+        Recon::ReconSettings Disabled = MakeMinimalSettings(false);
+        const ReplayVerifyResult V = VerifyReplay(Data, Content, &Disabled);
+        RA4_EXPECT(!V.bSucceeded);
+        RA4_EXPECT(V.Error.find("recon") != std::string::npos);
+    }
+    // 2. Recon recording, different tunables.
+    {
+        Recon::ReconSettings Other = MakeMinimalSettings(true);
+        Other.Tracks.StaleAfterTicks += 1;
+        const ReplayVerifyResult V = VerifyReplay(Data, Content, &Other);
+        RA4_EXPECT(!V.bSucceeded);
+        RA4_EXPECT(V.Error.find("hash mismatch") != std::string::npos);
+    }
+    // 3. Matching settings verify clean.
+    {
+        const ReplayVerifyResult V = VerifyReplay(Data, Content, &Settings);
+        if (!V.bSucceeded)
+        {
+            RA4Test::ReportFailure("intel replay failed to verify: " + V.Error + " at tick " +
+                                       std::to_string(V.DivergedAtTick),
+                                   __FILE__, __LINE__);
+        }
+        RA4_EXPECT(V.bSucceeded);
+    }
+    // 4. Classic recording, verifier wrongly given settings.
+    {
+        MatchSetup Setup = MakeTestSetup(556);
+        SimWorld World;
+        World.Initialize(&Content, Setup);
+        ReplayRecorder Rec;
+        Rec.Begin(MakeHeaderFromSetup(Setup, Content, "test"));
+        for (int32_t I = 0; I < 40; ++I)
+        {
+            CommandFrame Frame;
+            Frame.Tick = World.GetTick();
+            World.Tick(nullptr);
+            World.ClearEvents();
+            Rec.RecordFrame(Frame);
+            if ((World.GetTick() % kChecksumIntervalTicks) == 0)
+            {
+                Rec.RecordCheckpoint(World.GetTick(), World.ComputeStateChecksum());
+            }
+        }
+        Rec.End(World.GetTick(), World.GetWinner());
+        ReplayData Classic;
+        RA4_REQUIRE(DeserializeReplay(Rec.Serialize(), Classic, Error));
+        const ReplayVerifyResult V = VerifyReplay(Classic, Content, &Settings);
+        RA4_EXPECT(!V.bSucceeded);
+        RA4_EXPECT(V.Error.find("without the recon layer") != std::string::npos);
+    }
+}
+
+RA4_TEST(Recon, PerceivedWorldRefusesForeignVersion)
+{
+    // Review MINOR from I-B4: the version-mismatch refusal existed but nothing
+    // pinned it. A v2 (or corrupt-version) stream must be refused, not
+    // misparsed as current.
+    Recon::PerceivedWorld World;
+    PerceivedWorldTestAccess::Initialize(World, 16, 16, 4);
+    (void)PerceivedWorldTestAccess::AllocateTrack(World);
+
+    ByteWriter W;
+    World.Serialize(W);
+    std::vector<uint8_t> Bytes = W.GetBuffer();
+
+    // The version is the first uint32 of the stream; regress it by one.
+    RA4_REQUIRE(Bytes.size() >= 4);
+    uint32_t Version = 0;
+    std::memcpy(&Version, Bytes.data(), sizeof(Version));
+    Version -= 1;
+    std::memcpy(Bytes.data(), &Version, sizeof(Version));
+
+    Recon::PerceivedWorld Restored;
+    ByteReader R(Bytes);
+    RA4_EXPECT(!PerceivedWorldTestAccess::Deserialize(Restored, R));
 }

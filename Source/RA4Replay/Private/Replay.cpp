@@ -29,6 +29,8 @@ void SerializeHeader(ByteWriter& W, const ReplayHeader& H)
         W.WriteInt32(P.StartingCredits);
         W.WriteString(P.Name);
     }
+    W.WriteBool(H.bReconEnabled);
+    W.WriteUInt64(H.ReconSettingsHash);
 }
 
 bool DeserializeHeader(ByteReader& R, ReplayHeader& H, std::string& OutError)
@@ -73,6 +75,17 @@ bool DeserializeHeader(ByteReader& R, ReplayHeader& H, std::string& OutError)
         P.Name = R.ReadString();
     }
 
+    H.bReconEnabled = R.ReadBool();
+    H.ReconSettingsHash = R.ReadUInt64();
+    if (!H.bReconEnabled && H.ReconSettingsHash != 0)
+    {
+        // A hash without the flag is either corruption or tampering; there is no
+        // legitimate writer that produces it (MakeHeaderFromSetup sets both or
+        // neither), so refuse rather than guess.
+        OutError = "replay header is inconsistent: recon settings hash present but recon disabled";
+        return false;
+    }
+
     if (R.HasError())
     {
         OutError = "replay header is truncated";
@@ -83,7 +96,8 @@ bool DeserializeHeader(ByteReader& R, ReplayHeader& H, std::string& OutError)
 } // namespace
 
 ReplayHeader MakeHeaderFromSetup(const MatchSetup& Setup, const ContentDatabase& Content,
-                                 const std::string& GameVersion)
+                                 const std::string& GameVersion,
+                                 const Recon::ReconSettings* ReconSettings)
 {
     ReplayHeader H;
     H.GameVersion = GameVersion;
@@ -98,6 +112,11 @@ ReplayHeader MakeHeaderFromSetup(const MatchSetup& Setup, const ContentDatabase&
         H.Players[I].bActive = Setup.Players[I].bActive;
         H.Players[I].Faction = uint8_t(Setup.Players[I].Faction);
         H.Players[I].StartingCredits = Setup.Players[I].StartingCredits;
+    }
+    if (ReconSettings != nullptr && ReconSettings->bEnabled)
+    {
+        H.bReconEnabled = true;
+        H.ReconSettingsHash = ReconSettings->ComputeSettingsHash();
     }
     return H;
 }
@@ -243,7 +262,8 @@ bool LoadReplayFromFile(const std::string& Path, ReplayData& Out, std::string& O
     return DeserializeReplay(Bytes, Out, OutError);
 }
 
-ReplayVerifyResult VerifyReplay(const ReplayData& Replay, const ContentDatabase& Content)
+ReplayVerifyResult VerifyReplay(const ReplayData& Replay, const ContentDatabase& Content,
+                                const Recon::ReconSettings* ReconSettings)
 {
     ReplayVerifyResult Result;
 
@@ -252,6 +272,24 @@ ReplayVerifyResult VerifyReplay(const ReplayData& Replay, const ContentDatabase&
     if (LocalContentHash != Replay.Header.ContentHash)
     {
         Result.Error = "content hash mismatch: replay was recorded with different game data";
+        return Result;
+    }
+
+    // Recon ruleset identity (I-B5). Belief state is checksummed, so replaying
+    // an intel-enabled recording without the identical settings is a guaranteed
+    // checkpoint divergence -- refuse it as loudly as a content mismatch.
+    const bool bLocalIntel = ReconSettings != nullptr && ReconSettings->bEnabled;
+    if (Replay.Header.bReconEnabled != bLocalIntel)
+    {
+        Result.Error = Replay.Header.bReconEnabled
+                           ? "replay was recorded with the recon layer enabled; supply the matching "
+                             "ReconSettings with bEnabled=true"
+                           : "replay was recorded without the recon layer; do not supply enabled ReconSettings";
+        return Result;
+    }
+    if (bLocalIntel && ReconSettings->ComputeSettingsHash() != Replay.Header.ReconSettingsHash)
+    {
+        Result.Error = "recon settings hash mismatch: replay was recorded under a different recon ruleset";
         return Result;
     }
 
@@ -269,7 +307,7 @@ ReplayVerifyResult VerifyReplay(const ReplayData& Replay, const ContentDatabase&
     }
 
     SimWorld World;
-    World.Initialize(&Content, Setup);
+    World.Initialize(&Content, Setup, ReconSettings);
 
     // The recorder stores only non-empty frames, so playback walks the frame list
     // in parallel with the tick counter rather than indexing by tick.

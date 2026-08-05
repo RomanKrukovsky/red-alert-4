@@ -160,6 +160,14 @@ struct ReconSettings
 
     const DistortionProfile* FindDistortionProfile(const std::string& InName) const;
     const CommsProfile* FindCommsProfile(const std::string& InName) const;
+
+    // Deterministic digest of every gameplay-relevant field, in declaration
+    // order. Recorded in the replay header (ADR-0022: the recon configuration
+    // is part of the match ruleset) so that playback against different settings
+    // is refused up front instead of desyncing at the first checkpoint. Two
+    // settings objects with equal hashes replay identically; the blob itself is
+    // not stored because settings are data-driven and shipped with the build.
+    uint64_t ComputeSettingsHash() const;
 };
 
 // Loads settings from a JSON document (see Content/RA4/Data/Recon/recon_settings.json).
