@@ -118,6 +118,22 @@ struct FRA4ProductionEntry
     UPROPERTY(BlueprintReadOnly, Category = "RA4|Production")
     bool bAwaitingPlacement = false;
 
+    /**
+     * ADR-0012: production is paid a slice per tick, so an item can stall because the
+     * treasury is empty rather than because the player paused it. Without this the
+     * two are indistinguishable on screen -- a frozen progress bar either way.
+     */
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|Production")
+    bool bStarvedForCredits = false;
+
+    /** Credits paid into this item so far, for the funding bar. */
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|Production")
+    int32 PaidCredits = 0;
+
+    /** Full price of this item, fixed when it was queued. */
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|Production")
+    int32 TotalCost = 0;
+
     UPROPERTY(BlueprintReadOnly, Category = "RA4|Production")
     int32 SlotIndex = 0;
 };

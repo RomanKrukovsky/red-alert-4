@@ -688,6 +688,17 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
             }
             break;
 
+        // ADR-0012: an unaffordable order is now accepted and funded gradually, so
+        // "you are broke" surfaces here rather than as a command rejection. The
+        // simulation emits this only on the transition into Starved, so it is already
+        // edge-triggered and does not need extra throttling.
+        case RA4::SimEventType::ProductionStarved:
+            if (Event.Player == LocalPlayer)
+            {
+                PlayEVA(ERA4EVAEvent::InsufficientFunds);
+            }
+            break;
+
         case RA4::SimEventType::MatchEnded:
             PlayEVA(
                 Event.Player == LocalPlayer ? ERA4EVAEvent::Victory : ERA4EVAEvent::Defeat,

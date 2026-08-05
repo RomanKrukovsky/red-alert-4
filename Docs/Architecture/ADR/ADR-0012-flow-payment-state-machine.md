@@ -219,10 +219,14 @@ above should be read with `TickAccumulator` folded into `ProgressTicks`.
   above, and it is a floor multiplier rather than a freeze threshold.
 - `PrerequisiteLost` is defined but unreachable: nothing currently re-checks
   prerequisites for in-flight items, so its 80% refund is unimplemented.
-- `OwnershipChanged` is not yet used as a *state*, but its rule is enforced:
-  `SellBuilding` marks `BuildingComp::bSelling` and `DestroyEntity` skips the queue
-  refund for a sale, so selling returns the sale price only. Capture does not exist
-  yet.
+- `OwnershipChanged` is not yet used as a *state*, but its rule is enforced: a sale
+  pays no queue refund. The sale is recorded in the non-serialized `PendingSales` list
+  and passed to `DestroyEntity` as a parameter, deliberately *not* as a flag on
+  `BuildingComp`: the intent lasts exactly one tick, and an earlier persisted
+  `bSelling` flag could outlive the sale it described (a save taken between the
+  command and the death sweep reloaded a building flagged selling forever, which then
+  silently forfeited its destruction refund). `bSelling` was removed from
+  `BuildingComp` and from the save format in v3. Capture does not exist yet.
 - `Priority` is stored, serialized, hashed and honoured by the allocation order, but
   no command sets it — every item is priority 0 and ties break on entity index. The
   command to set it belongs with the UI work.
@@ -243,6 +247,19 @@ remains excluded from the state hash.
   `CommandReject::InsufficientCredits` is consequently no longer produced for
   production; it is left in the enum because removing a public value is a separate
   interface change.
-- `QueueEntry` carries `PaymentState`, `PaidCredits`, `TotalCost` and
-  `bStarvedForCredits` so the sidebar can distinguish "out of money" from "you pressed
-  pause" — the distinction the state enum exists for.
+- Because that rejection is gone, the "insufficient funds" EVA cue lost its only
+  trigger. A new `SimEventType::ProductionStarved` replaces it, emitted once on the
+  transition into `Starved` (edge-triggered, or a broke player would produce one event
+  per tick per queue).
+- `QueueEntry` and the Blueprint-facing `FRA4ProductionEntry` both carry
+  `PaidCredits`, `TotalCost` and `bStarvedForCredits`, and the UI change-detection
+  compares `bStarvedForCredits` — a starving item's progress bar does not move, so
+  without that the widget would never refresh to show or clear the warning.
+- The AI's two production gates now require only the first per-tick slice plus its
+  credit reserve, not the whole price. Left as it was, the AI would have been strictly
+  more cautious than the rules allow and than a human player, and would have stopped
+  producing entirely on low-income maps.
+- `kEnergyThrottleRecoverPercent` (50) is separate from `kMinPowerRatioPercent` (20).
+  The latter is a speed floor for ordinary production; the former is the recovery
+  threshold for the categories ADR-0013 pauses outright. Reusing the floor would let a
+  throttled item resume at 20% power and undo the pause ADR-0013 had just applied.

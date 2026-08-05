@@ -171,7 +171,12 @@ private:
 
     // --- Internals ---------------------------------------------------------
     EntityId AllocateEntity();
-    void DestroyEntity(EntityId Id, EntityId Killer);
+    // bWasSold distinguishes a voluntary sale from a violent death. It is a
+    // parameter rather than a flag on BuildingComp because the intent lasts exactly
+    // one tick: a persisted flag can outlive the sale it described (a save taken
+    // between the command and the death sweep reloads a building that is flagged
+    // selling forever) and then silently forfeits the ADR-0012 destruction refund.
+    void DestroyEntity(EntityId Id, EntityId Killer, bool bWasSold = false);
     void ApplyDamage(EntityId TargetId, int32_t BaseDamage, WarheadClass Warhead, EntityId Source, PlayerId SourcePlayer);
     void ApplySplashDamage(const Vec2& Center, Fixed Radius, int32_t BaseDamage, WarheadClass Warhead,
                            int32_t FalloffPercent, EntityId Source, PlayerId SourcePlayer);
@@ -243,6 +248,11 @@ private:
     // iteration stable: a unit dying in the combat system must not invalidate the
     // slot the movement system is about to read.
     std::vector<EntityId> PendingDestroy;
+    // Buildings the player sold this tick, as opposed to lost. ADR-0012 pays no
+    // queue refund for a sale (the sale price is the compensation), and this is
+    // tick-scoped intent rather than durable state, so it is neither serialized nor
+    // hashed -- it is consumed by SystemDeaths on the tick it is written.
+    std::vector<EntityId> PendingSales;
 
     std::vector<SimEvent> Events;
 

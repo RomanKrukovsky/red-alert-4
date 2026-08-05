@@ -33,6 +33,13 @@ constexpr int64_t kDockDistanceUnits = 260;
 // plant unrecoverable, which is not the intent of the mechanic.
 constexpr int32_t kMinPowerRatioPercent = 20;
 
+// Ratio at or above which an EnergyThrottled production item resumes funding. This
+// is deliberately NOT kMinPowerRatioPercent: that is a speed floor applied to
+// ordinary production, whereas this is the recovery threshold for the high-tech and
+// superweapon categories ADR-0013 pauses outright. Reusing the floor here would let a
+// throttled item resume at 20% power, undoing the pause ADR-0013 had just applied.
+constexpr int32_t kEnergyThrottleRecoverPercent = 50;
+
 // Docking is measured to the target's centre, but a building occupies tiles that no
 // unit can enter. A harvester pressed against the wall of a 3x2 refinery is already
 // ~400 units from its centre, so a flat 260-unit radius made docking geometrically
@@ -1097,8 +1104,10 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
             // ADR-0012 treats a sale as OwnershipChanged, which carries no queue
             // refund: the sale price already compensates the player, and paying the
             // destroyed-producer refund on top would make selling a loaded factory a
-            // money faucet. DestroyEntity reads this flag to tell the two apart.
-            Buildings[Cmd.Primary.Index].bSelling = true;
+            // money faucet. Recorded for this tick only -- a persisted flag would
+            // survive a save taken before the death sweep and permanently forfeit
+            // the refund on a later, genuine destruction.
+            PendingSales.push_back(Cmd.Primary);
             PendingDestroy.push_back(Cmd.Primary);
             break;
         }
@@ -1229,7 +1238,7 @@ void SimWorld::ApplySplashDamage(const Vec2& Center, Fixed Radius, int32_t BaseD
     }
 }
 
-void SimWorld::DestroyEntity(EntityId Id, EntityId Killer)
+void SimWorld::DestroyEntity(EntityId Id, EntityId Killer, bool bWasSold)
 {
     if (!IsAlive(Id))
     {
@@ -1250,7 +1259,7 @@ void SimWorld::DestroyEntity(EntityId Id, EntityId Killer)
         // A voluntary sale is excluded: that is OwnershipChanged, and the sale price
         // is already the compensation. Refunding here as well would make selling a
         // loaded factory strictly better than keeping it.
-        if (Owner < kMaxPlayers && !Buildings[Index].bSelling)
+        if (Owner < kMaxPlayers && !bWasSold)
         {
             int32_t Refunded = 0;
             for (const ProductionItem& Item : Buildings[Index].Queue)
@@ -1472,6 +1481,14 @@ void SimWorld::SystemFlowPayment()
         {
             continue;
         }
+        // A building sold or already doomed this tick must stop drawing credits:
+        // SystemDeaths has not run yet, so it is still alive here, and anything
+        // charged now is money taken for a queue that is about to be discarded
+        // without a refund.
+        if (std::find(PendingDestroy.begin(), PendingDestroy.end(), MakeId(I)) != PendingDestroy.end())
+        {
+            continue;
+        }
 
         ProductionItem& Head = B.Queue.front();
 
@@ -1485,10 +1502,12 @@ void SimWorld::SystemFlowPayment()
             case FlowPaymentState::Funding:
                 break;
             case FlowPaymentState::EnergyThrottled:
-                // ADR-0013 owns when this is set. Recovery is handled here rather
-                // than there so the state can never become a permanent trap: if the
-                // deficit has lifted, the item rejoins funding this tick.
-                if (Players[Core[I].Owner].GetPowerRatioPercent() < kMinPowerRatioPercent)
+                // ADR-0013 owns when this is set. Recovery lives here rather than
+                // there so the state can never become a permanent trap: if the
+                // deficit has lifted, the item rejoins funding this tick and the
+                // assignment at the end of the payment pass moves it out of
+                // EnergyThrottled.
+                if (Players[Core[I].Owner].GetPowerRatioPercent() < kEnergyThrottleRecoverPercent)
                 {
                     continue;
                 }
@@ -1554,6 +1573,21 @@ void SimWorld::SystemFlowPayment()
         {
             // Could not buy a full slice this tick. Partial payment is kept --
             // this is the "pauses rather than resets" requirement.
+            //
+            // Edge-triggered: the event fires on the transition into Starved, not
+            // every tick it stays there, or a broke player would generate one event
+            // per tick per queue and drown the alert feed.
+            if (Head.State != FlowPaymentState::Starved)
+            {
+                SimEvent Ev;
+                Ev.Type = SimEventType::ProductionStarved;
+                Ev.Tick = CurrentTick;
+                Ev.Entity = MakeId(Candidate.BuildingIndex);
+                Ev.Player = Candidate.Owner;
+                Ev.Content = Head.Content;
+                Ev.Value = Head.CreditsRemaining();
+                EmitEvent(Ev);
+            }
             Head.State = FlowPaymentState::Starved;
         }
         else
@@ -2760,9 +2794,12 @@ void SimWorld::SystemDeaths()
     // generation no longer matches.
     for (const EntityId& Id : PendingDestroy)
     {
-        DestroyEntity(Id, EntityId::Invalid());
+        const bool bWasSold =
+            std::find(PendingSales.begin(), PendingSales.end(), Id) != PendingSales.end();
+        DestroyEntity(Id, EntityId::Invalid(), bWasSold);
     }
     PendingDestroy.clear();
+    PendingSales.clear();
 }
 
 void SimWorld::SystemVictory()
@@ -3011,9 +3048,15 @@ uint64_t SimWorld::ComputeStateChecksum() const
 
 constexpr uint32_t kSimSaveMagic = 0x52413453u; // "RA4S"
 // v2 (ADR-0012): ProductionItem gained FlowPaymentState, TotalCost and Priority.
-// v1 saves are still readable; the missing fields are reconstructed on load.
-constexpr uint32_t kSimSaveVersion = 2;
+// v3 (ADR-0012): BuildingComp::bSelling is gone. It was tick-scoped intent held in
+//     durable state, so a save taken between the sell command and the death sweep
+//     reloaded a building flagged selling forever, which then silently forfeited its
+//     destruction refund. The intent now lives in the non-serialized PendingSales
+//     list. Older saves still load; the field is read and discarded.
+// Older saves are still readable; missing fields are reconstructed on load.
+constexpr uint32_t kSimSaveVersion = 3;
 constexpr uint32_t kSimSaveVersionFlowPayment = 2;
+constexpr uint32_t kSimSaveVersionNoSellingFlag = 3;
 constexpr uint32_t kSimSaveVersionMinSupported = 1;
 
 void SimWorld::Serialize(ByteWriter& W) const
@@ -3112,7 +3155,6 @@ void SimWorld::Serialize(ByteWriter& W) const
         W.WriteInt64(B.RallyPoint.X.Raw);
         W.WriteInt64(B.RallyPoint.Y.Raw);
         W.WriteBool(B.bHasRallyPoint);
-        W.WriteBool(B.bSelling);
         W.WriteUInt32(static_cast<uint32_t>(B.Queue.size()));
         for (const ProductionItem& Item : B.Queue)
         {
@@ -3273,7 +3315,13 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
         B.RallyPoint.X.Raw = R.ReadInt64();
         B.RallyPoint.Y.Raw = R.ReadInt64();
         B.bHasRallyPoint = R.ReadBool();
-        B.bSelling = R.ReadBool();
+        if (Version < kSimSaveVersionNoSellingFlag)
+        {
+            // Older saves carry the retired bSelling flag. Read it to keep the byte
+            // stream aligned and discard it: a persisted "selling" flag is exactly
+            // the corruption v3 exists to remove.
+            (void)R.ReadBool();
+        }
         const uint32_t QueueCount = R.ReadUInt32();
         B.Queue.resize(QueueCount);
         for (uint32_t Q = 0; Q < QueueCount; ++Q)

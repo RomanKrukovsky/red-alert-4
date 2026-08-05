@@ -269,7 +269,6 @@ struct BuildingComp
     bool bHasRallyPoint = false;
 
     std::vector<ProductionItem> Queue;
-    bool bSelling = false;
 
     EntityId DockedHarvester;
     std::vector<EntityId> UnloadingQueue;
@@ -362,6 +361,11 @@ enum class SimEventType : uint8_t
     ProductionStarted,
     ProductionCompleted,
     ProductionCancelled,
+    // ADR-0012: emitted once when a queued item runs out of money, and not again
+    // until it resumes. Under flow payment an unaffordable order is accepted rather
+    // than rejected, so without this the only cue that a player is broke -- the
+    // CommandRejected/InsufficientCredits path -- would simply go silent.
+    ProductionStarved,
     ResourceDelivered,
     PlayerDefeated,
     MatchEnded,

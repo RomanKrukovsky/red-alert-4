@@ -1223,17 +1223,22 @@ RA4_TEST(FlowPayment, EveryProducerIsFundedEvenBeyondTheQueueLengthCap)
     RunTicks(F.World, 20);
 
     // With a large treasury every single queue must be drawing credits. Before the
-    // fix the last five sat at zero paid, zero progress, forever.
+    // fix the last five sat at zero paid, zero progress, forever. Count explicitly
+    // rather than skipping absent queues, or the test would pass vacuously if every
+    // queue happened to have emptied.
+    int32_t Funded = 0;
     for (size_t N = 0; N < Barracks.size(); ++N)
     {
         const ProductionItem* Item = QueueHead(F.World, Barracks[N]);
-        if (Item == nullptr)
-        {
-            continue;   // already finished and popped, which is also fine
-        }
+        RA4_REQUIRE(Item != nullptr);   // a conscript takes far longer than 20 ticks
         RA4_EXPECT(Item->PaidCredits > 0);
         RA4_EXPECT(Item->State != FlowPaymentState::Queued);
+        if (Item->PaidCredits > 0)
+        {
+            ++Funded;
+        }
     }
+    RA4_EXPECT_EQ(Funded, kProducerCount);
 }
 
 // Selling is OwnershipChanged, which carries no queue refund: the sale price is
@@ -1279,4 +1284,132 @@ RA4_TEST(FlowPayment, SellingAProducerDoesNotAlsoPayTheDestroyedQueueRefund)
     RA4_EXPECT(!F.World.IsAlive(Barracks));
     // Exactly the sale price, with nothing added for the queue that went with it.
     RA4_EXPECT_EQ(F.World.GetPlayer(0).Credits, Before + SalePrice);
+}
+
+// A sold building is still alive when the funding pass runs -- SystemDeaths does not
+// sweep until the end of the tick -- so without an explicit skip it kept drawing
+// credits for a queue that was about to be discarded refund-free.
+RA4_TEST(FlowPayment, SoldProducerStopsDrawingCreditsImmediately)
+{
+    FlowFixture F(10000);
+    F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    F.World.SpawnBuilding(Ids::SovPower, 0, TileCoord(14, 10), true);
+    const EntityId Barracks = F.World.SpawnBuilding(Ids::SovBarracks, 0, TileCoord(10, 14), true);
+    RA4_REQUIRE(Barracks.IsValid());
+
+    Command Start = MakeCommand(CommandType::StartProduction, 0);
+    Start.Primary = Barracks;
+    Start.Content = Ids::SovConscript;
+    RA4_REQUIRE(F.World.ApplyCommand(Start).IsAccepted());
+    RunTicks(F.World, 10);
+
+    const EntityDef* Def = F.Content.FindEntity(Ids::SovBarracks);
+    RA4_REQUIRE(Def != nullptr);
+    const int32_t SalePrice = (Def->Production.Cost * Def->Building.SellRefundPercent) / 100;
+    const int32_t Before = F.World.GetPlayer(0).Credits;
+
+    Command Sell = MakeCommand(CommandType::SellBuilding, 0);
+    Sell.Primary = Barracks;
+    RA4_REQUIRE(F.World.ApplyCommand(Sell).IsAccepted());
+    RunTicks(F.World, 1);
+
+    RA4_EXPECT(!F.World.IsAlive(Barracks));
+    // Exactly the sale price: not one further credit was drawn on the way out, and
+    // no queue refund was added on top.
+    RA4_EXPECT_EQ(F.World.GetPlayer(0).Credits, Before + SalePrice);
+}
+
+// A save taken between the sell command and the death sweep used to reload a building
+// permanently flagged "selling", which then silently forfeited its ADR-0012
+// destruction refund when it was later destroyed for real. The intent is now
+// tick-scoped and unserialized, so a reload cannot inherit it.
+RA4_TEST(FlowPayment, SaleIntentDoesNotSurviveASaveAndSuppressLaterRefunds)
+{
+    FlowFixture F(10000);
+    F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    F.World.SpawnBuilding(Ids::SovPower, 0, TileCoord(14, 10), true);
+    const EntityId Barracks = F.World.SpawnBuilding(Ids::SovBarracks, 0, TileCoord(10, 14), true);
+    RA4_REQUIRE(Barracks.IsValid());
+
+    Command Start = MakeCommand(CommandType::StartProduction, 0);
+    Start.Primary = Barracks;
+    Start.Content = Ids::SovConscript;
+    RA4_REQUIRE(F.World.ApplyCommand(Start).IsAccepted());
+    RunTicks(F.World, 10);
+
+    // Issue the sale but save before ticking, so the sale is still pending.
+    Command Sell = MakeCommand(CommandType::SellBuilding, 0);
+    Sell.Primary = Barracks;
+    RA4_REQUIRE(F.World.ApplyCommand(Sell).IsAccepted());
+
+    ByteWriter W;
+    F.World.Serialize(W);
+
+    SimWorld Restored;
+    ByteReader R(W.GetBuffer());
+    RA4_REQUIRE(Restored.Deserialize(R, &F.Content));
+    RA4_REQUIRE(!R.HasError());
+
+    // The pending sale did not survive, so the building is alive and ordinary.
+    RA4_REQUIRE(Restored.IsAlive(Barracks));
+    const ProductionItem* Item = QueueHead(Restored, Barracks);
+    RA4_REQUIRE(Item != nullptr);
+    const int32_t Paid = Item->PaidCredits;
+    RA4_EXPECT(Paid > 0);
+
+    // Pause so the figure stops moving, then destroy it violently. The full
+    // destroyed-producer refund must be paid: this is not a sale any more.
+    Command Pause = MakeCommand(CommandType::PauseProduction, 0);
+    Pause.Primary = Barracks;
+    Pause.Slot = 0;
+    RA4_REQUIRE(Restored.ApplyCommand(Pause).IsAccepted());
+    RunTicks(Restored, 2);
+
+    const ProductionItem* Frozen = QueueHead(Restored, Barracks);
+    RA4_REQUIRE(Frozen != nullptr);
+    const int32_t FrozenPaid = Frozen->PaidCredits;
+    const int32_t Before = Restored.GetPlayer(0).Credits;
+
+    const HealthComp* H = Restored.GetHealth(Barracks);
+    RA4_REQUIRE(H != nullptr);
+    Restored.DebugDamage(Barracks, H->Max * 4);
+    RunTicks(Restored, 1);
+
+    RA4_EXPECT(!Restored.IsAlive(Barracks));
+    RA4_EXPECT_EQ(Restored.GetPlayer(0).Credits, Before + (FrozenPaid * 50) / 100);
+}
+
+// Starvation is announced exactly once per stall. Without the edge trigger a broke
+// player would emit one event per tick per queue and bury the alert feed.
+RA4_TEST(FlowPayment, StarvationIsAnnouncedOnceNotEveryTick)
+{
+    FlowFixture F(3);
+    const EntityId Yard = F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+
+    Command Start = MakeCommand(CommandType::StartProduction, 0);
+    Start.Primary = Yard;
+    Start.Content = Ids::SovPower;
+    RA4_REQUIRE(F.World.ApplyCommand(Start).IsAccepted());
+
+    int32_t StarvedEvents = 0;
+    for (int32_t T = 0; T < 60; ++T)
+    {
+        F.World.ClearEvents();
+        F.World.Tick(nullptr);
+        for (const SimEvent& Ev : F.World.GetEvents())
+        {
+            if (Ev.Type == SimEventType::ProductionStarved)
+            {
+                ++StarvedEvents;
+                RA4_EXPECT_EQ(int32_t(Ev.Player), 0);
+                RA4_EXPECT(Ev.Value > 0);   // credits still owed
+            }
+        }
+    }
+
+    const ProductionItem* Item = QueueHead(F.World, Yard);
+    RA4_REQUIRE(Item != nullptr);
+    RA4_EXPECT(Item->State == FlowPaymentState::Starved);
+    // One announcement for the one stall, not sixty.
+    RA4_EXPECT_EQ(StarvedEvents, 1);
 }

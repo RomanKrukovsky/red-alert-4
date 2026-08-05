@@ -191,7 +191,10 @@ bool URA4UIDataProviderSubsystem::HasVisibleProductionChange(const TArray<FRA4Pr
         const FRA4ProductionEntry& Old = PreviousQueue[Index];
         const FRA4ProductionEntry& New = ProductionQueue[Index];
         if (Old.ContentId != New.ContentId || Old.ProgressPercent != New.ProgressPercent ||
-            Old.bPaused != New.bPaused || Old.bAwaitingPlacement != New.bAwaitingPlacement)
+            Old.bPaused != New.bPaused || Old.bAwaitingPlacement != New.bAwaitingPlacement ||
+            // A starving item's progress bar does not move, so without this the
+            // widget would never refresh to show (or clear) the warning.
+            Old.bStarvedForCredits != New.bStarvedForCredits)
         {
             return true;
         }
@@ -306,12 +309,15 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
         Out.RemainingSeconds = TicksToSeconds(Entry.RemainingTicks);
         Out.bPaused = Entry.bPaused;
         Out.bAwaitingPlacement = Entry.bAwaitingPlacement;
+        Out.bStarvedForCredits = Entry.bStarvedForCredits;
+        Out.PaidCredits = Entry.PaidCredits;
+        Out.TotalCost = Entry.TotalCost;
         Out.SlotIndex = Entry.SlotIndex;
         ProductionQueue.Add(Out);
 
         FRA4ProductionQueueItem VMItem;
         VMItem.DisplayName = Out.DisplayName;
-        VMItem.Cost = 0;
+        VMItem.Cost = Entry.TotalCost;
         VMItem.Progress = FMath::Clamp(float(Entry.ProgressPercent) / 100.0f, 0.0f, 1.0f);
         VMItem.Quantity = 1;
         VMProductionQueue.Add(VMItem);
