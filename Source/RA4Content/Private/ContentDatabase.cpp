@@ -370,6 +370,10 @@ uint64_t ContentDatabase::ComputeContentHash() const
         H.FeedInt32(E.Production.Cost);
         H.FeedInt32(E.Production.BuildTimeTicks);
         H.FeedUInt8(uint8_t(E.Production.Category));
+        // ADR-0013: the tier decides whether a power deficit pauses this item, so it
+        // changes match outcomes and must invalidate a replay recorded against the
+        // old value.
+        H.FeedUInt8(uint8_t(E.Production.Tier));
         H.FeedInt32(E.Production.CancelRefundPercent);
         for (const ContentId& P : E.Production.ProducedBy) { H.FeedUInt32(P.Value); }
         for (const ContentId& P : E.Production.Prerequisites) { H.FeedUInt32(P.Value); }

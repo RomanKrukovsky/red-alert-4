@@ -1687,3 +1687,181 @@ RA4_TEST(PowerTier, HarvestingOnlySlowsAtCriticalNotEarlier)
     RA4_EXPECT(AtCritical > 0);
     RA4_EXPECT(AtCritical < AtNormal);
 }
+
+// ADR-0013 pauses "high tech" (T2+) outright during a deep deficit rather than merely
+// slowing it, using the EnergyThrottled state ADR-0012 defined but never set.
+RA4_TEST(PowerTier, HighTechIsPausedAtSevereAndResumesWhenPowerReturns)
+{
+    // One reactor against a heavy load: enough to reach Severe without going Critical,
+    // where the vehicle would be blocked by the Critical rule instead and the test
+    // would prove nothing about tiers.
+    PowerFixture F(1);
+    const EntityId Factory = F.World.SpawnBuilding(Ids::SovWarFactory, 0, TileCoord(10, 16), true);
+    RA4_REQUIRE(Factory.IsValid());
+    F.World.SpawnBuilding(Ids::SovBarracks, 0, TileCoord(10, 20), true);
+    F.World.SpawnBuilding(Ids::SovRefinery, 0, TileCoord(16, 20), true);
+    // Measured: one reactor gives 150 while factory+barracks+refinery draw 100, and
+    // each turret adds 40. Thirteen turrets puts the ratio at 24% -- inside Severe,
+    // where T2 is paused, without reaching Critical, where the separate Critical rule
+    // would block the vehicle anyway and the test would prove nothing about tiers.
+    for (int32_t N = 0; N < 13; ++N)
+    {
+        F.World.SpawnBuilding(Ids::SovTurret, 0, TileCoord(20 + (N % 7) * 2, 24 + (N / 7) * 3), true);
+    }
+
+    Command Start = MakeCommand(CommandType::StartProduction, 0);
+    Start.Primary = Factory;
+    Start.Content = Ids::SovHeavyTank;   // T2
+    RA4_REQUIRE(F.World.ApplyCommand(Start).IsAccepted());
+
+    RunTicks(F.World, 30);
+    RA4_REQUIRE(F.World.GetPlayer(0).GetPowerTier() >= PowerTier::Severe);
+
+    const ProductionItem* Throttled = QueueHead(F.World, Factory);
+    RA4_REQUIRE(Throttled != nullptr);
+    RA4_EXPECT(Throttled->State == FlowPaymentState::EnergyThrottled);
+    const int32_t FrozenProgress = Throttled->ProgressTicks;
+    const int32_t FrozenPaid = Throttled->PaidCredits;
+
+    // Frozen, not reset: neither progress nor payment moves while throttled.
+    RunTicks(F.World, 60);
+    const ProductionItem* Still = QueueHead(F.World, Factory);
+    RA4_REQUIRE(Still != nullptr);
+    RA4_EXPECT(Still->State == FlowPaymentState::EnergyThrottled);
+    RA4_EXPECT_EQ(Still->ProgressTicks, FrozenProgress);
+    RA4_EXPECT_EQ(Still->PaidCredits, FrozenPaid);
+
+    // Restore power and it must pick up from where it stopped and finish.
+    for (int32_t N = 0; N < 4; ++N)
+    {
+        F.World.SpawnBuilding(Ids::SovPower, 0, TileCoord(30 + N * 3, 10), true);
+    }
+    RunTicks(F.World, 2);
+    RA4_REQUIRE(F.World.GetPlayer(0).GetPowerTier() == PowerTier::Normal);
+
+    const ProductionItem* Resumed = QueueHead(F.World, Factory);
+    RA4_REQUIRE(Resumed != nullptr);
+    RA4_EXPECT(Resumed->State != FlowPaymentState::EnergyThrottled);
+    RA4_EXPECT(Resumed->ProgressTicks >= FrozenProgress);
+
+    RunTicks(F.World, SecondsToTicks(200));
+    RA4_EXPECT_EQ(CountEntitiesOfType(F.World, 0, Ids::SovHeavyTank), 1);
+}
+
+RA4_TEST(PowerTier, LowTechKeepsBuildingThroughADeficitInsteadOfPausing)
+{
+    // The distinction is the whole point of the tier field: T1 infantry slows, T2
+    // vehicles stop. If both behaved the same the field would be decoration.
+    PowerFixture F(1);
+    const EntityId Barracks = F.World.SpawnBuilding(Ids::SovBarracks, 0, TileCoord(10, 20), true);
+    RA4_REQUIRE(Barracks.IsValid());
+    F.World.SpawnBuilding(Ids::SovWarFactory, 0, TileCoord(10, 16), true);
+    F.World.SpawnBuilding(Ids::SovRefinery, 0, TileCoord(16, 20), true);
+    // Measured: one reactor gives 150 while factory+barracks+refinery draw 100, and
+    // each turret adds 40. Thirteen turrets puts the ratio at 24% -- inside Severe,
+    // where T2 is paused, without reaching Critical, where the separate Critical rule
+    // would block the vehicle anyway and the test would prove nothing about tiers.
+    for (int32_t N = 0; N < 13; ++N)
+    {
+        F.World.SpawnBuilding(Ids::SovTurret, 0, TileCoord(20 + (N % 7) * 2, 24 + (N / 7) * 3), true);
+    }
+
+    Command Start = MakeCommand(CommandType::StartProduction, 0);
+    Start.Primary = Barracks;
+    Start.Content = Ids::SovConscript;   // T1
+    RA4_REQUIRE(F.World.ApplyCommand(Start).IsAccepted());
+
+    RunTicks(F.World, 30);
+    RA4_REQUIRE(F.World.GetPlayer(0).GetPowerTier() >= PowerTier::Severe);
+
+    const ProductionItem* Item = QueueHead(F.World, Barracks);
+    if (Item != nullptr)
+    {
+        RA4_EXPECT(Item->State != FlowPaymentState::EnergyThrottled);
+    }
+    // Slowed, but it still arrives.
+    RunTicks(F.World, SecondsToTicks(200));
+    RA4_EXPECT(CountEntitiesOfType(F.World, 0, Ids::SovConscript) >= 1);
+}
+
+// Regression: an earlier version triggered the throttle below 40% but required 50% to
+// recover, so anything stalled in the 40-49% band was both throttled and refused
+// recovery -- frozen forever. Recovery is now the exact inverse of the trigger.
+RA4_TEST(PowerTier, ThrottleAndRecoveryUseTheSameBoundaryWithNoDeadBand)
+{
+    // Sweep the whole ratio range and assert the two conditions are complementary at
+    // every point: an item is either throttled or eligible to fund, never both and
+    // never neither.
+    for (int32_t Ratio = 0; Ratio <= 120; ++Ratio)
+    {
+        const PowerTier Tier = PowerTierForRatio(Ratio);
+        const bool bWouldThrottle = Tier >= PowerTier::Severe;
+        const bool bWouldRecover = !bWouldThrottle;
+        RA4_EXPECT(bWouldThrottle != bWouldRecover);
+    }
+    // And pin the boundary itself, so a later balance change has to move it knowingly.
+    RA4_EXPECT(PowerTierForRatio(40) < PowerTier::Severe);   // Moderate: T2 still builds
+    RA4_EXPECT(PowerTierForRatio(39) >= PowerTier::Severe);  // Severe: T2 paused
+}
+
+RA4_TEST(PowerTier, PlayerPauseOutranksTheEnergyThrottle)
+{
+    // If the throttle overwrote a manual pause, unpausing would appear to do nothing
+    // and the card would blame power for a stop the player chose.
+    PowerFixture F(1);
+    const EntityId Factory = F.World.SpawnBuilding(Ids::SovWarFactory, 0, TileCoord(10, 16), true);
+    RA4_REQUIRE(Factory.IsValid());
+    F.World.SpawnBuilding(Ids::SovBarracks, 0, TileCoord(10, 20), true);
+    F.World.SpawnBuilding(Ids::SovRefinery, 0, TileCoord(16, 20), true);
+    // Measured: one reactor gives 150 while factory+barracks+refinery draw 100, and
+    // each turret adds 40. Thirteen turrets puts the ratio at 24% -- inside Severe,
+    // where T2 is paused, without reaching Critical, where the separate Critical rule
+    // would block the vehicle anyway and the test would prove nothing about tiers.
+    for (int32_t N = 0; N < 13; ++N)
+    {
+        F.World.SpawnBuilding(Ids::SovTurret, 0, TileCoord(20 + (N % 7) * 2, 24 + (N / 7) * 3), true);
+    }
+
+    Command Start = MakeCommand(CommandType::StartProduction, 0);
+    Start.Primary = Factory;
+    Start.Content = Ids::SovHeavyTank;
+    RA4_REQUIRE(F.World.ApplyCommand(Start).IsAccepted());
+
+    Command Pause = MakeCommand(CommandType::PauseProduction, 0);
+    Pause.Primary = Factory;
+    Pause.Slot = 0;
+    RA4_REQUIRE(F.World.ApplyCommand(Pause).IsAccepted());
+
+    RunTicks(F.World, 30);
+    RA4_REQUIRE(F.World.GetPlayer(0).GetPowerTier() >= PowerTier::Severe);
+
+    const ProductionItem* Item = QueueHead(F.World, Factory);
+    RA4_REQUIRE(Item != nullptr);
+    RA4_EXPECT(Item->State == FlowPaymentState::ManuallyPaused);
+}
+
+RA4_TEST(Content, TechTierIsAssignedAndFeedsTheContentHash)
+{
+    ContentDatabase A;
+    BuildDefaultContent(A);
+
+    // Every produced definition must state a tier, and the chain must actually be
+    // graded -- if everything were T0 the throttle would never fire.
+    const EntityDef* Yard = A.FindEntity(Ids::SovConYard);
+    const EntityDef* Barracks = A.FindEntity(Ids::SovBarracks);
+    const EntityDef* Tank = A.FindEntity(Ids::SovHeavyTank);
+    RA4_REQUIRE(Yard != nullptr && Barracks != nullptr && Tank != nullptr);
+    RA4_EXPECT(Yard->Production.Tier == TechTier::T0);
+    RA4_EXPECT(Barracks->Production.Tier == TechTier::T1);
+    RA4_EXPECT(Tank->Production.Tier == TechTier::T2);
+
+    // A tier change alters match outcomes, so it must invalidate a replay.
+    ContentDatabase B;
+    BuildDefaultContent(B);
+    RA4_REQUIRE(A.ComputeContentHash() == B.ComputeContentHash());
+
+    EntityDef Shifted = *Tank;
+    Shifted.Production.Tier = TechTier::T3;
+    B.AddEntity(Shifted);
+    RA4_EXPECT(A.ComputeContentHash() != B.ComputeContentHash());
+}

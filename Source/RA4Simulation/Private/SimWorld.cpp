@@ -35,13 +35,6 @@ constexpr int32_t kTurretAlignTolerance = 64;
 // How close a harvester must get to the *edge* of its target to dock.
 constexpr int64_t kDockDistanceUnits = 260;
 
-// Ratio at or above which an EnergyThrottled production item resumes funding. This is
-// deliberately not the Severe band's speed floor: that scales ordinary production,
-// whereas this is the recovery threshold for the high-tech and superweapon categories
-// ADR-0013 pauses outright. Reusing the floor would let a throttled item resume at 10%
-// power, undoing the pause ADR-0013 had just applied.
-constexpr int32_t kEnergyThrottleRecoverPercent = 50;
-
 // Docking is measured to the target's centre, but a building occupies tiles that no
 // unit can enter. A harvester pressed against the wall of a 3x2 refinery is already
 // ~400 units from its centre, so a flat 260-unit radius made docking geometrically
@@ -1863,6 +1856,30 @@ void SimWorld::SystemFlowPayment()
 
         ProductionItem& Head = B.Queue.front();
 
+        // ADR-0013: high-tech production is paused outright at Severe and Critical,
+        // rather than merely slowed like T0/T1. Checked before the state switch
+        // because a fully-funded item is in Paying and would otherwise skip straight
+        // past every check here and keep advancing through a blackout.
+        //
+        // A player pause outranks this: an item the player deliberately stopped must
+        // not silently change its reported reason to "power".
+        if (Core[I].Owner < kMaxPlayers && Head.State != FlowPaymentState::ManuallyPaused)
+        {
+            const EntityDef* HeadDef = Content ? Content->FindEntity(Head.Content) : nullptr;
+            const bool bHighTech = HeadDef != nullptr && HeadDef->Production.Tier >= TechTier::T2;
+            const bool bThrottleTier =
+                Players[Core[I].Owner].GetPowerTier() >= PowerTier::Severe;
+
+            if (bHighTech && bThrottleTier)
+            {
+                // Freeze in place. PaidCredits and ProgressTicks are untouched, so
+                // this is a pause and not a reset -- the same guarantee starvation
+                // gives, for the same determinism reason.
+                Head.State = FlowPaymentState::EnergyThrottled;
+                continue;
+            }
+        }
+
         switch (Head.State)
         {
             case FlowPaymentState::Queued:
@@ -1873,15 +1890,13 @@ void SimWorld::SystemFlowPayment()
             case FlowPaymentState::Funding:
                 break;
             case FlowPaymentState::EnergyThrottled:
-                // ADR-0013 owns when this is set. Recovery lives here rather than
-                // there so the state can never become a permanent trap: if the
-                // deficit has lifted, the item rejoins funding this tick and the
-                // assignment at the end of the payment pass moves it out of
-                // EnergyThrottled.
-                if (Players[Core[I].Owner].GetPowerRatioPercent() < kEnergyThrottleRecoverPercent)
-                {
-                    continue;
-                }
+                // Reaching this case at all means the throttle test above said no, so
+                // the deficit has lifted and the item rejoins funding. Recovery is
+                // therefore the exact inverse of the trigger by construction, rather
+                // than an independent threshold that could disagree with it: an
+                // earlier version used a separate 50% constant while the trigger fired
+                // below 40%, which trapped any item stalled in the 40-49% band -- both
+                // throttled and refused recovery, forever.
                 break;
             case FlowPaymentState::Paying:
             case FlowPaymentState::Completed:
@@ -1897,7 +1912,9 @@ void SimWorld::SystemFlowPayment()
         }
 
         // A zero-cost item is funded the instant it is looked at, so it must not
-        // consume an allocation slot or it would stall behind a poor treasury.
+        // consume an allocation slot or it would stall behind a poor treasury. This
+        // also restores an already-paid item that was throttled and has now recovered:
+        // it needs no more credits, only its state back.
         if (Head.IsFullyFunded())
         {
             Head.State = FlowPaymentState::Paying;

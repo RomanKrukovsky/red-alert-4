@@ -203,6 +203,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = 2500;
         E.Production.BuildTimeTicks = SecondsToTicks(30);
         E.Production.Category = ProductionCategory::Structure;
+        E.Production.Tier = TechTier::T0;
         Db.AddEntity(E);
     }
 
@@ -226,6 +227,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = 800;
         E.Production.BuildTimeTicks = SecondsToTicks(8);
         E.Production.Category = ProductionCategory::Structure;
+        E.Production.Tier = TechTier::T0;
         E.Production.ProducedBy = {S.ConYard};
         E.Production.Prerequisites = {S.ConYard};
         Db.AddEntity(E);
@@ -252,6 +254,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = 2000;
         E.Production.BuildTimeTicks = SecondsToTicks(20);
         E.Production.Category = ProductionCategory::Structure;
+        E.Production.Tier = TechTier::T1;
         E.Production.ProducedBy = {S.ConYard};
         E.Production.Prerequisites = {S.Power};
         Db.AddEntity(E);
@@ -276,6 +279,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = 500;
         E.Production.BuildTimeTicks = SecondsToTicks(10);
         E.Production.Category = ProductionCategory::Structure;
+        E.Production.Tier = TechTier::T1;
         E.Production.ProducedBy = {S.ConYard};
         E.Production.Prerequisites = {S.Power};
         Db.AddEntity(E);
@@ -300,6 +304,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = 2000;
         E.Production.BuildTimeTicks = SecondsToTicks(20);
         E.Production.Category = ProductionCategory::Structure;
+        E.Production.Tier = TechTier::T2;
         E.Production.ProducedBy = {S.ConYard};
         E.Production.Prerequisites = {S.Refinery};
         Db.AddEntity(E);
@@ -323,6 +328,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = 600;
         E.Production.BuildTimeTicks = SecondsToTicks(8);
         E.Production.Category = ProductionCategory::Defense;
+        E.Production.Tier = TechTier::T1;
         E.Production.ProducedBy = {S.ConYard};
         E.Production.Prerequisites = {S.Barracks};
         Db.AddEntity(E);
@@ -350,6 +356,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = 2500;
         E.Production.BuildTimeTicks = SecondsToTicks(30);
         E.Production.Category = ProductionCategory::Vehicle;
+        E.Production.Tier = TechTier::T2;
         E.Production.ProducedBy = {S.WarFactory};
         E.Production.Prerequisites = {S.WarFactory};
         Db.AddEntity(E);
@@ -379,6 +386,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = 1400;
         E.Production.BuildTimeTicks = SecondsToTicks(15);
         E.Production.Category = ProductionCategory::Vehicle;
+        E.Production.Tier = TechTier::T1;
         E.Production.ProducedBy = {S.WarFactory};
         E.Production.Prerequisites = {S.Refinery};
         Db.AddEntity(E);
@@ -405,6 +413,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = 100;
         E.Production.BuildTimeTicks = SecondsToTicks(3);
         E.Production.Category = ProductionCategory::Infantry;
+        E.Production.Tier = TechTier::T1;
         E.Production.ProducedBy = {S.Barracks};
         E.Production.Prerequisites = {S.Barracks};
         Db.AddEntity(E);
@@ -431,6 +440,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = 300;
         E.Production.BuildTimeTicks = SecondsToTicks(5);
         E.Production.Category = ProductionCategory::Infantry;
+        E.Production.Tier = TechTier::T1;
         E.Production.ProducedBy = {S.Barracks};
         E.Production.Prerequisites = {S.Barracks};
         Db.AddEntity(E);
@@ -458,6 +468,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = S.TankCost;
         E.Production.BuildTimeTicks = SecondsToTicks(12);
         E.Production.Category = ProductionCategory::Vehicle;
+        E.Production.Tier = TechTier::T2;
         E.Production.ProducedBy = {S.WarFactory};
         E.Production.Prerequisites = {S.WarFactory};
         Db.AddEntity(E);
