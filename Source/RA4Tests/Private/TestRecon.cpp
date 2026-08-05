@@ -1389,3 +1389,61 @@ RA4_TEST(Recon, ScaredPlayerSeesInflatedContacts)
     }
     RA4_EXPECT(SawInflation);
 }
+
+
+RA4_TEST(Recon, RadarReturnsAnonymousContactsOnly)
+{
+    // Owner decision D6: a radar produces a POSITION, not an identity. The blip
+    // must surface as an anonymous track (bAnonymous, invalid class) and must
+    // never leak the true class through the read surface.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+
+    // Author a radar building: no shipped def sets bIsRadar yet, so the test
+    // registers its own -- exactly how a designer would, through content.
+    EntityDef RadarDef;
+    RadarDef.Name = "building.test.radar";
+    RadarDef.Id = MakeContentId("building.test.radar");
+    RadarDef.Kind = EntityKind::Building;
+    RadarDef.Faction = FactionId::Soviet;
+    RadarDef.MaxHealth = 500;
+    RadarDef.Building.FootprintX = 2;
+    RadarDef.Building.FootprintY = 2;
+    RadarDef.Building.bIsRadar = true;
+    Content.AddEntity(RadarDef);
+
+    Recon::ReconSettings Enabled = MakeMinimalSettings(true);
+    Enabled.RadarRangeTiles = 30;
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(7171), &Enabled);
+    // Radar at tile (30,30) ~ world (6000,6000): about 21 tiles from the enemy at
+    // (9000,9000) -- inside the 30-tile range, far outside any unit vision
+    // (player 0 fields no units at all).
+    World.SpawnBuilding(RadarDef.Id, 0, TileCoord{30, 30}, /*bInstantComplete=*/true);
+    World.SpawnUnit(Ids::AllLightTank, 1, Vec2(Fixed::FromInt(9000), Fixed::FromInt(9000)));
+
+    World.Tick(nullptr);
+
+    std::vector<const Recon::PerceivedTrack*> Found;
+    World.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, Found);
+    RA4_REQUIRE(Found.size() == 1);
+    RA4_EXPECT(Found[0]->bAnonymous);
+    RA4_EXPECT(!(Found[0]->BelievedClass == Ids::AllLightTank)); // identity must not leak
+    // The believed position matches the blip (truthful profile, no smear).
+    RA4_EXPECT(Found[0]->BelievedPosition.X == Fixed::FromInt(9000));
+    RA4_EXPECT(Found[0]->BelievedPosition.Y == Fixed::FromInt(9000));
+
+    // Visual contact upgrades the same track to an identified one, not a second
+    // blip: spawn a scout next to the tank and let fog reveal it.
+    World.SpawnUnit(Ids::SovConscript, 0, Vec2(Fixed::FromInt(8800), Fixed::FromInt(9000)));
+    for (int32_t T = 0; T < 3; ++T)
+    {
+        World.Tick(nullptr);
+    }
+    Found.clear();
+    World.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, Found);
+    RA4_REQUIRE(Found.size() == 1);
+    RA4_EXPECT(!Found[0]->bAnonymous);
+    RA4_EXPECT(Found[0]->BelievedClass == Ids::AllLightTank);
+}

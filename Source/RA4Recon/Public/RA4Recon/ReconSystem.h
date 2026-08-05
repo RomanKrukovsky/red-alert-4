@@ -47,6 +47,9 @@ struct ObservedEntity
     int32_t TileX = 0;
     int32_t TileY = 0;
     ObservedCategory Category = ObservedCategory::LightVehicle; // for the confusion matrix
+    // Radar return, not eyes-on: becomes an anonymous observation (position
+    // without identity) and skips the visual distortion stages.
+    bool bRadarContact = false;
 };
 
 // One friendly observer this tick. M2 uses per-PLAYER aggregate observers (one

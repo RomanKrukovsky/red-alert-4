@@ -179,6 +179,11 @@ struct ReconSettings
 
     TrackTuning Tracks;
     MoraleTuning Morale;
+
+    // Radar detection range for completed radar buildings (owner decision D6:
+    // radar creates anonymous contacts -- position without identity). One global
+    // range for M2; per-building ranges move into EntityDef content with M3.
+    int32_t RadarRangeTiles = 24;
     std::vector<DistortionProfile> DistortionProfiles;
     std::vector<CommsProfile> CommsProfiles;
     ConfusionMatrix Confusion;

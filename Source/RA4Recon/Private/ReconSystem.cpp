@@ -157,6 +157,13 @@ void ReconSystem::PhaseObservation(TickIndex CurrentTick, const ObservationInput
             Obs.Tick = CurrentTick;
             Obs.Clarity = Fixed::FromInt(1);
             Obs.Category = Seen.Category;
+            if (Seen.bRadarContact)
+            {
+                // A radar return is a position, not an identification. Anonymous
+                // from birth; identity can only come from a later visual contact.
+                Obs.bAnonymous = true;
+                Obs.ObservedClass = ContentId();
+            }
             PendingObservations[P].push_back(Obs);
             PendingCategories[P].push_back(Seen.Category);
 
@@ -200,6 +207,17 @@ void ReconSystem::PhaseDistortion(TickIndex)
         {
             Observation Obs = PendingObservations[P][I];
             const ObservedCategory TrueCategory = PendingCategories[P][I];
+
+            if (Obs.bAnonymous)
+            {
+                // Radar contact: machines do not panic and do not misname what
+                // they cannot name. Position is already coarse (the blip), so
+                // the visual stages 1-3/5 do not apply; keep it as-is for M2.
+                PendingObservations[P][Write] = Obs;
+                PendingCategories[P][Write] = TrueCategory;
+                Write += 1;
+                continue;
+            }
 
             // Stage 1: clarity gate. Below MinClarity the observation dies here.
             const Fixed Clarity = StageClarity(Observer, *Profile);

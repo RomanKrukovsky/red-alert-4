@@ -3028,6 +3028,28 @@ void SimWorld::SystemRecon()
     ReconInput.EntityCapacity = uint32_t(Core.size());
     int32_t VisibleEnemiesOf[kMaxPlayers] = {};
     int32_t LiveUnitsOf[kMaxPlayers] = {};
+
+    // Completed radar buildings per player (owner decision D6: radar produces
+    // anonymous contacts). Gathered once per tick; the per-entity check below
+    // is a squared-distance test against these centres.
+    std::vector<Vec2> RadarCentersOf[kMaxPlayers];
+    const Fixed RadarRange = Fixed::FromInt(int64_t(ReconSettingsRef->RadarRangeTiles) * kTileSizeUnits);
+    for (uint32_t I = 0; I < HighWaterMark; ++I)
+    {
+        if (!Core[I].bAlive || Core[I].Kind != EntityKind::Building || Core[I].Owner >= kMaxPlayers)
+        {
+            continue;
+        }
+        if (Buildings[I].State != ConstructionState::Complete)
+        {
+            continue;
+        }
+        const EntityDef* BD = Content ? Content->FindEntity(Core[I].Def) : nullptr;
+        if (BD != nullptr && BD->Building.bIsRadar)
+        {
+            RadarCentersOf[Core[I].Owner].push_back(Transforms[I].Position);
+        }
+    }
     for (uint32_t I = 0; I < HighWaterMark; ++I)
     {
         if (!Core[I].bAlive || Core[I].Kind == EntityKind::Projectile)
@@ -3050,9 +3072,27 @@ void SimWorld::SystemRecon()
             {
                 continue; // own units are known exactly, not tracked as contacts
             }
+            bool bRadarOnly = false;
             if (!IsEntityVisibleTo(P, I))
             {
-                continue;
+                // Not eyes-on: maybe a radar blip. Ground truth stays hidden --
+                // the contact enters the pipeline as anonymous (D6).
+                bool bOnRadar = false;
+                for (const Vec2& Center : RadarCentersOf[P])
+                {
+                    const Vec2 Dv(Transforms[I].Position.X - Center.X,
+                                  Transforms[I].Position.Y - Center.Y);
+                    if (Dv.X * Dv.X + Dv.Y * Dv.Y <= RadarRange * RadarRange)
+                    {
+                        bOnRadar = true;
+                        break;
+                    }
+                }
+                if (!bOnRadar)
+                {
+                    continue;
+                }
+                bRadarOnly = true;
             }
             Recon::ObservedEntity Seen;
             Seen.Id = MakeId(I);
@@ -3069,9 +3109,12 @@ void SimWorld::SystemRecon()
                     D->Unit.Layer == MovementLayer::Infantry,
                     D->Armor == ArmorClass::HeavyVehicle || D->Armor == ArmorClass::SiegeVehicle);
             }
+            Seen.bRadarContact = bRadarOnly;
             ReconInput.VisibleToPlayer[P].push_back(Seen);
-            if (IsHostile(P, Core[I].Owner))
+            if (!bRadarOnly && IsHostile(P, Core[I].Owner))
             {
+                // Radar blips do not feed superiority dread: troops fear what
+                // they can SEE outnumbering them, not a screen in a bunker.
                 VisibleEnemiesOf[P] += 1;
             }
         }

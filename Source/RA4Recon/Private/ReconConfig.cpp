@@ -285,6 +285,11 @@ bool ValidateReconSettings(const ReconSettings& Settings, std::vector<std::strin
         }
     }
 
+    if (Settings.RadarRangeTiles < 0)
+    {
+        OutErrors.push_back("recon_settings: radar_range_tiles is negative");
+    }
+
     const MoraleTuning& MT = Settings.Morale;
     CheckPerMilleRange(MT.DamageMoralePenaltyPerMille, "damage_morale_penalty", OutErrors);
     CheckPerMilleRange(MT.DamageSuppressionPerMille, "damage_suppression", OutErrors);
@@ -349,6 +354,7 @@ bool LoadReconSettingsFromJson(const std::string& JsonText, ReconSettings& OutSe
     OutSettings.bEnabled = ReadBool(Root, "enabled", false);
     OutSettings.ActiveDistortionProfile = ReadString(Root, "active_distortion_profile", OutSettings.ActiveDistortionProfile);
     OutSettings.ActiveCommsProfile = ReadString(Root, "active_comms_profile", OutSettings.ActiveCommsProfile);
+    OutSettings.RadarRangeTiles = ReadInt(Root, "radar_range_tiles", OutSettings.RadarRangeTiles);
 
     if (const Json::Value* Profiles = Root.Find("distortion_profiles"); Profiles != nullptr && Profiles->IsArray())
     {
