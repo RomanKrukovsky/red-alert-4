@@ -11,6 +11,7 @@
 #include "RA4AI/ThreatMap.h"
 #include "RA4AI/ValueMap.h"
 #include "RA4AI/AIDirectors.h"
+#include "RA4AI/AILeague.h"
 #include "RA4AI/BattlePredictor.h"
 #include "RA4AI/OpponentModel.h"
 #include "RA4Core/SimConfig.h"
@@ -2498,4 +2499,183 @@ RA4_TEST(AIProfiles, NoDifficultyTierIsHandedFreeIncome)
     const AIConfig Expert = MakeProfileConfig(AIProfile::Balanced, AIDifficulty::Expert);
     RA4_EXPECT(Hard.DecisionIntervalTicks < Easy.DecisionIntervalTicks);
     RA4_EXPECT(Expert.DecisionIntervalTicks < Hard.DecisionIntervalTicks);
+}
+
+
+// ---------------------------------------------------------------------------
+// Self-play league: the measurement instrument for profile balance. These tests
+// validate the instrument itself -- determinism, honest timeout accounting,
+// correct aggregation -- not any particular balance outcome, which is tuning
+// data and would make every balance change look like a regression.
+// ---------------------------------------------------------------------------
+
+RA4_TEST(AILeague, SingleMatchProducesACompleteRecord)
+{
+    const LeagueMatchRecord R = AILeague::PlayMatch(
+        AIProfile::Aggressive, AIProfile::Defensive,
+        AIDifficulty::Normal, 987654321ULL, /*MaxTicks*/ 20 * 60 * 10);
+
+    RA4_EXPECT(R.DurationTicks > 0);
+    RA4_EXPECT(R.FinalChecksum != 0);
+    // Both economies must have actually played: a record of two idle commanders
+    // would mean the harness wired them in wrong.
+    RA4_EXPECT(R.TotalHarvested[0] > 0 || R.TotalHarvested[1] > 0);
+    // Winner is either a real player or explicitly nobody -- never garbage.
+    RA4_EXPECT(R.Winner == 0 || R.Winner == 1 || R.Winner == kInvalidPlayer);
+    if (R.bTimedOut)
+    {
+        RA4_EXPECT(R.Winner == kInvalidPlayer);
+    }
+}
+
+RA4_TEST(AILeague, IdenticalSeedsProduceIdenticalRecords)
+{
+    // The league doubles as a mass determinism test: every field of two records
+    // from the same (profiles, difficulty, seed) must match bit-for-bit.
+    const LeagueMatchRecord A = AILeague::PlayMatch(
+        AIProfile::Rush, AIProfile::Turtle, AIDifficulty::Normal,
+        424242ULL, 20 * 60 * 6);
+    const LeagueMatchRecord B = AILeague::PlayMatch(
+        AIProfile::Rush, AIProfile::Turtle, AIDifficulty::Normal,
+        424242ULL, 20 * 60 * 6);
+
+    RA4_EXPECT_EQ(A.FinalChecksum, B.FinalChecksum);
+    RA4_EXPECT_EQ(A.DurationTicks, B.DurationTicks);
+    RA4_EXPECT(A.Winner == B.Winner);
+    RA4_EXPECT_EQ(A.TotalHarvested[0], B.TotalHarvested[0]);
+    RA4_EXPECT_EQ(A.TotalHarvested[1], B.TotalHarvested[1]);
+    RA4_EXPECT_EQ(A.UnitsLost[0], B.UnitsLost[0]);
+    RA4_EXPECT_EQ(A.UnitsLost[1], B.UnitsLost[1]);
+}
+
+RA4_TEST(AILeague, DifferentSeedsDivergeTheMatch)
+{
+    // If different seeds gave identical outcomes, the "thousands of matches"
+    // plan would be measuring one match a thousand times.
+    const LeagueMatchRecord A = AILeague::PlayMatch(
+        AIProfile::Aggressive, AIProfile::Balanced, AIDifficulty::Normal,
+        1001ULL, 20 * 60 * 6);
+    const LeagueMatchRecord B = AILeague::PlayMatch(
+        AIProfile::Aggressive, AIProfile::Balanced, AIDifficulty::Normal,
+        1002ULL, 20 * 60 * 6);
+    RA4_EXPECT(A.FinalChecksum != B.FinalChecksum);
+}
+
+RA4_TEST(AILeague, TimeoutIsADrawNotAWin)
+{
+    // With a 10-tick budget nothing can be decided; the instrument must say so
+    // honestly instead of crowning whoever happened to be ahead.
+    const LeagueMatchRecord R = AILeague::PlayMatch(
+        AIProfile::Balanced, AIProfile::Balanced, AIDifficulty::Normal,
+        7ULL, /*MaxTicks*/ 10);
+    RA4_EXPECT(R.bTimedOut);
+    RA4_EXPECT(R.Winner == kInvalidPlayer);
+    RA4_EXPECT_EQ(uint32_t(10), R.DurationTicks);
+}
+
+RA4_TEST(AILeague, RoundRobinPlaysBothOrdersOfEveryPairing)
+{
+    LeagueConfig Config;
+    Config.Roster = {AIProfile::Aggressive, AIProfile::Defensive, AIProfile::Rush};
+    Config.MatchesPerPairing = 1;
+    Config.MaxTicksPerMatch = 40;   // schedule structure is what's under test
+
+    const LeagueResult Result = AILeague::RunRoundRobin(Config);
+
+    // 3 profiles, ordered pairs without mirrors: 3*2 = 6 pairings.
+    RA4_EXPECT_EQ(uint32_t(6), uint32_t(Result.Pairings.size()));
+    RA4_EXPECT_EQ(uint32_t(6), Result.TotalMatches());
+    RA4_EXPECT(Result.FindPairing(AIProfile::Aggressive, AIProfile::Defensive) != nullptr);
+    RA4_EXPECT(Result.FindPairing(AIProfile::Defensive, AIProfile::Aggressive) != nullptr);
+    RA4_EXPECT(Result.FindPairing(AIProfile::Rush, AIProfile::Rush) == nullptr);
+}
+
+RA4_TEST(AILeague, PairingStatsAddUp)
+{
+    LeagueConfig Config;
+    Config.Roster = {AIProfile::Rush, AIProfile::Turtle};
+    Config.MatchesPerPairing = 2;
+    Config.MaxTicksPerMatch = 20 * 60 * 6;
+
+    const LeagueResult Result = AILeague::RunRoundRobin(Config);
+
+    RA4_EXPECT_EQ(uint32_t(4), Result.TotalMatches());
+    for (const LeaguePairingStats& P : Result.Pairings)
+    {
+        RA4_EXPECT_EQ(P.Matches, P.WinsA + P.WinsB + P.Draws);
+        RA4_EXPECT(P.WinRatePercentA() >= 0 && P.WinRatePercentA() <= 100);
+    }
+    // Every record's winner must be consistent with its timeout flag.
+    for (const LeagueMatchRecord& R : Result.Matches)
+    {
+        if (R.bTimedOut)
+        {
+            RA4_EXPECT(R.Winner == kInvalidPlayer);
+        }
+    }
+}
+
+RA4_TEST(AILeague, LeagueRunsAreReproducible)
+{
+    LeagueConfig Config;
+    Config.Roster = {AIProfile::Aggressive, AIProfile::Economic};
+    Config.MatchesPerPairing = 1;
+    Config.MaxTicksPerMatch = 20 * 60 * 5;
+    Config.BaseSeed = 555777999ULL;
+
+    const LeagueResult First = AILeague::RunRoundRobin(Config);
+    const LeagueResult Again = AILeague::RunRoundRobin(Config);
+
+    RA4_REQUIRE(First.TotalMatches() == Again.TotalMatches());
+    for (size_t I = 0; I < First.Matches.size(); ++I)
+    {
+        RA4_EXPECT_EQ(First.Matches[I].FinalChecksum, Again.Matches[I].FinalChecksum);
+        RA4_EXPECT(First.Matches[I].Winner == Again.Matches[I].Winner);
+        RA4_EXPECT_EQ(First.Matches[I].Seed, Again.Matches[I].Seed);
+    }
+}
+
+RA4_TEST(AILeague, FormatTableListsEveryPairing)
+{
+    LeagueConfig Config;
+    Config.Roster = {AIProfile::Rush, AIProfile::Guerrilla};
+    Config.MatchesPerPairing = 1;
+    Config.MaxTicksPerMatch = 40;
+
+    const LeagueResult Result = AILeague::RunRoundRobin(Config);
+    const std::string Table = Result.FormatTable();
+
+    RA4_EXPECT(Table.find("Rush") != std::string::npos);
+    RA4_EXPECT(Table.find("Guerrilla") != std::string::npos);
+    RA4_EXPECT(Table.find("A win%") != std::string::npos);
+}
+
+
+RA4_TEST(BattlePredictor, UnarmedUnitInForceDoesNotCrashGatherStats)
+{
+    // Regression: GatherStats dereferenced Weapon outside its null check, so any
+    // unarmed unit (a harvester swept into an assault list) crashed the match.
+    // All 398 unit tests missed it because they only ever gathered stats over
+    // armed units; the self-play league hit it within 56 matches.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(1111));
+
+    std::vector<EntityId> Mixed;
+    Mixed.push_back(World.SpawnUnit(Ids::SovConscript, 0,
+                                    World.GetMap().TileCenterToWorld(TileCoord(10, 10))));
+    Mixed.push_back(World.SpawnUnit(Ids::SovHarvester, 0,
+                                    World.GetMap().TileCenterToWorld(TileCoord(11, 10))));
+
+    const CombatantStats Stats = BattlePredictor::GatherStats(World, Mixed);
+    RA4_EXPECT_EQ(2, Stats.Count);
+    RA4_EXPECT(Stats.Health > 0);
+
+    // And the full prediction path the league exercises must survive it too.
+    std::vector<EntityId> Defender;
+    Defender.push_back(World.SpawnUnit(Ids::AllRifleman, 1,
+                                       World.GetMap().TileCenterToWorld(TileCoord(40, 40))));
+    const BattleEstimate E = BattlePredictor::PredictFromWorld(World, 0, 1, Mixed, Defender);
+    RA4_EXPECT(E.WinProbability >= 0 && E.WinProbability <= 100);
 }

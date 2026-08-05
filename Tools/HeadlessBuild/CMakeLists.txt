@@ -134,6 +134,7 @@ add_library(RA4AI STATIC
     ${RA4_SOURCE_ROOT}/RA4AI/Private/AIDirectors.cpp
     ${RA4_SOURCE_ROOT}/RA4AI/Private/OpponentModel.cpp
     ${RA4_SOURCE_ROOT}/RA4AI/Private/BattlePredictor.cpp
+    ${RA4_SOURCE_ROOT}/RA4AI/Private/AILeague.cpp
 )
 target_include_directories(RA4AI PUBLIC ${RA4_SOURCE_ROOT}/RA4AI/Public)
 target_link_libraries(RA4AI PUBLIC RA4Simulation RA4FogOfWar)
@@ -216,3 +217,8 @@ set_tests_properties(ai PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 # Plays an AI-versus-AI match and writes it out for Tools/MatchViewer/render.py.
 add_executable(RA4MatchDump ${CMAKE_CURRENT_SOURCE_DIR}/../MatchViewer/dump_match.cpp)
 target_link_libraries(RA4MatchDump PRIVATE RA4AI)
+
+# AI self-play league: plays real headless matches between profiles and prints
+# the balance table. Deterministic per argument set.
+add_executable(RA4League ${CMAKE_CURRENT_SOURCE_DIR}/../League/run_league.cpp)
+target_link_libraries(RA4League PRIVATE RA4AI)

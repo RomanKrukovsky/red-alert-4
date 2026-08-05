@@ -152,11 +152,15 @@ CombatantStats BattlePredictor::GatherStats(const SimWorld& World,
                     const int32_t Cdt = Weapon->CooldownTicks > 0 ? Weapon->CooldownTicks : 1;
                     TotalDps += (BurstDmg * 100) / Cdt;
                     TotalRange += Weapon->MaxRange.ToIntRound();
-                }
 
-                Stats.bHasAntiAir = Stats.bHasAntiAir || Weapon->bCanTargetAir;
-                Stats.bHasAntiArmor = Stats.bHasAntiArmor ||
-                    (Weapon && Weapon->Warhead == WarheadClass::ArmorPiercing);
+                    // Both flags belong INSIDE the null check: an unarmed unit in
+                    // the list (e.g. a harvester swept into an assault) previously
+                    // dereferenced Weapon here and crashed the whole match. Found
+                    // by the self-play league on its first real run.
+                    Stats.bHasAntiAir = Stats.bHasAntiAir || Weapon->bCanTargetAir;
+                    Stats.bHasAntiArmor = Stats.bHasAntiArmor ||
+                        Weapon->Warhead == WarheadClass::ArmorPiercing;
+                }
             }
         }
     }
