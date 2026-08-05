@@ -1179,6 +1179,32 @@ RA4_TEST(KeyBindings, ConflictingBindingsAreDetected)
     RA4_EXPECT(!Conflicts.empty() && Conflicts[0] == GameAction::Guard);
 }
 
+RA4_TEST(KeyBindings, BuildCardHotkeysDoNotCollideWithBoundActions)
+{
+    // Regression: "H" was both HoldPosition in the binding table and the tenth build
+    // card badge, so one press ran the hold order AND queued a structure. The two
+    // tables live in different modules (RA4Input and RA4UI) and nothing compared
+    // them, so the collision was invisible until a key did two things at once.
+    //
+    // Mirrors URA4SidebarWidget::kCardHotkeys and
+    // ARA4PlayerController::GetBuildCardHotkeys, which must agree with each other.
+    const char* const CardHotkeys[] = {"Q", "E", "R", "T", "Y", "U",
+                                       "I", "O", "P", "L", "J", "K"};
+
+    for (ControlScheme Scheme : {ControlScheme::ClassicRA, ControlScheme::Modern})
+    {
+        KeyBindingTable Table;
+        Table.LoadDefaults(Scheme);
+
+        for (const char* Card : CardHotkeys)
+        {
+            // Unmodified press, which is how a build card is committed.
+            const GameAction Action = Table.Resolve(Card, false, false, false);
+            RA4_EXPECT(Action == GameAction::None);
+        }
+    }
+}
+
 RA4_TEST(KeyBindings, PanAndRotateArePolledWhileOrdersAreDispatchedOnPress)
 {
     RA4_EXPECT(IsHeldAction(GameAction::CameraPanUp));

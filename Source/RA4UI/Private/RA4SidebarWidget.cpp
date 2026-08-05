@@ -205,10 +205,14 @@ const FLinearColor kQueueWaiting(0.30f, 0.44f, 0.58f);
 // control groups, and the ordinary RTS reflex of pressing a number to recall a squad has
 // to keep working. Every entry here is bound for real by ARA4PlayerController, which
 // asserts the two tables are the same length, so a badge cannot promise a dead key.
+//
+// H is deliberately absent: it is HoldPosition in RA4::Input::KeyBindingTable, and
+// while this table also claimed it a single press ran the hold order and committed a
+// build card. L takes the tenth slot instead.
 const TCHAR* const kCardHotkeys[] = {
     TEXT("Q"), TEXT("E"), TEXT("R"), TEXT("T"),
     TEXT("Y"), TEXT("U"), TEXT("I"), TEXT("O"),
-    TEXT("P"), TEXT("H"), TEXT("J"), TEXT("K"),
+    TEXT("P"), TEXT("L"), TEXT("J"), TEXT("K"),
 };
 
 // Power is plotted as consumption against production rather than over a fixed range:

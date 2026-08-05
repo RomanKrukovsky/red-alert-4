@@ -12,6 +12,7 @@
 
 #include "RA4Input/ControlScheme.h"
 #include "RA4Input/HitTest.h"
+#include "RA4Input/KeyBindings.h"
 #include "RA4Input/OrderResolver.h"
 #include "RA4Input/SelectionModel.h"
 
@@ -139,6 +140,24 @@ private:
     void OnAttackMovePressed();
     void OnControlGroupKeyByKey(FKey Key);
     void OnControlGroupKey(int32 GroupIndex);
+
+    /**
+     * Dispatches one physical key press through the remappable binding table.
+     *
+     * Every non-mouse key routes here rather than to its own handler, so which key
+     * does what is data in RA4::Input::KeyBindingTable and not a literal in
+     * SetupInputComponent. Modifier state is read from the controller at dispatch
+     * time so Ctrl+1 and 1 can reach the same action and be told apart there.
+     */
+    void OnBoundKeyPressed(FKey Key);
+
+    /**
+     * The player's binding table. Engine-free by design, so the rules that actually
+     * bite - modifier precedence, conflicts, unbound actions - are unit tested
+     * without an editor. Populated from the active control scheme on setup and, once
+     * a settings screen exists, from the player's overrides.
+     */
+    RA4::Input::KeyBindingTable KeyBindings;
 
     /**
      * Keys that commit build cards, in the same grid order as the badges the sidebar

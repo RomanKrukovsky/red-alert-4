@@ -238,10 +238,9 @@ void ARA4PlayerController::SetupInputComponent()
         return;
     }
 
-    // Bound directly to keys rather than through an InputMappingContext asset: the
-    // whole control scheme stays in code and in version control, and the project
-    // needs no editor-authored asset to be playable. Remapping moves to Enhanced
-    // Input with the settings screen.
+    // Mouse buttons stay literal. Which button selects and which orders is
+    // ControlScheme's decision - the pair has to swap together or the scheme becomes
+    // incoherent - so they are deliberately absent from the rebindable action table.
     InputComponent->BindKey(EKeys::LeftMouseButton, IE_Pressed, this, &ARA4PlayerController::OnPrimaryPressed);
     InputComponent->BindKey(EKeys::LeftMouseButton, IE_Released, this, &ARA4PlayerController::OnPrimaryReleased);
     InputComponent->BindKey(EKeys::RightMouseButton, IE_Pressed, this, &ARA4PlayerController::OnSecondaryPressed);
@@ -249,37 +248,41 @@ void ARA4PlayerController::SetupInputComponent()
     InputComponent->BindKey(EKeys::MiddleMouseButton, IE_Pressed, this, &ARA4PlayerController::OnMiddlePressed);
     InputComponent->BindKey(EKeys::MiddleMouseButton, IE_Released, this, &ARA4PlayerController::OnMiddleReleased);
 
-    InputComponent->BindKey(EKeys::MouseScrollUp, IE_Pressed, this, &ARA4PlayerController::OnZoomIn);
-    InputComponent->BindKey(EKeys::MouseScrollDown, IE_Pressed, this, &ARA4PlayerController::OnZoomOut);
+    // Everything else comes from the binding table, so no keyboard key is named here.
+    // RA4Input was already linked and unit tested but never actually consulted: the
+    // control scheme was a wall of literal BindKey calls, which made every key a
+    // recompile and remapping impossible. This is that connection.
+    KeyBindings.LoadDefaults(Scheme);
 
-    // Ensure WASD and arrow keys are tracked by PlayerInput for camera panning.
-    // A is deliberately absent: it arms attack-move below, which is what the genre
-    // and this class's own documentation expect of it. Panning left is left to the
-    // arrow key, the screen edge and the middle-mouse drag.
-    InputComponent->BindKey(EKeys::W, IE_Pressed, this, &ARA4PlayerController::OnDummyPanKey);
-    InputComponent->BindKey(EKeys::S, IE_Pressed, this, &ARA4PlayerController::OnDummyPanKey);
-    InputComponent->BindKey(EKeys::D, IE_Pressed, this, &ARA4PlayerController::OnDummyPanKey);
-    InputComponent->BindKey(EKeys::Up, IE_Pressed, this, &ARA4PlayerController::OnDummyPanKey);
-    InputComponent->BindKey(EKeys::Down, IE_Pressed, this, &ARA4PlayerController::OnDummyPanKey);
-    InputComponent->BindKey(EKeys::Left, IE_Pressed, this, &ARA4PlayerController::OnDummyPanKey);
-    // Right was missing from this list while its three neighbours were present.
-    InputComponent->BindKey(EKeys::Right, IE_Pressed, this, &ARA4PlayerController::OnDummyPanKey);
-    InputComponent->BindKey(EKeys::SpaceBar, IE_Pressed, this, &ARA4PlayerController::OnDummyPanKey);
-    InputComponent->BindKey(EKeys::SpaceBar, IE_Released, this, &ARA4PlayerController::OnDummyPanKey);
-
-    InputComponent->BindKey(EKeys::F, IE_Pressed, this, &ARA4PlayerController::OnDirectControlTogglePressed);
-    InputComponent->BindKey(EKeys::A, IE_Pressed, this, &ARA4PlayerController::OnAttackMovePressed);
-    InputComponent->BindKey(EKeys::X, IE_Pressed, this, &ARA4PlayerController::OnStopPressed);
-    InputComponent->BindKey(EKeys::G, IE_Pressed, this, &ARA4PlayerController::OnGuardPressed);
-    InputComponent->BindKey(EKeys::Tilde, IE_Pressed, this, &ARA4PlayerController::ToggleCheatConsole);
-    InputComponent->BindKey(EKeys::Escape, IE_Pressed, this, &ARA4PlayerController::CancelPendingAction);
-
-    // Control groups 1..9 then 0, matching the on-screen numbering.
-    static const FKey GroupKeys[10] = {EKeys::One, EKeys::Two,   EKeys::Three, EKeys::Four, EKeys::Five,
-                                       EKeys::Six, EKeys::Seven, EKeys::Eight, EKeys::Nine, EKeys::Zero};
-    for (int32 Index = 0; Index < 10; ++Index)
+    // A collision means two actions answer the same chord, and which one is the
+    // mistake is the player's call, not ours - so report it and carry on rather than
+    // silently dropping a binding the player asked for.
+    for (const RA4::Input::GameAction Conflicted : KeyBindings.FindConflicts())
     {
-        InputComponent->BindKey(GroupKeys[Index], IE_Pressed, this, &ARA4PlayerController::OnControlGroupKeyByKey);
+        UE_LOG(LogTemp, Warning, TEXT("RA4 input: binding conflict on action '%s'"),
+               *FString(RA4::Input::ToString(Conflicted)));
+    }
+
+    // Bind exactly the physical keys the table names, and nothing else.
+    for (const std::string& KeyName : KeyBindings.DistinctKeys())
+    {
+        const FKey Key(*FString(KeyName.c_str()));
+        if (!Key.IsValid())
+        {
+            UE_LOG(LogTemp, Warning, TEXT("RA4 input: binding names unknown key '%s'"),
+                   *FString(KeyName.c_str()));
+            continue;
+        }
+        InputComponent->BindKey(Key, IE_Pressed, this, &ARA4PlayerController::OnBoundKeyPressed);
+
+        // Held actions are polled in UpdateCameraInput, but PlayerInput only tracks a
+        // key it has a binding for, so the release edge has to be claimed too or
+        // IsInputKeyDown never reports the key at all.
+        if (RA4::Input::IsHeldAction(
+                KeyBindings.Resolve(KeyName, /*bCtrl*/ false, /*bShift*/ false, /*bAlt*/ false)))
+        {
+            InputComponent->BindKey(Key, IE_Released, this, &ARA4PlayerController::OnDummyPanKey);
+        }
     }
 
     // Build card hotkeys, in the same grid order as the badges the sidebar draws.
@@ -289,16 +292,85 @@ void ARA4PlayerController::SetupInputComponent()
     }
 }
 
+void ARA4PlayerController::OnBoundKeyPressed(const FKey Key)
+{
+    // Modifiers are read here rather than baked into separate enumerators: Resolve
+    // prefers an exact modifier match, so Ctrl+1 and 1 can both reach ControlGroup1
+    // and the assign-versus-recall decision stays where the group logic already is.
+    const bool bCtrl = IsInputKeyDown(EKeys::LeftControl) || IsInputKeyDown(EKeys::RightControl);
+    const bool bShift = IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift);
+    const bool bAlt = IsInputKeyDown(EKeys::LeftAlt) || IsInputKeyDown(EKeys::RightAlt);
+
+    const FString KeyName = Key.ToString();
+    const RA4::Input::GameAction Action =
+        KeyBindings.Resolve(TCHAR_TO_UTF8(*KeyName), bCtrl, bShift, bAlt);
+
+    using RA4::Input::GameAction;
+    switch (Action)
+    {
+    case GameAction::AttackMove:
+        OnAttackMovePressed();
+        return;
+    case GameAction::Stop:
+        OnStopPressed();
+        return;
+    case GameAction::Guard:
+    case GameAction::HoldPosition:
+        OnGuardPressed();
+        return;
+    case GameAction::CancelAction:
+        CancelPendingAction();
+        return;
+    case GameAction::ToggleDirectControl:
+        OnDirectControlTogglePressed();
+        return;
+    case GameAction::ToggleCheatConsole:
+        ToggleCheatConsole();
+        return;
+    case GameAction::CameraZoomIn:
+        OnZoomIn();
+        return;
+    case GameAction::CameraZoomOut:
+        OnZoomOut();
+        return;
+
+    case GameAction::ControlGroup1:
+    case GameAction::ControlGroup2:
+    case GameAction::ControlGroup3:
+    case GameAction::ControlGroup4:
+    case GameAction::ControlGroup5:
+    case GameAction::ControlGroup6:
+    case GameAction::ControlGroup7:
+    case GameAction::ControlGroup8:
+    case GameAction::ControlGroup9:
+        OnControlGroupKey(static_cast<int32>(Action) - static_cast<int32>(GameAction::ControlGroup1));
+        return;
+    case GameAction::ControlGroup0:
+        // Group 0 sits after 9 on the keyboard but is the tenth slot, matching the
+        // on-screen numbering rather than the enumerator order.
+        OnControlGroupKey(9);
+        return;
+
+    default:
+        // Held actions (panning, rotate, fast-pan) are polled in UpdateCameraInput,
+        // and an unbound key resolves to None. Both are no-ops on the press edge.
+        return;
+    }
+}
+
 const TArray<FKey>& ARA4PlayerController::GetBuildCardHotkeys()
 {
     // Deliberately not the digits: those are control groups above, and the ordinary RTS
     // reflex of pressing a number to recall a squad has to keep working. Order matches
     // URA4SidebarWidget's badge table, and the assert catches a key added to one table
     // and not the other rather than leaving a badge that does nothing.
+    //
+    // H is absent because RA4::Input::KeyBindingTable binds it to HoldPosition; while
+    // both tables claimed it, one press both held position and queued a structure.
     static const TArray<FKey> Keys = {
         EKeys::Q, EKeys::E, EKeys::R, EKeys::T,
         EKeys::Y, EKeys::U, EKeys::I, EKeys::O,
-        EKeys::P, EKeys::H, EKeys::J, EKeys::K,
+        EKeys::P, EKeys::L, EKeys::J, EKeys::K,
     };
     checkf(Keys.Num() == URA4SidebarWidget::GetCardHotkeyCount(),
            TEXT("Build card hotkey table and sidebar badge table disagree (%d vs %d)"),
