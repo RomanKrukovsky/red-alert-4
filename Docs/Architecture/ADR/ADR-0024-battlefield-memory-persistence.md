@@ -1,9 +1,9 @@
 # ADR-0024: Battlefield Memory — Persistent Terrain State and Wreck Salvage
 
-**Status**: Proposed — independent review 2026-08-05 returned **APPROVE-WITH-CHANGES**. Required
-before Accepted (NEXT_ACTIONS P-10): a flow-field invalidation contract for mid-match cost changes (batch
-phase, deterministic recompute order, recompute budget) and an incremental/dirty-region hashing scheme for
-TerrainStateLayer. No implementation authorized.
+**Status**: Proposed — review changes **applied 2026-08-05** (flow-field invalidation contract
+specified: per-tick batch phase, ascending-index recompute order, budget charged to the existing
+pathfinding line; incremental per-region rolling hash specified for checksum and delta saves). Ready
+for acceptance decision. No implementation authorized until Accepted.
 **Depends on**: ADR-0003 (entity/component model), ADR-0005 (replay/checkpointing), ADR-0009 (data-driven content), SAVE_AND_REPLAY.md
 
 ## Context
@@ -21,8 +21,28 @@ Both reduce to one architectural need: a **TerrainStateLayer** and a **WreckEnti
 
 - A per-cell overlay grid (same resolution family as fog/nav grids): `{SurfaceType, DamageLevel, ContaminationType, ContaminationTicksRemaining, TrafficCounter}`.
 - All mutations happen in-tick from combat/movement events (explosion at cell ⇒ DamageLevel up; N vehicle passes ⇒ TrafficCounter up, above threshold cell becomes `ImprovisedRoad` with a movement-cost bonus in the nav layer).
-- Nav/flow-field layer (ADR-0007) consumes TerrainStateLayer as a cost modifier — one-way dependency, no cycles.
-- Hash-relevant, replay-relevant, save-relevant.
+- Nav/flow-field layer (ADR-0007) consumes TerrainStateLayer as a cost modifier — one-way
+  dependency, no cycles. **Invalidation contract (review P-10)**:
+  - **Batch phase**: terrain cost mutations accumulate in a dirty-cell set during combat/movement
+    processing and are **applied once per tick**, in a fixed phase after TerrainStateLayer updates
+    and before any pathfinding query of the same tick. No mid-tick cost change is ever visible to a
+    query.
+  - **Deterministic recompute order**: dirty cells are drained in ascending cell index; affected
+    flow-field sectors are re-queued in ascending sector index. Field recomputation processes the
+    queue FIFO with a fixed per-tick budget; a sector recomputed at tick T serves stale-but-
+    consistent costs until then, identically on every peer (staleness is deterministic, so it is
+    not drift).
+  - **Recompute budget**: sector recompute work is charged against the existing 2.0 ms/sim-tick
+    pathfinding budget (PERFORMANCE_BUDGETS §2), with the §4.3 line item (≤1.0 ms amortized)
+    bounding the TerrainStateLayer-triggered share. Worst-case storm (mass crater event) degrades
+    to more ticks of staleness, never to a budget breach.
+- Hash-relevant, replay-relevant, save-relevant. **Hashing scheme (review P-10)**: the full grid
+  is too large to fold into the checksum every interval, so TerrainStateLayer keeps a
+  **per-region rolling hash** (regions = the flow-field sector partition): a cell mutation updates
+  its region hash incrementally at mutation time; the checksum tick folds the (fixed-order) region
+  hash vector, cost O(regions), not O(cells). Serialization writes regions in ascending index with
+  per-region dirty flags for delta saves. A full-grid rehash exists as a debug validation path
+  only.
 
 ### 2. WreckEntity
 
@@ -49,6 +69,21 @@ Presentation reads TerrainStateLayer to select decals/VFX/foliage states. It nev
 - Nav-cost coupling: improvised roads change pathing mid-match — needs determinism tests around flow-field invalidation.
 - Wreck spam in large battles — cap policy above is mandatory, not optional.
 - Campaign QA surface: missions must be beatable with ANY plausible TheaterState. Requires property-based scenario tests (randomized valid TheaterStates ⇒ mission-critical paths remain traversable). Mission design rule: critical routes are persistence-immune zones.
+
+**Additional design risks (review P-12)**:
+- **Wreck-spam as griefing**: deliberately feeding cheap units into the enemy's economy zone floods
+  the wreck cap and can flush *valuable* enemy wrecks out of it (cap eviction is
+  oldest-lowest-value). Mitigation: eviction value uses original unit cost, so cheap-unit floods
+  evict each other, not tanks; per-player wreck-source quota within the cap if playtests still show
+  abuse.
+- **Salvage rewarding failed attacks**: the attacker's dead units become salvage near the
+  defender's base — for the *defender*. That is the intended punishment asymmetry (the field owner
+  profits), but the reverse case (attacker salvaging mid-siege) weakens the cost of a failed push.
+  Rule: salvaging requires an engineer-class unit holding position for a duration — under fire this
+  is rarely viable, keeping failed attacks expensive.
+- **Improvised roads collapsing route diversity**: the movement bonus makes the popular route more
+  popular — positive feedback toward a single highway. Cap the bonus (single tier, +10% max), and
+  contamination/cratering on the same cells cancels it, so contested roads decay naturally.
 
 ## Verification plan
 

@@ -90,7 +90,18 @@ then freeze.
 | TheaterState blob size per mission | <= 1.0 MB | 2.0 MB | Campaign save attachment; versioned from v1. |
 | Memory: TerrainStateLayer | <= 8 MB | 16 MB | Grid at fog-grid resolution family. |
 
-### 4.4 Combined ceiling
+### 4.4 Entity baseline (product owner decision, 2026-08-05)
+
+The **single gating baseline for every per-tick budget in this document is 2,000 entities / 4
+players.** This resolves the conflict with NEXT_ACTIONS I-M5, which was written against 5,000
+entities: I-M5 is restated to 2,000. A 5,000-entity run remains a **stress metric** — recorded for
+information whenever the ProvingGround harness runs, but never a CI gate and never a blocker.
+Rationale: gates must sit on numbers we intend to measure (P-7); today only 500 entities have ever
+been measured, and failing a milestone on a 10x-extrapolated figure would block M2 for no product
+reason. If the 2,000 measurement comes in with >2x headroom, raising the baseline is the permitted
+single renegotiation.
+
+### 4.4a Combined ceiling
 
 Sum of all perception-warfare sim work (4.1 + 4.2 + 4.3) MUST stay under **2.5 ms per sim tick**
 (hard max 4.0 ms) at the 2,000-entity / 4-player baseline, so that total sim tick cost including

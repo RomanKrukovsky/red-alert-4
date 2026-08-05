@@ -91,14 +91,6 @@ const PerceivedWorld& IntelSystem::GetPerceivedWorld(PlayerId PlayerIdx) const
     return *Worlds[PlayerIdx];
 }
 
-PerceivedWorld& IntelSystem::GetPerceivedWorldMutable(PlayerId PlayerIdx)
-{
-    // Mutable access is core-internal (phases and tests). Unlike the const
-    // accessor there is no safe fallback, so this asserts by contract: callers
-    // must check IsEnabled() first.
-    return *Worlds[PlayerIdx];
-}
-
 // --- Phases (M0: deliberately empty, see header) -----------------------------
 
 void IntelSystem::PhaseMoraleUpdate(TickIndex) {}

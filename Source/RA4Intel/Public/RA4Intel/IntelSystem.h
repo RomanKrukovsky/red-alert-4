@@ -76,8 +76,9 @@ public:
     void Tick(TickIndex CurrentTick);
 
     // The only read surface for belief state. PlayerIdx must be < kMaxPlayers.
+    // There is deliberately no mutable counterpart: belief is written only by
+    // the phases of this system (INVARIANT 9, ADR-0026 review BLOCKER 2).
     const PerceivedWorld& GetPerceivedWorld(PlayerId PlayerIdx) const;
-    PerceivedWorld& GetPerceivedWorldMutable(PlayerId PlayerIdx);
 
     // --- Determinism plumbing ------------------------------------------------
     void Serialize(ByteWriter& W) const;

@@ -33,11 +33,11 @@
 
 9. **INVARIANT 9: Belief Is Written Only By The Simulation** (ADR-0021 K1)
    - No code outside `RA4Simulation`/`RA4Intel` may mutate any player's perceived world. A public mutable accessor to belief state is a violation of this invariant, not a convenience.
-   - **Currently violated**: `IntelSystem::GetPerceivedWorldMutable(PlayerId)` and `PerceivedWorld::SetLastObservedTick(...)` are public. Must be fixed before M1 (ADR-0026 review, BLOCKER 2).
+   - **Fixed 2026-08-05** (branch `fix/intel-invariant-blockers`): `GetPerceivedWorldMutable` removed; all `PerceivedWorld` writer methods are private, reachable only by `IntelSystem` (friend) and the deterministic test harness via `PerceivedWorldTestAccess`.
 
 10. **INVARIANT 10: No Ground Truth In The Belief Read Surface** (ADR-0021 K3)
    - Any type handed to presentation, UI or the AI commander must contain no field that reveals objective truth about entities the reading player does not own — including flags describing whether a contact is real. A comment saying a field is internal does not make it internal.
-   - **Currently violated**: `PerceivedTrack::bPhantom` is a member of the struct returned by `GetTracksInRegion`. Must be fixed before M1 (ADR-0026 review, BLOCKER 1), and pinned by an instrumented leak detector rather than by review discipline.
+   - **Fixed 2026-08-05** (branch `fix/intel-invariant-blockers`): `bPhantom` removed from `PerceivedTrack`; phantom truth lives in a core-internal side table (`PerceivedWorld::PhantomFlags`), private accessors only. Pinned by test `Intel.PhantomTruthLivesOutsideTheReadSurface`, whose `static_assert` mirror of the read-surface layout fails compilation if a field is added to `PerceivedTrack` without review.
 
 11. **INVARIANT 11: Belief Is Replay-Reconstructible** (ADR-0021 K2)
    - "What did player P believe at tick T" must be answerable from a replay plus a player id alone. Belief may not depend on any state that is not in the replay.
