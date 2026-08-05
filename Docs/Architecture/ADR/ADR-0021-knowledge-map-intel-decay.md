@@ -1,6 +1,8 @@
 # ADR-0021: Knowledge Map — Per-Player Belief State with Intel Decay
 
-**Status**: Proposed (pending independent review — NEXT_ACTIONS P-1; no implementation authorized)
+**Status**: **Superseded in part by ADR-0026** (which is the authority on implemented behaviour).
+Independent review completed 2026-08-05; see the rejection log at the end of this document. The
+un-implemented parts (cell-level intel layer, per-source-type decay, amortized decay) remain Proposed.
 **Depends on**: ADR-0001 (fixed-tick lockstep, 20 Hz), ADR-0002 (pure C++ sim), ADR-0004 (state hashing), ADR-0008 (AI zero-cheat fog compliance)
 
 ## Context
@@ -74,3 +76,38 @@ struct IntelRecord {
 2. Regression test: AI receives zero information not present in its KnowledgeMap (instrumented leak detector in test build).
 3. Replay test: belief-view reconstruction from replay matches live run.
 4. Performance test: 500 entities × 4 players, decay + hashing within tick budget (budget TBD in PERFORMANCE_BUDGETS.md).
+
+
+---
+
+## Rejection log — what ADR-0026 changed (independent review, 2026-08-05)
+
+ADR-0026 is the implementation decision record for this design. Where the two differ, **ADR-0026 wins on
+implemented behaviour and this document states intent only.** Every divergence found by independent
+review is listed here so no reader mistakes this document for current.
+
+| This ADR specified | ADR-0026 / M0 did instead | Disposition |
+| :--- | :--- | :--- |
+| `IntelRecord` with `SourceType` (visual/radar/report/inference) | `PerceivedTrack` with `IndependentSourceCount` — a count, not a type | **Rejected by omission — must be revisited.** Without a source type, this ADR's per-source-type decay rates cannot exist; `TrackTuning` has one global decay. Either restore the field or amend section 3 to accept a single decay curve, with a reason. |
+| `Confidence` as `uint8` 0–255, explicitly "not float" | `Fixed Confidence` (0..1) | **Accepted change.** `Fixed` satisfies INVARIANT 2 and is more natural in this codebase. This ADR's insistence on `uint8` was an over-specification. |
+| `FixedVec2 LastKnownPos` | `Vec2 BelievedPosition` + `PositionErrorRadius` | **Accepted change and an improvement** — an explicit error radius is better than an implied one. |
+| `LastConfirmedTick` | `LastUpdateTick` | **Accepted with a caveat.** The rename is a real semantic shift: a track touched by an unreliable or fabricated report has been *updated*, not *confirmed*. Any rule that meant "confirmed" must be re-read. |
+| UI shows an exact count: "24 tanks, confidence 61%" | `BelievedCountMin`/`BelievedCountMax` — "count is an interval, never one number" | **Accepted change; this ADR was wrong.** An interval is more honest than a false-precision integer. Section 4's example is superseded; GDD section 8 documents the interval presentation. |
+| Cell-level intel layer (terrain, structures) | Only `LastObserved` tick per tile | **Deferred, not rejected.** No cell-level belief exists yet. |
+| Amortized round-robin decay, 1/N records per tick, deterministic GC | `PhaseTrackUpdate()` is empty in M0 | **Deferred to M1/M2.** Honest for a skeleton, but neither a round-robin cursor nor a batch-size parameter exists in `TrackTuning`, so the requirement currently has no home in the design. Add both, or record explicitly that a full sweep per tick is affordable within budget. |
+| Updated exclusively inside `CommandBus::DispatchTick` | `SystemIntel` inside `SimWorld::Tick`, after `SystemFogOfWar` | **Accepted change.** Equivalent determinism guarantee; the phrasing here was too narrow. INVARIANT 4 uses the same wording and has the same imprecision. |
+| 60Hz tick assumptions throughout | 20 Hz (`kTicksPerSecond`) | **This ADR was wrong**, along with most of the documentation. Corrected here and across nine documents; erratum added to ADR-0001. |
+| Naming: `KnowledgeMap`, `IntelRecord`, `RA4Simulation` owns it | `PerceivedWorld`, `PerceivedTrack`, `RA4Intel` module | **Accepted change.** Read this document's names as referring to the ADR-0026 types. |
+
+### Invariants K1–K3: not yet honoured
+
+Independent review found that K1 and K3 are violated by the M0 read surface — `bPhantom` (a
+ground-truth flag) is a member of the struct handed to UI callers, and
+`GetPerceivedWorldMutable` / `SetLastObservedTick` are public. Details and required fixes are in
+ADR-0026's review section. **K1–K3 must also be promoted into
+`Docs/Architecture/INVARIANTS.md`**: while they live only in this document's prose they are advice, not
+invariants, which is precisely how they came to be implemented around.
+
+Verification items 2 (instrumented leak detector) and 3 (belief-view reconstruction from replay, i.e.
+K2) from section "Verification plan" are **not** among M0's 14 tests and are not listed as deferred
+anywhere. They gate M1.

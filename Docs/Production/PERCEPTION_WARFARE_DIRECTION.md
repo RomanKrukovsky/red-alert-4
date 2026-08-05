@@ -33,16 +33,25 @@ Rationale: Variants A and C decompose into five systems that are all *determinis
 Intelligence Layer") authored by a parallel work stream, whose M0 skeleton exists as
 `Source/RA4Intel/` with 14 `Intel.*` tests. Its claim of a clean build and 331 passing tests was
 independently re-verified by running the suite and is true. ADR-0021 remains the design-intent
-document; ADR-0026 is the authority on what is actually implemented. Reconciling the two is
-NEXT_ACTIONS P-2. Systems 2-5 have no code.
+document and is now Superseded in part; ADR-0026 is the authority on what is actually implemented, and
+ADR-0021 carries the full rejection log (P-2 complete).
+
+**However**, independent review found the M0 read surface violates two of ADR-0021's own K-invariants:
+a ground-truth flag (`bPhantom`) sits inside the struct handed to UI callers, and belief state is
+publicly mutable. Both were confirmed in the headers. They are now INVARIANTS 10 and 9 respectively,
+recorded as violated, and gate M1 as tasks I-B1/I-B2. The lesson is structural: K1–K3 lived only in ADR
+prose, and prose does not stop an implementation. Systems 2-5 have no code.
 
 Each ADR contains its own verification plan. Of the three original preconditions:
 1. ~~foundation green~~ — **DONE** via `main` (479/479, verified by run; see Status above);
 2. ~~performance budgets~~ — **DONE**, `PERFORMANCE_BUDGETS.md` section 4, with provisional figures
    marked `(p)` that must be replaced by measurements (NEXT_ACTIONS P-7);
-3. independent architecture review — **OUTSTANDING**. Three attempts failed on inference-gateway 524
-   timeouts. This remains a hard gate: no ADR moves to Accepted without it, and no implementation of
-   systems 2-5 may begin.
+3. independent architecture review — **DONE 2026-08-05**, after three attempts lost to gateway
+   timeouts, split across two reviewers who authored none of the documents. Outcome: ADR-0022..0025 all
+   **APPROVE-WITH-CHANGES** (none ready for Accepted; required changes tracked as P-8..P-12), and the
+   ADR-0021/ADR-0026 pair returned **divergences partly hidden** with two BLOCKERs re-verified directly
+   in the M0 headers (tracked as I-B1/I-B2). Implementation of systems 2-5 remains unauthorized until
+   their required changes land.
 
 ## 3. Disposition of the Remaining 15 Ideas
 
@@ -83,7 +92,7 @@ The four factions map cleanly onto the perception-warfare axis, replacing "facti
 
 | # | Item | Status |
 | :--- | :--- | :--- |
-| 1 | Independent review of ADR-0021..0026 by a non-author agent (project rule 12) | **OUTSTANDING** — 3 attempts lost to gateway 524 timeouts; tracked as NEXT_ACTIONS P-1 |
+| 1 | Independent review of ADR-0021..0026 by a non-author agent (project rule 12) | **DONE** — two reviewers, findings recorded in ADR-0026 and ADR-0021; follow-ups are I-B1..I-B5 and P-8..P-12 |
 | 2 | `PERFORMANCE_BUDGETS.md` budgets for intel, CommandGraph, TerrainStateLayer | **DONE** — section 4; provisional numbers marked `(p)`, measurement tracked as P-7 |
 | 3 | `GAME_DESIGN_DOCUMENT.md` sections for intel, command infrastructure, salvage | **DONE** — sections 8-11 |
 | 4 | `PRODUCT_VISION.md` positioning per §4 | **DONE** — genre problems 5-7 and the differentiation rationale |
@@ -105,7 +114,9 @@ Discovered and fixed while completing the above, not part of the original plan:
 
 - **No code, content or test changes by this work stream.** The only code in this direction is
   ADR-0026's M0, written by a different session.
-- **No ADR is Accepted.** All of ADR-0021..0025 remain Proposed pending independent review.
+- **No ADR is Accepted.** ADR-0022..0025 are Proposed with review changes outstanding; ADR-0021 is
+  Superseded in part by ADR-0026; only ADR-0026's M0 scope is Accepted, and even that carries two
+  invariant violations to fix before M1.
 - **No implementation is authorized** for systems 2-5 (Command Network, Deception, Battlefield Memory,
   Adaptive Opponent).
 - **Provisional budgets are not measurements.** Every `(p)` figure in PERFORMANCE_BUDGETS.md section 4

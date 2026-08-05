@@ -1,6 +1,6 @@
 # Architectural Invariants (`INVARIANTS.md`)
 
-**Document Version**: 3.1 (corrected against Source/RA4Core/SimConfig.h — prior version claimed 60Hz/16.66ms and FixedPoint.h, contradicting the actual code)  
+**Document Version**: 3.2 (corrected against Source/RA4Core/SimConfig.h — prior version claimed 60Hz/16.66ms and FixedPoint.h, contradicting the actual code)  
 **Project Title**: *Iron Resonance: Command of Tomorrow*  
 
 ---
@@ -30,3 +30,15 @@
 
 8. **INVARIANT 8: Intel Kill Switch Restores Classic Behaviour**
    - With the intel layer disabled (shipped default), simulation results are bit-identical to a build without the module. Pinned by test `Intel.DisabledLayerDoesNotChangeSimulationResults`.
+
+9. **INVARIANT 9: Belief Is Written Only By The Simulation** (ADR-0021 K1)
+   - No code outside `RA4Simulation`/`RA4Intel` may mutate any player's perceived world. A public mutable accessor to belief state is a violation of this invariant, not a convenience.
+   - **Currently violated**: `IntelSystem::GetPerceivedWorldMutable(PlayerId)` and `PerceivedWorld::SetLastObservedTick(...)` are public. Must be fixed before M1 (ADR-0026 review, BLOCKER 2).
+
+10. **INVARIANT 10: No Ground Truth In The Belief Read Surface** (ADR-0021 K3)
+   - Any type handed to presentation, UI or the AI commander must contain no field that reveals objective truth about entities the reading player does not own — including flags describing whether a contact is real. A comment saying a field is internal does not make it internal.
+   - **Currently violated**: `PerceivedTrack::bPhantom` is a member of the struct returned by `GetTracksInRegion`. Must be fixed before M1 (ADR-0026 review, BLOCKER 1), and pinned by an instrumented leak detector rather than by review discipline.
+
+11. **INVARIANT 11: Belief Is Replay-Reconstructible** (ADR-0021 K2)
+   - "What did player P believe at tick T" must be answerable from a replay plus a player id alone. Belief may not depend on any state that is not in the replay.
+   - **Not yet verified**: no test reconstructs a belief view from a replay. Gates M1.

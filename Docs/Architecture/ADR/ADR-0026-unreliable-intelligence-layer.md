@@ -1,6 +1,7 @@
 # ADR-0026: Unreliable Intelligence Layer (Perceived World)
 
-**Status**: Accepted — M0 (skeleton) implemented on `feat/intel-unreliable`
+**Status**: Accepted for M0 — **but two K-invariant violations found in independent review (2026-08-05)
+must be fixed before M1.** See "Independent review findings" at the end of this document.
 **Date**: 2026-08-05
 **Depends on**: ADR-0001 (20 Hz lockstep), ADR-0002 (pure C++ sim), ADR-0003 (data-oriented ECM), ADR-0004 (state hashing), ADR-0005 (replay/checkpoints), ADR-0009 (JSON content)
 **Relates to**: ADR-0021 (Knowledge Map — this ADR is its concrete implementation decision record; ADR-0021 stays as the design-direction document), ADR-0011 (DirectControl), ADR-0008 (AI commander)
@@ -136,3 +137,61 @@ mitigated by per-stage disable flags and the fabrication master switch.
   handles, hard cap, region query, negative knowledge, serialization round-trip,
   SimWorld save/load with intel enabled, cross-enabledness load refusal,
   two-instance lockstep drift check).
+
+
+---
+
+## Independent review findings (2026-08-05)
+
+An independent reviewer that authored neither this ADR nor ADR-0021 compared the two against the M0
+code. Verdict: **divergences are partly undocumented**. The two BLOCKER items were re-verified
+directly in the headers and are real.
+
+### BLOCKER 1 — ground-truth flag inside the player-facing struct
+
+`PerceivedTrack::bPhantom` is commented "core-internal truth flag, never shown to UI"
+(`IntelTypes.h:120`) but it sits in the very struct handed out by
+`PerceivedWorld::GetTracksInRegion(... std::vector<const PerceivedTrack*>&)` (`PerceivedWorld.h:49`).
+Any UI, presentation or AI caller holding a track can read whether that contact is fabricated. This
+defeats K3 and this ADR's own threat model: the comment is a convention, and a convention is not an
+invariant.
+
+**Required fix**: remove `bPhantom` — and any other ground-truth field — from `PerceivedTrack`. Keep it
+in a core-internal side table beside the track↔entity association, which already never leaves the
+simulation. Add a leak-detector test that fails the build if a ground-truth field is reachable from the
+read surface (this is also ADR-0021 verification item 2, currently unimplemented).
+
+### BLOCKER 2 — K1 is not structural
+
+ADR-0021 K1 states that nothing outside the simulation may write to belief state. Two public members
+contradict it: `IntelSystem::GetPerceivedWorldMutable(PlayerId)` (`IntelSystem.h:80`) and
+`PerceivedWorld::SetLastObservedTick(...)` (`PerceivedWorld.h:56`). Anything holding a reference to the
+system can mutate another player's belief.
+
+**Required fix**: move both behind a private writer interface with `IntelSystem` as a friend, or split
+the read surface into a separate const-only view type. Then record K1/K2/K3 in
+`Docs/Architecture/INVARIANTS.md` — they currently exist only inside ADR-0021 prose, which is why they
+were implementable-around.
+
+### Undocumented divergences from ADR-0021 (MAJOR)
+
+| ADR-0021 intent | M0 reality | Consequence |
+| :--- | :--- | :--- |
+| `SourceType` (visual / radar / report / inference) on each record | Absent; replaced by `IndependentSourceCount` (a count, not a type) | ADR-0021's per-source-type decay ("radar decays faster than visual") is **unimplementable** — `TrackTuning` has a single global `ConfidenceDecayPerSecondPerMille` |
+| Amortized round-robin decay, 1/N of records per tick | `PhaseTrackUpdate(TickIndex)` is empty | Honest as an M0 skeleton, but there is no cursor and no batch-size config, so the requirement has fallen out of the design surface rather than being scheduled |
+| Cell-level intel layer (terrain, structures) | Only `LastObserved` per tile | No cell-level belief about terrain or buildings |
+| `Confidence` as `uint8` 0–255, "not float" | `Fixed Confidence` | Satisfies INVARIANT 2, contradicts ADR-0021's letter |
+| `LastConfirmedTick` | `LastUpdateTick` | Semantic shift: an update from an unreliable or fabricated report is not a confirmation |
+| UI shows an exact count ("24 tanks, confidence 61%") | `BelievedCountMin/Max` interval by design | Direct contradiction; the interval is the better design, but ADR-0021 was never amended |
+
+Also: this ADR depends on "ADR-0001 (20 Hz)" while ADR-0021 said 60Hz — the 20 Hz figure is the correct
+one and the rest of the documentation has since been corrected to match, with an erratum on ADR-0001.
+The update point moved from ADR-0021's "exclusively inside `CommandBus::DispatchTick`" to `SystemIntel`
+within `SimWorld::Tick` after `SystemFogOfWar`, without a record. Terminology diverged wholesale
+(`KnowledgeMap`/`IntelRecord` → `PerceivedWorld`/`PerceivedTrack`) with no mapping table.
+
+### Status of ADR-0021
+
+ADR-0021 remains **Proposed** and is superseded in part by this document. It must gain an explicit
+rejection log covering every row of the table above. Until then the two ADRs mislead any reader who
+takes ADR-0021 as current. Tracked as NEXT_ACTIONS P-2.

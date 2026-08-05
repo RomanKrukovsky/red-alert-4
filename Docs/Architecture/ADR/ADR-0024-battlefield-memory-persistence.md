@@ -1,6 +1,9 @@
 # ADR-0024: Battlefield Memory — Persistent Terrain State and Wreck Salvage
 
-**Status**: Proposed (pending independent review — NEXT_ACTIONS P-1; no implementation authorized)
+**Status**: Proposed — independent review 2026-08-05 returned **APPROVE-WITH-CHANGES**. Required
+before Accepted (NEXT_ACTIONS P-10): a flow-field invalidation contract for mid-match cost changes (batch
+phase, deterministic recompute order, recompute budget) and an incremental/dirty-region hashing scheme for
+TerrainStateLayer. No implementation authorized.
 **Depends on**: ADR-0003 (entity/component model), ADR-0005 (replay/checkpointing), ADR-0009 (data-driven content), SAVE_AND_REPLAY.md
 
 ## Context

@@ -1,6 +1,9 @@
 # ADR-0022: Command Network — Physical Order Propagation and Autonomy Fallback
 
-**Status**: Proposed (pending independent review — NEXT_ACTIONS P-1; no implementation authorized)
+**Status**: Proposed — independent review 2026-08-05 returned **APPROVE-WITH-CHANGES**. Required
+before Accepted (NEXT_ACTIONS P-8): restate the latency budget to include lockstep input delay; specify
+the order-supersede rule instead of describing it as needed; pin the CommandGraph recompute tick phase
+and traversal order. No implementation authorized.
 **Depends on**: ADR-0001 (fixed-tick lockstep, 20 Hz), ADR-0003 (command protocol), ADR-0008 (HTN/utility AI), ADR-0021 (Knowledge Map)
 
 ## Context

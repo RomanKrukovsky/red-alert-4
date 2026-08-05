@@ -1,7 +1,13 @@
 # ADR-0025: Adaptive Opponent — Cross-Match Player Modeling and Doctrine Counter-Selection
 
-**Status**: Proposed (pending independent review — NEXT_ACTIONS P-1; no implementation authorized)
-**Depends on**: ADR-0008 (HTN/utility AI), ADR-0020 (economic telemetry), ADR-0021 (Knowledge Map)
+**Status**: Proposed — independent review 2026-08-05 returned **APPROVE-WITH-CHANGES**. Required
+before Accepted (NEXT_ACTIONS P-11): a canonical DoctrineBias encoding (key order, Fixed weights, unknown
+mapId, version skew); a statement of how this extends the existing `OpponentModel`/`AIDoctrine`/`AIStrategy`
+in RA4AI rather than duplicating them; and removal of the "free by-product" framing of the digital twin.
+No implementation authorized.
+**Depends on**: ADR-0008 (HTN/utility AI), ADR-0020 (economic telemetry & balance metrics — recovered
+from the non-compiling remediation branch, see its provenance note), ADR-0021 (Knowledge Map),
+ADR-0005 (replay format — the analyzer reads `Source/RA4Replay/Public/RA4Replay/Replay.h`)
 
 ## Context
 
@@ -38,7 +44,10 @@ DoctrineBias {
 
 ### 4. "Digital twin" (stretch, same architecture)
 
-After sufficient matches, a DoctrineBias can be compiled *from* the player's own profile ⇒ an AI that plays approximately like the player. This is a free by-product of the design, not a separate system; ships only if the base loop proves fun.
+After sufficient matches, a DoctrineBias can be compiled *from* the player's own profile ⇒ an AI that plays approximately like the player. **Correction (independent review 2026-08-05): this is not a free by-product.** Reweighted utility
+scores reproduce a player's *preferences*, not their play: imitating a style needs behavioural fidelity —
+action sequencing, timing, micro habits — which is a separate system and warrants its own ADR. Treat the
+idea as a research direction, not a deliverable of this ADR.
 
 ### 5. Explicitly rejected
 

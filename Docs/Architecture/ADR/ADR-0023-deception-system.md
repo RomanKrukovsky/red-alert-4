@@ -1,6 +1,10 @@
 # ADR-0023: Deception System — Signatures, Decoys and Information Attacks
 
-**Status**: Proposed (pending independent review — NEXT_ACTIONS P-1; no implementation authorized)
+**Status**: Proposed — independent review 2026-08-05 returned **APPROVE-WITH-CHANGES**. Required
+before Accepted (NEXT_ACTIONS P-9): withdraw the "pure data, no new engine systems" estimate (per-observer
+sensor-vs-signature resolution is an Intel-layer rework); add ADR-0022 to Depends on; define phantom
+contacts' status in the navigation and reservation grids and against entity caps; delimit responsibility
+against ADR-0026's fabrication stage. No implementation authorized.
 **Depends on**: ADR-0021 (Knowledge Map — hard dependency), ADR-0009 (data-driven content), ADR-0008 (AI zero-cheat)
 
 ## Context
