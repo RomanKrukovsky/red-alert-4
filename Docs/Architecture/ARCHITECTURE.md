@@ -24,7 +24,7 @@ The system is structured into four distinct execution layers:
                                         v
 +-------------------------------------------------------------------------------+
 |                         3. DETERMINISTIC SIMULATION LAYER                     |
-|   SimWorld (60Hz) | CommandBus | RA4Combat | RA4Navigation | RA4AI | FogOfWar  |
+|   SimWorld (20 Hz) | CommandBus | RA4Combat | RA4Navigation | RA4AI | FogOfWar |
 +-------------------------------------------------------------------------------+
                                         |
                                         v
@@ -40,5 +40,5 @@ The system is structured into four distinct execution layers:
 
 1. **Presentation & UI Layer**: Renders 3D meshes, plays audio, handles WASD camera controls, marquee selection box, and updates HUD widgets. Must never mutate simulation state.
 2. **Network & Lockstep Layer**: Assembles player command frames, handles UDP network packets, manages input delay buffer, and adjudicates 64-bit state checksums.
-3. **Deterministic Simulation Layer**: Executes game rules, unit movement, combat calculations, AI decision loops, and fog of war calculations on a fixed 60Hz tick.
+3. **Deterministic Simulation Layer**: Executes game rules, unit movement, combat calculations, AI decision loops, and fog of war calculations on a fixed 20 Hz tick (`kTicksPerSecond`, `SimConfig.h`; 50 ms per tick). Presentation renders at 60+ FPS by interpolating between ticks — render rate never affects simulation results.
 4. **Core & Content Database**: Provides fixed-point math, 64-bit hashing, normalized JSON content data, and data-driven unit definitions.

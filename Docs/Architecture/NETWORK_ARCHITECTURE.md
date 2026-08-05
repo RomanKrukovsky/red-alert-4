@@ -7,7 +7,7 @@
 
 ## 1. Lockstep Network Architecture
 
-The multiplayer network layer (`RA4Network`) operates on a **60Hz Lockstep Protocol**. All game instances process player commands on synchronized tick indices.
+The multiplayer network layer (`RA4Network`) operates on a **fixed-tick Lockstep Protocol at 20 Hz** (`kTicksPerSecond`, `SimConfig.h`). All game instances process player commands on synchronized tick indices.
 
 ```
  Client 1 (Local)                  Server / Host                  Client 2 (Peer)

@@ -25,4 +25,4 @@ Game definitions are decoupled from compiled C++ binaries. Unit stats, building 
 
 Modders can override default gameplay parameters by placing custom JSON override files in `%USERPROFILE%/Documents/IronResonance/Mods/Data/`.
 - **Allowed Overrides**: Unit costs, build times, health, weapon range, armor multipliers, speed.
-- **Banned Overrides**: Native C++ simulation tick rate (fixed at 60Hz), network packet framing, state hash algorithm.
+- **Banned Overrides**: Native C++ simulation tick rate (fixed at 20 Hz, `kTicksPerSecond`), network packet framing, state hash algorithm.

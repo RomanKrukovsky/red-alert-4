@@ -1,7 +1,7 @@
 # ADR-0022: Command Network — Physical Order Propagation and Autonomy Fallback
 
 **Status**: Proposed (pending independent review — NEXT_ACTIONS P-1; no implementation authorized)
-**Depends on**: ADR-0001 (fixed-tick lockstep; NOTE: actual rate is 20 Hz per SimConfig.h kTicksPerSecond, not the 60Hz claimed in ADR-0001), ADR-0003 (command protocol), ADR-0008 (HTN/utility AI), ADR-0021 (Knowledge Map)
+**Depends on**: ADR-0001 (fixed-tick lockstep, 20 Hz), ADR-0003 (command protocol), ADR-0008 (HTN/utility AI), ADR-0021 (Knowledge Map)
 
 ## Context
 

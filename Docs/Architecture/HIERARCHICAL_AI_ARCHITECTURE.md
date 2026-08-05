@@ -135,6 +135,6 @@ Threat Grid: Max Threat Sector (12, 44) | Value Grid: High Value Sector (8, 56)
 
 ## 5. Architectural Invariants
 
-1. **Deterministic Execution**: All AI state mutations occur in fixed-point 60Hz tick steps inside `Source/RA4AI/`.
+1. **Deterministic Execution**: All AI state mutations occur in fixed-point 20 Hz tick steps inside `Source/RA4AI/`.
 2. **Zero Cheat Integrity**: AI reads world state strictly through `IAIWorldView` fog-filtered views and emits valid `Command` objects.
 3. **No External Runtime API Lock-in**: All runtime AI calculations execute locally in pure C++ with zero web API latency.

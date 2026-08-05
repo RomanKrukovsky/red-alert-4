@@ -49,13 +49,28 @@ When a node's `Amount` reaches 0:
 
 | Type | MaxAmount | RegenDelayTicks | RegenPerTick | RegenCapPercent | Notes |
 |---|---|---|---|---|---|
-| StandardOre | 45,000 | 3,600 (60s) | 12 | 20% (9,000) | Starter fields regenerate slowly |
-| RichOre | 75,000 | 3,600 (60s) | 15 | 20% (15,000) | Rich fields also regenerate |
+| StandardOre | 45,000 | 3,600 (**180s at 20 Hz**, not 60s) | 12 (**unbalanced — see erratum**) | 20% (9,000) | Starter fields regenerate slowly |
+| RichOre | 75,000 | 3,600 (**180s at 20 Hz**, not 60s) | 15 (**unbalanced — see erratum**) | 20% (15,000) | Rich fields also regenerate |
 | StrategicPoint | N/A | N/A | N/A | N/A | Passive income, not extractable |
 | OilDerrick | N/A | N/A | N/A | N/A | Passive income, not extractable |
 | LateGameNode | ∞ | N/A | N/A | N/A | Infinite; yields ~2 credits/s |
 
-All values are at 60Hz tick rate. `RegenPerTick` of 12 = 720 credits/minute = 12 credits/second.
+**ERRATUM (2026-08-05)**: the original text read "All values are at 60Hz tick rate. `RegenPerTick` of
+12 = 720 credits/minute = 12 credits/second", which was wrong twice: the simulation runs at 20 Hz
+(`kTicksPerSecond`, `SimConfig.h`), and the arithmetic contradicted itself (720/minute is 12/second,
+which at 60 Hz would require `RegenPerTick` of 0.2, not 12).
+
+Corrected at the real 20 Hz tick: `RegenPerTick` of 12 = 240 credits/second = 14,400 credits/minute,
+which is far too fast for "regenerate slowly" — a starter field's 9,000-credit regen cap would refill
+in 38 seconds. The delay figures were also computed at 60 Hz: `RegenDelayTicks` of 3,600 is 180 seconds
+at 20 Hz, not 60.
+
+**These numbers require rebalancing against the intended rates, not mechanical conversion.** Until an
+economy designer sets them, treat the table as intent-only: slow trickle regeneration after a delay,
+capped at ~20% of the node's maximum. Intended-rate targets to convert with
+`PerSecondToPerTick()`: starter fields ~0.5 credits/second (`RegenPerTick` = 0 at integer precision —
+needs sub-integer accumulation or a longer interval), delay 60 seconds = `RegenDelayTicks` 1,200.
+Tracked as NEXT_ACTIONS P-4.
 
 ### Depletion Behavior (Revised)
 

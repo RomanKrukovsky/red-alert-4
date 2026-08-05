@@ -1,17 +1,24 @@
 # Non-Functional Performance Budgets (`PERFORMANCE_BUDGETS.md`)
 
-**Document Version**: 3.0  
+**Document Version**: 3.1  
 **Target Hardware Baseline**: Mid-Tier Gaming PC (Quad-Core CPU, GTX 1660 / RX 580, 16 GB RAM, NVMe SSD)  
 
 ---
 
 ## 1. Frame Rate & Timing Budgets
 
+> **Read this first.** Two different rates are in play and older revisions of this document conflated
+> them. **Presentation** targets 60 FPS (16.66 ms per rendered frame) — that is what section 1 budgets.
+> **Simulation** runs at 20 Hz (50 ms per tick, `kTicksPerSecond` in `SimConfig.h`) — that is what the
+> per-tick budgets in sections 2 and 4 refer to. One sim tick spans roughly three rendered frames, so a
+> "2.0 ms / tick" figure is not 2.0 ms of every frame's budget. Where a row below says "per tick", it
+> means per 50 ms sim step.
+
 | Metric | Target Budget | Hard Maximum Threshold | Notes / Justification |
 | :--- | :--- | :--- | :--- |
 | **Target Frame Rate** | **60 FPS / 120 FPS** | **60 FPS Minimum** | Essential for competitive RTS micro responsiveness. |
 | **Total Frame Time** | **16.66 ms** | **16.66 ms (60 FPS)** | Budget shared between CPU Game, Render, and GPU. |
-| **Game Thread Budget** | **<= 8.0 ms** | **10.0 ms** | Includes SimWorld tick, CommandBus, AI, and presentation. |
+| **Game Thread Budget** | **<= 8.0 ms** | **10.0 ms** | Per rendered frame. Includes the amortized share of the 20 Hz SimWorld tick, CommandBus, AI, and presentation update. |
 | **Render Thread Budget**| **<= 5.0 ms** | **6.0 ms** | Slate/UMG draw calls and scene rendering setup. |
 | **GPU Execution Time** | **<= 6.0 ms** | **8.3 ms** | Shading, lighting, Niagara particles, post-processing. |
 
@@ -23,10 +30,10 @@
 | :--- | :--- | :--- | :--- |
 | **System RAM Usage** | **<= 4.5 GB** | **8.0 GB** | Allows background streaming apps to run smoothly. |
 | **VRAM Usage** | **<= 2.5 GB** | **4.0 GB** | Fits within GTX 1660 / RX 580 4GB VRAM limits. |
-| **Active Simulation Entities** | **2,000 Entities** | **3,000 Entities** | Tested up to 500 entities in `ProvingGround` (<450ms / 1000 ticks). |
+| **Active Simulation Entities** | **2,000 Entities** | **3,000 Entities** | Measured only up to 500 entities in `ProvingGround` (<450 ms / 1,000 ticks). The 2,000 target is extrapolated, not measured; treat it as unproven until a 2,000-entity benchmark exists. |
 | **Active Physical Projectiles**| **500 Projectiles**| **1,000 Projectiles**| Ballistic, rocket, and laser projectiles. |
-| **Pathfinding Workload** | **<= 2.0 ms / tick**| **3.0 ms / tick** | Flowfield path lookup scales O(1) per unit. |
-| **AI Workload** | **<= 1.5 ms / tick**| **2.5 ms / tick** | HTN decision loop amortized across tick steps. |
+| **Pathfinding Workload** | **<= 2.0 ms / sim tick**| **3.0 ms / sim tick** | Flowfield path lookup scales O(1) per unit. Per 50 ms sim step, not per frame. |
+| **AI Workload** | **<= 1.5 ms / sim tick**| **2.5 ms / sim tick** | HTN decision loop amortized across tick steps. Per 50 ms sim step, not per frame. |
 
 ---
 

@@ -23,7 +23,7 @@
 [ LockstepSession::ReceivePlayerFrame (All Peers) ]
              |
              v
-[ CommandBus::DispatchTick (Fixed 60Hz Execution) ]
+[ CommandBus::DispatchTick (Fixed 20 Hz Execution) ]
              |
              v
 [ SimWorld Update (Transforms, Combat, Economy) ]
