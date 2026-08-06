@@ -91,6 +91,28 @@ core.
 
 ---
 
+## CI has never passed — root-caused 2026-08-06, partly fixed
+
+Measured, not assumed: `gh run list --limit 40` returned **40 failure, 0 success**, and
+`--limit 100 --jq '[.[]|select(.conclusion=="success")]|length'` returned **0**. The
+cause was a case-only path mismatch (`Build/Compliance` in the workflow vs
+`build/Compliance` in git, identical on macOS and different on the Linux runner), plus
+a `.gitignore` exception spelled with the same wrong case, so the scanner was never
+tracked. Everything else `needs: [compliance-scan]`, so **the cross-platform
+determinism job has never run** — the project's central invariant is unverified by CI.
+
+Fixed in `daa8fa7`: paths corrected, scanner tracked, and the 123 tracked Electronic
+Arts SAGE `.xsd` schemas it immediately flagged were deleted (owner decision, option
+A). Findings 2,500 → 2,130.
+
+| Task ID | Task | Acceptance criteria |
+| :--- | :--- | :--- |
+| **CI-1** | Reconcile the two provenance formats | `Content/AssetRegistry/ThirdPartyAssets.json` uses `assetId` / `PASS` / `open_source_public_domain`; `build/Compliance/policy/provenance.schema.json` requires `asset_id` / `reviewed` / `third_party`. 2,031 of the remaining findings are `missing_provenance` on `Content/RA4/Audio/EVA/**`. Decide which format is authoritative and convert the other — do NOT relax the schema to match the data, which would be rule 9's "weaken the assertion for a green light". |
+| **CI-2** | Close the remaining 99 findings | 68 `absolute_local_path`, 12 `command_and_conquer_identifier`, 7 `electronic_arts_identifier`, 1 `ea_copyright`, 1 `forbidden_directory`, plus `red_alert_3_identifier` hits in docs and `ControlScheme.h`. Most are prose in design docs; each needs a rename, a rewrite, or an entry in `policy/suppressions.json` with a stated reason. |
+| **CI-3** | Prove the determinism gate actually runs | Once CI-1/CI-2 are green, confirm from a real run that `Cross-Platform Determinism Verification` compares three checksums and that they match. This has never happened; until it does, cross-platform determinism is an assumption. |
+
+---
+
 ## Next actions
 
 | Task ID | Task | Acceptance criteria |
