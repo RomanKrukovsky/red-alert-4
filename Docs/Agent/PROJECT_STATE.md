@@ -58,6 +58,6 @@ Red Alert 4 (RA4) is a deterministic real-time strategy (RTS) game engine built 
 
 ## 4. Key Rules for Autonomous Agents
 
-1. **Maintain Determinism**: Never introduce non-deterministic C++ operations (e.g. `std::rand()`, unseeded engine floats, pointer-address hashing) into `Source/RA4Simulation`, `Source/RA4Core`, `Source/RA4Combat`, or `Source/RA4AI`.
+1. **Maintain Determinism**: Never introduce non-deterministic C++ operations (e.g. `std::rand()`, unseeded engine floats, pointer-address hashing) into `Source/RA4Simulation`, `Source/RA4Core`, or `Source/RA4AI`.
 2. **Execute Tests From Root**: Always execute C++ test binaries (`./build/hb/RA4Tests`, etc.) with current working directory set to the project root directory.
 3. **Respect IP Neutralization Rules**: Use safe faction identifiers (`Red Star Union`, `Global Alliance`, `AURA`) for new feature development.

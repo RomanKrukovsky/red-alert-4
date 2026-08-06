@@ -2943,3 +2943,56 @@ RA4_TEST(Recon, RadarReturnsAnonymousContactsOnly)
     RA4_EXPECT(!Found[0]->bAnonymous);
     RA4_EXPECT(Found[0]->BelievedClass == Ids::AllLightTank);
 }
+
+RA4_TEST(Recon, NoStraySourceCopiesInTheTree)
+{
+    // A failed revert once committed SimWorld.cpp.t: a 136 KB copy of the
+    // simulation core, in no build file, silently stale. Project rules forbid a
+    // parallel duplicate subsystem, and an accidental copy of the core is that
+    // hazard wearing source-file clothing -- someone eventually reads it, or
+    // greps it, and believes it.
+    //
+    // .gitignore now covers these patterns, but ignore rules only stop NEW
+    // additions: a file already tracked stays tracked. This test is what makes
+    // the tree state itself an assertion.
+    namespace fs = std::filesystem;
+
+    static const char* BadSuffixes[] = {".orig", ".rej", ".bak", ".t", "~"};
+
+    const fs::path Root = fs::current_path() / "Source";
+    if (!fs::exists(Root))
+    {
+        RA4Test::ReportFailure("Source/ not found from test cwd", __FILE__, __LINE__);
+        return;
+    }
+
+    std::vector<std::string> Strays;
+    for (auto It = fs::recursive_directory_iterator(Root); It != fs::recursive_directory_iterator(); ++It)
+    {
+        if (!It->is_regular_file())
+        {
+            continue;
+        }
+        const std::string Name = It->path().filename().string();
+        for (const char* Suffix : BadSuffixes)
+        {
+            const size_t SuffixLen = std::strlen(Suffix);
+            if (Name.size() > SuffixLen &&
+                Name.compare(Name.size() - SuffixLen, SuffixLen, Suffix) == 0)
+            {
+                Strays.push_back(fs::relative(It->path(), fs::current_path()).generic_string());
+                break;
+            }
+        }
+    }
+
+    for (const std::string& S : Strays)
+    {
+        RA4Test::ReportFailure(
+            "stray editor/merge scratch file in Source/: " + S +
+                " -- delete it; a copy of a source file that no build compiles is a trap, "
+                "not a backup (git history is the backup)",
+            __FILE__, __LINE__);
+    }
+    RA4_EXPECT(Strays.empty());
+}

@@ -2774,3 +2774,58 @@ RA4_TEST(AILeague, PeacefulTimeoutRecordsNoCombat)
     RA4_EXPECT_EQ(uint32_t(0), R.FirstBloodTick);
     RA4_EXPECT(R.FirstBloodBy == kInvalidPlayer);
 }
+
+RA4_TEST(SiegeArtillery, ExistsForBothPlayableFactionsAndOutRangesTheTurret)
+{
+    // The roster had no answer to static defence: every unit topped out at 9 m,
+    // exactly the turret's range, so an assault could only ever trade at a loss.
+    // This asserts the counter exists and keeps its defining property.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+
+    const WeaponDef* Turret = Content.FindWeapon(MakeContentId("weapon.turret_cannon"));
+    const WeaponDef* Siege = Content.FindWeapon(MakeContentId("weapon.siege_artillery"));
+    RA4_REQUIRE(Turret != nullptr);
+    RA4_REQUIRE(Siege != nullptr);
+
+    // The whole point: artillery must shell from beyond return fire.
+    RA4_EXPECT(Siege->MaxRange > Turret->MaxRange);
+    // Siege warhead is what makes it efficient against structures rather than
+    // just long-ranged; ArmorPiercing is only 0.6x against Building.
+    RA4_EXPECT(Siege->Warhead == WarheadClass::Siege);
+    // And it must not double as a general-purpose brawler.
+    RA4_EXPECT(Siege->MinRange > Fixed::Zero());
+    RA4_EXPECT(Siege->CooldownTicks > Turret->CooldownTicks);
+
+    for (const char* Id : {"unit.sov.zarevo_mlrs", "unit.all.oracle_artillery"})
+    {
+        const EntityDef* Def = Content.FindEntity(MakeContentId(Id));
+        RA4_REQUIRE(Def != nullptr);
+        RA4_EXPECT(HasRole(Def->Roles, EntityRole::Artillery));
+        RA4_EXPECT(Def->Weapon == Siege->Id);
+        // Fragile and slow on purpose: it beats walls, not armies.
+        const EntityDef* Tank = Content.FindEntity(
+            MakeContentId(std::string(Id).find(".sov.") != std::string::npos
+                              ? "unit.sov.heavy_tank" : "unit.all.light_tank"));
+        RA4_REQUIRE(Tank != nullptr);
+        RA4_EXPECT(Def->MaxHealth < Tank->MaxHealth);
+        RA4_EXPECT(Def->Unit.MaxSpeed < Tank->Unit.MaxSpeed);
+    }
+}
+
+RA4_TEST(SiegeArtillery, AIPrefersArtilleryOnlyAfterSeeingDefences)
+{
+    // Scoring production by cost alone permanently hid artillery, because it is
+    // cheaper than a main tank. The bonus must be conditional: no remembered
+    // defence, no artillery preference.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    const EntityDef* Art = Content.FindEntity(MakeContentId("unit.sov.zarevo_mlrs"));
+    const EntityDef* Tank = Content.FindEntity(MakeContentId("unit.sov.heavy_tank"));
+    RA4_REQUIRE(Art != nullptr);
+    RA4_REQUIRE(Tank != nullptr);
+
+    // The condition that used to make artillery unreachable, stated as a fact so a
+    // future cost change cannot silently restore the old behaviour.
+    RA4_EXPECT(Art->Production.Cost < Tank->Production.Cost);
+}

@@ -1,9 +1,29 @@
 // Copyright (c) Red Alert 4 project. In-Game Cheat Console Widget.
+//
+// Cheats mutate the simulation, which every other presentation-side caller is
+// forbidden from doing: RA4SimWorldSubsystem hands out a `const SimWorld*` and says so
+// in as many words -- "Nothing outside the simulation may mutate it directly."
+//
+// This file used to defeat that with a const_cast and then call Cheat* and ApplyCommand
+// straight on the world. Two things were wrong with that, and neither is stylistic:
+//
+//   1. It bypassed EnqueueCommand, which is the one place that knows a lockstep match
+//      must not apply a command locally -- it has to go to the server and come back in
+//      the authoritative frame. A cheat applied directly executes on this peer and
+//      nowhere else, which is a desync, not a cheat.
+//   2. A const_cast is not a mechanism, it is the absence of one. Anyone copying the
+//      line gets write access to authoritative state with no gate at all.
+//
+// So the console now refuses to run in a networked match, and refuses to exist in a
+// shipping build. Where a real command exists (surrender) it goes through the ordinary
+// player path. The Cheat* entry points are a debug-only escape hatch, taken through one
+// explicitly-named accessor rather than a cast, so grep finds every caller.
 #include "RA4CheatConsoleWidget.h"
 #include "RedAlert4/Public/RA4PlayerController.h"
 #include "RedAlert4/Public/RA4SimWorldSubsystem.h"
 #include "RA4Simulation/SimWorld.h"
 #include "RA4Core/SimConfig.h"
+#include "RA4NetworkManager.h"
 
 URA4CheatConsoleWidget::URA4CheatConsoleWidget(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
@@ -27,6 +47,62 @@ void URA4CheatConsoleWidget::AddLogLine(const FString& Line)
     OnCheatExecuted.Broadcast(Line);
 }
 
+namespace
+{
+// The single place presentation code is allowed to take a mutable simulation pointer,
+// named so that `grep MutableSimForCheats` lists every cheat that writes to the world.
+// It is not a general-purpose accessor: it refuses in a networked match, because a
+// local write there desyncs the peer instead of cheating, and it does not exist in a
+// shipping build at all.
+RA4::SimWorld* MutableSimForCheats(URA4SimWorldSubsystem* Subsystem)
+{
+#if UE_BUILD_SHIPPING
+    (void)Subsystem;
+    return nullptr;
+#else
+    if (Subsystem == nullptr)
+    {
+        return nullptr;
+    }
+
+    // Mirrors URA4SimWorldSubsystem::GetActiveNetwork, which is private: a manager
+    // exists in every world and only means anything once the match is active. Before
+    // that this is single player and a local write is safe.
+    if (const UWorld* OwningWorld = Subsystem->GetWorld())
+    {
+        if (URA4NetworkManager* Network = OwningWorld->GetSubsystem<URA4NetworkManager>())
+        {
+            if (Network->IsMatchActive())
+            {
+                return nullptr;
+            }
+        }
+    }
+
+    // Still a cast, but now a single audited one behind two gates, instead of an
+    // unmarked cast at the top of a 150-line function.
+    return const_cast<RA4::SimWorld*>(Subsystem->GetSimWorld());
+#endif
+}
+
+// Same predicate, for the error message. Kept adjacent so the two cannot drift.
+bool IsNetworkedMatch(const URA4SimWorldSubsystem* Subsystem)
+{
+    if (Subsystem == nullptr)
+    {
+        return false;
+    }
+    if (const UWorld* OwningWorld = Subsystem->GetWorld())
+    {
+        if (URA4NetworkManager* Network = OwningWorld->GetSubsystem<URA4NetworkManager>())
+        {
+            return Network->IsMatchActive();
+        }
+    }
+    return false;
+}
+} // namespace
+
 bool URA4CheatConsoleWidget::ExecuteCommandText(const FString& InCommandText)
 {
     FString Trimmed = InCommandText.TrimStartAndEnd();
@@ -39,7 +115,6 @@ bool URA4CheatConsoleWidget::ExecuteCommandText(const FString& InCommandText)
 
     ARA4PlayerController* PC = Cast<ARA4PlayerController>(GetOwningPlayer());
     URA4SimWorldSubsystem* SimSubsystem = PC ? PC->GetWorld()->GetSubsystem<URA4SimWorldSubsystem>() : nullptr;
-    RA4::SimWorld* Sim = SimSubsystem ? const_cast<RA4::SimWorld*>(SimSubsystem->GetSimWorld()) : nullptr;
 
     FString CmdLower = Trimmed.ToLower();
     TArray<FString> Tokens;
@@ -55,9 +130,54 @@ bool URA4CheatConsoleWidget::ExecuteCommandText(const FString& InCommandText)
         return true;
     }
 
+    // Win/lose are ordinary Surrender commands, not state pokes. They take the same road
+    // as the debug keys already bound in the controller: through SubmitOrders, into
+    // EnqueueCommand, and in a lockstep match out to the server rather than applied here.
+    if (Verb == TEXT("win") || Verb == TEXT("victory") ||
+        Verb == TEXT("lose") || Verb == TEXT("defeat") || Verb == TEXT("surrender"))
+    {
+#if UE_BUILD_SHIPPING
+        AddLogLine(TEXT("ERROR: Cheats are not available in a shipping build."));
+        return false;
+#else
+        if (PC == nullptr)
+        {
+            AddLogLine(TEXT("ERROR: No player controller."));
+            return false;
+        }
+        const bool bWin = (Verb == TEXT("win") || Verb == TEXT("victory"));
+        if (bWin)
+        {
+            PC->DebugForceVictory();
+            AddLogLine(TEXT("SUCCESS: Enemy surrendered."));
+        }
+        else
+        {
+            PC->DebugForceDefeat();
+            AddLogLine(TEXT("SUCCESS: Surrendered."));
+        }
+        return true;
+#endif
+    }
+
+    RA4::SimWorld* Sim = MutableSimForCheats(SimSubsystem);
     if (Sim == nullptr)
     {
-        AddLogLine(TEXT("ERROR: Active simulation world not found!"));
+        // Distinguish the three reasons, because "nothing happened" is the least useful
+        // thing a console can say.
+#if UE_BUILD_SHIPPING
+        AddLogLine(TEXT("ERROR: Cheats are not available in a shipping build."));
+#else
+        if (IsNetworkedMatch(SimSubsystem))
+        {
+            AddLogLine(TEXT("ERROR: Cheats are disabled in a networked match: a local"));
+            AddLogLine(TEXT("       state change would desync this peer, not cheat."));
+        }
+        else
+        {
+            AddLogLine(TEXT("ERROR: Active simulation world not found!"));
+        }
+#endif
         return false;
     }
 
@@ -96,25 +216,8 @@ bool URA4CheatConsoleWidget::ExecuteCommandText(const FString& InCommandText)
         return true;
     }
 
-    if (Verb == TEXT("win") || Verb == TEXT("victory"))
-    {
-        RA4::Command Surrender;
-        Surrender.Type = RA4::CommandType::Surrender;
-        Surrender.Issuer = 1; // Enemy surrenders
-        Sim->ApplyCommand(Surrender);
-        AddLogLine(TEXT("SUCCESS: Victory triggered!"));
-        return true;
-    }
-
-    if (Verb == TEXT("lose") || Verb == TEXT("defeat"))
-    {
-        RA4::Command Surrender;
-        Surrender.Type = RA4::CommandType::Surrender;
-        Surrender.Issuer = LocalPlayer;
-        Sim->ApplyCommand(Surrender);
-        AddLogLine(TEXT("SUCCESS: Defeat triggered."));
-        return true;
-    }
+    // win / lose / surrender were handled above, before the mutable-world gate, because
+    // they are real Commands and must travel the ordinary player path.
 
     if (Verb == TEXT("nuke"))
     {

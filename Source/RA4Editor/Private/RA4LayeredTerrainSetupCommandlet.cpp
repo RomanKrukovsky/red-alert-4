@@ -40,6 +40,7 @@
 // -- an editor-side edit would be silently reverted the next time it runs, which
 // is exactly how the ground-tiling fix was lost before.
 #include "Materials/MaterialExpressionAdd.h"
+#include "Materials/MaterialExpressionAppendVector.h"
 #include "Materials/MaterialExpressionConstant.h"
 #include "Materials/MaterialExpressionDesaturation.h"
 #include "Materials/MaterialExpressionDivide.h"
@@ -386,9 +387,54 @@ int32 URA4LayeredTerrainSetupCommandlet::Main(const FString& Params)
     FogWidth->ParameterName = TEXT("RA4FogWorldWidth");
     FogWidth->DefaultValue = 12800.0f;   // 64 tiles * 200 units, the default test map
 
+    // Height as well as width: a non-square map divided by width alone stretches
+    // the fog on one axis, and the subsystem publishes both. Verified the hard
+    // way -- a parameter the code sets but the material lacks is silently
+    // ignored by Unreal, so fog strength and contrast did nothing at all until
+    // this was checked with MaterialEditingLibrary.get_scalar_parameter_names.
+    UMaterialExpressionScalarParameter* FogHeight =
+        Cast<UMaterialExpressionScalarParameter>(UMaterialEditingLibrary::CreateMaterialExpression(
+            Material, UMaterialExpressionScalarParameter::StaticClass(), -1600, 1400));
+
+    // Accessibility parameters from ADR-0028 section 4. Defaults match the
+    // intended look so a material used without the subsystem still renders
+    // correct fog rather than none.
+    UMaterialExpressionScalarParameter* FogStrengthParam =
+        Cast<UMaterialExpressionScalarParameter>(UMaterialEditingLibrary::CreateMaterialExpression(
+            Material, UMaterialExpressionScalarParameter::StaticClass(), -1600, 1550));
+    UMaterialExpressionScalarParameter* FogContrastParam =
+        Cast<UMaterialExpressionScalarParameter>(UMaterialEditingLibrary::CreateMaterialExpression(
+            Material, UMaterialExpressionScalarParameter::StaticClass(), -1600, 1700));
+
+    // Fog UV needs both axes, so the divide takes a two-component B built from
+    // the width and height parameters.
+    UMaterialExpressionAppendVector* FogExtent =
+        Cast<UMaterialExpressionAppendVector>(UMaterialEditingLibrary::CreateMaterialExpression(
+            Material, UMaterialExpressionAppendVector::StaticClass(), -1450, 1300));
+
     UMaterialExpressionDivide* FogUV =
         Cast<UMaterialExpressionDivide>(UMaterialEditingLibrary::CreateMaterialExpression(
             Material, UMaterialExpressionDivide::StaticClass(), -1350, 1150));
+
+    // High contrast turns the smooth ramp into a hard edge: visibility is pushed
+    // toward 0 or 1 around the midpoint. Implemented as a lerp between the raw
+    // sample and a stepped version so one parameter blends between the two modes
+    // rather than needing a second material.
+    UMaterialExpressionMultiply* ContrastBoost =
+        Cast<UMaterialExpressionMultiply>(UMaterialEditingLibrary::CreateMaterialExpression(
+            Material, UMaterialExpressionMultiply::StaticClass(), -950, 1700));
+    UMaterialExpressionConstant* ContrastGain =
+        Cast<UMaterialExpressionConstant>(UMaterialEditingLibrary::CreateMaterialExpression(
+            Material, UMaterialExpressionConstant::StaticClass(), -1100, 1800));
+    UMaterialExpressionLinearInterpolate* ContrastMix =
+        Cast<UMaterialExpressionLinearInterpolate>(UMaterialEditingLibrary::CreateMaterialExpression(
+            Material, UMaterialExpressionLinearInterpolate::StaticClass(), -800, 1750));
+    // Strength scales how far brightness is allowed to fall: at strength 1 fog
+    // reaches the floor, at the clamped minimum it stays much brighter. The
+    // floor itself is enforced in code (kMinFogStrength), not here.
+    UMaterialExpressionLinearInterpolate* StrengthMix =
+        Cast<UMaterialExpressionLinearInterpolate>(UMaterialEditingLibrary::CreateMaterialExpression(
+            Material, UMaterialExpressionLinearInterpolate::StaticClass(), -700, 1500));
 
     UMaterialExpressionTextureSampleParameter2D* FogSample =
         Cast<UMaterialExpressionTextureSampleParameter2D>(UMaterialEditingLibrary::CreateMaterialExpression(
@@ -430,28 +476,55 @@ int32 URA4LayeredTerrainSetupCommandlet::Main(const FString& Params)
     const bool bFogNodesCreated = WorldPos != nullptr && FogWidth != nullptr && FogUV != nullptr &&
                                   FogSample != nullptr && FogFloor != nullptr &&
                                   FogBrightness != nullptr && FullBright != nullptr &&
-                                  FogInverse != nullptr && FogDesat != nullptr && FogTint != nullptr;
+                                  FogInverse != nullptr && FogDesat != nullptr && FogTint != nullptr &&
+                                  FogHeight != nullptr && FogStrengthParam != nullptr &&
+                                  FogContrastParam != nullptr && FogExtent != nullptr &&
+                                  ContrastBoost != nullptr && ContrastGain != nullptr &&
+                                  ContrastMix != nullptr && StrengthMix != nullptr;
 
     if (bFogNodesCreated)
     {
         FogSample->ParameterName = TEXT("RA4FogVisibility");
         FogSample->SamplerType = SAMPLERTYPE_LinearGrayscale;   // data, not sRGB colour
 
+        FogHeight->ParameterName = TEXT("RA4FogWorldHeight");
+        FogHeight->DefaultValue = 12800.0f;
+        FogStrengthParam->ParameterName = TEXT("RA4FogStrength");
+        FogStrengthParam->DefaultValue = 1.0f;
+        FogContrastParam->ParameterName = TEXT("RA4FogHighContrast");
+        FogContrastParam->DefaultValue = 0.0f;
+        ContrastGain->R = 4.0f;   // steepens the ramp around the midpoint
+
+        // UV = worldXY / (width, height)
+        UMaterialEditingLibrary::ConnectMaterialExpressions(FogWidth, TEXT(""), FogExtent, TEXT("A"));
+        UMaterialEditingLibrary::ConnectMaterialExpressions(FogHeight, TEXT(""), FogExtent, TEXT("B"));
         UMaterialEditingLibrary::ConnectMaterialExpressions(WorldPos, TEXT(""), FogUV, TEXT("A"));
-        UMaterialEditingLibrary::ConnectMaterialExpressions(FogWidth, TEXT(""), FogUV, TEXT("B"));
+        UMaterialEditingLibrary::ConnectMaterialExpressions(FogExtent, TEXT(""), FogUV, TEXT("B"));
         UMaterialEditingLibrary::ConnectMaterialExpressions(FogUV, TEXT(""), FogSample, TEXT("UVs"));
 
-        // brightness = lerp(floor, 1, visibility)
+        // High contrast: steepen the sample, then blend between raw and steepened
+        // by the contrast parameter, so one graph serves both modes.
+        UMaterialEditingLibrary::ConnectMaterialExpressions(FogSample, TEXT("R"), ContrastBoost, TEXT("A"));
+        UMaterialEditingLibrary::ConnectMaterialExpressions(ContrastGain, TEXT(""), ContrastBoost, TEXT("B"));
+        UMaterialEditingLibrary::ConnectMaterialExpressions(FogSample, TEXT("R"), ContrastMix, TEXT("A"));
+        UMaterialEditingLibrary::ConnectMaterialExpressions(ContrastBoost, TEXT(""), ContrastMix, TEXT("B"));
+        UMaterialEditingLibrary::ConnectMaterialExpressions(FogContrastParam, TEXT(""), ContrastMix, TEXT("Alpha"));
+
+        // brightness = lerp(floor, 1, visibility), then strength decides how much
+        // of that darkening is applied: lerp(1, brightness, strength).
         UMaterialEditingLibrary::ConnectMaterialExpressions(FogFloor, TEXT(""), FogBrightness, TEXT("A"));
         UMaterialEditingLibrary::ConnectMaterialExpressions(FullBright, TEXT(""), FogBrightness, TEXT("B"));
-        UMaterialEditingLibrary::ConnectMaterialExpressions(FogSample, TEXT("R"), FogBrightness, TEXT("Alpha"));
+        UMaterialEditingLibrary::ConnectMaterialExpressions(ContrastMix, TEXT(""), FogBrightness, TEXT("Alpha"));
+        UMaterialEditingLibrary::ConnectMaterialExpressions(FullBright, TEXT(""), StrengthMix, TEXT("A"));
+        UMaterialEditingLibrary::ConnectMaterialExpressions(FogBrightness, TEXT(""), StrengthMix, TEXT("B"));
+        UMaterialEditingLibrary::ConnectMaterialExpressions(FogStrengthParam, TEXT(""), StrengthMix, TEXT("Alpha"));
 
         // desaturate(colour, 1 - visibility), then multiply by brightness
-        UMaterialEditingLibrary::ConnectMaterialExpressions(FogSample, TEXT("R"), FogInverse, TEXT(""));
+        UMaterialEditingLibrary::ConnectMaterialExpressions(ContrastMix, TEXT(""), FogInverse, TEXT(""));
         UMaterialEditingLibrary::ConnectMaterialExpressions(ColourBlend, TEXT(""), FogDesat, TEXT(""));
         UMaterialEditingLibrary::ConnectMaterialExpressions(FogInverse, TEXT(""), FogDesat, TEXT("Fraction"));
         UMaterialEditingLibrary::ConnectMaterialExpressions(FogDesat, TEXT(""), FogTint, TEXT("A"));
-        UMaterialEditingLibrary::ConnectMaterialExpressions(FogBrightness, TEXT(""), FogTint, TEXT("B"));
+        UMaterialEditingLibrary::ConnectMaterialExpressions(StrengthMix, TEXT(""), FogTint, TEXT("B"));
 
         UMaterialEditingLibrary::ConnectMaterialProperty(FogTint, TEXT(""), MP_BaseColor);
         UE_LOG(LogTemp, Display, TEXT("RA4LayeredTerrain: fog-of-war nodes wired into BaseColor"));
@@ -514,6 +587,31 @@ int32 URA4LayeredTerrainSetupCommandlet::Main(const FString& Params)
             UMaterialExpressionScalarParameter* PPFogWidth =
                 Cast<UMaterialExpressionScalarParameter>(UMaterialEditingLibrary::CreateMaterialExpression(
                     FogPP, UMaterialExpressionScalarParameter::StaticClass(), -1400, 350));
+            UMaterialExpressionScalarParameter* PPFogHeight =
+                Cast<UMaterialExpressionScalarParameter>(UMaterialEditingLibrary::CreateMaterialExpression(
+                    FogPP, UMaterialExpressionScalarParameter::StaticClass(), -1400, 500));
+            UMaterialExpressionScalarParameter* PPStrength =
+                Cast<UMaterialExpressionScalarParameter>(UMaterialEditingLibrary::CreateMaterialExpression(
+                    FogPP, UMaterialExpressionScalarParameter::StaticClass(), -1400, 650));
+            UMaterialExpressionScalarParameter* PPContrast =
+                Cast<UMaterialExpressionScalarParameter>(UMaterialEditingLibrary::CreateMaterialExpression(
+                    FogPP, UMaterialExpressionScalarParameter::StaticClass(), -1400, 800));
+            UMaterialExpressionAppendVector* PPExtent =
+                Cast<UMaterialExpressionAppendVector>(UMaterialEditingLibrary::CreateMaterialExpression(
+                    FogPP, UMaterialExpressionAppendVector::StaticClass(), -1250, 420));
+            UMaterialExpressionMultiply* PPContrastBoost =
+                Cast<UMaterialExpressionMultiply>(UMaterialEditingLibrary::CreateMaterialExpression(
+                    FogPP, UMaterialExpressionMultiply::StaticClass(), -750, 800));
+            UMaterialExpressionConstant* PPContrastGain =
+                Cast<UMaterialExpressionConstant>(UMaterialEditingLibrary::CreateMaterialExpression(
+                    FogPP, UMaterialExpressionConstant::StaticClass(), -900, 900));
+            UMaterialExpressionLinearInterpolate* PPContrastMix =
+                Cast<UMaterialExpressionLinearInterpolate>(UMaterialEditingLibrary::CreateMaterialExpression(
+                    FogPP, UMaterialExpressionLinearInterpolate::StaticClass(), -600, 850));
+            UMaterialExpressionLinearInterpolate* PPStrengthMix =
+                Cast<UMaterialExpressionLinearInterpolate>(UMaterialEditingLibrary::CreateMaterialExpression(
+                    FogPP, UMaterialExpressionLinearInterpolate::StaticClass(), -500, 600));
+
             UMaterialExpressionDivide* PPFogUV =
                 Cast<UMaterialExpressionDivide>(UMaterialEditingLibrary::CreateMaterialExpression(
                     FogPP, UMaterialExpressionDivide::StaticClass(), -1150, 250));
@@ -543,7 +641,11 @@ int32 URA4LayeredTerrainSetupCommandlet::Main(const FString& Params)
                                     PPFogWidth != nullptr && PPFogUV != nullptr &&
                                     PPFogSample != nullptr && PPFloor != nullptr &&
                                     PPFull != nullptr && PPBrightness != nullptr &&
-                                    PPInverse != nullptr && PPDesat != nullptr && PPTint != nullptr;
+                                    PPInverse != nullptr && PPDesat != nullptr && PPTint != nullptr &&
+                                    PPFogHeight != nullptr && PPStrength != nullptr &&
+                                    PPContrast != nullptr && PPExtent != nullptr &&
+                                    PPContrastBoost != nullptr && PPContrastGain != nullptr &&
+                                    PPContrastMix != nullptr && PPStrengthMix != nullptr;
             if (bPPCreated)
             {
                 SceneColour->SceneTextureId = PPI_PostProcessInput0;
@@ -559,19 +661,38 @@ int32 URA4LayeredTerrainSetupCommandlet::Main(const FString& Params)
                 PPFloor->R = 0.08f;
                 PPFull->R = 1.0f;
 
+                PPFogHeight->ParameterName = TEXT("RA4FogWorldHeight");
+                PPFogHeight->DefaultValue = 12800.0f;
+                PPStrength->ParameterName = TEXT("RA4FogStrength");
+                PPStrength->DefaultValue = 1.0f;
+                PPContrast->ParameterName = TEXT("RA4FogHighContrast");
+                PPContrast->DefaultValue = 0.0f;
+                PPContrastGain->R = 4.0f;
+
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPFogWidth, TEXT(""), PPExtent, TEXT("A"));
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPFogHeight, TEXT(""), PPExtent, TEXT("B"));
                 UMaterialEditingLibrary::ConnectMaterialExpressions(PPWorldPos, TEXT(""), PPFogUV, TEXT("A"));
-                UMaterialEditingLibrary::ConnectMaterialExpressions(PPFogWidth, TEXT(""), PPFogUV, TEXT("B"));
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPExtent, TEXT(""), PPFogUV, TEXT("B"));
                 UMaterialEditingLibrary::ConnectMaterialExpressions(PPFogUV, TEXT(""), PPFogSample, TEXT("UVs"));
+
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPFogSample, TEXT("R"), PPContrastBoost, TEXT("A"));
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPContrastGain, TEXT(""), PPContrastBoost, TEXT("B"));
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPFogSample, TEXT("R"), PPContrastMix, TEXT("A"));
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPContrastBoost, TEXT(""), PPContrastMix, TEXT("B"));
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPContrast, TEXT(""), PPContrastMix, TEXT("Alpha"));
 
                 UMaterialEditingLibrary::ConnectMaterialExpressions(PPFloor, TEXT(""), PPBrightness, TEXT("A"));
                 UMaterialEditingLibrary::ConnectMaterialExpressions(PPFull, TEXT(""), PPBrightness, TEXT("B"));
-                UMaterialEditingLibrary::ConnectMaterialExpressions(PPFogSample, TEXT("R"), PPBrightness, TEXT("Alpha"));
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPContrastMix, TEXT(""), PPBrightness, TEXT("Alpha"));
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPFull, TEXT(""), PPStrengthMix, TEXT("A"));
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPBrightness, TEXT(""), PPStrengthMix, TEXT("B"));
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPStrength, TEXT(""), PPStrengthMix, TEXT("Alpha"));
 
-                UMaterialEditingLibrary::ConnectMaterialExpressions(PPFogSample, TEXT("R"), PPInverse, TEXT(""));
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPContrastMix, TEXT(""), PPInverse, TEXT(""));
                 UMaterialEditingLibrary::ConnectMaterialExpressions(SceneColour, TEXT(""), PPDesat, TEXT(""));
                 UMaterialEditingLibrary::ConnectMaterialExpressions(PPInverse, TEXT(""), PPDesat, TEXT("Fraction"));
                 UMaterialEditingLibrary::ConnectMaterialExpressions(PPDesat, TEXT(""), PPTint, TEXT("A"));
-                UMaterialEditingLibrary::ConnectMaterialExpressions(PPBrightness, TEXT(""), PPTint, TEXT("B"));
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPStrengthMix, TEXT(""), PPTint, TEXT("B"));
 
                 UMaterialEditingLibrary::ConnectMaterialProperty(PPTint, TEXT(""), MP_EmissiveColor);
 
