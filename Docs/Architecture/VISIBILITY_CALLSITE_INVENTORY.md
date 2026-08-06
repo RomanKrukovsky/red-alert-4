@@ -71,11 +71,13 @@ I-M6 is a one-funnel replacement plus deleting `EnemyMemory` in favour of `Perce
 
 | # | Action | Priority | Owner stream |
 | :--- | :--- | :--- | :--- |
-| V-A | Fix `RA4SimWorldSubsystem.cpp` actor sync: hide enemy actors whose tile is not CurrentlyVisible/RadarDetected for the local player (`IsEntityVisibleTo` exists; call it) | **HIGH — player-facing fog hole today** | Unreal Integration |
+| V-A | ~~Fix `RA4SimWorldSubsystem.cpp` actor sync~~ DONE via `IsEntityVisibleTo` + `SetActorHiddenInGame`. **Deliberate deviation from this row's original wording** (review MAJOR-2): the helper answers `CurrentlyVisible` only, NOT `RadarDetected` — reusing targeting semantics. Decision: a radar contact is a minimap blip, not a rendered 3D model; when radar starts writing `RadarDetected` into the grid (it writes nothing today), the 3D actor stays hidden and the blip belongs to the minimap/belief surface (V-D). If design wants radar to reveal models, change `IsEntityVisibleTo` — knowingly, in one place. Visual in-editor check still owed. | done (code) | Unreal Integration |
 | V-B | Fix `RA4PlayerController.cpp:677` picking: skip entities failing `IsEntityVisibleTo(LocalPlayer, …)` | HIGH | Unreal Integration |
 | V-C | I-M6: replace the `UpdateMemory` fog gate with `GetPerceivedWorld(Player)`; delete `EnemyMemory` in favour of `PerceivedTrack`; ThreatMap consumes tracks | Gated on I-M2+ | AI |
 | V-D | Same migration for `HudSnapshot` minimap (ghost markers with confidence per UI_UX_BIBLE) | Gated on I-M6 + UI | UI/UX |
 | V-E | Leak detector (this package): `Recon.ObjectiveStateFunnelInventory` pins the funnel list — a NEW ungated `GetAllCores` consumer file fails the test until classified here | DONE with this document | QA |
+| V-F | Combat-event debug VFX leak (review MINOR-1): `RA4SimWorldSubsystem` draws `DrawDebugLine`/`DrawDebugPoint` for ALL WeaponFired/ProjectileImpact events, including fights inside fog — tracers reveal positions. Debug-only placeholder (stripped in Shipping), but the same leak class as V-A; gate through `IsEntityVisibleTo` when replacing with real VFX, or earlier if debug builds are used for playtests. | queued | Unreal Integration |
+| V-G | Extend the static detector to `IsEntityVisibleTo` callers (review MINOR-4): the helper is now public, and the funnel test does not watch it — a new presentation file could ask "what does player 1 see" unbounced. Add the symbol to the funnel scan with its own whitelist, or introduce a viewer-scoped facade with multiplayer seats. | queued | QA |
 
 ## Leak-detector contract
 

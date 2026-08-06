@@ -2517,6 +2517,13 @@ EntityId SimWorld::AcquireTarget(EntityId Attacker) const
 
 bool SimWorld::IsEntityVisibleTo(PlayerId Viewer, uint32_t EntityIndex) const
 {
+    // Liveness and range come first: a dead or out-of-range entity is visible to
+    // nobody, fog or not (review MINOR-2 -- with the old order, a fogless match
+    // answered "visible" for garbage indices).
+    if (EntityIndex >= Core.size() || !Core[EntityIndex].bAlive)
+    {
+        return false;
+    }
     // Fog is optional. A match configured without it, and every headless fixture that
     // never builds a grid, has to behave as though the map is in the open -- the
     // alternative is that absent fog blinds every side and combat stops entirely.
@@ -2527,10 +2534,6 @@ bool SimWorld::IsEntityVisibleTo(PlayerId Viewer, uint32_t EntityIndex) const
     if (int32_t(Viewer) >= FogGrid->GetNumPlayers())
     {
         return true;
-    }
-    if (EntityIndex >= Core.size() || !Core[EntityIndex].bAlive)
-    {
-        return false;
     }
 
     // A side always sees its own. The grid is rebuilt from unit vision every tick, so

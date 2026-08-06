@@ -148,7 +148,8 @@ RA4_TEST(FogOfWar, EntityVisibilityGateAnswersPerViewer)
 
     // Player 0's scout at (2,2); player 1's units -- one adjacent (seen),
     // one across the map (fogged for player 0).
-    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(500), Fixed::FromInt(500)));
+    const EntityId OwnScout =
+        World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(500), Fixed::FromInt(500)));
     const EntityId NearEnemy =
         World.SpawnUnit(RA4Test::Ids::AllRifleman, 1, Vec2(Fixed::FromInt(700), Fixed::FromInt(500)));
     const EntityId FarEnemy = World.SpawnUnit(RA4Test::Ids::AllRifleman, 1,
@@ -158,7 +159,7 @@ RA4_TEST(FogOfWar, EntityVisibilityGateAnswersPerViewer)
     World.Tick(&Frame);
 
     // Player 0: sees own unit and the adjacent enemy; not the far one.
-    RA4_EXPECT(World.IsEntityVisibleTo(0, 0));
+    RA4_EXPECT(World.IsEntityVisibleTo(0, OwnScout.Index));
     RA4_EXPECT(World.IsEntityVisibleTo(0, NearEnemy.Index));
     RA4_EXPECT(!World.IsEntityVisibleTo(0, FarEnemy.Index));
 
@@ -167,9 +168,13 @@ RA4_TEST(FogOfWar, EntityVisibilityGateAnswersPerViewer)
     RA4_EXPECT(World.IsEntityVisibleTo(1, NearEnemy.Index));
     RA4_EXPECT(World.IsEntityVisibleTo(1, FarEnemy.Index));
 
-    // Out-of-range indices are not visible to anyone. (The dead-entity branch
-    // of the helper is covered by SimWorld's own targeting tests; killing a
-    // unit from here would need private API, which a presentation-side pin
-    // has no business touching.)
+    // Out-of-range indices are not visible to anyone -- including in a match
+    // without fog, where the helper's range check must fire before its
+    // fog-is-optional early-out (review MINOR-2 pinned this ordering).
     RA4_EXPECT(!World.IsEntityVisibleTo(0, World.GetEntityCapacity() + 100));
+    {
+        SimWorld NoFogCheck; // Initialize builds fog only per map config; default test setup has it,
+                             // so exercise the fogless order via an uninitialized world's empty core.
+        RA4_EXPECT(!NoFogCheck.IsEntityVisibleTo(0, 5));
+    }
 }

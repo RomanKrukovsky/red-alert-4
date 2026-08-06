@@ -321,8 +321,20 @@ int32_t SelectionModel::GetControlGroupSize(int32_t GroupIndex, const SimWorld& 
 
 void SelectionModel::PruneDead(const SimWorld& World)
 {
+    // Dead entities leave the selection -- and so do enemies that slipped back
+    // into fog (review MAJOR-1 on V-A/V-B): a selected enemy used to keep
+    // feeding the HUD live HP through the fog after its actor was hidden,
+    // which is an intel leak through the selection panel. Own units are always
+    // visible to their owner, so this only ever removes enemies.
     Selected.erase(std::remove_if(Selected.begin(), Selected.end(),
-                                  [&World](const EntityId& Id) { return !World.IsAlive(Id); }),
+                                  [&World, this](const EntityId& Id)
+                                  {
+                                      if (!World.IsAlive(Id))
+                                      {
+                                          return true;
+                                      }
+                                      return !World.IsEntityVisibleTo(LocalPlayer, Id.Index);
+                                  }),
                    Selected.end());
 }
 
