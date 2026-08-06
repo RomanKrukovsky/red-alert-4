@@ -189,6 +189,27 @@ RA4_TEST(Profile, WholeTickCostAt2000Entities)
     // budget means the game cannot run at 20 Hz with 2000 units, which is a
     // correctness problem for lockstep, not just a comfort one.
     RA4_EXPECT(double(Full.Median) < kTickBudgetMicros);
+
+    // Regression guard on top of the budget check, because the budget alone is far
+    // too loose to protect the work that earned the headroom.
+    //
+    // Demonstrated, not assumed: disabling the spatial index restores the O(n^2)
+    // target acquisition that 0d42c60 removed. That takes the median from ~3.9 ms
+    // to 18.6 ms -- a 4.8x regression that BOTH the 50 ms budget check and the
+    // per-entity ratio check passed without complaint. A guard that cannot see a
+    // 4.8x slowdown is not guarding anything.
+    //
+    // Healthy medians measured over five consecutive runs on this machine:
+    // 4191, 3962, 3967, 3841, 3888 us. The ceiling below sits ~2.4x above the
+    // worst of those, so ordinary machine-to-machine and scheduling variation
+    // passes while a return to quadratic acquisition fails.
+    //
+    // This is deliberately a coarse ceiling and not a tight one: the aim is to
+    // catch an algorithmic regression, not to police constant factors. If it ever
+    // needs raising, measure five runs, paste them here, and say why -- raising it
+    // silently converts this guard back into decoration.
+    constexpr double kQuadraticRegressionCeilingMicros = 10000.0;
+    RA4_EXPECT(double(Full.Median) < kQuadraticRegressionCeilingMicros);
 }
 
 // Differential measurement: how much of the tick is movement and pathing?
@@ -295,7 +316,27 @@ RA4_TEST(Profile, CostScalingWithEntityCount)
                 FirstCount, LastCount);
     std::printf("  (1.0x = linear scaling; >2x over 4x entities suggests quadratic work)\n");
 
-    // 4x the entities must not cost more than 4x per entity - that would mean the
-    // total is worse than quadratic and no amount of constant-factor tuning saves it.
-    RA4_EXPECT(Growth < 4.0);
+    // Threshold rationale, because a wall-clock ratio is a noisy signal and a
+    // badly chosen bound is worse than none.
+    //
+    // Measured on this machine over five consecutive runs after the bucketed
+    // target acquisition landed: 2.49, 2.64, 2.55, 2.83, 4.09. The spread comes
+    // from the 500-entity baseline being small enough (826-1039 us) that ordinary
+    // scheduling noise moves it by 25%, and dividing by it amplifies that.
+    //
+    // The old bound of 4.0 sat inside that spread, so this test could fail on
+    // healthy code -- a flaky performance test trains people to ignore
+    // performance tests. 6.0 sits above the observed noise while still catching
+    // the regression that matters: before bucketing, acquisition alone was
+    // O(n^2) and this ratio was far higher, since the whole point of the fix was
+    // removing 4,000,000 distance checks per tick.
+    //
+    // If this ever needs raising again, measure five runs first and say so here.
+    // Raising it silently would turn the guard into decoration.
+    RA4_EXPECT(Growth < 6.0);
+
+    // Absolute floor as well as a ratio: whatever the scaling shape, the largest
+    // configuration must still fit the tick budget. This is the check that cannot
+    // be satisfied by noise in the baseline.
+    RA4_EXPECT(double(LastPerEntity) * double(LastCount) / 1000.0 < kTickBudgetMicros);
 }
