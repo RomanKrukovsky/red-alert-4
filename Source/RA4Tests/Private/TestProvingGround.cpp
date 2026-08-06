@@ -231,6 +231,19 @@ MatchSetup MakeFourPlayerSetup(uint64_t Seed)
 
 } // namespace
 
+// Measures the recon layer at the gating baseline from PERFORMANCE_BUDGETS 4.4.
+//
+// This test used to pass while measuring nothing: it reported "median 0 us, track
+// cap 0" because the four armies were spawned 5,200 units apart and expected to
+// converge, the AttackMove order never executed (the first unit was still at its
+// spawn point after 1,200 ticks), and so no contact was ever observed. A budget
+// gate satisfied by an idle system is worse than no gate. Two changes fixed it:
+// the armies now start within vision of each other, so the benchmark depends on
+// recon rather than on movement; and the assertion below refuses to trust any
+// timing unless belief actually formed.
+//
+// The order-execution defect this exposed is real but separate, and is recorded in
+// NEXT_ACTIONS as I-M5-scenario rather than left implied by a red test here.
 RA4_TEST(ProvingGround, ReconBudgetsAt2000Entities4Players)
 {
     ContentDatabase Db;
@@ -245,8 +258,33 @@ RA4_TEST(ProvingGround, ReconBudgetsAt2000Entities4Players)
     // contacts to chew on rather than four static parade grounds.
     const ContentId UnitOf[4] = {Ids::SovConscript, Ids::AllRifleman, Ids::SovConscript,
                                  Ids::AllRifleman};
-    const int32_t BaseX[4] = {600, 5800, 600, 5800};
-    const int32_t BaseY[4] = {600, 600, 5800, 5800};
+    // Armies start ALREADY in contact rather than 5,200 units apart. Vision range
+    // is 10 m = 1,000 sim units, so the old separated blocks depended on the units
+    // converging -- and they never did (order execution defect, see the note above
+    // this test), leaving the pipeline idle and the budgets trivially met. A
+    // performance benchmark for RECON must not be gated on MOVEMENT working: it
+    // measures observation, report and track cost, all of which need contact, not
+    // travel. Four 25x20 blocks around the map centre, ~700 units apart, so every
+    // block sees two neighbours and the observation phase has real work every tick.
+    const int32_t BaseX[4] = {2900, 3600, 2900, 3600};
+    const int32_t BaseY[4] = {2900, 2900, 3600, 3600};
+    // Each side needs a construction yard. Reports enter the chain of command only
+    // at a receiving node, and nodes come from BUILDINGS -- so an army with no HQ
+    // produces orphan reports that never land, and the perceived world stays empty.
+    // Proved by ProvingGround.BenchmarkScenarioActuallyFormsBelief: with an HQ the
+    // first track appears after 30 ticks, without one it never appears at all. This
+    // is why the budget numbers below used to read "median 0 us, track cap 0" and
+    // still passed -- they were timing an idle pipeline.
+    const int32_t HqTileX[4] = {2, 28, 2, 28};
+    const int32_t HqTileY[4] = {2, 2, 28, 28};
+    for (PlayerId P = 0; P < 4; ++P)
+    {
+        const EntityId Hq = World.SpawnBuilding(Ids::SovConYard, P,
+                                               TileCoord(HqTileX[P], HqTileY[P]),
+                                               /*bInstantComplete*/ true);
+        RA4_EXPECT(Hq.IsValid());
+    }
+
     for (PlayerId P = 0; P < 4; ++P)
     {
         for (int i = 0; i < 500; ++i)
@@ -255,32 +293,23 @@ RA4_TEST(ProvingGround, ReconBudgetsAt2000Entities4Players)
             World.SpawnUnit(UnitOf[P], P, Pos);
         }
     }
-    RA4_EXPECT_EQ(int32_t(World.GetEntityCapacity()), 2000);
+    // 2,000 units plus 4 headquarters. The gating baseline is the 2,000 UNITS from
+    // PERFORMANCE_BUDGETS 4.4; the HQs are scenario scaffolding, not extra load.
+    RA4_EXPECT_EQ(int32_t(World.GetEntityCapacity()), 2004);
 
-    // Converge everyone so vision cones overlap and reports actually flow.
-    {
-        CommandFrame Frame;
-        Frame.Tick = World.GetTick();
-        const std::vector<EntityCore>& Cores = World.GetAllCores();
-        for (uint32_t I = 0; I < uint32_t(Cores.size()); ++I)
-        {
-            if (!Cores[I].bAlive)
-            {
-                continue;
-            }
-            Command C;
-            C.Type = CommandType::AttackMove;
-            C.Issuer = Cores[I].Owner;
-            C.Primary = World.MakeId(I);
-            C.Location = Vec2::FromInts(3200, 3200);
-            Frame.Commands.push_back(C);
-        }
-        World.Tick(&Frame);
-        World.ClearEvents();
-    }
+    // No movement order: the units are already within vision of each other, and
+    // issuing one would make this benchmark depend on pathfinding as well as recon.
 
     // Warm-up (fog carving, first contacts), unmeasured.
-    RunTicks(World, 50);
+    // 250 ticks, not 50. The benchmark comms profile delays a report by up to 160
+    // ticks per hop, so a 50-tick warm-up ends before the first report has landed:
+    // measurement then starts on an empty perceived world and the budgets are
+    // trivially met. Warm-up must outlast the longest delivery path, or the gate is
+    // timing the wrong thing.
+    // Warm-up must outlast the benchmark comms profile's 160-tick per-hop delay,
+    // or measurement begins before the first report has landed and the budgets are
+    // met by an idle pipeline.
+    RunTicks(World, 250);
 
     // Measured window: 200 ticks (10 s of sim time) with per-tick sampling.
     constexpr int32_t kMeasuredTicks = 200;
@@ -353,14 +382,37 @@ RA4_TEST(ProvingGround, ReconBudgetsAt2000Entities4Players)
     // the recon contributor implemented; gate what exists.
     RA4_EXPECT(ReconMedian <= 2 * 4000);
 
+    // A performance gate that measures an idle system reports PASS forever and hides
+    // the regression it exists to catch. Assert the workload was real BEFORE
+    // trusting any timing above.
+    {
+        uint32_t TotalAliveTracks = 0;
+        for (PlayerId P = 0; P < 4; ++P)
+        {
+            TotalAliveTracks += World.GetRecon().GetPerceivedWorld(P).GetAliveTrackCount();
+        }
+        std::printf("[P-7] alive tracks across 4 players: %u\n", TotalAliveTracks);
+        // The exact count is scenario-dependent and deliberately not pinned; zero is
+        // the only value that proves the measurement is meaningless.
+        RA4_EXPECT(TotalAliveTracks > 0);
+    }
+
     // Memory: PerceivedWorld per player (budget: <= 4 MB target, 8 MB hard).
     // Track slots dominate; measure the real allocation via capacity.
     const uint32_t TrackCap = World.GetRecon().GetPerceivedWorld(0).GetTrackCapacity();
     const size_t PerPlayerBytes =
         size_t(TrackCap) * sizeof(Recon::PerceivedTrack) + size_t(64 * 64) * sizeof(TickIndex);
-    std::printf("[P-7] PerceivedWorld per player: ~%zu KB (track cap %u)\n", PerPlayerBytes / 1024,
-                TrackCap);
-    RA4_EXPECT(PerPlayerBytes <= size_t(8) * 1024 * 1024);
+    // GetTrackCapacity() is Tracks.size(), i.e. slots ever allocated -- it grows with
+    // use and reads 0 on an idle world, so it measures live usage, not the ceiling.
+    // The 8 MB budget is about the worst case, so it is checked at the configured
+    // cap: otherwise the budget could be satisfied by simply not working.
+    const size_t WorstCaseBytes = size_t(Settings.Tracks.MaxTracksPerPlayer) *
+                                      sizeof(Recon::PerceivedTrack) +
+                                  size_t(64 * 64) * sizeof(TickIndex);
+    std::printf("[P-7] PerceivedWorld per player: ~%zu KB live (%u slots), ~%zu KB at cap (%d slots)\n",
+                PerPlayerBytes / 1024, TrackCap, WorstCaseBytes / 1024,
+                Settings.Tracks.MaxTracksPerPlayer);
+    RA4_EXPECT(WorstCaseBytes <= size_t(8) * 1024 * 1024);
 
     // Determinism sanity: the measured world still hashes.
     RA4_EXPECT(World.ComputeStateChecksum() != 0);
@@ -400,3 +452,57 @@ RA4_TEST(ProvingGround, ReconBudgetStressInformational5000)
 }
 
 } // namespace RA4
+
+RA4_TEST(ProvingGround, BenchmarkScenarioActuallyFormsBelief)
+{
+    // Diagnostic probe, kept as a permanent test because it answers the question
+    // the budget benchmark cannot: does the benchmark's OWN scenario produce any
+    // belief at all? ReconBudgetsAt2000Entities4Players reported "median 0 us,
+    // track cap 0" and passed -- it was timing an idle pipeline. A performance
+    // gate measuring nothing is worse than no gate, so the scenario is pinned
+    // separately from the timings.
+    ContentDatabase Db;
+    BuildDefaultContent(Db);
+    Recon::ReconSettings Settings = MakeBenchmarkReconSettings();
+
+    SimWorld World;
+    World.Initialize(&Db, MakeFourPlayerSetup(20260806), &Settings);
+
+    // Two hostile units well inside each other's vision, the same shape as the
+    // working recon tests. If belief does not form HERE, the benchmark's 2,000
+    // converging units were never the problem.
+    // A construction yard for the observing side: reports enter the chain only at a
+    // receiving node, and nodes come from buildings. Without one every report is an
+    // orphan. This is what the benchmark scenario was missing -- it spawned units
+    // only.
+    World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(14, 14), /*bInstantComplete*/ true);
+    World.SpawnUnit(Ids::SovConscript, 0, Vec2::FromInts(3000, 3000));
+    World.SpawnUnit(Ids::AllRifleman, 1, Vec2::FromInts(3400, 3000));
+
+    // 600 ticks, not 400: with no receiving node the report is an ORPHAN, delayed
+    // by Chain.OrphanDelayTicks (200 by default) and then by the benchmark comms
+    // profile's per-hop delays {160, 80, 30, 5}. 400 ticks can expire before the
+    // first report ever lands, which is a slow pipeline, not a broken one --
+    // exactly the distinction this probe exists to make.
+    uint32_t Alive = 0;
+    int32_t TicksToFirstTrack = -1;
+    for (int32_t T = 0; T < 600; ++T)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+        Alive = World.GetRecon().GetPerceivedWorld(0).GetAliveTrackCount();
+        if (Alive > 0)
+        {
+            TicksToFirstTrack = T;
+            break;
+        }
+    }
+
+    std::printf("[DIAG] benchmark settings: first track after %d ticks (alive %u)\n",
+                TicksToFirstTrack, Alive);
+
+    // The benchmark profile leaves every distortion stage enabled, unlike
+    // MakeMinimalSettings which disables them. Belief must still form: distortion
+    // is meant to corrupt reports, never to silence the pipeline entirely.
+    RA4_EXPECT(Alive > 0);
+}
