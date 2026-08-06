@@ -2829,3 +2829,98 @@ RA4_TEST(SiegeArtillery, AIPrefersArtilleryOnlyAfterSeeingDefences)
     // future cost change cannot silently restore the old behaviour.
     RA4_EXPECT(Art->Production.Cost < Tank->Production.Cost);
 }
+
+RA4_TEST(Aviation, AirLayerIsAnsweredOnlyByDedicatedAntiAir)
+{
+    // Opening the air layer is only fair if the ground base can answer it. The
+    // asymmetry is the design: the ordinary gun turret must NOT elevate, and the
+    // flak turret must not double as a ground defence.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+
+    for (const char* Faction : {"sov", "all"})
+    {
+        const std::string F(Faction);
+        const EntityDef* Air = Content.FindEntity(MakeContentId(
+            F == "sov" ? "unit.sov.mig_bomber" : "unit.all.harrier_jet"));
+        const EntityDef* Aa = Content.FindEntity(MakeContentId(
+            F == "sov" ? "building.sov.flak_turret" : "building.all.patriot_battery"));
+        const EntityDef* Gun = Content.FindEntity(MakeContentId(
+            F == "sov" ? "building.sov.gun_turret" : "building.all.pillbox"));
+        RA4_REQUIRE(Air != nullptr);
+        RA4_REQUIRE(Aa != nullptr);
+        RA4_REQUIRE(Gun != nullptr);
+
+        RA4_EXPECT(Air->Unit.Layer == MovementLayer::Air);
+        RA4_EXPECT(Air->Armor == ArmorClass::Air);
+        RA4_EXPECT(HasRole(Aa->Roles, EntityRole::AntiAir));
+
+        const WeaponDef* GunW = Content.FindWeapon(Gun->Weapon);
+        const WeaponDef* AaW = Content.FindWeapon(Aa->Weapon);
+        RA4_REQUIRE(GunW != nullptr);
+        RA4_REQUIRE(AaW != nullptr);
+
+        // The gap that makes aircraft worth building at all.
+        RA4_EXPECT(!GunW->bCanTargetAir);
+        // And the gap that keeps flak from replacing the gun turret.
+        RA4_EXPECT(AaW->bCanTargetAir);
+        RA4_EXPECT(!AaW->bCanTargetGround);
+        RA4_EXPECT(AaW->Warhead == WarheadClass::AntiAir);
+
+        // Flak must out-range the bomb, or a defended base could never punish a
+        // bombing run and aviation would be a strictly dominant strategy.
+        const WeaponDef* BombW = Content.FindWeapon(Air->Weapon);
+        RA4_REQUIRE(BombW != nullptr);
+        RA4_EXPECT(AaW->MaxRange > BombW->MaxRange);
+
+        // Fast and fragile: the trade for ignoring terrain.
+        const EntityDef* Tank = Content.FindEntity(MakeContentId(
+            F == "sov" ? "unit.sov.heavy_tank" : "unit.all.light_tank"));
+        RA4_REQUIRE(Tank != nullptr);
+        RA4_EXPECT(Air->Unit.MaxSpeed > Tank->Unit.MaxSpeed);
+        RA4_EXPECT(Air->MaxHealth < Tank->MaxHealth);
+        RA4_EXPECT(Air->Production.Cost > Tank->Production.Cost);
+    }
+}
+
+RA4_TEST(Aviation, FlakDestroysABomberThatLoitersOverTheBase)
+{
+    // End-to-end through the real simulation rather than the content tables: an
+    // enemy bomber parked over a defended base must actually die.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(90210));
+
+    const EntityId Plane = World.SpawnUnit(MakeContentId("unit.sov.mig_bomber"), 1,
+                                          World.GetMap().TileCenterToWorld(TileCoord(20, 20)));
+    World.SpawnBuilding(MakeContentId("building.sov.flak_turret"), 0, TileCoord(21, 20), true);
+    RA4_REQUIRE(Plane.IsValid());
+
+    for (int32_t I = 0; I < 400 && World.IsAlive(Plane); ++I)
+    {
+        World.Tick(nullptr);
+    }
+    RA4_EXPECT(!World.IsAlive(Plane));
+}
+
+RA4_TEST(Aviation, GunTurretAloneCannotStopABomber)
+{
+    // The counterpart: the same bomber over a base defended only by ground guns
+    // must survive, which is what forces the player to build AA at all.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(90211));
+
+    const EntityId Plane = World.SpawnUnit(MakeContentId("unit.sov.mig_bomber"), 1,
+                                           World.GetMap().TileCenterToWorld(TileCoord(20, 20)));
+    World.SpawnBuilding(MakeContentId("building.sov.gun_turret"), 0, TileCoord(21, 20), true);
+    RA4_REQUIRE(Plane.IsValid());
+
+    for (int32_t I = 0; I < 400; ++I)
+    {
+        World.Tick(nullptr);
+    }
+    RA4_EXPECT(World.IsAlive(Plane));
+}
