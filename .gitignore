@@ -59,3 +59,15 @@ __pycache__/
 # commandlet exit non-zero, which hides real regressions. Moved out of Content/
 # rather than deleted; see Docs/Production/THIRD_PARTY_PACK_AUDIT.md.
 /Content/ThirdParty/FactoryEnvironment/
+
+# Editor/merge scratch files. A stray SimWorld.cpp.t -- a 136 KB copy of the
+# simulation core, six months stale, in no build -- was committed by a failed
+# revert and sat in the tree unnoticed. A second copy of the core is exactly the
+# duplicate-subsystem hazard the project rules forbid, and it is worse when it
+# looks like source.
+*.orig
+*.rej
+*.bak
+*.cpp.t
+*.h.t
+*~
