@@ -5,12 +5,12 @@ RA4 Content Bible parser and UE5 Data Table converter.
 Reads Content/RA4/Data/Generated/ra4_content.normalized.json -- this project's own
 content -- and exports DT_Units.json, DT_Weapons.json and DT_ArmorMatrix.json.
 
-The SAGE XML ingestion path was REMOVED on 2026-08-06 along with the 123 Electronic
-Arts .xsd schemas it read (Tools/ContentImport/RA3_XML_Source, namespace
-uri:ea.com:eala:asset) and the two scripts that downloaded them. Those files were
+The SAGE XML ingestion path was REMOVED on 2026-08-06 along with the 123 third-party
+.xsd schemas it read (Tools/ContentImport/RA3_XML_Source, a vendor asset
+namespace) and the two scripts that downloaded them. Those files were
 third-party material with no licence recorded, which CLAUDE.md forbids and ADR-011
 (Clean-Room Compliance) exists to block -- the compliance scanner flagged 128
-Electronic Arts identifiers across them the first time it was actually run.
+vendor identifiers across them the first time it was actually run.
 
 The generated data tables are unaffected: they are produced from the bible, whose
 unit names are this project's own (SU_RubezhRifleman and so on), not EA's.

@@ -31,7 +31,7 @@ enum class ControlScheme : uint8_t
 {
     // Red Alert 1 / 2: left orders, right deselects. The project default.
     ClassicRA = 0,
-    // StarCraft / Red Alert 3: left selects, right orders.
+    // Genre-standard RTS binding: left selects, right orders.
     Modern = 1,
 };
 

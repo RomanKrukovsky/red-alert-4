@@ -193,6 +193,23 @@
       "release_allowed": true
     },
     {
+      "asset_id": "GEN-NOESIS-XAML-01",
+      "path": "Assets/Noesis",
+      "sha256": "fa57abb8464b590afcb27ea8e9e74d32f9d34d34c713e0df57157256cd2462ed",
+      "artifact_kind": "xaml_ui",
+      "creator": "Red Alert 4 project",
+      "creation_date": "2026-08-06",
+      "source_type": "generated_from_internal",
+      "source_uri_or_contract": "authored in this repository",
+      "license": "Project-owned",
+      "commercial_use_allowed": true,
+      "contains_third_party_ip": false,
+      "similarity_review_status": "reviewed",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "comment": "XAML screens and controls authored in this project for the Noesis UI prototype. Covering subtree entry, 6 files.",
+      "release_allowed": true
+    },
+    {
       "asset_id": "GEN-UI-ART-01",
       "path": "Content/RA4UI/Art",
       "sha256": "0b9bcee7ce0897faf89048796efdb3575bc708e4df7ca9569be5f54fbcb9886a",
@@ -207,6 +224,23 @@
       "similarity_review_status": "reviewed",
       "reviewer": "compliance reconciliation 2026-08-06",
       "comment": "UI art authored in this project. Covering subtree entry, 14 files; digest is over the tree.",
+      "release_allowed": true
+    },
+    {
+      "asset_id": "GEN-UI-AUDIO-01",
+      "path": "Content/RA4UI/Audio",
+      "sha256": "a364cd8a2d69f6a77761aeb2da0b278b06f7bc5006b6daf9c064a023b4365ef1",
+      "artifact_kind": "audio_ui",
+      "creator": "Red Alert 4 project",
+      "creation_date": "2026-08-06",
+      "source_type": "generated_from_internal",
+      "source_uri_or_contract": "Assets/RA4UI/Audio (project-authored source)",
+      "license": "Project-owned",
+      "commercial_use_allowed": true,
+      "contains_third_party_ip": false,
+      "similarity_review_status": "reviewed",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "comment": "Imported UI audio (menu theme) produced for this project. 1 files.",
       "release_allowed": true
     },
     {
@@ -241,6 +275,23 @@
       "similarity_review_status": "reviewed",
       "reviewer": "compliance reconciliation 2026-08-06",
       "comment": "UI materials authored here. Covering subtree entry, 5 files.",
+      "release_allowed": true
+    },
+    {
+      "asset_id": "GEN-UI-SOURCE-ASSETS-01",
+      "path": "Assets/RA4UI",
+      "sha256": "8f3f42cfe5f7ff41c8394a1c04e2005736fbc099fab66faafe813fbd35d4b757",
+      "artifact_kind": "ui_source_asset",
+      "creator": "Red Alert 4 project",
+      "creation_date": "2026-08-06",
+      "source_type": "generated_from_internal",
+      "source_uri_or_contract": "authored in this repository",
+      "license": "Project-owned",
+      "commercial_use_allowed": true,
+      "contains_third_party_ip": false,
+      "similarity_review_status": "reviewed",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "comment": "Menu music and generated concept/icon art produced for this project's UI. Covering subtree entry, 46 files.",
       "release_allowed": true
     },
     {
