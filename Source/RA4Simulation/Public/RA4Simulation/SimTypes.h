@@ -209,8 +209,10 @@ const char* ToString(PowerPriority Priority);
 // --- ADR-0013 per-system deficit effects ----------------------------------
 
 // Radar (and with it the anonymous-contact blips the recon layer derives from it) goes
-// dark from Moderate. Named rather than inlined so the simulation, the HUD and the tests
-// cannot disagree about when the minimap stops being trustworthy.
+// dark from Moderate. This states the effect matrix's threshold; the simulation reaches it
+// through the Auxiliary priority band instead, which is the same boundary by default but
+// lets a player promote a radar to keep it lit. Kept as the documented statement of the
+// matrix row, and as what the tests pin the boundary against.
 inline constexpr bool IsRadarOnlineAtTier(PowerTier Tier)
 {
     return Tier < PowerTier::Moderate;

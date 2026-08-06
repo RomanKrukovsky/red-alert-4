@@ -245,6 +245,39 @@ yields a silently corrupt world rather than an error. The same collision makes v
 ambiguous. Since no save ships yet, the minimum supported version is 5, and
 `SaveVersion.AmbiguousLegacyVersionsAreRefusedRatherThanMisread` pins that.
 
+**11. Radar shutdown is routed through the priority band, not the tier directly.**
+
+The effect matrix says radar is off from Moderate, and a radar defaults to `Auxiliary`,
+whose band stops at exactly Moderate — so the default behaviour matches the matrix. The
+check is written against the band rather than the tier so that promoting a radar to
+`Vital` actually keeps it lit, which is the point of letting the player choose. An earlier
+version ANDed both tests, so promotion bought nothing and the override was decoration for
+the one building it matters most for.
+
+A radar's chain-of-command role is deliberately *not* switched off with its coverage:
+relaying reports is a separate function with its own blackout rule in the recon layer.
+Note that rule uses a 50% threshold, which sits inside the Moderate band — so between 50%
+and 69% a radar is dark for coverage but a healthy relay. Recorded rather than unified,
+because the two functions are genuinely independent.
+
+**12. Repair skips a building already queued for destruction.**
+
+`SystemDeaths` runs at the end of the tick, so a building sold earlier in the same tick is
+still alive when `SystemRepair` sees it. Without the skip, selling a damaged building with
+repair armed charged for hitpoints nobody ever saw, on top of the sale refund. Same check
+`SystemFlowPayment` makes, for the same reason.
+
+**13. Production is funded before repair, so production wins a contested tick.**
+
+`SystemFlowPayment` runs before `SystemRepair`, and neither knows about the other; each
+clamps to the balance it sees, so the treasury never overdraws (pinned by
+`Repair.CompetingWithProductionNeverOverdrawsTheTreasury`). But the starvation is
+one-directional: a queue that wants the whole treasury leaves repair nothing, every tick,
+while repair never starves production. Defensible — a production order is the more
+explicit commitment — but it is a consequence of list order rather than a decision, so it
+is recorded here. Routing repair through the same priority-sorted funding pass would make
+it a choice; that wants play data first.
+
 **10. A pre-v7 save derives priority from content rather than defaulting.**
 
 A v6 save has no priority byte. Leaving the `BuildingComp` default would hand every

@@ -1545,7 +1545,11 @@ void ARA4PlayerController::CycleSelectedPowerPriority()
 
     // Read the current band from the simulation rather than tracking it here: the UI is
     // not a source of truth, and a stale local copy would send the wrong next value.
-    const URA4SimWorldSubsystem* Sim = GetWorld()->GetSubsystem<URA4SimWorldSubsystem>();
+    // GetWorld() is null on a PlayerController during teardown and on the CDO, and a
+    // bound input action can fire during a level transition.
+    const UWorld* OwningWorld = GetWorld();
+    const URA4SimWorldSubsystem* Sim =
+        OwningWorld != nullptr ? OwningWorld->GetSubsystem<URA4SimWorldSubsystem>() : nullptr;
     const RA4::SimWorld* World = Sim != nullptr ? Sim->GetSimWorld() : nullptr;
     const RA4::BuildingComp* Building = World != nullptr ? World->GetBuilding(Primary) : nullptr;
     if (Building == nullptr)

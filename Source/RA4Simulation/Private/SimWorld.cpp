@@ -268,9 +268,24 @@ bool SimWorld::IsAlive(EntityId Id) const
 const EntityCore* SimWorld::GetCore(EntityId Id) const { return IsAlive(Id) ? &Core[Id.Index] : nullptr; }
 const TransformComp* SimWorld::GetTransform(EntityId Id) const { return IsAlive(Id) ? &Transforms[Id.Index] : nullptr; }
 const HealthComp* SimWorld::GetHealth(EntityId Id) const { return IsAlive(Id) ? &Healths[Id.Index] : nullptr; }
-const BuildingComp* SimWorld::GetBuilding(EntityId Id) const { return IsAlive(Id) ? &Buildings[Id.Index] : nullptr; }
-const HarvesterComp* SimWorld::GetHarvester(EntityId Id) const { return IsAlive(Id) ? &Harvesters[Id.Index] : nullptr; }
-const ResourceNodeComp* SimWorld::GetResourceNode(EntityId Id) const { return IsAlive(Id) ? &ResourceNodes[Id.Index] : nullptr; }
+// The kind-specific accessors check Kind as well as liveness. Every entity owns a slot
+// in every component vector, so without that check these return a valid pointer to a
+// default-constructed component for the wrong kind -- and BuildingComp defaults to
+// ConstructionState::Complete, so a caller using `GetBuilding(Id) != nullptr` as a
+// "is this a building" test sees a live, finished building wherever a unit stands. The
+// HUD did exactly that and offered a repair button on a tank.
+const BuildingComp* SimWorld::GetBuilding(EntityId Id) const
+{
+    return (IsAlive(Id) && Core[Id.Index].Kind == EntityKind::Building) ? &Buildings[Id.Index] : nullptr;
+}
+const HarvesterComp* SimWorld::GetHarvester(EntityId Id) const
+{
+    return (IsAlive(Id) && Core[Id.Index].Kind == EntityKind::Unit) ? &Harvesters[Id.Index] : nullptr;
+}
+const ResourceNodeComp* SimWorld::GetResourceNode(EntityId Id) const
+{
+    return (IsAlive(Id) && Core[Id.Index].Kind == EntityKind::ResourceNode) ? &ResourceNodes[Id.Index] : nullptr;
+}
 const MovementComp* SimWorld::GetMovement(EntityId Id) const { return IsAlive(Id) ? &Movements[Id.Index] : nullptr; }
 const CombatComp* SimWorld::GetCombat(EntityId Id) const { return IsAlive(Id) ? &Combats[Id.Index] : nullptr; }
 const OrderQueue* SimWorld::GetOrders(EntityId Id) const { return IsAlive(Id) ? &Orders[Id.Index] : nullptr; }
@@ -2220,6 +2235,15 @@ void SimWorld::SystemRepair()
         {
             continue;
         }
+        // A building sold or already doomed this tick must not be repaired: SystemDeaths
+        // has not run yet, so it is still bAlive here, and both the credits and the
+        // hitpoints would go into something that is deleted before the tick ends. Same
+        // check SystemFlowPayment makes, for the same reason -- selling a damaged
+        // building with repair armed charged for a repair nobody ever saw.
+        if (std::find(PendingDestroy.begin(), PendingDestroy.end(), MakeId(I)) != PendingDestroy.end())
+        {
+            continue;
+        }
         // A half-built structure gains health from SystemConstruction; repairing it too
         // would pay twice for the same hitpoints.
         if (B.State != ConstructionState::Complete)
@@ -3748,12 +3772,21 @@ void SimWorld::SystemRecon()
         const EntityDef* BD = Content ? Content->FindEntity(Core[I].Def) : nullptr;
         if (BD != nullptr && BD->Building.bIsRadar)
         {
-            // ADR-0013: a radar goes dark from Moderate, and separately whenever its own
-            // priority band is offline -- that is the whole point of letting the player
-            // demote it. A dark radar contributes no coverage, so the anonymous contacts
-            // the recon layer derives from it stop appearing and the minimap goes quiet.
+            // ADR-0013: a radar goes dark once its priority band is offline. A radar
+            // defaults to Auxiliary, whose band stops at Moderate, so the default
+            // behaviour is exactly the effect matrix's "radar off from Moderate" -- but
+            // routing it through the band rather than testing the tier directly is what
+            // makes the player's override mean something. Promoting a radar to Vital
+            // keeps it lit through a deficit, which is the whole point of being allowed
+            // to choose; an earlier version ANDed the two tests together, so promotion
+            // bought nothing and the control was a decoration.
+            //
+            // A dark radar contributes no coverage, so the anonymous contacts the recon
+            // layer derives from it stop appearing and the minimap goes quiet. Its
+            // chain-of-command role below is deliberately left alone: relaying reports
+            // is a separate function with its own blackout rule.
             const PowerTier Tier = Players[Core[I].Owner].GetPowerTier();
-            if (IsRadarOnlineAtTier(Tier) && !IsPowerPriorityOffline(Buildings[I].Priority, Tier))
+            if (!IsPowerPriorityOffline(Buildings[I].Priority, Tier))
             {
                 RadarCentersOf[Core[I].Owner].push_back(Transforms[I].Position);
             }

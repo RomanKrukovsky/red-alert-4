@@ -2401,24 +2401,26 @@ RA4_TEST(PowerTier, PerSystemThresholdsMatchTheEffectMatrix)
     RA4_EXPECT(IsRadarOnlineAtTier(PowerTier::Mild));
     RA4_EXPECT(!IsRadarOnlineAtTier(PowerTier::Moderate));
 
+    // Pinned against the literal figures in the ADR's effect matrix, not against the
+    // constants the functions return -- comparing a function to its own constant cannot
+    // fail, and in particular would not notice someone changing the halving to 80%.
     RA4_EXPECT_EQ(RepairSpeedPercentForTier(PowerTier::Mild), 100);
-    RA4_EXPECT_EQ(RepairSpeedPercentForTier(PowerTier::Moderate), kRepairModerateSpeedPercent);
+    RA4_EXPECT_EQ(RepairSpeedPercentForTier(PowerTier::Moderate), 50);
     RA4_EXPECT_EQ(RepairSpeedPercentForTier(PowerTier::Severe), 0);
     RA4_EXPECT_EQ(RepairSpeedPercentForTier(PowerTier::Critical), 0);
 
     RA4_EXPECT_EQ(StaticDefenceCooldownMultiplierForTier(PowerTier::Moderate), 1);
-    RA4_EXPECT_EQ(StaticDefenceCooldownMultiplierForTier(PowerTier::Severe),
-                  kDefenceSevereCooldownMultiplier);
+    RA4_EXPECT_EQ(StaticDefenceCooldownMultiplierForTier(PowerTier::Severe), 2);
     RA4_EXPECT(IsStaticDefenceOnlineAtTier(PowerTier::Severe));
     RA4_EXPECT(!IsStaticDefenceOnlineAtTier(PowerTier::Critical));
 
-    // The thresholds must actually differ from each other: radar dies at Moderate while
-    // defence is still fully effective there, and defence survives Severe while repair
-    // does not.
-    RA4_EXPECT(!IsRadarOnlineAtTier(PowerTier::Moderate) &&
-               StaticDefenceCooldownMultiplierForTier(PowerTier::Moderate) == 1);
-    RA4_EXPECT(IsStaticDefenceOnlineAtTier(PowerTier::Severe) &&
-               RepairSpeedPercentForTier(PowerTier::Severe) == 0);
+    // The rows must land on different tiers -- a deficit arrives in stages, and if every
+    // row switched at once the matrix would collapse to one threshold. Stated as
+    // inequalities between rows rather than as an && of facts already asserted above.
+    RA4_EXPECT(IsRadarOnlineAtTier(PowerTier::Moderate) !=
+               IsStaticDefenceOnlineAtTier(PowerTier::Moderate));
+    RA4_EXPECT((RepairSpeedPercentForTier(PowerTier::Severe) > 0) !=
+               IsStaticDefenceOnlineAtTier(PowerTier::Severe));
 }
 
 namespace
@@ -2534,9 +2536,14 @@ RA4_TEST(Repair, IsHalvedAtModerateAndStoppedFromSevere)
     RA4_REQUIRE(SevereTier == PowerTier::Severe);
     RA4_REQUIRE(AtNormal > 0);
 
-    // Halved, then stopped outright.
+    // Halved, then stopped outright. Bounded tightly rather than "less than Normal",
+    // which one hitpoint of difference would satisfy: the mechanism is an exact 50%, so
+    // a regression to 75% or 25% has to fail. The bound is a window rather than an exact
+    // half because the per-tick heal has a max(1, ...) floor and is clamped by the
+    // damage remaining, so the two runs need not divide perfectly.
     RA4_EXPECT(AtModerate > 0);
-    RA4_EXPECT(AtModerate < AtNormal);
+    RA4_EXPECT(AtModerate * 100 <= AtNormal * 60);   // no more than 60% of full speed
+    RA4_EXPECT(AtModerate * 100 >= AtNormal * 40);   // and no less than 40%
     RA4_EXPECT_EQ(AtSevere, 0);
 }
 
@@ -2613,54 +2620,110 @@ RA4_TEST(Repair, CannotBeBoughtOnCreditAndTogglingOffBanksNothing)
     RA4_EXPECT(Spent >= (Gained * kRepairCostPerHealthCenti) / kRepairCostScale);
 }
 
-RA4_TEST(PowerTier, RadarGoesDarkAtModerateAndComesBackOnRecovery)
+namespace
 {
-    // Radar feeds the anonymous contacts the recon layer derives, so switching it off has
-    // a real consequence rather than being a cosmetic flag.
+// A base with a radar and one enemy already tracked, used to ask the only question that
+// actually shows radar coverage: does a *newly arrived* enemy get picked up?
+//
+// Existing tracks cannot answer it. Recon tracks are remembered belief and deliberately
+// persist after coverage stops -- that is what fog of war means -- so counting them before
+// and after a blackout shows nothing. An earlier version of this test did exactly that and
+// therefore proved nothing at all.
+struct RadarScenario
+{
     ContentDatabase Content;
-    BuildDefaultContent(Content);
-
-    // No shipped definition sets bIsRadar, so the test authors one -- exactly how a
-    // faction would.
-    const EntityDef* Base = Content.FindEntity(Ids::SovPower);
-    RA4_REQUIRE(Base != nullptr);
-    EntityDef RadarDef = *Base;
-    RadarDef.Id = MakeContentId("building.sov.test_radar");
-    RadarDef.Name = "building.sov.test_radar";
-    RadarDef.Building.bIsRadar = true;
-    RadarDef.Building.bIsPowerPlant = false;
-    RadarDef.Building.PowerProduced = 0;
-    RadarDef.Building.PowerConsumed = 40;
-    Content.AddEntity(RadarDef);
-
-    MatchSetup Setup = MakeTestSetup(818);
+    Recon::ReconSettings Recon;
     SimWorld World;
-    World.Initialize(&Content, Setup);
-    SpawnEnemyOutpost(World);
-    World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
-    World.SpawnBuilding(Ids::SovPower, 0, TileCoord(14, 10), true);
-    const EntityId Radar = World.SpawnBuilding(RadarDef.Id, 0, TileCoord(18, 10), true);
-    RA4_REQUIRE(Radar.IsValid());
+    EntityId Radar;
+    ContentId RadarType;
 
-    World.Tick(nullptr);
-    RA4_REQUIRE(World.GetPlayer(0).GetPowerTier() == PowerTier::Normal);
-    // A radar defaults to Auxiliary, the band the player loses first.
-    RA4_EXPECT(World.GetBuilding(Radar)->Priority == PowerPriority::Auxiliary);
-    // Online at Normal, and offline once its band is -- which for Auxiliary is Moderate.
-    RA4_EXPECT(!IsPowerPriorityOffline(World.GetBuilding(Radar)->Priority, PowerTier::Normal));
-    RA4_EXPECT(IsPowerPriorityOffline(World.GetBuilding(Radar)->Priority, PowerTier::Moderate));
-
-    // Drive the base into Moderate and confirm the tier rule agrees with the band rule.
-    // Reactor gives 150; the radar draws 40 and each turret 40, so six turrets puts the
-    // draw at 280 and the ratio at 53% -- inside Moderate.
-    for (int32_t N = 0; N < 6; ++N)
+    explicit RadarScenario(bool bStarveThePower)
     {
-        World.SpawnBuilding(Ids::SovTurret, 0, TileCoord(24 + N * 2, 24), true);
+        BuildDefaultContent(Content);
+        // No shipped definition sets bIsRadar, so author one -- exactly how a faction would.
+        const EntityDef* Base = Content.FindEntity(Ids::SovPower);
+        EntityDef RadarDef = *Base;
+        RadarDef.Id = MakeContentId("building.sov.test_radar");
+        RadarDef.Name = "building.sov.test_radar";
+        RadarDef.Building.bIsRadar = true;
+        RadarDef.Building.bIsPowerPlant = false;
+        RadarDef.Building.PowerProduced = 0;
+        RadarDef.Building.PowerConsumed = 40;
+        Content.AddEntity(RadarDef);
+        RadarType = RadarDef.Id;
+
+        Recon.bEnabled = true;
+        World.Initialize(&Content, MakeTestSetup(818), &Recon);
+        SpawnEnemyOutpost(World);
+        World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+        World.SpawnBuilding(Ids::SovPower, 0, TileCoord(14, 10), true);
+        Radar = World.SpawnBuilding(RadarType, 0, TileCoord(18, 10), true);
+
+        // Well outside any building's sight but inside the radar's 24-tile reach, so the
+        // only way it can be known is as a radar blip.
+        World.SpawnUnit(Ids::AllRifleman, 1, Vec2::FromInts(34 * 200, 10 * 200));
+
+        if (bStarveThePower)
+        {
+            // Reactor gives 150; radar draws 40 and each turret 40, so six turrets puts
+            // the ratio at 53% -- inside Moderate, where the Auxiliary band goes offline.
+            for (int32_t N = 0; N < 6; ++N)
+            {
+                World.SpawnBuilding(Ids::SovTurret, 0, TileCoord(24 + N * 2, 24), true);
+            }
+        }
+        RunTicks(World, 40);
     }
-    World.Tick(nullptr);
-    const PowerTier Deficit = World.GetPlayer(0).GetPowerTier();
-    RA4_REQUIRE(Deficit >= PowerTier::Moderate);
-    RA4_EXPECT(!IsRadarOnlineAtTier(Deficit));
+
+    size_t Tracks() const { return World.GetRecon().GetPerceivedWorld(0).GetAliveTrackCount(); }
+
+    // Spawns a second enemy inside radar reach and reports whether it was picked up.
+    bool DetectsANewArrival()
+    {
+        const size_t Before = Tracks();
+        World.SpawnUnit(Ids::AllRifleman, 1, Vec2::FromInts(30 * 200, 16 * 200));
+        RunTicks(World, 60);
+        return Tracks() > Before;
+    }
+};
+} // namespace
+
+RA4_TEST(PowerTier, RadarStopsDetectingNewContactsAtModerate)
+{
+    // Lit: a new arrival inside radar reach is picked up.
+    {
+        RadarScenario Lit(/*bStarveThePower*/ false);
+        RA4_REQUIRE(Lit.World.GetPlayer(0).GetPowerTier() == PowerTier::Normal);
+        RA4_REQUIRE(Lit.Tracks() > 0);   // the radar really is the thing reporting
+        RA4_EXPECT(Lit.DetectsANewArrival());
+    }
+    // Dark: the same arrival goes unnoticed. This is the ADR's "the minimap goes quiet",
+    // stated as behaviour rather than as a call to a threshold helper.
+    {
+        RadarScenario Dark(/*bStarveThePower*/ true);
+        RA4_REQUIRE(Dark.World.GetPlayer(0).GetPowerTier() >= PowerTier::Moderate);
+        RA4_EXPECT(!Dark.DetectsANewArrival());
+    }
+}
+
+// Promoting a radar out of Auxiliary must keep it working through a deficit. An earlier
+// version ANDed the tier test with the band test, so promotion bought nothing and the
+// priority control was decoration for the one building it matters most for.
+RA4_TEST(PowerPriority, PromotingARadarKeepsItWorkingThroughADeficit)
+{
+    RadarScenario S(/*bStarveThePower*/ true);
+    RA4_REQUIRE(S.World.GetPlayer(0).GetPowerTier() >= PowerTier::Moderate);
+    RA4_REQUIRE(S.World.GetBuilding(S.Radar)->Priority == PowerPriority::Auxiliary);
+
+    Command Set = MakeCommand(CommandType::SetPowerPriority, 0);
+    Set.Primary = S.Radar;
+    Set.Param = int32_t(PowerPriority::Vital);
+    RA4_REQUIRE(S.World.ApplyCommand(Set).IsAccepted());
+    RunTicks(S.World, 5);
+
+    // Vital never goes offline, so the radar is back and detecting again -- at a tier
+    // where an Auxiliary radar is dark, which the companion test above establishes.
+    RA4_EXPECT(S.DetectsANewArrival());
 }
 
 RA4_TEST(PowerTier, StaticDefenceReloadsSlowerAtSevereAndStopsAtCritical)
@@ -2701,7 +2764,7 @@ RA4_TEST(PowerTier, StaticDefenceReloadsSlowerAtSevereAndStopsAtCritical)
                 return C->CooldownTicks;
             }
         }
-        return 0;   // never fired
+        return -1;   // never fired -- must not collide with a genuine zero cooldown
     };
 
     PowerTier NormalTier = PowerTier::Normal;
@@ -2716,10 +2779,14 @@ RA4_TEST(PowerTier, StaticDefenceReloadsSlowerAtSevereAndStopsAtCritical)
     RA4_REQUIRE(CriticalTier == PowerTier::Critical);
 
     RA4_REQUIRE(AtNormal > 0);   // it did fire
+    RA4_REQUIRE(AtSevere > 0);   // and it still fires at Severe, just slower
     // Doubled, exactly -- this is a multiplier, not a vague slowdown.
     RA4_EXPECT_EQ(AtSevere, AtNormal * kDefenceSevereCooldownMultiplier);
-    // And silent at Critical.
-    RA4_EXPECT_EQ(AtCritical, 0);
+    // Silent at Critical. Asserted against the never-fired sentinel rather than against
+    // zero: a zero cooldown and a turret that never got the chance to shoot are the same
+    // number, so the earlier version of this test would have passed if the Critical
+    // fixture had failed to fire for any unrelated reason.
+    RA4_EXPECT_EQ(AtCritical, -1);
 }
 
 RA4_TEST(Repair, StateSurvivesSaveAndFeedsTheChecksum)
