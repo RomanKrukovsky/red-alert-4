@@ -95,13 +95,6 @@ public:
     const TransformComp* GetTransform(EntityId Id) const;
     const HealthComp* GetHealth(EntityId Id) const;
     const BuildingComp* GetBuilding(EntityId Id) const;
-
-    // Construction progress as a 0..1000 per-mille value, or 1000 for anything that
-    // is not under construction. Exposed as a helper because the progress field is
-    // stored pre-multiplied by an internal scale constant: presentation reproducing
-    // that arithmetic would silently break the day the scale changes, and a
-    // half-built building rendered as complete is a lie about game state.
-    int32_t GetConstructionProgressPerMille(EntityId Id) const;
     const HarvesterComp* GetHarvester(EntityId Id) const;
     const ResourceNodeComp* GetResourceNode(EntityId Id) const;
     const MovementComp* GetMovement(EntityId Id) const;

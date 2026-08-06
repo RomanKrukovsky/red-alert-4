@@ -21,32 +21,6 @@ ARA4EntityActor::ARA4EntityActor()
     SetRootComponent(MeshComponent);
     MeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision); // Collision is handled by simulation core
 
-    TurretComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("TurretComponent"));
-    TurretComponent->SetupAttachment(MeshComponent);
-    TurretComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    TurretComponent->SetVisibility(false);   // shown only when a turret mesh is set
-    // Absolute rotation: the turret aims in WORLD space, so it must not inherit the
-    // hull's yaw -- otherwise a turning tank drags its aim off target, which is the
-    // bug this component exists to avoid. Scale still follows the hull.
-    TurretComponent->SetAbsolute(false, true, false);
-
-    ProgressTrackComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ProgressTrackComponent"));
-    ProgressTrackComponent->SetupAttachment(MeshComponent);
-    ProgressTrackComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    ProgressTrackComponent->SetVisibility(false);
-    // Absolute rotation and scale: the bar must keep its size and face the camera
-    // regardless of how the hull is scaled or turned, otherwise a 3x3 factory gets
-    // a bar three times the size of a tank's and a turning unit spins its own UI.
-    ProgressTrackComponent->SetAbsolute(false, true, true);
-    ProgressTrackComponent->SetCastShadow(false);
-
-    ProgressFillComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ProgressFillComponent"));
-    ProgressFillComponent->SetupAttachment(MeshComponent);
-    ProgressFillComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    ProgressFillComponent->SetVisibility(false);
-    ProgressFillComponent->SetAbsolute(false, true, true);
-    ProgressFillComponent->SetCastShadow(false);
-
     FirstPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCameraComponent"));
     FirstPersonCameraComponent->SetupAttachment(MeshComponent);
     FirstPersonCameraComponent->SetRelativeLocation(FVector(0.0f, 0.0f, 80.0f));
@@ -239,163 +213,9 @@ void ARA4EntityActor::SetVisualScale(const FVector& Scale)
         SourceSize.Z > UE_SMALL_NUMBER ? DesiredSize.Z / SourceSize.Z : 1.0);
     MeshComponent->SetWorldScale3D(NormalizedScale);
 
-    // Ground-hugging offset from the mesh's ACTUAL bounds, not from an assumed
-    // centre pivot. The old code used DesiredSize.Z * 0.5, which is only correct
-    // for a centre-pivot mesh: every base-pivot blockout floated by half its
-    // height, and anything with an off-centre pivot was wrong by an arbitrary
-    // amount. GetBounds() gives the origin-to-centre offset, so the distance from
-    // the actor origin down to the mesh's lowest point is (centre - extent) on Z,
-    // scaled the same way the mesh is.
-    if (Mesh != nullptr)
-    {
-        const FBoxSphereBounds LocalBounds = Mesh->GetBounds();
-        const double LowestPointLocal = LocalBounds.Origin.Z - LocalBounds.BoxExtent.Z;
-        // Negative when the mesh hangs below its origin (centre pivot), ~0 when the
-        // pivot already sits at the base. Lifting by -lowest puts the base at Z=0.
-        VisualZOffset = float(-LowestPointLocal * NormalizedScale.Z);
-    }
-    else
-    {
-        // No mesh yet: the placeholder cube is centre-pivoted, so half its height.
-        VisualZOffset = float(DesiredSize.Z * 0.5);
-    }
-}
-
-
-
-double ARA4EntityActor::GetMeshHeightUU() const
-{
-    // Whichever body is actually visible: a skeletal unit and a static building
-    // must both answer this correctly, and asking the hidden one would return a
-    // stale or zero extent.
-    if (SkeletalMeshComponent != nullptr && SkeletalMeshComponent->IsVisible())
-    {
-        return SkeletalMeshComponent->Bounds.BoxExtent.Z * 2.0;
-    }
-    if (MeshComponent != nullptr)
-    {
-        return MeshComponent->Bounds.BoxExtent.Z * 2.0;
-    }
-    return 100.0;   // placeholder cube height
-}
-
-
-void ARA4EntityActor::UpdateConstructionIndicator()
-{
-    if (ProgressTrackComponent == nullptr || ProgressFillComponent == nullptr)
-    {
-        return;
-    }
-
-    const bool bShow = ConstructionPerMille < 1000;
-    if (!bShow)
-    {
-        if (ProgressTrackComponent->IsVisible())
-        {
-            ProgressTrackComponent->SetVisibility(false);
-            ProgressFillComponent->SetVisibility(false);
-        }
-        return;
-    }
-
-    // Lazily give the bars a mesh the first time one is needed: an engine cube,
-    // squashed. Loading it in the constructor would pay for every entity in the
-    // match when only buildings under construction ever show a bar.
-    if (ProgressTrackComponent->GetStaticMesh() == nullptr)
-    {
-        UStaticMesh* Cube = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube"));
-        if (Cube == nullptr)
-        {
-            return;   // no primitive available; no bar rather than a crash
-        }
-        ProgressTrackComponent->SetStaticMesh(Cube);
-        ProgressFillComponent->SetStaticMesh(Cube);
-    }
-
-    // Sit above the FULL height of the finished building, not the sunken visual,
-    // so the bar holds still while the building rises underneath it.
-    const double FullHeight = GetMeshHeightUU();
-    const double BarZ = VisualZOffset + FullHeight + 120.0;
-    const double BarWidth = FMath::Clamp(FullHeight * 1.2, 300.0, 1200.0);
-    constexpr double BarThickness = 18.0;
-    constexpr double CubeSize = 100.0;   // engine cube is 100 uu per side
-
-    ProgressTrackComponent->SetVisibility(true);
-    ProgressFillComponent->SetVisibility(true);
-
-    ProgressTrackComponent->SetRelativeLocation(FVector(0.0, 0.0, BarZ));
-    ProgressTrackComponent->SetWorldScale3D(
-        FVector(BarWidth / CubeSize, BarThickness / CubeSize, BarThickness / CubeSize));
-
-    const double Fraction = double(ConstructionPerMille) / 1000.0;
-    // The fill grows from the left edge rather than from the centre, which is what
-    // reads as a progress bar; centring it would look like a shrinking object.
-    const double FillWidth = FMath::Max(BarWidth * Fraction, 1.0);
-    ProgressFillComponent->SetWorldScale3D(
-        FVector(FillWidth / CubeSize, BarThickness / CubeSize * 1.25, BarThickness / CubeSize * 1.25));
-
-    // Billboard both parts at the local camera each update.
-    FRotator BarRotation = FRotator::ZeroRotator;
-    if (const UWorld* World = GetWorld())
-    {
-        if (const APlayerController* PC = World->GetFirstPlayerController())
-        {
-            FVector CamLoc;
-            FRotator CamRot;
-            PC->GetPlayerViewPoint(CamLoc, CamRot);
-            BarRotation = FRotator(0.0f, CamRot.Yaw, 0.0f);
-        }
-    }
-    ProgressTrackComponent->SetWorldRotation(BarRotation);
-    ProgressFillComponent->SetWorldRotation(BarRotation);
-
-    // Offset the fill so its left edge lines up with the track's left edge.
-    const FVector Right = FRotationMatrix(BarRotation).GetUnitAxis(EAxis::X);
-    const FVector TrackCentre = ProgressTrackComponent->GetComponentLocation();
-    ProgressFillComponent->SetWorldLocation(
-        TrackCentre - Right * (BarWidth * 0.5) + Right * (FillWidth * 0.5));
-}
-
-void ARA4EntityActor::SetConstructionProgress(int32 ProgressPerMille)
-{
-    ConstructionPerMille = FMath::Clamp(ProgressPerMille, 0, 1000);
-}
-
-void ARA4EntityActor::SetAirborne(bool bInAirborne, float InAltitude)
-{
-    bIsAirborne = bInAirborne;
-    AirborneAltitude = InAltitude;
-}
-
-
-void ARA4EntityActor::SetTurretMesh(UStaticMesh* TurretMesh, float MountHeight)
-{
-    if (TurretComponent == nullptr)
-    {
-        return;
-    }
-    bHasTurret = TurretMesh != nullptr;
-    TurretComponent->SetStaticMesh(TurretMesh);
-    TurretComponent->SetVisibility(bHasTurret);
-    if (bHasTurret)
-    {
-        // Sits on top of the hull. Relative Z only -- X/Y stay centred, so the
-        // turret rotates about the hull's own axis rather than orbiting it.
-        TurretComponent->SetRelativeLocation(FVector(0.0, 0.0, double(MountHeight)));
-    }
-}
-
-void ARA4EntityActor::SetTurretYaw(float NewYawDegrees, bool bTeleport)
-{
-    TargetTurretYaw = NewYawDegrees;
-    if (bTeleport)
-    {
-        CurrentTurretYaw = NewYawDegrees;
-        if (TurretComponent != nullptr && bHasTurret)
-        {
-            TurretComponent->SetWorldRotation(FRotator(0.0f, CurrentTurretYaw, 0.0f));
-        }
-    }
+    // The visual rests on the ground even when the imported source dimensions
+    // differ from the engine cube.
+    VisualZOffset = DesiredSize.Z * 0.5f;
 }
 
 void ARA4EntityActor::BeginPlay()
@@ -407,26 +227,7 @@ void ARA4EntityActor::BeginPlay()
 
 void ARA4EntityActor::UpdateFromSimulation(const FVector& NewPosition, float NewRotationZ, bool bTeleport)
 {
-    // Ground units are lifted so their mesh rests on the terrain; aircraft are
-    // lifted to a fixed altitude above it and deliberately do NOT hug the ground
-    // -- a helicopter sitting on a hillside is the same physics violation as a
-    // tank floating over flat land, just in the other direction.
-    double ZLift = bIsAirborne ? double(AirborneAltitude) : double(VisualZOffset);
-
-    // Under construction: sink the mesh so only the built fraction shows above
-    // ground. There is no construction animation, so this IS the animation --
-    // and it doubles as an unmistakable readable state, because a half-sunk
-    // building cannot be confused with a finished one at any zoom level.
-    // MeshHeight comes from the same bounds that produced VisualZOffset, so the
-    // two cannot disagree about where the ground is.
-    if (ConstructionPerMille < 1000)
-    {
-        const double MeshHeight = GetMeshHeightUU();
-        const double HiddenFraction = double(1000 - ConstructionPerMille) / 1000.0;
-        ZLift -= MeshHeight * HiddenFraction;
-    }
-
-    TargetPosition = NewPosition + FVector(0.0, 0.0, ZLift);
+    TargetPosition = NewPosition + FVector(0.0, 0.0, VisualZOffset);
     TargetRotationZ = NewRotationZ;
     
     if (bTeleport)
@@ -450,32 +251,8 @@ void ARA4EntityActor::Tick(float DeltaTime)
     FVector InterpolatedLocation = FMath::VInterpTo(CurrentLocation, TargetPosition, DeltaTime, 15.0f);
     
     FRotator CurrentRotation = GetActorRotation();
-    // A unit that aims but has no separate turret mesh turns its whole hull to the
-    // gun's angle. Not ideal-looking, but it is the truth: the simulation fires
-    // along TurretFacing, and a model pointing elsewhere would be lying about
-    // where the shot goes. Replaced automatically once art ships a turret mesh.
-    const float HullTargetYaw = (bAimsWithHull && !bHasTurret) ? TargetTurretYaw : TargetRotationZ;
-    FRotator TargetRotator(0.0f, HullTargetYaw, 0.0f);
+    FRotator TargetRotator(0.0f, TargetRotationZ, 0.0f);
     FRotator InterpolatedRotation = FMath::RInterpTo(CurrentRotation, TargetRotator, DeltaTime, 15.0f);
-
-    UpdateConstructionIndicator();
-
-    // Turret: interpolated like the hull, because the simulation only produces a
-    // new angle 20 times a second and a hard set reads as a stutter at 60+ FPS.
-    // FInterpTo would take the long way round from 359 to 1 degree, so the delta
-    // is normalised to [-180, 180] first -- that is the difference between a
-    // turret tracking a target and one spinning a full circle to reach it.
-    if (bHasTurret && TurretComponent != nullptr)
-    {
-        const float YawDelta = FMath::UnwindDegrees(TargetTurretYaw - CurrentTurretYaw);
-        // Same rate as the hull so the two read as one machine. The simulation
-        // already enforces the real traverse-speed limit; this is only smoothing
-        // between ticks and must never be slower than the sim, or the visual
-        // would lag behind where the gun is actually pointing.
-        const float Step = YawDelta * FMath::Min(1.0f, DeltaTime * 15.0f);
-        CurrentTurretYaw = FMath::UnwindDegrees(CurrentTurretYaw + Step);
-        TurretComponent->SetWorldRotation(FRotator(0.0f, CurrentTurretYaw, 0.0f));
-    }
 
     // AAA RTS Vehicle Dynamics: pitch dip on acceleration/brake, roll lean on turn, engine vibration
     const FVector Velocity = (InterpolatedLocation - CurrentLocation) / FMath::Max(DeltaTime, 0.001f);
@@ -691,13 +468,6 @@ void ARA4EntityActor::ApplyPrimitiveComposition(const FString& InEntityId)
 
     auto ApplyUnitArt = [this](const FRA4UnitArtDefinition& UnitArt)
     {
-        // Turret first: it is independent of whether the body ends up static or
-        // skeletal, and an early return below would otherwise skip it.
-        if (!UnitArt.TurretMesh.IsNull())
-        {
-            SetTurretMesh(UnitArt.TurretMesh.LoadSynchronous(), UnitArt.TurretMountHeight);
-        }
-
         if (!UnitArt.IdleAnim.IsNull()) CachedIdleAnim = UnitArt.IdleAnim.LoadSynchronous();
         if (!UnitArt.RunAnim.IsNull()) CachedRunAnim = UnitArt.RunAnim.LoadSynchronous();
         if (!UnitArt.AttackAnim.IsNull()) CachedAttackAnim = UnitArt.AttackAnim.LoadSynchronous();

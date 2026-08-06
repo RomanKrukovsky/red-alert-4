@@ -1292,49 +1292,6 @@ void URA4SimWorldSubsystem::SyncPresentation()
                         FLinearColor(0.75f, 0.70f, 0.20f)};  // neutral / resources
                     const uint8 Owner = Cores[Index].Owner;
                     Actor->SetTeamColor(PlayerColours[Owner < 2 ? Owner : 2]);
-
-                    // Ground-hug or fly, decided from content data (MovementLayer)
-                    // rather than guessed from the mesh or the entity kind: a
-                    // hovercraft and a helicopter are both "vehicles" and belong at
-                    // different heights. Altitude is presentation-only -- the
-                    // simulation is 2D and must stay that way.
-                    bool bAirborne = false;
-                    if (Content != nullptr)
-                    {
-                        if (const RA4::EntityDef* Def = Content->FindEntity(Cores[Index].Def))
-                        {
-                            bAirborne = Def->Kind == RA4::EntityKind::Unit &&
-                                        Def->Unit.Layer == RA4::MovementLayer::Air;
-                        }
-                    }
-                    // 600 uu ~ 6 m: high enough to read as flying over the tallest
-                    // blockout, low enough that the unit stays legible at RTS zoom.
-                    Actor->SetAirborne(bAirborne, bAirborne ? 600.0f : 0.0f);
-
-                    // Turret setup. A unit "has a turret" when the simulation
-                    // traverses one for it (TurretTurnRatePerSecond > 0, the same
-                    // criterion the combat code uses -- one source of truth, so the
-                    // visual cannot claim a turret the sim does not simulate).
-                    if (Content != nullptr)
-                    {
-                        if (const RA4::EntityDef* Def = Content->FindEntity(Cores[Index].Def))
-                        {
-                            // The turret MESH is assigned by the actor's own art
-                            // resolution (ApplyUnitArt), which already owns mesh
-                            // loading. Here we only record whether the SIMULATION
-                            // traverses a turret for this unit -- same criterion the
-                            // combat code uses (TurretTurnRatePerSecond > 0), so the
-                            // visual can never claim a turret the sim does not have.
-                            const bool bSimHasTurret = Def->Kind == RA4::EntityKind::Unit &&
-                                                       Def->Unit.TurretTurnRatePerSecond > 0;
-                            // With no separate turret mesh -- true of every current
-                            // blockout -- the hull rotates to the gun angle. A model
-                            // pointing one way while the shot leaves another is a lie
-                            // about game state; this is the honest fallback until art
-                            // ships split hull/turret meshes.
-                            Actor->SetAimsWithHull(bSimHasTurret && !Actor->HasTurret());
-                        }
-                    }
                 }
                 else
                 {
@@ -1370,20 +1327,6 @@ void URA4SimWorldSubsystem::SyncPresentation()
                 // 255 here rotated every unit by roughly a factor of sixteen.
                 const float UnrealRotZ = static_cast<float>(RA4Coords::FacingToYawDegrees(SimTransform.Facing));
                 Actor->UpdateFromSimulation(UnrealPos, UnrealRotZ, bNewActor);
-
-                // Turret aim, straight from the simulation. TurretFacing has been
-                // maintained by SimWorld all along -- traversing toward the target
-                // at the unit's own turn rate -- and nothing ever rendered it.
-                Actor->SetTurretYaw(
-                    static_cast<float>(RA4Coords::FacingToYawDegrees(SimTransform.TurretFacing)),
-                    bNewActor);
-
-                // Construction progress every sync, not just at spawn: the building
-                // rises continuously as it is built, and the progress bar needs the
-                // live value. Asks the simulation rather than recomputing, so the
-                // internal progress scale stays in one place.
-                Actor->SetConstructionProgress(
-                    SimWorld->GetConstructionProgressPerMille(SimWorld->MakeId(Index)));
 
                 // One-off dump of the first few actors. "The match runs but the
                 // screen is empty" is only answerable with the actual mesh, scale
