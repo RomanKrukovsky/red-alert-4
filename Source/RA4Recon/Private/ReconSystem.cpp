@@ -3,6 +3,7 @@
 
 #include "RA4Core/ByteStream.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include "RA4Core/Checksum.h"
@@ -142,6 +143,7 @@ void ReconSystem::EnsureAssociationCapacity(uint32_t NewEntityCapacity)
         {
             AssociationTrack[P].resize(EntityCapacity, TrackId{});
             AssociationGeneration[P].resize(EntityCapacity, 0);
+            AssociationsByTrackSlot[P].resize(Worlds[P]->GetTrackCapacity());
         }
     }
 }
@@ -615,7 +617,7 @@ void ReconSystem::ApplyGroupedReport(PerceivedWorld& World, PlayerId P, const Re
             Ghost->BelievedCategory = Group.Category;
             Ghost->bAnonymous = true;          // fear reports movement, not vehicles
             Ghost->BelievedClass = ContentId{};
-            Ghost->BelievedPosition = Group.Centre;
+            World.SetTrackPosition(GhostId, Group.Centre); // keeps the spatial index in step
             Ghost->PositionErrorRadius = Fixed::Zero();
             Ghost->BelievedCountMin = Group.Count;
             Ghost->BelievedCountMax = Group.Count;
@@ -641,7 +643,10 @@ void ReconSystem::ApplyGroupedReport(PerceivedWorld& World, PlayerId P, const Re
         uint32_t& AssocGen = AssociationGeneration[P][Group.RepresentativeSlot];
         if (Assoc.IsValid() && AssocGen != Group.RepresentativeGeneration)
         {
-            Assoc = TrackId{}; // GT slot reused: the HQ cannot know, so a new track
+            // GT slot reused: the HQ cannot know, so a new track. Unlink rather than
+            // null, or the reverse index keeps a back-link to a track this entity is
+            // no longer associated with.
+            AssociationUnlink(P, Group.RepresentativeSlot);
         }
 
         PerceivedTrack* Track = Assoc.IsValid() ? World.GetTrackMutable(Assoc) : nullptr;
@@ -673,7 +678,7 @@ void ReconSystem::ApplyGroupedReport(PerceivedWorld& World, PlayerId P, const Re
             }
             if (Existing.IsValid())
             {
-                Assoc = Existing;
+                AssociationLink(P, Group.RepresentativeSlot, Existing);
                 AssocGen = Group.RepresentativeGeneration;
                 Track = World.GetTrackMutable(Existing);
             }
@@ -686,7 +691,7 @@ void ReconSystem::ApplyGroupedReport(PerceivedWorld& World, PlayerId P, const Re
             {
                 continue; // at the hard cap; losing the report is the honest outcome
             }
-            Assoc = NewId;
+            AssociationLink(P, Group.RepresentativeSlot, NewId);
             AssocGen = Group.RepresentativeGeneration;
             Track = World.GetTrackMutable(NewId);
             Track->IndependentSourceCount = 0;
@@ -713,7 +718,7 @@ void ReconSystem::ApplyGroupedReport(PerceivedWorld& World, PlayerId P, const Re
         Track->BelievedCategory = Group.Category;
         Track->bAnonymous = Group.bAnonymous;
         Track->BelievedClass = Group.bAnonymous ? ContentId{} : Group.ObservedClass;
-        Track->BelievedPosition = Group.Centre;
+        World.SetTrackPosition(Track->Id, Group.Centre); // keeps the spatial index in step
         Track->PositionErrorRadius = Fixed::Zero();
         Track->LastUpdateTick = CurrentTick;
         Track->LastReportNodeId = Report.NodeId;
@@ -839,7 +844,7 @@ void ReconSystem::PhaseAggregation(TickIndex CurrentTick)
             uint32_t& AssocGen = AssociationGeneration[P][Slot];
             if (Assoc.IsValid() && AssocGen != Obs.Subject.Generation)
             {
-                Assoc = TrackId{};
+                AssociationUnlink(PlayerId(P), Slot);
             }
 
             PerceivedTrack* Track = Assoc.IsValid() ? World->GetTrackMutable(Assoc) : nullptr;
@@ -850,7 +855,7 @@ void ReconSystem::PhaseAggregation(TickIndex CurrentTick)
                 {
                     continue; // at hard cap; report is lost, which is honest
                 }
-                Assoc = NewId;
+                AssociationLink(PlayerId(P), Slot, NewId);
                 AssocGen = Obs.Subject.Generation;
                 Track = World->GetTrackMutable(NewId);
             }
@@ -860,7 +865,7 @@ void ReconSystem::PhaseAggregation(TickIndex CurrentTick)
             Track->BelievedClass = Obs.ObservedClass;
             Track->BelievedCategory = Obs.Category;
             Track->bAnonymous = Obs.bAnonymous;
-            Track->BelievedPosition = Obs.ObservedPosition;
+            World->SetTrackPosition(Track->Id, Obs.ObservedPosition); // keeps the index in step
             Track->PositionErrorRadius = Fixed::Zero();
             Track->BelievedCountMin = Obs.ObservedCount;
             Track->BelievedCountMax = Obs.ObservedCount;
@@ -876,19 +881,123 @@ void ReconSystem::PhaseAggregation(TickIndex CurrentTick)
     InFlightReports.resize(WriteBack);
 }
 
+bool ReconSystem::ReverseIndexMatchesForwardTableForTest(PlayerId P) const
+{
+    if (P >= kMaxPlayers || Worlds[P] == nullptr)
+    {
+        return true;
+    }
+    // Every forward association must have exactly one matching back-link...
+    for (uint32_t Slot = 0; Slot < EntityCapacity; ++Slot)
+    {
+        const TrackId Id = AssociationTrack[P][Slot];
+        if (!Id.IsValid())
+        {
+            continue;
+        }
+        if (Id.Index >= AssociationsByTrackSlot[P].size())
+        {
+            return false;
+        }
+        const std::vector<uint32_t>& Bucket = AssociationsByTrackSlot[P][Id.Index];
+        if (std::find(Bucket.begin(), Bucket.end(), Slot) == Bucket.end())
+        {
+            return false;
+        }
+    }
+    // ...and every back-link must correspond to a live forward association.
+    for (size_t TrackSlot = 0; TrackSlot < AssociationsByTrackSlot[P].size(); ++TrackSlot)
+    {
+        for (uint32_t EntitySlot : AssociationsByTrackSlot[P][TrackSlot])
+        {
+            if (EntitySlot >= EntityCapacity ||
+                AssociationTrack[P][EntitySlot].Index != uint32_t(TrackSlot))
+            {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+void ReconSystem::AssociationLink(PlayerId P, uint32_t EntitySlot, TrackId Id)
+{
+    // Point the entity slot at the track, and record the back-link so releasing the
+    // track later costs O(its own associations) instead of O(every entity slot).
+    AssociationUnlink(P, EntitySlot);
+    AssociationTrack[P][EntitySlot] = Id;
+    if (Id.IsValid() && Id.Index < AssociationsByTrackSlot[P].size())
+    {
+        AssociationsByTrackSlot[P][Id.Index].push_back(EntitySlot);
+    }
+}
+
+void ReconSystem::AssociationUnlink(PlayerId P, uint32_t EntitySlot)
+{
+    const TrackId Old = AssociationTrack[P][EntitySlot];
+    if (!Old.IsValid() || Old.Index >= AssociationsByTrackSlot[P].size())
+    {
+        AssociationTrack[P][EntitySlot] = TrackId{};
+        return;
+    }
+    std::vector<uint32_t>& Bucket = AssociationsByTrackSlot[P][Old.Index];
+    for (size_t I = 0; I < Bucket.size(); ++I)
+    {
+        if (Bucket[I] == EntitySlot)
+        {
+            // Swap-erase: bucket order never reaches simulation results, because the
+            // only consumer clears every element.
+            Bucket[I] = Bucket.back();
+            Bucket.pop_back();
+            break;
+        }
+    }
+    AssociationTrack[P][EntitySlot] = TrackId{};
+}
+
+void ReconSystem::RebuildAssociationReverseIndex()
+{
+    // Derived from the association tables, so it is reconstructed after load rather
+    // than serialized: one source of truth, and no chance of a save carrying an
+    // index that disagrees with the data it indexes.
+    for (int32_t P = 0; P < kMaxPlayers; ++P)
+    {
+        if (Worlds[P] == nullptr)
+        {
+            continue;
+        }
+        AssociationsByTrackSlot[P].assign(Worlds[P]->GetTrackCapacity(), {});
+        for (uint32_t Slot = 0; Slot < EntityCapacity; ++Slot)
+        {
+            const TrackId Id = AssociationTrack[P][Slot];
+            if (Id.IsValid() && Id.Index < AssociationsByTrackSlot[P].size())
+            {
+                AssociationsByTrackSlot[P][Id.Index].push_back(Slot);
+            }
+        }
+    }
+}
+
 void ReconSystem::ReleaseTrackAndAssociations(PlayerId P, PerceivedWorld& World, TrackId Id)
 {
     // Sever associations BEFORE releasing, or the next report about that ground-truth
     // entity would write into a freed slot. Both halves of the pair are cleared: a
     // stale generation beside an invalid handle is harmless only until someone
     // reorders the staleness test (M3 review M1).
-    for (uint32_t Slot = 0; Slot < EntityCapacity; ++Slot)
+    // O(this track's associations), not O(every entity slot). The old full scan cost
+    // EntityCapacity comparisons per collected track, and blackout collects many at
+    // once by design (review M1/M2).
+    if (Id.Index < AssociationsByTrackSlot[P].size())
     {
-        if (AssociationTrack[P][Slot] == Id)
+        for (uint32_t Slot : AssociationsByTrackSlot[P][Id.Index])
         {
-            AssociationTrack[P][Slot] = TrackId{};
-            AssociationGeneration[P][Slot] = 0;
+            if (Slot < EntityCapacity && AssociationTrack[P][Slot] == Id)
+            {
+                AssociationTrack[P][Slot] = TrackId{};
+                AssociationGeneration[P][Slot] = 0;
+            }
         }
+        AssociationsByTrackSlot[P][Id.Index].clear();
     }
     World.ReleaseTrack(Id);
 }
@@ -1181,7 +1290,7 @@ bool ReconSystem::Deserialize(ByteReader& R)
     }
     if (!bWasEnabled)
     {
-        return true;
+        return true; // nothing to restore, and no index to rebuild
     }
 
     NextReportId = R.ReadUInt32();
@@ -1251,6 +1360,12 @@ bool ReconSystem::Deserialize(ByteReader& R)
             AssociationGeneration[P][I] = R.ReadUInt32();
         }
     }
+
+    // LAST, and the ordering is the whole point: the reverse index is derived from
+    // EntityCapacity and the association tables, both of which are only complete
+    // here. An earlier call (which is where this first landed) walked zero slots and
+    // produced an empty index that silently disagreed with its own source.
+    RebuildAssociationReverseIndex();
     return true;
 }
 

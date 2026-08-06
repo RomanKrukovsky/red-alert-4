@@ -1817,6 +1817,168 @@ RA4_TEST(Recon, PhantomTruthNeverReachesTheReadSurface)
     (void)Settings;
 }
 
+// --- M3-perf: derived indices must agree with the data they index -----------------
+
+RA4_TEST(Recon, SpatialIndexAgreesWithALinearScan)
+{
+    // The spatial index is derived state, and the dangerous failure mode is silent:
+    // a track that stops being FOUND by region queries while still existing simply
+    // vanishes from the HUD. So the accelerated query is compared against the
+    // obvious brute-force answer, over a match that allocates, moves and collects
+    // tracks -- exactly the operations that can desynchronise an index.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Settings.Tracks.bGroupTracksEnabled = true;
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(24601), &Settings);
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    // Several enemies spread out, and one ordered to move so tracks change cells.
+    const EntityId Mover =
+        World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::AllRifleman, 1, Vec2(Fixed::FromInt(6000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::AllRifleman, 1, Vec2(Fixed::FromInt(3000), Fixed::FromInt(6000)));
+
+    Command Move = RA4Test::MakeCommand(CommandType::Move, 1);
+    Move.Primary = Mover;
+    Move.Location = Vec2(Fixed::FromInt(9000), Fixed::FromInt(9000));
+    CommandFrame Frame;
+    Frame.Commands.push_back(Move);
+    World.Tick(&Frame);
+    World.ClearEvents();
+
+    for (int32_t Step = 0; Step < 60; ++Step)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+
+        const Recon::PerceivedWorld& Belief = World.GetRecon().GetPerceivedWorld(0);
+
+        // Whole map: the accelerated query must return exactly the alive tracks.
+        std::vector<const Recon::PerceivedTrack*> Indexed;
+        Belief.GetTracksInRegion(0, 0, 63, 63, Indexed);
+        RA4_EXPECT(uint32_t(Indexed.size()) == Belief.GetAliveTrackCount());
+
+        // Output order must stay ascending by slot: callers and the determinism
+        // tests depend on it, and cell traversal order must not leak through.
+        for (size_t I = 1; I < Indexed.size(); ++I)
+        {
+            if (Indexed[I - 1]->Id.Index >= Indexed[I]->Id.Index)
+            {
+                RA4Test::ReportFailure("region query returned tracks out of slot order",
+                                       __FILE__, __LINE__);
+                return;
+            }
+        }
+
+        // Sub-rectangles: every track the index reports must genuinely be inside,
+        // and every alive track inside must be reported. This is the property a
+        // stale index breaks.
+        const int32_t Rects[4][4] = {{0, 0, 20, 20}, {10, 10, 40, 40}, {30, 0, 63, 30}, {0, 30, 30, 63}};
+        for (const auto& R : Rects)
+        {
+            std::vector<const Recon::PerceivedTrack*> Sub;
+            Belief.GetTracksInRegion(R[0], R[1], R[2], R[3], Sub);
+
+            int32_t ExpectedCount = 0;
+            std::vector<const Recon::PerceivedTrack*> All;
+            Belief.GetTracksInRegion(0, 0, 63, 63, All);
+            for (const Recon::PerceivedTrack* T : All)
+            {
+                const int64_t TileX = T->BelievedPosition.X.ToIntFloor() / 200;
+                const int64_t TileY = T->BelievedPosition.Y.ToIntFloor() / 200;
+                if (TileX >= R[0] && TileX <= R[2] && TileY >= R[1] && TileY <= R[3])
+                {
+                    ExpectedCount += 1;
+                }
+            }
+            if (int32_t(Sub.size()) != ExpectedCount)
+            {
+                RA4Test::ReportFailure("spatial index disagrees with a linear scan on a sub-region",
+                                       __FILE__, __LINE__);
+                return;
+            }
+        }
+    }
+}
+
+RA4_TEST(Recon, IndicesSurviveSaveLoadAndKeepQueriesCorrect)
+{
+    // Both derived indices (spatial grid, association reverse index) are rebuilt on
+    // load rather than serialized. If a rebuild were forgotten, the restored world
+    // would answer queries wrongly while its checksum still matched -- the worst
+    // possible combination, so it gets its own test.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    // Tracks must be COLLECTED during the post-load run, because that is the only
+    // path where the association reverse index matters: a stale index fails to sever
+    // associations, the next report writes through a dangling handle, and the two
+    // worlds diverge. Without collection the test cannot tell a rebuilt index from a
+    // missing one -- verified by mutation.
+    Settings.Tracks.ConfidenceDecayPerSecondPerMille = 400;
+    Settings.Tracks.DropBelowConfidencePerMille = 300;
+    Settings.Tracks.StaleAfterTicks = 5;
+
+    SimWorld Live;
+    Live.Initialize(&Content, MakeTestSetup(48000), &Settings);
+    Live.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    Live.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    Live.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+    for (int32_t I = 0; I < 10; ++I)
+    {
+        Live.Tick(nullptr);
+        Live.ClearEvents();
+    }
+    std::vector<const Recon::PerceivedTrack*> Before;
+    Live.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, Before);
+    RA4_REQUIRE(!Before.empty());
+
+    ByteWriter W;
+    Live.Serialize(W);
+    SimWorld Restored;
+    Restored.Initialize(&Content, MakeTestSetup(1), &Settings);
+    ByteReader R(W.GetBuffer().data(), W.GetBuffer().size());
+    RA4_REQUIRE(Restored.Deserialize(R, &Content));
+
+    // Belief must be COLLECTED during the run below, because that is the only path
+    // where the association reverse index matters. Decay does that on its own here
+    // (aggressive decay plus a high GC floor were configured above); nothing is
+    // killed by hand, because DebugDamage is an out-of-band edit and applying it to
+    // two worlds is one more thing that can differ between them rather than a
+    // guarantee that they match.
+
+    // The rebuilt spatial index must find the same tracks...
+    std::vector<const Recon::PerceivedTrack*> After;
+    Restored.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, After);
+    RA4_EXPECT(After.size() == Before.size());
+
+    // Direct check on the reverse index itself: after a load, every forward
+    // association must have a matching back-link. A missing rebuild shows up here
+    // immediately, rather than only as an eventual divergence.
+    RA4_EXPECT(Restored.GetRecon().ReverseIndexMatchesForwardTableForTest(0));
+
+    // ...and the rebuilt association index must keep the two worlds in lockstep as
+    // they run on, which is where a broken reverse index would show up: a released
+    // track leaving a dangling association diverges the next update.
+    for (int32_t I = 0; I < 60; ++I)
+    {
+        Live.Tick(nullptr);
+        Live.ClearEvents();
+        Restored.Tick(nullptr);
+        Restored.ClearEvents();
+        if (Live.ComputeStateChecksum() != Restored.ComputeStateChecksum())
+        {
+            RA4Test::ReportFailure("live and restored diverged " + std::to_string(I + 1) +
+                                       " ticks after load: a derived index was not rebuilt",
+                                   __FILE__, __LINE__);
+            return;
+        }
+    }
+}
+
 RA4_TEST(Recon, TruthfulPipelineMirrorsVisibleEnemy)
 {
     ContentDatabase Content;

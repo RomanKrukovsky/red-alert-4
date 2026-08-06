@@ -188,6 +188,11 @@ public:
     // and it exposes only the player's OWN aggregate state -- no enemy data.
     const ObserverSnapshot& GetLastObserverForTest(PlayerId P) const { return LastObserver[P]; }
 
+    // Test-only audit of a DERIVED index against the data it indexes. Derived state
+    // that silently disagrees with its source is the worst failure mode in this
+    // layer: queries answer wrongly while checksums still match.
+    bool ReverseIndexMatchesForwardTableForTest(PlayerId P) const;
+
 private:
     // Phase bodies. Filled milestone by milestone; a milestone MUST NOT touch
     // phases it does not own (small reviewable packages, CLAUDE.md rule 10).
@@ -248,6 +253,19 @@ private:
     // freezes as last-known-position -- the HQ has no idea the old unit is gone.
     std::vector<TrackId> AssociationTrack[kMaxPlayers];
     std::vector<uint32_t> AssociationGeneration[kMaxPlayers];
+
+    // Reverse index: track SLOT -> the entity slots currently associated with it
+    // (M3-perf, review finding M1/M2). Without it, releasing a track meant scanning
+    // every entity slot to find the associations pointing at it, and a decay
+    // avalanche -- which blackout causes by design, since it raises decay for every
+    // track at once -- turned that into tens of millions of comparisons in one tick.
+    //
+    // Derived state: rebuilt from the association tables on load, never serialized,
+    // so there is exactly one source of truth.
+    std::vector<std::vector<uint32_t>> AssociationsByTrackSlot[kMaxPlayers];
+    void AssociationLink(PlayerId P, uint32_t EntitySlot, TrackId Id);
+    void AssociationUnlink(PlayerId P, uint32_t EntitySlot);
+    void RebuildAssociationReverseIndex();
     uint32_t EntityCapacity = 0;
 
     // Scratch for grouping this tick's observations by reporting node. Members
