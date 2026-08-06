@@ -43,7 +43,22 @@ public:
     const TArray<FRA4RadarMarker>& GetMarkers() const;
     FVector2D GetMapSize() const;
     int32 GetLocalPlayer() const;
+    /** False when a power deficit has taken the radar: the panel draws dark instead. */
+    bool IsOnline() const;
     void HandleSlateClick(const FVector2D& NormalizedPosition);
+
+    /**
+     * The rectangle inside a square radar panel that the map actually occupies, letterboxed
+     * to preserve the map's aspect ratio. A 128x64 map drawn to fill a square panel is
+     * stretched 2:1 vertically, which puts every marker in the wrong place relative to the
+     * terrain a player is looking at.
+     *
+     * Returned as offset plus size in panel-local pixels. Both the painter and the click
+     * handler go through this, so a click cannot land somewhere other than where the marker
+     * under the cursor was drawn.
+     */
+    static void ComputeMapRect(const FVector2D& PanelSize, const FVector2D& MapSize,
+                               FVector2D& OutOffset, FVector2D& OutSize);
 
     virtual void ReleaseSlateResources(bool bReleaseChildren) override;
 

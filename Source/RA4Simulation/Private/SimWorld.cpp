@@ -3604,6 +3604,19 @@ void SimWorld::SystemFogOfWar()
 
         const TileCoord Tile = Map.WorldToTile(Transforms[I].Position);
         FogGrid->RevealCircularArea(int32_t(Owner), Tile.X, Tile.Y, VisionRadiusTiles);
+
+        // A working radar additionally paints RadarDetected over a much wider circle.
+        // That state existed and was tested for by the minimap and the AI view, but
+        // nothing ever set it, so radar contributed nothing to either -- the minimap's
+        // radar was decoration. Gated on the same priority band the recon layer uses, so
+        // a radar shut down by a power deficit or demoted by the player goes dark here too
+        // rather than the two disagreeing about whether it is working.
+        if (Core[I].Kind == EntityKind::Building && D->Building.bIsRadar &&
+            Buildings[I].State == ConstructionState::Complete &&
+            !IsPowerPriorityOffline(Buildings[I].Priority, Players[Owner].GetPowerTier()))
+        {
+            FogGrid->RevealRadarArea(int32_t(Owner), Tile.X, Tile.Y, kRadarSweepRadiusTiles);
+        }
     }
 }
 

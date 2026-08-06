@@ -581,3 +581,199 @@ RA4_TEST(ArtMapping, UnitArtDefinitionSupportsAnimationProperties)
     RA4_EXPECT(Def.RunAnim.IsNull());
 }
 
+
+// ---------------------------------------------------------------------------
+// Minimap (radar panel)
+// ---------------------------------------------------------------------------
+
+namespace
+{
+// A base with an optional radar, an enemy parked well outside every building's sight but
+// inside radar reach, and a dial for driving the power tier.
+struct MinimapFixture
+{
+    ContentDatabase Content;
+    SimWorld World;
+    ContentId RadarType;
+    EntityId Radar;
+
+    MinimapFixture(bool bWithRadar, int32_t Turrets)
+    {
+        BuildDefaultContent(Content);
+        // No shipped definition sets bIsRadar, so author one -- exactly how a faction would.
+        const EntityDef* Base = Content.FindEntity(Ids::SovPower);
+        EntityDef RadarDef = *Base;
+        RadarDef.Id = MakeContentId("building.sov.minimap_test_radar");
+        RadarDef.Name = "building.sov.minimap_test_radar";
+        RadarDef.Building.bIsRadar = true;
+        RadarDef.Building.bIsPowerPlant = false;
+        RadarDef.Building.PowerProduced = 0;
+        RadarDef.Building.PowerConsumed = 40;
+        Content.AddEntity(RadarDef);
+        RadarType = RadarDef.Id;
+
+        World.Initialize(&Content, MakeTestSetup(6060));
+        SpawnEnemyOutpost(World);
+        World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+        World.SpawnBuilding(Ids::SovPower, 0, TileCoord(14, 10), true);
+        if (bWithRadar)
+        {
+            Radar = World.SpawnBuilding(RadarType, 0, TileCoord(18, 10), true);
+        }
+        for (int32_t N = 0; N < Turrets; ++N)
+        {
+            World.SpawnBuilding(Ids::SovTurret, 0, TileCoord(24 + N * 2, 24), true);
+        }
+        // 16 tiles from the radar: outside any building's vision, inside radar reach.
+        World.SpawnUnit(Ids::AllRifleman, 1, Vec2::FromInts(34 * 200, 10 * 200));
+        RunTicks(World, 10);
+    }
+
+    RadarState Snapshot() const
+    {
+        HudSnapshotBuilder Builder;
+        Builder.Initialize(0);
+        HudSnapshot Out;
+        Builder.Build(World, {}, Out);
+        return Out.Radar;
+    }
+
+    // Enemy markers only: the question is whether radar reveals contacts.
+    int32_t EnemyMarkers() const
+    {
+        int32_t Count = 0;
+        for (const RadarMarker& M : Snapshot().Markers)
+        {
+            if (M.Owner != 0 && M.Kind != EntityKind::ResourceNode)
+            {
+                ++Count;
+            }
+        }
+        return Count;
+    }
+};
+} // namespace
+
+// VisibilityState::RadarDetected existed and was tested for by both the minimap and the AI
+// view, but nothing ever set it -- so a radar building contributed nothing to the minimap
+// and the "radar" half of the panel was decoration.
+RA4_TEST(Minimap, RadarRevealsContactsNoEyesCanSee)
+{
+    // No radar: the enemy is simply not there as far as the panel is concerned.
+    {
+        MinimapFixture NoRadar(/*bWithRadar*/ false, /*Turrets*/ 0);
+        RA4_REQUIRE(NoRadar.World.GetPlayer(0).GetPowerTier() == PowerTier::Normal);
+        RA4_EXPECT_EQ(NoRadar.EnemyMarkers(), 0);
+    }
+    // With a working radar it appears -- and the only thing that changed is the radar.
+    {
+        MinimapFixture WithRadar(/*bWithRadar*/ true, /*Turrets*/ 0);
+        RA4_REQUIRE(WithRadar.World.GetPlayer(0).GetPowerTier() == PowerTier::Normal);
+        RA4_EXPECT(WithRadar.EnemyMarkers() >= 1);
+    }
+}
+
+RA4_TEST(Minimap, RadarContactsVanishWhenADeficitTakesTheRadar)
+{
+    // Six turrets against one reactor puts the ratio at 53% -- Moderate, where the
+    // Auxiliary band a radar defaults to goes offline.
+    MinimapFixture Dark(/*bWithRadar*/ true, /*Turrets*/ 6);
+    RA4_REQUIRE(Dark.World.GetPlayer(0).GetPowerTier() >= PowerTier::Moderate);
+    RA4_EXPECT_EQ(Dark.EnemyMarkers(), 0);
+
+    // And the whole panel reports itself dark, so the widget can say why rather than
+    // looking like a map with nothing on it.
+    const RadarState State = Dark.Snapshot();
+    RA4_EXPECT(!State.bOnline);
+    RA4_EXPECT(State.bOfflineForPower);
+    RA4_EXPECT(State.Markers.empty());
+}
+
+RA4_TEST(Minimap, PanelStaysOnlineForAPlayerWhoNeverBuiltARadar)
+{
+    // The effect matrix row is about losing a facility to a deficit, not about gating the
+    // basic overview behind tech: a player with no radar must keep their minimap even at
+    // Critical, or every early-game blackout blinds them completely.
+    MinimapFixture NoRadar(/*bWithRadar*/ false, /*Turrets*/ 13);
+    RA4_REQUIRE(NoRadar.World.GetPlayer(0).GetPowerTier() >= PowerTier::Severe);
+
+    const RadarState State = NoRadar.Snapshot();
+    RA4_EXPECT(State.bOnline);
+    RA4_EXPECT(!State.bOfflineForPower);
+    // Own base is still shown.
+    bool bSawOwn = false;
+    for (const RadarMarker& M : State.Markers)
+    {
+        if (M.Owner == 0)
+        {
+            bSawOwn = true;
+        }
+    }
+    RA4_EXPECT(bSawOwn);
+}
+
+RA4_TEST(Minimap, RadarStillObeysFogAndIsNotAMaphack)
+{
+    // Radar grants "something is there", not vision. An enemy outside radar reach as well
+    // as outside sight must stay hidden, or the fix would have turned the panel into a
+    // maphack.
+    MinimapFixture F(/*bWithRadar*/ true, /*Turrets*/ 0);
+    const int32_t Before = F.EnemyMarkers();
+
+    // Far corner: well beyond the radar's 24-tile sweep from tile (18,10).
+    F.World.SpawnUnit(Ids::AllRifleman, 1, Vec2::FromInts(60 * 200, 60 * 200));
+    RunTicks(F.World, 10);
+    RA4_EXPECT_EQ(F.EnemyMarkers(), Before);
+}
+
+// The radar panel is square; maps are not. Drawing a 2:1 map to fill a square panel
+// stretched it vertically, so a marker halfway up the map appeared nowhere near the terrain
+// it stood on and a click came back with the wrong world position. Letterboxing fixes both,
+// and the painter and the click handler share this one mapping so they cannot disagree.
+RA4_TEST(Minimap, LetterboxPreservesMapAspectAndCentresIt)
+{
+    double OffX = 0, OffY = 0, W = 0, H = 0;
+
+    // Square map in a square panel: fills it exactly, no bars.
+    ComputeMinimapRect(208, 208, 12800, 12800, OffX, OffY, W, H);
+    RA4_EXPECT_EQ(int32_t(OffX), 0);
+    RA4_EXPECT_EQ(int32_t(OffY), 0);
+    RA4_EXPECT_EQ(int32_t(W), 208);
+    RA4_EXPECT_EQ(int32_t(H), 208);
+
+    // Wide 2:1 map: full width, half height, centred vertically. Before the fix this was
+    // drawn at full height and every marker's Y was doubled.
+    ComputeMinimapRect(208, 208, 25600, 12800, OffX, OffY, W, H);
+    RA4_EXPECT_EQ(int32_t(W), 208);
+    RA4_EXPECT_EQ(int32_t(H), 104);
+    RA4_EXPECT_EQ(int32_t(OffX), 0);
+    RA4_EXPECT_EQ(int32_t(OffY), 52);
+
+    // Tall 1:2 map: the mirror image.
+    ComputeMinimapRect(208, 208, 12800, 25600, OffX, OffY, W, H);
+    RA4_EXPECT_EQ(int32_t(W), 104);
+    RA4_EXPECT_EQ(int32_t(H), 208);
+    RA4_EXPECT_EQ(int32_t(OffX), 52);
+    RA4_EXPECT_EQ(int32_t(OffY), 0);
+
+    // The map rect never exceeds the panel, whatever the shape -- a marker cannot be drawn
+    // outside the widget.
+    const double Shapes[][2] = {{1, 1}, {3, 1}, {1, 3}, {16, 9}, {9, 16}, {100, 1}, {1, 100}};
+    for (const auto& Shape : Shapes)
+    {
+        ComputeMinimapRect(208, 208, Shape[0] * 1000, Shape[1] * 1000, OffX, OffY, W, H);
+        RA4_EXPECT(W <= 208.0 + 0.001);
+        RA4_EXPECT(H <= 208.0 + 0.001);
+        RA4_EXPECT(OffX >= -0.001 && OffY >= -0.001);
+        // And the aspect ratio really is preserved.
+        const double Want = Shape[0] / Shape[1];
+        const double Got = W / H;
+        RA4_EXPECT(Got > Want * 0.999 && Got < Want * 1.001);
+    }
+
+    // Degenerate input must not divide by zero or produce a negative rect.
+    ComputeMinimapRect(208, 208, 0, 0, OffX, OffY, W, H);
+    RA4_EXPECT(W >= 0.0 && H >= 0.0);
+    ComputeMinimapRect(0, 0, 12800, 12800, OffX, OffY, W, H);
+    RA4_EXPECT(W >= 0.0 && H >= 0.0);
+}

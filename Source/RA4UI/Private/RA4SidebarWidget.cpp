@@ -26,6 +26,8 @@
 #include "RA4HUDViewModel.h"
 #include "RA4UIDataProviderSubsystem.h"
 
+#include "RA4Presentation/HudSnapshot.h"
+
 namespace
 {
 constexpr float kRadarDesiredSize = 208.0f;
@@ -83,18 +85,36 @@ public:
             return LayerId + 1;
         }
 
+        // ADR-0013: a deficit that took the radar takes the whole overview with it. Drawn
+        // as a distinctly dead panel rather than an empty one, so "no contacts" and "no
+        // radar" do not look the same.
+        if (!RadarOwner->IsOnline())
+        {
+            FSlateDrawElement::MakeBox(
+                OutDrawElements, LayerId + 2,
+                AllottedGeometry.ToPaintGeometry(Size, FSlateLayoutTransform()),
+                WhiteBrush, ESlateDrawEffect::None, FLinearColor(0.05f, 0.02f, 0.02f, 0.85f));
+            return LayerId + 2;
+        }
+
         const FVector2D MapSize = RadarOwner->GetMapSize();
         if (MapSize.X <= 0.0f || MapSize.Y <= 0.0f)
         {
             return LayerId + 1;
         }
 
+        // Letterbox so a non-square map keeps its shape. Shared with the click handler,
+        // so a click always lands where the marker under the cursor was drawn.
+        FVector2D MapOffset, MapExtent;
+        URA4RadarWidget::ComputeMapRect(Size, MapSize, MapOffset, MapExtent);
+
         const int32 LocalPlayer = RadarOwner->GetLocalPlayer();
         for (const FRA4RadarMarker& Marker : RadarOwner->GetMarkers())
         {
             const float NormalizedX = FMath::Clamp(float(Marker.WorldPosition.X / MapSize.X), 0.0f, 1.0f);
             const float NormalizedY = FMath::Clamp(float(Marker.WorldPosition.Y / MapSize.Y), 0.0f, 1.0f);
-            const FVector2D Centre(NormalizedX * Size.X, (1.0f - NormalizedY) * Size.Y);
+            const FVector2D Centre(MapOffset.X + NormalizedX * MapExtent.X,
+                                   MapOffset.Y + (1.0f - NormalizedY) * MapExtent.Y);
 
             float MarkerExtent = 4.0f;
             FLinearColor Colour;
@@ -146,9 +166,23 @@ public:
                 const FVector2D Local = MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
                 if (URA4RadarWidget* RadarOwner = Owner.Get())
                 {
-                    RadarOwner->HandleSlateClick(FVector2D(
-                        FMath::Clamp(Local.X / Size.X, 0.0f, 1.0f),
-                        FMath::Clamp(Local.Y / Size.Y, 0.0f, 1.0f)));
+                    // Normalize against the letterboxed map rect, not the whole panel, or a
+                    // click is offset by the size of the bars. Clicks inside a bar are
+                    // ignored rather than clamped to the edge: the player pointed at
+                    // nothing, and snapping the camera to a corner is a worse answer.
+                    FVector2D MapOffset, MapExtent;
+                    URA4RadarWidget::ComputeMapRect(Size, RadarOwner->GetMapSize(),
+                                                    MapOffset, MapExtent);
+                    if (MapExtent.X > 0.0 && MapExtent.Y > 0.0)
+                    {
+                        const FVector2D Inside = Local - MapOffset;
+                        if (Inside.X >= 0.0 && Inside.Y >= 0.0 &&
+                            Inside.X <= MapExtent.X && Inside.Y <= MapExtent.Y)
+                        {
+                            RadarOwner->HandleSlateClick(FVector2D(Inside.X / MapExtent.X,
+                                                                   Inside.Y / MapExtent.Y));
+                        }
+                    }
                 }
             }
         }
@@ -373,6 +407,19 @@ FVector2D URA4RadarWidget::GetMapSize() const
 {
     const URA4UIDataProviderSubsystem* Provider = GetProvider();
     return Provider != nullptr ? Provider->GetRadarMapSize() : FVector2D::ZeroVector;
+}
+
+void URA4RadarWidget::ComputeMapRect(const FVector2D& PanelSize, const FVector2D& MapSize,
+                                     FVector2D& OutOffset, FVector2D& OutSize)
+{
+    // Delegates to the presentation layer so there is one implementation of the mapping
+    // rather than one here and one in a test. The geometry is pure and headless-testable;
+    // this wrapper exists only to speak FVector2D.
+    double OffX = 0.0, OffY = 0.0, W = 0.0, H = 0.0;
+    RA4::Presentation::ComputeMinimapRect(PanelSize.X, PanelSize.Y, MapSize.X, MapSize.Y,
+                                         OffX, OffY, W, H);
+    OutOffset = FVector2D(OffX, OffY);
+    OutSize = FVector2D(W, H);
 }
 
 int32 URA4RadarWidget::GetLocalPlayer() const

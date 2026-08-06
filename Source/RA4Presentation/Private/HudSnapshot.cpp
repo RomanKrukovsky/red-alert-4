@@ -400,6 +400,37 @@ void HudSnapshotBuilder::BuildProduction(const SimWorld& World, const SelectionS
 // Radar
 // ---------------------------------------------------------------------------
 
+void ComputeMinimapRect(double PanelWidth, double PanelHeight,
+                        double MapWidth, double MapHeight,
+                        double& OutOffsetX, double& OutOffsetY,
+                        double& OutWidth, double& OutHeight)
+{
+    OutOffsetX = 0.0;
+    OutOffsetY = 0.0;
+    OutWidth = PanelWidth;
+    OutHeight = PanelHeight;
+    if (PanelWidth <= 0.0 || PanelHeight <= 0.0 || MapWidth <= 0.0 || MapHeight <= 0.0)
+    {
+        return;
+    }
+
+    const double PanelAspect = PanelWidth / PanelHeight;
+    const double MapAspect = MapWidth / MapHeight;
+    if (MapAspect > PanelAspect)
+    {
+        // Wider than the panel: full width, bars above and below.
+        OutWidth = PanelWidth;
+        OutHeight = PanelWidth / MapAspect;
+    }
+    else
+    {
+        OutHeight = PanelHeight;
+        OutWidth = PanelHeight * MapAspect;
+    }
+    OutOffsetX = (PanelWidth - OutWidth) * 0.5;
+    OutOffsetY = (PanelHeight - OutHeight) * 0.5;
+}
+
 void HudSnapshotBuilder::BuildRadar(const SimWorld& World, const std::vector<EntityId>& Selection,
                                     RadarState& Out) const
 {
@@ -407,6 +438,47 @@ void HudSnapshotBuilder::BuildRadar(const SimWorld& World, const std::vector<Ent
     const MapDescription& Map = World.GetMap();
     Out.MapWidthUnits = Map.Width * kTileSizeUnits;
     Out.MapHeightUnits = Map.Height * kTileSizeUnits;
+
+    // ADR-0013's "Radar / minimap" row: the panel goes dark from Moderate. Only the radar
+    // half of that row was implemented, so the overview survived a blackout intact.
+    //
+    // A player with no radar building at all keeps their minimap -- the row is about
+    // losing a facility to a deficit, not about gating the basic overview behind tech.
+    // So the panel goes dark only if the player *has* a radar and the deficit has taken
+    // it, which is also what makes building one feel like it bought something.
+    const PowerTier Tier = World.GetPlayer(LocalPlayer).GetPowerTier();
+    bool bHasRadar = false;
+    bool bHasWorkingRadar = false;
+    for (uint32_t Index = 0; Index < uint32_t(World.GetAllCores().size()); ++Index)
+    {
+        const EntityCore& C = World.GetAllCores()[Index];
+        if (!C.bAlive || C.Kind != EntityKind::Building || C.Owner != LocalPlayer)
+        {
+            continue;
+        }
+        const EntityDef* Def = World.GetContent()->FindEntity(C.Def);
+        if (Def == nullptr || !Def->Building.bIsRadar)
+        {
+            continue;
+        }
+        const BuildingComp* B = World.GetBuilding(World.MakeId(Index));
+        if (B == nullptr || B->State != ConstructionState::Complete)
+        {
+            continue;
+        }
+        bHasRadar = true;
+        if (!IsPowerPriorityOffline(B->Priority, Tier))
+        {
+            bHasWorkingRadar = true;
+            break;
+        }
+    }
+    Out.bOfflineForPower = bHasRadar && !bHasWorkingRadar;
+    Out.bOnline = !Out.bOfflineForPower;
+    if (!Out.bOnline)
+    {
+        return;   // no markers at all: the panel is dark
+    }
 
     const FFogOfWarGrid* Fog = World.GetFogGrid();
     const std::vector<EntityCore>& Cores = World.GetAllCores();

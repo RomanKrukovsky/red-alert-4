@@ -59,6 +59,10 @@ public:
     UFUNCTION(BlueprintPure, Category = "RA4|UI")
     FVector2D GetRadarMapSize() const { return RadarMapSize; }
 
+    /** False when a power deficit has taken the player's radar, so the panel draws dark. */
+    UFUNCTION(BlueprintPure, Category = "RA4|Radar")
+    bool IsRadarOnline() const { return bRadarOnline; }
+
     UFUNCTION(BlueprintPure, Category = "RA4|UI")
     int32 GetRadarLocalPlayer() const { return RadarLocalPlayer; }
 
@@ -183,6 +187,7 @@ private:
     TArray<FRA4RadarMarker> RadarMarkers;
 
     FVector2D RadarMapSize = FVector2D::ZeroVector;
+    bool bRadarOnline = true;
     int32 RadarLocalPlayer = 0;
 
     int32 Credits = 0;

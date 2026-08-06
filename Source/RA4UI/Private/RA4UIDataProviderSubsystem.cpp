@@ -396,6 +396,7 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
     // markers it is allowed to draw and therefore cannot reveal hidden enemies.
     RadarMapSize = FVector2D(Snapshot.Radar.MapWidthUnits, Snapshot.Radar.MapHeightUnits);
     RadarLocalPlayer = int32(Snapshot.LocalPlayer);
+    bRadarOnline = Snapshot.Radar.bOnline;
     RadarMarkers.Reset(int32(Snapshot.Radar.Markers.size()));
     for (const RP::RadarMarker& Marker : Snapshot.Radar.Markers)
     {

@@ -214,7 +214,33 @@ struct RadarState
     int32_t MapWidthUnits = 0;
     int32_t MapHeightUnits = 0;
     std::vector<RadarMarker> Markers;
+
+    // ADR-0013: the minimap itself goes dark from Moderate. The effect matrix lists
+    // "Radar / minimap" as one row, and only half of it was implemented -- radar coverage
+    // stopped, but the panel carried on showing every friendly unit as though nothing had
+    // happened. When this is false the widget draws an offline panel instead of markers.
+    //
+    // Own forces are still filtered out along with everything else: the point of the row
+    // is that the player loses the overview, not that they lose enemy contacts they were
+    // never entitled to.
+    bool bOnline = true;
+    // Why it is dark, so the panel can say so rather than just being blank.
+    bool bOfflineForPower = false;
 };
+
+// Letterboxes a map of the given size inside a panel of the given size, preserving the
+// map's aspect ratio and centring it. Returns the offset and extent of the map rect in
+// panel-local units.
+//
+// Lives here rather than in the widget because it is pure integer-free geometry with no
+// Unreal types, so it can be tested headlessly -- and because both the painter and the
+// click handler must use the identical mapping. A square panel drawing a 2:1 map stretched
+// it vertically, so a marker halfway up the map appeared nowhere near the terrain it stood
+// on, and a click came back with the wrong world position.
+void ComputeMinimapRect(double PanelWidth, double PanelHeight,
+                        double MapWidth, double MapHeight,
+                        double& OutOffsetX, double& OutOffsetY,
+                        double& OutWidth, double& OutHeight);
 
 // --- Match -----------------------------------------------------------------
 

@@ -250,6 +250,12 @@ inline constexpr bool IsStaticDefenceOnlineAtTier(PowerTier Tier)
     return Tier != PowerTier::Critical;
 }
 
+// How far a working radar paints VisibilityState::RadarDetected, in tiles. Matches the
+// recon layer's own RadarRangeTiles default so the minimap and the belief pipeline agree
+// about where a radar reaches; the recon layer keeps its own copy because it is
+// configurable per match and this is not.
+constexpr int32_t kRadarSweepRadiusTiles = 24;
+
 // --- Repair (ADR-0013) ----------------------------------------------------
 
 // Health restored per tick at full speed, and what that costs. Repair is deliberately
