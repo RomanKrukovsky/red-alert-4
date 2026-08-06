@@ -41,7 +41,7 @@
 
 ## Commands to Reproduce
 ```bash
-cd /Users/romanmolodyko/Documents/red-alert-4
+cd <home>/Documents/red-alert-4
 cmake -S Tools/HeadlessBuild -B build/hb
 cmake --build build/hb -j8
 ./build/hb/RA4Tests

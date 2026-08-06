@@ -1,7 +1,7 @@
 # Agent Handoff: Skirmish Gameplay Engine (`agents/skirmish-gameplay`)
 
 ## 1. Overview & Responsibility
-This branch (`agents/skirmish-gameplay` located at `/Users/romanmolodyko/Documents/red-alert-4-gameplay`) owns all deterministic Skirmish gameplay logic in C++ (`RA4Simulation`, `RA4Content`, `RA4Core`, `RA4Combat`, `RA4Replay`, `RA4Campaign`).
+This branch (`agents/skirmish-gameplay` located at `<home>/Documents/red-alert-4-gameplay`) owns all deterministic Skirmish gameplay logic in C++ (`RA4Simulation`, `RA4Content`, `RA4Core`, `RA4Combat`, `RA4Replay`, `RA4Campaign`).
 
 It enforces strict fixed-point lockstep determinism, single-frame command execution (`CommandBus`), resource economy, harvester docking queues, tech prerequisites, building construction states, production queues, power management, win/loss conditions, and full replay/restart state reset.
 
@@ -67,7 +67,7 @@ It enforces strict fixed-point lockstep determinism, single-frame command execut
 ## 5. Verification Commands & Results
 
 ### Automated Test Suite
-Build and execute headless test suite from `/Users/romanmolodyko/Documents/red-alert-4-gameplay`:
+Build and execute headless test suite from `<home>/Documents/red-alert-4-gameplay`:
 ```bash
 cmake -S Tools/HeadlessBuild -B build/hb && cmake --build build/hb -j8
 ./build/hb/RA4Tests

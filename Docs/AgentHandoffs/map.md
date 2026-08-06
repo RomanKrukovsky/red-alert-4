@@ -8,13 +8,13 @@ This document summarizes the creation, layout architecture, validation, and asse
 ## 1. Created & Modified Assets
 
 ### Level Package
-- **`/Game/Maps/RA4_Skirmish_Production.umap`** ([Content/Maps/RA4_Skirmish_Production.umap](file:///Users/romanmolodyko/Documents/red-alert-4-map/Content/Maps/RA4_Skirmish_Production.umap))
+- **`/Game/Maps/RA4_Skirmish_Production.umap`** ([Content/Maps/RA4_Skirmish_Production.umap](file://<home>/Documents/red-alert-4-map/Content/Maps/RA4_Skirmish_Production.umap))
 
 ### Automation & Tools Scripts
-- **`Tools/Editor/inventory_map_assets.py`** ([Tools/Editor/inventory_map_assets.py](file:///Users/romanmolodyko/Documents/red-alert-4-map/Tools/Editor/inventory_map_assets.py)) — Scans and generates asset inventory report.
-- **`Tools/Editor/make_production_skirmish_map.py`** ([Tools/Editor/make_production_skirmish_map.py](file:///Users/romanmolodyko/Documents/red-alert-4-map/Tools/Editor/make_production_skirmish_map.py)) — Deterministically generates the production skirmish map.
-- **`Tools/Editor/verify_production_skirmish_map.py`** ([Tools/Editor/verify_production_skirmish_map.py](file:///Users/romanmolodyko/Documents/red-alert-4-map/Tools/Editor/verify_production_skirmish_map.py)) — Scene validator script verifying landscape, base plateaus, resource fields, player starts, and navmesh.
-- **`Tools/Editor/capture_map_screenshots.py`** ([Tools/Editor/capture_map_screenshots.py](file:///Users/romanmolodyko/Documents/red-alert-4-map/Tools/Editor/capture_map_screenshots.py)) — Viewport camera automation for level reporting.
+- **`Tools/Editor/inventory_map_assets.py`** ([Tools/Editor/inventory_map_assets.py](file://<home>/Documents/red-alert-4-map/Tools/Editor/inventory_map_assets.py)) — Scans and generates asset inventory report.
+- **`Tools/Editor/make_production_skirmish_map.py`** ([Tools/Editor/make_production_skirmish_map.py](file://<home>/Documents/red-alert-4-map/Tools/Editor/make_production_skirmish_map.py)) — Deterministically generates the production skirmish map.
+- **`Tools/Editor/verify_production_skirmish_map.py`** ([Tools/Editor/verify_production_skirmish_map.py](file://<home>/Documents/red-alert-4-map/Tools/Editor/verify_production_skirmish_map.py)) — Scene validator script verifying landscape, base plateaus, resource fields, player starts, and navmesh.
+- **`Tools/Editor/capture_map_screenshots.py`** ([Tools/Editor/capture_map_screenshots.py](file://<home>/Documents/red-alert-4-map/Tools/Editor/capture_map_screenshots.py)) — Viewport camera automation for level reporting.
 
 ### Saved Reports & Automation Artifacts
 - **`Saved/Reports/MapAssetInventory.json`** — Scanned inventory of 565 assets across `Content/`.
@@ -54,7 +54,7 @@ This document summarizes the creation, layout architecture, validation, and asse
 
 - Command:
   ```bash
-  "/Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor-Cmd" "$PWD/RedAlert4.uproject" -run=PythonScript -script="$PWD/Tools/Editor/verify_production_skirmish_map.py" -nullrhi -unattended
+  "<home>/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor-Cmd" "$PWD/RedAlert4.uproject" -run=PythonScript -script="$PWD/Tools/Editor/verify_production_skirmish_map.py" -nullrhi -unattended
   ```
 - Result: **SUCCESS (All 20 required actors and validation checks passed)**.
   - `RA4_Landscape_MainGround` present.
@@ -69,7 +69,7 @@ This document summarizes the creation, layout architecture, validation, and asse
 
 To re-generate the production skirmish map at any time:
 ```bash
-"/Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor-Cmd" "$PWD/RedAlert4.uproject" -run=PythonScript -script="$PWD/Tools/Editor/make_production_skirmish_map.py" -nullrhi -unattended
+"<home>/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor-Cmd" "$PWD/RedAlert4.uproject" -run=PythonScript -script="$PWD/Tools/Editor/make_production_skirmish_map.py" -nullrhi -unattended
 ```
 
 ---

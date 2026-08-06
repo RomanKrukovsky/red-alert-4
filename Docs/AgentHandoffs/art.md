@@ -1,7 +1,7 @@
 # Red Alert 4 — Art & Presentation Agent Handoff
 
 ## Overview & Working Environment
-- **Target Repository**: `/Users/romanmolodyko/Documents/red-alert-4-art`
+- **Target Repository**: `<home>/Documents/red-alert-4-art`
 - **Active Branch**: `agents/skirmish-art`
 - **Primary Goal**: Complete production-ready visual representations, materials, sockets, construction stages, VFX, audio routing, and data-driven presentation mappings for USSR and Alliance factions without mutating core simulation (`SimWorld`, `AICommander`, economy, or `RA4_Skirmish_Production`).
 

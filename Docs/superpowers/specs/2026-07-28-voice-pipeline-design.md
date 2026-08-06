@@ -16,7 +16,7 @@ Generate original Russian voice-over package for Red Alert 4 (industrial RTS) us
 
 ## Architecture
 
-Five Python modules under `/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/pipeline/`:
+Five Python modules under `GeneratedVO/pipeline/`:
 
 1. **voice_bible.py** — generates `GeneratedVO/voice_bible.json` with all VoiceId definitions (gender_age, control_instruction, ru_pacing, prosody_caps, forbidden_traits, sample_texts).
 2. **line_writer.py** — generates `voice_lines.json` with all event text variants per (VoiceId, Event).

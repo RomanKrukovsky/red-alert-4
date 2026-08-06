@@ -1,21 +1,21 @@
 # AI Commander & Skirmish Balance Handoff Document
 
 ## Overview
-This document details the refactoring, difficulty tuning, Fog of War compliance, counter-unit selection, state machine expansion, and mass simulation balance verification for the `AICommander` system in `/Users/romanmolodyko/Documents/red-alert-4-ai` on branch `agents/skirmish-ai`.
+This document details the refactoring, difficulty tuning, Fog of War compliance, counter-unit selection, state machine expansion, and mass simulation balance verification for the `AICommander` system in `<home>/Documents/red-alert-4-ai` on branch `agents/skirmish-ai`.
 
 ## Modified Files
-- [`Source/RA4AI/Public/RA4AI/AIStrategy.h`](file:///Users/romanmolodyko/Documents/red-alert-4-ai/Source/RA4AI/Public/RA4AI/AIStrategy.h)
+- [`Source/RA4AI/Public/RA4AI/AIStrategy.h`](file://<home>/Documents/red-alert-4-ai/Source/RA4AI/Public/RA4AI/AIStrategy.h)
   - Added `AIDifficulty` enum (`Easy`, `Normal`, `Hard`).
   - Added `CreditBonusMultiplier` in `AIConfig` (1.0f for Easy/Normal, 1.20f for Hard).
   - Extended `AIStrategy` values (`Opening`, `ExpandEconomy`, `Expansion`, `TechUp`, `Fortify`, `AssembleArmy`, `Assault`, `Recover`, `FinalAssault`).
   - Extended `MakeProfileConfig` signature and added `ToString(AIDifficulty)`.
-- [`Source/RA4AI/Private/AIStrategy.cpp`](file:///Users/romanmolodyko/Documents/red-alert-4-ai/Source/RA4AI/Private/AIStrategy.cpp)
+- [`Source/RA4AI/Private/AIStrategy.cpp`](file://<home>/Documents/red-alert-4-ai/Source/RA4AI/Private/AIStrategy.cpp)
   - Implemented difficulty tuning in `MakeProfileConfig` (decision & memory update intervals).
   - Added scoring logic for all 9 strategy states in `ScoreStrategies`.
-- [`Source/RA4AI/Private/AICommander.cpp`](file:///Users/romanmolodyko/Documents/red-alert-4-ai/Source/RA4AI/Private/AICommander.cpp)
+- [`Source/RA4AI/Private/AICommander.cpp`](file://<home>/Documents/red-alert-4-ai/Source/RA4AI/Private/AICommander.cpp)
   - Added counter-unit selection logic to `FindCombatUnit` based on visible enemy composition from `Knowledge` (`SimWorldView`).
   - Handled all strategy enum values in `ExecuteStrategy` and `Tick`.
-- [`Source/RA4Tests/Private/TestAI.cpp`](file:///Users/romanmolodyko/Documents/red-alert-4-ai/Source/RA4Tests/Private/TestAI.cpp)
+- [`Source/RA4Tests/Private/TestAI.cpp`](file://<home>/Documents/red-alert-4-ai/Source/RA4Tests/Private/TestAI.cpp)
   - Added `AI.DifficultyProfilesConfig`, `AI.FogOfWarStrictCompliance`, `AI.NoCheatResources`, and `AI.MassSimulationsBenchmark`.
 
 ## Key AI Architecture Guarantees

@@ -45,7 +45,7 @@ To unblock runtime testing and allow screens to reach `MIGRATED` or `VERIFIED` s
 ### Step 2: Install Plugin into Project Repository
 1. Navigate to the project root directory:
    ```bash
-   cd /Users/romanmolodyko/Documents/red-alert-4
+   cd <home>/Documents/red-alert-4
    ```
 2. Create the `Plugins` directory if it does not exist:
    ```bash
@@ -103,12 +103,12 @@ PublicDependencyModuleNames.AddRange(
    # Mac / Terminal:
    ./GenerateProjectFiles.command
    # Or via UnrealEngine Tool / UnrealBuildTool:
-   UnrealBuildTool -projectfiles -project="/Users/romanmolodyko/Documents/red-alert-4/RedAlert4.uproject" -game -engine
+   UnrealBuildTool -projectfiles -project="RedAlert4.uproject" -game -engine
    ```
 2. Build the project C++ source and NoesisGUI plugin:
    ```bash
    # Build Development Editor target
-   ./Engine/Build/BatchFiles/Mac/Build.sh RedAlert4Editor Mac Development "/Users/romanmolodyko/Documents/red-alert-4/RedAlert4.uproject"
+   ./Engine/Build/BatchFiles/Mac/Build.sh RedAlert4Editor Mac Development "RedAlert4.uproject"
    ```
 
 ### Step 6: Verify Plugin Activation in Unreal Editor

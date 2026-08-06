@@ -41,18 +41,18 @@ Red Alert 4 (RA4) is a deterministic real-time strategy (RTS) game engine built 
 
 ## 3. Phase 1 Audit Reports Sitemap (`Docs/Audit/`)
 
-- [`CURRENT_STATE.md`](file:///Users/romanmolodyko/Documents/red-alert-4/Docs/Audit/CURRENT_STATE.md): Executive summary and overall project health baseline.
-- [`ARCHITECTURE_AUDIT.md`](file:///Users/romanmolodyko/Documents/red-alert-4/Docs/Audit/ARCHITECTURE_AUDIT.md): C++ module breakdown, sim vs presentation separation, lockstep determinism.
-- [`GAMEPLAY_AUDIT.md`](file:///Users/romanmolodyko/Documents/red-alert-4/Docs/Audit/GAMEPLAY_AUDIT.md): Harvesters, camera controls, placement grid, combat, pathfinding, victory/defeat.
-- [`UNREAL_INTEGRATION_AUDIT.md`](file:///Users/romanmolodyko/Documents/red-alert-4/Docs/Audit/UNREAL_INTEGRATION_AUDIT.md): `.uproject`, build targets, CMake headless harness, CI workflows, packaging status.
-- [`UI_AUDIT.md`](file:///Users/romanmolodyko/Documents/red-alert-4/Docs/Audit/UI_AUDIT.md): Tri-layer UI audit (NoesisGUI, Slate/UMG, `ra4-ui`).
-- [`AI_AUDIT.md`](file:///Users/romanmolodyko/Documents/red-alert-4/Docs/Audit/AI_AUDIT.md): `AICommander` utility strategy loop, difficulty profiles, fog-of-war zero-cheat policy.
-- [`CONTENT_AUDIT.md`](file:///Users/romanmolodyko/Documents/red-alert-4/Docs/Audit/CONTENT_AUDIT.md): Data bible, 3D models (142 blockout + 36 PBR), 624 voice lines, maps, Niagara VFX.
-- [`ASSET_AND_LICENSE_AUDIT.md`](file:///Users/romanmolodyko/Documents/red-alert-4/Docs/Audit/ASSET_AND_LICENSE_AUDIT.md): Legal audit, C&C trademark usage, 3D/audio asset licenses, `Druk Cyr` font risk.
-- [`BUILD_AND_TEST_AUDIT.md`](file:///Users/romanmolodyko/Documents/red-alert-4/Docs/Audit/BUILD_AND_TEST_AUDIT.md): UBT vs CMake build harness, 378 test suite inventory, timing benchmarks.
-- [`GIT_REGRESSION_AUDIT.md`](file:///Users/romanmolodyko/Documents/red-alert-4/Docs/Audit/GIT_REGRESSION_AUDIT.md): History analysis, merged feature branches, disconnected features (Noesis plugin missing, direct control).
-- [`GAP_ANALYSIS.md`](file:///Users/romanmolodyko/Documents/red-alert-4/Docs/Audit/GAP_ANALYSIS.md): Categorized issue register (Blocker, Critical, Important, Medium, Cosmetic, External).
-- [`RISK_REGISTER.md`](file:///Users/romanmolodyko/Documents/red-alert-4/Docs/Production/RISK_REGISTER.md): Legal/IP, architectural, UI, build, and team handoff risks.
+- [`CURRENT_STATE.md`](file://Docs/Audit/CURRENT_STATE.md): Executive summary and overall project health baseline.
+- [`ARCHITECTURE_AUDIT.md`](file://Docs/Audit/ARCHITECTURE_AUDIT.md): C++ module breakdown, sim vs presentation separation, lockstep determinism.
+- [`GAMEPLAY_AUDIT.md`](file://Docs/Audit/GAMEPLAY_AUDIT.md): Harvesters, camera controls, placement grid, combat, pathfinding, victory/defeat.
+- [`UNREAL_INTEGRATION_AUDIT.md`](file://Docs/Audit/UNREAL_INTEGRATION_AUDIT.md): `.uproject`, build targets, CMake headless harness, CI workflows, packaging status.
+- [`UI_AUDIT.md`](file://Docs/Audit/UI_AUDIT.md): Tri-layer UI audit (NoesisGUI, Slate/UMG, `ra4-ui`).
+- [`AI_AUDIT.md`](file://Docs/Audit/AI_AUDIT.md): `AICommander` utility strategy loop, difficulty profiles, fog-of-war zero-cheat policy.
+- [`CONTENT_AUDIT.md`](file://Docs/Audit/CONTENT_AUDIT.md): Data bible, 3D models (142 blockout + 36 PBR), 624 voice lines, maps, Niagara VFX.
+- [`ASSET_AND_LICENSE_AUDIT.md`](file://Docs/Audit/ASSET_AND_LICENSE_AUDIT.md): Legal audit, C&C trademark usage, 3D/audio asset licenses, `Druk Cyr` font risk.
+- [`BUILD_AND_TEST_AUDIT.md`](file://Docs/Audit/BUILD_AND_TEST_AUDIT.md): UBT vs CMake build harness, 378 test suite inventory, timing benchmarks.
+- [`GIT_REGRESSION_AUDIT.md`](file://Docs/Audit/GIT_REGRESSION_AUDIT.md): History analysis, merged feature branches, disconnected features (Noesis plugin missing, direct control).
+- [`GAP_ANALYSIS.md`](file://Docs/Audit/GAP_ANALYSIS.md): Categorized issue register (Blocker, Critical, Important, Medium, Cosmetic, External).
+- [`RISK_REGISTER.md`](file://Docs/Production/RISK_REGISTER.md): Legal/IP, architectural, UI, build, and team handoff risks.
 
 ---
 

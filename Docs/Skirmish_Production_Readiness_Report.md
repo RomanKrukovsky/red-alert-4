@@ -4,7 +4,7 @@
 **Status**: **PRODUCTION READY / VERIFIED IN RUNTIME**  
 **Branch**: `feature/skirmish-production-90`  
 **Engine Version**: **Unreal Engine 5.8**  
-**Baseline Git Bundle**: `/Users/romanmolodyko/Documents/red-alert-4-skirmish90.bundle`
+**Baseline Git Bundle**: `<home>/Documents/red-alert-4-skirmish90.bundle`
 
 ---
 

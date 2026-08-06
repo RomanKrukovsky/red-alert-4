@@ -1,6 +1,6 @@
 # C&C Red Alert - Build System, Platform Dependencies & File Formats
 
-> **Source**: `/Users/romanmolodyko/cnc-red-alert-original/CODE/`
+> **Source**: `<home>/cnc-red-alert-original/CODE/`
 > **Analysis Date**: July 2026
 > **Confidence**: High (direct source analysis)
 

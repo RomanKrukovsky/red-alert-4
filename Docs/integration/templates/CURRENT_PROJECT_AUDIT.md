@@ -13,7 +13,7 @@ Every number below was produced by running a command against the tree, not estim
 
 | Item | Value |
 | --- | --- |
-| EngineAssociation | 5.6 (installed build at `/Users/Shared/Epic Games/UE_5.6`, 5.6.1, CL 44394996) |
+| EngineAssociation | 5.6 (installed build at `<home>/Epic Games/UE_5.6`, 5.6.1, CL 44394996) |
 | Build verified | `Build.sh RedAlert4Editor Mac Development` → **Result: Succeeded** (observed compile + link of project modules) |
 | Target platforms declared | Windows, Linux, Mac |
 | Targets | `RedAlert4` (Game), `RedAlert4Editor` (Editor), `RedAlert4Server` (Server) |

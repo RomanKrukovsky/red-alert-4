@@ -4,7 +4,6 @@
     {
       "anchor_num": 3,
       "file": "Anchors/Soviet/USSR_MainTank/anchor_03.wav",
-      "absolute_path": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_MainTank/anchor_03.wav",
       "consistency": 0.6629,
       "clarity": 5.0,
       "duration": 4.0,
@@ -16,7 +15,6 @@
     {
       "anchor_num": 2,
       "file": "Anchors/Soviet/USSR_MainTank/anchor_02.wav",
-      "absolute_path": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_MainTank/anchor_02.wav",
       "consistency": 0.5918,
       "clarity": 5.0,
       "duration": 2.88,
@@ -28,7 +26,6 @@
     {
       "anchor_num": 1,
       "file": "Anchors/Soviet/USSR_MainTank/anchor_01.wav",
-      "absolute_path": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_MainTank/anchor_01.wav",
       "consistency": 0.5426,
       "clarity": 5.0,
       "duration": 3.68,
@@ -39,6 +36,6 @@
     }
   ],
   "selected_anchor_num": 2,
-  "selected_file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_MainTank/anchor_02.wav",
+  "selected_file": "GeneratedVO/Anchors/Soviet/USSR_MainTank/anchor_02.wav",
   "selection_reason": "tie_within_5pct_preferring_anchor_02"
 }

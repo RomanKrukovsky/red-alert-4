@@ -4,7 +4,6 @@
     {
       "anchor_num": 2,
       "file": "Anchors/Chrono/Chrono_Rifleman/anchor_02.wav",
-      "absolute_path": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Chrono/Chrono_Rifleman/anchor_02.wav",
       "consistency": 0.6536,
       "clarity": 5.0,
       "duration": 3.2,
@@ -16,7 +15,6 @@
     {
       "anchor_num": 3,
       "file": "Anchors/Chrono/Chrono_Rifleman/anchor_03.wav",
-      "absolute_path": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Chrono/Chrono_Rifleman/anchor_03.wav",
       "consistency": 0.5311,
       "clarity": 5.0,
       "duration": 3.52,
@@ -28,7 +26,6 @@
     {
       "anchor_num": 1,
       "file": "Anchors/Chrono/Chrono_Rifleman/anchor_01.wav",
-      "absolute_path": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Chrono/Chrono_Rifleman/anchor_01.wav",
       "consistency": 0.5125,
       "clarity": 5.0,
       "duration": 3.52,
@@ -39,6 +36,6 @@
     }
   ],
   "selected_anchor_num": 2,
-  "selected_file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Chrono/Chrono_Rifleman/anchor_02.wav",
+  "selected_file": "GeneratedVO/Anchors/Chrono/Chrono_Rifleman/anchor_02.wav",
   "selection_reason": "best_overall_score"
 }

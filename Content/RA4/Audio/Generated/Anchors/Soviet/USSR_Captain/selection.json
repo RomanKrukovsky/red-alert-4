@@ -4,7 +4,6 @@
     {
       "anchor_num": 1,
       "file": "Anchors/Soviet/USSR_Captain/anchor_01.wav",
-      "absolute_path": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_Captain/anchor_01.wav",
       "consistency": 0.5944,
       "clarity": 5.0,
       "duration": 3.04,
@@ -16,7 +15,6 @@
     {
       "anchor_num": 2,
       "file": "Anchors/Soviet/USSR_Captain/anchor_02.wav",
-      "absolute_path": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_Captain/anchor_02.wav",
       "consistency": 0.5617,
       "clarity": 5.0,
       "duration": 4.16,
@@ -28,7 +26,6 @@
     {
       "anchor_num": 3,
       "file": "Anchors/Soviet/USSR_Captain/anchor_03.wav",
-      "absolute_path": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_Captain/anchor_03.wav",
       "consistency": 0.4901,
       "clarity": 5.0,
       "duration": 3.84,
@@ -39,6 +36,6 @@
     }
   ],
   "selected_anchor_num": 1,
-  "selected_file": "/Users/romanmolodyko/Documents/red-alert-4/GeneratedVO/Anchors/Soviet/USSR_Captain/anchor_01.wav",
+  "selected_file": "GeneratedVO/Anchors/Soviet/USSR_Captain/anchor_01.wav",
   "selection_reason": "best_overall_score"
 }
