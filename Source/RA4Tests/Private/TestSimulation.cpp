@@ -2033,3 +2033,217 @@ RA4_TEST(PowerTier, DefeatedPlayerIsNotToldTheirPowerCameBack)
     RA4_EXPECT(!World.IsAlive(Doomed));
     RA4_EXPECT_EQ(SpuriousRecoveries, 0);
 }
+
+// ---------------------------------------------------------------------------
+// Power priority (ADR-0013 package C)
+// ---------------------------------------------------------------------------
+
+RA4_TEST(PowerPriority, OfflineBandsMatchTheSpecTable)
+{
+    // The whole point of the priority table is that a deficit reaches things in a
+    // chosen order. If every band went offline at the same tier the feature would be
+    // decoration, so pin each band's threshold and assert they actually differ.
+    for (int32_t T = 0; T <= int32_t(PowerTier::Critical); ++T)
+    {
+        const PowerTier Tier = PowerTier(T);
+        // Vital never goes offline at any tier -- this is what keeps a deficit
+        // recoverable rather than terminal.
+        RA4_EXPECT(!IsPowerPriorityOffline(PowerPriority::Vital, Tier));
+    }
+
+    // Auxiliary is the first to go: offline from Moderate onward.
+    RA4_EXPECT(!IsPowerPriorityOffline(PowerPriority::Auxiliary, PowerTier::Normal));
+    RA4_EXPECT(!IsPowerPriorityOffline(PowerPriority::Auxiliary, PowerTier::Mild));
+    RA4_EXPECT(IsPowerPriorityOffline(PowerPriority::Auxiliary, PowerTier::Moderate));
+    RA4_EXPECT(IsPowerPriorityOffline(PowerPriority::Auxiliary, PowerTier::Critical));
+
+    // Production and Defense survive Moderate and Severe, and stop at Critical.
+    for (const PowerPriority P : {PowerPriority::Production, PowerPriority::Defense})
+    {
+        RA4_EXPECT(!IsPowerPriorityOffline(P, PowerTier::Moderate));
+        RA4_EXPECT(!IsPowerPriorityOffline(P, PowerTier::Severe));
+        RA4_EXPECT(IsPowerPriorityOffline(P, PowerTier::Critical));
+    }
+
+    // The bands must be genuinely ordered at Moderate: Auxiliary is out while the
+    // others are not.
+    RA4_EXPECT(IsPowerPriorityOffline(PowerPriority::Auxiliary, PowerTier::Moderate) !=
+               IsPowerPriorityOffline(PowerPriority::Production, PowerTier::Moderate));
+}
+
+RA4_TEST(PowerPriority, DefaultsComeFromWhatABuildingIsNotFromItsName)
+{
+    Fixture F;
+    // A refinery funds the recovery and a yard builds the reactor, so both are Vital:
+    // degrading them would turn a shortage into a death spiral.
+    const EntityId Yard = F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    const EntityId Refinery = F.World.SpawnBuilding(Ids::SovRefinery, 0, TileCoord(16, 10), true);
+    const EntityId Power = F.World.SpawnBuilding(Ids::SovPower, 0, TileCoord(20, 10), true);
+    const EntityId Turret = F.World.SpawnBuilding(Ids::SovTurret, 0, TileCoord(24, 10), true);
+    const EntityId Factory = F.World.SpawnBuilding(Ids::SovWarFactory, 0, TileCoord(10, 16), true);
+    RA4_REQUIRE(Yard.IsValid() && Refinery.IsValid() && Power.IsValid());
+    RA4_REQUIRE(Turret.IsValid() && Factory.IsValid());
+
+    RA4_EXPECT(F.World.GetBuilding(Yard)->Priority == PowerPriority::Vital);
+    RA4_EXPECT(F.World.GetBuilding(Refinery)->Priority == PowerPriority::Vital);
+    RA4_EXPECT(F.World.GetBuilding(Power)->Priority == PowerPriority::Vital);
+    RA4_EXPECT(F.World.GetBuilding(Turret)->Priority == PowerPriority::Defense);
+    RA4_EXPECT(F.World.GetBuilding(Factory)->Priority == PowerPriority::Production);
+
+    // Regression: EntityRole::BaseBuilding is set on *every* building in the default
+    // content -- turrets and factories included -- so keying Vital off it made almost
+    // the whole base Vital and the priority table meaningless. Assert the bands are
+    // genuinely distinct rather than collapsed onto one value.
+    const EntityDef* TurretDef = F.Content.FindEntity(Ids::SovTurret);
+    RA4_REQUIRE(TurretDef != nullptr);
+    RA4_EXPECT(HasRole(TurretDef->Roles, EntityRole::BaseBuilding));   // the trap
+    RA4_EXPECT(F.World.GetBuilding(Turret)->Priority !=
+               F.World.GetBuilding(Yard)->Priority);
+    RA4_EXPECT(F.World.GetBuilding(Factory)->Priority !=
+               F.World.GetBuilding(Yard)->Priority);
+}
+
+RA4_TEST(PowerPriority, PlayerCanOverrideItAndABadValueIsRejected)
+{
+    Fixture F;
+    const EntityId Factory = F.World.SpawnBuilding(Ids::SovWarFactory, 0, TileCoord(10, 16), true);
+    RA4_REQUIRE(Factory.IsValid());
+    RA4_REQUIRE(F.World.GetBuilding(Factory)->Priority == PowerPriority::Production);
+
+    Command Set = MakeCommand(CommandType::SetPowerPriority, 0);
+    Set.Primary = Factory;
+    Set.Param = int32_t(PowerPriority::Vital);
+    RA4_REQUIRE(F.World.ApplyCommand(Set).IsAccepted());
+    RA4_EXPECT(F.World.GetBuilding(Factory)->Priority == PowerPriority::Vital);
+
+    // Param arrives over the wire, so an out-of-range value must be refused rather
+    // than cast into the enum where it would fall through every switch on it.
+    Command Bad = MakeCommand(CommandType::SetPowerPriority, 0);
+    Bad.Primary = Factory;
+    Bad.Param = 99;
+    RA4_EXPECT(F.World.ApplyCommand(Bad).Reason == CommandReject::TargetInvalid);
+    Bad.Param = -1;
+    RA4_EXPECT(F.World.ApplyCommand(Bad).Reason == CommandReject::TargetInvalid);
+    // The refusal left the override intact.
+    RA4_EXPECT(F.World.GetBuilding(Factory)->Priority == PowerPriority::Vital);
+
+    // And it is still someone else's building.
+    const EntityId Enemy = F.World.SpawnBuilding(Ids::AllConYard, 1, TileCoord(50, 50), true);
+    RA4_REQUIRE(Enemy.IsValid());
+    Command Theirs = MakeCommand(CommandType::SetPowerPriority, 0);
+    Theirs.Primary = Enemy;
+    Theirs.Param = int32_t(PowerPriority::Auxiliary);
+    RA4_EXPECT(F.World.ApplyCommand(Theirs).Reason == CommandReject::NoSuchEntity);
+}
+
+RA4_TEST(PowerPriority, AuxiliaryStopsAtModerateWhileProductionKeepsGoing)
+{
+    // The observable consequence of the table: at Moderate an Auxiliary-priority
+    // factory is offline and a Production-priority one is merely slow. Without this
+    // the priority field would never change a single outcome.
+    const auto BuiltAfter = [](PowerPriority Priority) -> int32_t {
+        PowerFixture F(1);
+        const EntityId Barracks = F.World.SpawnBuilding(Ids::SovBarracks, 0, TileCoord(10, 20), true);
+        if (!Barracks.IsValid())
+        {
+            return -1;
+        }
+        F.AddPowerDraw(5);   // reactor 150 vs barracks 30 + 5x40 => Moderate
+
+        Command Set = MakeCommand(CommandType::SetPowerPriority, 0);
+        Set.Primary = Barracks;
+        Set.Param = int32_t(Priority);
+        if (!F.World.ApplyCommand(Set).IsAccepted())
+        {
+            return -2;
+        }
+
+        Command Start = MakeCommand(CommandType::StartProduction, 0);
+        Start.Primary = Barracks;
+        Start.Content = Ids::SovConscript;   // T1, so no high-tech pause applies
+        if (!F.World.ApplyCommand(Start).IsAccepted())
+        {
+            return -3;
+        }
+        F.World.Tick(nullptr);
+        if (F.World.GetPlayer(0).GetPowerTier() != PowerTier::Moderate)
+        {
+            return -4;   // premise broken; the comparison below would mean nothing
+        }
+        RunTicks(F.World, SecondsToTicks(120));
+        return CountEntitiesOfType(F.World, 0, Ids::SovConscript);
+    };
+
+    const int32_t AsProduction = BuiltAfter(PowerPriority::Production);
+    const int32_t AsAuxiliary = BuiltAfter(PowerPriority::Auxiliary);
+
+    RA4_REQUIRE(AsProduction >= 0 && AsAuxiliary >= 0);   // premises held
+    // Production is only slowed, so it delivers; Auxiliary is offline, so it does not.
+    RA4_EXPECT(AsProduction >= 1);
+    RA4_EXPECT_EQ(AsAuxiliary, 0);
+}
+
+RA4_TEST(PowerPriority, OverrideSurvivesSaveAndFeedsTheChecksum)
+{
+    Fixture F;
+    SpawnEnemyOutpost(F.World);
+    const EntityId Factory = F.World.SpawnBuilding(Ids::SovWarFactory, 0, TileCoord(10, 16), true);
+    RA4_REQUIRE(Factory.IsValid());
+
+    Command Set = MakeCommand(CommandType::SetPowerPriority, 0);
+    Set.Primary = Factory;
+    Set.Param = int32_t(PowerPriority::Auxiliary);
+    RA4_REQUIRE(F.World.ApplyCommand(Set).IsAccepted());
+    RunTicks(F.World, 3);
+
+    const uint64_t Before = F.World.ComputeStateChecksum();
+
+    ByteWriter W;
+    F.World.Serialize(W);
+    SimWorld Restored;
+    ByteReader R(W.GetBuffer());
+    RA4_REQUIRE(Restored.Deserialize(R, &F.Content));
+    RA4_REQUIRE(!R.HasError());
+
+    // The override is a player decision, so losing it across a reload would silently
+    // undo something the player did.
+    RA4_EXPECT(Restored.GetBuilding(Factory)->Priority == PowerPriority::Auxiliary);
+    RA4_EXPECT(Restored.ComputeStateChecksum() == Before);
+
+    // And it must be part of the hash: two worlds differing only in priority must not
+    // agree, or a peer that missed the command would go undetected.
+    Fixture G;
+    SpawnEnemyOutpost(G.World);
+    G.World.SpawnBuilding(Ids::SovWarFactory, 0, TileCoord(10, 16), true);
+    RunTicks(G.World, 3);
+    RA4_EXPECT(G.World.ComputeStateChecksum() != Before);
+}
+
+// Regression: the priority bands and the Critical carve-out are two rules about the
+// same question, and they contradicted each other. A barracks defaulted to Production
+// priority, which goes offline at Critical -- exactly the tier the carve-out says an
+// infantry producer must keep working, so it was forced offline by its band and the
+// blackout became inescapable again. Anything the carve-out keeps alive is now Vital.
+RA4_TEST(PowerPriority, AnythingThatSurvivesCriticalIsVitalSoTheRulesCannotDisagree)
+{
+    PowerFixture F(0);   // no power at all: Critical
+    const EntityId Barracks = F.World.SpawnBuilding(Ids::SovBarracks, 0, TileCoord(10, 20), true);
+    RA4_REQUIRE(Barracks.IsValid());
+    F.World.Tick(nullptr);
+    RA4_REQUIRE(F.World.GetPlayer(0).GetPowerTier() == PowerTier::Critical);
+
+    // Both the yard and the barracks must be Vital, because both are things the
+    // Critical rule keeps running.
+    RA4_EXPECT(F.World.GetBuilding(F.Yard)->Priority == PowerPriority::Vital);
+    RA4_EXPECT(F.World.GetBuilding(Barracks)->Priority == PowerPriority::Vital);
+    // And Vital is never offline, at any tier.
+    RA4_EXPECT(!IsPowerPriorityOffline(PowerPriority::Vital, PowerTier::Critical));
+
+    // The observable consequence: infantry still comes out of a blacked-out base.
+    Command Start = MakeCommand(CommandType::StartProduction, 0);
+    Start.Primary = Barracks;
+    Start.Content = Ids::SovConscript;
+    RA4_REQUIRE(F.World.ApplyCommand(Start).IsAccepted());
+    RunTicks(F.World, SecondsToTicks(120));
+    RA4_EXPECT(CountEntitiesOfType(F.World, 0, Ids::SovConscript) >= 1);
+}

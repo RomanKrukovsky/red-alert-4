@@ -111,22 +111,21 @@ AI queries:
 
 ## Status
 
-**PARTIALLY IMPLEMENTED.** Packages A and B are done and tested; C and D are pending.
+**PARTIALLY IMPLEMENTED.** Packages A, B and C are done and tested; D is pending.
 
-### Implemented (packages A and B)
+### Implemented (packages A, B and C)
 
 Tier bands and the construction/production/harvester rows of the effect matrix;
 `PowerTier` + `PowerTierForRatio` + `PowerSpeedPercentForTier` in `SimTypes.h`;
 `SimWorld::PowerSpeedPercent` as the single ratio→speed authority;
 `ProductionInfo::Tier` with the default content graded T0–T2; high-tech (T2+) pausing
 via `FlowPaymentState::EnergyThrottled`; edge-triggered `PowerShortageStarted/Ended`
-with `PlayerState::LastPowerTier` serialized (save v5) and hashed.
+with `PlayerState::LastPowerTier` serialized and hashed; the four-band priority table
+with `BuildingComp::Priority`, defaults derived from content, and the
+`SetPowerPriority` player command (serialized, hashed, replayed).
 
 ### Pending
 
-- **Package C**: per-building power priority (the four levels in the Priority System
-  table above) and the player command to override it. Nothing currently reads or
-  assigns a priority, so that table is unimplemented in full.
 - **Package D**: radar/minimap shutdown at Moderate+, the repair system (the
   `RepairBuilding` command is validated but has no effect yet), static-defence
   fire-rate halving at Severe and shutdown at Critical.
@@ -183,3 +182,23 @@ Defeat does not clear `bActive`, and a defeated player's last building dying tak
 both power figures to zero — which `GetPowerRatioPercent` reports as a healthy 100%.
 The tier would jump to Normal and announce that power had been restored to a player
 who had just lost their base. The edge trigger therefore gates on `bDefeated` as well.
+
+**7. The barracks is Vital, not Production.**
+
+The priority table assigns "HQ, Barracks, Harvester refinery" to Vital and "Factory,
+Airfield, Dock" to Production, which is what the implementation does — but the table
+also has Production going offline at Critical, while the effect matrix says an
+infantry producer keeps working there. Read literally the two rules contradict each
+other, and a barracks left at Production priority was forced offline at exactly the
+tier the carve-out exists to protect, making a blackout inescapable again.
+
+Resolved by deriving the Vital band partly from the carve-out itself: anything
+`ProducerRunsAtCriticalPower` keeps alive is Vital. The two rules now ask the same
+function, so they cannot drift apart.
+
+**8. Vital defaults are keyed on specific roles, not `BaseBuilding`.**
+
+`EntityRole::BaseBuilding` is set on *every* building in the default content, turrets
+and factories included, so using it as a Vital signal made almost the whole base Vital
+and the priority table meaningless. Only `EntityRole::Refinery`, `EntityRole::Power`
+and the `bIsConstructionYard` / `bIsRefinery` / `bIsPowerPlant` flags discriminate.

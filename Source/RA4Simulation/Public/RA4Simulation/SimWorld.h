@@ -211,6 +211,10 @@ private:
     // buildings qualify is a content question (what can this thing produce), not a
     // hardcoded name list, so it is answered here from the definition.
     bool ProducerRunsAtCriticalPower(const EntityDef& Def) const;
+    // Seeds BuildingComp::Priority at spawn. Anything ProducerRunsAtCriticalPower
+    // keeps alive is Vital, so the priority bands and the Critical carve-out cannot
+    // contradict each other.
+    PowerPriority DefaultPowerPriorityFor(const EntityDef& Def) const;
     // The single ADR-0013 verdict on "is this queue head stopped by the power state".
     // Both SystemFlowPayment and SystemProduction ask it, because the two answering
     // the question separately is what produced a blackout deadlock: payment kept

@@ -354,6 +354,9 @@ EntityId SimWorld::SpawnBuilding(ContentId Def, PlayerId Owner, const TileCoord&
     B.State = bInstantComplete ? ConstructionState::Complete : ConstructionState::UnderConstruction;
     B.ConstructionTotalTicks = std::max(1, D->Production.BuildTimeTicks);
     B.ConstructionProgressTicks = bInstantComplete ? B.ConstructionTotalTicks * kProgressScale : 0;
+    // ADR-0013: seeded from the definition, then owned by the player. An override is a
+    // command, so it must not be recomputed from content on any later tick.
+    B.Priority = DefaultPowerPriorityFor(*D);
 
     // Position is the footprint centre so that range checks against a 3x3 factory
     // behave the same as against a 1x1 turret.
@@ -461,6 +464,66 @@ int32_t SimWorld::PowerSpeedPercent(PlayerId Owner) const
 // continue. Membership is decided from what the building can actually produce rather
 // than from its name, so a faction that calls its barracks something else, or a mod
 // that adds a second infantry building, needs no code change here.
+const char* ToString(PowerPriority Priority)
+{
+    switch (Priority)
+    {
+        case PowerPriority::Vital:      return "Vital";
+        case PowerPriority::Production: return "Production";
+        case PowerPriority::Defense:    return "Defense";
+        case PowerPriority::Auxiliary:  return "Auxiliary";
+    }
+    return "Unknown";
+}
+
+// ADR-0013 default power priority, read from what the building *is* rather than from a
+// per-faction name table -- a mod adding a second refinery should inherit Vital without
+// touching this code.
+PowerPriority SimWorld::DefaultPowerPriorityFor(const EntityDef& Def) const
+{
+    const BuildingInfo& B = Def.Building;
+
+    // Radar first: it is the one thing the player should lose earliest, and a radar
+    // that also happens to provide a build radius must not be captured by a later rule.
+    if (B.bIsRadar)
+    {
+        return PowerPriority::Auxiliary;
+    }
+
+    // Vital is everything a base needs to climb back out of a deficit: the yard that
+    // builds a reactor, the reactor itself, the refinery that funds both, and the
+    // infantry producer that ADR-0013's Critical rule keeps running. Letting these
+    // degrade would turn a shortage into a death spiral -- and for the yard and the
+    // barracks it would directly contradict the Critical carve-out, which exists so a
+    // blacked-out base can rebuild.
+    //
+    // Deliberately not keyed on EntityRole::BaseBuilding: the default content sets that
+    // on *every* building including turrets and factories, so using it here made almost
+    // the whole base Vital and the priority table meaningless. Only the specific roles
+    // discriminate.
+    if (B.bIsConstructionYard || B.bIsRefinery || B.bIsPowerPlant ||
+        HasRole(Def.Roles, EntityRole::Refinery) || HasRole(Def.Roles, EntityRole::Power))
+    {
+        return PowerPriority::Vital;
+    }
+
+    // Anything the Critical rule keeps running must be Vital, or the two rules
+    // contradict each other: a Production-priority barracks would be forced offline by
+    // its band at exactly the tier the carve-out says it should still work. Asking the
+    // same function both rules use keeps them from drifting apart.
+    if (ProducerRunsAtCriticalPower(Def))
+    {
+        return PowerPriority::Vital;
+    }
+
+    if (Def.Production.Category == ProductionCategory::Defense ||
+        HasRole(Def.Roles, EntityRole::Defense))
+    {
+        return PowerPriority::Defense;
+    }
+    return PowerPriority::Production;
+}
+
 bool SimWorld::ProducerRunsAtCriticalPower(const EntityDef& Def) const
 {
     if (Content == nullptr)
@@ -508,6 +571,15 @@ bool SimWorld::IsProductionPowerStalled(uint32_t BuildingIndex) const
         return false;
     }
     const PowerTier Tier = Players[Core[BuildingIndex].Owner].GetPowerTier();
+
+    // ADR-0013 priority. A Vital building never goes offline whatever the tier, which
+    // is what keeps a deficit recoverable; everything else has a tier at which it does.
+    // This is checked before the tier shortcut below, because an Auxiliary building is
+    // offline from Moderate onward -- a band that otherwise only slows things down.
+    if (IsPowerPriorityOffline(B.Priority, Tier))
+    {
+        return true;
+    }
     if (Tier < PowerTier::Severe)
     {
         return false;   // Normal, Mild and Moderate slow production; they never stop it
@@ -1234,6 +1306,24 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
             }
             // Repair over time lands with the economy milestone; the command is
             // accepted and validated now so the protocol does not change later.
+            break;
+        }
+
+        case CommandType::SetPowerPriority:
+        {
+            if (!IsAlive(Cmd.Primary) || Core[Cmd.Primary.Index].Owner != Cmd.Issuer ||
+                Core[Cmd.Primary.Index].Kind != EntityKind::Building)
+            {
+                return Reject(CommandReject::NoSuchEntity);
+            }
+            // Param is a wire value, so it is range-checked rather than cast blindly:
+            // a malformed packet must not be able to plant an out-of-range enum that
+            // then falls through every switch on it.
+            if (Cmd.Param < 0 || Cmd.Param > int32_t(PowerPriority::Auxiliary))
+            {
+                return Reject(CommandReject::TargetInvalid);
+            }
+            Buildings[Cmd.Primary.Index].Priority = PowerPriority(Cmd.Param);
             break;
         }
 
@@ -3736,6 +3826,9 @@ uint64_t SimWorld::ComputeStateChecksum() const
         if (Core[I].Kind == EntityKind::Building)
         {
             H.FeedUInt8(uint8_t(Buildings[I].State));
+            // Priority gates whether this building is offline, so a peer that
+            // disagrees about it has genuinely diverged.
+            H.FeedUInt8(uint8_t(Buildings[I].Priority));
             H.FeedInt32(Buildings[I].ConstructionProgressTicks);
             H.FeedInt32(int32_t(Buildings[I].Queue.size()));
             for (const ProductionItem& QueueItem : Buildings[I].Queue)
@@ -3789,13 +3882,15 @@ constexpr uint32_t kSimSaveMagic = 0x52413453u; // "RA4S"
 //   v4: MoraleComp (main, M2); separately the union of the two v2/v3 lines above
 //   v5: PlayerState::LastPowerTier (ADR-0013 edge-triggered deficit warning)
 //   v6: the union of all of the above
+//   v7: BuildingComp::Priority (ADR-0013 per-building power priority override)
 //
 // Older saves are still readable; missing fields are reconstructed on load and
 // retired fields are read and discarded to keep the byte stream aligned.
-constexpr uint32_t kSimSaveVersion = 6;
+constexpr uint32_t kSimSaveVersion = 7;
 constexpr uint32_t kSimSaveVersionFlowPayment = 4;
 constexpr uint32_t kSimSaveVersionNoSellingFlag = 4;
 constexpr uint32_t kSimSaveVersionPowerTier = 5;
+constexpr uint32_t kSimSaveVersionPowerPriority = 7;
 // Both landed on main before this merge, so their gates are minimums rather than
 // equalities: named so the read sites do not carry a bare number that nobody can tie
 // back to a format change.
@@ -3904,6 +3999,9 @@ void SimWorld::Serialize(ByteWriter& W) const
         W.WriteInt64(B.RallyPoint.X.Raw);
         W.WriteInt64(B.RallyPoint.Y.Raw);
         W.WriteBool(B.bHasRallyPoint);
+        // ADR-0013: a player override, so it is authoritative state rather than
+        // something re-derivable from content on load.
+        W.WriteUInt8(static_cast<uint8_t>(B.Priority));
         W.WriteUInt32(static_cast<uint32_t>(B.Queue.size()));
         for (const ProductionItem& Item : B.Queue)
         {
@@ -4115,6 +4213,14 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
             // the corruption v3 exists to remove.
             (void)R.ReadBool();
         }
+        if (Version >= kSimSaveVersionPowerPriority)
+        {
+            B.Priority = static_cast<PowerPriority>(R.ReadUInt8());
+        }
+        // Older saves have no priority byte. Reset() default-constructed the component
+        // and the entity's definition is not yet known here, so the default from
+        // BuildingComp stands -- Production, the middle band, which is the safest guess
+        // for a building whose original intent was never recorded.
         const uint32_t QueueCount = R.ReadUInt32();
         B.Queue.resize(QueueCount);
         for (uint32_t Q = 0; Q < QueueCount; ++Q)

@@ -135,6 +135,92 @@ struct OrderQueue
     }
 };
 
+// --- Energy (ADR-0013) ----------------------------------------------------
+
+// Power is not a stored resource but a ratio recomputed every tick, and the ratio
+// alone is a poor thing to scatter comparisons against: "< 40" appearing in six
+// systems is six chances to write a different bound. Naming the bands once means a
+// balance change moves one table, and the UI, the AI and the tests all agree on
+// where "Moderate" begins.
+enum class PowerTier : uint8_t
+{
+    Normal = 0,    // >= 100%: no penalties
+    Mild,          // 70-99%:  build and production speed scale with the ratio
+    Moderate,      // 40-69%:  radar off, repair halved
+    Severe,        // 10-39%:  repair off, high-tech paused, defences slowed
+    Critical,      // < 10%:   only barracks and harvesters, at half speed
+};
+
+// Band boundaries, expressed as the lowest ratio still inside each band.
+constexpr int32_t kPowerTierMildMinPercent = 70;
+constexpr int32_t kPowerTierModerateMinPercent = 40;
+constexpr int32_t kPowerTierSevereMinPercent = 10;
+
+inline constexpr PowerTier PowerTierForRatio(int32_t RatioPercent)
+{
+    if (RatioPercent >= 100) { return PowerTier::Normal; }
+    if (RatioPercent >= kPowerTierMildMinPercent) { return PowerTier::Mild; }
+    if (RatioPercent >= kPowerTierModerateMinPercent) { return PowerTier::Moderate; }
+    if (RatioPercent >= kPowerTierSevereMinPercent) { return PowerTier::Severe; }
+    return PowerTier::Critical;
+}
+
+// Speed floor inside Severe. A deficit should hurt, but a base that can never
+// rebuild its power plant is a dead match rather than a hard one.
+constexpr int32_t kPowerSevereFloorPercent = 10;
+// At Critical the few things still running do so at a flat rate rather than at the
+// ratio, which by then is near zero and would mean "stopped" in all but name.
+constexpr int32_t kPowerCriticalSpeedPercent = 50;
+
+// Speed multiplier (percent) that construction and production run at in a tier.
+// Critical returns the flat rate; whether a given producer is allowed to run at all
+// at Critical is a separate question the caller answers, because it depends on what
+// the building is.
+inline constexpr int32_t PowerSpeedPercentForTier(PowerTier Tier, int32_t RatioPercent)
+{
+    switch (Tier)
+    {
+        case PowerTier::Normal:   return 100;
+        case PowerTier::Mild:     return RatioPercent;
+        case PowerTier::Moderate: return RatioPercent;
+        case PowerTier::Severe:   return RatioPercent > kPowerSevereFloorPercent
+                                             ? RatioPercent : kPowerSevereFloorPercent;
+        case PowerTier::Critical: return kPowerCriticalSpeedPercent;
+    }
+    return 100;
+}
+
+const char* ToString(PowerTier Tier);
+
+// ADR-0013. Which buildings a deficit reaches first. The point is that a shortage is a
+// choice rather than an opaque uniform slowdown: the player decides that the radar can
+// go dark so the factory keeps running, and the ordering here is what makes that
+// decision expressible.
+enum class PowerPriority : uint8_t
+{
+    Vital = 0,      // HQ, barracks, refinery -- last to degrade, never fully offline
+    Production = 1, // factories and docks -- degrade at the tier thresholds
+    Defense = 2,    // turrets and walls -- degrade at thresholds, offline at Critical
+    Auxiliary = 3,  // radar, repair, tech, superweapon -- first to go, offline at Moderate
+};
+
+const char* ToString(PowerPriority Priority);
+
+// The tier at which a priority band goes fully offline. Vital never does, which is what
+// stops a deficit from being unrecoverable: the buildings needed to rebuild power keep
+// working no matter how deep the hole.
+inline constexpr bool IsPowerPriorityOffline(PowerPriority Priority, PowerTier Tier)
+{
+    switch (Priority)
+    {
+        case PowerPriority::Vital:      return false;
+        case PowerPriority::Production: return Tier == PowerTier::Critical;
+        case PowerPriority::Defense:    return Tier == PowerTier::Critical;
+        case PowerPriority::Auxiliary:  return Tier >= PowerTier::Moderate;
+    }
+    return false;
+}
+
 // --- Components -----------------------------------------------------------
 
 struct EntityCore
@@ -270,6 +356,11 @@ struct BuildingComp
 
     std::vector<ProductionItem> Queue;
 
+    // ADR-0013 power priority. Seeded from the definition when the building is created
+    // and then owned by the player: an explicit override has to persist, so this is
+    // stored per building rather than re-derived from content each tick.
+    PowerPriority Priority = PowerPriority::Production;
+
     EntityId DockedHarvester;
     std::vector<EntityId> UnloadingQueue;
 };
@@ -336,63 +427,6 @@ struct DirectControlComp
 };
 
 // --- Player ---------------------------------------------------------------
-
-// --- Energy (ADR-0013) ----------------------------------------------------
-
-// Power is not a stored resource but a ratio recomputed every tick, and the ratio
-// alone is a poor thing to scatter comparisons against: "< 40" appearing in six
-// systems is six chances to write a different bound. Naming the bands once means a
-// balance change moves one table, and the UI, the AI and the tests all agree on
-// where "Moderate" begins.
-enum class PowerTier : uint8_t
-{
-    Normal = 0,    // >= 100%: no penalties
-    Mild,          // 70-99%:  build and production speed scale with the ratio
-    Moderate,      // 40-69%:  radar off, repair halved
-    Severe,        // 10-39%:  repair off, high-tech paused, defences slowed
-    Critical,      // < 10%:   only barracks and harvesters, at half speed
-};
-
-// Band boundaries, expressed as the lowest ratio still inside each band.
-constexpr int32_t kPowerTierMildMinPercent = 70;
-constexpr int32_t kPowerTierModerateMinPercent = 40;
-constexpr int32_t kPowerTierSevereMinPercent = 10;
-
-inline constexpr PowerTier PowerTierForRatio(int32_t RatioPercent)
-{
-    if (RatioPercent >= 100) { return PowerTier::Normal; }
-    if (RatioPercent >= kPowerTierMildMinPercent) { return PowerTier::Mild; }
-    if (RatioPercent >= kPowerTierModerateMinPercent) { return PowerTier::Moderate; }
-    if (RatioPercent >= kPowerTierSevereMinPercent) { return PowerTier::Severe; }
-    return PowerTier::Critical;
-}
-
-// Speed floor inside Severe. A deficit should hurt, but a base that can never
-// rebuild its power plant is a dead match rather than a hard one.
-constexpr int32_t kPowerSevereFloorPercent = 10;
-// At Critical the few things still running do so at a flat rate rather than at the
-// ratio, which by then is near zero and would mean "stopped" in all but name.
-constexpr int32_t kPowerCriticalSpeedPercent = 50;
-
-// Speed multiplier (percent) that construction and production run at in a tier.
-// Critical returns the flat rate; whether a given producer is allowed to run at all
-// at Critical is a separate question the caller answers, because it depends on what
-// the building is.
-inline constexpr int32_t PowerSpeedPercentForTier(PowerTier Tier, int32_t RatioPercent)
-{
-    switch (Tier)
-    {
-        case PowerTier::Normal:   return 100;
-        case PowerTier::Mild:     return RatioPercent;
-        case PowerTier::Moderate: return RatioPercent;
-        case PowerTier::Severe:   return RatioPercent > kPowerSevereFloorPercent
-                                             ? RatioPercent : kPowerSevereFloorPercent;
-        case PowerTier::Critical: return kPowerCriticalSpeedPercent;
-    }
-    return 100;
-}
-
-const char* ToString(PowerTier Tier);
 
 struct PlayerState
 {
