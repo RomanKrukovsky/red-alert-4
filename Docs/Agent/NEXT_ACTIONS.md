@@ -172,8 +172,8 @@ These are code changes, not documentation. Both were re-verified in the headers,
 
 | Task ID | Task | Acceptance criteria |
 | :--- | :--- | :--- |
-| **V-A** | Hide fogged enemy actors in `RA4SimWorldSubsystem` actor sync | Enemy entities on tiles that are neither CurrentlyVisible nor RadarDetected for the local player have hidden actors (`IsEntityVisibleTo` exists at SimWorld.h:200 — use it). Player-facing fog hole TODAY: fogged enemies render on screen. Requires an in-editor visual check, not only unit tests. |
-| **V-B** | Gate cursor picking by visibility | `RA4PlayerController.cpp:677` skips entities failing `IsEntityVisibleTo(LocalPlayer, …)`; tooltip/cursor can no longer reveal fogged presence. |
+| **V-A** | ~~Hide fogged enemy actors in `RA4SimWorldSubsystem` actor sync~~ — **CODE DONE 2026-08-06; in-editor visual check STILL REQUIRED** | Actor sync now calls `SimWorld::IsEntityVisibleTo(local, index)` every sync and applies `SetActorHiddenInGame` (hide, not destroy — avoids actor churn at fog edges; no-op for own units and fogless matches). Helper moved from private to the public read section of SimWorld.h with a rationale comment. UE 5.8 editor target: `Result: Succeeded`. Headless: `FogOfWar.EntityVisibilityGateAnswersPerViewer` pins the per-viewer contract. **NOT claiming visual verification**: nobody has launched the editor and looked; per CLAUDE.md that check is still owed before this row reads fully done. Known debt: local player is the constant 0 throughout this subsystem — real multiplayer seats must replace it everywhere at once. |
+| **V-B** | ~~Gate cursor picking by visibility~~ — **DONE 2026-08-06** | `BuildPickCandidates` skips entities failing `IsEntityVisibleTo(Selection.GetLocalPlayer(), …)`: the cursor, hover tooltip and click-pick can no longer land on fogged enemies. UE editor target builds clean; suite 430/430. Same seat caveat as V-A does not apply here — picking already read the seat from `Selection.GetLocalPlayer()`. |
 
 Sequencing: P-1 and P-2 are **done**. I-B1 and I-B2 are the highest-priority
 items in this file — they are live invariant violations in shipped-but-disabled

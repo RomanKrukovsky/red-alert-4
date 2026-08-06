@@ -114,6 +114,14 @@ public:
     const ContentDatabase* GetContent() const { return Content; }
     const FFogOfWarGrid* GetFogGrid() const { return FogGrid.get(); }
 
+    // Whether Viewer's fog currently shows the tile the entity stands on. Auto-target
+    // acquisition asks this so a side does not shoot at what it cannot see; the
+    // presentation layer asks it so fog actually hides things on screen (picking
+    // and actor sync, V-A/V-B in VISIBILITY_CALLSITE_INVENTORY.md). Public and
+    // const: it reads objective visibility, it cannot leak belief (that is
+    // GetRecon()'s job) and it cannot mutate anything.
+    bool IsEntityVisibleTo(PlayerId Viewer, uint32_t EntityIndex) const;
+
     // Belief state (unreliable intelligence, ADR-0026). Read-only outside the
     // simulation; the UI and the AI commander query enemy information here and
     // never through the entity getters above once the feature is enabled.
@@ -196,9 +204,6 @@ private:
     EntityId FindNearestResourceNode(const Vec2& From, PlayerId Owner) const;
     EntityId FindNearestRefinery(const Vec2& From, PlayerId Owner) const;
     EntityId AcquireTarget(EntityId Attacker) const;
-    // Whether Viewer's fog currently shows the tile the entity stands on. Auto-target
-    // acquisition asks this so a side does not shoot at what it cannot see.
-    bool IsEntityVisibleTo(PlayerId Viewer, uint32_t EntityIndex) const;
     bool IsHostile(PlayerId A, PlayerId B) const;
     Vec2 FindFreeSpawnPoint(const BuildingComp& Producer, ContentId UnitDef) const;
     void EmitEvent(const SimEvent& Event) { Events.push_back(Event); }

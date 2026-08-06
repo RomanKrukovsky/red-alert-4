@@ -805,10 +805,22 @@ void ARA4PlayerController::BuildPickCandidates(TArray<PickCandidate>& OutCandida
     const std::vector<TransformComp>& Transforms = World->GetAllTransforms();
     const RA4::Fixed Tolerance = RA4::Fixed::FromInt(int64(PickToleranceUnits));
 
+    const RA4::PlayerId LocalPlayer = Selection.GetLocalPlayer();
+
     for (uint32 Index = 0; Index < uint32(Cores.size()); ++Index)
     {
         const EntityCore& Core = Cores[Index];
         if (!Core.bAlive || Core.Kind == EntityKind::Projectile)
+        {
+            continue;
+        }
+
+        // V-B (VISIBILITY_CALLSITE_INVENTORY): the cursor must not find what the
+        // player cannot see. Without this gate, hovering fog produced tooltips
+        // and cursor changes over hidden enemies -- an intel leak through the
+        // mouse. Own units are always pickable; IsEntityVisibleTo also handles
+        // matches configured without fog (everything visible).
+        if (!World->IsEntityVisibleTo(LocalPlayer, Index))
         {
             continue;
         }

@@ -132,3 +132,44 @@ RA4_TEST(FogOfWar, UnitMovementUpdatesFog)
     TileCoord NewTile = World.GetMap().WorldToTile(Trans->Position);
     RA4_EXPECT(Fog->GetVisibility(0, NewTile.X, NewTile.Y) == VisibilityState::CurrentlyVisible);
 }
+
+RA4_TEST(FogOfWar, EntityVisibilityGateAnswersPerViewer)
+{
+    // V-A/V-B regression pin (VISIBILITY_CALLSITE_INVENTORY.md): the
+    // presentation layer now gates actor visibility and cursor picking through
+    // SimWorld::IsEntityVisibleTo. This pins the helper's contract from the
+    // presentation side: own entities always visible, fogged enemies not,
+    // seen enemies yes -- per viewer, not globally.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+
+    SimWorld World;
+    World.Initialize(&Content, RA4Test::MakeTestSetup());
+
+    // Player 0's scout at (2,2); player 1's units -- one adjacent (seen),
+    // one across the map (fogged for player 0).
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(500), Fixed::FromInt(500)));
+    const EntityId NearEnemy =
+        World.SpawnUnit(RA4Test::Ids::AllRifleman, 1, Vec2(Fixed::FromInt(700), Fixed::FromInt(500)));
+    const EntityId FarEnemy = World.SpawnUnit(RA4Test::Ids::AllRifleman, 1,
+                                              Vec2(Fixed::FromInt(15000), Fixed::FromInt(15000)));
+
+    CommandFrame Frame;
+    World.Tick(&Frame);
+
+    // Player 0: sees own unit and the adjacent enemy; not the far one.
+    RA4_EXPECT(World.IsEntityVisibleTo(0, 0));
+    RA4_EXPECT(World.IsEntityVisibleTo(0, NearEnemy.Index));
+    RA4_EXPECT(!World.IsEntityVisibleTo(0, FarEnemy.Index));
+
+    // Player 1: both its units are its own -- always visible to itself,
+    // including the one player 0 cannot see. Per-viewer, not global.
+    RA4_EXPECT(World.IsEntityVisibleTo(1, NearEnemy.Index));
+    RA4_EXPECT(World.IsEntityVisibleTo(1, FarEnemy.Index));
+
+    // Out-of-range indices are not visible to anyone. (The dead-entity branch
+    // of the helper is covered by SimWorld's own targeting tests; killing a
+    // unit from here would need private API, which a presentation-side pin
+    // has no business touching.)
+    RA4_EXPECT(!World.IsEntityVisibleTo(0, World.GetEntityCapacity() + 100));
+}
