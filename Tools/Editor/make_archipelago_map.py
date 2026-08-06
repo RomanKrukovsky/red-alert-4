@@ -118,10 +118,10 @@ SAND_MAX_HEIGHT = 220.0      # above sea level: the beach band
 GRASS_MIN_HEIGHT = 180.0     # overlaps sand slightly so the join is not a hard line
 ROCK_MIN_SLOPE = 26.0        # degrees; below this a surface reads as ground, not cliff
 
-# Sampling step for the paint pass. 200 uu is one game tile, fine enough for a beach
-# band to look deliberate without making the pass take minutes.
-PAINT_STEP = 200.0
-PAINT_BRUSH = 170.0          # slightly under the step so brushes overlap
+# Each island is sampled on a fixed grid of this many cells per side. 14 keeps the
+# whole paint pass in the low hundreds of RPCs while still resolving a beach band;
+# a per-sample brush on a 200 uu grid was ~4000 calls and timed out the MCP bridge.
+PAINT_GRID_STEPS = 14
 
 # 505x505 verts at 25.6 uu/quad -> 12928 uu, covers MAP_EXTENT.
 LANDSCAPE_SCALE = 25.6
@@ -634,6 +634,11 @@ def paint_layers():
     Height and slope are sampled from the real landscape rather than recomputed
     from the island table, so the paint follows whatever the noise and erosion
     passes actually produced instead of an idealised shape.
+
+    Painted per island as a grid of small rectangles rather than with a brush per
+    sample point. paint_layer_at_location on a PAINT_STEP grid is ~4000 separate
+    calls, which over the MCP HTTP bridge exceeded the request timeout and left
+    the editor unresponsive. Rectangles cover the same ground in tens of calls.
     """
     # Dirt underneath everything: it is what shows through where nothing else
     # applies, and painting it explicitly avoids relying on PreviewWeight.
@@ -642,33 +647,50 @@ def paint_layers():
     )
 
     counts = {"Sand": 0, "Grass": 0, "Rock": 0}
-    steps = int(MAP_EXTENT / PAINT_STEP)
-    for iy in range(steps):
-        y = (iy + 0.5) * PAINT_STEP
-        for ix in range(steps):
-            x = (ix + 0.5) * PAINT_STEP
-            z = terrain_z(x, y)
-            if z <= SEA_LEVEL:
-                continue          # underwater: no beach, no grass, nothing to paint
 
-            slope = LS.get_slope_at_location(LANDSCAPE_LABEL, x, y)
+    for cx, cy, radius, _raise_h, name in ISLANDS:
+        # Only the island's own bounding box is worth sampling; the rest is ocean.
+        # Cell size scales with the island so a big landmass does not cost 20x the
+        # calls of a small one: each island is sampled on a fixed ~14x14 grid,
+        # which keeps the whole pass in the low hundreds of RPCs.
+        reach = radius * 1.25
+        steps = PAINT_GRID_STEPS
+        cell = (reach * 2.0) / steps
 
-            # Order matters: grass first, then sand nearer the water, then rock last
-            # so a steep cliff stays rock even if its height says grass.
-            if z >= GRASS_MIN_HEIGHT:
-                LS.paint_layer_at_location(
-                    LANDSCAPE_LABEL, "Grass", x, y, PAINT_BRUSH, 1.0)
-                counts["Grass"] += 1
-            if z <= SAND_MAX_HEIGHT:
-                LS.paint_layer_at_location(
-                    LANDSCAPE_LABEL, "Sand", x, y, PAINT_BRUSH, 1.0)
-                counts["Sand"] += 1
-            if slope >= ROCK_MIN_SLOPE:
-                LS.paint_layer_at_location(
-                    LANDSCAPE_LABEL, "Rock", x, y, PAINT_BRUSH, 1.0)
-                counts["Rock"] += 1
+        for iy in range(steps):
+            y = cy - reach + (iy + 0.5) * cell
+            for ix in range(steps):
+                x = cx - reach + (ix + 0.5) * cell
+                if not (0.0 <= x <= MAP_EXTENT and 0.0 <= y <= MAP_EXTENT):
+                    continue
 
-    print("Painted: sand=%d grass=%d rock=%d samples"
+                z = terrain_z(x, y)
+                if z <= SEA_LEVEL:
+                    continue      # underwater: nothing to paint
+
+                slope = LS.get_slope_at_location(LANDSCAPE_LABEL, x, y)
+
+                x0, y0 = x - cell * 0.5, y - cell * 0.5
+                x1, y1 = x + cell * 0.5, y + cell * 0.5
+
+                # Order matters: grass first, then sand nearer the water, then rock
+                # last so a steep cliff stays rock even where height says grass.
+                if z >= GRASS_MIN_HEIGHT:
+                    LS.paint_layer_in_world_rect(
+                        LANDSCAPE_LABEL, "Grass", x0, y0, x1, y1, 1.0)
+                    counts["Grass"] += 1
+                if z <= SAND_MAX_HEIGHT:
+                    LS.paint_layer_in_world_rect(
+                        LANDSCAPE_LABEL, "Sand", x0, y0, x1, y1, 1.0)
+                    counts["Sand"] += 1
+                if slope >= ROCK_MIN_SLOPE:
+                    LS.paint_layer_in_world_rect(
+                        LANDSCAPE_LABEL, "Rock", x0, y0, x1, y1, 1.0)
+                    counts["Rock"] += 1
+
+        print("  painted %s" % name)
+
+    print("Painted: sand=%d grass=%d rock=%d cells"
           % (counts["Sand"], counts["Grass"], counts["Rock"]))
     # A pass that painted nothing means the thresholds no longer match the sculpt.
     if counts["Grass"] == 0 or counts["Sand"] == 0:
