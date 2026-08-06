@@ -50,6 +50,13 @@ public:
     // object; derived from live component bounds so it follows scaling.
     double GetMeshHeightUU() const;
 
+    // Places the possession camera behind and to the right of the object, so the
+    // controlled tank or infantryman is framed in the LEFT of the screen and no
+    // part of its own geometry (barrel included) blocks the view. Recomputed from
+    // live mesh bounds whenever art changes, because a fixed offset that suits a
+    // tank buries the camera inside a war factory.
+    void ApplyPossessionCameraFraming();
+
     // Binds this Actor to a simulation entity.
     void BindToEntity(uint32 InEntityIndex, uint32 InEntityGeneration);
 

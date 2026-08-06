@@ -170,6 +170,7 @@ add_executable(RA4Tests
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/Test_RA3PipelineAndCommandBus.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/Test_HUDIntegrationAndGameState.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestProvingGround.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestProfile.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestDirectControl.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestNetwork.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestRecon.cpp

@@ -110,7 +110,8 @@ if [[ "$SERVER_ONLY" == "true" ]]; then
         -pak \
         -prereqs \
         -compressed \
-        -nodebuginfo
+        -nodebuginfo \
+        -nozenstore
     EXIT_CODE=$?
     set -e
 else
@@ -132,7 +133,9 @@ else
         -prereqs \
         -compressed \
         -nodebuginfo \
-        -utf8output
+        -utf8output \
+        -nozenstore \
+        -unversionedcookedcontent
     EXIT_CODE=$?
     set -e
 fi
