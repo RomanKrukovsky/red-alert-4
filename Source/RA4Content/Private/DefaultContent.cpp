@@ -22,6 +22,7 @@ constexpr ContentId WpnRocketLauncher = MakeContentId("weapon.rocket_launcher");
 constexpr ContentId WpnTankCannonLight = MakeContentId("weapon.tank_cannon_light");
 constexpr ContentId WpnTankCannonHeavy = MakeContentId("weapon.tank_cannon_heavy");
 constexpr ContentId WpnTurretCannon = MakeContentId("weapon.turret_cannon");
+constexpr ContentId WpnSiegeArtillery = MakeContentId("weapon.siege_artillery");
 constexpr ContentId WpnTurretMachineGun = MakeContentId("weapon.turret_machinegun");
 constexpr ContentId WpnPrismBeam = MakeContentId("weapon.prism_beam");
 
@@ -46,12 +47,14 @@ constexpr ContentId UnitSovHarvester = MakeContentId("unit.sov.ore_harvester");
 constexpr ContentId UnitSovConscript = MakeContentId("unit.sov.conscript");
 constexpr ContentId UnitSovRocketeer = MakeContentId("unit.sov.rocket_trooper");
 constexpr ContentId UnitSovHeavyTank = MakeContentId("unit.sov.heavy_tank");
+constexpr ContentId UnitSovArtillery = MakeContentId("unit.sov.zarevo_mlrs");
 
 constexpr ContentId UnitAllMcv = MakeContentId("unit.all.mcv");
 constexpr ContentId UnitAllHarvester = MakeContentId("unit.all.ore_harvester");
 constexpr ContentId UnitAllRifleman = MakeContentId("unit.all.rifleman");
 constexpr ContentId UnitAllRocketeer = MakeContentId("unit.all.missile_infantry");
 constexpr ContentId UnitAllLightTank = MakeContentId("unit.all.light_tank");
+constexpr ContentId UnitAllArtillery = MakeContentId("unit.all.oracle_artillery");
 
 constexpr ContentId ResOreField = MakeContentId("resource.ore_field");
 
@@ -110,6 +113,22 @@ void BuildWeapons(ContentDatabase& Db)
         Db.AddWeapon(W);
     }
     {
+        // Siege artillery: the counter to static defence. Out-ranges the turret
+        // (14 m vs 9 m) so it can shell a wall without being shot back, but is
+        // slow, fragile and near-useless against units -- the trade is deliberate.
+        WeaponDef W;
+        W.Id = WpnSiegeArtillery;
+        W.Name = "weapon.siege_artillery";
+        W.Damage = 60;
+        W.Warhead = WarheadClass::Siege;
+        W.MaxRange = Metres(14);
+        W.MinRange = Metres(4);      // cannot defend itself up close
+        W.CooldownTicks = 60;        // 3 s at 20 Hz: slow, telegraphed
+        W.ProjectileSpeed = Metres(45);
+        W.SplashRadius = Metres(2);
+        Db.AddWeapon(W);
+    }
+    {
         WeaponDef W;
         W.Id = WpnTurretCannon;
         W.Name = "weapon.turret_cannon";
@@ -158,7 +177,7 @@ struct FactionSetup
     FactionId Faction;
     const char* KeyPrefix;
     ContentId ConYard, Power, Refinery, Barracks, WarFactory, Turret;
-    ContentId Mcv, Harvester, BasicInfantry, AntiArmorInfantry, MainTank;
+    ContentId Mcv, Harvester, BasicInfantry, AntiArmorInfantry, MainTank, Artillery;
     const char* ConYardName;
     const char* PowerName;
     const char* RefineryName;
@@ -170,6 +189,7 @@ struct FactionSetup
     const char* BasicInfantryName;
     const char* AntiArmorInfantryName;
     const char* MainTankName;
+    const char* ArtilleryName;
 
     int32_t PowerOutput;
     int32_t TankHealth;
@@ -355,6 +375,40 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         Db.AddEntity(E);
     }
 
+    // --- Siege artillery ---------------------------------------------------
+    // Exists to answer static defence. League pass 1 and 2 both showed Turtle
+    // winning ~80% because NOTHING in the roster out-ranged a 9 m turret, so an
+    // attack could only ever trade at a loss: a 600-credit turret killed a
+    // 900-credit tank and survived. This unit shells from 14 m, uses the Siege
+    // warhead (x2 vs Building where AP is x0.6), and cannot fire inside 4 m --
+    // so it beats walls but dies to anything that reaches it.
+    {
+        EntityDef E;
+        E.Id = S.Artillery;
+        E.Name = S.ArtilleryName;
+        E.DisplayNameKey = Prefix + ".unit.artillery";
+        E.Kind = EntityKind::Unit;
+        E.Faction = S.Faction;
+        E.MaxHealth = 220;                       // fragile: half a main tank
+        E.Armor = ArmorClass::SiegeVehicle;
+        E.VisionRange = Metres(10);              // shorter than its own range:
+                                                 // needs a spotter to shoot blind
+        E.Weapon = WpnSiegeArtillery;
+        E.Roles = EntityRole::Combat | EntityRole::Artillery;
+        E.Unit.Layer = MovementLayer::Tracked;
+        E.Unit.MaxSpeed = Metres(4);             // slow, cannot escape a raid
+        E.Unit.Acceleration = Metres(10);
+        E.Unit.TurnRatePerSecond = 400;
+        E.Unit.TurretTurnRatePerSecond = 600;
+        E.Unit.CollisionRadius = Fixed::FromInt(120);
+        E.Production.Cost = 800;
+        E.Production.BuildTimeTicks = SecondsToTicks(15);
+        E.Production.Category = ProductionCategory::Vehicle;
+        E.Production.ProducedBy = {S.WarFactory};
+        E.Production.Prerequisites = {S.WarFactory};
+        Db.AddEntity(E);
+    }
+
     // --- Harvester ---------------------------------------------------------
     {
         EntityDef E;
@@ -498,6 +552,8 @@ void BuildDefaultContent(ContentDatabase& Db)
     Soviet.BasicInfantryName = "unit.sov.conscript";
     Soviet.AntiArmorInfantryName = "unit.sov.rocket_trooper";
     Soviet.MainTankName = "unit.sov.heavy_tank";
+    Soviet.Artillery = UnitSovArtillery;
+    Soviet.ArtilleryName = "unit.sov.zarevo_mlrs";
     Soviet.PowerOutput = 150;
     Soviet.TankHealth = 520;
     Soviet.TankWeapon = WpnTankCannonHeavy;
@@ -522,6 +578,7 @@ void BuildDefaultContent(ContentDatabase& Db)
     Alliance.BasicInfantry = UnitAllRifleman;
     Alliance.AntiArmorInfantry = UnitAllRocketeer;
     Alliance.MainTank = UnitAllLightTank;
+    Alliance.Artillery = UnitAllArtillery;
     Alliance.ConYardName = "building.all.construction_yard";
     Alliance.PowerName = "building.all.power_plant";
     Alliance.RefineryName = "building.all.ore_refinery";
@@ -533,6 +590,7 @@ void BuildDefaultContent(ContentDatabase& Db)
     Alliance.BasicInfantryName = "unit.all.rifleman";
     Alliance.AntiArmorInfantryName = "unit.all.missile_infantry";
     Alliance.MainTankName = "unit.all.light_tank";
+    Alliance.ArtilleryName = "unit.all.oracle_artillery";
     Alliance.PowerOutput = 100;
     Alliance.TankHealth = 380;
     Alliance.TankWeapon = WpnTankCannonLight;
