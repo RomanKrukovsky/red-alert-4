@@ -78,12 +78,6 @@ add_library(RA4Navigation STATIC
 target_include_directories(RA4Navigation PUBLIC ${RA4_SOURCE_ROOT}/RA4Navigation/Public)
 target_link_libraries(RA4Navigation PUBLIC RA4Core)
 
-add_library(RA4Combat STATIC
-    ${RA4_SOURCE_ROOT}/RA4Combat/Private/ArmorMatrix.cpp
-)
-target_include_directories(RA4Combat PUBLIC ${RA4_SOURCE_ROOT}/RA4Combat/Public)
-target_link_libraries(RA4Combat PUBLIC RA4Content)
-
 add_library(RA4Recon STATIC
     ${RA4_SOURCE_ROOT}/RA4Recon/Private/ReconConfig.cpp
     ${RA4_SOURCE_ROOT}/RA4Recon/Private/ReconSystem.cpp
@@ -100,7 +94,7 @@ add_library(RA4Simulation STATIC
     ${RA4_SOURCE_ROOT}/RA4Simulation/Private/LockstepSession.cpp
 )
 target_include_directories(RA4Simulation PUBLIC ${RA4_SOURCE_ROOT}/RA4Simulation/Public)
-target_link_libraries(RA4Simulation PUBLIC RA4Content RA4Navigation RA4FogOfWar RA4Combat RA4Recon)
+target_link_libraries(RA4Simulation PUBLIC RA4Content RA4Navigation RA4FogOfWar RA4Recon)
 
 add_library(RA4Input STATIC
     ${RA4_SOURCE_ROOT}/RA4Input/Private/CameraController.cpp

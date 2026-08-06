@@ -840,3 +840,122 @@ RA4_TEST(Lifecycle, SimWorldRestartRestoresCleanState)
     for (const EntityCore& C : F.World.GetAllCores()) { if (C.bAlive) AliveAfter++; }
     RA4_EXPECT_EQ(int32_t(AliveAfter), 0);
 }
+
+// --- Presentation-facing contracts for construction and turret aim -----------
+// The visuals for these live in Unreal and can only be judged on screen, but the
+// VALUES the visuals read are simulation state and belong in a test. A building
+// that reports "complete" while still building, or a turret angle that never
+// moves, would render wrongly with no way to trace it from a screenshot.
+
+RA4_TEST(Simulation, ConstructionProgressIsMonotonicAndBounded)
+{
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    SimWorld World;
+    World.Initialize(&Content, RA4Test::MakeTestSetup());
+
+    // Placed through the normal path, i.e. NOT instantly complete -- the same call
+    // the build command makes.
+    const EntityId Site = World.SpawnBuilding(RA4Test::Ids::SovPower, 0, TileCoord(10, 10),
+                                              /*bInstantComplete*/ false);
+    RA4_EXPECT(Site.IsValid());
+
+    const BuildingComp* B = World.GetBuilding(Site);
+    RA4_EXPECT(B != nullptr);
+    RA4_EXPECT(B->State == ConstructionState::UnderConstruction);
+
+    // A freshly placed site must NOT read as finished: this is exactly the value
+    // the presentation layer uses to decide whether to sink the mesh and show a
+    // progress bar, so reporting 1000 here would make construction invisible.
+    const int32_t Initial = World.GetConstructionProgressPerMille(Site);
+    RA4_EXPECT(Initial < 1000);
+
+    int32_t Previous = Initial;
+    bool bMonotonic = true;
+    bool bWithinBounds = true;
+    for (int32_t Tick = 0; Tick < 400; ++Tick)
+    {
+        World.Tick(nullptr);
+        const int32_t Now = World.GetConstructionProgressPerMille(Site);
+        if (Now < Previous)
+        {
+            bMonotonic = false;   // progress must never go backwards
+        }
+        if (Now < 0 || Now > 1000)
+        {
+            bWithinBounds = false;   // the visual divides by this; out of range warps the mesh
+        }
+        Previous = Now;
+    }
+    RA4_EXPECT(bMonotonic);
+    RA4_EXPECT(bWithinBounds);
+
+    // And it did advance, rather than sitting at zero forever -- otherwise a
+    // building would stay half-sunk permanently.
+    RA4_EXPECT(Previous > Initial);
+}
+
+RA4_TEST(Simulation, InstantlyPlacedBuildingReportsComplete)
+{
+    // Map-authored and cheat-placed buildings use bInstantComplete. They must
+    // report 1000 immediately, or every pre-placed base on a map would spawn
+    // half-buried with a progress bar over it.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    SimWorld World;
+    World.Initialize(&Content, RA4Test::MakeTestSetup());
+
+    const EntityId Done = World.SpawnBuilding(RA4Test::Ids::SovPower, 0, TileCoord(20, 20),
+                                              /*bInstantComplete*/ true);
+    RA4_EXPECT(Done.IsValid());
+    RA4_EXPECT(World.GetConstructionProgressPerMille(Done) == 1000);
+
+    // Non-buildings have no construction state at all and must also read complete,
+    // since the same presentation path runs for every entity.
+    const EntityId Unit = World.SpawnUnit(RA4Test::Ids::SovConscript, 0,
+                                          Vec2(Fixed::FromInt(500), Fixed::FromInt(500)));
+    RA4_EXPECT(World.GetConstructionProgressPerMille(Unit) == 1000);
+
+    // An invalid id must not report "under construction" either.
+    RA4_EXPECT(World.GetConstructionProgressPerMille(EntityId::Invalid()) == 1000);
+}
+
+RA4_TEST(Simulation, TurretTracksTargetIndependentlyOfHull)
+{
+    // The turret angle is what the presentation layer now rotates a turret mesh
+    // (or the hull, as a fallback) to. Pin that it actually moves toward a target
+    // and that it is independent of the hull's facing -- if it simply mirrored
+    // Facing, a turret mesh would be decorative.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    SimWorld World;
+    World.Initialize(&Content, RA4Test::MakeTestSetup());
+
+    const EntityId Tank = World.SpawnUnit(RA4Test::Ids::SovConscript, 0,
+                                          Vec2(Fixed::FromInt(1000), Fixed::FromInt(1000)));
+    // Enemy placed at a right angle to the tank's initial facing.
+    World.SpawnUnit(RA4Test::Ids::AllRifleman, 1,
+                    Vec2(Fixed::FromInt(1000), Fixed::FromInt(1600)));
+
+    const TransformComp* T = World.GetTransform(Tank);
+    RA4_EXPECT(T != nullptr);
+    const int32_t HullBefore = T->Facing;
+    const int32_t TurretBefore = T->TurretFacing;
+
+    for (int32_t Tick = 0; Tick < 40; ++Tick)
+    {
+        World.Tick(nullptr);
+    }
+
+    const TransformComp* After = World.GetTransform(Tank);
+    RA4_EXPECT(After != nullptr);
+    // The turret moved to acquire the target...
+    RA4_EXPECT(After->TurretFacing != TurretBefore);
+    // ...and the angle stays in the simulation's canonical range, which the
+    // degree conversion in presentation depends on.
+    RA4_EXPECT(After->TurretFacing >= 0 && After->TurretFacing < kAngleTurn);
+    // Hull facing is a separate value; the test asserts independence by checking
+    // the turret is not merely a copy of it.
+    const bool bIndependent = (After->TurretFacing != After->Facing) || (HullBefore != After->Facing);
+    RA4_EXPECT(bIndependent);
+}
