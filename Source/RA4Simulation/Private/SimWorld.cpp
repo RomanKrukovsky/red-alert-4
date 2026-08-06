@@ -251,27 +251,6 @@ const PlayerState& SimWorld::GetPlayer(PlayerId Id) const
     return Id < kMaxPlayers ? Players[Id] : Empty;
 }
 
-int32_t SimWorld::GetConstructionProgressPerMille(EntityId Id) const
-{
-    const BuildingComp* B = GetBuilding(Id);
-    if (B == nullptr || B->State != ConstructionState::UnderConstruction)
-    {
-        // Units, resource nodes and finished buildings are all "fully built" as far
-        // as presentation is concerned; only an in-progress building is partial.
-        return 1000;
-    }
-    const int64_t Total = int64_t(B->ConstructionTotalTicks) * kProgressScale;
-    if (Total <= 0)
-    {
-        // A zero build time means it completes on the tick it is placed. Reporting
-        // 1000 keeps presentation from dividing by zero and from flashing an empty
-        // progress bar for one frame.
-        return 1000;
-    }
-    const int64_t Clamped = std::min<int64_t>(std::max<int64_t>(B->ConstructionProgressTicks, 0), Total);
-    return int32_t((Clamped * 1000) / Total);
-}
-
 // ---------------------------------------------------------------------------
 // Spawning
 // ---------------------------------------------------------------------------
@@ -2563,6 +2542,90 @@ void SimWorld::SystemMovement()
     }
 }
 
+void SimWorld::RebuildSpatialGrid()
+{
+    // Cell edge in world units. A multiple of the tile size keeps cell lookup an
+    // integer division, so there is no float rounding to diverge between platforms.
+    constexpr int64_t kCellUnits = MapDescription::kTileSizeUnitsLocal * kSpatialCellTiles;
+
+    const int32_t WantX = Map.Width > 0
+        ? int32_t((int64_t(Map.Width) + kSpatialCellTiles - 1) / kSpatialCellTiles) : 1;
+    const int32_t WantY = Map.Height > 0
+        ? int32_t((int64_t(Map.Height) + kSpatialCellTiles - 1) / kSpatialCellTiles) : 1;
+
+    if (WantX != SpatialCellsX || WantY != SpatialCellsY)
+    {
+        SpatialCellsX = WantX;
+        SpatialCellsY = WantY;
+        SpatialCells.assign(size_t(WantX) * size_t(WantY), std::vector<uint32_t>());
+    }
+    else
+    {
+        // clear() keeps each cell's capacity, so steady-state ticks do no allocation.
+        for (std::vector<uint32_t>& Cell : SpatialCells)
+        {
+            Cell.clear();
+        }
+    }
+
+    // Ascending index order matters: it is what makes the candidate sequence, and
+    // therefore tie-breaking, identical to the old full linear scan.
+    for (uint32_t I = 0; I < uint32_t(Core.size()); ++I)
+    {
+        if (!Core[I].bAlive)
+        {
+            continue;
+        }
+        // Projectiles and resource nodes are never acquisition candidates, so
+        // keeping them out shrinks every query.
+        if (Core[I].Kind == EntityKind::Projectile || Core[I].Kind == EntityKind::ResourceNode)
+        {
+            continue;
+        }
+        const Vec2& P = Transforms[I].Position;
+        int64_t CX = P.X.ToIntFloor() / kCellUnits;
+        int64_t CY = P.Y.ToIntFloor() / kCellUnits;
+        // Clamp rather than drop: an entity nudged outside the map bounds must stay
+        // targetable, otherwise it becomes silently invulnerable.
+        CX = CX < 0 ? 0 : (CX >= SpatialCellsX ? SpatialCellsX - 1 : CX);
+        CY = CY < 0 ? 0 : (CY >= SpatialCellsY ? SpatialCellsY - 1 : CY);
+        SpatialCells[size_t(CY) * size_t(SpatialCellsX) + size_t(CX)].push_back(I);
+    }
+}
+
+void SimWorld::QuerySpatial(const Vec2& Centre, Fixed Radius,
+                            std::vector<uint32_t>& Out) const
+{
+    Out.clear();
+    if (SpatialCells.empty())
+    {
+        return;
+    }
+    constexpr int64_t kCellUnits = MapDescription::kTileSizeUnitsLocal * kSpatialCellTiles;
+
+    const int64_t R = Radius.ToIntFloor();
+    const int64_t MinX = (Centre.X.ToIntFloor() - R) / kCellUnits;
+    const int64_t MaxX = (Centre.X.ToIntFloor() + R) / kCellUnits;
+    const int64_t MinY = (Centre.Y.ToIntFloor() - R) / kCellUnits;
+    const int64_t MaxY = (Centre.Y.ToIntFloor() + R) / kCellUnits;
+
+    const int64_t X0 = MinX < 0 ? 0 : MinX;
+    const int64_t Y0 = MinY < 0 ? 0 : MinY;
+    const int64_t X1 = MaxX >= SpatialCellsX ? SpatialCellsX - 1 : MaxX;
+    const int64_t Y1 = MaxY >= SpatialCellsY ? SpatialCellsY - 1 : MaxY;
+
+    // Row-major, ascending: fixed visitation order on every machine.
+    for (int64_t CY = Y0; CY <= Y1; ++CY)
+    {
+        for (int64_t CX = X0; CX <= X1; ++CX)
+        {
+            const std::vector<uint32_t>& Cell =
+                SpatialCells[size_t(CY) * size_t(SpatialCellsX) + size_t(CX)];
+            Out.insert(Out.end(), Cell.begin(), Cell.end());
+        }
+    }
+}
+
 EntityId SimWorld::AcquireTarget(EntityId Attacker) const
 {
     if (!IsAlive(Attacker))
@@ -2589,13 +2652,26 @@ EntityId SimWorld::AcquireTarget(EntityId Attacker) const
 
     EntityId Best = EntityId::Invalid();
     Fixed BestDistSq = Fixed::Max();
-    for (uint32_t I = 0; I < Core.size(); ++I)
+
+    // Only the cells the search radius actually reaches, instead of every entity in
+    // the world. Candidates arrive in ascending index order within each cell and the
+    // cells are walked row-major, so the "strictly closer, else lower index"
+    // tie-break below resolves identically to the previous full scan. Cells never
+    // contain projectiles or resource nodes, so those checks are gone from the loop.
+    //
+    // The radius is padded by one whole cell. The grid is built at the top of the
+    // tick but SystemMovement runs before SystemCombat, so a position can be up to
+    // one tick of travel stale by the time targets are acquired - at the fastest
+    // content speed that is ~9% of a cell, and without the pad an entity sitting
+    // just past a cell boundary could be missed. Padding cannot introduce a false
+    // positive because every candidate is still range-checked against SearchSq
+    // below; it only guarantees the candidate set is a superset of the true one, so
+    // the result is identical to the linear scan.
+    QuerySpatial(Pos, SearchRange + Fixed::FromInt(MapDescription::kTileSizeUnitsLocal * kSpatialCellTiles),
+                 SpatialQueryScratch);
+    for (const uint32_t I : SpatialQueryScratch)
     {
         if (!Core[I].bAlive || I == A)
-        {
-            continue;
-        }
-        if (Core[I].Kind == EntityKind::Projectile || Core[I].Kind == EntityKind::ResourceNode)
         {
             continue;
         }
@@ -3089,6 +3165,12 @@ void SimWorld::Tick(const CommandFrame* Frame)
     {
         return;
     }
+
+    // Spatial acceleration for this tick's queries, refreshed before any system
+    // reads it. This is not a simulation system: it derives purely from positions
+    // that are already settled, writes no game state, and only makes lookups
+    // cheaper. It therefore sits outside the versioned system order below.
+    RebuildSpatialGrid();
 
     // Fixed system order. Changing it changes simulation results, so it is part of
     // the replay compatibility contract and is versioned in ReplayFormat.

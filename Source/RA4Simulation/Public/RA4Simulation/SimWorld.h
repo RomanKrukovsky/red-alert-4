@@ -95,13 +95,6 @@ public:
     const TransformComp* GetTransform(EntityId Id) const;
     const HealthComp* GetHealth(EntityId Id) const;
     const BuildingComp* GetBuilding(EntityId Id) const;
-
-    // Construction progress as a 0..1000 per-mille value, or 1000 for anything that
-    // is not under construction. Exposed as a helper because the progress field is
-    // stored pre-multiplied by an internal scale constant: presentation reproducing
-    // that arithmetic would silently break the day the scale changes, and a
-    // half-built building rendered as complete is a lie about game state.
-    int32_t GetConstructionProgressPerMille(EntityId Id) const;
     const HarvesterComp* GetHarvester(EntityId Id) const;
     const ResourceNodeComp* GetResourceNode(EntityId Id) const;
     const MovementComp* GetMovement(EntityId Id) const;
@@ -219,6 +212,24 @@ private:
     EntityId FindNearestResourceNode(const Vec2& From, PlayerId Owner) const;
     EntityId FindNearestRefinery(const Vec2& From, PlayerId Owner) const;
     EntityId AcquireTarget(EntityId Attacker) const;
+
+    // Uniform spatial bucket grid over live entities, rebuilt once per tick.
+    //
+    // WHY: AcquireTarget scanned all Core entries for every armed entity, so target
+    // acquisition was O(n^2) - 4,000,000 distance checks per tick at the 2000-entity
+    // budget load. Measured cost per entity grew 4.57x across a 4x entity increase
+    // (TestProfile.cpp), which is that quadratic term. With buckets, a unit only
+    // examines the cells its search radius actually covers.
+    //
+    // DETERMINISM: bucket contents are appended in ascending entity index and
+    // cells are visited in a fixed order, so candidates are always considered in
+    // the same sequence on every machine. AcquireTarget still resolves ties by
+    // "strictly closer, else lower index", exactly as the linear scan did, so this
+    // is a pure speed change and the checksum must not move.
+    void RebuildSpatialGrid();
+    // Appends live entity indices whose cell overlaps the square around Centre.
+    void QuerySpatial(const Vec2& Centre, Fixed Radius, std::vector<uint32_t>& Out) const;
+
     bool IsHostile(PlayerId A, PlayerId B) const;
     Vec2 FindFreeSpawnPoint(const BuildingComp& Producer, ContentId UnitDef) const;
     void EmitEvent(const SimEvent& Event) { Events.push_back(Event); }
@@ -229,6 +240,18 @@ private:
     MapDescription Map;
     std::unique_ptr<Nav::NavGrid> NavigationGrid;
     std::unique_ptr<FFogOfWarGrid> FogGrid;
+
+    // Spatial bucket grid, rebuilt at the top of each tick by RebuildSpatialGrid.
+    // Cell size is a multiple of the tile size so cell lookup is integer division
+    // with no floating point, keeping it deterministic across platforms.
+    static constexpr int32_t kSpatialCellTiles = 8;
+    int32_t SpatialCellsX = 0;
+    int32_t SpatialCellsY = 0;
+    // One vector per cell, holding live entity indices in ascending order.
+    std::vector<std::vector<uint32_t>> SpatialCells;
+    // Scratch reused by AcquireTarget so a per-call allocation is not paid 2000
+    // times per tick. Mutable because AcquireTarget is const and logically a query.
+    mutable std::vector<uint32_t> SpatialQueryScratch;
 
 
     struct FlowFieldCacheEntry
