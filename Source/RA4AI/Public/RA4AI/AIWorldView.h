@@ -7,6 +7,7 @@
 #include "RA4Core/Fixed.h"
 #include "RA4Core/Ids.h"
 #include "RA4Core/Vector.h"
+#include "RA4Recon/PerceivedWorld.h"
 #include "RA4Simulation/SimWorld.h"
 
 #ifndef RA4AI_API
@@ -72,6 +73,11 @@ public:
     // Observes everything currently visible, then ages what was not seen.
     void UpdateMemory(TickIndex MemoryRetentionTicks);
 
+    // Rebuilds enemy memory from the player's perceived world instead of from
+    // entity scans (I-M6). Called by UpdateMemory when the recon layer is enabled;
+    // separate so the truth path stays untouched and testable on its own.
+    void UpdateMemoryFromBelief(TickIndex MemoryRetentionTicks);
+
     // Ages memories that were not refreshed this pass: confidence falls linearly to
     // a 0.1 floor and the record is dropped once it exceeds the retention window.
     //
@@ -85,6 +91,9 @@ private:
     const SimWorld& World;
     PlayerId Player;
     std::vector<EnemyMemory> KnownEnemies;
+    // Scratch for the belief query; a member so repeated per-tick rebuilds allocate
+    // nothing in the steady state.
+    std::vector<const Recon::PerceivedTrack*> BeliefScratch;
 };
 
 } // namespace AI

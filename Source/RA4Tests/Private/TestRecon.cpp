@@ -12,6 +12,7 @@
 #include "RA4Recon/ReconConfig.h"
 #include "RA4Recon/DistortionPipeline.h"
 #include "RA4Recon/MoraleModel.h"
+#include "RA4AI/AIWorldView.h"
 #include "RA4Recon/ReconSystem.h"
 #include "RA4Recon/PerceivedWorld.h"
 #include "RA4Replay/Replay.h"
@@ -2139,6 +2140,143 @@ RA4_TEST(Recon, ExplanationDegradesHonestlyWhenReportsAgedOut)
     RA4_EXPECT(Text.find("older than the audit log") != std::string::npos);
     // ...and it still describes the belief itself, so the panel is not blank.
     RA4_EXPECT(Text.find("Contact:") != std::string::npos);
+}
+
+// --- M6: the AI plays from belief, not truth --------------------------------------
+
+RA4_TEST(Recon, AICannotSeeWhatTheStaffMapDoesNotBelieve)
+{
+    // The milestone's structural claim: with recon on, the AI's only enemy
+    // information is the same staff map a human reads. Zero-cheat stops being a
+    // promise kept by review and becomes a property of the code.
+    //
+    // Scene: an enemy tank hidden in fog with nothing of ours nearby. The staff map
+    // holds no track, so the AI must know nothing -- previously it scanned entities
+    // and would have found it.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(21000), &Settings);
+    // The AI player (1) has a base far from the enemy contact.
+    World.SpawnBuilding(RA4Test::Ids::AllConYard, 1, TileCoord(50, 50), true);
+    // Player 0's tank sits in the far corner, unseen by anything player 1 owns.
+    World.SpawnUnit(RA4Test::Ids::SovHeavyTank, 0, Vec2(Fixed::FromInt(1000), Fixed::FromInt(1000)));
+
+    for (int32_t I = 0; I < 20; ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+    }
+
+    AI::SimWorldView View(World, 1);
+    View.UpdateMemory(600);
+    RA4_EXPECT(View.GetKnownEnemies().empty());
+    // ...and belief agrees, so the test is asserting the wiring rather than an
+    // accident of the scene.
+    RA4_EXPECT(World.GetRecon().GetPerceivedWorld(1).GetAliveTrackCount() == 0);
+}
+
+RA4_TEST(Recon, AISeesExactlyWhatTheStaffMapBelieves)
+{
+    // The other half: what the staff map DOES hold must reach the AI, or the
+    // commander would be blind rather than merely fallible.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(21001), &Settings);
+    World.SpawnBuilding(RA4Test::Ids::AllConYard, 1, TileCoord(15, 40), true);
+    // An observer of player 1 with an enemy right in front of it.
+    World.SpawnUnit(RA4Test::Ids::AllRifleman, 1, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::SovHeavyTank, 0, Vec2(Fixed::FromInt(3300), Fixed::FromInt(3000)));
+
+    for (int32_t I = 0; I < 10; ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+    }
+
+    const uint32_t Believed = World.GetRecon().GetPerceivedWorld(1).GetAliveTrackCount();
+    RA4_REQUIRE(Believed > 0);
+
+    AI::SimWorldView View(World, 1);
+    View.UpdateMemory(600);
+    // One memory per track: the AI's picture is the staff map, entry for entry.
+    RA4_EXPECT(uint32_t(View.GetKnownEnemies().size()) == Believed);
+}
+
+RA4_TEST(Recon, AIIsFooledByAPhantomExactlyAsAPlayerWouldBe)
+{
+    // The consequence that makes the layer honest rather than merely fair: a
+    // fabricated contact must fool the AI too. If the commander could tell ghosts
+    // from real contacts, it would be cheating in the one way the layer is meant to
+    // prevent -- and phantoms would only ever punish the human.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(21002), &Settings);
+    World.SpawnBuilding(RA4Test::Ids::AllConYard, 1, TileCoord(50, 50), true);
+    World.Tick(nullptr);
+    World.ClearEvents();
+
+    // Plant a phantom on player 1's staff map. There is NO real enemy anywhere in
+    // this scene, so anything the AI reports knowing came from belief alone.
+    const Recon::PerceivedWorld& Belief = World.GetRecon().GetPerceivedWorld(1);
+    Recon::PerceivedWorld& Writable = const_cast<Recon::PerceivedWorld&>(Belief);
+    const Recon::TrackId Ghost = PerceivedWorldTestAccess::AllocateTrack(Writable);
+    RA4_REQUIRE(Ghost.IsValid());
+    Recon::PerceivedTrack* T = PerceivedWorldTestAccess::GetTrackMutable(Writable, Ghost);
+    RA4_REQUIRE(T != nullptr);
+    T->BelievedPosition = Vec2(Fixed::FromInt(4000), Fixed::FromInt(4000));
+    T->BelievedCategory = Recon::ObservedCategory::HeavyVehicle;
+    T->BelievedCountMin = 3;
+    T->BelievedCountMax = 5;
+    T->Confidence = Fixed::FromRatio(3, 4);
+    T->LastUpdateTick = World.GetTick();
+    PerceivedWorldTestAccess::SetPhantom(Writable, Ghost, true);
+
+    AI::SimWorldView View(World, 1);
+    View.UpdateMemory(600);
+
+    // The AI believes in the imaginary force...
+    RA4_REQUIRE(View.GetKnownEnemies().size() == 1);
+    const AI::EnemyMemory& Mem = View.GetKnownEnemies()[0];
+    RA4_EXPECT(Mem.Position.X == 20 && Mem.Position.Y == 20); // 4000 / 200 tile units
+    // ...and carries no handle it could use to check, because a track has none.
+    RA4_EXPECT(!Mem.Entity.IsValid());
+}
+
+RA4_TEST(Recon, DisablingReconRestoresTheClassicAIScanPath)
+{
+    // The kill switch must work for the AI as well, or turning the feature off would
+    // silently leave the commander blind -- and every other system's debugging would
+    // be done against a broken opponent.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Disabled = MakeMinimalSettings(false);
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(21003), &Disabled);
+    World.SpawnBuilding(RA4Test::Ids::AllConYard, 1, TileCoord(15, 40), true);
+    World.SpawnUnit(RA4Test::Ids::AllRifleman, 1, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::SovHeavyTank, 0, Vec2(Fixed::FromInt(3300), Fixed::FromInt(3000)));
+    for (int32_t I = 0; I < 10; ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+    }
+
+    AI::SimWorldView View(World, 1);
+    View.UpdateMemory(600);
+    // Classic behaviour: the visible enemy is known, and it carries a real handle
+    // (the entity scan path fills one) -- the belief path deliberately does not.
+    RA4_REQUIRE(!View.GetKnownEnemies().empty());
+    RA4_EXPECT(View.GetKnownEnemies()[0].Entity.IsValid());
 }
 
 RA4_TEST(Recon, TruthfulPipelineMirrorsVisibleEnemy)
