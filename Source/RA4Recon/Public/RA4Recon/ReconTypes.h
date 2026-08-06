@@ -117,6 +117,49 @@ struct ReconReport
 // free; the full report history lives in the match replay anyway.
 constexpr uint32_t kTrackProvenanceSize = 4;
 
+// --- Post-match explainability (§4.6, M5) ----------------------------------------
+//
+// "Why did I believe that?" is the difference between a player who finds this layer
+// deep and a player who finds it unfair, and §4.6 puts readability above realism for
+// exactly this reason. So every report that shaped belief is logged with what it
+// claimed and how it differed from the truth.
+//
+// This is an OUTPUT, not simulation state: like SimWorld's event list it is excluded
+// from the checksum and from saves. That is deliberate on three counts -- it must
+// never influence future state, it must be free to hold ground truth (it is only
+// ever read after the match or by the debug overlay, never by the player mid-game or
+// by the AI), and a peer replaying a match must not desync because it kept a
+// different number of log entries.
+struct ReportAudit
+{
+    uint32_t ReportId = 0;
+    PlayerId OwnerPlayer = kInvalidPlayer;
+    uint16_t NodeId = 0;                 // which post filed it
+    TickIndex EmitTick = 0;
+    TickIndex ArrivalTick = 0;           // EmitTick + chain latency: the delay, visible
+    uint8_t Hops = 0;
+    Fixed Reliability = Fixed::Zero();
+
+    // What the report CLAIMED.
+    ObservedCategory ClaimedCategory = ObservedCategory::LightVehicle;
+    int32_t ClaimedCount = 0;
+    Vec2 ClaimedPosition;
+    bool bClaimedAnonymous = false;
+    bool bWasFabricated = false;         // there was nothing there at all
+
+    // What was actually TRUE at the observed position, for the side-by-side. Only
+    // ever read post-match or by the cheat-gated overlay.
+    ObservedCategory TrueCategory = ObservedCategory::LightVehicle;
+    int32_t TrueCount = 0;
+    Vec2 TruePosition;
+
+    // Observer state that produced the distortion, so the explanation can say WHY
+    // rather than only WHAT: "the reporting company was at 20% morale and exhausted".
+    Fixed ObserverMorale = Fixed::Zero();
+    Fixed ObserverFatigue = Fixed::Zero();
+    Fixed ObserverClarity = Fixed::Zero();
+};
+
 // One entry on the HQ map. This is the ONLY shape of enemy information that the
 // UI and the AI commander are allowed to read. It deliberately has no EntityId
 // and no phantom flag: both the track<->entity association and the "is this

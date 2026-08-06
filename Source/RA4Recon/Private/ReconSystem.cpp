@@ -4,6 +4,7 @@
 #include "RA4Core/ByteStream.h"
 
 #include <algorithm>
+#include <string>
 #include <chrono>
 #include <cstdio>
 #include "RA4Core/Checksum.h"
@@ -347,6 +348,151 @@ void ReconSystem::PhaseDistortion(TickIndex CurrentDistortionTick)
     }
 }
 
+void ReconSystem::RecordReportAudit(const ReportAudit& Entry)
+{
+    // Ring buffer, oldest overwritten. Grows to capacity once, then never allocates:
+    // the log is written every tick a report is filed, so it must not be a source of
+    // hot-path allocation (§6).
+    if (ReportAudits.size() < kReportAuditCapacity)
+    {
+        ReportAudits.push_back(Entry);
+        AuditWriteCursor = ReportAudits.size() % kReportAuditCapacity;
+        return;
+    }
+    ReportAudits[AuditWriteCursor] = Entry;
+    AuditWriteCursor = (AuditWriteCursor + 1) % kReportAuditCapacity;
+}
+
+void ReconSystem::GetAuditsForTrack(PlayerId P, const PerceivedTrack& Track,
+                                    std::vector<const ReportAudit*>& Out) const
+{
+    Out.clear();
+    // The provenance ring holds the last kTrackProvenanceSize report ids. Resolve
+    // them against the audit log, skipping any that have aged out -- a track that has
+    // been updated for ten minutes legitimately has older reports than the log keeps,
+    // and saying "no explanation available" is better than inventing one.
+    for (uint32_t I = 0; I < kTrackProvenanceSize; ++I)
+    {
+        const uint32_t WantId = Track.ProvenanceReportIds[I];
+        if (WantId == 0)
+        {
+            continue;
+        }
+        for (const ReportAudit& Audit : ReportAudits)
+        {
+            if (Audit.ReportId == WantId && Audit.OwnerPlayer == P)
+            {
+                Out.push_back(&Audit);
+                break;
+            }
+        }
+    }
+    // Oldest first: an explanation reads as a story, and a story runs forwards.
+    std::sort(Out.begin(), Out.end(),
+              [](const ReportAudit* A, const ReportAudit* B) { return A->EmitTick < B->EmitTick; });
+}
+
+namespace
+{
+
+const char* AuditCategoryName(ObservedCategory C)
+{
+    switch (C)
+    {
+        case ObservedCategory::Infantry: return "infantry";
+        case ObservedCategory::LightVehicle: return "light vehicles";
+        case ObservedCategory::HeavyVehicle: return "heavy armour";
+        case ObservedCategory::Aircraft: return "aircraft";
+        case ObservedCategory::Ship: return "ships";
+        case ObservedCategory::Structure: return "structures";
+        default: return "unknown";
+    }
+}
+
+// Fixed 0..1 as a percentage string, without float formatting (which would differ
+// between platforms and is unnecessary here).
+std::string PercentOf(Fixed Value)
+{
+    const int64_t Percent = (Value * 100).ToIntFloor();
+    return std::to_string(Percent < 0 ? 0 : (Percent > 100 ? 100 : Percent)) + "%";
+}
+
+} // namespace
+
+std::string ReconSystem::ExplainTrack(PlayerId P, const PerceivedTrack& Track) const
+{
+    // The §4.6 obligation: if a player cannot see why they were wrong, the feature
+    // reads as unfairness rather than depth. So this says what was claimed, who
+    // claimed it, how late it arrived, and -- with ground truth alongside -- exactly
+    // where the belief parted company with reality.
+    std::vector<const ReportAudit*> Chain;
+    GetAuditsForTrack(P, Track, Chain);
+
+    std::string Out;
+    Out += "Contact: ";
+    Out += Track.bAnonymous ? "unidentified" : AuditCategoryName(Track.BelievedCategory);
+    if (Track.BelievedCountMin == Track.BelievedCountMax)
+    {
+        Out += " x" + std::to_string(Track.BelievedCountMin);
+    }
+    else
+    {
+        Out += " x" + std::to_string(Track.BelievedCountMin) + "-" + std::to_string(Track.BelievedCountMax);
+    }
+    Out += ", confidence " + PercentOf(Track.Confidence);
+    if (Track.bContested)
+    {
+        Out += ", CONTESTED (sources disagree)";
+    }
+    if (Track.bStale)
+    {
+        Out += ", stale";
+    }
+    Out += "\n";
+
+    if (Chain.empty())
+    {
+        Out += "  No surviving reports: this contact is older than the audit log.\n";
+        return Out;
+    }
+
+    for (const ReportAudit* A : Chain)
+    {
+        Out += "  Report #" + std::to_string(A->ReportId);
+        Out += " from post " + (A->NodeId == kNoChainNode ? std::string("(none)") : std::to_string(A->NodeId));
+        Out += " filed tick " + std::to_string(A->EmitTick);
+        const int32_t Delay = int32_t(A->ArrivalTick) - int32_t(A->EmitTick);
+        Out += ", arrived +" + std::to_string(Delay) + " ticks";
+        Out += " via " + std::to_string(A->Hops) + " hop(s)";
+        Out += "\n    claimed: " + std::string(A->bClaimedAnonymous ? "unidentified" : AuditCategoryName(A->ClaimedCategory));
+        Out += " x" + std::to_string(A->ClaimedCount);
+        if (A->bWasFabricated)
+        {
+            Out += "\n    TRUTH: nothing was there. The reporting unit invented this contact";
+            Out += " (morale " + PercentOf(A->ObserverMorale);
+            Out += ", fatigue " + PercentOf(A->ObserverFatigue) + ").";
+        }
+        else
+        {
+            Out += "\n    truth: " + std::string(AuditCategoryName(A->TrueCategory));
+            Out += " x" + std::to_string(A->TrueCount);
+            if (A->TrueCategory != A->ClaimedCategory && !A->bClaimedAnonymous)
+            {
+                Out += " -- MISIDENTIFIED";
+            }
+            if (A->TrueCount != A->ClaimedCount)
+            {
+                Out += A->ClaimedCount > A->TrueCount ? " -- OVERCOUNTED" : " -- UNDERCOUNTED";
+            }
+            Out += "\n    observer: morale " + PercentOf(A->ObserverMorale);
+            Out += ", fatigue " + PercentOf(A->ObserverFatigue);
+            Out += ", clarity " + PercentOf(A->ObserverClarity);
+        }
+        Out += "\n";
+    }
+    return Out;
+}
+
 void ReconSystem::PhaseReportEmission(TickIndex CurrentTick)
 {
     // M3: observations are grouped BY REPORTING NODE, and each group becomes one
@@ -466,6 +612,47 @@ void ReconSystem::PhaseReportEmission(TickIndex CurrentTick)
             }
             if (!Report.Payload.empty())
             {
+                // Audit the report as filed, WITH the ground truth beside it (§4.6).
+                // Written here rather than on arrival because this is the only place
+                // the observer's state of mind is still known -- by the time the
+                // report lands, the unit that sent it may be dead.
+                for (const Observation& Logged : Report.Payload)
+                {
+                    ReportAudit Audit;
+                    Audit.ReportId = Report.ReportId;
+                    Audit.OwnerPlayer = Report.OwnerPlayer;
+                    Audit.NodeId = Report.NodeId;
+                    Audit.EmitTick = Report.EmitTick;
+                    Audit.ArrivalTick = Report.ArrivalTick;
+                    Audit.Hops = Report.HopsRemaining;
+                    Audit.Reliability = Report.Reliability;
+                    Audit.ClaimedCategory = Logged.Category;
+                    Audit.ClaimedCount = Logged.ObservedCount;
+                    Audit.ClaimedPosition = Logged.ObservedPosition;
+                    Audit.bClaimedAnonymous = Logged.bAnonymous;
+                    Audit.bWasFabricated = Logged.bPhantom;
+                    Audit.ObserverMorale = TickInput->Observers[P].Morale;
+                    Audit.ObserverFatigue = TickInput->Observers[P].Fatigue;
+                    Audit.ObserverClarity = Logged.Clarity;
+
+                    // Ground truth for the side-by-side. A fabricated contact has no
+                    // subject, so its truth is "nothing was there" -- which is
+                    // exactly what the explanation needs to say.
+                    if (!Logged.bPhantom)
+                    {
+                        for (const ObservedEntity& Seen : TickInput->VisibleToPlayer[P])
+                        {
+                            if (Seen.Id == Logged.Subject)
+                            {
+                                Audit.TrueCategory = Seen.Category;
+                                Audit.TrueCount = 1;
+                                Audit.TruePosition = Seen.Position;
+                                break;
+                            }
+                        }
+                    }
+                    RecordReportAudit(Audit);
+                }
                 InFlightReports.push_back(std::move(Report));
             }
         }

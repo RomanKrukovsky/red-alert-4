@@ -1979,6 +1979,168 @@ RA4_TEST(Recon, IndicesSurviveSaveLoadAndKeepQueriesCorrect)
     }
 }
 
+// --- M5: post-hoc explainability (§4.6) -------------------------------------------
+
+RA4_TEST(Recon, AuditLogIsAnOutputAndCannotAffectDeterminism)
+{
+    // The audit log carries ground truth, so if it were simulation state it would be
+    // both a desync risk and an INVARIANT 10 violation. It must therefore be an
+    // output, like SimWorld's event list: excluded from the checksum and from saves.
+    //
+    // Proved by divergence rather than by inspection: two worlds are run on identical
+    // input, one of them having its log cleared repeatedly. If the log influenced
+    // anything, the checksums would part company.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeChainSettings(4, 20);
+
+    SimWorld A;
+    SimWorld B;
+    A.Initialize(&Content, MakeTestSetup(70707), &Settings);
+    B.Initialize(&Content, MakeTestSetup(70707), &Settings);
+    for (SimWorld* W : {&A, &B})
+    {
+        W->SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+        W->SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+        W->SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+    }
+
+    for (int32_t I = 0; I < 80; ++I)
+    {
+        A.Tick(nullptr);
+        A.ClearEvents();
+        B.Tick(nullptr);
+        B.ClearEvents();
+        // B forgets its explanations as it goes; A keeps everything.
+        const_cast<Recon::ReconSystem&>(B.GetRecon()).ClearReportAudits();
+        if (A.ComputeStateChecksum() != B.ComputeStateChecksum())
+        {
+            RA4Test::ReportFailure("clearing the audit log changed simulation state at tick " +
+                                       std::to_string(I + 1),
+                                   __FILE__, __LINE__);
+            return;
+        }
+    }
+    // And the fixture must have actually logged something, or this proves nothing.
+    RA4_EXPECT(!A.GetRecon().GetReportAudits().empty());
+    RA4_EXPECT(B.GetRecon().GetReportAudits().empty());
+}
+
+RA4_TEST(Recon, AuditLogIsBoundedOverALongMatch)
+{
+    // An unbounded explanation log is a memory leak with a 40-minute fuse. The ring
+    // must cap, and the cap must hold under a long run with continuous reporting.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(80808), &Settings);
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+
+    for (int32_t I = 0; I < 3000; ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+    }
+    // 3000 ticks is 150 seconds of continuous reporting; the log must be capped well
+    // below that, not merely "smaller than the tick count".
+    RA4_EXPECT(World.GetRecon().GetReportAudits().size() <= 4096);
+    RA4_EXPECT(!World.GetRecon().GetReportAudits().empty());
+}
+
+RA4_TEST(Recon, ExplanationNamesTheActualCauseOfTheError)
+{
+    // The §4.6 obligation, and the whole point of M5: if a player cannot see WHY
+    // they were wrong, the layer reads as unfairness rather than depth. So an
+    // explanation must name the specific failure -- overcount, misidentification or
+    // fabrication -- and not merely restate what was believed.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Recon::DistortionProfile& Profile = Settings.DistortionProfiles[0];
+    // Fear-driven overcounting, hard enough to be certain within the window.
+    Profile.bCountDistortionEnabled = true;
+    Profile.FearCountBiasMaxPerMille = 3000;
+    Profile.CompetenceNoiseMaxPerMille = 0;
+    Settings.Morale.DamageMoralePenaltyPerMille = 5000;
+    Settings.Morale.MoraleRegenPerTickPerMille = 0;
+    Settings.Morale.FatiguePerTickUnderFirePerMille = 400;
+    Settings.Morale.FatigueRegenPerTickPerMille = 0;
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(90909), &Settings);
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    const EntityId Observer =
+        World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::AllRifleman, 1, Vec2(Fixed::FromInt(3300), Fixed::FromInt(3000)));
+
+    // Let a real firefight rattle the observer so its reports start inflating.
+    std::string Explanation;
+    for (int32_t I = 0; I < 120 && World.IsAlive(Observer); ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+        std::vector<const Recon::PerceivedTrack*> Found;
+        World.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, Found);
+        for (const Recon::PerceivedTrack* T : Found)
+        {
+            const std::string Text = World.GetRecon().ExplainTrack(0, *T);
+            if (Text.find("OVERCOUNTED") != std::string::npos ||
+                Text.find("MISIDENTIFIED") != std::string::npos ||
+                Text.find("invented this contact") != std::string::npos)
+            {
+                Explanation = Text;
+                break;
+            }
+        }
+        if (!Explanation.empty())
+        {
+            break;
+        }
+    }
+    RA4_REQUIRE(!Explanation.empty());
+
+    // The explanation must be usable, not just non-empty: it has to attribute the
+    // report to a post, state the delay, and quote the observer's condition -- that
+    // is what turns "the game lied to me" into "my scouts were terrified".
+    RA4_EXPECT(Explanation.find("Report #") != std::string::npos);
+    RA4_EXPECT(Explanation.find("arrived +") != std::string::npos);
+    RA4_EXPECT(Explanation.find("morale") != std::string::npos);
+    RA4_EXPECT(Explanation.find("truth") != std::string::npos);
+}
+
+RA4_TEST(Recon, ExplanationDegradesHonestlyWhenReportsAgedOut)
+{
+    // A track older than the audit log must say so rather than fabricate an
+    // explanation. Silently inventing a plausible history would be worse than
+    // admitting the log has rolled over, because the player would trust it.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(11111), &Settings);
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+    World.Tick(nullptr);
+    World.ClearEvents();
+
+    std::vector<const Recon::PerceivedTrack*> Found;
+    World.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, Found);
+    RA4_REQUIRE(!Found.empty());
+
+    // Wipe the log, keeping the track: exactly the state a long match reaches.
+    const_cast<Recon::ReconSystem&>(World.GetRecon()).ClearReportAudits();
+    const std::string Text = World.GetRecon().ExplainTrack(0, *Found[0]);
+    RA4_EXPECT(Text.find("older than the audit log") != std::string::npos);
+    // ...and it still describes the belief itself, so the panel is not blank.
+    RA4_EXPECT(Text.find("Contact:") != std::string::npos);
+}
+
 RA4_TEST(Recon, TruthfulPipelineMirrorsVisibleEnemy)
 {
     ContentDatabase Content;

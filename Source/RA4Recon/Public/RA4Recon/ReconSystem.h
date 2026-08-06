@@ -12,6 +12,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "RA4Core/Ids.h"
@@ -184,6 +185,28 @@ public:
 
     const PhaseStats& GetStats() const { return Stats; }
 
+    // --- Post-match explainability (§4.6, M5) ---------------------------------
+    // The report log behind every belief. An OUTPUT, like SimWorld's event list:
+    // excluded from the checksum and from saves, so it can safely carry ground
+    // truth for the side-by-side and cannot desync a replaying peer.
+    //
+    // Bounded: the ring holds the most recent kReportAuditCapacity reports and
+    // overwrites the oldest, because an unbounded log is a memory leak with a
+    // 40-minute fuse.
+    const std::vector<ReportAudit>& GetReportAudits() const { return ReportAudits; }
+
+    // Reports that shaped one track, oldest first, resolved from its provenance
+    // ring. Empty if the track is gone or its reports have aged out of the log.
+    void GetAuditsForTrack(PlayerId P, const PerceivedTrack& Track,
+                           std::vector<const ReportAudit*>& Out) const;
+
+    // Human-readable explanation of one track: what was claimed, by whom, how late,
+    // and how it differed from the truth. This is the string a post-match screen or
+    // `recon.LogChain` prints, kept here so UI and console cannot drift apart.
+    std::string ExplainTrack(PlayerId P, const PerceivedTrack& Track) const;
+
+    void ClearReportAudits() { ReportAudits.clear(); AuditWriteCursor = 0; }
+
     // Test-only window on the last observer snapshot the layer consumed. Read-only,
     // and it exposes only the player's OWN aggregate state -- no enemy data.
     const ObserverSnapshot& GetLastObserverForTest(PlayerId P) const { return LastObserver[P]; }
@@ -294,6 +317,14 @@ private:
 
     // Last observer snapshot per player, kept for diagnostics and tests.
     ObserverSnapshot LastObserver[kMaxPlayers];
+
+    // Report audit ring (see GetReportAudits). 4096 reports is minutes of history at
+    // a realistic reporting cadence and about 200 KB -- enough for a post-match
+    // screen, bounded enough that a long match cannot grow it without limit.
+    static constexpr size_t kReportAuditCapacity = 4096;
+    std::vector<ReportAudit> ReportAudits;
+    size_t AuditWriteCursor = 0;
+    void RecordReportAudit(const ReportAudit& Entry);
 
     PhaseStats Stats;
 };

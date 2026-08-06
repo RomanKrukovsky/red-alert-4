@@ -120,6 +120,95 @@ const TCHAR* CategoryLabel(RA4::Recon::ObservedCategory C)
 
 } // namespace
 
+// --- Console commands (§7) ---------------------------------------------------------
+//
+// recon.DumpTracks            what the staff map currently believes
+// recon.LogChain <TrackIndex> why it believes one specific contact
+//
+// Both are read-only over the simulation and ECVF_Cheat, because DumpTracks prints
+// belief (harmless) while LogChain prints the ground-truth comparison behind it,
+// which is exactly the information the layer exists to withhold mid-match.
+namespace
+{
+
+const RA4::SimWorld* FindSimWorldForConsole(UWorld* World)
+{
+    if (World == nullptr)
+    {
+        return nullptr;
+    }
+    const URA4SimWorldSubsystem* Sim = World->GetSubsystem<URA4SimWorldSubsystem>();
+    return Sim != nullptr ? Sim->GetSimWorld() : nullptr;
+}
+
+FAutoConsoleCommandWithWorld GCmdDumpTracks(
+    TEXT("recon.DumpTracks"),
+    TEXT("Print the local player's perceived tracks (belief only)."),
+    FConsoleCommandWithWorldDelegate::CreateStatic([](UWorld* World)
+    {
+        const RA4::SimWorld* Sim = FindSimWorldForConsole(World);
+        if (Sim == nullptr || !Sim->GetRecon().IsEnabled())
+        {
+            UE_LOG(LogTemp, Display, TEXT("recon.DumpTracks: recon layer is not enabled"));
+            return;
+        }
+        std::vector<const RA4::Recon::PerceivedTrack*> Tracks;
+        Sim->GetRecon().GetPerceivedWorld(0).GetTracksInRegion(
+            0, 0, Sim->GetMap().Width - 1, Sim->GetMap().Height - 1, Tracks);
+        UE_LOG(LogTemp, Display, TEXT("recon.DumpTracks: %d track(s) believed by player 0"),
+               int32(Tracks.size()));
+        for (const RA4::Recon::PerceivedTrack* T : Tracks)
+        {
+            UE_LOG(LogTemp, Display,
+                   TEXT("  [%u] %s x%d-%d  conf %d%%  age %ds%s%s"),
+                   T->Id.Index,
+                   T->bAnonymous ? TEXT("unidentified") : CategoryLabel(T->BelievedCategory),
+                   T->BelievedCountMin, T->BelievedCountMax,
+                   int32((T->Confidence * 100).ToIntFloor()),
+                   (int32(Sim->GetTick()) - int32(T->LastUpdateTick)) / RA4::kTicksPerSecond,
+                   T->bContested ? TEXT("  CONTESTED") : TEXT(""),
+                   T->bStale ? TEXT("  stale") : TEXT(""));
+        }
+    }),
+    ECVF_Cheat);
+
+FAutoConsoleCommandWithWorldAndArgs GCmdLogChain(
+    TEXT("recon.LogChain"),
+    TEXT("recon.LogChain <TrackIndex> -- print the report chain that produced one contact."),
+    FConsoleCommandWithWorldAndArgsDelegate::CreateStatic([](const TArray<FString>& Args, UWorld* World)
+    {
+        const RA4::SimWorld* Sim = FindSimWorldForConsole(World);
+        if (Sim == nullptr || !Sim->GetRecon().IsEnabled())
+        {
+            UE_LOG(LogTemp, Display, TEXT("recon.LogChain: recon layer is not enabled"));
+            return;
+        }
+        if (Args.Num() < 1)
+        {
+            UE_LOG(LogTemp, Display, TEXT("recon.LogChain: expected a track index (see recon.DumpTracks)"));
+            return;
+        }
+        const uint32 WantIndex = uint32(FCString::Atoi(*Args[0]));
+        std::vector<const RA4::Recon::PerceivedTrack*> Tracks;
+        Sim->GetRecon().GetPerceivedWorld(0).GetTracksInRegion(
+            0, 0, Sim->GetMap().Width - 1, Sim->GetMap().Height - 1, Tracks);
+        for (const RA4::Recon::PerceivedTrack* T : Tracks)
+        {
+            if (T->Id.Index == WantIndex)
+            {
+                // One shared explanation routine for console and UI, so a post-match
+                // screen and a debug dump can never tell the player different stories.
+                const std::string Text = Sim->GetRecon().ExplainTrack(0, *T);
+                UE_LOG(LogTemp, Display, TEXT("%s"), UTF8_TO_TCHAR(Text.c_str()));
+                return;
+            }
+        }
+        UE_LOG(LogTemp, Display, TEXT("recon.LogChain: no live track with index %u"), WantIndex);
+    }),
+    ECVF_Cheat);
+
+} // namespace
+
 int32 URA4ReconDebugOverlay::GetOverlayMode()
 {
     // Read the backing int32 directly. FAutoConsoleVariableRef writes straight into
