@@ -153,7 +153,10 @@ RA4_TEST(FogOfWar, EntityVisibilityGateAnswersPerViewer)
     const EntityId NearEnemy =
         World.SpawnUnit(RA4Test::Ids::AllRifleman, 1, Vec2(Fixed::FromInt(700), Fixed::FromInt(500)));
     const EntityId FarEnemy = World.SpawnUnit(RA4Test::Ids::AllRifleman, 1,
-                                              Vec2(Fixed::FromInt(15000), Fixed::FromInt(15000)));
+                                              Vec2(Fixed::FromInt(12000), Fixed::FromInt(12000)));
+    // 12000 / kTileSizeUnits(200) = tile 60, INSIDE the 64x64 test map. 15000 is
+    // tile 75 -- off the map, where the fog grid answers NeverSeen from its bounds
+    // guard, so the assertion would pass without fog being involved at all.
 
     CommandFrame Frame;
     World.Tick(&Frame);
@@ -177,4 +180,61 @@ RA4_TEST(FogOfWar, EntityVisibilityGateAnswersPerViewer)
                              // so exercise the fogless order via an uninitialized world's empty core.
         RA4_EXPECT(!NoFogCheck.IsEntityVisibleTo(0, 5));
     }
+}
+
+RA4_TEST(FogOfWar, LocationVisibilityGateMatchesEntityGate)
+{
+    // V-F pin: combat events carry a location, not a live entity (the shooter can
+    // be dead by the time presentation reads the event), so tracers and impact
+    // markers gate on IsLocationVisibleTo. This pins that the location overload
+    // agrees with the entity one wherever both apply -- otherwise the two fog
+    // gates could drift and one surface would leak while the other did not.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+
+    SimWorld World;
+    World.Initialize(&Content, RA4Test::MakeTestSetup());
+
+    // 12000 / kTileSizeUnits(200) = tile 60, inside the 64x64 test map. An
+    // earlier draft used 15000 -> tile 75, which is OFF the map: the fog grid
+    // answers NeverSeen for out-of-bounds tiles, so the location gate closed
+    // while the entity gate stayed open on its own-unit short-circuit. That
+    // divergence is correct behaviour for both, but it made the test assert the
+    // wrong thing -- keep fogged fixtures on the map.
+    const Vec2 SeenPos(Fixed::FromInt(500), Fixed::FromInt(500));
+    const Vec2 FoggedPos(Fixed::FromInt(12000), Fixed::FromInt(12000));
+
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, SeenPos);
+    const EntityId NearEnemy = World.SpawnUnit(RA4Test::Ids::AllRifleman, 1,
+                                              Vec2(Fixed::FromInt(700), Fixed::FromInt(500)));
+    const EntityId FarEnemy = World.SpawnUnit(RA4Test::Ids::AllRifleman, 1, FoggedPos);
+
+    CommandFrame Frame;
+    World.Tick(&Frame);
+
+    // Where player 0 has vision, the location gate opens; where it does not, it closes.
+    RA4_EXPECT(World.IsLocationVisibleTo(0, SeenPos));
+    RA4_EXPECT(!World.IsLocationVisibleTo(0, FoggedPos));
+
+    // And it agrees with the entity gate for entities standing on those tiles --
+    // the property that keeps the tracer gate and the actor gate consistent.
+    const TransformComp* NearT = World.GetTransform(NearEnemy);
+    const TransformComp* FarT = World.GetTransform(FarEnemy);
+    RA4_EXPECT(NearT != nullptr && FarT != nullptr);
+    RA4_EXPECT(World.IsLocationVisibleTo(0, NearT->Position) ==
+               World.IsEntityVisibleTo(0, NearEnemy.Index));
+    RA4_EXPECT(World.IsLocationVisibleTo(0, FarT->Position) ==
+               World.IsEntityVisibleTo(0, FarEnemy.Index));
+
+    // Player 1 sees its own far unit's tile; the gate is per viewer, not global.
+    RA4_EXPECT(World.IsLocationVisibleTo(1, FoggedPos));
+
+    // Documented asymmetry: the entity gate short-circuits on ownership ("a side
+    // always sees its own"), while a LOCATION has no owner, so the location gate
+    // answers purely from the fog grid. Off-map points are therefore never
+    // visible to anyone, even the owner of a unit standing there. V-F's callers
+    // only ever pass in-bounds event locations, so this cannot hide a legitimate
+    // tracer -- but the two helpers are not interchangeable and this pins why.
+    const Vec2 OffMap(Fixed::FromInt(15000), Fixed::FromInt(15000));
+    RA4_EXPECT(!World.IsLocationVisibleTo(1, OffMap));
 }

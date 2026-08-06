@@ -3619,7 +3619,6 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
     ResourceNodes.resize(HighWaterMark);
     Projectiles.resize(HighWaterMark);
     Orders.resize(HighWaterMark);
-    DirectControls.resize(HighWaterMark);
 
     for (uint32_t I = 0; I < HighWaterMark; ++I)
     {
