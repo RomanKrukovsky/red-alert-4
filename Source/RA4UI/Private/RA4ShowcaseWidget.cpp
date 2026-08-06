@@ -495,8 +495,8 @@ void URA4ShowcaseWidget::SetScreen(const int32 InScreen)
     case 2:
         Accent = SovietRed;
         Heading = LOCTEXT("HudHeading", "ОПЕРАЦИЯ: ПЕПЕЛ СТОЛИЦЫ");
-        Body = LOCTEXT("HudBody", "БОЕВОЙ HUD СССР\n\nКРЕДИТЫ 12 450     ЭНЕРГИЯ 780 / 920\n\nОЧЕРЕДЬ ПРОИЗВОДСТВА\nТесла-танк — 72%\nПризывник ×5\n\nЗАДАЧА: удержать плацдарм и уничтожить командный узел противника.");
-        Status = LOCTEXT("HudStatus", "MINI-MAP\nSektor: M-14\n\nVYDELENO\n3 × Tesla Tank\n12 × Conscript\n\nTREVOGA\nNizkaya");
+        Body = LOCTEXT("HudBody", "БОЕВОЙ HUD СССР\n\nКРЕДИТЫ 12 450     ЭНЕРГИЯ 780 / 920\n\nОЧЕРЕДЬ ПРОИЗВОДСТВА\nТанк «Гранит» — 72%\nСтрелок «Рубеж» ×5\n\nЗАДАЧА: удержать плацдарм и уничтожить командный узел противника.");
+        Status = LOCTEXT("HudStatus", "MINI-MAP\nSektor: M-14\n\nVYDELENO\n3 × Tank «Granit»\n12 × Strelok «Rubezh»\n\nTREVOGA\nNizkaya");
         Progress = 0.72f;
         break;
     case 3:
@@ -649,7 +649,7 @@ void URA4ShowcaseWidget::SetScreen(const int32 InScreen)
     case 24:
         Accent = SovietRed;
         Heading = LOCTEXT("AlertHudHeading", "ПРЕДУПРЕЖДЕНИЕ: АВИАНАЛЁТ");
-        Body = LOCTEXT("AlertHudBody", "Obnaruzheny samolyoty Alliancea. Razvernite Anti-Air, peremestite mobilnye generatory i zashchitite Tesla-laboratoriyu.");
+        Body = LOCTEXT("AlertHudBody", "Obnaruzheny samolyoty Alliancea. Razvernite Anti-Air, peremestite mobilnye generatory i zashchitite energolaboratoriyu.");
         Status = LOCTEXT("AlertHudStatus", "KONTAKTOV\n12\n\nDO PODLYoTA\n00:32\n\nAnti-Air\n4 batarei");
         Progress = 0.32f;
         break;
