@@ -32,6 +32,7 @@ constexpr ContentId BldSovRefinery = MakeContentId("building.sov.ore_refinery");
 constexpr ContentId BldSovBarracks = MakeContentId("building.sov.barracks");
 constexpr ContentId BldSovWarFactory = MakeContentId("building.sov.war_factory");
 constexpr ContentId BldSovTurret = MakeContentId("building.sov.gun_turret");
+constexpr ContentId BldSovRadar = MakeContentId("building.sov.radar_complex");
 
 constexpr ContentId BldAllConYard = MakeContentId("building.all.construction_yard");
 constexpr ContentId BldAllPower = MakeContentId("building.all.power_plant");
@@ -39,6 +40,7 @@ constexpr ContentId BldAllRefinery = MakeContentId("building.all.ore_refinery");
 constexpr ContentId BldAllBarracks = MakeContentId("building.all.barracks");
 constexpr ContentId BldAllWarFactory = MakeContentId("building.all.war_factory");
 constexpr ContentId BldAllTurret = MakeContentId("building.all.pillbox");
+constexpr ContentId BldAllRadar = MakeContentId("building.all.radar_complex");
 
 // --- Unit ids -------------------------------------------------------------
 constexpr ContentId UnitSovMcv = MakeContentId("unit.sov.mcv");
@@ -157,7 +159,7 @@ struct FactionSetup
 {
     FactionId Faction;
     const char* KeyPrefix;
-    ContentId ConYard, Power, Refinery, Barracks, WarFactory, Turret;
+    ContentId ConYard, Power, Refinery, Barracks, WarFactory, Turret, Radar;
     ContentId Mcv, Harvester, BasicInfantry, AntiArmorInfantry, MainTank;
     const char* ConYardName;
     const char* PowerName;
@@ -165,6 +167,7 @@ struct FactionSetup
     const char* BarracksName;
     const char* WarFactoryName;
     const char* TurretName;
+    const char* RadarName;
     const char* McvName;
     const char* HarvesterName;
     const char* BasicInfantryName;
@@ -334,6 +337,44 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         Db.AddEntity(E);
     }
 
+    // --- Radar complex -----------------------------------------------------
+    // ADR-0013's "Radar / minimap" row and the RadarDetected sweep in SystemFogOfWar both
+    // key off Building.bIsRadar, and until now no shipped definition set it -- the whole
+    // radar mechanic was reachable only from tests. This is the building that makes it real.
+    //
+    // Priority is left to DefaultPowerPriorityFor, which sees bIsRadar first and assigns
+    // Auxiliary: the radar is the thing a deficit is *supposed* to take, and hardcoding it
+    // here would let the two disagree.
+    {
+        EntityDef E;
+        E.Id = S.Radar;
+        E.Name = S.RadarName;
+        E.DisplayNameKey = Prefix + ".building.radar";
+        E.Kind = EntityKind::Building;
+        E.Faction = S.Faction;
+        E.MaxHealth = 800;
+        E.Armor = ArmorClass::Building;
+        // Its own sight is ordinary; the 24-tile sweep it grants is radar coverage, which is
+        // a different and weaker thing -- contacts without terrain.
+        E.VisionRange = Metres(12);
+        E.Roles = EntityRole::BaseBuilding;
+        E.Building.FootprintX = 2;
+        E.Building.FootprintY = 2;
+        E.Building.bIsRadar = true;
+        // Deliberately expensive to run. The minimap going dark under load is the point of
+        // the ADR-0013 row, and a radar that draws almost nothing would never trigger it.
+        E.Building.PowerConsumed = 75;
+        E.Production.Cost = 1000;
+        E.Production.BuildTimeTicks = SecondsToTicks(15);
+        E.Production.Category = ProductionCategory::Structure;
+        // T1, not T2: at Severe and below, T2+ production is throttled, and a radar that
+        // could not be rebuilt during a blackout would make a power crisis unrecoverable.
+        E.Production.Tier = TechTier::T1;
+        E.Production.ProducedBy = {S.ConYard};
+        E.Production.Prerequisites = {S.Power};
+        Db.AddEntity(E);
+    }
+
     // --- MCV ---------------------------------------------------------------
     {
         EntityDef E;
@@ -493,6 +534,7 @@ void BuildDefaultContent(ContentDatabase& Db)
     Soviet.Barracks = BldSovBarracks;
     Soviet.WarFactory = BldSovWarFactory;
     Soviet.Turret = BldSovTurret;
+    Soviet.Radar = BldSovRadar;
     Soviet.Mcv = UnitSovMcv;
     Soviet.Harvester = UnitSovHarvester;
     Soviet.BasicInfantry = UnitSovConscript;
@@ -504,6 +546,7 @@ void BuildDefaultContent(ContentDatabase& Db)
     Soviet.BarracksName = "building.sov.barracks";
     Soviet.WarFactoryName = "building.sov.war_factory";
     Soviet.TurretName = "building.sov.gun_turret";
+    Soviet.RadarName = "building.sov.radar_complex";
     Soviet.McvName = "unit.sov.mcv";
     Soviet.HarvesterName = "unit.sov.ore_harvester";
     Soviet.BasicInfantryName = "unit.sov.conscript";
@@ -528,6 +571,7 @@ void BuildDefaultContent(ContentDatabase& Db)
     Alliance.Barracks = BldAllBarracks;
     Alliance.WarFactory = BldAllWarFactory;
     Alliance.Turret = BldAllTurret;
+    Alliance.Radar = BldAllRadar;
     Alliance.Mcv = UnitAllMcv;
     Alliance.Harvester = UnitAllHarvester;
     Alliance.BasicInfantry = UnitAllRifleman;
@@ -539,6 +583,7 @@ void BuildDefaultContent(ContentDatabase& Db)
     Alliance.BarracksName = "building.all.barracks";
     Alliance.WarFactoryName = "building.all.war_factory";
     Alliance.TurretName = "building.all.pillbox";
+    Alliance.RadarName = "building.all.radar_complex";
     Alliance.McvName = "unit.all.mcv";
     Alliance.HarvesterName = "unit.all.ore_harvester";
     Alliance.BasicInfantryName = "unit.all.rifleman";

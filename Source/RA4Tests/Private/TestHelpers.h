@@ -19,6 +19,7 @@ constexpr ContentId SovRefinery = MakeContentId("building.sov.ore_refinery");
 constexpr ContentId SovBarracks = MakeContentId("building.sov.barracks");
 constexpr ContentId SovWarFactory = MakeContentId("building.sov.war_factory");
 constexpr ContentId SovTurret = MakeContentId("building.sov.gun_turret");
+constexpr ContentId SovRadar = MakeContentId("building.sov.radar_complex");
 constexpr ContentId SovHarvester = MakeContentId("unit.sov.ore_harvester");
 constexpr ContentId SovConscript = MakeContentId("unit.sov.conscript");
 constexpr ContentId SovHeavyTank = MakeContentId("unit.sov.heavy_tank");

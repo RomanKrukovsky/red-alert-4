@@ -3576,6 +3576,17 @@ void SimWorld::SystemFogOfWar()
 
     for (int32_t P = 0; P < kMaxPlayers; ++P)
     {
+        // DirtyRegions is a producer/consumer list for texture uploads: every reveal appends
+        // a rect and the consumer is expected to drain it. Nothing in the shipping path ever
+        // called ClearDirtyRegions, so the vectors grew by one rect per revealing entity per
+        // tick and were never freed -- measured at 2400 rects after 600 ticks with three
+        // buildings, which is roughly 144k rects per player over a half-hour match, for a
+        // list nobody reads.
+        //
+        // Cleared here, at the top of the tick, rather than at the end: a presentation layer
+        // that starts consuming this later must see the rects produced by the tick that just
+        // ran, and clearing after producing them would hand it an empty list.
+        FogGrid->ClearDirtyRegions(P);
         FogGrid->ClearCurrentVisibility(P);
     }
 

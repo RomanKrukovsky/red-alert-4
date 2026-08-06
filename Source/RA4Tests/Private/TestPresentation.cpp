@@ -1496,3 +1496,80 @@ RA4_TEST(MinimapPing, WithinAKindTheFreshestComesFirst)
     RA4_EXPECT(uint8_t(RadarPingKind::Attack) < uint8_t(RadarPingKind::Loss));
     RA4_EXPECT(uint8_t(RadarPingKind::Loss) < uint8_t(RadarPingKind::Construction));
 }
+
+// Every radar test above authored its own definition at runtime, because no shipped entity set
+// Building.bIsRadar -- so the whole mechanic was reachable only from tests and a real match had
+// no radar to build. This asserts the shipped content, so deleting the definition breaks a test
+// rather than silently reverting the feature.
+RA4_TEST(MinimapContent, ShippedFactionsHaveABuildableRadar)
+{
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+
+    const EntityDef* Radar = Content.FindEntity(Ids::SovRadar);
+    RA4_REQUIRE(Radar != nullptr);
+    RA4_EXPECT(Radar->Building.bIsRadar);
+    RA4_EXPECT(Radar->Kind == EntityKind::Building);
+    // Reachable: it must be produced by something and cost something, or it exists on paper
+    // only. A prerequisite chain no player can satisfy is the same as no radar.
+    RA4_EXPECT(!Radar->Production.ProducedBy.empty());
+    RA4_EXPECT(Radar->Production.Cost > 0);
+    RA4_EXPECT(Radar->Production.BuildTimeTicks > 0);
+    // Draws enough power to matter: ADR-0013's minimap row only fires under a real deficit,
+    // and a radar that consumed almost nothing would never cause one.
+    RA4_EXPECT(Radar->Building.PowerConsumed > 0);
+    // T1, so a blackout does not make the radar unrebuildable -- T2+ production is throttled
+    // from Severe, which would turn a power crisis into a permanent one.
+    RA4_EXPECT(Radar->Production.Tier <= TechTier::T1);
+
+    // Both playable factions, not just the Soviets: an asymmetry here would be a silent
+    // balance bug rather than a design decision.
+    const EntityDef* AllianceRadar = Content.FindEntity(MakeContentId("building.all.radar_complex"));
+    RA4_REQUIRE(AllianceRadar != nullptr);
+    RA4_EXPECT(AllianceRadar->Building.bIsRadar);
+    RA4_EXPECT(!AllianceRadar->Production.ProducedBy.empty());
+}
+
+// The radar's power priority decides whether a deficit takes it, which is the entire ADR-0013
+// row. Derived rather than hardcoded, so this pins the derivation against the shipped content.
+RA4_TEST(MinimapContent, ShippedRadarIsTheFirstThingADeficitTakes)
+{
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(4242));
+    SpawnEnemyOutpost(World);
+    World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    World.SpawnBuilding(Ids::SovPower, 0, TileCoord(14, 10), true);
+    const EntityId Radar = World.SpawnBuilding(Ids::SovRadar, 0, TileCoord(18, 10), true);
+    RA4_REQUIRE(Radar.IsValid());
+    RunTicks(World, 4);
+
+    const BuildingComp* B = World.GetBuilding(Radar);
+    RA4_REQUIRE(B != nullptr);
+    // Auxiliary: the radar is what a deficit is supposed to take first, ahead of production
+    // and defence.
+    RA4_EXPECT(B->Priority == PowerPriority::Auxiliary);
+    RA4_EXPECT(uint8_t(PowerPriority::Auxiliary) > uint8_t(PowerPriority::Production));
+    RA4_EXPECT(uint8_t(PowerPriority::Auxiliary) > uint8_t(PowerPriority::Defense));
+
+    // With power intact the panel is online; the shipped radar therefore actually works.
+    HudSnapshotBuilder Builder;
+    Builder.Initialize(0);
+    HudSnapshot Snapshot;
+    Builder.Build(World, {}, Snapshot);
+    RA4_EXPECT(Snapshot.Radar.bOnline);
+    RA4_EXPECT(!Snapshot.Radar.bOfflineForPower);
+
+    // Now overload the grid. The radar's band goes offline before anything else, and the
+    // panel reports itself dark rather than pretending to still have coverage.
+    for (int32_t N = 0; N < 12; ++N)
+    {
+        World.SpawnBuilding(Ids::SovTurret, 0, TileCoord(24 + N * 2, 24), true);
+    }
+    RunTicks(World, 6);
+    RA4_REQUIRE(World.GetPlayer(0).GetPowerTier() >= PowerTier::Moderate);
+    Builder.Build(World, {}, Snapshot);
+    RA4_EXPECT(!Snapshot.Radar.bOnline);
+    RA4_EXPECT(Snapshot.Radar.bOfflineForPower);
+}

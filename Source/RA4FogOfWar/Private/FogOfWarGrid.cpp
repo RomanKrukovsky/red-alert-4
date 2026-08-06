@@ -32,7 +32,11 @@ void FFogOfWarGrid::RevealCircularArea(int32_t PlayerIndex, int32_t CenterX, int
     const int32_t MinY = std::max(0, CenterY - Radius);
     const int32_t MaxY = std::min(Height - 1, CenterY + Radius);
 
-    const int32_t RadiusSq = Radius * Radius;
+    // int64: Radius * Radius overflows int32 above 46340, and signed overflow is undefined
+    // behaviour rather than merely a wrong answer. No caller passes anything near that today
+    // (vision is derived from a content range, radar is a fixed 24), but a map or a definition
+    // is data, and data must not be able to make this function undefined.
+    const int64_t RadiusSq = int64_t(Radius) * int64_t(Radius);
     bool bChanged = false;
 
     auto& Data = VisibilityData[PIdx];
@@ -41,7 +45,8 @@ void FFogOfWarGrid::RevealCircularArea(int32_t PlayerIndex, int32_t CenterX, int
     {
         for (int32_t X = MinX; X <= MaxX; ++X)
         {
-            const int32_t DistSq = (X - CenterX) * (X - CenterX) + (Y - CenterY) * (Y - CenterY);
+            const int64_t DistSq = int64_t(X - CenterX) * int64_t(X - CenterX) +
+                                   int64_t(Y - CenterY) * int64_t(Y - CenterY);
             if (DistSq <= RadiusSq)
             {
                 const size_t Idx = static_cast<size_t>(Y) * static_cast<size_t>(Width) + static_cast<size_t>(X);
@@ -71,7 +76,11 @@ void FFogOfWarGrid::RevealRadarArea(int32_t PlayerIndex, int32_t CenterX, int32_
     const int32_t MinY = std::max(0, CenterY - Radius);
     const int32_t MaxY = std::min(Height - 1, CenterY + Radius);
 
-    const int32_t RadiusSq = Radius * Radius;
+    // int64: Radius * Radius overflows int32 above 46340, and signed overflow is undefined
+    // behaviour rather than merely a wrong answer. No caller passes anything near that today
+    // (vision is derived from a content range, radar is a fixed 24), but a map or a definition
+    // is data, and data must not be able to make this function undefined.
+    const int64_t RadiusSq = int64_t(Radius) * int64_t(Radius);
     bool bChanged = false;
 
     auto& Data = VisibilityData[PIdx];
@@ -80,7 +89,8 @@ void FFogOfWarGrid::RevealRadarArea(int32_t PlayerIndex, int32_t CenterX, int32_
     {
         for (int32_t X = MinX; X <= MaxX; ++X)
         {
-            const int32_t DistSq = (X - CenterX) * (X - CenterX) + (Y - CenterY) * (Y - CenterY);
+            const int64_t DistSq = int64_t(X - CenterX) * int64_t(X - CenterX) +
+                                   int64_t(Y - CenterY) * int64_t(Y - CenterY);
             if (DistSq > RadiusSq)
             {
                 continue;
