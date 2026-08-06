@@ -45,12 +45,21 @@ namespace
 const TCHAR* kGeneratedRoot = TEXT("/Game/RA4/Generated/Terrain");
 const TCHAR* kLayerInfoRoot = TEXT("/Game/RA4/Generated/Terrain/Layers");
 
-// One entry per paintable surface. SourceSet is the ambientCG folder name; the
-// suffixes follow that pack's own naming, which is stable across sets.
+// Tiling is per layer on purpose, and the numbers are far lower than they look.
 //
-// Tiling differs per layer on purpose. Grass and sand are fine-grained and tile
-// hard without reading as repetition; rock has large features and shows an
-// obvious grid if repeated as often, so it tiles half as much.
+// WHY THE OLD VALUES (64-80) LOOKED LIKE DIRT AND NOISE
+// ----------------------------------------------------
+// The map is 12800 units across, so 64 repeats put one tile every 200 units - two
+// metres. An RTS camera sits 30-80 metres up, which means a 2 m tile is well under
+// a centimetre on screen: the texture collapses into per-pixel noise and reads as
+// grime rather than ground. That is the "ugly ground texture" complaint, and it was
+// a resolution problem, not a colour problem. Measured: Ground039 is only 2.8%
+// rust-hued pixels, the most neutral of five ambientCG ground sets tested, so the
+// colour was never the fault.
+//
+// 8-12 repeats put one tile every 1000-1600 units (10-16 m), which is a legible
+// surface feature at that camera height. Rock stays lowest because its features are
+// largest; grass is highest because fine blades tolerate repetition.
 struct FLayerSpec
 {
     const TCHAR* LayerName;
@@ -62,10 +71,10 @@ struct FLayerSpec
 const FLayerSpec kLayers[] = {
     // Dirt first: it is the base the others paint over, so it is the layer whose
     // weight the landscape falls back to when nothing else is painted.
-    {TEXT("Dirt"), TEXT("Ground039_2K-JPG"), TEXT("Dirt"), 64.0f},
-    {TEXT("Sand"), TEXT("Ground054_2K-JPG"), TEXT("Sand"), 64.0f},
-    {TEXT("Grass"), TEXT("Grass004_2K-JPG"), TEXT("Grass"), 80.0f},
-    {TEXT("Rock"), TEXT("Rock030_2K-JPG"), TEXT("Rock"), 32.0f},
+    {TEXT("Dirt"), TEXT("Ground039_2K-JPG"), TEXT("Dirt"), 10.0f},
+    {TEXT("Sand"), TEXT("Ground054_2K-JPG"), TEXT("Sand"), 10.0f},
+    {TEXT("Grass"), TEXT("Grass004_2K-JPG"), TEXT("Grass"), 12.0f},
+    {TEXT("Rock"), TEXT("Rock030_2K-JPG"), TEXT("Rock"), 8.0f},
 };
 
 constexpr int32 kLayerCount = UE_ARRAY_COUNT(kLayers);

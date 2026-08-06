@@ -63,6 +63,11 @@ void ARA4SkirmishGameMode::StartSimulationMatch()
     int32 Difficulty = UGameplayStatics::GetIntOption(Options, TEXT("Difficulty"), 1);
     int32 AISpot = UGameplayStatics::GetIntOption(Options, TEXT("AISpot"), -1);
     int32 NumAI = UGameplayStatics::GetIntOption(Options, TEXT("NumAI"), 1);
+    // Unreliable-recon skirmish options (ADR-0026). Open options, not cheat codes:
+    // ?Recon=1 makes belief drive the HUD, ?ShowTruth=1 also raises the two-maps
+    // overlay so a player can watch how wrong their staff map is.
+    const bool bReconEnabled = UGameplayStatics::GetIntOption(Options, TEXT("Recon"), 0) != 0;
+    const bool bReconShowTruth = UGameplayStatics::GetIntOption(Options, TEXT("ShowTruth"), 0) != 0;
     if (NumAI < 1)
     {
         NumAI = 1;
@@ -100,6 +105,7 @@ void ARA4SkirmishGameMode::StartSimulationMatch()
     {
         if (URA4SimWorldSubsystem* SimSub = World->GetSubsystem<URA4SimWorldSubsystem>())
         {
+            SimSub->ConfigureRecon(bReconEnabled, bReconShowTruth);
             SimSub->StartSkirmishMatch(PlayerFaction, EnemyFaction, Difficulty, NumAI, AISpot);
         }
     }

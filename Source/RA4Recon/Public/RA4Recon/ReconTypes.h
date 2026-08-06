@@ -74,6 +74,9 @@ struct MoraleComp
 // reports and tracks carry only believed data (see PerceivedTrack).
 struct Observation
 {
+    // Chain node of the observer that produced this (M3). Decides how long the
+    // report takes to reach the staff map; kNoChainNode = outside the network.
+    uint16_t ObserverNodeId = 0;
     EntityId Subject;                       // GT association, core-internal only
     ContentId ObservedClass;                // exact believed type; invalid when misidentified
     ObservedCategory Category = ObservedCategory::LightVehicle; // coarse believed category
@@ -97,6 +100,7 @@ struct ReconReport
     TickIndex EmitTick = 0;
     TickIndex ArrivalTick = 0;
     uint8_t HopsRemaining = 0;
+    uint16_t NodeId = 0;                    // chain node that filed it (M3)
     Fixed Reliability = Fixed::FromInt(1);  // product of author competence and chain bias
     std::vector<Observation> Payload;       // pooled/reused by the in-flight queue
 };
@@ -126,6 +130,10 @@ struct PerceivedTrack
     TickIndex LastUpdateTick = 0;
     Fixed Confidence = Fixed::Zero();       // 0..1, decays over time
     uint8_t IndependentSourceCount = 0;
+    // Chain node whose report last updated this track (M3). Lets aggregation tell
+    // "a second source agrees" from "the same source repeating itself" -- only the
+    // former is corroboration. Belief about our own sources, not ground truth.
+    uint16_t LastReportNodeId = 0;
     bool bStale = false;                    // no fresh reports for a while
     bool bContested = false;                // independent sources disagree (ADR-0026)
     // Unidentified contact: BelievedClass is meaningless, UI shows "unknown".

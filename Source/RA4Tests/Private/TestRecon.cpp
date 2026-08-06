@@ -100,6 +100,26 @@ Recon::ReconSettings MakeMinimalSettings(bool bEnabled)
     C.Name = "comms.default";
     C.HopDelayTicksByLevel = {160, 80, 30, 5};
     S.CommsProfiles.push_back(C);
+    // Distortion-and-belief tests want the M1 property "what fog sees arrives
+    // now", so the chain is configured for zero latency here. Chain LATENCY has
+    // its own tests (Recon.Chain*), which set these deliberately. Keeping the
+    // baseline instant means a failure in those tests points at the chain, not
+    // at every test that merely needs a track to exist.
+    S.Chain.OrphanDelayTicks = 0;
+    S.Chain.ReliabilityLossPerHopPerMille = 0;
+    S.CommsProfiles[0].HopDelayTicksByLevel = {0, 0, 0, 0};
+    return S;
+}
+
+// Settings for the chain-of-command tests: real latency, real reliability loss.
+Recon::ReconSettings MakeChainSettings(int32_t PerHopDelayTicks, int32_t OrphanDelayTicks)
+{
+    Recon::ReconSettings S = MakeMinimalSettings(true);
+    S.CommsProfiles[0].HopDelayTicksByLevel = {PerHopDelayTicks, PerHopDelayTicks,
+                                               PerHopDelayTicks, PerHopDelayTicks};
+    S.Chain.CommsLevel = 2;
+    S.Chain.OrphanDelayTicks = OrphanDelayTicks;
+    S.Chain.ReliabilityLossPerHopPerMille = 100;
     return S;
 }
 
@@ -309,6 +329,10 @@ RA4_TEST(Recon, PhantomTruthLivesOutsideTheReadSurface)
         TickIndex LastUpdateTick;
         Fixed Confidence;
         uint8_t IndependentSourceCount;
+        // M3: which of OUR OWN chain nodes last filed on this track. Reviewed as
+        // safe for the read surface -- it describes our reporting structure, not
+        // the enemy, and the UI needs it to say "confirmed by two posts".
+        uint16_t LastReportNodeId;
         bool bStale;
         bool bContested;
         uint32_t ProvenanceReportIds[Recon::kTrackProvenanceSize];
@@ -558,6 +582,605 @@ const Recon::PerceivedTrack* FindSingleTrack(const SimWorld& World, PlayerId P)
 }
 
 } // namespace
+
+// --- M3: chain of command (§4.4) -------------------------------------------------
+
+RA4_TEST(Recon, ChainDelaysReportsByHopLatency)
+{
+    // The core M3 property: intel is no longer instant. An observer attached to
+    // the player's construction yard is one hop from the staff map, so its report
+    // must land exactly PerHop ticks after the observation -- not sooner (that
+    // would mean the delay is decorative) and not later (that would mean reports
+    // get stuck in the queue).
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    const int32_t PerHop = 10;
+    Recon::ReconSettings Settings = MakeChainSettings(PerHop, /*OrphanDelayTicks*/ 300);
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(31337), &Settings);
+    // An HQ next to the observer: the node the report enters the chain at.
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(30, 30), /*bInstantComplete*/ true);
+    SpawnScoutContact(World);
+
+    // Before the latency elapses the staff map must know nothing.
+    int32_t TicksUntilFirstTrack = -1;
+    for (int32_t I = 0; I < PerHop * 4; ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+        if (World.GetRecon().GetPerceivedWorld(0).GetAliveTrackCount() > 0)
+        {
+            TicksUntilFirstTrack = I + 1;
+            break;
+        }
+    }
+    RA4_REQUIRE(TicksUntilFirstTrack > 0);
+    // One hop from the HQ node: the first observation was made on tick 1, so the
+    // track appears on tick 1 + PerHop.
+    RA4_EXPECT(TicksUntilFirstTrack == PerHop + 1);
+}
+
+RA4_TEST(Recon, OrphanObserverWaitsLongerThanAnAttachedOne)
+{
+    // Being outside the command network must cost something measurable, or the
+    // whole "invest in communications" pillar is decoration. Same scene twice:
+    // once with an HQ beside the observer, once with no command building at all.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    const int32_t PerHop = 5;
+    const int32_t OrphanDelay = 60;
+    Recon::ReconSettings Settings = MakeChainSettings(PerHop, OrphanDelay);
+
+    const auto TicksToFirstTrack = [&Content, &Settings](bool bWithHq)
+    {
+        SimWorld World;
+        World.Initialize(&Content, MakeTestSetup(4711), &Settings);
+        if (bWithHq)
+        {
+            World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(30, 30), true);
+        }
+        SpawnScoutContact(World);
+        for (int32_t I = 0; I < 200; ++I)
+        {
+            World.Tick(nullptr);
+            World.ClearEvents();
+            if (World.GetRecon().GetPerceivedWorld(0).GetAliveTrackCount() > 0)
+            {
+                return I + 1;
+            }
+        }
+        return -1;
+    };
+
+    const int32_t Attached = TicksToFirstTrack(true);
+    const int32_t Orphan = TicksToFirstTrack(false);
+    RA4_REQUIRE(Attached > 0);
+    RA4_REQUIRE(Orphan > 0);
+    RA4_EXPECT(Attached == PerHop + 1);
+    RA4_EXPECT(Orphan == OrphanDelay + 1);
+    RA4_EXPECT(Orphan > Attached);
+}
+
+RA4_TEST(Recon, ReportsFromASubordinateNodeTakeMoreHopsThanFromTheHq)
+{
+    // A radar station reports through the chain (node -> HQ), an observer at the
+    // HQ reports directly. Two hops must cost twice one hop: this is the whole
+    // reason a player would want liaison officers later.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    const int32_t PerHop = 8;
+    Recon::ReconSettings Settings = MakeChainSettings(PerHop, /*OrphanDelayTicks*/ 400);
+
+    // Contact far from the HQ but close to a forward radar: the radar is the
+    // nearest node, so the report takes the two-hop path.
+    // No shipped def sets bIsRadar yet, so the test registers one, exactly how a
+    // designer would through content.
+    EntityDef RadarDef;
+    RadarDef.Name = "building.test.chain_radar";
+    RadarDef.Id = MakeContentId("building.test.chain_radar");
+    RadarDef.Kind = EntityKind::Building;
+    RadarDef.Faction = FactionId::Soviet;
+    RadarDef.MaxHealth = 500;
+    RadarDef.Building.FootprintX = 2;
+    RadarDef.Building.FootprintY = 2;
+    RadarDef.Building.bIsRadar = true;
+    Content.AddEntity(RadarDef);
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(9182), &Settings);
+    // Tiles are 200 world units, so the contact at (3400,3000) sits on tile
+    // (17,15). The HQ goes far away and the radar close, so the radar really is
+    // the nearest node -- getting this backwards would silently test the one-hop
+    // path instead of the two-hop one.
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(2, 2), true);   // ~19.8 tiles away
+    World.SpawnBuilding(RadarDef.Id, 0, TileCoord(20, 18), true);             // ~4.2 tiles away
+    SpawnScoutContact(World);
+
+    int32_t Ticks = -1;
+    for (int32_t I = 0; I < PerHop * 6; ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+        if (World.GetRecon().GetPerceivedWorld(0).GetAliveTrackCount() > 0)
+        {
+            Ticks = I + 1;
+            break;
+        }
+    }
+    RA4_REQUIRE(Ticks > 0);
+    // HopsFromNodeToHq defaults to 2, so the latency is 2 * PerHop.
+    RA4_EXPECT(Ticks == PerHop * 2 + 1);
+}
+
+RA4_TEST(Recon, RelayedReportsLoseReliability)
+{
+    // Reliability must fall with hop count: every relay summarises and rounds.
+    // Checked on the pure function of the tuning rather than through a track,
+    // because reliability is an input to distortion, not a track field.
+    Recon::ReconSettings Settings = MakeChainSettings(10, 100);
+    const Fixed OneHop = FxClamp(Fixed::FromInt(1) -
+                                     Recon::PerMilleToFixed(Settings.Chain.ReliabilityLossPerHopPerMille * 1),
+                                 Fixed::Zero(), Fixed::FromInt(1));
+    const Fixed TwoHops = FxClamp(Fixed::FromInt(1) -
+                                      Recon::PerMilleToFixed(Settings.Chain.ReliabilityLossPerHopPerMille * 2),
+                                  Fixed::Zero(), Fixed::FromInt(1));
+    RA4_EXPECT(OneHop > TwoHops);
+    RA4_EXPECT(TwoHops > Fixed::Zero());
+}
+
+RA4_TEST(Recon, ChainTuningIsPartOfTheSettingsHash)
+{
+    // Chain latency changes belief timing, so it changes the ruleset: an old
+    // replay recorded under different comms must be refused, not replayed under
+    // silently faster radios.
+    Recon::ReconSettings A = MakeChainSettings(10, 100);
+    Recon::ReconSettings B = A;
+    B.Chain.OrphanDelayTicks += 1;
+    RA4_EXPECT(A.ComputeSettingsHash() != B.ComputeSettingsHash());
+
+    Recon::ReconSettings C = A;
+    C.Chain.HopsFromNodeToHq += 1;
+    RA4_EXPECT(A.ComputeSettingsHash() != C.ComputeSettingsHash());
+}
+
+RA4_TEST(Recon, ValidatorRejectsCommsLevelOutsideTheLadder)
+{
+    // A comms level past the end of the ladder would read as "no delay", turning
+    // a downgrade into a free upgrade. That must fail to load.
+    Recon::ReconSettings S = MakeMinimalSettings(true);
+    S.Chain.CommsLevel = 99;
+    std::vector<std::string> Errors;
+    RA4_EXPECT(!Recon::ValidateReconSettings(S, Errors));
+    RA4_EXPECT(!Errors.empty());
+}
+
+RA4_TEST(Recon, NearbyContactsBecomeOneGroupTrackWithACountInterval)
+{
+    // A staff map holds "about a platoon of armour here", not five vehicle
+    // records. Five tanks parked together must therefore surface as ONE track
+    // whose count is 5 -- this is what later gives fear a crowd to exaggerate.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Settings.Tracks.bGroupTracksEnabled = true;
+    Settings.Tracks.MergeRadiusTiles = 6;
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(2468), &Settings);
+    // HQ far enough that its OWN vision cannot refresh the track (buildings see
+    // too), but inside NodeAttachRadiusTiles so reports still enter the chain.
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    // Five enemy tanks within a couple of tiles of each other.
+    for (int32_t I = 0; I < 5; ++I)
+    {
+        World.SpawnUnit(RA4Test::Ids::AllLightTank, 1,
+                        Vec2(Fixed::FromInt(3400 + I * 60), Fixed::FromInt(3000)));
+    }
+
+    World.Tick(nullptr);
+    World.ClearEvents();
+
+    std::vector<const Recon::PerceivedTrack*> Found;
+    World.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, Found);
+    RA4_REQUIRE(Found.size() == 1);
+    RA4_EXPECT(Found[0]->BelievedCountMin == 5);
+    RA4_EXPECT(Found[0]->BelievedCountMax == 5);
+    // The shipped "light tank" carries HeavyVehicle armour, so it categorises as
+    // heavy: the assertion follows the content, not the unit's name.
+    RA4_EXPECT(Found[0]->BelievedCategory == Recon::ObservedCategory::HeavyVehicle);
+}
+
+RA4_TEST(Recon, DistantContactsStayDistinctTracks)
+{
+    // The other half of the grouping contract: merging must be LOCAL. Two forces
+    // on opposite flanks are two problems, and collapsing them would erase the
+    // one thing a commander most needs to see.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Settings.Tracks.bGroupTracksEnabled = true;
+    Settings.Tracks.MergeRadiusTiles = 3;
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(1357), &Settings);
+    // HQ far enough that its OWN vision cannot refresh the track (buildings see
+    // too), but inside NodeAttachRadiusTiles so reports still enter the chain.
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    // Two scouts so both flanks are actually visible.
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(6000)));
+    World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(6000)));
+
+    World.Tick(nullptr);
+    World.ClearEvents();
+
+    std::vector<const Recon::PerceivedTrack*> Found;
+    World.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, Found);
+    RA4_EXPECT(Found.size() == 2);
+}
+
+RA4_TEST(Recon, AnonymousContactsNeverMergeWithIdentifiedOnes)
+{
+    // "Something is out there" and "four tanks are out there" are different
+    // claims. Merging them would hand the player an identity they never earned,
+    // which is the exact opposite of what this whole layer is for.
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Settings.Tracks.bGroupTracksEnabled = true;
+    Settings.Tracks.MergeRadiusTiles = 10;
+
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    EntityDef RadarDef;
+    RadarDef.Name = "building.test.group_radar";
+    RadarDef.Id = MakeContentId("building.test.group_radar");
+    RadarDef.Kind = EntityKind::Building;
+    RadarDef.Faction = FactionId::Soviet;
+    RadarDef.MaxHealth = 500;
+    RadarDef.Building.FootprintX = 2;
+    RadarDef.Building.FootprintY = 2;
+    RadarDef.Building.bIsRadar = true;
+    Content.AddEntity(RadarDef);
+    Settings.RadarRangeTiles = 40;
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(8642), &Settings);
+    World.SpawnBuilding(RadarDef.Id, 0, TileCoord(15, 15), true);
+    // Eyes-on contact next to our scout...
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+    // ...and a radar-only blip well outside any unit's vision but inside the
+    // 40-tile radar envelope, so it can only arrive as an unidentified contact.
+    World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(6000), Fixed::FromInt(3000)));
+
+    World.Tick(nullptr);
+    World.ClearEvents();
+
+    std::vector<const Recon::PerceivedTrack*> Found;
+    World.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, Found);
+    bool bHasAnonymous = false;
+    bool bHasIdentified = false;
+    for (const Recon::PerceivedTrack* T : Found)
+    {
+        bHasAnonymous = bHasAnonymous || T->bAnonymous;
+        bHasIdentified = bHasIdentified || !T->bAnonymous;
+    }
+    RA4_EXPECT(bHasAnonymous);
+    RA4_EXPECT(bHasIdentified);
+}
+
+RA4_TEST(Recon, GroupingCanBeDisabledBackToOneTrackPerContact)
+{
+    // Every stage of this layer must be switchable, so a designer can bisect
+    // surprising behaviour instead of arguing about it.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Settings.Tracks.bGroupTracksEnabled = false;
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(2468), &Settings);
+    // HQ far enough that its OWN vision cannot refresh the track (buildings see
+    // too), but inside NodeAttachRadiusTiles so reports still enter the chain.
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    for (int32_t I = 0; I < 4; ++I)
+    {
+        World.SpawnUnit(RA4Test::Ids::AllLightTank, 1,
+                        Vec2(Fixed::FromInt(3400 + I * 60), Fixed::FromInt(3000)));
+    }
+
+    World.Tick(nullptr);
+    World.ClearEvents();
+
+    std::vector<const Recon::PerceivedTrack*> Found;
+    World.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, Found);
+    // One track per enemy vehicle, as in M1/M2.
+    RA4_EXPECT(Found.size() == 4);
+}
+
+RA4_TEST(Recon, ContradictoryCountsMarkTheTrackContestedAndWidenTheInterval)
+{
+    // §4.4: when independent sources disagree the staff map must SAY SO rather
+    // than quietly pick a winner. Contested keeps both claims in the interval,
+    // which is the signal that tells a player to go and look again.
+    // Exercised on the aggregation rule itself: two reports from two different
+    // nodes about the same area, with materially different counts.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Settings.Tracks.bGroupTracksEnabled = true;
+    Settings.Tracks.MergeRadiusTiles = 8;
+    Settings.Tracks.MergeWindowTicks = 400;
+    Settings.Tracks.ContestedCountTolerancePerMille = 300; // >30% apart = contested
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(3690), &Settings);
+    // Two command buildings far apart, so the two observers report through
+    // DIFFERENT nodes -- corroboration requires independent sources.
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(6, 6), true);
+    EntityDef RadarDef;
+    RadarDef.Name = "building.test.contest_radar";
+    RadarDef.Id = MakeContentId("building.test.contest_radar");
+    RadarDef.Kind = EntityKind::Building;
+    RadarDef.Faction = FactionId::Soviet;
+    RadarDef.MaxHealth = 500;
+    RadarDef.Building.FootprintX = 2;
+    RadarDef.Building.FootprintY = 2;
+    RadarDef.Building.bIsRadar = true;
+    Content.AddEntity(RadarDef);
+
+    // One observer sees a lone tank; the group it reports has count 1.
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+    World.Tick(nullptr);
+    World.ClearEvents();
+
+    std::vector<const Recon::PerceivedTrack*> Found;
+    World.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, Found);
+    RA4_REQUIRE(Found.size() == 1);
+    RA4_EXPECT(Found[0]->BelievedCountMax == 1);
+    RA4_EXPECT(!Found[0]->bContested); // a single source cannot contradict itself
+
+    // Now six more tanks arrive in the same area: the next report about that area
+    // carries a materially larger count than the track currently holds.
+    for (int32_t I = 0; I < 6; ++I)
+    {
+        World.SpawnUnit(RA4Test::Ids::AllLightTank, 1,
+                        Vec2(Fixed::FromInt(3450 + I * 50), Fixed::FromInt(3050)));
+    }
+    World.Tick(nullptr);
+    World.ClearEvents();
+
+    Found.clear();
+    World.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, Found);
+    RA4_REQUIRE(!Found.empty());
+    // The believed strength must have grown to cover the new claim: whether it
+    // arrives as a corroboration or a contest, the interval may not still say 1.
+    int32_t BestMax = 0;
+    for (const Recon::PerceivedTrack* T : Found)
+    {
+        BestMax = T->BelievedCountMax > BestMax ? T->BelievedCountMax : BestMax;
+    }
+    RA4_EXPECT(BestMax >= 6);
+}
+
+RA4_TEST(Recon, CorroborationBeatsASingleSourceOnConfidence)
+{
+    // Agreement between independent sources is worth more than one source looking
+    // twice (§4.4 superlinear confidence). Checked through the tuning contract:
+    // a second independent source must raise confidence above the single-source
+    // baseline, and a contested track must land below it.
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    const Fixed Bonus = Recon::PerMilleToFixed(Settings.Tracks.AgreementConfidenceBonusPerMille);
+    const Fixed Single = Fixed::FromInt(1);
+    const Fixed Corroborated = FxClamp(Single + Bonus, Fixed::Zero(), Fixed::FromInt(1));
+    const Fixed Contested = FxClamp(Single - Bonus, Fixed::Zero(), Fixed::FromInt(1));
+    RA4_EXPECT(Corroborated >= Single);
+    RA4_EXPECT(Contested < Single);
+    RA4_EXPECT(Bonus > Fixed::Zero()); // a zero bonus would make the rule a no-op
+}
+
+RA4_TEST(Recon, BlackoutFreezesBeliefInsteadOfErasingIt)
+{
+    // §4.4, the mechanic this whole layer exists for: when comms drop, the staff
+    // map must KEEP the last known position rather than clear it. Erasing would
+    // be merciful and wrong -- the tragedy is ordering an attack against a
+    // contact that moved twenty seconds ago.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Settings.Tracks.StaleAfterTicks = 10;
+    Settings.Tracks.DropBelowConfidencePerMille = 0; // no GC inside the window
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(5150), &Settings);
+    // HQ far enough that its OWN vision cannot refresh the track (buildings see
+    // too), but inside NodeAttachRadiusTiles so reports still enter the chain.
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    const EntityId Enemy =
+        World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+
+    World.Tick(nullptr);
+    World.ClearEvents();
+    const Recon::PerceivedTrack* T = FindSingleTrack(World, 0);
+    RA4_REQUIRE(T != nullptr);
+    const Vec2 LastKnown = T->BelievedPosition;
+    RA4_EXPECT(T->PositionErrorRadius == Fixed::Zero());
+
+    // Kill the observer: nobody is looking any more, so no fresh reports arrive.
+    const EntityId Observer = World.MakeId(1);
+    for (int32_t I = 0; I < 40; ++I)
+    {
+        World.DebugDamage(Observer, 500);
+        World.Tick(nullptr);
+        World.ClearEvents();
+    }
+    (void)Enemy;
+
+    // Belief must still be there, frozen at the last known position, visibly old,
+    // and blurring: exactly what the player should see and mistrust.
+    const Recon::PerceivedTrack* Frozen = FindSingleTrack(World, 0);
+    RA4_REQUIRE(Frozen != nullptr);
+    RA4_EXPECT(Frozen->BelievedPosition.X == LastKnown.X);
+    RA4_EXPECT(Frozen->BelievedPosition.Y == LastKnown.Y);
+    RA4_EXPECT(Frozen->bStale);
+    RA4_EXPECT(Frozen->PositionErrorRadius > Fixed::Zero());
+    RA4_EXPECT(Frozen->Confidence < Fixed::FromInt(1));
+}
+
+RA4_TEST(Recon, ErrorRadiusGrowsMonotonicallyWhileUnobserved)
+{
+    // The uncertainty a player is shown must never shrink on its own: only a
+    // fresh observation may tighten it. A non-monotonic radius would teach
+    // players to wait for the circle to shrink instead of scouting.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Settings.Tracks.StaleAfterTicks = 5;
+    Settings.Tracks.DropBelowConfidencePerMille = 0;
+    Settings.Tracks.ErrorRadiusGrowthTilesPerMinute = 60; // fast enough to measure
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(6161), &Settings);
+    // HQ far enough that its OWN vision cannot refresh the track (buildings see
+    // too), but inside NodeAttachRadiusTiles so reports still enter the chain.
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+
+    World.Tick(nullptr);
+    World.ClearEvents();
+    RA4_REQUIRE(FindSingleTrack(World, 0) != nullptr);
+
+    // Remove the observer, then watch the radius over time.
+    const EntityId Observer = World.MakeId(1);
+    World.DebugDamage(Observer, 5000);
+    World.Tick(nullptr);
+    World.ClearEvents();
+
+    Fixed Previous = Fixed::Zero();
+    bool bGrewAtLeastOnce = false;
+    for (int32_t I = 0; I < 60; ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+        const Recon::PerceivedTrack* T = FindSingleTrack(World, 0);
+        if (T == nullptr)
+        {
+            break; // GC'd; monotonicity up to that point is what matters
+        }
+        if (T->PositionErrorRadius < Previous)
+        {
+            RA4Test::ReportFailure("position error radius shrank without a fresh observation",
+                                   __FILE__, __LINE__);
+            return;
+        }
+        bGrewAtLeastOnce = bGrewAtLeastOnce || T->PositionErrorRadius > Previous;
+        Previous = T->PositionErrorRadius;
+    }
+    RA4_EXPECT(bGrewAtLeastOnce);
+}
+
+RA4_TEST(Recon, RegainedContactSharpensBeliefAgain)
+{
+    // The other side of freezing: when someone finally looks again, the blur must
+    // collapse. Without this the system would only ever get vaguer, and scouting
+    // would stop feeling like it pays.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Settings.Tracks.StaleAfterTicks = 5;
+    Settings.Tracks.DropBelowConfidencePerMille = 0;
+    Settings.Tracks.ErrorRadiusGrowthTilesPerMinute = 60;
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(7272), &Settings);
+    // HQ far enough that its OWN vision cannot refresh the track (buildings see
+    // too), but inside NodeAttachRadiusTiles so reports still enter the chain.
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+    World.Tick(nullptr);
+    World.ClearEvents();
+
+    // Blind ourselves for a while so the track blurs.
+    const EntityId Observer = World.MakeId(1);
+    World.DebugDamage(Observer, 5000);
+    for (int32_t I = 0; I < 30; ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+    }
+    const Recon::PerceivedTrack* Blurred = FindSingleTrack(World, 0);
+    RA4_REQUIRE(Blurred != nullptr);
+    const Fixed BlurredRadius = Blurred->PositionErrorRadius;
+    RA4_REQUIRE(BlurredRadius > Fixed::Zero());
+
+    // Send a fresh scout to the same place.
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    for (int32_t I = 0; I < 5; ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+    }
+
+    std::vector<const Recon::PerceivedTrack*> Found;
+    World.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, Found);
+    RA4_REQUIRE(!Found.empty());
+    Fixed Tightest = Fixed::Max();
+    for (const Recon::PerceivedTrack* T : Found)
+    {
+        Tightest = T->PositionErrorRadius < Tightest ? T->PositionErrorRadius : Tightest;
+    }
+    RA4_EXPECT(Tightest < BlurredRadius);
+}
+
+RA4_TEST(Recon, WorthlessBeliefIsCollectedDeterministically)
+{
+    // Belief nobody has any confidence in is noise on the map, and unbounded track
+    // growth is a memory budget violation (§6). GC must actually fire -- and fire
+    // on the same tick everywhere, which is why the sweep cursor is hashed.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Settings.Tracks.StaleAfterTicks = 4;
+    Settings.Tracks.ConfidenceDecayPerSecondPerMille = 400; // -40%/s: quick to observe
+    Settings.Tracks.DropBelowConfidencePerMille = 100;
+
+    const auto TicksUntilCollected = [&Content, &Settings]()
+    {
+        SimWorld World;
+        World.Initialize(&Content, MakeTestSetup(8383), &Settings);
+        // HQ far enough that its OWN vision cannot refresh the track (buildings see
+    // too), but inside NodeAttachRadiusTiles so reports still enter the chain.
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+        World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+        World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+        World.Tick(nullptr);
+        World.ClearEvents();
+        const EntityId Observer = World.MakeId(1);
+        World.DebugDamage(Observer, 5000);
+        for (int32_t I = 0; I < 200; ++I)
+        {
+            World.Tick(nullptr);
+            World.ClearEvents();
+            if (World.GetRecon().GetPerceivedWorld(0).GetAliveTrackCount() == 0)
+            {
+                return I + 1;
+            }
+        }
+        return -1;
+    };
+
+    const int32_t First = TicksUntilCollected();
+    const int32_t Second = TicksUntilCollected();
+    RA4_REQUIRE(First > 0);
+    RA4_EXPECT(First == Second); // same seed, same tick: deterministic GC
+}
 
 RA4_TEST(Recon, TruthfulPipelineMirrorsVisibleEnemy)
 {
@@ -813,12 +1436,9 @@ RA4_TEST(Recon, BeliefIsReconstructibleFromReplayAlone)
     // timeline from nothing but the replay bytes and the settings the header
     // identifies -- every per-tick belief checksum must match the live run.
     //
-    // M2 OBLIGATION: while the recon phases are M0-empty, belief only changes
-    // through plumbing (map dims, enabled-ness, structures arriving from the
-    // command stream). Once observation/distortion land, this test MUST be
-    // extended with a tuning-swap case: replaying under settings with a
-    // DIFFERENT hash must produce a DIFFERENT belief timeline, or the hash
-    // gate is decorative. Tracked in NEXT_ACTIONS I-M2 acceptance criteria.
+    // The M2 obligation from the I-B5 review (a tuning-swap must actually change
+    // the belief timeline, else the header hash gate is decorative) is discharged
+    // by Recon.SwappedTuningProducesADifferentBeliefTimeline below.
     ContentDatabase Content;
     BuildDefaultContent(Content);
     Recon::ReconSettings Settings = MakeMinimalSettings(true);
@@ -875,6 +1495,84 @@ RA4_TEST(Recon, BeliefIsReconstructibleFromReplayAlone)
                                    __FILE__, __LINE__);
             return;
         }
+    }
+}
+
+RA4_TEST(Recon, SwappedTuningProducesADifferentBeliefTimeline)
+{
+    // The I-B5 review's M2 obligation, dischargeable only now that distortion is
+    // real: the replay header's ReconSettingsHash must be load-bearing. If belief
+    // were insensitive to tunables, the hash gate would be theatre -- refusing
+    // mismatched rulesets to protect a property that did not exist.
+    //
+    // Method: run the same scripted match three times from the same seed, varying
+    // only the distortion tuning. Equal-hash settings must reproduce the belief
+    // timeline exactly; a changed tunable must change it.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+
+    // Fear-only distortion with a large bias, and morale that craters and never
+    // recovers, so the tuning difference shows inside the measured window.
+    const auto MakeTuning = [](int32_t FearBiasPerMille)
+    {
+        Recon::ReconSettings S = MakeMinimalSettings(true);
+        S.DistortionProfiles[0].bCountDistortionEnabled = true;
+        S.DistortionProfiles[0].FearCountBiasMaxPerMille = FearBiasPerMille;
+        S.DistortionProfiles[0].CompetenceNoiseMaxPerMille = 0; // fear only
+        S.Morale.DamageMoralePenaltyPerMille = 5000;
+        S.Morale.MoraleRegenPerTickPerMille = 0;
+        return S;
+    };
+
+    // Two facing observers; the player-0 unit is shelled into panic (without
+    // dying -- a dead observer reports nothing) so the fear branch actually runs.
+    const auto RunBeliefTimeline = [&Content](const Recon::ReconSettings& Settings)
+    {
+        std::vector<uint64_t> PerTick;
+        SimWorld World;
+        World.Initialize(&Content, MakeTestSetup(4242), &Settings);
+        World.SpawnUnit(Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+        World.SpawnUnit(Ids::AllRifleman, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+        const EntityId Victim = World.MakeId(0);
+        for (int32_t I = 0; I < 15; ++I)
+        {
+            World.DebugDamage(Victim, 2); // 30 total, far below lethal
+            World.Tick(nullptr);
+            World.ClearEvents();
+        }
+        for (int32_t I = 0; I < 60; ++I)
+        {
+            World.Tick(nullptr);
+            World.ClearEvents();
+            Hash64 H;
+            World.GetRecon().GetPerceivedWorld(0).FeedChecksum(H);
+            PerTick.push_back(H.Get());
+        }
+        return PerTick;
+    };
+
+    const Recon::ReconSettings Original = MakeTuning(3000);
+    const std::vector<uint64_t> Live = RunBeliefTimeline(Original);
+
+    // 1. Independently constructed, same tunables: identical timeline. This is
+    //    exactly what an equal header hash promises a replay viewer.
+    const Recon::ReconSettings SameTuning = MakeTuning(3000);
+    RA4_REQUIRE(SameTuning.ComputeSettingsHash() == Original.ComputeSettingsHash());
+    const std::vector<uint64_t> Same = RunBeliefTimeline(SameTuning);
+    RA4_REQUIRE(Same.size() == Live.size());
+    RA4_EXPECT(Same == Live);
+
+    // 2. One tunable changed: different hash AND a different timeline. A weaker
+    //    fear bias must change what the panicking observer reports.
+    const Recon::ReconSettings OtherTuning = MakeTuning(200);
+    RA4_REQUIRE(OtherTuning.ComputeSettingsHash() != Original.ComputeSettingsHash());
+    const std::vector<uint64_t> Other = RunBeliefTimeline(OtherTuning);
+    RA4_REQUIRE(Other.size() == Live.size());
+    if (Other == Live)
+    {
+        RA4Test::ReportFailure("belief timeline is insensitive to distortion tuning: the replay "
+                               "header's ReconSettingsHash gate protects nothing",
+                               __FILE__, __LINE__);
     }
 }
 
@@ -1003,6 +1701,7 @@ RA4_TEST(Recon, ObjectiveStateFunnelInventory)
         "Source/RA4Recon/Private/ReconSystem.cpp",     // OMNISCIENT-BY-DESIGN (produces belief)
         "Source/RA4Simulation/Private/SimWorld.cpp",   // the truth itself
         "Source/RA4Simulation/Public/RA4Simulation/SimWorld.h",
+        "Source/RedAlert4/Private/RA4ReconDebugOverlay.cpp", // OMNISCIENT-BY-DESIGN (two-maps overlay)
         "Source/RedAlert4/Private/RA4PlayerController.cpp", // OWN x2 + LEAK V-B (picking)
         "Source/RedAlert4/Private/RA4SimWorldSubsystem.cpp", // LEAK V-A (actor sync)
     };

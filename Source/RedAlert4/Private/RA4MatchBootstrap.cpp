@@ -77,7 +77,10 @@ void SeedBase(SimWorld& World, const StartingForce& Force, PlayerId Owner, const
 }
 } // namespace
 
-void FRA4MatchBootstrap::BuildSkirmish(ContentDatabase& Content, SimWorld& World, uint64 Seed, RA4::FactionId PlayerFaction, RA4::FactionId EnemyFaction, int32 NumAIPlayers, int32 AISpot)
+void FRA4MatchBootstrap::BuildSkirmish(ContentDatabase& Content, SimWorld& World, uint64 Seed,
+                                       RA4::FactionId PlayerFaction, RA4::FactionId EnemyFaction,
+                                       int32 NumAIPlayers, int32 AISpot,
+                                       const RA4::Recon::ReconSettings* ReconSettings)
 {
     BuildDefaultContent(Content);
 
@@ -176,7 +179,7 @@ void FRA4MatchBootstrap::BuildSkirmish(ContentDatabase& Content, SimWorld& World
             EnemyFaction == RA4::FactionId::Soviet ? RA4::FactionId::Alliance : RA4::FactionId::Soviet;
     }
 
-    World.Initialize(&Content, Setup);
+    World.Initialize(&Content, Setup, ReconSettings);
 
     const auto ForceFor = [](RA4::FactionId Faction) -> const StartingForce&
     {

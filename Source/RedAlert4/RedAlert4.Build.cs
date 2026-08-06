@@ -23,6 +23,7 @@ public class RedAlert4 : ModuleRules
 			"RA4AI",
 			"RA4Input",
 			"RA4Simulation",
+			"RA4Recon",
 			"RA4Replay",
 			"RA4FogOfWar",
 			"RA4Campaign",

@@ -13,10 +13,10 @@ MATERIAL_ROOT = "/Game/RA4/Art/Materials"
 TEXTURE_ROOT = f"{MATERIAL_ROOT}/Textures"
 
 TEXTURES = {
-    "T_RA4_PaintedMetal_BaseColor": "Content/ThirdParty/ambientCG/PaintedMetal006_2K-JPG/PaintedMetal006_2K-JPG_Color.jpg",
-    "T_RA4_PaintedMetal_Normal": "Content/ThirdParty/ambientCG/PaintedMetal006_2K-JPG/PaintedMetal006_2K-JPG_NormalDX.jpg",
-    "T_RA4_PaintedMetal_Roughness": "Content/ThirdParty/ambientCG/PaintedMetal006_2K-JPG/PaintedMetal006_2K-JPG_Roughness.jpg",
-    "T_RA4_PaintedMetal_Metallic": "Content/ThirdParty/ambientCG/PaintedMetal006_2K-JPG/PaintedMetal006_2K-JPG_Metalness.jpg",
+    "T_RA4_PaintedMetal_BaseColor": "Content/ThirdParty/ambientCG/Metal032_2K-JPG/Metal032_2K-JPG_Color.jpg",
+    "T_RA4_PaintedMetal_Normal": "Content/ThirdParty/ambientCG/Metal032_2K-JPG/Metal032_2K-JPG_NormalGL.jpg",
+    "T_RA4_PaintedMetal_Roughness": "Content/ThirdParty/ambientCG/Metal032_2K-JPG/Metal032_2K-JPG_Roughness.jpg",
+    "T_RA4_PaintedMetal_Metallic": "Content/ThirdParty/ambientCG/Metal032_2K-JPG/Metal032_2K-JPG_Metalness.jpg",
 }
 
 PALETTES = {

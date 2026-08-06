@@ -5,6 +5,7 @@
 
 #include <chrono>
 #include "RA4Core/Checksum.h"
+#include "RA4Core/SimConfig.h"
 #include "RA4Recon/DistortionPipeline.h"
 
 namespace RA4
@@ -14,7 +15,7 @@ namespace Recon
 
 namespace
 {
-constexpr uint32_t kReconSystemVersion = 3; // v3: category/anonymous in observations (M2); v2: association tables (M1)
+constexpr uint32_t kReconSystemVersion = 4; // v4: report NodeId, chain latency (M3); v3: category/anonymous (M2); v2: association tables (M1)
 } // namespace
 
 const char* PhaseName(Phase P)
@@ -166,6 +167,7 @@ void ReconSystem::PhaseObservation(TickIndex CurrentTick, const ObservationInput
         for (const ObservedEntity& Seen : Input.VisibleToPlayer[P])
         {
             Observation Obs;
+            Obs.ObserverNodeId = Seen.ObserverNodeId; // M3: who is reporting this
             Obs.Subject = Seen.Id;
             Obs.ObservedClass = Seen.Class;
             Obs.ObservedPosition = Seen.Position;
@@ -287,25 +289,111 @@ void ReconSystem::PhaseDistortion(TickIndex)
 
 void ReconSystem::PhaseReportEmission(TickIndex CurrentTick)
 {
-    // M1: one report per player per tick, arriving instantly. M3 replaces the
-    // instant arrival with per-reporter intervals and chain-of-command delays,
-    // which is why reports already carry EmitTick/ArrivalTick/HopsRemaining.
+    // M3: observations are grouped BY REPORTING NODE, and each group becomes one
+    // report whose arrival is pushed into the future by the chain latency of that
+    // node. Grouping by node rather than per observation is what makes a report a
+    // report: a squad radios in what it saw, it does not send one telegram per
+    // enemy tank.
+    //
+    // Reports from a blacked-out node are never created -- that node has no
+    // working comms. Its existing tracks freeze, which PhaseTrackUpdate handles.
+    const ChainTuning& CT = Settings->Chain;
+    const CommsProfile* Comms = Settings->FindCommsProfile(Settings->ActiveCommsProfile);
+
     for (int32_t P = 0; P < kMaxPlayers; ++P)
     {
         if (Worlds[P] == nullptr || PendingObservations[P].empty())
         {
             continue;
         }
-        ReconReport Report;
-        Report.ReportId = NextReportId;
-        NextReportId += 1;
-        Report.OwnerPlayer = PlayerId(P);
-        Report.EmitTick = CurrentTick;
-        Report.ArrivalTick = CurrentTick; // zero delay in the truthful pipeline
-        Report.HopsRemaining = 0;
-        Report.Reliability = Fixed::FromInt(1);
-        Report.Payload = PendingObservations[P]; // copy; pooling lands with M3's queue
-        InFlightReports.push_back(std::move(Report));
+
+        // Node lookup for this player. Node ids are 1-based and assigned in
+        // ascending order by the input builder, so this is a direct index.
+        const std::vector<ChainNode>& Nodes = TickInput->ChainNodes[P];
+
+        // Distinct nodes present in this tick's observations, in first-seen order
+        // (deterministic: PendingObservations is built in entity-slot order).
+        NodeBatchIds.clear();
+        NodeBatchStart.clear();
+        for (const Observation& Obs : PendingObservations[P])
+        {
+            bool bKnown = false;
+            for (uint16_t Existing : NodeBatchIds)
+            {
+                if (Existing == Obs.ObserverNodeId) { bKnown = true; break; }
+            }
+            if (!bKnown)
+            {
+                NodeBatchIds.push_back(Obs.ObserverNodeId);
+            }
+        }
+
+        for (uint16_t NodeId : NodeBatchIds)
+        {
+            const ChainNode* Node = nullptr;
+            if (NodeId != kNoChainNode && size_t(NodeId - 1) < Nodes.size())
+            {
+                Node = &Nodes[NodeId - 1];
+            }
+
+            // A blacked-out node emits nothing at all: no comms, no report.
+            if (Node != nullptr && Node->bBlackout)
+            {
+                continue;
+            }
+
+            // Latency and hop count. An observer attached to the HQ itself is one
+            // hop from the staff map; attached to a subordinate node it is
+            // HopsFromNodeToHq; attached to nothing, or reporting to a player with
+            // no HQ standing, it takes the orphan delay.
+            int32_t Hops = 0;
+            int32_t DelayTicks = 0;
+            if (Node == nullptr || !TickInput->HasHqNode[P])
+            {
+                Hops = 1;
+                DelayTicks = CT.OrphanDelayTicks;
+            }
+            else
+            {
+                Hops = Node->bIsHq ? 1 : CT.HopsFromNodeToHq;
+                int32_t PerHop = 0;
+                if (Comms != nullptr && !Comms->HopDelayTicksByLevel.empty())
+                {
+                    const size_t Level = size_t(CT.CommsLevel) < Comms->HopDelayTicksByLevel.size()
+                                             ? size_t(CT.CommsLevel)
+                                             : Comms->HopDelayTicksByLevel.size() - 1;
+                    PerHop = Comms->HopDelayTicksByLevel[Level];
+                }
+                DelayTicks = PerHop * Hops;
+            }
+
+            // Reliability degrades per hop: each relay summarises, rounds and
+            // loses detail. Clamped at zero rather than going negative.
+            Fixed Reliability = Fixed::FromInt(1) -
+                                PerMilleToFixed(CT.ReliabilityLossPerHopPerMille * Hops);
+            Reliability = FxClamp(Reliability, Fixed::Zero(), Fixed::FromInt(1));
+
+            ReconReport Report;
+            Report.ReportId = NextReportId;
+            NextReportId += 1;
+            Report.OwnerPlayer = PlayerId(P);
+            Report.EmitTick = CurrentTick;
+            Report.ArrivalTick = CurrentTick + TickIndex(DelayTicks);
+            Report.HopsRemaining = uint8_t(Hops);
+            Report.Reliability = Reliability;
+            Report.NodeId = NodeId;
+            for (const Observation& Obs : PendingObservations[P])
+            {
+                if (Obs.ObserverNodeId == NodeId)
+                {
+                    Report.Payload.push_back(Obs);
+                }
+            }
+            if (!Report.Payload.empty())
+            {
+                InFlightReports.push_back(std::move(Report));
+            }
+        }
     }
 }
 
@@ -315,11 +403,249 @@ void ReconSystem::PhasePropagation(TickIndex)
     // nothing to advance.
 }
 
+// --- M3 aggregation helpers ------------------------------------------------------
+//
+// A staff map does not hold "tank #4713 at (3412, 2988)". It holds "about a
+// company of armour around the crossroads". Grouping is therefore not an
+// optimisation, it is the unit of belief the player is supposed to reason about
+// -- and it is what gives fear something to exaggerate (owner decision Q3: group
+// in M3, together with report merging, rather than earlier and twice).
+//
+// The rule: observations from ONE report that share a category and sit within
+// MergeRadiusTiles of an existing group join it; otherwise they open a new one.
+// Both steps run in first-seen order, which is entity-slot order, so the outcome
+// is deterministic without sorting.
+
+namespace
+{
+
+// Squared tile distance between two world positions, in tiles^2, using integer
+// math only (Fixed multiply would overflow at map scale for no benefit here).
+int64_t TileDistanceSquared(const Vec2& A, const Vec2& B)
+{
+    const int64_t Ax = A.X.Raw / (kFixedOne * kTileSizeUnits);
+    const int64_t Ay = A.Y.Raw / (kFixedOne * kTileSizeUnits);
+    const int64_t Bx = B.X.Raw / (kFixedOne * kTileSizeUnits);
+    const int64_t By = B.Y.Raw / (kFixedOne * kTileSizeUnits);
+    const int64_t Dx = Ax - Bx;
+    const int64_t Dy = Ay - By;
+    return Dx * Dx + Dy * Dy;
+}
+
+// Whether two believed counts disagree enough to call the track contested.
+// Proportional, not absolute: 3 vs 4 is a rounding difference, 3 vs 30 is a
+// genuine contradiction, and a fixed threshold would confuse the two.
+bool CountsMateriallyDiffer(int32_t A, int32_t B, int32_t TolerancePerMille)
+{
+    const int32_t Larger = A > B ? A : B;
+    if (Larger <= 0)
+    {
+        return false;
+    }
+    const int32_t Difference = A > B ? A - B : B - A;
+    return int64_t(Difference) * 1000 > int64_t(Larger) * int64_t(TolerancePerMille);
+}
+
+} // namespace
+
+void ReconSystem::ApplyGroupedReport(PerceivedWorld& World, PlayerId P, const ReconReport& Report,
+                                     TickIndex CurrentTick)
+{
+    const TrackTuning& TT = Settings->Tracks;
+    const int64_t MergeRadiusSq = int64_t(TT.MergeRadiusTiles) * int64_t(TT.MergeRadiusTiles);
+
+    // 1. Bucket this report's observations into groups by category + proximity.
+    GroupScratch.clear();
+    for (const Observation& Obs : Report.Payload)
+    {
+        int32_t Found = -1;
+        for (size_t G = 0; G < GroupScratch.size(); ++G)
+        {
+            ObservationGroup& Group = GroupScratch[G];
+            // Anonymous contacts never merge with identified ones: "something is
+            // out there" and "four tanks are out there" are different claims and
+            // merging them would invent an identity the player never earned.
+            if (Group.Category != Obs.Category || Group.bAnonymous != Obs.bAnonymous)
+            {
+                continue;
+            }
+            if (TileDistanceSquared(Group.Centre, Obs.ObservedPosition) <= MergeRadiusSq)
+            {
+                Found = int32_t(G);
+                break;
+            }
+        }
+        if (Found < 0)
+        {
+            ObservationGroup Group;
+            Group.Category = Obs.Category;
+            Group.bAnonymous = Obs.bAnonymous;
+            Group.Centre = Obs.ObservedPosition;
+            Group.SumX = Obs.ObservedPosition.X;
+            Group.SumY = Obs.ObservedPosition.Y;
+            Group.Count = Obs.ObservedCount;
+            Group.Members = 1;
+            Group.RepresentativeSlot = Obs.Subject.Index;
+            Group.RepresentativeGeneration = Obs.Subject.Generation;
+            Group.ObservedClass = Obs.ObservedClass;
+            GroupScratch.push_back(Group);
+        }
+        else
+        {
+            ObservationGroup& Group = GroupScratch[size_t(Found)];
+            Group.SumX += Obs.ObservedPosition.X;
+            Group.SumY += Obs.ObservedPosition.Y;
+            Group.Members += 1;
+            Group.Count += Obs.ObservedCount;
+            // Centroid, so the marker sits in the middle of the formation rather
+            // than on whichever member happened to be first in slot order.
+            Group.Centre = Vec2(Group.SumX / int64_t(Group.Members), Group.SumY / int64_t(Group.Members));
+            // A mixed group loses its exact class: the staff knows the category,
+            // not which specific model each vehicle was.
+            if (Group.ObservedClass != Obs.ObservedClass)
+            {
+                Group.ObservedClass = ContentId{};
+            }
+        }
+    }
+
+    // 2. Fold each group into belief, reusing the association of its
+    //    representative so a moving formation keeps one track across ticks.
+    for (const ObservationGroup& Group : GroupScratch)
+    {
+        if (Group.RepresentativeSlot >= EntityCapacity)
+        {
+            continue;
+        }
+        TrackId& Assoc = AssociationTrack[P][Group.RepresentativeSlot];
+        uint32_t& AssocGen = AssociationGeneration[P][Group.RepresentativeSlot];
+        if (Assoc.IsValid() && AssocGen != Group.RepresentativeGeneration)
+        {
+            Assoc = TrackId{}; // GT slot reused: the HQ cannot know, so a new track
+        }
+
+        PerceivedTrack* Track = Assoc.IsValid() ? World.GetTrackMutable(Assoc) : nullptr;
+        if (Track == nullptr)
+        {
+            // Before opening a track, look for an existing one this group plainly
+            // refers to: the same area, same category, still fresh. That is what
+            // makes two DIFFERENT nodes reporting one formation converge instead
+            // of littering the map with duplicates.
+            TrackId Existing{};
+            for (uint32_t I = 0; I < World.GetTrackCapacity(); ++I)
+            {
+                const PerceivedTrack& Candidate = World.Tracks[I];
+                if (!Candidate.bAlive || Candidate.bAnonymous != Group.bAnonymous ||
+                    Candidate.BelievedCategory != Group.Category)
+                {
+                    continue;
+                }
+                if (CurrentTick < Candidate.LastUpdateTick ||
+                    int32_t(CurrentTick - Candidate.LastUpdateTick) > TT.MergeWindowTicks)
+                {
+                    continue;
+                }
+                if (TileDistanceSquared(Candidate.BelievedPosition, Group.Centre) <= MergeRadiusSq)
+                {
+                    Existing = Candidate.Id;
+                    break;
+                }
+            }
+            if (Existing.IsValid())
+            {
+                Assoc = Existing;
+                AssocGen = Group.RepresentativeGeneration;
+                Track = World.GetTrackMutable(Existing);
+            }
+        }
+
+        if (Track == nullptr)
+        {
+            const TrackId NewId = World.AllocateTrack();
+            if (!NewId.IsValid())
+            {
+                continue; // at the hard cap; losing the report is the honest outcome
+            }
+            Assoc = NewId;
+            AssocGen = Group.RepresentativeGeneration;
+            Track = World.GetTrackMutable(NewId);
+            Track->IndependentSourceCount = 0;
+        }
+
+        // Corroboration: a report from a node we have not heard from on this track
+        // is an independent source. Same node again is the same source saying the
+        // same thing, which is not evidence.
+        const bool bNewSource = Track->LastReportNodeId != Report.NodeId;
+        const bool bWasObserved = Track->LastUpdateTick != 0 || Track->IndependentSourceCount > 0;
+        const bool bContestedNow =
+            bWasObserved && bNewSource &&
+            CountsMateriallyDiffer(Track->BelievedCountMax, Group.Count, TT.ContestedCountTolerancePerMille);
+
+        Track->BelievedCategory = Group.Category;
+        Track->bAnonymous = Group.bAnonymous;
+        Track->BelievedClass = Group.bAnonymous ? ContentId{} : Group.ObservedClass;
+        Track->BelievedPosition = Group.Centre;
+        Track->PositionErrorRadius = Fixed::Zero();
+        Track->LastUpdateTick = CurrentTick;
+        Track->LastReportNodeId = Report.NodeId;
+        Track->bStale = false;
+
+        if (bContestedNow)
+        {
+            // Sources disagree: keep BOTH claims by widening the interval, and say
+            // so. Picking a winner here would hide exactly the uncertainty the
+            // player needs in order to send someone to look again.
+            Track->bContested = true;
+            Track->BelievedCountMin = Track->BelievedCountMin < Group.Count ? Track->BelievedCountMin : Group.Count;
+            Track->BelievedCountMax = Track->BelievedCountMax > Group.Count ? Track->BelievedCountMax : Group.Count;
+        }
+        else
+        {
+            Track->bContested = false;
+            Track->BelievedCountMin = Group.Count;
+            Track->BelievedCountMax = Group.Count;
+        }
+
+        if (bNewSource && Track->IndependentSourceCount < 255)
+        {
+            Track->IndependentSourceCount = uint8_t(Track->IndependentSourceCount + 1);
+        }
+
+        // Confidence. Agreement between independent sources is worth MORE than the
+        // sum of its parts (§4.4): two eyes on the same formation is qualitatively
+        // better evidence than one looking twice. Contested data does not earn the
+        // bonus -- the sources cancel rather than reinforce.
+        Fixed Confidence = Fixed::FromInt(1);
+        if (Track->bContested)
+        {
+            Confidence = Fixed::FromInt(1) - PerMilleToFixed(TT.AgreementConfidenceBonusPerMille);
+        }
+        else if (Track->IndependentSourceCount > 1)
+        {
+            Confidence = Fixed::FromInt(1) + PerMilleToFixed(TT.AgreementConfidenceBonusPerMille);
+        }
+        Track->Confidence = FxClamp(Confidence, Fixed::Zero(), Fixed::FromInt(1));
+
+        Track->ProvenanceReportIds[Track->ProvenanceCount % kTrackProvenanceSize] = Report.ReportId;
+        Track->ProvenanceCount = uint8_t((Track->ProvenanceCount + 1) % (kTrackProvenanceSize * 2));
+    }
+}
+
 void ReconSystem::PhaseAggregation(TickIndex CurrentTick)
 {
-    // Applies every report whose ArrivalTick has come. M1 keeps the merge rule
-    // trivial -- one GT entity maps to one track via the association table; the
-    // spatial merge of anonymous reports is M3's problem.
+    // Applies every report whose ArrivalTick has come.
+    //
+    // M3 adds two things on top of M1's per-entity association:
+    //  * grouping -- nearby same-category contacts in one report become ONE track
+    //    carrying a count interval, which is how a staff map actually reads;
+    //  * agreement/contest -- a second independent node reporting the same area
+    //    raises confidence superlinearly, while a materially different count sets
+    //    bContested and widens the interval instead of silently picking a winner.
+    //
+    // Contested rather than competing hypotheses: chosen in the M2 design review
+    // and recorded in ADR-0026. Splitting a track in two doubles the state, the
+    // decay bookkeeping and the phantom-refutation surface for the same gameplay
+    // signal -- "your sources disagree, go look again".
     size_t WriteBack = 0;
     for (size_t I = 0; I < InFlightReports.size(); ++I)
     {
@@ -340,6 +666,17 @@ void ReconSystem::PhaseAggregation(TickIndex CurrentTick)
         if (World == nullptr)
         {
             continue; // owner slot inactive; drop the report
+        }
+
+        // --- Group pass -------------------------------------------------------
+        // Collapse this report's observations into groups before touching belief,
+        // so a single track update carries the whole crowd rather than the last
+        // tank in slot order.
+        const TrackTuning& TT = Settings->Tracks;
+        if (TT.bGroupTracksEnabled)
+        {
+            ApplyGroupedReport(*World, P, Report, CurrentTick);
+            continue;
         }
 
         for (const Observation& Obs : Report.Payload)
@@ -397,10 +734,23 @@ void ReconSystem::PhaseAggregation(TickIndex CurrentTick)
 
 void ReconSystem::PhaseTrackUpdate(TickIndex CurrentTick)
 {
-    // M1 scope: stale marking only, so a track whose subject left our vision is
-    // visibly old data rather than a live contact. Confidence decay curves,
-    // error-radius growth and phantom refutation land with M2/M4 (I-B3/I-B4
-    // decide the decay model first).
+    // Ageing of belief. A track nobody has refreshed does not vanish and does not
+    // stay crisp: it BLURS. The staff map keeps the last known position, the error
+    // radius grows, confidence falls, and eventually the entry is dropped.
+    //
+    // That is the mechanic §4.4 calls the main source of tragic mistakes: an
+    // attack ordered against a frozen contact that moved twenty seconds ago. It
+    // is also why blackout does not erase anything -- erasing would be merciful
+    // and wrong.
+    //
+    // The sweep is amortized round-robin (ADR-0021, I-B4): at most
+    // TracksPerTickBudget slots per tick, resuming from a persistent cursor, so a
+    // load spike cannot turn decay into a frame-time cliff. The cursor is
+    // serialized and hashed because it decides WHICH tick a given track's
+    // confidence drops on.
+    const TrackTuning& TT = Settings->Tracks;
+    const ChainTuning& CT = Settings->Chain;
+
     for (int32_t P = 0; P < kMaxPlayers; ++P)
     {
         PerceivedWorld* World = Worlds[P].get();
@@ -408,19 +758,87 @@ void ReconSystem::PhaseTrackUpdate(TickIndex CurrentTick)
         {
             continue;
         }
-        const int32_t StaleAfter = Settings->Tracks.StaleAfterTicks;
-        for (uint32_t I = 0; I < World->GetTrackCapacity(); ++I)
+
+        // Whether this player's command network is silent right now. A player with
+        // no working HQ has no staff receiving anything, so every one of their
+        // tracks ages at the blackout rate.
+        const bool bNetworkDown = TickInput != nullptr && !TickInput->HasHqNode[P];
+
+        const uint32_t Capacity = World->GetTrackCapacity();
+        if (Capacity == 0)
         {
+            continue;
+        }
+        const uint32_t Budget = TT.TracksPerTickBudget > 0
+                                    ? uint32_t(TT.TracksPerTickBudget)
+                                    : Capacity;
+        const uint32_t Visits = Budget < Capacity ? Budget : Capacity;
+
+        for (uint32_t Step = 0; Step < Visits; ++Step)
+        {
+            const uint32_t I = (World->DecayCursor + Step) % Capacity;
             PerceivedTrack& T = World->Tracks[I]; // friend access: phases are the writer
-            if (!T.bAlive || T.bStale)
+            if (!T.bAlive)
             {
                 continue;
             }
-            if (CurrentTick >= T.LastUpdateTick && int32_t(CurrentTick - T.LastUpdateTick) >= StaleAfter)
+            if (CurrentTick < T.LastUpdateTick)
+            {
+                continue; // freshly written this tick; nothing to age
+            }
+            const int32_t Age = int32_t(CurrentTick - T.LastUpdateTick);
+            if (Age <= 0)
+            {
+                continue;
+            }
+
+            if (Age >= TT.StaleAfterTicks)
             {
                 T.bStale = true;
             }
+
+            // How much wall-clock this slot is accountable for: the sweep visits
+            // each slot once per (Capacity / Budget) ticks, so per-second rates
+            // must be scaled by the interval actually elapsed for THIS slot, or a
+            // bigger cap would silently slow decay down.
+            const int32_t TicksPerVisit = int32_t((Capacity + Visits - 1) / Visits);
+
+            // Confidence decay. A blacked-out network loses faith faster: the
+            // staff knows it is working from data nobody can confirm.
+            const int32_t DecayPerSecond = TT.ConfidenceDecayPerSecondPerMille +
+                                           (bNetworkDown ? CT.BlackoutConfidenceDecayPerSecondPerMille : 0);
+            const Fixed DecayThisVisit =
+                PerMilleToFixed(DecayPerSecond) * int64_t(TicksPerVisit) / int64_t(kTicksPerSecond);
+            T.Confidence = FxClamp(T.Confidence - DecayThisVisit, Fixed::Zero(), Fixed::FromInt(1));
+
+            // Error radius growth: the longer since anyone looked, the larger the
+            // area the contact could be in. Monotonic by construction -- only a
+            // fresh observation resets it, in aggregation.
+            const int64_t GrowthUnitsPerMinute =
+                int64_t(TT.ErrorRadiusGrowthTilesPerMinute) * kTileSizeUnits;
+            const Fixed GrowthThisVisit = Fixed::FromInt(GrowthUnitsPerMinute) *
+                                          int64_t(TicksPerVisit) /
+                                          int64_t(kTicksPerSecond * 60);
+            T.PositionErrorRadius = T.PositionErrorRadius + GrowthThisVisit;
+
+            // Garbage collection: belief nobody has any confidence in is noise on
+            // the map. Dropping it deterministically (same tick on every peer) is
+            // why the cursor is part of the checksum.
+            if (T.Confidence <= PerMilleToFixed(TT.DropBelowConfidencePerMille))
+            {
+                // Sever the association first, or the next report about this GT
+                // entity would write into a released slot.
+                for (uint32_t Slot = 0; Slot < EntityCapacity; ++Slot)
+                {
+                    if (AssociationTrack[P][Slot] == T.Id)
+                    {
+                        AssociationTrack[P][Slot] = TrackId{};
+                    }
+                }
+                World->ReleaseTrack(T.Id);
+            }
         }
+        World->DecayCursor = (World->DecayCursor + Visits) % Capacity;
     }
 }
 
@@ -445,6 +863,7 @@ void ReconSystem::Serialize(ByteWriter& W) const
         W.WriteUInt32(Report.EmitTick);
         W.WriteUInt32(Report.ArrivalTick);
         W.WriteUInt8(Report.HopsRemaining);
+        W.WriteUInt32(Report.NodeId);
         W.WriteInt64(Report.Reliability.Raw);
         W.WriteUInt32(uint32_t(Report.Payload.size()));
         for (const Observation& Obs : Report.Payload)
@@ -525,6 +944,7 @@ bool ReconSystem::Deserialize(ByteReader& R)
         Report.EmitTick = R.ReadUInt32();
         Report.ArrivalTick = R.ReadUInt32();
         Report.HopsRemaining = R.ReadUInt8();
+        Report.NodeId = uint16_t(R.ReadUInt32());
         Report.Reliability = Fixed::FromRaw(R.ReadInt64());
         const uint32_t PayloadCount = R.ReadUInt32();
         Report.Payload.reserve(PayloadCount);
@@ -592,6 +1012,16 @@ void ReconSystem::FeedChecksum(Hash64& H) const
     {
         H.FeedUInt32(Report.ReportId);
         H.FeedUInt32(Report.ArrivalTick);
+        // M3: the queue now holds reports for many ticks, so everything that
+        // decides what they will DO on arrival is future-influencing state and
+        // must be hashed -- otherwise two peers with differently-routed reports
+        // agree today and diverge when the reports land.
+        H.FeedUInt32(Report.EmitTick);
+        H.FeedUInt8(Report.HopsRemaining);
+        H.FeedUInt32(Report.NodeId);
+        H.FeedInt64(Report.Reliability.Raw);
+        H.FeedUInt8(Report.OwnerPlayer);
+        H.FeedUInt32(uint32_t(Report.Payload.size()));
     }
     for (int32_t P = 0; P < kMaxPlayers; ++P)
     {

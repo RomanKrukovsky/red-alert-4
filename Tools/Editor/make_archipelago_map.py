@@ -178,13 +178,70 @@ ROCK_MESHES = [
     "/Game/ThirdParty/CityPark/Meshes/Ground/SM_Rock03",
 ]
 
-BUILDING_LAYOUT = [
+# Base layout in BASE-LOCAL coordinates, rotated per player so both bases face the
+# centre of the map. +Y is "toward the enemy", i.e. the direction the base fronts.
+#
+# WHY NOT A SQUARE
+# ----------------
+# The previous layout was five buildings on the corners of a 400x400 square, which
+# reads as arithmetic and not as a base. A real RTS base has a readable spine: the
+# entrance faces the threat, production sits where units can roll straight out
+# toward it, and the soft economy buildings hide at the back.
+#
+# Ordering along the spine, front (+Y, toward the enemy) to back (-Y):
+#   WarFactory  at the front so vehicles exit facing the fight
+#   Barracks    beside it, same reason for infantry
+#   ConYard     centre, the anchor everything is built from
+#   PowerPlant  behind, vulnerable and worth protecting
+#   Refinery    at the back, closest to the ore it serves
+#
+# Offsets are asymmetric on purpose: nothing shares an X or a Y with anything else,
+# so the eye reads a layout rather than a grid.
+BASE_LAYOUT = [
+    ("WarFactory", 240.0, 620.0),
+    ("Barracks", -330.0, 480.0),
     ("ConYard", 0.0, 0.0),
-    ("Barracks", 400.0, 0.0),
-    ("PowerPlant", -400.0, 400.0),
-    ("WarFactory", 0.0, -400.0),
-    ("Refinery", 400.0, 400.0),
+    ("PowerPlant", -420.0, -380.0),
+    ("Refinery", 330.0, -560.0),
 ]
+
+# Ore placement, as (island_index, angle_from_island_centre_deg, fraction_of_radius,
+# kind, rocks_in_patch). Deliberately NOT next to the construction yard.
+#
+# WHY IT IS PLACED THIS WAY
+# -------------------------
+# Ore used to sit at (+/-500, +/-500) from each base centre - inside the walls,
+# uncontested, and in a diagonal line. Free income with no decision attached.
+#
+# Now: each player gets one "safe" patch at the back of their own island, which is
+# enough to open with, plus contested patches on the centre island and satellites
+# that both players can reach. That turns economy into a map-control question,
+# which is the point of ore in an RTS.
+#
+# Patches are clusters of several rocks rather than one cube, so they read as a
+# deposit; the cluster is spread with a deterministic offset table.
+ORE_PATCHES = [
+    # island 0 = P1 base island, 1 = P2 base island, 2 = centre, 3.. = satellites
+    (0, 215.0, 0.62, "Green", 5),      # P1 home patch, behind the base
+    (1, 35.0, 0.62, "Green", 5),       # P2 home patch, mirrored
+    (2, 90.0, 0.55, "Blue", 6),        # centre island: the prize, contested
+    (2, 270.0, 0.55, "Blue", 6),
+    (3, 0.0, 0.45, "Green", 4),        # satellites: expansion, exposed
+    (4, 180.0, 0.45, "Green", 4),
+    (5, 90.0, 0.45, "Blue", 3),
+    (6, 270.0, 0.45, "Blue", 3),
+]
+
+# Spread inside one patch, in units. Fixed rather than random so the map is
+# reproducible; radius grows with index so the cluster looks scattered, not ringed.
+ORE_CLUSTER_OFFSETS = [
+    (0.0, 0.0), (150.0, 90.0), (-120.0, 160.0), (90.0, -170.0),
+    (-180.0, -80.0), (220.0, 40.0),
+]
+
+# Where the access road meets the base, in the same local frame as BASE_LAYOUT.
+# The road stops at the gate instead of driving through the buildings.
+BASE_GATE_LOCAL = (0.0, 980.0)
 
 LS = unreal.LandscapeService
 FS = unreal.FoliageService
@@ -375,46 +432,153 @@ def build_link(start, end, tag):
     return placed
 
 
+def base_frame(base_xy):
+    """Return (yaw, rotate) for a base that fronts the map centre.
+
+    Buildings are authored in a local frame where +Y points at the enemy. Each
+    base is rotated so that direction actually faces the centre of the map, which
+    is what makes both bases read as facing each other instead of being two copies
+    of the same grid.
+    """
+    import math
+
+    bx, by = base_xy
+    # Direction from the base toward the centre.
+    yaw = math.degrees(math.atan2(CENTRE - by, CENTRE - bx)) - 90.0
+    rad = math.radians(yaw)
+    cos_y, sin_y = math.cos(rad), math.sin(rad)
+
+    def rotate(local_x, local_y):
+        return (bx + local_x * cos_y - local_y * sin_y,
+                by + local_x * sin_y + local_y * cos_y)
+
+    return yaw, rotate
+
+
+def build_spline_road(points, tag):
+    """Lay a road as a landscape spline through `points`.
+
+    WHY A SPLINE AND NOT TILED MESHES
+    ---------------------------------
+    build_link() places discrete road and bridge meshes end to end, scaled to fill
+    each run. Any rounding in that scale shows up as a visible seam, and on a
+    curved route the straight segments cut corners, so the road reads as a row of
+    separate slabs rather than one road.
+
+    A landscape spline is a single continuous object: the mesh is deformed along it
+    with no joins, and it can also conform the terrain under itself so the road
+    does not float over bumps.
+
+    Returns True when the spline was created, False when the API is unavailable, so
+    the caller can fall back to the tiled path rather than leaving the map roadless.
+    """
+    if not hasattr(LS, "create_spline_from_points"):
+        return False
+
+    spline_points = []
+    for x, y in points:
+        z = terrain_z(x, y)
+        # Over water the deck must clear the surface; on land it follows the ground.
+        if z < SEA_LEVEL:
+            z = BRIDGE_DECK_Z
+        spline_points.append(unreal.Vector(x, y, z))
+
+    try:
+        result = LS.create_spline_from_points(LANDSCAPE_LABEL, spline_points, tag)
+    except Exception as error:                                  # noqa: BLE001
+        print("  [warn] spline road '%s' failed: %s" % (tag, error))
+        return False
+
+    ok = getattr(result, "success", bool(result))
+    if not ok:
+        print("  [warn] spline road '%s' not created" % tag)
+        return False
+
+    try:
+        LS.set_spline_segment_meshes(LANDSCAPE_LABEL, tag, [ROAD_MESH])
+    except Exception as error:                                  # noqa: BLE001
+        # The spline exists and is drivable geometry even without the mesh applied,
+        # so this is a cosmetic failure and must not abort the build.
+        print("  [warn] could not apply road mesh to '%s': %s" % (tag, error))
+    return True
+
+
+def route_points(base_xy):
+    """Waypoints from a base gate to the map centre.
+
+    Bends the route rather than running a straight diagonal: a road that curves
+    around the island interior reads as built terrain, and it keeps the crossing
+    perpendicular to the shoreline instead of slicing it at an angle.
+    """
+    _yaw, rotate = base_frame(base_xy)
+    gate = rotate(*BASE_GATE_LOCAL)
+
+    bx, by = base_xy
+    mid_x = bx + (CENTRE - bx) * 0.55
+    mid_y = by + (CENTRE - by) * 0.35      # asymmetric, so the route bends
+    approach_x = CENTRE + (bx - CENTRE) * 0.28
+    approach_y = CENTRE + (by - CENTRE) * 0.28
+
+    return [gate, (mid_x, mid_y), (approach_x, approach_y)]
+
+
 def add_roads():
-    inset = 400.0
+    """Connect both bases to the centre island.
+
+    Tries a landscape spline first for a seamless road, and falls back to the tiled
+    road/bridge meshes when splines are unavailable, so the map is never left
+    without connections.
+    """
     total = 0
-    for (px, py), tag in ((P1, "P1_Centre"), (P2, "P2_Centre")):
-        ux = 1.0 if CENTRE > px else -1.0
-        uy = 1.0 if CENTRE > py else -1.0
-        total += build_link(
-            (px + ux * inset, py + uy * inset),
-            (CENTRE - ux * inset, CENTRE - uy * inset),
-            tag,
-        )
-    print("Placed %d road/bridge segments" % total)
+    spline_count = 0
+    for base_xy, tag in ((P1, "P1_Centre"), (P2, "P2_Centre")):
+        points = route_points(base_xy)
+        if build_spline_road(points, tag):
+            spline_count += 1
+            continue
+        # Fallback: tile meshes along each leg of the same route.
+        for index in range(len(points) - 1):
+            total += build_link(points[index], points[index + 1],
+                                "%s_%d" % (tag, index))
+
+    if spline_count:
+        print("Placed %d spline roads" % spline_count)
+    if total:
+        print("Placed %d tiled road/bridge segments (spline fallback)" % total)
+    if not spline_count and not total:
+        raise RuntimeError("no roads placed by either the spline or tiled path")
 
 
 # ---------------------------------------------------------------- buildings ---
 def add_buildings():
+    """Place each faction's base along a spine that faces the map centre."""
     placed = 0
-    for faction, code, (bx, by) in (("Soviet", "SU", P1), ("Alliance", "AL", P2)):
-        for btype, ox, oy in BUILDING_LAYOUT:
+    for faction, code, base_xy in (("Soviet", "SU", P1), ("Alliance", "AL", P2)):
+        yaw, rotate = base_frame(base_xy)
+        for btype, ox, oy in BASE_LAYOUT:
             path = "/Game/RA4/Art/Buildings/%s/SM_%s_%s_%s" % (
                 faction, faction, code, btype,
             )
-            x, y = bx + ox, by + oy
+            x, y = rotate(ox, oy)
             # Buildings pivot at their base, so terrain Z is correct as-is.
-            if spawn_mesh(path, x, y, terrain_z(x, y), 0.0, None,
+            # Yaw matters: a building turned side-on to its own base road looks
+            # dropped in rather than built.
+            if spawn_mesh(path, x, y, terrain_z(x, y), yaw, None,
                           "%s_%s" % (faction, btype)):
                 placed += 1
-    print("Placed %d faction buildings" % placed)
+    print("Placed %d faction buildings on oriented base spines" % placed)
 
 
 def add_ore_fields():
-    """Placeholder ore markers.
+    """Place ore as clustered patches positioned for contest, not convenience.
 
-    The project has no crystal/ore meshes, so these are tinted cubes standing
-    in for green/blue ore. Replace when real ore art lands.
+    Placeholder art: the project has no crystal meshes, so these are tinted rocks
+    from the CityPark set - a cluster of rocks reads far more like a deposit than
+    the single stretched cube this used to place. Swap the mesh when real ore art
+    lands; the positions stay valid.
     """
-    cube = "/Engine/BasicShapes/Cube"
-    # CityPark materials are nested (Materials/Flora/Grass, Materials/BaseMaterial),
-    # not flat under Materials/. The flat paths silently resolve to None, which
-    # previously left the marker count at 0 while cubes were in fact spawned.
+    import math
+
     green = unreal.load_asset(
         "/Game/ThirdParty/CityPark/Materials/Flora/Grass/MI_Grass01"
     )
@@ -423,30 +587,52 @@ def add_ore_fields():
     )
     if green is None or blue is None:
         print("  [warn] ore tint material missing; markers will be untinted")
-    scale = unreal.Vector(3.0, 3.0, 1.5)
 
+    rock = "/Game/ThirdParty/CityPark/Meshes/Ground/SM_Rock02"
     placed = 0
-    for bx, by in (P1, P2):
-        for ox, oy, mat, kind in (
-            (500.0, 500.0, green, "Green"),
-            (-500.0, -500.0, green, "Green2"),
-            (500.0, -500.0, blue, "Blue"),
-        ):
-            x, y = bx + ox, by + oy
-            # Cube pivot is centred: lift by half the scaled height.
+    skipped = 0
+
+    for island_index, angle_deg, radius_frac, kind, rock_count in ORE_PATCHES:
+        if island_index >= len(ISLANDS):
+            continue
+        cx, cy, radius, _raise_h, island_name = ISLANDS[island_index]
+        rad = math.radians(angle_deg)
+        patch_x = cx + math.cos(rad) * radius * radius_frac
+        patch_y = cy + math.sin(rad) * radius * radius_frac
+        mat = green if kind == "Green" else blue
+
+        for index in range(min(rock_count, len(ORE_CLUSTER_OFFSETS))):
+            ox, oy = ORE_CLUSTER_OFFSETS[index]
+            x, y = patch_x + ox, patch_y + oy
+            if not (0.0 <= x <= MAP_EXTENT and 0.0 <= y <= MAP_EXTENT):
+                skipped += 1
+                continue
+            ground = terrain_z(x, y)
+            # An ore rock underwater is unreachable and reads as a bug. Skip and
+            # report rather than placing something the player cannot harvest.
+            if ground <= SEA_LEVEL:
+                skipped += 1
+                continue
+
+            # Vary scale and yaw per rock so a cluster does not look stamped.
+            size = 1.6 + 0.25 * (index % 3)
             actor = spawn_mesh(
-                cube, x, y, terrain_z(x, y) + 50.0 * scale.z, 0.0, scale,
-                "Ore_%s_%d_%d" % (kind, int(x), int(y)),
+                rock, x, y, ground, (index * 67) % 360,
+                unreal.Vector(size, size, size * 0.8),
+                "Ore_%s_%s_%d" % (kind, island_name, index),
             )
             if actor is None:
                 continue
-            # Count the marker itself; tinting is cosmetic and must not gate it.
             placed += 1
             if mat:
                 actor.get_component_by_class(
                     unreal.StaticMeshComponent
                 ).set_material(0, mat)
-    print("Placed %d ore markers (placeholder cubes)" % placed)
+
+    print("Placed %d ore rocks in %d patches (%d skipped: water or off-map)"
+          % (placed, len(ORE_PATCHES), skipped))
+    if placed == 0:
+        raise RuntimeError("no ore placed; patch positions miss the islands")
 
 
 # ------------------------------------------------------------------ foliage ---

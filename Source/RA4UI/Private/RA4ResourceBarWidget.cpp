@@ -67,9 +67,9 @@ TSharedRef<SWidget> URA4ResourceBarWidget::RebuildWidget()
         };
 
         AddField(TEXT("Credits"), NSLOCTEXT("RA4", "Res_Credits", "KREDITY"), CreditsValue, kCredits);
-        AddField(TEXT("Power"), NSLOCTEXT("RA4", "Res_Power", "ENERGIYa"), PowerValue, kPowerOk);
+        AddField(TEXT("Power"), NSLOCTEXT("RA4", "Res_Power", "ЭНЕРГИЯ"), PowerValue, kPowerOk);
         AddField(TEXT("Supply"), NSLOCTEXT("RA4", "Res_Supply", "VOYSKA"), SupplyValue, kTextNormal);
-        AddField(TEXT("Timer"), NSLOCTEXT("RA4", "Res_Timer", "VREMYa"), TimerValue, kTextNormal);
+        AddField(TEXT("Timer"), NSLOCTEXT("RA4", "Res_Timer", "ВРЕМЯ"), TimerValue, kTextNormal);
 
         if (USizeBox* Sizer = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("BarSizer")))
         {

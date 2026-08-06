@@ -105,6 +105,46 @@ struct CommsProfile
     int32_t OfficerBiasMaxPerMille = 200;      // distortion a low-quality node may add
 };
 
+// --- Chain of command (M3, §4.4) ------------------------------------------------
+
+// Owner decision (2026-08-06, question 9, option (в)): the chain is built
+// automatically from the player's own command structures -- no micromanagement
+// required to have working intel -- and explicit liaison officers become an
+// upgrade layer later. So a node is a command BUILDING, and a reporting unit
+// belongs to the nearest one; the HQ node is the player's construction yard.
+struct ChainTuning
+{
+    // Comms tech level index into CommsProfile::HopDelayTicksByLevel. One global
+    // level per match in M3; per-player upgrades are the natural next step and
+    // deliberately not built yet (no speculative generality).
+    int32_t CommsLevel = 2;                     // 2 = radio in the shipped profile
+
+    // A unit further than this from every command building is out of the chain:
+    // its reports walk in on foot, i.e. they take the orphan delay below and
+    // arrive with the lowest reliability.
+    int32_t NodeAttachRadiusTiles = 40;
+
+    // Delay for a report from a unit attached to no node at all. Deliberately
+    // long: being out of the command network is supposed to hurt.
+    int32_t OrphanDelayTicks = 200;             // 10 s at 20 Hz
+
+    // Hop count a report takes when its author is attached to a node that is not
+    // the HQ: one hop to the node, one from the node to the HQ. Two hops is the
+    // whole ladder in M3 (Squad->Company->HQ collapses to node->HQ), because a
+    // deeper hierarchy needs organisational UI that does not exist yet.
+    int32_t HopsFromNodeToHq = 2;
+
+    // Reliability lost per hop, per mille. Feeds the officer-bias term of the
+    // distortion pipeline: information degrades as it is relayed and summarised.
+    int32_t ReliabilityLossPerHopPerMille = 100;
+
+    // Blackout: a node whose comms are cut stops forwarding. Its tracks are NOT
+    // erased -- they freeze and blur (§4.4), which is the whole point of the
+    // mechanic. This is the extra confidence decay a blackout node's tracks take
+    // per second on top of the normal decay curve.
+    int32_t BlackoutConfidenceDecayPerSecondPerMille = 40;
+};
+
 // --- Morale model (inputs of the distortion pipeline, M2) -----------------------
 
 // Owner decisions (2026-08-06): morale falls from incoming damage, suppression,
@@ -149,6 +189,15 @@ struct TrackTuning
     int32_t ErrorRadiusGrowthTilesPerMinute = 6;    // frozen tracks blur over time
     int32_t StaleAfterTicks = 600;                  // 30 s without reports -> bStale
     int32_t DropBelowConfidencePerMille = 50;       // GC threshold
+    // Group tracks (owner decision, question 3: aggregate in M3 together with
+    // report merging, so "a frightened observer sees a crowd" has a crowd to be
+    // wrong about). Off collapses to one track per contact, i.e. M1/M2 behaviour.
+    bool bGroupTracksEnabled = true;
+    // Two counts are "materially different" — and so contested — when they differ
+    // by more than this fraction of the larger. Below it, sources are treated as
+    // agreeing and confidence rises instead.
+    int32_t ContestedCountTolerancePerMille = 300;
+
     int32_t MergeRadiusTiles = 3;                   // spatial merge window (§4.4)
     int32_t MergeWindowTicks = 100;                 // temporal merge window
     int32_t AgreementConfidenceBonusPerMille = 300; // superlinear boost on agreement
@@ -179,6 +228,7 @@ struct ReconSettings
 
     TrackTuning Tracks;
     MoraleTuning Morale;
+    ChainTuning Chain;
 
     // Radar detection range for completed radar buildings (owner decision D6:
     // radar creates anonymous contacts -- position without identity). One global

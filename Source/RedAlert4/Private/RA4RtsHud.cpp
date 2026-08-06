@@ -2,6 +2,7 @@
 #include "RA4RtsHud.h"
 
 #include "RA4PlayerController.h"
+#include "RA4ReconDebugOverlay.h"
 #include "RA4SimCoords.h"
 #include "RA4SimWorldSubsystem.h"
 
@@ -21,6 +22,17 @@ void ARA4RtsHud::DrawHUD()
     DrawSelectionBrackets(Controller);
     DrawMarquee(Controller);
     DrawMoveTargetRing(Controller);
+
+    // Two-maps recon overlay (ADR-0026 §7): console `recon.Overlay 1|2`, or the
+    // ?ShowTruth=1 skirmish option. Local player is slot 0, matching the
+    // SnapshotBuilder->Initialize(0) the HUD already assumes.
+    if (const UWorld* W = GetWorld())
+    {
+        if (const URA4SimWorldSubsystem* Sim = W->GetSubsystem<URA4SimWorldSubsystem>())
+        {
+            URA4ReconDebugOverlay::Draw(Canvas, Controller, Sim, /*ViewerPlayer*/ 0);
+        }
+    }
 
     if (Controller->IsPlacementArmed())
     {

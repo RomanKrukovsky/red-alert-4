@@ -103,7 +103,7 @@ void URA4SkirmishSetupWidget::BuildLayout()
     CanvasSlot->SetVerticalAlignment(VAlign_Fill);
 
     // Title Header
-    UTextBlock* Title = MakeSetupText(WidgetTree, LOCTEXT("Title", "NASTROYKA SKhVATKI (SKIRMISH)"), 36, Red, TEXT("TitleText"));
+    UTextBlock* Title = MakeSetupText(WidgetTree, LOCTEXT("Title", "НАСТРОЙКА СХВАТКИ"), 36, Red, TEXT("TitleText"));
     PlaceSetupWidget(MainCanvas, Title, FVector2D(80.0f, 40.0f), FVector2D(800.0f, 60.0f), 2);
 
     UTextBlock* Subtitle = MakeSetupText(
@@ -114,7 +114,7 @@ void URA4SkirmishSetupWidget::BuildLayout()
     UVerticalBox* LeftBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("LeftBox"));
 
     // Map Selection
-    UTextBlock* MapLabel = MakeSetupText(WidgetTree, LOCTEXT("MapLabel", "MAP SRAZhENIYa"), 16, TextColor, TEXT("MapLabelText"));
+    UTextBlock* MapLabel = MakeSetupText(WidgetTree, LOCTEXT("MapLabel", "КАРТА СРАЖЕНИЯ"), 16, TextColor, TEXT("MapLabelText"));
     LeftBox->AddChildToVerticalBox(MapLabel)->SetPadding(FMargin(0.0f, 10.0f, 0.0f, 4.0f));
 
     MapCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("MapCombo"));
@@ -124,7 +124,7 @@ void URA4SkirmishSetupWidget::BuildLayout()
     LeftBox->AddChildToVerticalBox(MapCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 16.0f));
 
     // Starting Credits
-    UTextBlock* CreditsLabel = MakeSetupText(WidgetTree, LOCTEXT("CreditsLabel", "STARTOVYY BYuDZhET (KREDITY)"), 16, TextColor, TEXT("CreditsLabelText"));
+    UTextBlock* CreditsLabel = MakeSetupText(WidgetTree, LOCTEXT("CreditsLabel", "СТАРТОВЫЙ БЮДЖЕТ (КРЕДИТЫ)"), 16, TextColor, TEXT("CreditsLabelText"));
     LeftBox->AddChildToVerticalBox(CreditsLabel)->SetPadding(FMargin(0.0f, 10.0f, 0.0f, 4.0f));
 
     CreditsCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("CreditsCombo"));
@@ -229,19 +229,19 @@ void URA4SkirmishSetupWidget::BuildLayout()
     UVerticalBox* BannerStack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("BannerStack"));
 
     ValidationWarningText = MakeSetupText(
-        WidgetTree, LOCTEXT("ValidationOk", "Parametry matcha korrektny."), 15, GreenOk, TEXT("ValidationWarningText"));
+        WidgetTree, LOCTEXT("ValidationOk", "Параметры матча корректны."), 15, GreenOk, TEXT("ValidationWarningText"));
     BannerStack->AddChildToVerticalBox(ValidationWarningText)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 12.0f));
 
     UHorizontalBox* ActionRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("ActionRow"));
 
     UButton* BackButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("BackButton"));
-    BackButton->AddChild(MakeSetupText(WidgetTree, LOCTEXT("Back", "BACK V MENYu"), 18, TextColor, TEXT("BackLabel")));
+    BackButton->AddChild(MakeSetupText(WidgetTree, LOCTEXT("Back", "‹  НАЗАД"), 18, TextColor, TEXT("BackLabel")));
     BackButton->OnClicked.AddDynamic(this, &URA4SkirmishSetupWidget::HandleBackClicked);
     ActionRow->AddChildToHorizontalBox(BackButton)->SetPadding(FMargin(0.0f, 0.0f, 16.0f, 0.0f));
 
     StartButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("StartButton"));
     StartButton->SetBackgroundColor(RedDim);
-    StartButton->AddChild(MakeSetupText(WidgetTree, LOCTEXT("StartMatch", "NAChAT MATCh"), 20, TextColor, TEXT("StartMatchLabel")));
+    StartButton->AddChild(MakeSetupText(WidgetTree, LOCTEXT("StartMatch", "НАЧАТЬ МАТЧ"), 20, TextColor, TEXT("StartMatchLabel")));
     StartButton->OnClicked.AddDynamic(this, &URA4SkirmishSetupWidget::HandleStartMatchClicked);
     ActionRow->AddChildToHorizontalBox(StartButton);
 
@@ -280,16 +280,16 @@ void URA4SkirmishSetupWidget::UpdateConflictValidation()
     if (PlayerColorIndex == AIColorIndex)
     {
         bHasConflict = true;
-        Message = LOCTEXT("ColorConflict", "OShIBKA: Igrok i II vystavili odinakovyy tsvet! Vyberite raznye tsveta.");
+        Message = LOCTEXT("ColorConflict", "ОШИБКА: игрок и ИИ выставили одинаковый цвет! Выберите разные цвета.");
     }
     else if (PlayerSpotIndex == AISpotIndex)
     {
         bHasConflict = true;
-        Message = LOCTEXT("SpotConflict", "OShIBKA: Konflikt startovykh pozitsiy! Igroki ne mogut startovat na odnom spavne.");
+        Message = LOCTEXT("SpotConflict", "ОШИБКА: конфликт стартовых позиций! Игроки не могут стартовать на одном спавне.");
     }
     else
     {
-        Message = LOCTEXT("ValidationOk", "Parametry matcha provereny. Nazhmite «NAChAT MATCh» dlya zagruzki.");
+        Message = LOCTEXT("ValidationOk", "Параметры матча проверены. Нажмите «НАЧАТЬ МАТЧ» для загрузки.");
     }
 
     if (bHasConflict)
