@@ -2515,6 +2515,22 @@ EntityId SimWorld::AcquireTarget(EntityId Attacker) const
     return Best;
 }
 
+bool SimWorld::IsLocationVisibleTo(PlayerId Viewer, const Vec2& Location) const
+{
+    // Same fog-is-optional rule as IsEntityVisibleTo: a match without a grid, and
+    // every headless fixture, behaves as though the map is in the open.
+    if (Viewer >= kMaxPlayers || FogGrid == nullptr)
+    {
+        return true;
+    }
+    if (int32_t(Viewer) >= FogGrid->GetNumPlayers())
+    {
+        return true;
+    }
+    const TileCoord Tile = Map.WorldToTile(Location);
+    return FogGrid->GetVisibility(int32_t(Viewer), Tile.X, Tile.Y) == VisibilityState::CurrentlyVisible;
+}
+
 bool SimWorld::IsEntityVisibleTo(PlayerId Viewer, uint32_t EntityIndex) const
 {
     // Liveness and range come first: a dead or out-of-range entity is visible to

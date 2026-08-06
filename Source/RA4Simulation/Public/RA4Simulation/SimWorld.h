@@ -122,6 +122,15 @@ public:
     // GetRecon()'s job) and it cannot mutate anything.
     bool IsEntityVisibleTo(PlayerId Viewer, uint32_t EntityIndex) const;
 
+    // Whether Viewer's fog currently shows the tile containing a world point.
+    // Combat events carry a location rather than a live entity (the shooter may
+    // already be dead by the time presentation reads the event), so gating
+    // tracers and impact markers needs this rather than the entity overload
+    // above -- inventory row V-F. Same contract: true when fog is absent, and
+    // CurrentlyVisible only, matching IsEntityVisibleTo (see V-A's MAJOR-2 note
+    // on RadarDetected).
+    bool IsLocationVisibleTo(PlayerId Viewer, const Vec2& Location) const;
+
     // Belief state (unreliable intelligence, ADR-0026). Read-only outside the
     // simulation; the UI and the AI commander query enemy information here and
     // never through the entity getters above once the feature is enabled.
