@@ -152,6 +152,121 @@ bool StageOmission(Fixed Clarity, const ObserverState& Observer,
     return Rng.NextBelow(1000) < ChancePerMille;
 }
 
+// --- Stage 6: fabrication -------------------------------------------------------
+
+bool StageFabrication(const ObserverState& Observer, const DistortionProfile& P, Random& Rng)
+{
+    if (!P.bFabricationEnabled)
+    {
+        return false;
+    }
+    const Fixed One = Fixed::FromInt(1);
+
+    // Dread has two ingredients and needs BOTH: how broken the unit is, and how
+    // worn down it is. A unit that took one hit and a unit that has been in contact
+    // for a minute can share a morale value and have very different nerves, and only
+    // the second one starts seeing movement in the trees.
+    //
+    // Exhaustion comes from Fatigue, not from MoraleComp::TicksUnderFire. That field
+    // counts ticks SINCE THE LAST stimulus (it resets to 0 on every hit and goes
+    // negative once a quiet window elapses), so reading it as accumulated dread was
+    // simply wrong -- it is smallest exactly when a unit is being shelled hardest.
+    // Fatigue is the field that accrues in contact and decays in quiet, which is the
+    // quantity this stage means. Found by the refutation test failing to produce a
+    // single phantom.
+    const Fixed Broken = One - Observer.Morale;
+    const Fixed Endured = FxClamp(Observer.Fatigue, Fixed::Zero(), One);
+
+    // Product, not sum: a fresh unit that is merely frightened fabricates nothing,
+    // and an exhausted unit with intact morale fabricates nothing either. Phantoms
+    // belong to units that are both shaken AND worn out -- that conjunction is what
+    // makes a phantom mean something when the player sees one.
+    const Fixed Level = Broken * Endured;
+
+    // bIsUnderFire gates it further: a unit resting behind the lines stops seeing
+    // ghosts even while its fatigue drains away.
+    if (!Observer.bIsUnderFire)
+    {
+        return false;
+    }
+    const Fixed Chance = PerMilleToFixed(P.FabricationChanceMaxPerMille) * Level;
+    const uint32_t ChancePerMille = uint32_t(FxClamp(Chance, Fixed::Zero(), One).Raw * 1000 / kFixedOne);
+    if (ChancePerMille == 0)
+    {
+        // Still consume no randomness: a zero-probability roll must not shift the
+        // stream, or enabling the stage would change every later draw.
+        return false;
+    }
+    return Rng.NextBelow(1000) < ChancePerMille;
+}
+
+Vec2 StageFabricationOffset(const ObserverState& Observer, const DistortionProfile& P, Random& Rng)
+{
+    // A phantom appears where the observer is already looking nervously: within the
+    // position-error envelope, not at a random point on the map. The offset uses
+    // the same radius as stage 4 so the two agree about how vague this observer is.
+    const int64_t MaxUnits = int64_t(P.PositionErrorMaxTiles) * kTileSizeUnits;
+    if (MaxUnits <= 0)
+    {
+        return Vec2();
+    }
+    const Fixed Radius = Fixed::FromInt(MaxUnits) *
+                         FxClamp(Observer.DistanceRatio + Fixed::FromRatio(1, 2), Fixed::Zero(), Fixed::FromInt(1));
+    // Two independent draws in [-1, 1]: a square envelope, which is honest about
+    // being an approximation and costs no trigonometry (and no float).
+    const auto Signed = [&Rng]()
+    {
+        return Fixed::FromRaw(int64_t(Rng.NextUInt32() & 0xFFFF)) * 2 - Fixed::FromInt(1);
+    };
+    return Vec2(Radius * Signed().Raw / kFixedOne, Radius * Signed().Raw / kFixedOne);
+}
+
+// --- Stage 7: self-report bias ---------------------------------------------------
+
+int32_t StageSelfReportStrength(int32_t TrueStrength, Fixed Discipline, const DistortionProfile& P,
+                                Random& Rng)
+{
+    if (!P.bSelfReportBiasEnabled || TrueStrength <= 0)
+    {
+        return TrueStrength;
+    }
+    // Asymmetric like fear, in the opposite direction: a unit never reports being
+    // STRONGER than it is by accident, it does so to avoid admitting a rout. So the
+    // bias only ever adds, and it scales with indiscipline.
+    const Fixed Indiscipline = FxClamp(Fixed::FromInt(1) - Discipline, Fixed::Zero(), Fixed::FromInt(1));
+    const Fixed MaxBias = PerMilleToFixed(P.SelfReportStrengthOverstatementMaxPerMille) * Indiscipline;
+    const uint32_t BiasPerMille = uint32_t(FxClamp(MaxBias, Fixed::Zero(), Fixed::FromInt(4)).Raw * 1000 / kFixedOne);
+    if (BiasPerMille == 0)
+    {
+        return TrueStrength;
+    }
+    const uint32_t Roll = Rng.NextBelow(BiasPerMille + 1);
+    const int64_t Inflated = int64_t(TrueStrength) * (1000 + int64_t(Roll)) / 1000;
+    return int32_t(Inflated);
+}
+
+int32_t StageSelfReportLosses(int32_t TrueLosses, Fixed Discipline, const DistortionProfile& P,
+                              Random& Rng)
+{
+    if (!P.bSelfReportBiasEnabled || TrueLosses <= 0)
+    {
+        return TrueLosses;
+    }
+    // The mirror image: losses are understated, never overstated. Clamped at zero
+    // so a badly disciplined unit can claim it lost nothing, but never claim it
+    // gained troops by being shot at.
+    const Fixed Indiscipline = FxClamp(Fixed::FromInt(1) - Discipline, Fixed::Zero(), Fixed::FromInt(1));
+    const Fixed MaxHidden = PerMilleToFixed(P.SelfReportLossUnderstatementMaxPerMille) * Indiscipline;
+    const uint32_t HiddenPerMille = uint32_t(FxClamp(MaxHidden, Fixed::Zero(), Fixed::FromInt(1)).Raw * 1000 / kFixedOne);
+    if (HiddenPerMille == 0)
+    {
+        return TrueLosses;
+    }
+    const uint32_t Roll = Rng.NextBelow(HiddenPerMille + 1);
+    const int64_t Reported = int64_t(TrueLosses) * (1000 - int64_t(Roll)) / 1000;
+    return int32_t(Reported < 0 ? 0 : Reported);
+}
+
 ObservedCategory CategorizeForConfusion(bool bIsBuilding, bool bIsAircraft, bool bIsShip,
                                         bool bIsInfantry, bool bIsHeavy)
 {

@@ -4,6 +4,7 @@
 #include "RA4Core/ByteStream.h"
 
 #include <chrono>
+#include <cstdio>
 #include "RA4Core/Checksum.h"
 #include "RA4Core/SimConfig.h"
 #include "RA4Recon/DistortionPipeline.h"
@@ -190,7 +191,7 @@ void ReconSystem::PhaseObservation(TickIndex CurrentTick, const ObservationInput
     }
 }
 
-void ReconSystem::PhaseDistortion(TickIndex)
+void ReconSystem::PhaseDistortion(TickIndex CurrentDistortionTick)
 {
     // Stages 1-5 of ADR-0026 §4.3, per observation, all math on Fixed and the
     // isolated ReconRng. The truthful M1 path is exactly this function with the
@@ -206,7 +207,12 @@ void ReconSystem::PhaseDistortion(TickIndex)
 
     for (int32_t P = 0; P < kMaxPlayers; ++P)
     {
-        if (Worlds[P] == nullptr || PendingObservations[P].empty())
+        // NOT skipped when the player sees nothing: fabrication (stage 6, below)
+        // exists precisely for the case where a frightened unit reports a contact
+        // where there is none, and an early-out on an empty observation list made
+        // the whole stage unreachable in exactly that situation -- found by the
+        // refutation test never producing a phantom.
+        if (Worlds[P] == nullptr)
         {
             continue;
         }
@@ -284,6 +290,58 @@ void ReconSystem::PhaseDistortion(TickIndex)
         }
         PendingObservations[P].resize(Write);
         PendingCategories[P].resize(Write);
+
+        // --- Stage 6: fabrication (M4) --------------------------------------------
+        // A shaken unit still under fire invents a contact. Appended AFTER the real
+        // observations so the loop above never sees it: a phantom must not be
+        // distorted twice, and it has no true category to misidentify.
+        //
+        // At most one phantom per player per tick. The cap is not thrift, it is
+        // readability: a map that sprouts five imaginary companies in one second
+        // reads as a bug, and §4.6 puts readability above realism.
+        Observer.bIsUnderFire = TickInput->Observers[P].bAnyUnitUnderFire;
+        LastObserver[P] = TickInput->Observers[P];
+        if (StageFabrication(Observer, *Profile, *TickRng))
+        {
+            // Anchor the phantom on something the player's own side can plausibly
+            // be looking at. Without an anchor a phantom would need a map-wide
+            // random position, which reads as noise rather than as fear.
+            Vec2 Anchor;
+            bool bHaveAnchor = false;
+            if (!PendingObservations[P].empty())
+            {
+                Anchor = PendingObservations[P].front().ObservedPosition;
+                bHaveAnchor = true;
+            }
+            else if (TickInput->ObserverAnchorValid[P])
+            {
+                Anchor = TickInput->ObserverAnchor[P];
+                bHaveAnchor = true;
+            }
+
+            if (bHaveAnchor)
+            {
+                const Vec2 Offset = StageFabricationOffset(Observer, *Profile, *TickRng);
+                Observation Ghost;
+                Ghost.ObserverNodeId = PendingObservations[P].empty()
+                                           ? kNoChainNode
+                                           : PendingObservations[P].front().ObserverNodeId;
+                Ghost.Subject = EntityId{};       // nothing real underneath
+                Ghost.ObservedClass = ContentId();
+                Ghost.ObservedPosition = Vec2(Anchor.X + Offset.X, Anchor.Y + Offset.Y);
+                Ghost.ObservedCount = 1;
+                Ghost.Tick = CurrentDistortionTick;
+                Ghost.Clarity = PerMilleToFixed(Profile->MinClarityPerMille);
+                Ghost.bPhantom = true;
+                // A phantom is BY DEFINITION unidentified: the observer saw
+                // movement, not a vehicle. Claiming a category would be inventing
+                // detail nobody perceived.
+                Ghost.bAnonymous = true;
+                Ghost.Category = ObservedCategory::LightVehicle; // unused while anonymous
+                PendingObservations[P].push_back(Ghost);
+                PendingCategories[P].push_back(ObservedCategory::LightVehicle);
+            }
+        }
     }
 }
 
@@ -486,8 +544,12 @@ void ReconSystem::ApplyGroupedReport(PerceivedWorld& World, PlayerId P, const Re
             // Anonymous contacts never merge with identified ones: "something is
             // out there" and "four tanks are out there" are different claims and
             // merging them would invent an identity the player never earned.
-            if (Group.Category != Obs.Category || Group.bAnonymous != Obs.bAnonymous)
+            if (Group.Category != Obs.Category || Group.bAnonymous != Obs.bAnonymous ||
+                Group.bPhantom != Obs.bPhantom)
             {
+                // Phantoms never merge with real contacts inside one report: a
+                // genuine blip must not absorb an invented one, because then the
+                // phantom would be cleared without anybody having gone to look.
                 continue;
             }
             if (TileDistanceSquared(Group.Centre, Obs.ObservedPosition) <= MergeRadiusSq)
@@ -509,6 +571,7 @@ void ReconSystem::ApplyGroupedReport(PerceivedWorld& World, PlayerId P, const Re
             Group.RepresentativeSlot = Obs.Subject.Index;
             Group.RepresentativeGeneration = Obs.Subject.Generation;
             Group.ObservedClass = Obs.ObservedClass;
+            Group.bPhantom = Obs.bPhantom;
             GroupScratch.push_back(Group);
         }
         else
@@ -527,6 +590,9 @@ void ReconSystem::ApplyGroupedReport(PerceivedWorld& World, PlayerId P, const Re
             {
                 Group.ObservedClass = ContentId{};
             }
+            // One real sighting redeems the whole group: if anything genuine is
+            // in there, the contact is no longer imaginary.
+            Group.bPhantom = Group.bPhantom && Obs.bPhantom;
         }
     }
 
@@ -534,6 +600,39 @@ void ReconSystem::ApplyGroupedReport(PerceivedWorld& World, PlayerId P, const Re
     //    representative so a moving formation keeps one track across ticks.
     for (const ObservationGroup& Group : GroupScratch)
     {
+        // A phantom has NO ground-truth subject, so it has no association slot to
+        // live in -- slot 0 would collide with a real entity. It gets a fresh track
+        // every time and is then owned by the refutation rules, which is also why it
+        // cannot be "updated" by later reports: an invented contact does not move.
+        if (Group.bPhantom)
+        {
+            const TrackId GhostId = World.AllocateTrack();
+            if (!GhostId.IsValid())
+            {
+                continue; // at the hard cap: dropping an imaginary contact is fine
+            }
+            PerceivedTrack* Ghost = World.GetTrackMutable(GhostId);
+            Ghost->BelievedCategory = Group.Category;
+            Ghost->bAnonymous = true;          // fear reports movement, not vehicles
+            Ghost->BelievedClass = ContentId{};
+            Ghost->BelievedPosition = Group.Centre;
+            Ghost->PositionErrorRadius = Fixed::Zero();
+            Ghost->BelievedCountMin = Group.Count;
+            Ghost->BelievedCountMax = Group.Count;
+            Ghost->LastClaimedCount = Group.Count;
+            Ghost->LastUpdateTick = CurrentTick;
+            Ghost->LastReportNodeId = Report.NodeId;
+            Ghost->IndependentSourceCount = 1;
+            Ghost->bStale = false;
+            Ghost->bContested = false;
+            Ghost->Confidence = ConfidenceForSources(TT, 1, false);
+            Ghost->PhantomBornTick = CurrentTick;
+            Ghost->ProvenanceReportIds[0] = Report.ReportId;
+            Ghost->ProvenanceCount = 1;
+            World.SetTrackPhantomInternal(GhostId, true);
+            continue;
+        }
+
         if (Group.RepresentativeSlot >= EntityCapacity)
         {
             continue;
@@ -659,6 +758,18 @@ void ReconSystem::ApplyGroupedReport(PerceivedWorld& World, PlayerId P, const Re
         // to the player: the next contest test compares against this.
         Track->LastClaimedCount = Group.Count;
 
+        // Phantom truth rides in the private side table, never on the track (that
+        // is INVARIANT 10). It is what makes refutation possible: only the core
+        // knows this contact was invented, and only the core may clear it.
+        if (Group.bPhantom)
+        {
+            World.SetTrackPhantomInternal(Track->Id, true);
+            if (Track->PhantomBornTick == 0)
+            {
+                Track->PhantomBornTick = CurrentTick;
+            }
+        }
+
         Track->ProvenanceReportIds[Track->ProvenanceCount % kTrackProvenanceSize] = Report.ReportId;
         Track->ProvenanceCount = uint8_t((Track->ProvenanceCount + 1) % (kTrackProvenanceSize * 2));
     }
@@ -765,6 +876,76 @@ void ReconSystem::PhaseAggregation(TickIndex CurrentTick)
     InFlightReports.resize(WriteBack);
 }
 
+void ReconSystem::ReleaseTrackAndAssociations(PlayerId P, PerceivedWorld& World, TrackId Id)
+{
+    // Sever associations BEFORE releasing, or the next report about that ground-truth
+    // entity would write into a freed slot. Both halves of the pair are cleared: a
+    // stale generation beside an invalid handle is harmless only until someone
+    // reorders the staleness test (M3 review M1).
+    for (uint32_t Slot = 0; Slot < EntityCapacity; ++Slot)
+    {
+        if (AssociationTrack[P][Slot] == Id)
+        {
+            AssociationTrack[P][Slot] = TrackId{};
+            AssociationGeneration[P][Slot] = 0;
+        }
+    }
+    World.ReleaseTrack(Id);
+}
+
+bool ReconSystem::IsTileObservedAndEmpty(PlayerId P, const Vec2& Position, TickIndex CurrentTick) const
+{
+    // "Someone went and looked, and there was nothing there."
+    //
+    // Observed: the player's fog shows the tile this tick -- taken from the
+    // observation input, which is the same fog the rest of the layer reads, so a
+    // phantom cannot be cleared by knowledge the player does not have.
+    // Empty: no real observation this tick sits within the refutation radius.
+    if (TickInput == nullptr)
+    {
+        return false;
+    }
+    const int32_t TileX = int32_t(Position.X.ToIntFloor() / kTileSizeUnits);
+    const int32_t TileY = int32_t(Position.Y.ToIntFloor() / kTileSizeUnits);
+
+    // "Is anyone looking there?" must come from the FOG, not from the observation
+    // log. LastObservedTick only records tiles where something WAS seen, so asking
+    // it here made this path unreachable: a scout standing in an empty clearing
+    // could never disprove a phantom, which is exactly the promise of §4.5.
+    const uint32_t Packed = (uint32_t(TileX) << 16) | (uint32_t(TileY) & 0xFFFFu);
+    bool bWatched = false;
+    for (uint32_t Tile : TickInput->VisibleTilesPacked[P])
+    {
+        if (Tile == Packed)
+        {
+            bWatched = true;
+            break;
+        }
+    }
+    if (!bWatched)
+    {
+        return false; // nobody is looking there right now
+    }
+    (void)CurrentTick;
+
+    // "Empty" means nothing real is standing ON the reported spot -- not "nothing
+    // real is anywhere nearby". A phantom plotted next to a genuine contact is still
+    // a phantom: it claims a SEPARATE force, and the observer looking at that ground
+    // can see there is no second force there. Using the merge radius here made every
+    // phantom born during a firefight unrefutable, because the enemy being fought
+    // was always within it.
+    //
+    // One tile is the resolution the staff map works at, so it is the honest test.
+    for (const ObservedEntity& Seen : TickInput->VisibleToPlayer[P])
+    {
+        if (Seen.TileX == TileX && Seen.TileY == TileY)
+        {
+            return false; // something real IS there; the contact was not imaginary
+        }
+    }
+    return true;
+}
+
 void ReconSystem::PhaseTrackUpdate(TickIndex CurrentTick)
 {
     // Ageing of belief. A track nobody has refreshed does not vanish and does not
@@ -783,6 +964,8 @@ void ReconSystem::PhaseTrackUpdate(TickIndex CurrentTick)
     // confidence drops on.
     const TrackTuning& TT = Settings->Tracks;
     const ChainTuning& CT = Settings->Chain;
+    const DistortionProfile* Profile = Settings->FindDistortionProfile(Settings->ActiveDistortionProfile);
+    const int32_t PhantomLifetime = Profile != nullptr ? Profile->MaxPhantomLifetimeTicks : 0;
 
     for (int32_t P = 0; P < kMaxPlayers; ++P)
     {
@@ -830,6 +1013,34 @@ void ReconSystem::PhaseTrackUpdate(TickIndex CurrentTick)
                 T.bStale = true;
             }
 
+            // --- Phantom refutation (M4, §4.5) -------------------------------------
+            // A phantom MUST have a guaranteed path to being disproved. Without one,
+            // a player who investigates and finds nothing learns that investigating
+            // does not work, and from then on treats the whole staff map as noise --
+            // which costs more than the phantom ever gained.
+            //
+            // Two paths, and the second one cannot be avoided:
+            //  1. Someone looks. A friendly observer standing where the phantom is
+            //     reported, seeing nothing, clears it -- this is the path the player
+            //     controls and the one scouting is supposed to reward.
+            //  2. The deadline. Every phantom dies at MaxPhantomLifetimeTicks no
+            //     matter what, so an unreachable corner of the map cannot host an
+            //     immortal ghost.
+            if (World->IsTrackPhantomInternal(T.Id))
+            {
+                const int32_t PhantomAge =
+                    T.PhantomBornTick == 0 ? 0 : int32_t(CurrentTick - T.PhantomBornTick);
+                const bool bDeadlinePassed = PhantomAge >= PhantomLifetime;
+                const bool bLookedAtAndEmpty =
+                    TickInput != nullptr &&
+                    IsTileObservedAndEmpty(PlayerId(P), T.BelievedPosition, CurrentTick);
+                if (bDeadlinePassed || bLookedAtAndEmpty)
+                {
+                    ReleaseTrackAndAssociations(PlayerId(P), *World, T.Id);
+                    continue;
+                }
+            }
+
             // How much wall-clock this slot is accountable for. Measured, not
             // estimated: charging a ceil-rounded (Capacity / Visits) made the
             // effective decay rate a function of how many tracks happened to exist,
@@ -868,22 +1079,7 @@ void ReconSystem::PhaseTrackUpdate(TickIndex CurrentTick)
             // why the cursor is part of the checksum.
             if (T.Confidence <= PerMilleToFixed(TT.DropBelowConfidencePerMille))
             {
-                // Sever the association first, or the next report about this GT
-                // entity would write into a released slot.
-                for (uint32_t Slot = 0; Slot < EntityCapacity; ++Slot)
-                {
-                    if (AssociationTrack[P][Slot] == T.Id)
-                    {
-                        AssociationTrack[P][Slot] = TrackId{};
-                        // Clear the generation too. The staleness check happens to
-                        // short-circuit on the invalid handle today, so a stale
-                        // generation is currently harmless -- which is exactly how
-                        // it would survive until a future reader checked generation
-                        // first and got a wrong answer (review M1).
-                        AssociationGeneration[P][Slot] = 0;
-                    }
-                }
-                World->ReleaseTrack(T.Id);
+                ReleaseTrackAndAssociations(PlayerId(P), *World, T.Id);
             }
         }
         World->DecayCursor = (World->DecayCursor + Visits) % Capacity;

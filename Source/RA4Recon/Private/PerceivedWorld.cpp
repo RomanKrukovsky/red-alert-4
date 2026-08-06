@@ -17,7 +17,7 @@ namespace
 // Serialization is versioned independently of the SimWorld save version so that
 // intel format changes (frequent while the feature matures) do not force a bump
 // of the outer save format every time.
-constexpr uint32_t kPerceivedWorldVersion = 4; // v4: category/anonymous/node (M3 review B3) // v3: DecayCursor (I-B4); v2: phantom side table
+constexpr uint32_t kPerceivedWorldVersion = 5; // v5: PhantomBornTick (M4) // v4: category/anonymous/node (M3 review B3) // v3: DecayCursor (I-B4); v2: phantom side table
 } // namespace
 
 void PerceivedWorld::Initialize(int32_t MapWidthTiles, int32_t MapHeightTiles, int32_t MaxTracks)
@@ -203,6 +203,7 @@ void PerceivedWorld::Serialize(ByteWriter& W) const
         W.WriteUInt32(T.LastReportNodeId);
         W.WriteUInt32(T.LastDecayTick);
         W.WriteInt32(T.LastClaimedCount);
+        W.WriteUInt32(T.PhantomBornTick);
         W.WriteInt64(T.BelievedPosition.X.Raw);
         W.WriteInt64(T.BelievedPosition.Y.Raw);
         W.WriteInt64(T.PositionErrorRadius.Raw);
@@ -282,6 +283,7 @@ bool PerceivedWorld::Deserialize(ByteReader& R)
         T.LastReportNodeId = uint16_t(R.ReadUInt32());
         T.LastDecayTick = R.ReadUInt32();
         T.LastClaimedCount = R.ReadInt32();
+        T.PhantomBornTick = R.ReadUInt32();
         T.BelievedPosition.X = Fixed::FromRaw(R.ReadInt64());
         T.BelievedPosition.Y = Fixed::FromRaw(R.ReadInt64());
         T.PositionErrorRadius = Fixed::FromRaw(R.ReadInt64());
@@ -352,6 +354,7 @@ void PerceivedWorld::FeedChecksum(Hash64& H) const
         H.FeedUInt32(T.LastReportNodeId);
         H.FeedUInt32(T.LastDecayTick);
         H.FeedInt32(T.LastClaimedCount);
+        H.FeedUInt32(T.PhantomBornTick);
     }
     // LastObserved is hashed coarsely (size only): per-tile hashing of a 256x256
     // map every checksum tick would dominate the hash cost for data that only

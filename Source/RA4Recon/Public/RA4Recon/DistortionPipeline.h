@@ -40,6 +40,12 @@ struct ObserverState
     Fixed Fatigue = Fixed::Zero();          // 0..1
     Fixed Suppression = Fixed::Zero();      // 0..1
     Fixed DistanceRatio = Fixed::Zero();    // 0..1: distance / max observation range
+    // Whether this observer is currently in contact. Fabrication (stage 6) needs
+    // it because a unit resting behind the lines should stop seeing ghosts even
+    // while its fatigue is still draining. NOTE: deliberately a bool rather than
+    // MoraleComp::TicksUnderFire, which counts ticks since the LAST stimulus and is
+    // therefore smallest when a unit is being shelled hardest.
+    bool bIsUnderFire = false;
 };
 
 // --- Stage 1: clarity ---------------------------------------------------------
@@ -73,6 +79,37 @@ RA4RECON_API Vec2 StagePositionError(Fixed Clarity, const ObserverState& Observe
 // it down). Probability grows with fatigue and falls with clarity.
 RA4RECON_API bool StageOmission(Fixed Clarity, const ObserverState& Observer,
                                 const DistortionProfile& P, Random& Rng);
+
+// --- Stage 6: fabrication (M4) ------------------------------------------------------
+// True = this observer invents a contact that is not there ("something is moving
+// in the trees"). The most valuable and most dangerous stage in the layer, so it
+// sits behind its own enable flag AND its own multiplier -- a playtest must be
+// able to kill phantoms with one switch without losing the rest of the model.
+//
+// Probability rises as morale falls and as time under fire accumulates: this is
+// exhaustion and dread, not dice. A calm unit never fabricates, which is what
+// makes a phantom informative rather than noise.
+RA4RECON_API bool StageFabrication(const ObserverState& Observer, const DistortionProfile& P,
+                                   Random& Rng);
+
+// Where a fabricated contact appears: near the observer's own attention, offset by
+// up to the position-error radius. A phantom in the middle of nowhere reads as a
+// bug; a phantom just beyond the treeline reads as fear.
+RA4RECON_API Vec2 StageFabricationOffset(const ObserverState& Observer, const DistortionProfile& P,
+                                         Random& Rng);
+
+// --- Stage 7: self-report bias (M4) -------------------------------------------------
+// A unit's report about ITSELF is also distorted: a broken company with poor
+// discipline overstates its remaining strength and understates its losses, because
+// admitting a rout is harder than fudging a number.
+//
+// Owner decision D3: this affects INFORMATION PANELS only. Selection, orders and
+// direct control keep using true own-unit state, so the player never loses the
+// ability to command what they own -- they lose the ability to trust the summary.
+RA4RECON_API int32_t StageSelfReportStrength(int32_t TrueStrength, Fixed Discipline,
+                                             const DistortionProfile& P, Random& Rng);
+RA4RECON_API int32_t StageSelfReportLosses(int32_t TrueLosses, Fixed Discipline,
+                                           const DistortionProfile& P, Random& Rng);
 
 // Maps an entity definition to its confusion category. Lives here so the
 // pipeline and the aggregation agree on one mapping. Content-driven inputs

@@ -148,6 +148,11 @@ struct PerceivedTrack
     // the widened interval let one early over-count poison the test permanently
     // (review M3). Belief about our own reporting, not ground truth.
     int32_t LastClaimedCount = 0;
+    // Tick a fabricated contact first appeared, 0 if this track never was one.
+    // The refutation deadline is measured from here: §4.5 requires that a phantom
+    // ALWAYS has a path to being disproved, or players stop trusting the map and
+    // the whole feature becomes noise. Simulation state: serialized and hashed.
+    TickIndex PhantomBornTick = 0;
     bool bStale = false;                    // no fresh reports for a while
     bool bContested = false;                // independent sources disagree (ADR-0026)
     // Unidentified contact: BelievedClass is meaningless, UI shows "unknown".

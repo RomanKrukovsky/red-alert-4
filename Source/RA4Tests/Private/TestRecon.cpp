@@ -338,6 +338,10 @@ RA4_TEST(Recon, PhantomTruthLivesOutsideTheReadSurface)
         TickIndex LastDecayTick;
         // M3 review M3: the last claim, for contest comparison. Our own reporting.
         int32_t LastClaimedCount;
+        // M4: when a fabricated contact was born, for the refutation deadline.
+        // Reviewed as safe: a timestamp of OUR bookkeeping. Note the phantom flag
+        // itself stays in the private side table -- that is the ground truth.
+        TickIndex PhantomBornTick;
         bool bStale;
         bool bContested;
         uint32_t ProvenanceReportIds[Recon::kTrackProvenanceSize];
@@ -1463,6 +1467,354 @@ RA4_TEST(Recon, BlackoutThresholdIsADesignerSettingInTheRuleset)
     Bad.Chain.BlackoutPowerRatioPercent = 250;
     std::vector<std::string> Errors;
     RA4_EXPECT(!Recon::ValidateReconSettings(Bad, Errors));
+}
+
+// --- M4: fabrication and self-report bias (§4.3 stages 6-7, §4.5) -----------------
+
+RA4_TEST(Recon, CalmObserversNeverFabricate)
+{
+    // The floor of the mechanic: a unit that is not shaken and not under fire must
+    // never invent a contact. Without this, phantoms are noise rather than a signal
+    // about the reporting unit's condition.
+    Recon::DistortionProfile P;
+    P.bFabricationEnabled = true;
+    P.FabricationChanceMaxPerMille = 1000; // maximum, to prove morale is the gate
+    Recon::ObserverState Calm;
+    Calm.Morale = Fixed::FromInt(1);
+    Calm.Fatigue = Fixed::Zero();
+    Calm.bIsUnderFire = false;
+
+    Random Rng(4242);
+    for (int32_t I = 0; I < 2000; ++I)
+    {
+        if (Recon::StageFabrication(Calm, P, Rng))
+        {
+            RA4Test::ReportFailure("a calm observer fabricated a contact", __FILE__, __LINE__);
+            return;
+        }
+    }
+}
+
+RA4_TEST(Recon, FabricationNeedsBrokenMoraleExhaustionAndContact)
+{
+    // Product, not sum, plus a contact gate: a merely frightened fresh unit invents
+    // nothing, an exhausted unit with intact morale invents nothing, and a unit
+    // resting behind the lines invents nothing however wrecked it is. Phantoms
+    // belong to troops that are shaken, worn out AND still being shot at -- that
+    // conjunction is what makes a phantom informative rather than noise.
+    Recon::DistortionProfile P;
+    P.bFabricationEnabled = true;
+    P.FabricationChanceMaxPerMille = 1000;
+
+    const auto CountFabrications = [&P](Fixed Morale, Fixed Fatigue, bool bUnderFire)
+    {
+        Recon::ObserverState O;
+        O.Morale = Morale;
+        O.Fatigue = Fatigue;
+        O.bIsUnderFire = bUnderFire;
+        Random Rng(99);
+        int32_t Count = 0;
+        for (int32_t I = 0; I < 2000; ++I)
+        {
+            if (Recon::StageFabrication(O, P, Rng)) { Count += 1; }
+        }
+        return Count;
+    };
+
+    const Fixed Spent = Fixed::FromInt(1);
+    const Fixed Fresh = Fixed::Zero();
+    const Fixed Half = Fixed::FromRatio(1, 2);
+
+    RA4_EXPECT(CountFabrications(Fixed::Zero(), Spent, true) > 0);   // broken, spent, in contact
+    RA4_EXPECT(CountFabrications(Fixed::Zero(), Fresh, true) == 0);  // frightened but fresh
+    RA4_EXPECT(CountFabrications(Fixed::FromInt(1), Spent, true) == 0); // spent but steady
+    RA4_EXPECT(CountFabrications(Fixed::Zero(), Spent, false) == 0); // wrecked but out of contact
+
+    // Monotone in exhaustion: more worn down must not be LESS likely.
+    RA4_EXPECT(CountFabrications(Fixed::Zero(), Spent, true) >=
+               CountFabrications(Fixed::Zero(), Half, true));
+}
+
+RA4_TEST(Recon, FabricationDisableFlagIsAbsolute)
+{
+    // §4.3.6 requires that the most dangerous stage die from one switch, because a
+    // playtest must be able to remove phantoms without losing the rest of the model.
+    Recon::DistortionProfile P;
+    P.bFabricationEnabled = false;
+    P.FabricationChanceMaxPerMille = 1000; // maxed, and must still never fire
+    Recon::ObserverState Broken;
+    Broken.Morale = Fixed::Zero();
+    Broken.Fatigue = Fixed::FromInt(1);
+    Broken.bIsUnderFire = true;
+
+    Random Rng(7);
+    for (int32_t I = 0; I < 2000; ++I)
+    {
+        if (Recon::StageFabrication(Broken, P, Rng))
+        {
+            RA4Test::ReportFailure("fabrication fired with its flag off", __FILE__, __LINE__);
+            return;
+        }
+    }
+}
+
+RA4_TEST(Recon, PhantomIsAlwaysRefutedByTheDeadline)
+{
+    // §4.5's hard promise, and the reason the feature is playable: a phantom ALWAYS
+    // has a path to being disproved. This is the unconditional path -- even in a
+    // corner of the map nobody can reach, the ghost dies at the deadline.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Recon::DistortionProfile& Profile = Settings.DistortionProfiles[0];
+    Profile.bFabricationEnabled = true;
+    Profile.FabricationChanceMaxPerMille = 1000;  // certainty, so the test is not flaky
+    Profile.FabricationFearSaturationTicks = 20;
+    Profile.MaxPhantomLifetimeTicks = 40;
+    // Ghosts land far from our own troops, so the "someone looked and saw nothing"
+    // path cannot fire and the DEADLINE is what this test measures. Verified by
+    // mutation: with the deadline disabled this test fails.
+    Profile.PositionErrorMaxTiles = 30;
+    // Every OTHER removal mechanism is switched off, so the deadline is the only
+    // thing that can clear this ghost. Confidence decay was quietly doing the job at
+    // tick 11 of 40, which meant the test passed with the deadline deleted.
+    Settings.Tracks.DropBelowConfidencePerMille = 0;   // no GC
+    Settings.Tracks.ConfidenceDecayPerSecondPerMille = 0; // no decay to trigger it
+    Settings.Chain.BlackoutConfidenceDecayPerSecondPerMille = 0;
+    Settings.Tracks.StaleAfterTicks = 100000;          // no stale marking
+    Settings.Morale.DamageMoralePenaltyPerMille = 5000;
+    Settings.Morale.MoraleRegenPerTickPerMille = 0;
+    // Fabrication needs morale down AND fatigue up. The shipped fatigue rate is
+    // 0.4%/tick, which would need ~250 ticks of shelling: fine in a match, far too
+    // slow for a unit test that must also keep the victim alive. Cranked so the
+    // scene reaches "shaken and spent" in a handful of ticks. The RATES are what is
+    // being made convenient here, never the rule under test.
+    Settings.Morale.FatiguePerTickUnderFirePerMille = 400;
+    Settings.Morale.FatigueRegenPerTickPerMille = 0;
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(31415), &Settings);
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    // Morale is driven by the DamageApplied EVENT, and SimWorld::DebugDamage
+    // deliberately does not emit one (it edits health directly). So the observer is
+    // rattled by a real firefight: a tough conscript in contact with an enemy
+    // rifleman, which produces genuine damage events tick after tick.
+    const EntityId Victim =
+        World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::AllRifleman, 1, Vec2(Fixed::FromInt(3300), Fixed::FromInt(3000)));
+
+    // Let the fight run until the conscript is shaken and spent but still alive.
+    for (int32_t I = 0; I < 30 && World.IsAlive(Victim); ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+    }
+    RA4_REQUIRE(World.IsAlive(Victim));
+    RA4_REQUIRE(World.GetRecon().GetLastObserverForTest(0).bAnyUnitUnderFire);
+    RA4_REQUIRE(World.GetRecon().GetLastObserverForTest(0).Morale < Fixed::FromInt(1));
+
+    // A phantom must have appeared: player 0 has no real enemy anywhere.
+    // Count PHANTOM tracks specifically: a real enemy is present and legitimately
+    // tracked, so "zero tracks" would be the wrong question.
+    const auto CountPhantoms = [&World]()
+    {
+        const Recon::PerceivedWorld& Belief = World.GetRecon().GetPerceivedWorld(0);
+        std::vector<const Recon::PerceivedTrack*> Found;
+        Belief.GetTracksInRegion(0, 0, 63, 63, Found);
+        int32_t Count = 0;
+        for (const Recon::PerceivedTrack* T : Found)
+        {
+            if (PerceivedWorldTestAccess::IsPhantom(Belief, T->Id))
+            {
+                Count += 1;
+            }
+        }
+        return Count;
+    };
+
+    int32_t FirstPhantomTick = -1;
+    for (int32_t I = 0; I < 200 && FirstPhantomTick < 0 && World.IsAlive(Victim); ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+        if (CountPhantoms() > 0)
+        {
+            FirstPhantomTick = int32_t(World.GetTick());
+        }
+    }
+    RA4_REQUIRE(FirstPhantomTick > 0); // otherwise the rest of the test proves nothing
+
+    // The guarantee is PER PHANTOM: this specific ghost must be gone by the
+    // deadline. It is not "the map eventually holds no phantoms" -- a unit still
+    // being shelled keeps inventing new ones, and that is correct behaviour, so
+    // waiting for an empty map would hang on a working feature.
+    std::vector<const Recon::PerceivedTrack*> Snapshot;
+    World.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, Snapshot);
+    Recon::TrackId Watched;
+    for (const Recon::PerceivedTrack* T : Snapshot)
+    {
+        if (PerceivedWorldTestAccess::IsPhantom(World.GetRecon().GetPerceivedWorld(0), T->Id))
+        {
+            Watched = T->Id;
+            break;
+        }
+    }
+    RA4_REQUIRE(Watched.IsValid());
+
+    bool bCleared = false;
+    const int32_t Deadline = Profile.MaxPhantomLifetimeTicks;
+    for (int32_t I = 0; I < Deadline * 4 && !bCleared; ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+        // Gone means the generational handle no longer resolves: the slot may have
+        // been recycled for a different contact, which must NOT read as survival.
+        bCleared = !World.GetRecon().GetPerceivedWorld(0).IsTrackAlive(Watched);
+    }
+    RA4_EXPECT(bCleared);
+}
+
+RA4_TEST(Recon, ScoutingRefutesAPhantomBeforeTheDeadline)
+{
+    // The player-driven half of §4.5, and the half that makes scouting feel like it
+    // pays: a friendly unit standing where a phantom is plotted, seeing nothing,
+    // clears it WITHOUT waiting for the deadline.
+    //
+    // This path was broken when first written: the query asked LastObservedTick,
+    // which only records tiles where something WAS seen, so a scout in an empty
+    // clearing could never disprove anything. It now asks the fog grid.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Recon::DistortionProfile& Profile = Settings.DistortionProfiles[0];
+    Profile.bFabricationEnabled = true;
+    Profile.FabricationChanceMaxPerMille = 1000;
+    // Ghosts land close by, so our own shaken unit is standing on them.
+    Profile.PositionErrorMaxTiles = 1;
+    // A deadline far beyond the run: if the ghost dies, someone LOOKED.
+    Profile.MaxPhantomLifetimeTicks = 100000;
+    Settings.Tracks.DropBelowConfidencePerMille = 0;
+    Settings.Tracks.ConfidenceDecayPerSecondPerMille = 0;
+    Settings.Tracks.StaleAfterTicks = 100000;
+    Settings.Morale.DamageMoralePenaltyPerMille = 5000;
+    Settings.Morale.MoraleRegenPerTickPerMille = 0;
+    Settings.Morale.FatiguePerTickUnderFirePerMille = 400;
+    Settings.Morale.FatigueRegenPerTickPerMille = 0;
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(60606), &Settings);
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    const EntityId Victim =
+        World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::AllRifleman, 1, Vec2(Fixed::FromInt(3300), Fixed::FromInt(3000)));
+
+    const auto FindPhantom = [&World]()
+    {
+        const Recon::PerceivedWorld& Belief = World.GetRecon().GetPerceivedWorld(0);
+        std::vector<const Recon::PerceivedTrack*> Found;
+        Belief.GetTracksInRegion(0, 0, 63, 63, Found);
+        for (const Recon::PerceivedTrack* T : Found)
+        {
+            if (PerceivedWorldTestAccess::IsPhantom(Belief, T->Id))
+            {
+                return T->Id;
+            }
+        }
+        return Recon::TrackId{};
+    };
+
+    // Let the firefight rattle the conscript until it invents something.
+    Recon::TrackId Ghost;
+    for (int32_t I = 0; I < 200 && !Ghost.IsValid() && World.IsAlive(Victim); ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+        Ghost = FindPhantom();
+    }
+    RA4_REQUIRE(Ghost.IsValid());
+    const TickIndex BornAt = World.GetTick();
+
+    // The ghost sits within a tile of our own troops, who can see that ground and
+    // see nothing there, so the staff must strike it off -- vastly sooner than the
+    // 100000-tick deadline could explain.
+    bool bCleared = false;
+    for (int32_t I = 0; I < 400 && !bCleared; ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+        bCleared = !World.GetRecon().GetPerceivedWorld(0).IsTrackAlive(Ghost);
+    }
+    RA4_EXPECT(bCleared);
+    RA4_EXPECT(int32_t(World.GetTick() - BornAt) < Profile.MaxPhantomLifetimeTicks);
+}
+
+RA4_TEST(Recon, SelfReportOverstatesStrengthAndHidesLossesOnlyWhenUndisciplined)
+{
+    // Stage 7, asymmetric in opposite directions: a unit never accidentally reports
+    // being weaker than it is, and never reports losses it did not take. A
+    // disciplined unit reports the truth.
+    Recon::DistortionProfile P;
+    P.bSelfReportBiasEnabled = true;
+    P.SelfReportStrengthOverstatementMaxPerMille = 500;
+    P.SelfReportLossUnderstatementMaxPerMille = 500;
+
+    Random Rng(1234);
+    // Perfect discipline: truth, bit for bit.
+    for (int32_t I = 0; I < 200; ++I)
+    {
+        RA4_EXPECT(Recon::StageSelfReportStrength(10, Fixed::FromInt(1), P, Rng) == 10);
+        RA4_EXPECT(Recon::StageSelfReportLosses(4, Fixed::FromInt(1), P, Rng) == 4);
+    }
+
+    // No discipline: strength never below truth, losses never above it.
+    bool bSawInflation = false;
+    bool bSawHiding = false;
+    for (int32_t I = 0; I < 500; ++I)
+    {
+        const int32_t Strength = Recon::StageSelfReportStrength(10, Fixed::Zero(), P, Rng);
+        const int32_t Losses = Recon::StageSelfReportLosses(10, Fixed::Zero(), P, Rng);
+        if (Strength < 10 || Losses > 10)
+        {
+            RA4Test::ReportFailure("self-report bias reversed direction", __FILE__, __LINE__);
+            return;
+        }
+        bSawInflation = bSawInflation || Strength > 10;
+        bSawHiding = bSawHiding || Losses < 10;
+    }
+    RA4_EXPECT(bSawInflation);
+    RA4_EXPECT(bSawHiding);
+
+    // And the flag kills it.
+    Recon::DistortionProfile Off = P;
+    Off.bSelfReportBiasEnabled = false;
+    RA4_EXPECT(Recon::StageSelfReportStrength(10, Fixed::Zero(), Off, Rng) == 10);
+    RA4_EXPECT(Recon::StageSelfReportLosses(10, Fixed::Zero(), Off, Rng) == 10);
+}
+
+RA4_TEST(Recon, PhantomTruthNeverReachesTheReadSurface)
+{
+    // INVARIANT 10 for the M4 addition: the UI must not be able to tell a phantom
+    // from a real contact. If it could, the player would simply filter the ghosts
+    // out and the mechanic would be free to ignore.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Recon::PerceivedWorld Belief;
+    PerceivedWorldTestAccess::Initialize(Belief, 64, 64, 8);
+    const Recon::TrackId Id = PerceivedWorldTestAccess::AllocateTrack(Belief);
+    PerceivedWorldTestAccess::SetPhantom(Belief, Id, true);
+
+    // Core knows...
+    RA4_EXPECT(PerceivedWorldTestAccess::IsPhantom(Belief, Id));
+    // ...and the read surface does not carry it. Enforced structurally by the
+    // static_assert layout mirror in Recon.PhantomTruthLivesOutsideTheReadSurface;
+    // here we assert the observable consequence: a phantom track looks like any
+    // other track to a reader.
+    std::vector<const Recon::PerceivedTrack*> Found;
+    Belief.GetTracksInRegion(0, 0, 63, 63, Found);
+    RA4_REQUIRE(Found.size() == 1);
+    RA4_EXPECT(Found[0]->Id == Id);
+    (void)Settings;
 }
 
 RA4_TEST(Recon, TruthfulPipelineMirrorsVisibleEnemy)
