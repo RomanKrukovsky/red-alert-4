@@ -813,12 +813,9 @@ RA4_TEST(Recon, BeliefIsReconstructibleFromReplayAlone)
     // timeline from nothing but the replay bytes and the settings the header
     // identifies -- every per-tick belief checksum must match the live run.
     //
-    // M2 OBLIGATION: while the recon phases are M0-empty, belief only changes
-    // through plumbing (map dims, enabled-ness, structures arriving from the
-    // command stream). Once observation/distortion land, this test MUST be
-    // extended with a tuning-swap case: replaying under settings with a
-    // DIFFERENT hash must produce a DIFFERENT belief timeline, or the hash
-    // gate is decorative. Tracked in NEXT_ACTIONS I-M2 acceptance criteria.
+    // The M2 obligation from the I-B5 review (a tuning-swap must actually change
+    // the belief timeline, else the header hash gate is decorative) is discharged
+    // by Recon.SwappedTuningProducesADifferentBeliefTimeline below.
     ContentDatabase Content;
     BuildDefaultContent(Content);
     Recon::ReconSettings Settings = MakeMinimalSettings(true);
@@ -875,6 +872,84 @@ RA4_TEST(Recon, BeliefIsReconstructibleFromReplayAlone)
                                    __FILE__, __LINE__);
             return;
         }
+    }
+}
+
+RA4_TEST(Recon, SwappedTuningProducesADifferentBeliefTimeline)
+{
+    // The I-B5 review's M2 obligation, dischargeable only now that distortion is
+    // real: the replay header's ReconSettingsHash must be load-bearing. If belief
+    // were insensitive to tunables, the hash gate would be theatre -- refusing
+    // mismatched rulesets to protect a property that did not exist.
+    //
+    // Method: run the same scripted match three times from the same seed, varying
+    // only the distortion tuning. Equal-hash settings must reproduce the belief
+    // timeline exactly; a changed tunable must change it.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+
+    // Fear-only distortion with a large bias, and morale that craters and never
+    // recovers, so the tuning difference shows inside the measured window.
+    const auto MakeTuning = [](int32_t FearBiasPerMille)
+    {
+        Recon::ReconSettings S = MakeMinimalSettings(true);
+        S.DistortionProfiles[0].bCountDistortionEnabled = true;
+        S.DistortionProfiles[0].FearCountBiasMaxPerMille = FearBiasPerMille;
+        S.DistortionProfiles[0].CompetenceNoiseMaxPerMille = 0; // fear only
+        S.Morale.DamageMoralePenaltyPerMille = 5000;
+        S.Morale.MoraleRegenPerTickPerMille = 0;
+        return S;
+    };
+
+    // Two facing observers; the player-0 unit is shelled into panic (without
+    // dying -- a dead observer reports nothing) so the fear branch actually runs.
+    const auto RunBeliefTimeline = [&Content](const Recon::ReconSettings& Settings)
+    {
+        std::vector<uint64_t> PerTick;
+        SimWorld World;
+        World.Initialize(&Content, MakeTestSetup(4242), &Settings);
+        World.SpawnUnit(Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+        World.SpawnUnit(Ids::AllRifleman, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+        const EntityId Victim = World.MakeId(0);
+        for (int32_t I = 0; I < 15; ++I)
+        {
+            World.DebugDamage(Victim, 2); // 30 total, far below lethal
+            World.Tick(nullptr);
+            World.ClearEvents();
+        }
+        for (int32_t I = 0; I < 60; ++I)
+        {
+            World.Tick(nullptr);
+            World.ClearEvents();
+            Hash64 H;
+            World.GetRecon().GetPerceivedWorld(0).FeedChecksum(H);
+            PerTick.push_back(H.Get());
+        }
+        return PerTick;
+    };
+
+    const Recon::ReconSettings Original = MakeTuning(3000);
+    const std::vector<uint64_t> Live = RunBeliefTimeline(Original);
+
+    // 1. Independently constructed, same tunables: identical timeline. This is
+    //    exactly what an equal header hash promises a replay viewer.
+    const Recon::ReconSettings SameTuning = MakeTuning(3000);
+    RA4_REQUIRE(SameTuning.ComputeSettingsHash() == Original.ComputeSettingsHash());
+    const std::vector<uint64_t> Same = RunBeliefTimeline(SameTuning);
+    RA4_REQUIRE(Same.size() == Live.size());
+    RA4_EXPECT(Same == Live);
+
+    // 2. One tunable changed: different hash AND a different timeline. A weaker
+    //    fear bias must change what the panicking observer reports.
+    const Recon::ReconSettings OtherTuning = MakeTuning(200);
+    RA4_REQUIRE(OtherTuning.ComputeSettingsHash() != Original.ComputeSettingsHash());
+    const std::vector<uint64_t> Other = RunBeliefTimeline(OtherTuning);
+    RA4_REQUIRE(Other.size() == Live.size());
+    if (Other == Live)
+    {
+        RA4Test::ReportFailure("belief timeline is insensitive to distortion tuning: the replay "
+                               "header's ReconSettingsHash gate protects nothing",
+                               __FILE__, __LINE__);
     }
 }
 
