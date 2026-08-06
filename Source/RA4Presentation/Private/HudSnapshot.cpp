@@ -53,6 +53,10 @@ void HudSnapshotBuilder::Reset()
     PreviousCredits = 0;
     bHasPreviousCredits = false;
     ActiveAlerts.clear();
+    CachedBackground = MinimapBackground();
+    BackgroundRevision = 0;
+    bHasSampledBackground = false;
+    LastBackgroundTick = 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -431,6 +435,194 @@ void ComputeMinimapRect(double PanelWidth, double PanelHeight,
     OutOffsetY = (PanelHeight - OutHeight) * 0.5;
 }
 
+void ComputeMinimapCellGrid(int32_t TileWidth, int32_t TileHeight,
+                            int32_t& OutCellsX, int32_t& OutCellsY,
+                            int32_t& OutStrideX, int32_t& OutStrideY)
+{
+    OutCellsX = 0;
+    OutCellsY = 0;
+    OutStrideX = 1;
+    OutStrideY = 1;
+    if (TileWidth <= 0 || TileHeight <= 0)
+    {
+        return;
+    }
+
+    // Ceiling division, so a map that does not divide evenly gets one extra partly-filled
+    // cell rather than silently losing its last strip of tiles.
+    OutStrideX = (TileWidth + kMinimapMaxCellsPerAxis - 1) / kMinimapMaxCellsPerAxis;
+    OutStrideY = (TileHeight + kMinimapMaxCellsPerAxis - 1) / kMinimapMaxCellsPerAxis;
+    if (OutStrideX < 1) { OutStrideX = 1; }
+    if (OutStrideY < 1) { OutStrideY = 1; }
+
+    OutCellsX = (TileWidth + OutStrideX - 1) / OutStrideX;
+    OutCellsY = (TileHeight + OutStrideY - 1) / OutStrideY;
+}
+
+namespace
+{
+
+// Which terrain wins when one minimap cell covers several tiles. A single cell can be up
+// to a few tiles across on a large map, and averaging them would turn a one-tile-wide
+// river into nothing. Ranked by how much a player needs to see it: an ore patch or a cliff
+// edge is a decision, plain ground is not.
+int32_t TerrainSalience(MinimapTerrain Terrain)
+{
+    switch (Terrain)
+    {
+        case MinimapTerrain::Structure: return 5;
+        case MinimapTerrain::Ore:       return 4;
+        case MinimapTerrain::Cliff:     return 3;
+        case MinimapTerrain::Water:     return 2;
+        case MinimapTerrain::Ground:    return 1;
+        case MinimapTerrain::Unknown:   return 0;
+    }
+    return 0;
+}
+
+MinimapTerrain TerrainForTileFlags(uint8_t Flags)
+{
+    // Ore is checked before water and cliff because an ore patch is the one thing on the
+    // minimap the player is actively looking for; a tile flagged both is still worth
+    // showing as ore.
+    if ((Flags & Tile_Resource) != 0)  { return MinimapTerrain::Ore; }
+    if ((Flags & Tile_Occupied) != 0)  { return MinimapTerrain::Structure; }
+    if ((Flags & Tile_Water) != 0)     { return MinimapTerrain::Water; }
+    if ((Flags & Tile_Cliff) != 0)     { return MinimapTerrain::Cliff; }
+    return MinimapTerrain::Ground;
+}
+
+MinimapShroud ShroudForVisibility(VisibilityState Visibility)
+{
+    switch (Visibility)
+    {
+        // A radar blip tells the player something is moving there, not what the ground
+        // looks like, so it lights the cell exactly as eyes-on does. Treating it as merely
+        // remembered would leave a live contact sitting on a dimmed cell.
+        case VisibilityState::CurrentlyVisible:
+        case VisibilityState::RadarDetected:
+            return MinimapShroud::Visible;
+        case VisibilityState::PreviouslySeen:
+            return MinimapShroud::Remembered;
+        case VisibilityState::NeverSeen:
+            break;
+    }
+    return MinimapShroud::NeverSeen;
+}
+
+} // namespace
+
+void HudSnapshotBuilder::BuildMinimapBackground(const SimWorld& World, RadarState& Out)
+{
+    Out.bBackgroundChanged = false;
+    Out.BackgroundRevision = BackgroundRevision;
+    // Always describes the current explored map, whichever tick the reader arrived on. An
+    // earlier version only filled this in on the tick the background changed, which meant a
+    // consumer created mid-match saw nothing until the next scout moved.
+    Out.Background = CachedBackground;
+
+    const MapDescription& Map = World.GetMap();
+    const TickIndex Tick = World.GetTick();
+
+    // Re-sample on the first call and then only on the interval. Between those ticks the
+    // cached copy above is handed out unchanged, and bBackgroundChanged stays false so the
+    // UI knows it need not re-upload its texture.
+    const bool bDue = !bHasSampledBackground ||
+                      (Tick - LastBackgroundTick) >= TickIndex(MinimapRefreshIntervalTicks);
+    if (!bDue)
+    {
+        return;
+    }
+
+    int32_t CellsX = 0, CellsY = 0, StrideX = 1, StrideY = 1;
+    ComputeMinimapCellGrid(Map.Width, Map.Height, CellsX, CellsY, StrideX, StrideY);
+    if (CellsX <= 0 || CellsY <= 0)
+    {
+        return;   // no map yet; leave whatever the consumer already has
+    }
+
+    MinimapBackground Sampled;
+    Sampled.Width = CellsX;
+    Sampled.Height = CellsY;
+    Sampled.Terrain.assign(size_t(CellsX) * size_t(CellsY), uint8_t(MinimapTerrain::Unknown));
+    Sampled.Shroud.assign(size_t(CellsX) * size_t(CellsY), uint8_t(MinimapShroud::NeverSeen));
+
+    const FFogOfWarGrid* Fog = World.GetFogGrid();
+
+    for (int32_t CellY = 0; CellY < CellsY; ++CellY)
+    {
+        for (int32_t CellX = 0; CellX < CellsX; ++CellX)
+        {
+            MinimapTerrain BestTerrain = MinimapTerrain::Unknown;
+            MinimapShroud BestShroud = MinimapShroud::NeverSeen;
+
+            const int32_t TileX0 = CellX * StrideX;
+            const int32_t TileY0 = CellY * StrideY;
+            for (int32_t OffsetY = 0; OffsetY < StrideY; ++OffsetY)
+            {
+                for (int32_t OffsetX = 0; OffsetX < StrideX; ++OffsetX)
+                {
+                    const int32_t TileX = TileX0 + OffsetX;
+                    const int32_t TileY = TileY0 + OffsetY;
+                    if (!Map.IsInBounds(TileX, TileY))
+                    {
+                        continue;
+                    }
+
+                    // The brightest state any covered tile is in. A cell straddling the
+                    // edge of vision reads as lit, which matches what the player sees on
+                    // the terrain itself.
+                    const MinimapShroud Shroud = Fog != nullptr
+                        ? ShroudForVisibility(Fog->GetVisibility(int32_t(LocalPlayer), TileX, TileY))
+                        : MinimapShroud::Visible;   // no fog grid: nothing is hidden
+                    if (Shroud > BestShroud)
+                    {
+                        BestShroud = Shroud;
+                    }
+
+                    // Terrain is only recorded for ground the player has at least explored.
+                    // Sampling it regardless would leak the shape of the coastline and
+                    // every ore patch on an unexplored map, which is exactly the maphack
+                    // the fog exists to prevent.
+                    if (Shroud == MinimapShroud::NeverSeen)
+                    {
+                        continue;
+                    }
+                    const MinimapTerrain Terrain = TerrainForTileFlags(Map.GetTile(TileX, TileY));
+                    if (TerrainSalience(Terrain) > TerrainSalience(BestTerrain))
+                    {
+                        BestTerrain = Terrain;
+                    }
+                }
+            }
+
+            const size_t Index = size_t(CellY) * size_t(CellsX) + size_t(CellX);
+            Sampled.Terrain[Index] = uint8_t(BestTerrain);
+            Sampled.Shroud[Index] = uint8_t(BestShroud);
+        }
+    }
+
+    LastBackgroundTick = Tick;
+    bHasSampledBackground = true;
+
+    // Only bump the revision when the result actually differs. A match where nothing has
+    // been explored since the last sample -- which is most ticks once the map is open --
+    // then produces no traffic at all, and the consumer's texture is not re-uploaded.
+    if (Sampled.Width == CachedBackground.Width &&
+        Sampled.Height == CachedBackground.Height &&
+        Sampled.Terrain == CachedBackground.Terrain &&
+        Sampled.Shroud == CachedBackground.Shroud)
+    {
+        return;
+    }
+
+    CachedBackground = std::move(Sampled);
+    ++BackgroundRevision;
+    Out.BackgroundRevision = BackgroundRevision;
+    Out.bBackgroundChanged = true;
+    Out.Background = CachedBackground;
+}
+
 void HudSnapshotBuilder::BuildRadar(const SimWorld& World, const std::vector<EntityId>& Selection,
                                     RadarState& Out) const
 {
@@ -691,6 +883,10 @@ void HudSnapshotBuilder::Build(const SimWorld& World, const std::vector<EntityId
     BuildSelection(World, Selection, Out.Selection);
     BuildProduction(World, Out.Selection, Out.Production);
     BuildRadar(World, Selection, Out.Radar);
+    // After BuildRadar, which resets the whole RadarState. The background is produced even
+    // when the panel is dark: the player is told the radar is out, not made to re-explore
+    // the map once it comes back.
+    BuildMinimapBackground(World, Out.Radar);
     BuildMatch(World, Out.Match);
     AccumulateAlerts(World, Out.Resources);
 

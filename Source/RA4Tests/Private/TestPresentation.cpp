@@ -777,3 +777,355 @@ RA4_TEST(Minimap, LetterboxPreservesMapAspectAndCentresIt)
     ComputeMinimapRect(0, 0, 12800, 12800, OffX, OffY, W, H);
     RA4_EXPECT(W >= 0.0 && H >= 0.0);
 }
+
+// ---------------------------------------------------------------------------
+// Minimap background: terrain and shroud (M2)
+// ---------------------------------------------------------------------------
+
+namespace
+{
+// A map with a river, a cliff ridge and an ore patch at known tiles, so the sampler can be
+// asked what it produced for each of them rather than only whether it produced something.
+struct BackgroundFixture
+{
+    ContentDatabase Content;
+    SimWorld World;
+    HudSnapshotBuilder Builder;
+    HudSnapshot Snapshot;
+
+    static constexpr int32_t kWaterX = 30;   // a full-height column of water
+    static constexpr int32_t kCliffX = 40;   // a full-height column of cliff
+    static constexpr int32_t kOreX = 12;     // a 2x2 ore patch next to the base
+    static constexpr int32_t kOreY = 14;
+
+    explicit BackgroundFixture(int32_t MapWidth = 64, int32_t MapHeight = 64)
+    {
+        BuildDefaultContent(Content);
+
+        MatchSetup Setup = MakeTestSetup(9090);
+        Setup.Map.Resize(MapWidth, MapHeight, Tile_GroundPassable);
+        for (int32_t Y = 0; Y < MapHeight; ++Y)
+        {
+            if (kWaterX < MapWidth) { Setup.Map.SetTileFlag(kWaterX, Y, Tile_Water, true); }
+            if (kCliffX < MapWidth) { Setup.Map.SetTileFlag(kCliffX, Y, Tile_Cliff, true); }
+        }
+        for (int32_t Y = kOreY; Y < kOreY + 2; ++Y)
+        {
+            for (int32_t X = kOreX; X < kOreX + 2; ++X)
+            {
+                Setup.Map.SetTileFlag(X, Y, Tile_Resource, true);
+            }
+        }
+
+        World.Initialize(&Content, Setup);
+        // Without an opponent the match ends on the first tick, which stops the fog from
+        // updating and makes every order fail with MatchOver -- so the background would be
+        // measured on a world that is not running.
+        World.SpawnBuilding(Ids::AllConYard, 1, TileCoord(MapWidth - 6, MapHeight - 6), true);
+        Builder.Initialize(0);
+        // Every tick, so a test never has to guess when a re-sample lands.
+        Builder.SetMinimapRefreshIntervalTicks(1);
+    }
+
+    void Step(int32_t Ticks = 1)
+    {
+        for (int32_t I = 0; I < Ticks; ++I)
+        {
+            World.Tick(nullptr);
+            Builder.Build(World, {}, Snapshot);
+            World.ClearEvents();
+        }
+    }
+
+    // The most recent background, which is only present on ticks where it changed.
+    const MinimapBackground& Background() const { return Snapshot.Radar.Background; }
+
+    // The cell a given tile falls into.
+    MinimapTerrain TerrainAtTile(int32_t TileX, int32_t TileY) const
+    {
+        int32_t CellsX = 0, CellsY = 0, StrideX = 1, StrideY = 1;
+        ComputeMinimapCellGrid(World.GetMap().Width, World.GetMap().Height,
+                               CellsX, CellsY, StrideX, StrideY);
+        const int32_t CellX = TileX / StrideX;
+        const int32_t CellY = TileY / StrideY;
+        const MinimapBackground& B = Background();
+        if (CellX < 0 || CellY < 0 || CellX >= B.Width || CellY >= B.Height)
+        {
+            return MinimapTerrain::Unknown;
+        }
+        return MinimapTerrain(B.Terrain[size_t(CellY) * size_t(B.Width) + size_t(CellX)]);
+    }
+
+    MinimapShroud ShroudAtTile(int32_t TileX, int32_t TileY) const
+    {
+        int32_t CellsX = 0, CellsY = 0, StrideX = 1, StrideY = 1;
+        ComputeMinimapCellGrid(World.GetMap().Width, World.GetMap().Height,
+                               CellsX, CellsY, StrideX, StrideY);
+        const int32_t CellX = TileX / StrideX;
+        const int32_t CellY = TileY / StrideY;
+        const MinimapBackground& B = Background();
+        if (CellX < 0 || CellY < 0 || CellX >= B.Width || CellY >= B.Height)
+        {
+            return MinimapShroud::NeverSeen;
+        }
+        return MinimapShroud(B.Shroud[size_t(CellY) * size_t(B.Width) + size_t(CellX)]);
+    }
+
+    int32_t CountTerrain(MinimapTerrain Want) const
+    {
+        int32_t Count = 0;
+        for (uint8_t V : Background().Terrain)
+        {
+            if (MinimapTerrain(V) == Want) { ++Count; }
+        }
+        return Count;
+    }
+};
+} // namespace
+
+// The panel drew markers onto an empty grid: a player could see where their units were but
+// nothing about the ground under them. The background now carries the terrain the player
+// has explored -- and, crucially, only that.
+RA4_TEST(MinimapBackground, ExploredTerrainIsReportedAndUnexploredIsNot)
+{
+    BackgroundFixture F;
+    F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    // The very first sample is new, so it is flagged as changed.
+    F.Step(1);
+    RA4_EXPECT(F.Snapshot.Radar.bBackgroundChanged);
+    F.Step(3);
+
+    RA4_EXPECT(F.Snapshot.Radar.BackgroundRevision > 0);
+    RA4_EXPECT(F.Background().Width > 0);
+    RA4_EXPECT(F.Background().Height > 0);
+    RA4_EXPECT_EQ(F.Background().Terrain.size(),
+                  size_t(F.Background().Width) * size_t(F.Background().Height));
+    RA4_EXPECT_EQ(F.Background().Shroud.size(), F.Background().Terrain.size());
+
+    // The yard's own cell reads as a structure -- its footprint sets Tile_Occupied, and a
+    // building is the most worth-showing thing that can be in a cell.
+    RA4_EXPECT_EQ(int32_t(F.TerrainAtTile(10, 10)), int32_t(MinimapTerrain::Structure));
+    RA4_EXPECT_EQ(int32_t(F.ShroudAtTile(10, 10)), int32_t(MinimapShroud::Visible));
+
+    // Open ground the yard can see, clear of its footprint but inside its 5-tile vision.
+    RA4_EXPECT_EQ(int32_t(F.TerrainAtTile(10, 14)), int32_t(MinimapTerrain::Ground));
+    RA4_EXPECT_EQ(int32_t(F.ShroudAtTile(10, 14)), int32_t(MinimapShroud::Visible));
+
+    // The far corner has never been visited: no terrain and no shroud state.
+    RA4_EXPECT_EQ(int32_t(F.TerrainAtTile(62, 62)), int32_t(MinimapTerrain::Unknown));
+    RA4_EXPECT_EQ(int32_t(F.ShroudAtTile(62, 62)), int32_t(MinimapShroud::NeverSeen));
+}
+
+// Sampling terrain regardless of fog would draw the coastline, every cliff and every ore
+// patch on a map the player has not set foot on -- the exact maphack the fog exists to
+// prevent, delivered by the minimap instead of by the unit vision code.
+RA4_TEST(MinimapBackground, UnexploredTerrainIsNotLeaked)
+{
+    BackgroundFixture F;
+    F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    F.Step(4);
+
+    // The river and the ridge are 20 and 30 tiles away, far outside the yard's sight.
+    RA4_EXPECT_EQ(int32_t(F.TerrainAtTile(BackgroundFixture::kWaterX, 40)),
+                  int32_t(MinimapTerrain::Unknown));
+    RA4_EXPECT_EQ(int32_t(F.TerrainAtTile(BackgroundFixture::kCliffX, 40)),
+                  int32_t(MinimapTerrain::Unknown));
+
+    // Nothing anywhere on the map reports water or cliff yet, so the leak cannot be hiding
+    // in a cell the two probes above happened to miss.
+    RA4_EXPECT_EQ(F.CountTerrain(MinimapTerrain::Water), 0);
+    RA4_EXPECT_EQ(F.CountTerrain(MinimapTerrain::Cliff), 0);
+}
+
+// Ore is the one thing on the minimap a player actively hunts for, so a cell covering both
+// ore and plain ground must read as ore rather than being averaged away.
+RA4_TEST(MinimapBackground, OreSurvivesDownsamplingAndIsVisibleWhenExplored)
+{
+    // A map large enough that one minimap cell covers several tiles. On a 64x64 map the
+    // stride is 1 and each cell is a single tile, so the merge rule is never exercised --
+    // an earlier version of this test used that size and passed with the rule removed.
+    BackgroundFixture F(/*MapWidth*/ 256, /*MapHeight*/ 256);
+    int32_t CellsX = 0, CellsY = 0, StrideX = 0, StrideY = 0;
+    ComputeMinimapCellGrid(256, 256, CellsX, CellsY, StrideX, StrideY);
+    RA4_REQUIRE(StrideX > 1);   // otherwise this test proves nothing
+    // Near enough that the patch is inside the yard's vision, but not on top of it -- a
+    // footprint would mask the ore with Structure and the test would prove nothing.
+    F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(BackgroundFixture::kOreX + 5,
+                                                        BackgroundFixture::kOreY), true);
+    F.Step(4);
+
+    RA4_EXPECT_EQ(int32_t(F.TerrainAtTile(BackgroundFixture::kOreX + 1,
+                                          BackgroundFixture::kOreY + 1)),
+                  int32_t(MinimapTerrain::Ore));
+    RA4_EXPECT(F.CountTerrain(MinimapTerrain::Ore) > 0);
+}
+
+// Ground the player once walked past but no longer watches must be dimmed rather than
+// either erased or left looking live -- that difference is the whole memory of the map.
+RA4_TEST(MinimapBackground, GroundOnceSeenBecomesRememberedNotForgotten)
+{
+    BackgroundFixture F;
+    // A lone scout well away from the base, so nothing else keeps its ground lit.
+    const EntityId Scout = F.World.SpawnUnit(Ids::AllRifleman, 0, Vec2::FromInts(20 * 200, 45 * 200));
+    F.Step(4);
+    RA4_EXPECT_EQ(int32_t(F.ShroudAtTile(20, 45)), int32_t(MinimapShroud::Visible));
+    const MinimapTerrain SeenTerrain = F.TerrainAtTile(20, 45);
+    RA4_EXPECT_EQ(int32_t(SeenTerrain), int32_t(MinimapTerrain::Ground));
+
+    // Walk the eyes away rather than deleting them, so this exercises the same path a real
+    // match takes when a scout moves on. The cell must drop to Remembered, not back to
+    // NeverSeen, and must keep the terrain the player learned.
+    Command Away = MakeCommand(CommandType::Move, 0);
+    Away.Primary = Scout;
+    Away.Location = Vec2::FromInts(20 * 200, 12 * 200);
+    RA4_EXPECT(F.World.ApplyCommand(Away).IsAccepted());
+    F.Step(200);
+    RA4_EXPECT_EQ(int32_t(F.ShroudAtTile(20, 45)), int32_t(MinimapShroud::Remembered));
+    RA4_EXPECT_EQ(int32_t(F.TerrainAtTile(20, 45)), int32_t(MinimapTerrain::Ground));
+}
+
+// A background that is copied into the snapshot 20 times a second to say "identical" is the
+// single most expensive thing here. It must only be sent when it actually changed.
+RA4_TEST(MinimapBackground, IdenticalBackgroundIsNotResentEveryTick)
+{
+    BackgroundFixture F;
+    F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+
+    // First sample: new, so it is sent.
+    F.Step(1);
+    RA4_EXPECT(F.Snapshot.Radar.bBackgroundChanged);
+    const uint32_t FirstRevision = F.Snapshot.Radar.BackgroundRevision;
+    RA4_EXPECT(FirstRevision > 0);
+
+    // Let exploration settle, then confirm a static map produces no further traffic.
+    F.Step(20);
+    const uint32_t Settled = F.Snapshot.Radar.BackgroundRevision;
+    int32_t Resends = 0;
+    for (int32_t I = 0; I < 20; ++I)
+    {
+        F.Step(1);
+        if (F.Snapshot.Radar.bBackgroundChanged) { ++Resends; }
+    }
+    RA4_EXPECT_EQ(Resends, 0);
+    RA4_EXPECT_EQ(int32_t(F.Snapshot.Radar.BackgroundRevision), int32_t(Settled));
+    // The revision is still reported on the quiet ticks, so a consumer that missed one can
+    // tell its cached copy is current.
+    RA4_EXPECT(F.Snapshot.Radar.BackgroundRevision > 0);
+
+    // Newly explored ground must still get through: a scout walking into the dark is
+    // exactly the case a naive "only send once" cache would break.
+    F.World.SpawnUnit(Ids::AllRifleman, 0, Vec2::FromInts(50 * 200, 50 * 200));
+    F.Step(3);
+    RA4_EXPECT(F.Snapshot.Radar.BackgroundRevision > Settled);
+}
+
+// A 512x512 map must not turn into a quarter-million-cell upload, and a small map must not
+// be blurred by downsampling it when it already fits.
+RA4_TEST(MinimapBackground, LargeMapsAreDownsampledAndSmallOnesAreNot)
+{
+    int32_t CellsX = 0, CellsY = 0, StrideX = 0, StrideY = 0;
+
+    // Comfortably under the cap: sampled tile-for-tile.
+    ComputeMinimapCellGrid(64, 64, CellsX, CellsY, StrideX, StrideY);
+    RA4_EXPECT_EQ(StrideX, 1);
+    RA4_EXPECT_EQ(StrideY, 1);
+    RA4_EXPECT_EQ(CellsX, 64);
+    RA4_EXPECT_EQ(CellsY, 64);
+
+    // Over the cap: strides up and the cell count stays bounded.
+    ComputeMinimapCellGrid(512, 512, CellsX, CellsY, StrideX, StrideY);
+    RA4_EXPECT(StrideX > 1);
+    RA4_EXPECT(CellsX <= kMinimapMaxCellsPerAxis);
+    RA4_EXPECT(CellsY <= kMinimapMaxCellsPerAxis);
+
+    // Every axis length up to a large map stays within the cap and never loses a tile off
+    // the end -- the cells must always cover the whole map.
+    for (int32_t Size = 1; Size <= 600; ++Size)
+    {
+        ComputeMinimapCellGrid(Size, Size, CellsX, CellsY, StrideX, StrideY);
+        RA4_EXPECT(CellsX >= 1 && CellsX <= kMinimapMaxCellsPerAxis);
+        RA4_EXPECT(StrideX >= 1);
+        RA4_EXPECT(CellsX * StrideX >= Size);
+    }
+
+    // A non-square map keeps independent strides rather than being squashed to one.
+    ComputeMinimapCellGrid(256, 64, CellsX, CellsY, StrideX, StrideY);
+    RA4_EXPECT(StrideX > StrideY);
+    RA4_EXPECT(CellsX > CellsY);
+
+    // Degenerate input yields no grid rather than a divide by zero.
+    ComputeMinimapCellGrid(0, 0, CellsX, CellsY, StrideX, StrideY);
+    RA4_EXPECT_EQ(CellsX, 0);
+    RA4_EXPECT_EQ(CellsY, 0);
+}
+
+// A real oversized map must actually produce a bounded, correctly-shaped background, not
+// just satisfy the pure helper above.
+RA4_TEST(MinimapBackground, OversizedMapProducesABoundedGrid)
+{
+    BackgroundFixture F(/*MapWidth*/ 256, /*MapHeight*/ 128);
+    F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    F.Step(4);
+
+    RA4_EXPECT(F.Background().Width <= kMinimapMaxCellsPerAxis);
+    RA4_EXPECT(F.Background().Height <= kMinimapMaxCellsPerAxis);
+    RA4_EXPECT_EQ(F.Background().Terrain.size(),
+                  size_t(F.Background().Width) * size_t(F.Background().Height));
+    // Aspect is preserved by the cell counts, so the widget's letterbox and the cell grid
+    // agree about the shape of the map.
+    RA4_EXPECT(F.Background().Width > F.Background().Height);
+    // And the base is still findable in the downsampled grid.
+    RA4_EXPECT_EQ(int32_t(F.ShroudAtTile(10, 10)), int32_t(MinimapShroud::Visible));
+}
+
+// ADR-0013 takes the overview away on a deficit, but it must not take away the map the
+// player already explored: losing radar should cost the live picture, not the memory.
+RA4_TEST(MinimapBackground, BackgroundSurvivesARadarBlackout)
+{
+    BackgroundFixture F;
+    F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    F.Step(4);
+    const uint32_t Explored = F.Snapshot.Radar.BackgroundRevision;
+    RA4_EXPECT(Explored > 0);
+
+    // Drive the tier down hard with unpowered turrets.
+    for (int32_t N = 0; N < 12; ++N)
+    {
+        F.World.SpawnBuilding(Ids::SovTurret, 0, TileCoord(24 + N * 2, 24), true);
+    }
+    F.Step(6);
+
+    // Whatever the panel decided about being online, the explored ground is still described
+    // -- the revision never rewinds and the yard's own cell is still known terrain.
+    RA4_EXPECT(F.Snapshot.Radar.BackgroundRevision >= Explored);
+    RA4_EXPECT(F.Background().Width > 0);
+    RA4_EXPECT_EQ(int32_t(F.TerrainAtTile(10, 10)), int32_t(MinimapTerrain::Structure));
+}
+
+
+
+// The Blueprint-facing minimap enums in RA4HUDTypes.h are a hand-written copy of these,
+// and the sampler writes a raw byte that the painter reads back. RA4UI cannot be compiled
+// headlessly, so the copy is guarded by static_assert in RA4SidebarWidget.cpp -- but that
+// only fires if these values are the ones it was written against. Pinning them here means
+// reordering the presentation enum breaks a test even in a headless run, instead of only
+// when someone next builds the editor.
+RA4_TEST(MinimapBackground, TerrainAndShroudValuesArePinnedForTheBlueprintMirror)
+{
+    RA4_EXPECT_EQ(int32_t(MinimapTerrain::Unknown), 0);
+    RA4_EXPECT_EQ(int32_t(MinimapTerrain::Ground), 1);
+    RA4_EXPECT_EQ(int32_t(MinimapTerrain::Water), 2);
+    RA4_EXPECT_EQ(int32_t(MinimapTerrain::Cliff), 3);
+    RA4_EXPECT_EQ(int32_t(MinimapTerrain::Ore), 4);
+    RA4_EXPECT_EQ(int32_t(MinimapTerrain::Structure), 5);
+
+    RA4_EXPECT_EQ(int32_t(MinimapShroud::NeverSeen), 0);
+    RA4_EXPECT_EQ(int32_t(MinimapShroud::Remembered), 1);
+    RA4_EXPECT_EQ(int32_t(MinimapShroud::Visible), 2);
+
+    // Brightness ordering is relied on by the sampler, which keeps the brightest state any
+    // tile in a cell is in. If Remembered ever outranked Visible, a cell straddling the edge
+    // of vision would be drawn dimmed while the player is looking straight at it.
+    RA4_EXPECT(MinimapShroud::Visible > MinimapShroud::Remembered);
+    RA4_EXPECT(MinimapShroud::Remembered > MinimapShroud::NeverSeen);
+}

@@ -33,6 +33,20 @@ namespace
 constexpr float kRadarDesiredSize = 208.0f;
 }
 
+// The Blueprint-facing minimap enums are a hand-written copy of the presentation ones, so
+// the byte the sampler wrote must mean the same thing to the painter. Checked here because
+// this is the one translation unit that sees both definitions; if either list is reordered
+// or extended, this fails to compile instead of quietly painting water as ore.
+static_assert(uint8(ERA4MinimapTerrain::Unknown) == uint8(RA4::Presentation::MinimapTerrain::Unknown), "minimap terrain drift");
+static_assert(uint8(ERA4MinimapTerrain::Ground) == uint8(RA4::Presentation::MinimapTerrain::Ground), "minimap terrain drift");
+static_assert(uint8(ERA4MinimapTerrain::Water) == uint8(RA4::Presentation::MinimapTerrain::Water), "minimap terrain drift");
+static_assert(uint8(ERA4MinimapTerrain::Cliff) == uint8(RA4::Presentation::MinimapTerrain::Cliff), "minimap terrain drift");
+static_assert(uint8(ERA4MinimapTerrain::Ore) == uint8(RA4::Presentation::MinimapTerrain::Ore), "minimap terrain drift");
+static_assert(uint8(ERA4MinimapTerrain::Structure) == uint8(RA4::Presentation::MinimapTerrain::Structure), "minimap terrain drift");
+static_assert(uint8(ERA4MinimapShroud::NeverSeen) == uint8(RA4::Presentation::MinimapShroud::NeverSeen), "minimap shroud drift");
+static_assert(uint8(ERA4MinimapShroud::Remembered) == uint8(RA4::Presentation::MinimapShroud::Remembered), "minimap shroud drift");
+static_assert(uint8(ERA4MinimapShroud::Visible) == uint8(RA4::Presentation::MinimapShroud::Visible), "minimap shroud drift");
+
 class SRA4RadarSlate final : public SLeafWidget
 {
 public:
@@ -108,6 +122,51 @@ public:
         FVector2D MapOffset, MapExtent;
         URA4RadarWidget::ComputeMapRect(Size, MapSize, MapOffset, MapExtent);
 
+        // Terrain and shroud, drawn underneath the markers. Without this the panel was a
+        // blank grid: a player could see where their units were but nothing about the
+        // ground they were standing on, and no record of what they had explored.
+        const FIntPoint Cells = RadarOwner->GetBackgroundCellCounts();
+        const TArray<uint8>& Terrain = RadarOwner->GetBackgroundTerrain();
+        const TArray<uint8>& Shroud = RadarOwner->GetBackgroundShroud();
+        if (Cells.X > 0 && Cells.Y > 0 &&
+            Terrain.Num() >= Cells.X * Cells.Y && Shroud.Num() >= Cells.X * Cells.Y)
+        {
+            // Cell size is rounded up so adjacent cells overlap by less than a pixel rather
+            // than leaving a seam of background between every pair of them.
+            const FVector2D CellSize(FMath::CeilToFloat(float(MapExtent.X) / float(Cells.X)),
+                                     FMath::CeilToFloat(float(MapExtent.Y) / float(Cells.Y)));
+            for (int32 CellY = 0; CellY < Cells.Y; ++CellY)
+            {
+                for (int32 CellX = 0; CellX < Cells.X; ++CellX)
+                {
+                    const int32 Index = CellY * Cells.X + CellX;
+                    const ERA4MinimapShroud CellShroud = ERA4MinimapShroud(Shroud[Index]);
+                    if (CellShroud == ERA4MinimapShroud::NeverSeen)
+                    {
+                        continue;   // unexplored: leave the panel's own dark background
+                    }
+
+                    FLinearColor Colour = RA4MinimapTerrainColour(ERA4MinimapTerrain(Terrain[Index]));
+                    if (CellShroud == ERA4MinimapShroud::Remembered)
+                    {
+                        // Dimmed, not greyed: the player must still recognise a river or an
+                        // ore patch they scouted earlier, just not mistake it for live.
+                        Colour *= 0.45f;
+                        Colour.A = 1.0f;
+                    }
+
+                    // The simulation's Y grows northward and the panel's grows downward.
+                    const FVector2D CellPos(
+                        MapOffset.X + float(CellX) * float(MapExtent.X) / float(Cells.X),
+                        MapOffset.Y + float(Cells.Y - 1 - CellY) * float(MapExtent.Y) / float(Cells.Y));
+                    FSlateDrawElement::MakeBox(
+                        OutDrawElements, LayerId + 2,
+                        AllottedGeometry.ToPaintGeometry(CellSize, FSlateLayoutTransform(CellPos)),
+                        WhiteBrush, ESlateDrawEffect::None, Colour);
+                }
+            }
+        }
+
         const int32 LocalPlayer = RadarOwner->GetLocalPlayer();
         for (const FRA4RadarMarker& Marker : RadarOwner->GetMarkers())
         {
@@ -138,7 +197,7 @@ public:
             {
                 const FVector2D OutlineSize(MarkerExtent + 4.0f, MarkerExtent + 4.0f);
                 FSlateDrawElement::MakeBox(
-                    OutDrawElements, LayerId + 2,
+                    OutDrawElements, LayerId + 3,
                     AllottedGeometry.ToPaintGeometry(
                         OutlineSize, FSlateLayoutTransform(Centre - OutlineSize * 0.5f)),
                     WhiteBrush, ESlateDrawEffect::None, FLinearColor::White);
@@ -146,13 +205,13 @@ public:
 
             const FVector2D MarkerSize(MarkerExtent, MarkerExtent);
             FSlateDrawElement::MakeBox(
-                OutDrawElements, LayerId + 3,
+                OutDrawElements, LayerId + 4,
                 AllottedGeometry.ToPaintGeometry(
                     MarkerSize, FSlateLayoutTransform(Centre - MarkerSize * 0.5f)),
                 WhiteBrush, ESlateDrawEffect::None, Colour);
         }
 
-        return LayerId + 3;
+        return LayerId + 4;
     }
 
     virtual FReply OnMouseButtonDown(const FGeometry& MyGeometry,
@@ -426,6 +485,34 @@ int32 URA4RadarWidget::GetLocalPlayer() const
 {
     const URA4UIDataProviderSubsystem* Provider = GetProvider();
     return Provider != nullptr ? Provider->GetRadarLocalPlayer() : 0;
+}
+
+bool URA4RadarWidget::IsOnline() const
+{
+    const URA4UIDataProviderSubsystem* Provider = GetProvider();
+    // No provider means no match is running, so there is nothing to report as offline --
+    // an editor preview must not render itself as a blacked-out radar.
+    return Provider == nullptr || Provider->IsRadarOnline();
+}
+
+const TArray<uint8>& URA4RadarWidget::GetBackgroundTerrain() const
+{
+    static const TArray<uint8> Empty;
+    const URA4UIDataProviderSubsystem* Provider = GetProvider();
+    return Provider != nullptr ? Provider->GetMinimapTerrain() : Empty;
+}
+
+const TArray<uint8>& URA4RadarWidget::GetBackgroundShroud() const
+{
+    static const TArray<uint8> Empty;
+    const URA4UIDataProviderSubsystem* Provider = GetProvider();
+    return Provider != nullptr ? Provider->GetMinimapShroud() : Empty;
+}
+
+FIntPoint URA4RadarWidget::GetBackgroundCellCounts() const
+{
+    const URA4UIDataProviderSubsystem* Provider = GetProvider();
+    return Provider != nullptr ? Provider->GetMinimapCellCounts() : FIntPoint::ZeroValue;
 }
 
 void URA4RadarWidget::HandleSlateClick(const FVector2D& NormalizedPosition)

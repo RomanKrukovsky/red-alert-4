@@ -209,11 +209,63 @@ struct RadarMarker
     bool bSelected = false;
 };
 
+// The minimap drew markers onto an empty grid, so a player could see where their units
+// were but nothing about where they were standing -- no coast, no cliff, no ore, and no
+// record of which parts of the map they had actually explored. These two layers are the
+// background underneath the markers.
+//
+// Terrain and shroud are separate because they answer different questions: what is there,
+// and how much of it the player is entitled to know. Keeping them apart means the shroud
+// can dim or black out a cell without the terrain layer having to encode fog states as
+// extra terrain values.
+enum class MinimapTerrain : uint8_t
+{
+    Unknown = 0,   // never explored: nothing may be drawn here
+    Ground,
+    Water,
+    Cliff,
+    Ore,
+    Structure,     // a building footprint occupies the cell
+};
+
+enum class MinimapShroud : uint8_t
+{
+    NeverSeen = 0,  // black
+    Remembered,     // explored but not currently watched: dimmed
+    Visible,        // eyes or radar on it now: full brightness
+};
+
+// A large map must not turn into a per-cell upload the size of the map. Both axes are
+// downsampled to at most this many cells, which is already finer than the panel's pixel
+// count at any realistic panel size.
+constexpr int32_t kMinimapMaxCellsPerAxis = 96;
+
+struct MinimapBackground
+{
+    int32_t Width = 0;
+    int32_t Height = 0;
+    // Row-major, Width * Height entries each. Terrain holds MinimapTerrain values and
+    // Shroud holds MinimapShroud values; stored as bytes so the UI can hand them to a
+    // texture without a conversion pass.
+    std::vector<uint8_t> Terrain;
+    std::vector<uint8_t> Shroud;
+};
+
 struct RadarState
 {
     int32_t MapWidthUnits = 0;
     int32_t MapHeightUnits = 0;
     std::vector<RadarMarker> Markers;
+
+    // Background always describes the currently explored map, so a consumer that starts
+    // mid-match gets a complete picture immediately rather than waiting for the next scout
+    // to move. bBackgroundChanged says whether it differs from the previous snapshot, and
+    // BackgroundRevision counts how many times it has changed: together they let the UI
+    // skip re-uploading its texture on the ticks where nothing was newly explored, which
+    // is most of them once the map is open.
+    uint32_t BackgroundRevision = 0;
+    bool bBackgroundChanged = false;
+    MinimapBackground Background;
 
     // ADR-0013: the minimap itself goes dark from Moderate. The effect matrix lists
     // "Radar / minimap" as one row, and only half of it was implemented -- radar coverage
@@ -237,10 +289,18 @@ struct RadarState
 // click handler must use the identical mapping. A square panel drawing a 2:1 map stretched
 // it vertically, so a marker halfway up the map appeared nowhere near the terrain it stood
 // on, and a click came back with the wrong world position.
-void ComputeMinimapRect(double PanelWidth, double PanelHeight,
+void RA4PRESENTATION_API ComputeMinimapRect(double PanelWidth, double PanelHeight,
                         double MapWidth, double MapHeight,
                         double& OutOffsetX, double& OutOffsetY,
                         double& OutWidth, double& OutHeight);
+
+// Downsamples a map of TileWidth x TileHeight to at most kMinimapMaxCellsPerAxis per axis.
+// Returns the cell counts and, through the two callbacks' worth of stride, how many tiles
+// each cell covers. Exposed so the tests can assert the sampling without going through a
+// whole SimWorld.
+void RA4PRESENTATION_API ComputeMinimapCellGrid(int32_t TileWidth, int32_t TileHeight,
+                            int32_t& OutCellsX, int32_t& OutCellsY,
+                            int32_t& OutStrideX, int32_t& OutStrideY);
 
 // --- Match -----------------------------------------------------------------
 
@@ -287,11 +347,22 @@ public:
     // adding a row.
     void SetAlertMergeWindowTicks(int32_t Ticks) { AlertMergeWindowTicks = Ticks; }
 
+    // How often the minimap background is re-sampled. The terrain barely changes and the
+    // explored area grows slowly, so re-scanning the whole map every tick would burn time
+    // to produce an identical result. Set to 1 in tests that need it evaluated immediately.
+    void SetMinimapRefreshIntervalTicks(int32_t Ticks)
+    {
+        MinimapRefreshIntervalTicks = Ticks > 0 ? Ticks : 1;
+    }
+
 private:
     void BuildResources(const SimWorld& World, ResourceState& Out);
     void BuildSelection(const SimWorld& World, const std::vector<EntityId>& Selection, SelectionState& Out) const;
     void BuildProduction(const SimWorld& World, const SelectionState& Selection, ProductionState& Out) const;
     void BuildRadar(const SimWorld& World, const std::vector<EntityId>& Selection, RadarState& Out) const;
+    // Non-const: owns the cached background and the revision counter, since the whole
+    // point is to avoid rebuilding an identical one every tick.
+    void BuildMinimapBackground(const SimWorld& World, RadarState& Out);
     void BuildMatch(const SimWorld& World, MatchState& Out) const;
     void AccumulateAlerts(const SimWorld& World, const ResourceState& Resources);
     void PushAlert(const Alert& Incoming);
@@ -303,6 +374,14 @@ private:
 
     int32_t AlertLifetimeTicks = 200;      // 10 s at 20 Hz
     int32_t AlertMergeWindowTicks = 60;    // 3 s
+
+    // 0.5 s at 20 Hz: fast enough that newly explored ground appears while the scout is
+    // still moving, slow enough to be 1/10th of the work of doing it every tick.
+    int32_t MinimapRefreshIntervalTicks = 10;
+    MinimapBackground CachedBackground;
+    uint32_t BackgroundRevision = 0;
+    bool bHasSampledBackground = false;
+    TickIndex LastBackgroundTick = 0;
 };
 
 const char* RA4PRESENTATION_API ToString(AlertType Type);

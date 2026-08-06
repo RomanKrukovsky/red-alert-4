@@ -420,6 +420,28 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
         RadarMarkers.Add(Out);
     }
 
+    // The background is only copied on the ticks it actually changed. Re-uploading a few
+    // thousand cells 20 times a second to say "identical" would be the most expensive thing
+    // the HUD does, and on a fully explored map that is every tick.
+    if (Snapshot.Radar.bBackgroundChanged)
+    {
+        const RP::MinimapBackground& Background = Snapshot.Radar.Background;
+        MinimapCellCounts = FIntPoint(Background.Width, Background.Height);
+        MinimapTerrain.SetNumUninitialized(int32(Background.Terrain.size()));
+        MinimapShroud.SetNumUninitialized(int32(Background.Shroud.size()));
+        if (!Background.Terrain.empty())
+        {
+            FMemory::Memcpy(MinimapTerrain.GetData(), Background.Terrain.data(),
+                            Background.Terrain.size());
+        }
+        if (!Background.Shroud.empty())
+        {
+            FMemory::Memcpy(MinimapShroud.GetData(), Background.Shroud.data(),
+                            Background.Shroud.size());
+        }
+        MinimapBackgroundRevision = int32(Snapshot.Radar.BackgroundRevision);
+    }
+
     // --- alerts ---------------------------------------------------------------
     // Compared by content, not rebuilt blindly: the feed should animate when there
     // is news, not every tick.

@@ -66,6 +66,24 @@ public:
     UFUNCTION(BlueprintPure, Category = "RA4|UI")
     int32 GetRadarLocalPlayer() const { return RadarLocalPlayer; }
 
+    /**
+     * The minimap terrain/shroud background, as a row-major grid of at most
+     * kMinimapMaxCellsPerAxis cells per axis. Terrain values are ERA4MinimapTerrain and
+     * shroud values are ERA4MinimapShroud, stored as bytes so a painter can index them
+     * directly without a per-cell conversion.
+     *
+     * Copied only when it changed, so an explored map costs nothing per tick.
+     */
+    const TArray<uint8>& GetMinimapTerrain() const { return MinimapTerrain; }
+    const TArray<uint8>& GetMinimapShroud() const { return MinimapShroud; }
+
+    UFUNCTION(BlueprintPure, Category = "RA4|Radar")
+    FIntPoint GetMinimapCellCounts() const { return MinimapCellCounts; }
+
+    /** Bumped whenever the background changes, so a cached texture knows to re-upload. */
+    UFUNCTION(BlueprintPure, Category = "RA4|Radar")
+    int32 GetMinimapBackgroundRevision() const { return MinimapBackgroundRevision; }
+
     /** Resolves the stable simulation display key through the HUD localization map. */
     UFUNCTION(BlueprintPure, Category = "RA4|UI")
     FText GetDisplayNameForKey(const FString& Key) const;
@@ -189,6 +207,11 @@ private:
     FVector2D RadarMapSize = FVector2D::ZeroVector;
     bool bRadarOnline = true;
     int32 RadarLocalPlayer = 0;
+
+    TArray<uint8> MinimapTerrain;
+    TArray<uint8> MinimapShroud;
+    FIntPoint MinimapCellCounts = FIntPoint::ZeroValue;
+    int32 MinimapBackgroundRevision = 0;
 
     int32 Credits = 0;
     int32 PowerProduced = 0;

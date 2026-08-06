@@ -45,6 +45,10 @@ public:
     int32 GetLocalPlayer() const;
     /** False when a power deficit has taken the radar: the panel draws dark instead. */
     bool IsOnline() const;
+    /** Terrain and shroud grids for the background, and how many cells they hold. */
+    const TArray<uint8>& GetBackgroundTerrain() const;
+    const TArray<uint8>& GetBackgroundShroud() const;
+    FIntPoint GetBackgroundCellCounts() const;
     void HandleSlateClick(const FVector2D& NormalizedPosition);
 
     /**

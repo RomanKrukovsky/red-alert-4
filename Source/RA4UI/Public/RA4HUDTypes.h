@@ -64,6 +64,46 @@ enum class ERA4MatchPhase : uint8
     Finished,
 };
 
+// Mirrors RA4::Presentation::MinimapTerrain / MinimapShroud. Duplicated as UENUMs because
+// the simulation enums are plain C++ and Blueprint cannot see them. The values are compared
+// with static_assert in RA4SidebarWidget.cpp, where both headers are visible, so a change to
+// either side is a build failure rather than a silently mismatched colour.
+UENUM(BlueprintType)
+enum class ERA4MinimapTerrain : uint8
+{
+    Unknown,
+    Ground,
+    Water,
+    Cliff,
+    Ore,
+    Structure,
+};
+
+UENUM(BlueprintType)
+enum class ERA4MinimapShroud : uint8
+{
+    NeverSeen,
+    Remembered,
+    Visible,
+};
+
+/** The colour the minimap paints for a terrain class. */
+inline FLinearColor RA4MinimapTerrainColour(ERA4MinimapTerrain Terrain)
+{
+    switch (Terrain)
+    {
+        // Deliberately desaturated: the background must stay legible underneath the unit
+        // markers, which are the saturated reds and greens the player actually reads.
+        case ERA4MinimapTerrain::Ground:    return FLinearColor(0.16f, 0.20f, 0.14f, 1.0f);
+        case ERA4MinimapTerrain::Water:     return FLinearColor(0.06f, 0.13f, 0.28f, 1.0f);
+        case ERA4MinimapTerrain::Cliff:     return FLinearColor(0.24f, 0.22f, 0.19f, 1.0f);
+        case ERA4MinimapTerrain::Ore:       return FLinearColor(0.42f, 0.34f, 0.09f, 1.0f);
+        case ERA4MinimapTerrain::Structure: return FLinearColor(0.26f, 0.27f, 0.30f, 1.0f);
+        case ERA4MinimapTerrain::Unknown:   break;
+    }
+    return FLinearColor(0.02f, 0.03f, 0.04f, 1.0f);
+}
+
 UENUM(BlueprintType)
 enum class ERA4RadarMarkerKind : uint8
 {
