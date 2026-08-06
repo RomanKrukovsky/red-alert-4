@@ -167,6 +167,13 @@ private:
     static const TArray<FKey>& GetBuildCardHotkeys();
     void OnBuildCardKeyByKey(FKey Key);
     void OnBuildCardHotkey(int32 CardIndex);
+
+    /**
+     * Keeps the viewport strip reserved for the sidebar equal to the width the sidebar
+     * actually draws. Called every tick because the first evaluation, in BeginPlay,
+     * necessarily predates the viewport having a size.
+     */
+    void SyncSidebarReservedWidth();
 #if !UE_BUILD_SHIPPING
     void DebugForceVictory();
     void DebugForceDefeat();
@@ -214,6 +221,10 @@ private:
     // resource bar; it reports card clicks back and never issues commands itself.
     UPROPERTY(Transient)
     TObjectPtr<class URA4SidebarWidget> Sidebar;
+
+    // Width currently reserved for the sidebar in its viewport slot. Compared against
+    // the widget's own computed width each tick; see SyncSidebarReservedWidth.
+    float AppliedSidebarReservedWidth = 0.0f;
 
     void HandleBuildCardClicked(int64 ContentIdValue);
     void HandleRadarClicked(FVector2D WorldPosition);
