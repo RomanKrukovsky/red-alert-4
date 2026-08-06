@@ -189,6 +189,15 @@ struct TrackTuning
     int32_t ErrorRadiusGrowthTilesPerMinute = 6;    // frozen tracks blur over time
     int32_t StaleAfterTicks = 600;                  // 30 s without reports -> bStale
     int32_t DropBelowConfidencePerMille = 50;       // GC threshold
+    // Group tracks (owner decision, question 3: aggregate in M3 together with
+    // report merging, so "a frightened observer sees a crowd" has a crowd to be
+    // wrong about). Off collapses to one track per contact, i.e. M1/M2 behaviour.
+    bool bGroupTracksEnabled = true;
+    // Two counts are "materially different" — and so contested — when they differ
+    // by more than this fraction of the larger. Below it, sources are treated as
+    // agreeing and confidence rises instead.
+    int32_t ContestedCountTolerancePerMille = 300;
+
     int32_t MergeRadiusTiles = 3;                   // spatial merge window (§4.4)
     int32_t MergeWindowTicks = 100;                 // temporal merge window
     int32_t AgreementConfidenceBonusPerMille = 300; // superlinear boost on agreement

@@ -178,6 +178,12 @@ private:
     void PhaseAggregation(TickIndex CurrentTick);
     void PhaseTrackUpdate(TickIndex CurrentTick);
 
+    // Folds one arrived report into belief with M3 grouping: nearby same-category
+    // observations become one track carrying a count interval, and a second
+    // independent node either corroborates (confidence up) or contests it.
+    void ApplyGroupedReport(PerceivedWorld& World, PlayerId P, const ReconReport& Report,
+                            TickIndex CurrentTick);
+
     // Grows the per-player association tables to cover EntityCapacity slots.
     void EnsureAssociationCapacity(uint32_t NewEntityCapacity);
 
@@ -219,6 +225,24 @@ private:
     // allocation, §6). Cleared per player inside PhaseReportEmission.
     std::vector<uint16_t> NodeBatchIds;
     std::vector<uint32_t> NodeBatchStart;
+
+    // One bucket of nearby same-category observations from a single report.
+    // Tick-scoped scratch; a member so its capacity survives (no steady-state
+    // allocation in the hot path, §6).
+    struct ObservationGroup
+    {
+        ObservedCategory Category = ObservedCategory::LightVehicle;
+        bool bAnonymous = false;
+        Vec2 Centre;
+        Fixed SumX;                 // running coordinate sums for the centroid
+        Fixed SumY;
+        int32_t Count = 0;          // believed strength of the whole group
+        int32_t Members = 0;        // observations folded in (for the centroid)
+        uint32_t RepresentativeSlot = 0;
+        uint32_t RepresentativeGeneration = 0;
+        ContentId ObservedClass;    // invalid once the group is mixed
+    };
+    std::vector<ObservationGroup> GroupScratch;
 
     PhaseStats Stats;
 };

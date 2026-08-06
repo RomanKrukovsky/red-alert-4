@@ -5,6 +5,7 @@
 
 #include <chrono>
 #include "RA4Core/Checksum.h"
+#include "RA4Core/SimConfig.h"
 #include "RA4Recon/DistortionPipeline.h"
 
 namespace RA4
@@ -402,11 +403,249 @@ void ReconSystem::PhasePropagation(TickIndex)
     // nothing to advance.
 }
 
+// --- M3 aggregation helpers ------------------------------------------------------
+//
+// A staff map does not hold "tank #4713 at (3412, 2988)". It holds "about a
+// company of armour around the crossroads". Grouping is therefore not an
+// optimisation, it is the unit of belief the player is supposed to reason about
+// -- and it is what gives fear something to exaggerate (owner decision Q3: group
+// in M3, together with report merging, rather than earlier and twice).
+//
+// The rule: observations from ONE report that share a category and sit within
+// MergeRadiusTiles of an existing group join it; otherwise they open a new one.
+// Both steps run in first-seen order, which is entity-slot order, so the outcome
+// is deterministic without sorting.
+
+namespace
+{
+
+// Squared tile distance between two world positions, in tiles^2, using integer
+// math only (Fixed multiply would overflow at map scale for no benefit here).
+int64_t TileDistanceSquared(const Vec2& A, const Vec2& B)
+{
+    const int64_t Ax = A.X.Raw / (kFixedOne * kTileSizeUnits);
+    const int64_t Ay = A.Y.Raw / (kFixedOne * kTileSizeUnits);
+    const int64_t Bx = B.X.Raw / (kFixedOne * kTileSizeUnits);
+    const int64_t By = B.Y.Raw / (kFixedOne * kTileSizeUnits);
+    const int64_t Dx = Ax - Bx;
+    const int64_t Dy = Ay - By;
+    return Dx * Dx + Dy * Dy;
+}
+
+// Whether two believed counts disagree enough to call the track contested.
+// Proportional, not absolute: 3 vs 4 is a rounding difference, 3 vs 30 is a
+// genuine contradiction, and a fixed threshold would confuse the two.
+bool CountsMateriallyDiffer(int32_t A, int32_t B, int32_t TolerancePerMille)
+{
+    const int32_t Larger = A > B ? A : B;
+    if (Larger <= 0)
+    {
+        return false;
+    }
+    const int32_t Difference = A > B ? A - B : B - A;
+    return int64_t(Difference) * 1000 > int64_t(Larger) * int64_t(TolerancePerMille);
+}
+
+} // namespace
+
+void ReconSystem::ApplyGroupedReport(PerceivedWorld& World, PlayerId P, const ReconReport& Report,
+                                     TickIndex CurrentTick)
+{
+    const TrackTuning& TT = Settings->Tracks;
+    const int64_t MergeRadiusSq = int64_t(TT.MergeRadiusTiles) * int64_t(TT.MergeRadiusTiles);
+
+    // 1. Bucket this report's observations into groups by category + proximity.
+    GroupScratch.clear();
+    for (const Observation& Obs : Report.Payload)
+    {
+        int32_t Found = -1;
+        for (size_t G = 0; G < GroupScratch.size(); ++G)
+        {
+            ObservationGroup& Group = GroupScratch[G];
+            // Anonymous contacts never merge with identified ones: "something is
+            // out there" and "four tanks are out there" are different claims and
+            // merging them would invent an identity the player never earned.
+            if (Group.Category != Obs.Category || Group.bAnonymous != Obs.bAnonymous)
+            {
+                continue;
+            }
+            if (TileDistanceSquared(Group.Centre, Obs.ObservedPosition) <= MergeRadiusSq)
+            {
+                Found = int32_t(G);
+                break;
+            }
+        }
+        if (Found < 0)
+        {
+            ObservationGroup Group;
+            Group.Category = Obs.Category;
+            Group.bAnonymous = Obs.bAnonymous;
+            Group.Centre = Obs.ObservedPosition;
+            Group.SumX = Obs.ObservedPosition.X;
+            Group.SumY = Obs.ObservedPosition.Y;
+            Group.Count = Obs.ObservedCount;
+            Group.Members = 1;
+            Group.RepresentativeSlot = Obs.Subject.Index;
+            Group.RepresentativeGeneration = Obs.Subject.Generation;
+            Group.ObservedClass = Obs.ObservedClass;
+            GroupScratch.push_back(Group);
+        }
+        else
+        {
+            ObservationGroup& Group = GroupScratch[size_t(Found)];
+            Group.SumX += Obs.ObservedPosition.X;
+            Group.SumY += Obs.ObservedPosition.Y;
+            Group.Members += 1;
+            Group.Count += Obs.ObservedCount;
+            // Centroid, so the marker sits in the middle of the formation rather
+            // than on whichever member happened to be first in slot order.
+            Group.Centre = Vec2(Group.SumX / int64_t(Group.Members), Group.SumY / int64_t(Group.Members));
+            // A mixed group loses its exact class: the staff knows the category,
+            // not which specific model each vehicle was.
+            if (Group.ObservedClass != Obs.ObservedClass)
+            {
+                Group.ObservedClass = ContentId{};
+            }
+        }
+    }
+
+    // 2. Fold each group into belief, reusing the association of its
+    //    representative so a moving formation keeps one track across ticks.
+    for (const ObservationGroup& Group : GroupScratch)
+    {
+        if (Group.RepresentativeSlot >= EntityCapacity)
+        {
+            continue;
+        }
+        TrackId& Assoc = AssociationTrack[P][Group.RepresentativeSlot];
+        uint32_t& AssocGen = AssociationGeneration[P][Group.RepresentativeSlot];
+        if (Assoc.IsValid() && AssocGen != Group.RepresentativeGeneration)
+        {
+            Assoc = TrackId{}; // GT slot reused: the HQ cannot know, so a new track
+        }
+
+        PerceivedTrack* Track = Assoc.IsValid() ? World.GetTrackMutable(Assoc) : nullptr;
+        if (Track == nullptr)
+        {
+            // Before opening a track, look for an existing one this group plainly
+            // refers to: the same area, same category, still fresh. That is what
+            // makes two DIFFERENT nodes reporting one formation converge instead
+            // of littering the map with duplicates.
+            TrackId Existing{};
+            for (uint32_t I = 0; I < World.GetTrackCapacity(); ++I)
+            {
+                const PerceivedTrack& Candidate = World.Tracks[I];
+                if (!Candidate.bAlive || Candidate.bAnonymous != Group.bAnonymous ||
+                    Candidate.BelievedCategory != Group.Category)
+                {
+                    continue;
+                }
+                if (CurrentTick < Candidate.LastUpdateTick ||
+                    int32_t(CurrentTick - Candidate.LastUpdateTick) > TT.MergeWindowTicks)
+                {
+                    continue;
+                }
+                if (TileDistanceSquared(Candidate.BelievedPosition, Group.Centre) <= MergeRadiusSq)
+                {
+                    Existing = Candidate.Id;
+                    break;
+                }
+            }
+            if (Existing.IsValid())
+            {
+                Assoc = Existing;
+                AssocGen = Group.RepresentativeGeneration;
+                Track = World.GetTrackMutable(Existing);
+            }
+        }
+
+        if (Track == nullptr)
+        {
+            const TrackId NewId = World.AllocateTrack();
+            if (!NewId.IsValid())
+            {
+                continue; // at the hard cap; losing the report is the honest outcome
+            }
+            Assoc = NewId;
+            AssocGen = Group.RepresentativeGeneration;
+            Track = World.GetTrackMutable(NewId);
+            Track->IndependentSourceCount = 0;
+        }
+
+        // Corroboration: a report from a node we have not heard from on this track
+        // is an independent source. Same node again is the same source saying the
+        // same thing, which is not evidence.
+        const bool bNewSource = Track->LastReportNodeId != Report.NodeId;
+        const bool bWasObserved = Track->LastUpdateTick != 0 || Track->IndependentSourceCount > 0;
+        const bool bContestedNow =
+            bWasObserved && bNewSource &&
+            CountsMateriallyDiffer(Track->BelievedCountMax, Group.Count, TT.ContestedCountTolerancePerMille);
+
+        Track->BelievedCategory = Group.Category;
+        Track->bAnonymous = Group.bAnonymous;
+        Track->BelievedClass = Group.bAnonymous ? ContentId{} : Group.ObservedClass;
+        Track->BelievedPosition = Group.Centre;
+        Track->PositionErrorRadius = Fixed::Zero();
+        Track->LastUpdateTick = CurrentTick;
+        Track->LastReportNodeId = Report.NodeId;
+        Track->bStale = false;
+
+        if (bContestedNow)
+        {
+            // Sources disagree: keep BOTH claims by widening the interval, and say
+            // so. Picking a winner here would hide exactly the uncertainty the
+            // player needs in order to send someone to look again.
+            Track->bContested = true;
+            Track->BelievedCountMin = Track->BelievedCountMin < Group.Count ? Track->BelievedCountMin : Group.Count;
+            Track->BelievedCountMax = Track->BelievedCountMax > Group.Count ? Track->BelievedCountMax : Group.Count;
+        }
+        else
+        {
+            Track->bContested = false;
+            Track->BelievedCountMin = Group.Count;
+            Track->BelievedCountMax = Group.Count;
+        }
+
+        if (bNewSource && Track->IndependentSourceCount < 255)
+        {
+            Track->IndependentSourceCount = uint8_t(Track->IndependentSourceCount + 1);
+        }
+
+        // Confidence. Agreement between independent sources is worth MORE than the
+        // sum of its parts (§4.4): two eyes on the same formation is qualitatively
+        // better evidence than one looking twice. Contested data does not earn the
+        // bonus -- the sources cancel rather than reinforce.
+        Fixed Confidence = Fixed::FromInt(1);
+        if (Track->bContested)
+        {
+            Confidence = Fixed::FromInt(1) - PerMilleToFixed(TT.AgreementConfidenceBonusPerMille);
+        }
+        else if (Track->IndependentSourceCount > 1)
+        {
+            Confidence = Fixed::FromInt(1) + PerMilleToFixed(TT.AgreementConfidenceBonusPerMille);
+        }
+        Track->Confidence = FxClamp(Confidence, Fixed::Zero(), Fixed::FromInt(1));
+
+        Track->ProvenanceReportIds[Track->ProvenanceCount % kTrackProvenanceSize] = Report.ReportId;
+        Track->ProvenanceCount = uint8_t((Track->ProvenanceCount + 1) % (kTrackProvenanceSize * 2));
+    }
+}
+
 void ReconSystem::PhaseAggregation(TickIndex CurrentTick)
 {
-    // Applies every report whose ArrivalTick has come. M1 keeps the merge rule
-    // trivial -- one GT entity maps to one track via the association table; the
-    // spatial merge of anonymous reports is M3's problem.
+    // Applies every report whose ArrivalTick has come.
+    //
+    // M3 adds two things on top of M1's per-entity association:
+    //  * grouping -- nearby same-category contacts in one report become ONE track
+    //    carrying a count interval, which is how a staff map actually reads;
+    //  * agreement/contest -- a second independent node reporting the same area
+    //    raises confidence superlinearly, while a materially different count sets
+    //    bContested and widens the interval instead of silently picking a winner.
+    //
+    // Contested rather than competing hypotheses: chosen in the M2 design review
+    // and recorded in ADR-0026. Splitting a track in two doubles the state, the
+    // decay bookkeeping and the phantom-refutation surface for the same gameplay
+    // signal -- "your sources disagree, go look again".
     size_t WriteBack = 0;
     for (size_t I = 0; I < InFlightReports.size(); ++I)
     {
@@ -427,6 +666,17 @@ void ReconSystem::PhaseAggregation(TickIndex CurrentTick)
         if (World == nullptr)
         {
             continue; // owner slot inactive; drop the report
+        }
+
+        // --- Group pass -------------------------------------------------------
+        // Collapse this report's observations into groups before touching belief,
+        // so a single track update carries the whole crowd rather than the last
+        // tank in slot order.
+        const TrackTuning& TT = Settings->Tracks;
+        if (TT.bGroupTracksEnabled)
+        {
+            ApplyGroupedReport(*World, P, Report, CurrentTick);
+            continue;
         }
 
         for (const Observation& Obs : Report.Payload)

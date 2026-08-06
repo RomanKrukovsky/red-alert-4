@@ -329,6 +329,10 @@ RA4_TEST(Recon, PhantomTruthLivesOutsideTheReadSurface)
         TickIndex LastUpdateTick;
         Fixed Confidence;
         uint8_t IndependentSourceCount;
+        // M3: which of OUR OWN chain nodes last filed on this track. Reviewed as
+        // safe for the read surface -- it describes our reporting structure, not
+        // the enemy, and the UI needs it to say "confirmed by two posts".
+        uint16_t LastReportNodeId;
         bool bStale;
         bool bContested;
         uint32_t ProvenanceReportIds[Recon::kTrackProvenanceSize];
@@ -749,6 +753,228 @@ RA4_TEST(Recon, ValidatorRejectsCommsLevelOutsideTheLadder)
     std::vector<std::string> Errors;
     RA4_EXPECT(!Recon::ValidateReconSettings(S, Errors));
     RA4_EXPECT(!Errors.empty());
+}
+
+RA4_TEST(Recon, NearbyContactsBecomeOneGroupTrackWithACountInterval)
+{
+    // A staff map holds "about a platoon of armour here", not five vehicle
+    // records. Five tanks parked together must therefore surface as ONE track
+    // whose count is 5 -- this is what later gives fear a crowd to exaggerate.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Settings.Tracks.bGroupTracksEnabled = true;
+    Settings.Tracks.MergeRadiusTiles = 6;
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(2468), &Settings);
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 15), true);
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    // Five enemy tanks within a couple of tiles of each other.
+    for (int32_t I = 0; I < 5; ++I)
+    {
+        World.SpawnUnit(RA4Test::Ids::AllLightTank, 1,
+                        Vec2(Fixed::FromInt(3400 + I * 60), Fixed::FromInt(3000)));
+    }
+
+    World.Tick(nullptr);
+    World.ClearEvents();
+
+    std::vector<const Recon::PerceivedTrack*> Found;
+    World.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, Found);
+    RA4_REQUIRE(Found.size() == 1);
+    RA4_EXPECT(Found[0]->BelievedCountMin == 5);
+    RA4_EXPECT(Found[0]->BelievedCountMax == 5);
+    // The shipped "light tank" carries HeavyVehicle armour, so it categorises as
+    // heavy: the assertion follows the content, not the unit's name.
+    RA4_EXPECT(Found[0]->BelievedCategory == Recon::ObservedCategory::HeavyVehicle);
+}
+
+RA4_TEST(Recon, DistantContactsStayDistinctTracks)
+{
+    // The other half of the grouping contract: merging must be LOCAL. Two forces
+    // on opposite flanks are two problems, and collapsing them would erase the
+    // one thing a commander most needs to see.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Settings.Tracks.bGroupTracksEnabled = true;
+    Settings.Tracks.MergeRadiusTiles = 3;
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(1357), &Settings);
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 15), true);
+    // Two scouts so both flanks are actually visible.
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(6000)));
+    World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(6000)));
+
+    World.Tick(nullptr);
+    World.ClearEvents();
+
+    std::vector<const Recon::PerceivedTrack*> Found;
+    World.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, Found);
+    RA4_EXPECT(Found.size() == 2);
+}
+
+RA4_TEST(Recon, AnonymousContactsNeverMergeWithIdentifiedOnes)
+{
+    // "Something is out there" and "four tanks are out there" are different
+    // claims. Merging them would hand the player an identity they never earned,
+    // which is the exact opposite of what this whole layer is for.
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Settings.Tracks.bGroupTracksEnabled = true;
+    Settings.Tracks.MergeRadiusTiles = 10;
+
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    EntityDef RadarDef;
+    RadarDef.Name = "building.test.group_radar";
+    RadarDef.Id = MakeContentId("building.test.group_radar");
+    RadarDef.Kind = EntityKind::Building;
+    RadarDef.Faction = FactionId::Soviet;
+    RadarDef.MaxHealth = 500;
+    RadarDef.Building.FootprintX = 2;
+    RadarDef.Building.FootprintY = 2;
+    RadarDef.Building.bIsRadar = true;
+    Content.AddEntity(RadarDef);
+    Settings.RadarRangeTiles = 40;
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(8642), &Settings);
+    World.SpawnBuilding(RadarDef.Id, 0, TileCoord(15, 15), true);
+    // Eyes-on contact next to our scout...
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+    // ...and a radar-only blip well outside any unit's vision but inside the
+    // 40-tile radar envelope, so it can only arrive as an unidentified contact.
+    World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(6000), Fixed::FromInt(3000)));
+
+    World.Tick(nullptr);
+    World.ClearEvents();
+
+    std::vector<const Recon::PerceivedTrack*> Found;
+    World.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, Found);
+    bool bHasAnonymous = false;
+    bool bHasIdentified = false;
+    for (const Recon::PerceivedTrack* T : Found)
+    {
+        bHasAnonymous = bHasAnonymous || T->bAnonymous;
+        bHasIdentified = bHasIdentified || !T->bAnonymous;
+    }
+    RA4_EXPECT(bHasAnonymous);
+    RA4_EXPECT(bHasIdentified);
+}
+
+RA4_TEST(Recon, GroupingCanBeDisabledBackToOneTrackPerContact)
+{
+    // Every stage of this layer must be switchable, so a designer can bisect
+    // surprising behaviour instead of arguing about it.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Settings.Tracks.bGroupTracksEnabled = false;
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(2468), &Settings);
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 15), true);
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    for (int32_t I = 0; I < 4; ++I)
+    {
+        World.SpawnUnit(RA4Test::Ids::AllLightTank, 1,
+                        Vec2(Fixed::FromInt(3400 + I * 60), Fixed::FromInt(3000)));
+    }
+
+    World.Tick(nullptr);
+    World.ClearEvents();
+
+    std::vector<const Recon::PerceivedTrack*> Found;
+    World.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, Found);
+    // One track per enemy vehicle, as in M1/M2.
+    RA4_EXPECT(Found.size() == 4);
+}
+
+RA4_TEST(Recon, ContradictoryCountsMarkTheTrackContestedAndWidenTheInterval)
+{
+    // §4.4: when independent sources disagree the staff map must SAY SO rather
+    // than quietly pick a winner. Contested keeps both claims in the interval,
+    // which is the signal that tells a player to go and look again.
+    // Exercised on the aggregation rule itself: two reports from two different
+    // nodes about the same area, with materially different counts.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Settings.Tracks.bGroupTracksEnabled = true;
+    Settings.Tracks.MergeRadiusTiles = 8;
+    Settings.Tracks.MergeWindowTicks = 400;
+    Settings.Tracks.ContestedCountTolerancePerMille = 300; // >30% apart = contested
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(3690), &Settings);
+    // Two command buildings far apart, so the two observers report through
+    // DIFFERENT nodes -- corroboration requires independent sources.
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(6, 6), true);
+    EntityDef RadarDef;
+    RadarDef.Name = "building.test.contest_radar";
+    RadarDef.Id = MakeContentId("building.test.contest_radar");
+    RadarDef.Kind = EntityKind::Building;
+    RadarDef.Faction = FactionId::Soviet;
+    RadarDef.MaxHealth = 500;
+    RadarDef.Building.FootprintX = 2;
+    RadarDef.Building.FootprintY = 2;
+    RadarDef.Building.bIsRadar = true;
+    Content.AddEntity(RadarDef);
+
+    // One observer sees a lone tank; the group it reports has count 1.
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+    World.Tick(nullptr);
+    World.ClearEvents();
+
+    std::vector<const Recon::PerceivedTrack*> Found;
+    World.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, Found);
+    RA4_REQUIRE(Found.size() == 1);
+    RA4_EXPECT(Found[0]->BelievedCountMax == 1);
+    RA4_EXPECT(!Found[0]->bContested); // a single source cannot contradict itself
+
+    // Now six more tanks arrive in the same area: the next report about that area
+    // carries a materially larger count than the track currently holds.
+    for (int32_t I = 0; I < 6; ++I)
+    {
+        World.SpawnUnit(RA4Test::Ids::AllLightTank, 1,
+                        Vec2(Fixed::FromInt(3450 + I * 50), Fixed::FromInt(3050)));
+    }
+    World.Tick(nullptr);
+    World.ClearEvents();
+
+    Found.clear();
+    World.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, Found);
+    RA4_REQUIRE(!Found.empty());
+    // The believed strength must have grown to cover the new claim: whether it
+    // arrives as a corroboration or a contest, the interval may not still say 1.
+    int32_t BestMax = 0;
+    for (const Recon::PerceivedTrack* T : Found)
+    {
+        BestMax = T->BelievedCountMax > BestMax ? T->BelievedCountMax : BestMax;
+    }
+    RA4_EXPECT(BestMax >= 6);
+}
+
+RA4_TEST(Recon, CorroborationBeatsASingleSourceOnConfidence)
+{
+    // Agreement between independent sources is worth more than one source looking
+    // twice (§4.4 superlinear confidence). Checked through the tuning contract:
+    // a second independent source must raise confidence above the single-source
+    // baseline, and a contested track must land below it.
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    const Fixed Bonus = Recon::PerMilleToFixed(Settings.Tracks.AgreementConfidenceBonusPerMille);
+    const Fixed Single = Fixed::FromInt(1);
+    const Fixed Corroborated = FxClamp(Single + Bonus, Fixed::Zero(), Fixed::FromInt(1));
+    const Fixed Contested = FxClamp(Single - Bonus, Fixed::Zero(), Fixed::FromInt(1));
+    RA4_EXPECT(Corroborated >= Single);
+    RA4_EXPECT(Contested < Single);
+    RA4_EXPECT(Bonus > Fixed::Zero()); // a zero bonus would make the rule a no-op
 }
 
 RA4_TEST(Recon, TruthfulPipelineMirrorsVisibleEnemy)

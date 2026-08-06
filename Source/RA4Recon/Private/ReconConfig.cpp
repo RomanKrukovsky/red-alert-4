@@ -348,6 +348,7 @@ bool ValidateReconSettings(const ReconSettings& Settings, std::vector<std::strin
     CheckPerMilleRange(T.ConfidenceDecayPerSecondPerMille, "confidence_decay_per_second", OutErrors);
     CheckPerMilleRange(T.DropBelowConfidencePerMille, "drop_below_confidence", OutErrors);
     CheckPerMilleRange(T.AgreementConfidenceBonusPerMille, "agreement_confidence_bonus", OutErrors);
+    CheckPerMilleRange(T.ContestedCountTolerancePerMille, "contested_count_tolerance", OutErrors);
     if (T.TracksPerTickBudget <= 0 || T.TracksPerTickBudget > T.MaxTracksPerPlayer)
     {
         // Zero would stall the sweep forever (tracks never decay, never GC);
@@ -446,6 +447,9 @@ bool LoadReconSettingsFromJson(const std::string& JsonText, ReconSettings& OutSe
         T.ErrorRadiusGrowthTilesPerMinute = ReadInt(*Tracks, "error_radius_growth_tiles_per_minute", T.ErrorRadiusGrowthTilesPerMinute);
         T.StaleAfterTicks = ReadInt(*Tracks, "stale_after_ticks", T.StaleAfterTicks);
         T.DropBelowConfidencePerMille = ReadPerMille(*Tracks, "drop_below_confidence", T.DropBelowConfidencePerMille);
+        T.bGroupTracksEnabled = ReadBool(*Tracks, "group_tracks_enabled", T.bGroupTracksEnabled);
+        T.ContestedCountTolerancePerMille =
+            ReadPerMille(*Tracks, "contested_count_tolerance", T.ContestedCountTolerancePerMille);
         T.MergeRadiusTiles = ReadInt(*Tracks, "merge_radius_tiles", T.MergeRadiusTiles);
         T.MergeWindowTicks = ReadInt(*Tracks, "merge_window_ticks", T.MergeWindowTicks);
         T.AgreementConfidenceBonusPerMille = ReadPerMille(*Tracks, "agreement_confidence_bonus", T.AgreementConfidenceBonusPerMille);
@@ -477,6 +481,8 @@ uint64_t ReconSettings::ComputeSettingsHash() const
     H.FeedUInt32(uint32_t(Tracks.ErrorRadiusGrowthTilesPerMinute));
     H.FeedUInt32(uint32_t(Tracks.StaleAfterTicks));
     H.FeedUInt32(uint32_t(Tracks.DropBelowConfidencePerMille));
+    H.FeedBool(Tracks.bGroupTracksEnabled);
+    H.FeedUInt32(uint32_t(Tracks.ContestedCountTolerancePerMille));
     H.FeedUInt32(uint32_t(Tracks.MergeRadiusTiles));
     H.FeedUInt32(uint32_t(Tracks.MergeWindowTicks));
     H.FeedUInt32(uint32_t(Tracks.AgreementConfidenceBonusPerMille));

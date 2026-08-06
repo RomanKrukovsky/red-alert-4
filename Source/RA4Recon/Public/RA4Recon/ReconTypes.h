@@ -130,6 +130,10 @@ struct PerceivedTrack
     TickIndex LastUpdateTick = 0;
     Fixed Confidence = Fixed::Zero();       // 0..1, decays over time
     uint8_t IndependentSourceCount = 0;
+    // Chain node whose report last updated this track (M3). Lets aggregation tell
+    // "a second source agrees" from "the same source repeating itself" -- only the
+    // former is corroboration. Belief about our own sources, not ground truth.
+    uint16_t LastReportNodeId = 0;
     bool bStale = false;                    // no fresh reports for a while
     bool bContested = false;                // independent sources disagree (ADR-0026)
     // Unidentified contact: BelievedClass is meaningless, UI shows "unknown".
