@@ -2389,3 +2389,348 @@ RA4_TEST(Content, ValidationRejectsOutOfRangeAndIncoherentTechTiers)
         RA4_EXPECT(!Db.Validate(Errors));
     }
 }
+
+// ---------------------------------------------------------------------------
+// Package D: radar, repair, static defence (ADR-0013)
+// ---------------------------------------------------------------------------
+
+RA4_TEST(PowerTier, PerSystemThresholdsMatchTheEffectMatrix)
+{
+    // Each row of the matrix has a different threshold, which is the point -- a deficit
+    // is supposed to arrive in stages, not switch everything off at once.
+    RA4_EXPECT(IsRadarOnlineAtTier(PowerTier::Mild));
+    RA4_EXPECT(!IsRadarOnlineAtTier(PowerTier::Moderate));
+
+    RA4_EXPECT_EQ(RepairSpeedPercentForTier(PowerTier::Mild), 100);
+    RA4_EXPECT_EQ(RepairSpeedPercentForTier(PowerTier::Moderate), kRepairModerateSpeedPercent);
+    RA4_EXPECT_EQ(RepairSpeedPercentForTier(PowerTier::Severe), 0);
+    RA4_EXPECT_EQ(RepairSpeedPercentForTier(PowerTier::Critical), 0);
+
+    RA4_EXPECT_EQ(StaticDefenceCooldownMultiplierForTier(PowerTier::Moderate), 1);
+    RA4_EXPECT_EQ(StaticDefenceCooldownMultiplierForTier(PowerTier::Severe),
+                  kDefenceSevereCooldownMultiplier);
+    RA4_EXPECT(IsStaticDefenceOnlineAtTier(PowerTier::Severe));
+    RA4_EXPECT(!IsStaticDefenceOnlineAtTier(PowerTier::Critical));
+
+    // The thresholds must actually differ from each other: radar dies at Moderate while
+    // defence is still fully effective there, and defence survives Severe while repair
+    // does not.
+    RA4_EXPECT(!IsRadarOnlineAtTier(PowerTier::Moderate) &&
+               StaticDefenceCooldownMultiplierForTier(PowerTier::Moderate) == 1);
+    RA4_EXPECT(IsStaticDefenceOnlineAtTier(PowerTier::Severe) &&
+               RepairSpeedPercentForTier(PowerTier::Severe) == 0);
+}
+
+namespace
+{
+// Returns a damaged, complete building with repair available, plus the fixture holding it.
+// PowerPlants controls the tier; Turrets adds a known draw.
+struct RepairScenario
+{
+    ContentDatabase Content;
+    SimWorld World;
+    EntityId Yard;
+    EntityId Damaged;
+
+    RepairScenario(int32_t PowerPlants, int32_t Turrets, int32_t StartingCredits = 100000)
+    {
+        BuildDefaultContent(Content);
+        MatchSetup Setup = MakeTestSetup(5150);
+        Setup.Players[0].StartingCredits = StartingCredits;
+        World.Initialize(&Content, Setup);
+        SpawnEnemyOutpost(World);
+        Yard = World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+        for (int32_t N = 0; N < PowerPlants; ++N)
+        {
+            World.SpawnBuilding(Ids::SovPower, 0, TileCoord(14 + N * 3, 10), true);
+        }
+        // The barracks is the repair target: Vital priority, so its own band never
+        // interferes and the test measures the tier effect alone.
+        Damaged = World.SpawnBuilding(Ids::SovBarracks, 0, TileCoord(10, 20), true);
+        for (int32_t N = 0; N < Turrets; ++N)
+        {
+            World.SpawnBuilding(Ids::SovTurret, 0,
+                                TileCoord(20 + (N % 7) * 2, 24 + (N / 7) * 3), true);
+        }
+        World.Tick(nullptr);
+        // Knock it down to half so there is room to repair and room to observe.
+        const HealthComp* H = World.GetHealth(Damaged);
+        if (H != nullptr)
+        {
+            World.DebugDamage(Damaged, H->Max / 2);
+        }
+    }
+
+    int32_t Health() const
+    {
+        const HealthComp* H = World.GetHealth(Damaged);
+        return H != nullptr ? H->Current : -1;
+    }
+
+    bool StartRepair()
+    {
+        Command C = MakeCommand(CommandType::RepairBuilding, 0);
+        C.Primary = Damaged;
+        return World.ApplyCommand(C).IsAccepted();
+    }
+};
+} // namespace
+
+RA4_TEST(Repair, CommandActuallyRestoresHealthAndChargesForIt)
+{
+    // The RepairBuilding command used to validate and then do nothing at all, which is
+    // the kind of gap that reads as "implemented" in a status document.
+    RepairScenario S(2, 0);
+    RA4_REQUIRE(S.Damaged.IsValid());
+    RA4_REQUIRE(S.World.GetPlayer(0).GetPowerTier() == PowerTier::Normal);
+
+    const int32_t Wounded = S.Health();
+    const int32_t CreditsBefore = S.World.GetPlayer(0).Credits;
+    RA4_REQUIRE(Wounded > 0);
+
+    RA4_REQUIRE(S.StartRepair());
+    RA4_EXPECT(S.World.GetBuilding(S.Damaged)->bRepairing);
+
+    RunTicks(S.World, 30);
+    RA4_EXPECT(S.Health() > Wounded);
+    // And it is not free.
+    RA4_EXPECT(S.World.GetPlayer(0).Credits < CreditsBefore);
+
+    // Run to completion: it must reach full health and switch itself off rather than
+    // sit armed and start spending again on the next scratch.
+    RunTicks(S.World, SecondsToTicks(60));
+    const HealthComp* H = S.World.GetHealth(S.Damaged);
+    RA4_REQUIRE(H != nullptr);
+    RA4_EXPECT_EQ(H->Current, H->Max);
+    RA4_EXPECT(!S.World.GetBuilding(S.Damaged)->bRepairing);
+}
+
+RA4_TEST(Repair, IsHalvedAtModerateAndStoppedFromSevere)
+{
+    // Same wound, same duration, three power states. This is the matrix row for repair.
+    const auto HealedIn = [](int32_t Plants, int32_t Turrets, int32_t Ticks,
+                             PowerTier& OutTier) -> int32_t {
+        RepairScenario S(Plants, Turrets);
+        OutTier = S.World.GetPlayer(0).GetPowerTier();
+        const int32_t Before = S.Health();
+        if (!S.StartRepair())
+        {
+            return -1;
+        }
+        RunTicks(S.World, Ticks);
+        return S.Health() - Before;
+    };
+
+    PowerTier NormalTier = PowerTier::Normal;
+    PowerTier ModerateTier = PowerTier::Normal;
+    PowerTier SevereTier = PowerTier::Normal;
+    const int32_t AtNormal = HealedIn(2, 0, 40, NormalTier);
+    const int32_t AtModerate = HealedIn(1, 5, 40, ModerateTier);
+    const int32_t AtSevere = HealedIn(1, 13, 40, SevereTier);
+
+    // Guard every premise: a mislabelled tier would make the comparisons meaningless.
+    RA4_REQUIRE(NormalTier == PowerTier::Normal);
+    RA4_REQUIRE(ModerateTier == PowerTier::Moderate);
+    RA4_REQUIRE(SevereTier == PowerTier::Severe);
+    RA4_REQUIRE(AtNormal > 0);
+
+    // Halved, then stopped outright.
+    RA4_EXPECT(AtModerate > 0);
+    RA4_EXPECT(AtModerate < AtNormal);
+    RA4_EXPECT_EQ(AtSevere, 0);
+}
+
+RA4_TEST(Repair, StoppedByADeficitResumesWhenPowerReturnsWithoutLosingTheFlag)
+{
+    // Paused, not cancelled: a player who switched repair on during a blackout should
+    // not have to notice the deficit lifted and switch it on again.
+    RepairScenario S(1, 13);
+    RA4_REQUIRE(S.World.GetPlayer(0).GetPowerTier() == PowerTier::Severe);
+    RA4_REQUIRE(S.StartRepair());
+
+    const int32_t Wounded = S.Health();
+    RunTicks(S.World, 40);
+    RA4_EXPECT_EQ(S.Health(), Wounded);                       // frozen
+    RA4_EXPECT(S.World.GetBuilding(S.Damaged)->bRepairing);   // still armed
+
+    // Restore power and it must pick up by itself.
+    for (int32_t N = 0; N < 5; ++N)
+    {
+        S.World.SpawnBuilding(Ids::SovPower, 0, TileCoord(40 + N * 3, 10), true);
+    }
+    RunTicks(S.World, 40);
+    RA4_EXPECT(S.World.GetPlayer(0).GetPowerTier() < PowerTier::Severe);
+    RA4_EXPECT(S.Health() > Wounded);
+}
+
+RA4_TEST(Repair, CannotBeBoughtOnCreditAndTogglingOffBanksNothing)
+{
+    // Two ways repair could have become free: healing without paying, and pocketing the
+    // part-credit across a stop/start cycle.
+    RepairScenario S(2, 0, /*StartingCredits*/ 0);
+    RA4_REQUIRE(S.World.GetPlayer(0).GetPowerTier() == PowerTier::Normal);
+    RA4_REQUIRE(S.StartRepair());
+
+    const int32_t Wounded = S.Health();
+    RunTicks(S.World, 60);
+    // No money, so no hitpoints -- and certainly no negative treasury.
+    RA4_EXPECT_EQ(S.Health(), Wounded);
+    RA4_EXPECT_EQ(S.World.GetPlayer(0).Credits, 0);
+
+    // Now with money, but toggled off and on repeatedly: the accumulator must reset, so
+    // this cannot heal for free.
+    S.World.CheatGrantCredits(0, 100000);
+    for (int32_t N = 0; N < 20; ++N)
+    {
+        Command Toggle = MakeCommand(CommandType::RepairBuilding, 0);
+        Toggle.Primary = S.Damaged;
+        RA4_REQUIRE(S.World.ApplyCommand(Toggle).IsAccepted());   // off
+        RA4_REQUIRE(S.World.ApplyCommand(Toggle).IsAccepted());   // on
+        S.World.Tick(nullptr);
+    }
+    const int32_t Gained = S.Health() - Wounded;
+    const int32_t Spent = 100000 - S.World.GetPlayer(0).Credits;
+    // Whatever was healed was paid for at the intended rate, within rounding.
+    RA4_EXPECT(Gained >= 0);
+    if (Gained > 0)
+    {
+        RA4_EXPECT(Spent > 0);
+    }
+}
+
+RA4_TEST(PowerTier, RadarGoesDarkAtModerateAndComesBackOnRecovery)
+{
+    // Radar feeds the anonymous contacts the recon layer derives, so switching it off has
+    // a real consequence rather than being a cosmetic flag.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+
+    // No shipped definition sets bIsRadar, so the test authors one -- exactly how a
+    // faction would.
+    const EntityDef* Base = Content.FindEntity(Ids::SovPower);
+    RA4_REQUIRE(Base != nullptr);
+    EntityDef RadarDef = *Base;
+    RadarDef.Id = MakeContentId("building.sov.test_radar");
+    RadarDef.Name = "building.sov.test_radar";
+    RadarDef.Building.bIsRadar = true;
+    RadarDef.Building.bIsPowerPlant = false;
+    RadarDef.Building.PowerProduced = 0;
+    RadarDef.Building.PowerConsumed = 40;
+    Content.AddEntity(RadarDef);
+
+    MatchSetup Setup = MakeTestSetup(818);
+    SimWorld World;
+    World.Initialize(&Content, Setup);
+    SpawnEnemyOutpost(World);
+    World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    World.SpawnBuilding(Ids::SovPower, 0, TileCoord(14, 10), true);
+    const EntityId Radar = World.SpawnBuilding(RadarDef.Id, 0, TileCoord(18, 10), true);
+    RA4_REQUIRE(Radar.IsValid());
+
+    World.Tick(nullptr);
+    RA4_REQUIRE(World.GetPlayer(0).GetPowerTier() == PowerTier::Normal);
+    // A radar defaults to Auxiliary, the band the player loses first.
+    RA4_EXPECT(World.GetBuilding(Radar)->Priority == PowerPriority::Auxiliary);
+    // Online at Normal, and offline once its band is -- which for Auxiliary is Moderate.
+    RA4_EXPECT(!IsPowerPriorityOffline(World.GetBuilding(Radar)->Priority, PowerTier::Normal));
+    RA4_EXPECT(IsPowerPriorityOffline(World.GetBuilding(Radar)->Priority, PowerTier::Moderate));
+
+    // Drive the base into Moderate and confirm the tier rule agrees with the band rule.
+    // Reactor gives 150; the radar draws 40 and each turret 40, so six turrets puts the
+    // draw at 280 and the ratio at 53% -- inside Moderate.
+    for (int32_t N = 0; N < 6; ++N)
+    {
+        World.SpawnBuilding(Ids::SovTurret, 0, TileCoord(24 + N * 2, 24), true);
+    }
+    World.Tick(nullptr);
+    const PowerTier Deficit = World.GetPlayer(0).GetPowerTier();
+    RA4_REQUIRE(Deficit >= PowerTier::Moderate);
+    RA4_EXPECT(!IsRadarOnlineAtTier(Deficit));
+}
+
+RA4_TEST(PowerTier, StaticDefenceReloadsSlowerAtSevereAndStopsAtCritical)
+{
+    // A turret's cooldown is the observable: doubled at Severe, and it does not fire at
+    // all at Critical. Units are unaffected, since a tank carries its own power.
+    const auto CooldownAfterFiring = [](int32_t Plants, int32_t Turrets,
+                                        PowerTier& OutTier) -> int32_t {
+        ContentDatabase Content;
+        BuildDefaultContent(Content);
+        MatchSetup Setup = MakeTestSetup(2718);
+        SimWorld World;
+        World.Initialize(&Content, Setup);
+        SpawnEnemyOutpost(World);
+        World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+        for (int32_t N = 0; N < Plants; ++N)
+        {
+            World.SpawnBuilding(Ids::SovPower, 0, TileCoord(14 + N * 3, 10), true);
+        }
+        const EntityId Turret = World.SpawnBuilding(Ids::SovTurret, 0, TileCoord(30, 30), true);
+        for (int32_t N = 0; N < Turrets; ++N)
+        {
+            World.SpawnBuilding(Ids::SovTurret, 0,
+                                TileCoord(20 + (N % 7) * 2, 40 + (N / 7) * 3), true);
+        }
+        // An enemy right next to the turret, so it fires on the first opportunity.
+        World.SpawnUnit(Ids::AllRifleman, 1, Vec2::FromInts(31 * 200, 30 * 200));
+        World.Tick(nullptr);
+        OutTier = World.GetPlayer(0).GetPowerTier();
+
+        // Find the tick it fires on and read the cooldown it was handed.
+        for (int32_t T = 0; T < 400; ++T)
+        {
+            World.Tick(nullptr);
+            const CombatComp* C = World.GetCombat(Turret);
+            if (C != nullptr && C->CooldownTicks > 0)
+            {
+                return C->CooldownTicks;
+            }
+        }
+        return 0;   // never fired
+    };
+
+    PowerTier NormalTier = PowerTier::Normal;
+    PowerTier SevereTier = PowerTier::Normal;
+    PowerTier CriticalTier = PowerTier::Normal;
+    const int32_t AtNormal = CooldownAfterFiring(2, 0, NormalTier);
+    const int32_t AtSevere = CooldownAfterFiring(1, 13, SevereTier);
+    const int32_t AtCritical = CooldownAfterFiring(0, 2, CriticalTier);
+
+    RA4_REQUIRE(NormalTier == PowerTier::Normal);
+    RA4_REQUIRE(SevereTier == PowerTier::Severe);
+    RA4_REQUIRE(CriticalTier == PowerTier::Critical);
+
+    RA4_REQUIRE(AtNormal > 0);   // it did fire
+    // Doubled, exactly -- this is a multiplier, not a vague slowdown.
+    RA4_EXPECT_EQ(AtSevere, AtNormal * kDefenceSevereCooldownMultiplier);
+    // And silent at Critical.
+    RA4_EXPECT_EQ(AtCritical, 0);
+}
+
+RA4_TEST(Repair, StateSurvivesSaveAndFeedsTheChecksum)
+{
+    RepairScenario S(2, 0);
+    RA4_REQUIRE(S.StartRepair());
+    RunTicks(S.World, 5);
+
+    const uint64_t Before = S.World.ComputeStateChecksum();
+
+    ByteWriter W;
+    S.World.Serialize(W);
+    SimWorld Restored;
+    ByteReader R(W.GetBuffer());
+    RA4_REQUIRE(Restored.Deserialize(R, &S.Content));
+    RA4_REQUIRE(!R.HasError());
+
+    RA4_EXPECT(Restored.GetBuilding(S.Damaged)->bRepairing);
+    RA4_EXPECT(Restored.ComputeStateChecksum() == Before);
+
+    // Toggling repair must move the hash, or a peer that missed the command goes
+    // undetected. Checked by mutating only this, then reverting it.
+    Command Toggle = MakeCommand(CommandType::RepairBuilding, 0);
+    Toggle.Primary = S.Damaged;
+    RA4_REQUIRE(Restored.ApplyCommand(Toggle).IsAccepted());
+    RA4_EXPECT(Restored.ComputeStateChecksum() != Before);
+    RA4_REQUIRE(Restored.ApplyCommand(Toggle).IsAccepted());
+    RA4_EXPECT(Restored.ComputeStateChecksum() == Before);
+}

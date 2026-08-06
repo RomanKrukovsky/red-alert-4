@@ -111,9 +111,9 @@ AI queries:
 
 ## Status
 
-**PARTIALLY IMPLEMENTED.** Packages A, B and C are done and tested; D is pending.
+**IMPLEMENTED** for every system that exists. Packages A through D are done and tested.
 
-### Implemented (packages A, B and C)
+### Implemented (packages A through D)
 
 Tier bands and the construction/production/harvester rows of the effect matrix;
 `PowerTier` + `PowerTierForRatio` + `PowerSpeedPercentForTier` in `SimTypes.h`;
@@ -124,26 +124,43 @@ with `PlayerState::LastPowerTier` serialized and hashed; the four-band priority 
 with `BuildingComp::Priority`, defaults derived from content, and the
 `SetPowerPriority` player command (serialized, hashed, replayed).
 
+Package D completes the effect matrix: radar goes dark from Moderate (which stops the
+anonymous contacts the recon layer derives from its coverage, so the minimap really does
+go quiet); repair exists at all -- `RepairBuilding` previously validated and then did
+nothing -- and runs at full speed to Mild, half through Moderate and not at all from
+Severe; static defence doubles its cooldown at Severe and stops firing at Critical.
+Every one of those also respects the building's own priority band, which is what makes
+the player's override meaningful.
+
+Both mechanics now reach the player: `SelectionState` carries the priority, whether the
+band is currently offline, and the repair state, and those cross into Blueprints through
+`URA4UIDataProviderSubsystem`. `ARA4PlayerController::CycleSelectedPowerPriority` and
+`ToggleSelectedRepair` issue ordinary validated commands, so both are replayed and
+server-authoritative like any other decision.
+
 ### Pending
 
-- **Package D**: radar/minimap shutdown at Moderate+, the repair system (the
-  `RepairBuilding` command is validated but has no effect yet), static-defence
-  fire-rate halving at Severe and shutdown at Critical.
-- **Superweapons** do not exist as a system, so the superweapon row is unreachable.
-- **No UI or AI path for priority.** `SetPowerPriority` is validated, serialized,
-  hashed and replayed, but nothing issues it: the ADR's "icon overlay on each building,
-  click to cycle" does not exist, and the AI does not deprioritise anything during a
-  deficit. The mechanic is therefore only reachable from tests today — the
-  deficit-as-a-choice story the package sells is not yet playable.
+- **Superweapons** do not exist as a system, so the superweapon row is unreachable. It
+  is the only row of the effect matrix with nothing behind it.
 - **No radar in shipped content.** No definition sets `bIsRadar`, so the `Auxiliary`
-  band has no default occupant and every test that exercises it assigns the priority by
-  command. The band works; nothing lands in it naturally yet.
+  band has no default occupant and the radar tests author one. The code path works and is
+  tested; a faction has to declare a radar for it to matter in play. This is a content
+  task, not a code one.
+- **No widget bound yet.** The controls are exposed to Blueprints and the commands are
+  wired, but no `.uasset` calls them — that is editor work, and it cannot be done or
+  verified headlessly.
+- **AI does not use priority.** The commander never demotes a building during a deficit.
+  Advisory only, so nothing is broken by its absence.
 - **Priority is free and uncapped.** There is no cost, cooldown or per-building rate
   limit, so a player can set every building to `Vital` at match start and opt out of the
   shutdown dimension of the deficit entirely (speed scaling still applies, since that is
   player-wide and priority-independent). This is spec-faithful — the ADR places no
-  constraint on the override — but the spec is exploitable, and balancing it belongs with
-  the UI work rather than being invented here.
+  constraint on the override — but the spec is exploitable, and balancing it wants play
+  data rather than a number invented here.
+- **Repair rates are placeholders.** `kRepairHealthPerTick` (4) and
+  `kRepairCostPerHealthCenti` (25, a quarter-credit per hitpoint) are chosen to be
+  slower and dearer per point than the original construction, so repair saves a building
+  rather than replacing defence. Both want tuning against real matches.
 
 ### Amendments made during implementation
 

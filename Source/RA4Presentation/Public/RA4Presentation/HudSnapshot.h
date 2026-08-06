@@ -124,6 +124,19 @@ struct SelectionState
     int32_t PrimaryHealthMax = 0;
     bool bPrimaryIsOwned = false;
 
+    // ADR-0013. Present for an owned building so the detail card can show the power
+    // priority and offer the cycle control, and so a repair toggle can show whether it
+    // is currently running. Without these the mechanics exist but are invisible: the
+    // player has no way to see or change either one.
+    bool bPrimaryIsBuilding = false;
+    PowerPriority PrimaryPowerPriority = PowerPriority::Production;
+    // Whether this building's priority band is offline at the owner's current power
+    // tier, so the card can grey it rather than making the player work out the table.
+    bool bPrimaryPowerOffline = false;
+    bool bPrimaryIsRepairing = false;
+    // A damaged, complete, owned building is the only thing repair can be started on.
+    bool bPrimaryCanRepair = false;
+
     std::vector<SelectionGroup> Groups;
 
     // Set when the selection contains at least one producer, which is what makes the

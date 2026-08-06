@@ -176,6 +176,10 @@ private:
     // begin advancing on the same tick it becomes fully paid.
     void SystemFlowPayment();
     void SystemConstruction();
+    // ADR-0013. Runs after SystemConstruction so a building that finished this tick is
+    // already Complete, and before SystemCombat so a repaired structure survives the
+    // shot that would otherwise have killed it at its pre-repair health.
+    void SystemRepair();
     void SystemProduction();
     void SystemHarvesters();
     void SystemOrders();

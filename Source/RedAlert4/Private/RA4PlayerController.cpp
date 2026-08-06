@@ -1535,6 +1535,53 @@ void ARA4PlayerController::HandleBuildCardClicked(int64 ContentIdValue)
     SubmitOrders({C});
 }
 
+void ARA4PlayerController::CycleSelectedPowerPriority()
+{
+    const EntityId Primary = Selection.GetPrimary();
+    if (!Primary.IsValid())
+    {
+        return;
+    }
+
+    // Read the current band from the simulation rather than tracking it here: the UI is
+    // not a source of truth, and a stale local copy would send the wrong next value.
+    const URA4SimWorldSubsystem* Sim = GetWorld()->GetSubsystem<URA4SimWorldSubsystem>();
+    const RA4::SimWorld* World = Sim != nullptr ? Sim->GetSimWorld() : nullptr;
+    const RA4::BuildingComp* Building = World != nullptr ? World->GetBuilding(Primary) : nullptr;
+    if (Building == nullptr)
+    {
+        return;   // not a building; the sidebar should not have offered the control
+    }
+
+    // Wrap round, so one control walks the whole table without needing four buttons.
+    const int32 Next = (int32(Building->Priority) + 1) %
+                       (int32(RA4::PowerPriority::Auxiliary) + 1);
+
+    Command C;
+    C.Type = CommandType::SetPowerPriority;
+    C.Issuer = Selection.GetLocalPlayer();
+    C.Primary = Primary;
+    C.Param = Next;
+    SubmitOrders({C});
+}
+
+void ARA4PlayerController::ToggleSelectedRepair()
+{
+    const EntityId Primary = Selection.GetPrimary();
+    if (!Primary.IsValid())
+    {
+        return;
+    }
+
+    // The command itself is a toggle, and the simulation validates ownership and kind,
+    // so there is nothing to decide here beyond who is asking.
+    Command C;
+    C.Type = CommandType::RepairBuilding;
+    C.Issuer = Selection.GetLocalPlayer();
+    C.Primary = Primary;
+    SubmitOrders({C});
+}
+
 void ARA4PlayerController::CancelPendingAction()
 {
     if (bCheatConsoleOpen)

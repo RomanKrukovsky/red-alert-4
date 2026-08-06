@@ -206,6 +206,59 @@ enum class PowerPriority : uint8_t
 
 const char* ToString(PowerPriority Priority);
 
+// --- ADR-0013 per-system deficit effects ----------------------------------
+
+// Radar (and with it the anonymous-contact blips the recon layer derives from it) goes
+// dark from Moderate. Named rather than inlined so the simulation, the HUD and the tests
+// cannot disagree about when the minimap stops being trustworthy.
+inline constexpr bool IsRadarOnlineAtTier(PowerTier Tier)
+{
+    return Tier < PowerTier::Moderate;
+}
+
+// Repair runs at full speed until Moderate, at half through Moderate, and stops from
+// Severe. Returned as a percentage so the caller scales rather than branching.
+constexpr int32_t kRepairModerateSpeedPercent = 50;
+
+inline constexpr int32_t RepairSpeedPercentForTier(PowerTier Tier)
+{
+    switch (Tier)
+    {
+        case PowerTier::Normal:
+        case PowerTier::Mild:     return 100;
+        case PowerTier::Moderate: return kRepairModerateSpeedPercent;
+        case PowerTier::Severe:
+        case PowerTier::Critical: return 0;
+    }
+    return 100;
+}
+
+// Static defence fires at half rate through Severe (cooldowns doubled) and not at all at
+// Critical. A multiplier on the cooldown rather than a speed, because that is the value
+// the combat system actually holds.
+constexpr int32_t kDefenceSevereCooldownMultiplier = 2;
+
+inline constexpr int32_t StaticDefenceCooldownMultiplierForTier(PowerTier Tier)
+{
+    return Tier == PowerTier::Severe ? kDefenceSevereCooldownMultiplier : 1;
+}
+
+inline constexpr bool IsStaticDefenceOnlineAtTier(PowerTier Tier)
+{
+    return Tier != PowerTier::Critical;
+}
+
+// --- Repair (ADR-0013) ----------------------------------------------------
+
+// Health restored per tick at full speed, and what that costs. Repair is deliberately
+// slower and dearer per point than building the structure was: it is a way to save a
+// damaged building, not a cheaper substitute for defending it.
+constexpr int32_t kRepairHealthPerTick = 4;
+// Credits per health point, in hundredths, so the price can be below one credit per
+// point without floating-point maths. 25 = a quarter of a credit per hitpoint.
+constexpr int32_t kRepairCostPerHealthCenti = 25;
+constexpr int32_t kRepairCostScale = 100;
+
 // The tier at which a priority band goes fully offline. Vital never does, which is what
 // stops a deficit from being unrecoverable: the buildings needed to rebuild power keep
 // working no matter how deep the hole.
@@ -360,6 +413,16 @@ struct BuildingComp
     // and then owned by the player: an explicit override has to persist, so this is
     // stored per building rather than re-derived from content each tick.
     PowerPriority Priority = PowerPriority::Production;
+
+    // Repair is a sustained, paid activity the player switches on, not a one-shot: it
+    // draws credits every tick while it runs, so it needs a persistent flag rather than
+    // a queued order. A power deficit slows it and eventually stops it (ADR-0013), and
+    // it switches itself off once the building is whole again.
+    bool bRepairing = false;
+    // Fractional-credit accumulator. Repair costs less than one credit per tick at
+    // sensible rates, and rounding that up every tick would make repair wildly more
+    // expensive than intended; rounding it down would make it free.
+    int32_t RepairCreditAccumulator = 0;
 
     EntityId DockedHarvester;
     std::vector<EntityId> UnloadingQueue;

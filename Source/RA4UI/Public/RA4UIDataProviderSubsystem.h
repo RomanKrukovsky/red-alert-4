@@ -73,6 +73,30 @@ public:
     UFUNCTION(BlueprintPure, Category = "RA4|UI")
     ERA4SelectionKind GetSelectionKind() const { return SelectionKind; }
 
+    // --- ADR-0013 building controls -----------------------------------------
+    // The simulation has carried power priority and repair state for a while, but
+    // neither reached Blueprints, so the mechanics existed and no player could see or
+    // use them. These expose the selected building's state; the actual changes go out
+    // as ordinary validated commands, never by mutating the simulation from here.
+
+    /** True when the selection's primary is a building, so the card can show its controls. */
+    UFUNCTION(BlueprintPure, Category = "RA4|UI")
+    bool IsSelectionABuilding() const { return bSelectionIsBuilding; }
+
+    UFUNCTION(BlueprintPure, Category = "RA4|UI")
+    ERA4PowerPriority GetSelectionPowerPriority() const { return SelectionPowerPriority; }
+
+    /** True when this building's priority band is offline at the current power tier. */
+    UFUNCTION(BlueprintPure, Category = "RA4|UI")
+    bool IsSelectionPowerOffline() const { return bSelectionPowerOffline; }
+
+    UFUNCTION(BlueprintPure, Category = "RA4|UI")
+    bool IsSelectionRepairing() const { return bSelectionRepairing; }
+
+    /** True only for an owned, finished, damaged building -- the one case repair applies. */
+    UFUNCTION(BlueprintPure, Category = "RA4|UI")
+    bool CanSelectionBeRepaired() const { return bSelectionCanRepair; }
+
     UFUNCTION(BlueprintPure, Category = "RA4|UI")
     ERA4MatchPhase GetMatchPhase() const { return MatchPhase; }
 
@@ -170,6 +194,12 @@ private:
     bool bSupplyModelled = false;
 
     ERA4SelectionKind SelectionKind = ERA4SelectionKind::Empty;
+    // ADR-0013 building controls, refreshed from the snapshot each frame.
+    bool bSelectionIsBuilding = false;
+    ERA4PowerPriority SelectionPowerPriority = ERA4PowerPriority::Production;
+    bool bSelectionPowerOffline = false;
+    bool bSelectionRepairing = false;
+    bool bSelectionCanRepair = false;
     ERA4MatchPhase MatchPhase = ERA4MatchPhase::NotStarted;
     int32 MatchElapsedSeconds = 0;
     int32 WinningPlayer = -1;

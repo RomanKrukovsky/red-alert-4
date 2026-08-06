@@ -1313,12 +1313,22 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
 
         case CommandType::RepairBuilding:
         {
-            if (!IsAlive(Cmd.Primary) || Core[Cmd.Primary.Index].Owner != Cmd.Issuer)
+            if (!IsAlive(Cmd.Primary) || Core[Cmd.Primary.Index].Owner != Cmd.Issuer ||
+                Core[Cmd.Primary.Index].Kind != EntityKind::Building)
             {
                 return Reject(CommandReject::NoSuchEntity);
             }
-            // Repair over time lands with the economy milestone; the command is
-            // accepted and validated now so the protocol does not change later.
+            BuildingComp& Target = Buildings[Cmd.Primary.Index];
+            // A toggle rather than a one-shot: repair is a sustained paid activity, and
+            // the player needs to be able to call it off when the bill outgrows the
+            // building. SystemRepair also clears the flag once the structure is whole.
+            Target.bRepairing = !Target.bRepairing;
+            if (!Target.bRepairing)
+            {
+                // Drop the part-credit rather than bank it across a stop/start cycle,
+                // which would let a player repair for free by toggling.
+                Target.RepairCreditAccumulator = 0;
+            }
             break;
         }
 
@@ -2188,6 +2198,85 @@ void SimWorld::SystemConstruction()
                 const Vec2 SpawnAt = FindFreeSpawnPoint(B, D->Building.BundledUnit);
                 SpawnUnit(D->Building.BundledUnit, Owner, SpawnAt);
             }
+        }
+    }
+}
+
+// ADR-0013. Repairs damaged buildings the player has switched repair on for, charging
+// per hitpoint restored and slowing or stopping under a power deficit.
+//
+// Repair is a sustained paid activity rather than a one-shot order, which is why it needs
+// a system at all: the RepairBuilding command previously validated and then did nothing.
+void SimWorld::SystemRepair()
+{
+    for (uint32_t I = 0; I < Core.size(); ++I)
+    {
+        if (!Core[I].bAlive || Core[I].Kind != EntityKind::Building || Core[I].Owner >= kMaxPlayers)
+        {
+            continue;
+        }
+        BuildingComp& B = Buildings[I];
+        if (!B.bRepairing)
+        {
+            continue;
+        }
+        // A half-built structure gains health from SystemConstruction; repairing it too
+        // would pay twice for the same hitpoints.
+        if (B.State != ConstructionState::Complete)
+        {
+            continue;
+        }
+
+        HealthComp& H = Healths[I];
+        if (H.Current >= H.Max)
+        {
+            // Switch itself off rather than sit armed: otherwise the next scratch would
+            // silently start spending again without the player asking.
+            B.bRepairing = false;
+            B.RepairCreditAccumulator = 0;
+            continue;
+        }
+
+        PlayerState& P = Players[Core[I].Owner];
+        const PowerTier Tier = P.GetPowerTier();
+        // Repair is Auxiliary work in ADR-0013's table: halved at Moderate, off from
+        // Severe. A building whose own priority band is offline cannot be repaired at
+        // all, which is the player's own choice expressing itself.
+        int32_t SpeedPercent = RepairSpeedPercentForTier(Tier);
+        if (IsPowerPriorityOffline(B.Priority, Tier))
+        {
+            SpeedPercent = 0;
+        }
+        if (SpeedPercent <= 0)
+        {
+            continue;   // paused, not cancelled: the flag stays on and resumes on recovery
+        }
+
+        const int32_t Missing = H.Max - H.Current;
+        int32_t Heal = std::max(1, (kRepairHealthPerTick * SpeedPercent) / 100);
+        Heal = std::min(Heal, Missing);
+
+        // Bill in hundredths and only spend whole credits, so a sub-credit-per-tick rate
+        // is neither rounded up into extortion nor down into free repair.
+        B.RepairCreditAccumulator += Heal * kRepairCostPerHealthCenti;
+        const int32_t Due = B.RepairCreditAccumulator / kRepairCostScale;
+        if (Due > 0)
+        {
+            const int32_t Charged = std::min(Due, std::max(0, P.Credits));
+            P.Credits -= Charged;
+            B.RepairCreditAccumulator -= Charged * kRepairCostScale;
+            if (Charged < Due)
+            {
+                // Out of money. Heal only what was actually paid for -- repairing on
+                // credit would be a way to conjure hitpoints from nothing.
+                Heal = (Charged * kRepairCostScale) / kRepairCostPerHealthCenti;
+                B.RepairCreditAccumulator = 0;
+            }
+        }
+
+        if (Heal > 0)
+        {
+            H.Current = std::min(H.Max, H.Current + Heal);
         }
     }
 }
@@ -3140,7 +3229,16 @@ void SimWorld::FireWeapon(EntityId Attacker, EntityId TargetId, const WeaponDef&
     Ev.Location = From;
     EmitEvent(Ev);
 
-    Combats[A].CooldownTicks = Weapon.CooldownTicks;
+    // ADR-0013: a static defence under a Severe deficit reloads at half rate. Applied
+    // here rather than at the tick-down so the slowdown is visible in CooldownTicks --
+    // a UI reading that field sees the real remaining time, and a tier change mid-reload
+    // does not retroactively rewrite how long the shot took.
+    int32_t Cooldown = Weapon.CooldownTicks;
+    if (Core[A].Kind == EntityKind::Building && Core[A].Owner < kMaxPlayers)
+    {
+        Cooldown *= StaticDefenceCooldownMultiplierForTier(Players[Core[A].Owner].GetPowerTier());
+    }
+    Combats[A].CooldownTicks = Cooldown;
 
     if (Weapon.ProjectileSpeed <= Fixed::Zero())
     {
@@ -3222,6 +3320,17 @@ void SimWorld::SystemCombat()
         if (Kind == EntityKind::Building && Buildings[I].State != ConstructionState::Complete)
         {
             continue;   // a turret under construction does not shoot
+        }
+        // ADR-0013: static defence is offline at Critical, and offline whenever its own
+        // priority band is. Units are unaffected -- a tank carries its own power.
+        if (Kind == EntityKind::Building && Core[I].Owner < kMaxPlayers)
+        {
+            const PowerTier Tier = Players[Core[I].Owner].GetPowerTier();
+            if (!IsStaticDefenceOnlineAtTier(Tier) ||
+                IsPowerPriorityOffline(Buildings[I].Priority, Tier))
+            {
+                continue;
+            }
         }
         const WeaponDef* W = Content->FindWeapon(D->Weapon);
         if (W == nullptr)
@@ -3537,6 +3646,7 @@ void SimWorld::Tick(const CommandFrame* Frame)
     SystemPower();
     SystemFlowPayment();
     SystemConstruction();
+    SystemRepair();
     SystemProduction();
     SystemHarvesters();
     SystemOrders();
@@ -3624,7 +3734,15 @@ void SimWorld::SystemRecon()
         const EntityDef* BD = Content ? Content->FindEntity(Core[I].Def) : nullptr;
         if (BD != nullptr && BD->Building.bIsRadar)
         {
-            RadarCentersOf[Core[I].Owner].push_back(Transforms[I].Position);
+            // ADR-0013: a radar goes dark from Moderate, and separately whenever its own
+            // priority band is offline -- that is the whole point of letting the player
+            // demote it. A dark radar contributes no coverage, so the anonymous contacts
+            // the recon layer derives from it stop appearing and the minimap goes quiet.
+            const PowerTier Tier = Players[Core[I].Owner].GetPowerTier();
+            if (IsRadarOnlineAtTier(Tier) && !IsPowerPriorityOffline(Buildings[I].Priority, Tier))
+            {
+                RadarCentersOf[Core[I].Owner].push_back(Transforms[I].Position);
+            }
         }
 
         // --- Chain of command nodes (M3, owner decision 9-в) ------------------
@@ -3912,6 +4030,10 @@ uint64_t SimWorld::ComputeStateChecksum() const
             // Priority gates whether this building is offline, so a peer that
             // disagrees about it has genuinely diverged.
             H.FeedUInt8(uint8_t(Buildings[I].Priority));
+            // Repair spends credits and adds health, so a peer disagreeing about it
+            // diverges on both.
+            H.FeedBool(Buildings[I].bRepairing);
+            H.FeedInt32(Buildings[I].RepairCreditAccumulator);
             H.FeedInt32(Buildings[I].ConstructionProgressTicks);
             H.FeedInt32(int32_t(Buildings[I].Queue.size()));
             for (const ProductionItem& QueueItem : Buildings[I].Queue)
@@ -3964,6 +4086,7 @@ constexpr uint32_t kSimSaveMagic = 0x52413453u; // "RA4S"
 //   v5: PlayerState::LastPowerTier (ADR-0013 edge-triggered deficit warning)
 //   v6: the union of all of the above
 //   v7: BuildingComp::Priority (ADR-0013 per-building power priority override)
+//   v8: BuildingComp::bRepairing + RepairCreditAccumulator (ADR-0013 repair)
 //
 // v1 through v4 are NOT loadable, and that is deliberate rather than laziness. The two
 // branches independently stamped "4" on genuinely different byte layouts: main's v4
@@ -3982,9 +4105,10 @@ constexpr uint32_t kSimSaveMagic = 0x52413453u; // "RA4S"
 //
 // From v5 onward, missing fields are reconstructed on load and retired fields are read
 // and discarded to keep the byte stream aligned.
-constexpr uint32_t kSimSaveVersion = 7;
+constexpr uint32_t kSimSaveVersion = 8;
 constexpr uint32_t kSimSaveVersionPowerTier = 5;
 constexpr uint32_t kSimSaveVersionPowerPriority = 7;
+constexpr uint32_t kSimSaveVersionRepair = 8;
 // The oldest version whose byte layout is unambiguous. See the note above: v4 and below
 // were stamped on two incompatible formats by two branches.
 constexpr uint32_t kSimSaveVersionMinSupported = 5;
@@ -4093,6 +4217,10 @@ void SimWorld::Serialize(ByteWriter& W) const
         // ADR-0013: a player override, so it is authoritative state rather than
         // something re-derivable from content on load.
         W.WriteUInt8(static_cast<uint8_t>(B.Priority));
+        // ADR-0013 repair: a sustained activity the player switched on, so it and its
+        // part-paid credit both have to survive a reload.
+        W.WriteBool(B.bRepairing);
+        W.WriteInt32(B.RepairCreditAccumulator);
         W.WriteUInt32(static_cast<uint32_t>(B.Queue.size()));
         for (const ProductionItem& Item : B.Queue)
         {
@@ -4313,6 +4441,13 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
             B.Priority = Def != nullptr ? DefaultPowerPriorityFor(*Def)
                                         : PowerPriority::Production;
         }
+        if (Version >= kSimSaveVersionRepair)
+        {
+            B.bRepairing = R.ReadBool();
+            B.RepairCreditAccumulator = R.ReadInt32();
+        }
+        // Older saves predate repair entirely, so the resize() default of "not
+        // repairing" is exactly right -- nothing to reconstruct.
         const uint32_t QueueCount = R.ReadUInt32();
         B.Queue.resize(QueueCount);
         for (uint32_t Q = 0; Q < QueueCount; ++Q)

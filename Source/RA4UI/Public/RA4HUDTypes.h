@@ -20,6 +20,23 @@ enum class ERA4SelectionKind : uint8
     Mixed,
 };
 
+/**
+ * ADR-0013 power priority, mirrored for Blueprints. Order matters: it is the order the
+ * cycle control steps through, and it is the order a deficit reaches the bands in.
+ */
+UENUM(BlueprintType)
+enum class ERA4PowerPriority : uint8
+{
+    /** HQ, barracks, refinery. Never goes offline, whatever the deficit. */
+    Vital,
+    /** Factories and docks. Offline at Critical. */
+    Production,
+    /** Turrets and walls. Offline at Critical. */
+    Defense,
+    /** Radar, repair, tech. First to go -- offline from Moderate. */
+    Auxiliary,
+};
+
 UENUM(BlueprintType)
 enum class ERA4BuildBlockReason : uint8
 {

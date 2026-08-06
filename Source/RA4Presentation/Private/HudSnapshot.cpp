@@ -191,6 +191,28 @@ void HudSnapshotBuilder::BuildSelection(const SimWorld& World, const std::vector
             Out.PrimaryHealthCurrent = Health->Current;
             Out.PrimaryHealthMax = Health->Max;
         }
+
+        // ADR-0013 building controls. Only meaningful for a building the local player
+        // owns: the card offers a priority cycle and a repair toggle, and both are
+        // commands, so the UI needs to know the current state to render them honestly.
+        if (const BuildingComp* Building = World.GetBuilding(Out.Primary))
+        {
+            Out.bPrimaryIsBuilding = true;
+            Out.PrimaryPowerPriority = Building->Priority;
+            Out.bPrimaryIsRepairing = Building->bRepairing;
+
+            if (Core != nullptr && Out.bPrimaryIsOwned)
+            {
+                const PowerTier Tier = World.GetPlayer(Core->Owner).GetPowerTier();
+                Out.bPrimaryPowerOffline = IsPowerPriorityOffline(Building->Priority, Tier);
+            }
+            // Repair is offerable only on a finished, damaged building -- a half-built
+            // one already gains health from construction, and paying twice for the same
+            // hitpoints would be a bug the UI invited.
+            Out.bPrimaryCanRepair = Out.bPrimaryIsOwned &&
+                                    Building->State == ConstructionState::Complete &&
+                                    Health != nullptr && Health->Current < Health->Max;
+        }
     }
 }
 

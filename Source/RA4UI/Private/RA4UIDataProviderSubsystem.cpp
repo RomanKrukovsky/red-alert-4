@@ -24,6 +24,17 @@ ERA4SelectionKind ToBlueprint(RP::SelectionKind Kind)
     }
 }
 
+ERA4PowerPriority ToBlueprint(RA4::PowerPriority Priority)
+{
+    switch (Priority)
+    {
+        case RA4::PowerPriority::Vital: return ERA4PowerPriority::Vital;
+        case RA4::PowerPriority::Defense: return ERA4PowerPriority::Defense;
+        case RA4::PowerPriority::Auxiliary: return ERA4PowerPriority::Auxiliary;
+        default: return ERA4PowerPriority::Production;
+    }
+}
+
 ERA4BuildBlockReason ToBlueprint(RP::BuildBlockReason Reason)
 {
     switch (Reason)
@@ -279,6 +290,15 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
     
     SelectionKind = ToBlueprint(Snapshot.Selection.Kind);
     HUDViewModel->SetSelectionKind(SelectionKind);
+
+    // ADR-0013 building controls. Mirrored straight from the snapshot: the UI reads
+    // state and issues commands, and never decides any of this for itself.
+    bSelectionIsBuilding = Snapshot.Selection.bPrimaryIsBuilding;
+    SelectionPowerPriority = ToBlueprint(Snapshot.Selection.PrimaryPowerPriority);
+    bSelectionPowerOffline = Snapshot.Selection.bPrimaryPowerOffline;
+    bSelectionRepairing = Snapshot.Selection.bPrimaryIsRepairing;
+    bSelectionCanRepair = Snapshot.Selection.bPrimaryCanRepair;
+
     OnSelectionChanged.Broadcast();
 
     // --- selection groups -----------------------------------------------------
