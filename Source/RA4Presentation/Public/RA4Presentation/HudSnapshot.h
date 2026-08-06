@@ -403,6 +403,12 @@ public:
     // adding a row.
     void SetAlertMergeWindowTicks(int32_t Ticks) { AlertMergeWindowTicks = Ticks; }
 
+    // Asks for the next snapshot to carry the full minimap background even if nothing has
+    // changed. For a consumer that starts, or restarts, mid-match: it has no cached copy, and
+    // without this it would stay blank until the next scout revealed something. Costs one grid
+    // copy, once, instead of one per tick.
+    void RequestBackgroundResend() { bBackgroundResendRequested = true; }
+
     // How often the minimap background is re-sampled. The terrain barely changes and the
     // explored area grows slowly, so re-scanning the whole map every tick would burn time
     // to produce an identical result. Set to 1 in tests that need it evaluated immediately.
@@ -437,6 +443,8 @@ private:
     MinimapBackground CachedBackground;
     uint32_t BackgroundRevision = 0;
     bool bHasSampledBackground = false;
+    // Set for the first sample too, so the very first snapshot carries the grid.
+    bool bBackgroundResendRequested = true;
     TickIndex LastBackgroundTick = 0;
 };
 

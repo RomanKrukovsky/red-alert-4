@@ -84,6 +84,13 @@ public:
     UFUNCTION(BlueprintPure, Category = "RA4|Radar")
     int32 GetMinimapBackgroundRevision() const { return MinimapBackgroundRevision; }
 
+    /**
+     * True while this provider has never been handed a minimap grid. The snapshot only carries
+     * the grid on the ticks it changed, so a provider created after the map was already
+     * explored has nothing to draw; the owner answers this by requesting a resend.
+     */
+    bool NeedsMinimapBackground() const { return MinimapCellCounts.X <= 0 || MinimapCellCounts.Y <= 0; }
+
     /** Transient alert markers, brightest first. Empty when nothing has just happened. */
     UFUNCTION(BlueprintPure, Category = "RA4|Radar")
     const TArray<FRA4RadarPing>& GetRadarPings() const { return RadarPings; }

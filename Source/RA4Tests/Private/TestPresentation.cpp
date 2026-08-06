@@ -833,12 +833,21 @@ struct BackgroundFixture
         {
             World.Tick(nullptr);
             Builder.Build(World, {}, Snapshot);
+            // A real consumer caches the grid and is only handed a new one when it changed, so
+            // the fixture does the same. Reading Snapshot.Radar.Background directly every tick
+            // would test a payload the shipping UI never receives.
+            if (Snapshot.Radar.bBackgroundChanged)
+            {
+                Delivered = Snapshot.Radar.Background;
+            }
             World.ClearEvents();
         }
     }
 
-    // The most recent background, which is only present on ticks where it changed.
-    const MinimapBackground& Background() const { return Snapshot.Radar.Background; }
+    // The most recently delivered background, held across the ticks that carried nothing.
+    const MinimapBackground& Background() const { return Delivered; }
+
+    MinimapBackground Delivered;
 
     // The cell a given tile falls into.
     MinimapTerrain TerrainAtTile(int32_t TileX, int32_t TileY) const
@@ -1572,4 +1581,99 @@ RA4_TEST(MinimapContent, ShippedRadarIsTheFirstThingADeficitTakes)
     Builder.Build(World, {}, Snapshot);
     RA4_EXPECT(!Snapshot.Radar.bOnline);
     RA4_EXPECT(Snapshot.Radar.bOfflineForPower);
+}
+
+
+// The contract says false when there is nothing to draw. Guarding only the input extent was
+// not enough: a camera entirely off the map clamps every corner to the same bound, so the rect
+// had zero area but the function still returned true -- and the widget drew a degenerate line
+// against the map edge, implying the player was looking somewhere they were not.
+//
+// Found by an independent reviewer's probe, which reported ok=1 with w=0 h=0.
+RA4_TEST(MinimapCamera, ACameraEntirelyOffTheMapDrawsNothing)
+{
+    double OffX = 0, OffY = 0, W = 0, H = 0;
+    ComputeMinimapRect(208, 208, 12800, 12800, OffX, OffY, W, H);
+    double L = 1, T = 1, R = 1, B = 1;
+
+    // Far off every edge in turn. Each must refuse rather than return a zero-area rect.
+    const double FarOff[][2] = {{-99999, -99999}, {99999, 99999}, {-99999, 6400},
+                                {99999, 6400}, {6400, -99999}, {6400, 99999}};
+    for (const auto& Centre : FarOff)
+    {
+        RA4_EXPECT(!ComputeMinimapCameraFrame(OffX, OffY, W, H, 12800, 12800,
+                                              Centre[0], Centre[1], 2000, 2000, L, T, R, B));
+    }
+
+    // A camera that merely straddles an edge still has area, and must still be drawn --
+    // otherwise the frame would vanish the moment the player panned to the map border.
+    RA4_REQUIRE(ComputeMinimapCameraFrame(OffX, OffY, W, H, 12800, 12800,
+                                          0, 6400, 4000, 4000, L, T, R, B));
+    RA4_EXPECT(R > L);
+    RA4_EXPECT(B > T);
+}
+
+// The whole point of the revision counter is that an unchanged map costs nothing. An earlier
+// version copied the full grid into every snapshot regardless -- 14792 bytes on a 256x256 map,
+// about 296 KB/s at 20 Hz, purely to say "identical". Measured and reported by an independent
+// reviewer; the claimed saving did not exist.
+RA4_TEST(MinimapBackground, AnUnchangedBackgroundCarriesNoPayload)
+{
+    BackgroundFixture F(/*MapWidth*/ 256, /*MapHeight*/ 256);
+    F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+
+    // Let exploration settle so the grid really is static.
+    F.Step(40);
+    RA4_REQUIRE(F.Background().Width > 0);   // something was delivered at least once
+
+    int32_t TicksCarryingPayload = 0;
+    for (int32_t I = 0; I < 40; ++I)
+    {
+        F.Step(1);
+        if (!F.Snapshot.Radar.Background.Terrain.empty() ||
+            !F.Snapshot.Radar.Background.Shroud.empty())
+        {
+            ++TicksCarryingPayload;
+        }
+    }
+    RA4_EXPECT_EQ(TicksCarryingPayload, 0);
+    // The revision is still reported, so a consumer can tell its cached copy is current.
+    RA4_EXPECT(F.Snapshot.Radar.BackgroundRevision > 0);
+
+    // Newly explored ground still gets through: the cache must not silence real changes.
+    F.World.SpawnUnit(Ids::AllRifleman, 0, Vec2::FromInts(200 * 200, 200 * 200));
+    bool bDelivered = false;
+    for (int32_t I = 0; I < 40 && !bDelivered; ++I)
+    {
+        F.Step(1);
+        if (F.Snapshot.Radar.bBackgroundChanged) { bDelivered = true; }
+    }
+    RA4_EXPECT(bDelivered);
+}
+
+// A consumer created mid-match has no cached grid, and the payload is no longer sent
+// unconditionally -- so it needs a way to ask. Without this it would sit blank until the next
+// scout happened to reveal something, which on a settled map could be the rest of the game.
+RA4_TEST(MinimapBackground, ALateConsumerCanAskForTheGridToBeResent)
+{
+    BackgroundFixture F(/*MapWidth*/ 128, /*MapHeight*/ 128);
+    F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    F.Step(40);
+
+    // Settled: nothing is being sent.
+    F.Step(1);
+    RA4_REQUIRE(F.Snapshot.Radar.Background.Terrain.empty());
+
+    // Ask, and the very next snapshot carries the full grid.
+    F.Builder.RequestBackgroundResend();
+    F.Step(1);
+    RA4_EXPECT(F.Snapshot.Radar.bBackgroundChanged);
+    RA4_EXPECT(!F.Snapshot.Radar.Background.Terrain.empty());
+    RA4_EXPECT_EQ(F.Snapshot.Radar.Background.Terrain.size(),
+                  size_t(F.Snapshot.Radar.Background.Width) *
+                  size_t(F.Snapshot.Radar.Background.Height));
+
+    // And it is a one-shot request, not a mode: the tick after is quiet again.
+    F.Step(1);
+    RA4_EXPECT(F.Snapshot.Radar.Background.Terrain.empty());
 }

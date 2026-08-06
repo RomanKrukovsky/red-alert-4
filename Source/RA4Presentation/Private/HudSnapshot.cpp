@@ -56,6 +56,9 @@ void HudSnapshotBuilder::Reset()
     CachedBackground = MinimapBackground();
     BackgroundRevision = 0;
     bHasSampledBackground = false;
+    // A reset means the consumer's cached copy is stale, so the next snapshot must carry a
+    // full grid rather than waiting for the map to change.
+    bBackgroundResendRequested = true;
     LastBackgroundTick = 0;
 }
 
@@ -466,6 +469,18 @@ bool ComputeMinimapCameraFrame(
     // Y flip: the northern edge of the footprint is the top of the panel.
     OutTop = MapRectOffsetY + (1.0 - FracNorth) * MapRectHeight;
     OutBottom = MapRectOffsetY + (1.0 - FracSouth) * MapRectHeight;
+
+    // A camera entirely off the map clamps every corner to the same bound, so the rect has
+    // zero area. Guarding only the *input* extent was not enough: the contract above promises
+    // false when there is nothing to draw, and returning true here put a degenerate line
+    // against the map edge, implying the player was looking there when they were not.
+    //
+    // Found by an independent reviewer's probe, which reported ok=1 with w=0 h=0.
+    if (OutRight <= OutLeft || OutBottom <= OutTop)
+    {
+        OutLeft = OutTop = OutRight = OutBottom = 0.0;
+        return false;
+    }
     return true;
 }
 
@@ -600,10 +615,21 @@ void HudSnapshotBuilder::BuildMinimapBackground(const SimWorld& World, RadarStat
 {
     Out.bBackgroundChanged = false;
     Out.BackgroundRevision = BackgroundRevision;
-    // Always describes the current explored map, whichever tick the reader arrived on. An
-    // earlier version only filled this in on the tick the background changed, which meant a
-    // consumer created mid-match saw nothing until the next scout moved.
-    Out.Background = CachedBackground;
+
+    // The payload is attached only on the ticks it changed, plus whenever a consumer has asked
+    // to be re-sent it. An earlier version copied it unconditionally so that a consumer created
+    // mid-match would see a complete map -- but that made every tick carry the full grid, which
+    // is 14792 bytes on a 256x256 map, ~296 KB/s at 20 Hz, to say "identical". An independent
+    // reviewer measured exactly that and was right to call the claimed saving false.
+    //
+    // RequestBackgroundResend covers the case the unconditional copy was there for, without
+    // charging every tick for it.
+    if (bBackgroundResendRequested && bHasSampledBackground)
+    {
+        Out.Background = CachedBackground;
+        Out.bBackgroundChanged = true;
+        bBackgroundResendRequested = false;
+    }
 
     const MapDescription& Map = World.GetMap();
     const TickIndex Tick = World.GetTick();

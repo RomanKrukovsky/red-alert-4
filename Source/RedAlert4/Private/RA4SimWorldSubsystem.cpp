@@ -536,6 +536,16 @@ void URA4SimWorldSubsystem::TickSimulation()
                     OwningWorld->GetSubsystem<URA4UIDataProviderSubsystem>())
             {
                 UIData->ApplySnapshot(*LatestSnapshot);
+
+                // The minimap grid is only attached to the snapshot on the ticks it changed,
+                // so a provider that came up after the map was already explored would have
+                // nothing to draw until the next scout moved -- which on a settled map could
+                // be the rest of the match. Asking here, rather than pushing the grid every
+                // tick, keeps the steady-state cost at zero.
+                if (UIData->NeedsMinimapBackground())
+                {
+                    SnapshotBuilder->RequestBackgroundResend();
+                }
             }
         }
     }
