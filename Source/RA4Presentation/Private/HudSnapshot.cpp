@@ -435,6 +435,40 @@ void ComputeMinimapRect(double PanelWidth, double PanelHeight,
     OutOffsetY = (PanelHeight - OutHeight) * 0.5;
 }
 
+bool ComputeMinimapCameraFrame(
+    double MapRectOffsetX, double MapRectOffsetY, double MapRectWidth, double MapRectHeight,
+    double MapWorldWidth, double MapWorldHeight,
+    double ViewCentreX, double ViewCentreY, double ViewExtentX, double ViewExtentY,
+    double& OutLeft, double& OutTop, double& OutRight, double& OutBottom)
+{
+    OutLeft = OutTop = OutRight = OutBottom = 0.0;
+    // A zero extent means the camera footprint is unknown -- a near-horizon corner that
+    // missed the ground plane, or no camera yet. Drawing a degenerate frame would put a
+    // stray line in the corner of the panel and imply the player is looking there.
+    if (ViewExtentX <= 0.0 || ViewExtentY <= 0.0 ||
+        MapWorldWidth <= 0.0 || MapWorldHeight <= 0.0 ||
+        MapRectWidth <= 0.0 || MapRectHeight <= 0.0)
+    {
+        return false;
+    }
+
+    const auto Clamp01 = [](double V) { return V < 0.0 ? 0.0 : (V > 1.0 ? 1.0 : V); };
+
+    // Clamped per edge, so a camera looking past the map boundary yields a frame flush with
+    // that boundary rather than one drawn outside the widget.
+    const double FracLeft = Clamp01((ViewCentreX - ViewExtentX * 0.5) / MapWorldWidth);
+    const double FracRight = Clamp01((ViewCentreX + ViewExtentX * 0.5) / MapWorldWidth);
+    const double FracSouth = Clamp01((ViewCentreY - ViewExtentY * 0.5) / MapWorldHeight);
+    const double FracNorth = Clamp01((ViewCentreY + ViewExtentY * 0.5) / MapWorldHeight);
+
+    OutLeft = MapRectOffsetX + FracLeft * MapRectWidth;
+    OutRight = MapRectOffsetX + FracRight * MapRectWidth;
+    // Y flip: the northern edge of the footprint is the top of the panel.
+    OutTop = MapRectOffsetY + (1.0 - FracNorth) * MapRectHeight;
+    OutBottom = MapRectOffsetY + (1.0 - FracSouth) * MapRectHeight;
+    return true;
+}
+
 void ComputeMinimapCellGrid(int32_t TileWidth, int32_t TileHeight,
                             int32_t& OutCellsX, int32_t& OutCellsY,
                             int32_t& OutStrideX, int32_t& OutStrideY)

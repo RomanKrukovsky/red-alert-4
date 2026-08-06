@@ -39,6 +39,13 @@ class RA4UI_API URA4RadarWidget : public UWidget
 
 public:
     FRA4OnRadarClicked OnRadarClicked;
+    /**
+     * A right-click on the panel, in world units. Carried separately from OnRadarClicked
+     * because the two mean opposite things: the left button moves the camera, the right
+     * button orders the selection somewhere. Collapsing them would make every camera jump
+     * also send an army across the map.
+     */
+    FRA4OnRadarClicked OnRadarOrdered;
 
     const TArray<FRA4RadarMarker>& GetMarkers() const;
     FVector2D GetMapSize() const;
@@ -50,6 +57,20 @@ public:
     const TArray<uint8>& GetBackgroundShroud() const;
     FIntPoint GetBackgroundCellCounts() const;
     void HandleSlateClick(const FVector2D& NormalizedPosition);
+    /** Right-click equivalent: resolves to world units and fires OnRadarOrdered. */
+    void HandleSlateOrder(const FVector2D& NormalizedPosition);
+
+    /**
+     * The camera's current view rectangle in world units, so the panel can outline what part
+     * of the map is on screen. Without it the player can see where their forces are but not
+     * where they themselves are looking, which is what makes the minimap navigable rather
+     * than merely informative.
+     *
+     * Zero extent means unknown, and the frame is not drawn.
+     */
+    void SetCameraView(const FVector2D& CentreWorld, const FVector2D& ExtentWorld);
+    FVector2D GetCameraViewCentre() const { return CameraViewCentre; }
+    FVector2D GetCameraViewExtent() const { return CameraViewExtent; }
 
     /**
      * The rectangle inside a square radar panel that the map actually occupies, letterboxed
@@ -73,6 +94,9 @@ private:
     URA4UIDataProviderSubsystem* GetProvider() const;
 
     TSharedPtr<SRA4RadarSlate> RadarSlate;
+
+    FVector2D CameraViewCentre = FVector2D::ZeroVector;
+    FVector2D CameraViewExtent = FVector2D::ZeroVector;
 };
 
 /**
@@ -151,6 +175,11 @@ public:
 
     FRA4OnBuildCardClicked OnBuildCardClicked;
     FRA4OnRadarClicked OnRadarClicked;
+    /** Forwarded from the radar panel's right button: an order, not a camera move. */
+    FRA4OnRadarClicked OnRadarOrdered;
+
+    /** Forwards the camera's ground footprint to the radar panel, which outlines it. */
+    void SetRadarCameraView(const FVector2D& CentreWorld, const FVector2D& ExtentWorld);
 
     /** Which sidebar tab is showing. Values match ProductionCategory. */
     UFUNCTION(BlueprintCallable, Category = "RA4|UI")
@@ -182,6 +211,7 @@ private:
     void HandleTabClicked(int32 TabIndex);
     void HandleCardClicked(int32 CardIndex);
     void HandleRadarClicked(FVector2D WorldPosition);
+    void HandleRadarOrdered(FVector2D WorldPosition);
 
     /**
      * Drives the hover swell on the cards and follows viewport resizes. Both are

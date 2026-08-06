@@ -245,6 +245,10 @@ private:
 
     void HandleBuildCardClicked(int64 ContentIdValue);
     void HandleRadarClicked(FVector2D WorldPosition);
+    /** Right-click on the minimap: orders the current selection to that world position. */
+    void HandleRadarOrdered(FVector2D WorldPosition);
+    /** Pushes the camera's ground footprint into the radar widget so it can outline it. */
+    void UpdateRadarCameraView();
     void BindMatchResultEvents();
     void HandleMatchEnded(bool bLocalPlayerWon, int32 WinningPlayer);
     void HandleRetryRequested();

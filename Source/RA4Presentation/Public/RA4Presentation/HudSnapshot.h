@@ -294,6 +294,21 @@ void RA4PRESENTATION_API ComputeMinimapRect(double PanelWidth, double PanelHeigh
                         double& OutOffsetX, double& OutOffsetY,
                         double& OutWidth, double& OutHeight);
 
+// The camera's view rectangle projected onto the minimap panel, as panel-local pixels.
+//
+// Takes the map rect from ComputeMinimapRect and the camera footprint in world units, and
+// returns the outline corners clamped to the map. Lives here rather than in the widget so the
+// clamping and the Y flip -- the simulation's Y grows northward, the panel's downward -- are
+// covered by headless tests instead of being judged by eye.
+//
+// Returns false when there is nothing to draw: an unknown footprint (zero extent), or a
+// degenerate map.
+bool RA4PRESENTATION_API ComputeMinimapCameraFrame(
+    double MapRectOffsetX, double MapRectOffsetY, double MapRectWidth, double MapRectHeight,
+    double MapWorldWidth, double MapWorldHeight,
+    double ViewCentreX, double ViewCentreY, double ViewExtentX, double ViewExtentY,
+    double& OutLeft, double& OutTop, double& OutRight, double& OutBottom);
+
 // Downsamples a map of TileWidth x TileHeight to at most kMinimapMaxCellsPerAxis per axis.
 // Returns the cell counts and, through the two callbacks' worth of stride, how many tiles
 // each cell covers. Exposed so the tests can assert the sampling without going through a

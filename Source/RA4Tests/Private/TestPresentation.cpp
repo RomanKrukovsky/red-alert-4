@@ -1129,3 +1129,126 @@ RA4_TEST(MinimapBackground, TerrainAndShroudValuesArePinnedForTheBlueprintMirror
     RA4_EXPECT(MinimapShroud::Visible > MinimapShroud::Remembered);
     RA4_EXPECT(MinimapShroud::Remembered > MinimapShroud::NeverSeen);
 }
+
+// ---------------------------------------------------------------------------
+// Minimap camera frame (M3)
+// ---------------------------------------------------------------------------
+
+// The panel showed where a player's forces were but not where the player was looking, which
+// is the difference between an informative minimap and a navigable one.
+RA4_TEST(MinimapCamera, FrameTracksTheViewAndFlipsY)
+{
+    // A square 208px panel showing a square 12800-unit map: the whole panel is the map.
+    double OffX = 0, OffY = 0, W = 0, H = 0;
+    ComputeMinimapRect(208, 208, 12800, 12800, OffX, OffY, W, H);
+
+    double L = 0, T = 0, R = 0, B = 0;
+
+    // Camera dead centre, looking at a quarter of the map per axis.
+    RA4_REQUIRE(ComputeMinimapCameraFrame(OffX, OffY, W, H, 12800, 12800,
+                                          6400, 6400, 3200, 3200, L, T, R, B));
+    RA4_EXPECT_NEAR(L, 78.0, 0.01);    // (0.5 - 0.125) * 208
+    RA4_EXPECT_NEAR(R, 130.0, 0.01);
+    RA4_EXPECT_NEAR(T, 78.0, 0.01);
+    RA4_EXPECT_NEAR(B, 130.0, 0.01);
+
+    // Looking at the north edge. The simulation's Y grows northward and the panel's grows
+    // downward, so a northern view must sit at the TOP of the panel. Without the flip the
+    // frame would appear at the bottom -- diametrically wrong, and the sort of error that
+    // looks plausible until a player tries to navigate with it.
+    RA4_REQUIRE(ComputeMinimapCameraFrame(OffX, OffY, W, H, 12800, 12800,
+                                          6400, 12800 - 1600, 3200, 3200, L, T, R, B));
+    RA4_EXPECT(T < 52.0);              // in the upper quarter
+    RA4_EXPECT_NEAR(B, 52.0, 0.01);
+
+    // Looking at the south edge: the mirror image, at the bottom.
+    RA4_REQUIRE(ComputeMinimapCameraFrame(OffX, OffY, W, H, 12800, 12800,
+                                          6400, 1600, 3200, 3200, L, T, R, B));
+    RA4_EXPECT_NEAR(T, 156.0, 0.01);
+    RA4_EXPECT(B > 156.0);
+
+    // And east/west are not flipped: looking east puts the frame on the right.
+    RA4_REQUIRE(ComputeMinimapCameraFrame(OffX, OffY, W, H, 12800, 12800,
+                                          12800 - 1600, 6400, 3200, 3200, L, T, R, B));
+    RA4_EXPECT(R > 156.0);
+    RA4_EXPECT_NEAR(L, 156.0, 0.01);
+}
+
+// A camera looking past the boundary must produce a frame flush with the edge, not one drawn
+// outside the widget over the resource bar beneath it.
+RA4_TEST(MinimapCamera, FrameIsClampedToTheMapAndNeverLeavesThePanel)
+{
+    double OffX = 0, OffY = 0, W = 0, H = 0;
+    ComputeMinimapRect(208, 208, 12800, 12800, OffX, OffY, W, H);
+    double L = 0, T = 0, R = 0, B = 0;
+
+    // Centred on the corner, so half the footprint is off the map.
+    RA4_REQUIRE(ComputeMinimapCameraFrame(OffX, OffY, W, H, 12800, 12800,
+                                          0, 0, 4000, 4000, L, T, R, B));
+    RA4_EXPECT_NEAR(L, 0.0, 0.01);
+    RA4_EXPECT_NEAR(B, 208.0, 0.01);
+    RA4_EXPECT(R <= 208.0 && T >= 0.0);
+
+    // A footprint larger than the whole map collapses to the full panel rather than
+    // overflowing it.
+    RA4_REQUIRE(ComputeMinimapCameraFrame(OffX, OffY, W, H, 12800, 12800,
+                                          6400, 6400, 999999, 999999, L, T, R, B));
+    RA4_EXPECT_NEAR(L, 0.0, 0.01);
+    RA4_EXPECT_NEAR(T, 0.0, 0.01);
+    RA4_EXPECT_NEAR(R, 208.0, 0.01);
+    RA4_EXPECT_NEAR(B, 208.0, 0.01);
+
+    // Sweeping the camera across and down the map, the frame stays inside the panel and
+    // never inverts (right below left, or bottom above top).
+    for (int32_t Step = 0; Step <= 20; ++Step)
+    {
+        const double Along = 12800.0 * double(Step) / 20.0;
+        RA4_REQUIRE(ComputeMinimapCameraFrame(OffX, OffY, W, H, 12800, 12800,
+                                              Along, Along, 2500, 1800, L, T, R, B));
+        RA4_EXPECT(L >= -0.001 && T >= -0.001);
+        RA4_EXPECT(R <= 208.001 && B <= 208.001);
+        RA4_EXPECT(R >= L);
+        RA4_EXPECT(B >= T);
+    }
+}
+
+// The frame must respect the letterbox, or on a non-square map it would be drawn over the
+// bars -- outside the map it claims to describe.
+RA4_TEST(MinimapCamera, FrameRespectsTheLetterboxOnANonSquareMap)
+{
+    // A 2:1 map in a square panel: 208 wide, 104 tall, centred with 52px bars.
+    double OffX = 0, OffY = 0, W = 0, H = 0;
+    ComputeMinimapRect(208, 208, 25600, 12800, OffX, OffY, W, H);
+    RA4_REQUIRE(int32_t(OffY) == 52);
+
+    double L = 0, T = 0, R = 0, B = 0;
+    RA4_REQUIRE(ComputeMinimapCameraFrame(OffX, OffY, W, H, 25600, 12800,
+                                          12800, 6400, 2560, 1280, L, T, R, B));
+    // Vertically inside the map strip, not the panel: never in a bar.
+    RA4_EXPECT(T >= 52.0 - 0.001);
+    RA4_EXPECT(B <= 156.0 + 0.001);
+    // Horizontally centred, since the camera is at the middle of the map.
+    RA4_EXPECT_NEAR((L + R) * 0.5, 104.0, 0.01);
+}
+
+// An unknown footprint must be reported as "do not draw" rather than as a zero-size frame,
+// which would leave a stray dot in the corner implying the player is looking there.
+RA4_TEST(MinimapCamera, UnknownOrDegenerateInputDrawsNothing)
+{
+    double OffX = 0, OffY = 0, W = 0, H = 0;
+    ComputeMinimapRect(208, 208, 12800, 12800, OffX, OffY, W, H);
+    double L = 1, T = 1, R = 1, B = 1;
+
+    // Zero extent: the controller could not deproject the viewport corners.
+    RA4_EXPECT(!ComputeMinimapCameraFrame(OffX, OffY, W, H, 12800, 12800,
+                                          6400, 6400, 0, 0, L, T, R, B));
+    // Negative extent is nonsense and must be refused rather than mirrored.
+    RA4_EXPECT(!ComputeMinimapCameraFrame(OffX, OffY, W, H, 12800, 12800,
+                                          6400, 6400, -100, -100, L, T, R, B));
+    // No map yet.
+    RA4_EXPECT(!ComputeMinimapCameraFrame(OffX, OffY, W, H, 0, 0,
+                                          6400, 6400, 3200, 3200, L, T, R, B));
+    // No panel rect yet.
+    RA4_EXPECT(!ComputeMinimapCameraFrame(0, 0, 0, 0, 12800, 12800,
+                                          6400, 6400, 3200, 3200, L, T, R, B));
+}

@@ -91,6 +91,7 @@ void ARA4PlayerController::BeginPlay()
         {
             Sidebar->OnBuildCardClicked.AddUObject(this, &ARA4PlayerController::HandleBuildCardClicked);
             Sidebar->OnRadarClicked.AddUObject(this, &ARA4PlayerController::HandleRadarClicked);
+            Sidebar->OnRadarOrdered.AddUObject(this, &ARA4PlayerController::HandleRadarOrdered);
             // The reserved strip and the widget's own width come from the same helper. If
             // they ever disagree the world is drawn under the column, or a band of
             // background shows beside it.
@@ -513,6 +514,10 @@ void ARA4PlayerController::PlayerTick(float DeltaTime)
     // control group, and the prune immediately above -- and costs one vector copy
     // of a list that is bounded by what a player can select.
     Subsystem->SetSelectedEntitiesForHUD(Selection.Get());
+
+    // Cheap, and it has to run every frame: the outline follows the camera, which moves
+    // continuously. SetRadarCameraView drops an identical frame without invalidating Slate.
+    UpdateRadarCameraView();
 
     // Direct control is presentation-driven: the subsystem owns the phase
     // machine and the camera. We branch here so RTS camera/selection input
@@ -1679,6 +1684,90 @@ void ARA4PlayerController::HandleRadarClicked(FVector2D WorldPosition)
         CameraPawn->GetCameraController().FocusOn(
             Vec2f(float(WorldPosition.X), float(WorldPosition.Y)), true);
     }
+}
+
+void ARA4PlayerController::HandleRadarOrdered(FVector2D WorldPosition)
+{
+    URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
+    const SimWorld* World = Subsystem != nullptr ? Subsystem->GetSimWorld() : nullptr;
+    if (World == nullptr || Selection.IsEmpty())
+    {
+        return;   // nothing selected: a right-click on the map is not an order
+    }
+
+    // Routed through the ordinary order resolver and the ordinary command queue, so a
+    // minimap order is indistinguishable from a right-click in the world -- same validation,
+    // same replay, same server authority. A separate path here would be a second way to
+    // move an army, and the two would drift.
+    // Same rounding as RA4Coords::FromUnreal, so a minimap order and a world right-click on
+    // the identical spot resolve to the identical fixed-point tile.
+    const Vec2 Ground = Vec2(
+        RA4::Fixed::FromRaw(FMath::RoundToInt64(WorldPosition.X * double(RA4::kFixedOne))),
+        RA4::Fixed::FromRaw(FMath::RoundToInt64(WorldPosition.Y * double(RA4::kFixedOne))));
+    OrderContext Context = MakeOrderContext(Ground);
+    // The pointer is over the sidebar, not the terrain, so whatever entity happens to sit at
+    // those world coordinates was not hovered in any meaningful sense. Clearing it keeps a
+    // minimap click a move order rather than an attack on something the player cannot see.
+    Context.HoveredEntity = EntityId::Invalid();
+    SubmitOrders(ResolveOrder(*World, Selection, Context));
+}
+
+void ARA4PlayerController::UpdateRadarCameraView()
+{
+    if (Sidebar == nullptr)
+    {
+        return;
+    }
+
+    int32 ViewportX = 0;
+    int32 ViewportY = 0;
+    GetViewportSize(ViewportX, ViewportY);
+    if (ViewportX <= 0 || ViewportY <= 0)
+    {
+        return;
+    }
+
+    // Deprojected from the actual viewport corners rather than derived from the camera
+    // height, so the outline matches what is really on screen at any pitch or zoom. The
+    // sidebar covers the right-hand strip, so the visible world stops short of the full
+    // width -- using the whole viewport would draw a frame wider than the player can see.
+    const float RightEdge = FMath::Max(1.0f, float(ViewportX) - AppliedSidebarReservedWidth);
+    const FVector2D Corners[4] = {
+        FVector2D(0.0f, 0.0f),
+        FVector2D(RightEdge, 0.0f),
+        FVector2D(0.0f, float(ViewportY)),
+        FVector2D(RightEdge, float(ViewportY)),
+    };
+
+    bool bAny = false;
+    double MinX = 0.0, MaxX = 0.0, MinY = 0.0, MaxY = 0.0;
+    for (const FVector2D& Corner : Corners)
+    {
+        Vec2 Ground;
+        if (!ScreenToGround(Corner, Ground))
+        {
+            // A near-horizon corner can miss the ground plane entirely. Reporting an unknown
+            // frame is better than one built from the corners that happened to hit.
+            Sidebar->SetRadarCameraView(FVector2D::ZeroVector, FVector2D::ZeroVector);
+            return;
+        }
+        const double X = Ground.X.ToDoubleUnsafe();
+        const double Y = Ground.Y.ToDoubleUnsafe();
+        if (!bAny)
+        {
+            MinX = MaxX = X;
+            MinY = MaxY = Y;
+            bAny = true;
+            continue;
+        }
+        MinX = FMath::Min(MinX, X);
+        MaxX = FMath::Max(MaxX, X);
+        MinY = FMath::Min(MinY, Y);
+        MaxY = FMath::Max(MaxY, Y);
+    }
+
+    Sidebar->SetRadarCameraView(FVector2D((MinX + MaxX) * 0.5, (MinY + MaxY) * 0.5),
+                               FVector2D(MaxX - MinX, MaxY - MinY));
 }
 
 // ---------------------------------------------------------------------------

@@ -167,6 +167,29 @@ public:
             }
         }
 
+        // The camera's view rectangle, so the player can see where they are looking as well
+        // as where their forces are. Drawn under the markers: it is a reference frame, and a
+        // unit sitting on its edge must stay readable.
+        const FVector2D ViewCentre = RadarOwner->GetCameraViewCentre();
+        const FVector2D ViewExtent = RadarOwner->GetCameraViewExtent();
+        double FrameLeft = 0.0, FrameTop = 0.0, FrameRight = 0.0, FrameBottom = 0.0;
+        if (RA4::Presentation::ComputeMinimapCameraFrame(
+                MapOffset.X, MapOffset.Y, MapExtent.X, MapExtent.Y, MapSize.X, MapSize.Y,
+                ViewCentre.X, ViewCentre.Y, ViewExtent.X, ViewExtent.Y,
+                FrameLeft, FrameTop, FrameRight, FrameBottom))
+        {
+            TArray<FVector2D> Outline{
+                FVector2D(FrameLeft, FrameTop),
+                FVector2D(FrameRight, FrameTop),
+                FVector2D(FrameRight, FrameBottom),
+                FVector2D(FrameLeft, FrameBottom),
+                FVector2D(FrameLeft, FrameTop)};
+            FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 3,
+                                         AllottedGeometry.ToPaintGeometry(), Outline,
+                                         ESlateDrawEffect::None,
+                                         FLinearColor(0.90f, 0.90f, 0.95f, 0.75f), true, 1.0f);
+        }
+
         const int32 LocalPlayer = RadarOwner->GetLocalPlayer();
         for (const FRA4RadarMarker& Marker : RadarOwner->GetMarkers())
         {
@@ -197,7 +220,7 @@ public:
             {
                 const FVector2D OutlineSize(MarkerExtent + 4.0f, MarkerExtent + 4.0f);
                 FSlateDrawElement::MakeBox(
-                    OutDrawElements, LayerId + 3,
+                    OutDrawElements, LayerId + 4,
                     AllottedGeometry.ToPaintGeometry(
                         OutlineSize, FSlateLayoutTransform(Centre - OutlineSize * 0.5f)),
                     WhiteBrush, ESlateDrawEffect::None, FLinearColor::White);
@@ -205,53 +228,125 @@ public:
 
             const FVector2D MarkerSize(MarkerExtent, MarkerExtent);
             FSlateDrawElement::MakeBox(
-                OutDrawElements, LayerId + 4,
+                OutDrawElements, LayerId + 5,
                 AllottedGeometry.ToPaintGeometry(
                     MarkerSize, FSlateLayoutTransform(Centre - MarkerSize * 0.5f)),
                 WhiteBrush, ESlateDrawEffect::None, Colour);
         }
 
-        return LayerId + 4;
+        return LayerId + 5;
     }
 
     virtual FReply OnMouseButtonDown(const FGeometry& MyGeometry,
                                      const FPointerEvent& MouseEvent) override
     {
-        if (MouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+        const FKey Button = MouseEvent.GetEffectingButton();
+        FVector2D Normalized;
+        if (!ResolveNormalized(MyGeometry, MouseEvent, Normalized))
         {
-            const FVector2D Size = MyGeometry.GetLocalSize();
-            if (Size.X > 0.0f && Size.Y > 0.0f)
-            {
-                const FVector2D Local = MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
-                if (URA4RadarWidget* RadarOwner = Owner.Get())
-                {
-                    // Normalize against the letterboxed map rect, not the whole panel, or a
-                    // click is offset by the size of the bars. Clicks inside a bar are
-                    // ignored rather than clamped to the edge: the player pointed at
-                    // nothing, and snapping the camera to a corner is a worse answer.
-                    FVector2D MapOffset, MapExtent;
-                    URA4RadarWidget::ComputeMapRect(Size, RadarOwner->GetMapSize(),
-                                                    MapOffset, MapExtent);
-                    if (MapExtent.X > 0.0 && MapExtent.Y > 0.0)
-                    {
-                        const FVector2D Inside = Local - MapOffset;
-                        if (Inside.X >= 0.0 && Inside.Y >= 0.0 &&
-                            Inside.X <= MapExtent.X && Inside.Y <= MapExtent.Y)
-                        {
-                            RadarOwner->HandleSlateClick(FVector2D(Inside.X / MapExtent.X,
-                                                                   Inside.Y / MapExtent.Y));
-                        }
-                    }
-                }
-            }
+            // Inside a letterbox bar, or no map: the player pointed at nothing. Swallowed
+            // rather than clamped to the nearest edge, which would fling the camera into a
+            // corner the player did not click.
+            return FReply::Handled();
         }
 
-        // Both mouse buttons belong to the radar while the pointer is over it.
+        URA4RadarWidget* RadarOwner = Owner.Get();
+        if (RadarOwner == nullptr)
+        {
+            return FReply::Handled();
+        }
+
+        if (Button == EKeys::LeftMouseButton)
+        {
+            RadarOwner->HandleSlateClick(Normalized);
+            // Capture so the camera keeps following the pointer after it leaves the panel.
+            // Without this a drag that overshoots the edge stops dead, which feels like the
+            // widget lost the mouse -- and it had.
+            bDraggingCamera = true;
+            return FReply::Handled().CaptureMouse(SharedThis(this));
+        }
+        if (Button == EKeys::RightMouseButton)
+        {
+            RadarOwner->HandleSlateOrder(Normalized);
+            return FReply::Handled();
+        }
         return FReply::Handled();
     }
 
+    virtual FReply OnMouseMove(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override
+    {
+        if (!bDraggingCamera)
+        {
+            return FReply::Unhandled();
+        }
+        FVector2D Normalized;
+        URA4RadarWidget* RadarOwner = Owner.Get();
+        if (RadarOwner != nullptr && ResolveNormalized(MyGeometry, MouseEvent, Normalized))
+        {
+            // Every move while held, so the camera tracks the pointer continuously rather
+            // than only jumping on press and release.
+            RadarOwner->HandleSlateClick(Normalized);
+        }
+        return FReply::Handled();
+    }
+
+    virtual FReply OnMouseButtonUp(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override
+    {
+        if (MouseEvent.GetEffectingButton() == EKeys::LeftMouseButton && bDraggingCamera)
+        {
+            bDraggingCamera = false;
+            return FReply::Handled().ReleaseMouseCapture();
+        }
+        return FReply::Handled();
+    }
+
+    // Releasing capture without clearing the flag would leave the panel convinced a drag was
+    // still in progress, so the next stray move would yank the camera.
+    virtual void OnMouseCaptureLost(const FCaptureLostEvent& CaptureLostEvent) override
+    {
+        bDraggingCamera = false;
+        SLeafWidget::OnMouseCaptureLost(CaptureLostEvent);
+    }
+
 private:
+    // Panel-local pointer position as a 0..1 fraction of the letterboxed map rect. False if
+    // the pointer is outside that rect, which is not the same as outside the widget.
+    bool ResolveNormalized(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent,
+                           FVector2D& OutNormalized) const
+    {
+        const URA4RadarWidget* RadarOwner = Owner.Get();
+        if (RadarOwner == nullptr)
+        {
+            return false;
+        }
+        const FVector2D Size = MyGeometry.GetLocalSize();
+        if (Size.X <= 0.0f || Size.Y <= 0.0f)
+        {
+            return false;
+        }
+
+        // Normalize against the letterboxed map rect, not the whole panel, or a click is
+        // offset by the size of the bars -- the same mapping the painter uses, so a click
+        // lands on the marker that was drawn under the cursor.
+        FVector2D MapOffset, MapExtent;
+        URA4RadarWidget::ComputeMapRect(Size, RadarOwner->GetMapSize(), MapOffset, MapExtent);
+        if (MapExtent.X <= 0.0 || MapExtent.Y <= 0.0)
+        {
+            return false;
+        }
+
+        const FVector2D Inside =
+            MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition()) - MapOffset;
+        if (Inside.X < 0.0 || Inside.Y < 0.0 || Inside.X > MapExtent.X || Inside.Y > MapExtent.Y)
+        {
+            return false;
+        }
+        OutNormalized = FVector2D(Inside.X / MapExtent.X, Inside.Y / MapExtent.Y);
+        return true;
+    }
+
     TWeakObjectPtr<URA4RadarWidget> Owner;
+    bool bDraggingCamera = false;
 };
 
 namespace
@@ -528,6 +623,35 @@ void URA4RadarWidget::HandleSlateClick(const FVector2D& NormalizedPosition)
         (1.0f - NormalizedPosition.Y) * MapSize.Y));
 }
 
+void URA4RadarWidget::HandleSlateOrder(const FVector2D& NormalizedPosition)
+{
+    const FVector2D MapSize = GetMapSize();
+    if (MapSize.X <= 0.0f || MapSize.Y <= 0.0f)
+    {
+        return;
+    }
+
+    // Same mapping as the camera click; only the delegate differs, so an order cannot land
+    // somewhere other than where the camera would have gone for the same pixel.
+    OnRadarOrdered.Broadcast(FVector2D(
+        NormalizedPosition.X * MapSize.X,
+        (1.0f - NormalizedPosition.Y) * MapSize.Y));
+}
+
+void URA4RadarWidget::SetCameraView(const FVector2D& CentreWorld, const FVector2D& ExtentWorld)
+{
+    if (CameraViewCentre.Equals(CentreWorld) && CameraViewExtent.Equals(ExtentWorld))
+    {
+        return;   // no change: do not invalidate Slate for an identical frame
+    }
+    CameraViewCentre = CentreWorld;
+    CameraViewExtent = ExtentWorld;
+    if (RadarSlate.IsValid())
+    {
+        RadarSlate->Invalidate(EInvalidateWidgetReason::Paint);
+    }
+}
+
 // ---------------------------------------------------------------------------
 // URA4IndexedButton
 // ---------------------------------------------------------------------------
@@ -632,6 +756,7 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
         RadarWidget = WidgetTree->ConstructWidget<URA4RadarWidget>(
             URA4RadarWidget::StaticClass(), TEXT("Radar"));
         RadarWidget->OnRadarClicked.AddUObject(this, &URA4SidebarWidget::HandleRadarClicked);
+        RadarWidget->OnRadarOrdered.AddUObject(this, &URA4SidebarWidget::HandleRadarOrdered);
         Frame->AddChild(RadarWidget);
 
         USizeBox* Sizer = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("MinimapSizer"));
@@ -886,6 +1011,19 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
 void URA4SidebarWidget::HandleRadarClicked(FVector2D WorldPosition)
 {
     OnRadarClicked.Broadcast(WorldPosition);
+}
+
+void URA4SidebarWidget::HandleRadarOrdered(FVector2D WorldPosition)
+{
+    OnRadarOrdered.Broadcast(WorldPosition);
+}
+
+void URA4SidebarWidget::SetRadarCameraView(const FVector2D& CentreWorld, const FVector2D& ExtentWorld)
+{
+    if (RadarWidget != nullptr)
+    {
+        RadarWidget->SetCameraView(CentreWorld, ExtentWorld);
+    }
 }
 
 void URA4SidebarWidget::NativeConstruct()
