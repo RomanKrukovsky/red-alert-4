@@ -31,9 +31,17 @@
 
 // Off by default: this is a debugging aid, and with it on every shot draws a bright
 // yellow tracer over the battlefield.
-static TAutoConsoleVariable<int32> CVarRA4DebugCombatDraw(
+//
+// FAutoConsoleVariableRef rather than TAutoConsoleVariable<int32>: the templated
+// form's destructor calls AsVariable()->ClearOnChangedCallback(), and for a static
+// in a game module that runs from __cxa_finalize_ranges during exit(), after the
+// console manager is gone. That is a use-after-free and it crashed the editor on
+// quit ("Caught signal", stack ending in TAutoConsoleVariable<int>::~...). The Ref
+// form has no destructor, so shutdown ordering stops mattering.
+int32 GRA4DebugCombatDraw = 0;
+static FAutoConsoleVariableRef CVarRA4DebugCombatDraw(
     TEXT("ra4.DebugCombatDraw"),
-    0,
+    GRA4DebugCombatDraw,
     TEXT("Draw debug lines for weapon fire and impacts (0 = off, 1 = on)."),
     ECVF_Cheat);
 

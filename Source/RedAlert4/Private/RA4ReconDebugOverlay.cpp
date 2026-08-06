@@ -23,8 +23,21 @@ namespace
 // because this must be reachable mid-playtest from the console with no UI built
 // yet -- and it lives entirely in the presentation layer, so it cannot desync
 // anything (the simulation never reads it).
-static TAutoConsoleVariable<int32> CVarReconOverlay(
-    TEXT("recon.Overlay"), 0,
+//
+// FAutoConsoleVariableRef, not TAutoConsoleVariable<int32>. The templated form has
+// a destructor that calls AsVariable()->ClearOnChangedCallback(), and for a static
+// living in a game module that destructor runs from __cxa_finalize_ranges during
+// exit(), after the console manager has already been torn down. The result is a
+// dereference of freed memory and a "Caught signal" crash on quit with this exact
+// stack:
+//     TAutoConsoleVariable<int>::~TAutoConsoleVariable
+//     libsystem_c __cxa_finalize_ranges -> exit
+//     AppKit -[NSApplication terminate:]
+// The Ref form has no such destructor, so shutdown order stops mattering. It reads
+// through a plain int32, which is also cheaper than GetValueOnGameThread().
+int32 GReconOverlayMode = 0;
+static FAutoConsoleVariableRef CVarReconOverlay(
+    TEXT("recon.Overlay"), GReconOverlayMode,
     TEXT("Recon two-maps debug overlay: 0=off, 1=belief, 2=belief+ground truth"),
     ECVF_Cheat);
 
@@ -109,7 +122,9 @@ const TCHAR* CategoryLabel(RA4::Recon::ObservedCategory C)
 
 int32 URA4ReconDebugOverlay::GetOverlayMode()
 {
-    return CVarReconOverlay.GetValueOnGameThread();
+    // Read the backing int32 directly. FAutoConsoleVariableRef writes straight into
+    // it, so there is no GetValueOnGameThread() indirection to go through.
+    return GReconOverlayMode;
 }
 
 void URA4ReconDebugOverlay::Draw(UCanvas* Canvas, const APlayerController* Projector,
