@@ -12,6 +12,15 @@
 #include "Materials/MaterialInterface.h"
 #include "UObject/ConstructorHelpers.h"
 
+namespace
+{
+// Fallback framing for an entity with no mesh yet (the placeholder cube). Behind,
+// to the right and above, so even the placeholder is viewed from outside rather
+// than from within. Real entities override this from their own bounds in
+// ApplyPossessionCameraFraming().
+const FVector kDefaultPossessionCameraOffset(-420.0, 220.0, 180.0);
+}
+
 ARA4EntityActor::ARA4EntityActor()
 {
     PrimaryActorTick.bCanEverTick = true;
@@ -49,7 +58,14 @@ ARA4EntityActor::ARA4EntityActor()
 
     FirstPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCameraComponent"));
     FirstPersonCameraComponent->SetupAttachment(MeshComponent);
-    FirstPersonCameraComponent->SetRelativeLocation(FVector(0.0f, 0.0f, 80.0f));
+    // Over-the-shoulder, NOT inside the hull. The old (0,0,80) put the camera
+    // within the mesh, so the model's own geometry -- the barrel most of all --
+    // filled the frame: the "gun barrel effect". The camera is now pulled back and
+    // offset to the RIGHT, which places the controlled tank or infantryman in the
+    // LEFT of the frame where the player can actually see what they are driving.
+    // Values are recomputed per entity in ApplyPossessionCameraFraming() from the
+    // real mesh size; these are the fallback for a mesh-less placeholder.
+    FirstPersonCameraComponent->SetRelativeLocation(kDefaultPossessionCameraOffset);
     FirstPersonCameraComponent->bUsePawnControlRotation = false;
 
     SkeletalMeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalMeshComponent"));
@@ -99,13 +115,55 @@ void ARA4EntityActor::SetSelected(bool bSelected)
     }
 }
 
+void ARA4EntityActor::ApplyPossessionCameraFraming()
+{
+    if (FirstPersonCameraComponent == nullptr)
+    {
+        return;
+    }
+
+    // Frame the object from its actual size rather than a fixed distance: a
+    // rifleman and a war factory need very different standoff, and a constant
+    // offset either buries the camera in the tank or leaves infantry a speck.
+    const double Height = GetMeshHeightUU();
+    double Radius = 100.0;
+    if (SkeletalMeshComponent != nullptr && SkeletalMeshComponent->IsVisible())
+    {
+        const FVector E = SkeletalMeshComponent->Bounds.BoxExtent;
+        Radius = FMath::Max(E.X, E.Y);
+    }
+    else if (MeshComponent != nullptr)
+    {
+        const FVector E = MeshComponent->Bounds.BoxExtent;
+        Radius = FMath::Max(E.X, E.Y);
+    }
+    Radius = FMath::Max(Radius, 40.0);
+
+    // Behind by ~3 radii clears the longest barrel in the blockout set; the
+    // sideways offset is what pushes the subject off-centre to the left. Positive
+    // Y is right in Unreal, and moving the CAMERA right moves the SUBJECT left.
+    const double Back = -(Radius * 3.0 + 120.0);
+    const double Right = Radius * 1.6 + 60.0;
+    const double Up = Height * 0.85 + 60.0;
+
+    FirstPersonCameraComponent->SetRelativeLocation(FVector(Back, Right, Up));
+    // Aim slightly left and down so the subject sits in the left third with the
+    // ground and the horizon both readable -- looking straight ahead from an
+    // offset camera would frame empty space instead.
+    FirstPersonCameraComponent->SetRelativeRotation(FRotator(-8.0, -12.0, 0.0));
+}
+
 FVector ARA4EntityActor::GetPossessionCameraLocation() const
 {
     if (FirstPersonCameraComponent)
     {
         return FirstPersonCameraComponent->GetComponentLocation();
     }
-    return GetActorLocation() + FVector(0.0f, 0.0f, 80.0f);
+    // Fallback must also frame from OUTSIDE. The old value put the camera 80 uu
+    // above the actor origin, i.e. inside the hull, which is the in-model view
+    // this change exists to remove -- leaving it here would restore the barrel in
+    // frame the moment the camera component is missing.
+    return GetActorLocation() + GetActorRotation().RotateVector(kDefaultPossessionCameraOffset);
 }
 
 FRotator ARA4EntityActor::GetPossessionCameraRotation() const
@@ -114,7 +172,9 @@ FRotator ARA4EntityActor::GetPossessionCameraRotation() const
     {
         return FirstPersonCameraComponent->GetComponentRotation();
     }
-    return GetActorRotation();
+    // Match the offset camera's aim, not the hull's: returning the raw hull
+    // rotation from an offset position frames empty ground beside the subject.
+    return GetActorRotation() + FRotator(-8.0, -12.0, 0.0);
 }
 
 void ARA4EntityActor::SetEntityMesh(UStaticMesh* InMesh)
@@ -238,6 +298,10 @@ void ARA4EntityActor::SetVisualScale(const FVector& Scale)
         SourceSize.Y > UE_SMALL_NUMBER ? DesiredSize.Y / SourceSize.Y : 1.0,
         SourceSize.Z > UE_SMALL_NUMBER ? DesiredSize.Z / SourceSize.Z : 1.0);
     MeshComponent->SetWorldScale3D(NormalizedScale);
+
+    // Camera framing depends on the same bounds, so refresh it here rather than
+    // leaving a stale standoff from a previous mesh.
+    ApplyPossessionCameraFraming();
 
     // Ground-hugging offset from the mesh's ACTUAL bounds, not from an assumed
     // centre pivot. The old code used DesiredSize.Z * 0.5, which is only correct
