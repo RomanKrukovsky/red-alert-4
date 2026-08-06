@@ -734,10 +734,23 @@ void ReconSystem::PhaseAggregation(TickIndex CurrentTick)
 
 void ReconSystem::PhaseTrackUpdate(TickIndex CurrentTick)
 {
-    // M1 scope: stale marking only, so a track whose subject left our vision is
-    // visibly old data rather than a live contact. Confidence decay curves,
-    // error-radius growth and phantom refutation land with M2/M4 (I-B3/I-B4
-    // decide the decay model first).
+    // Ageing of belief. A track nobody has refreshed does not vanish and does not
+    // stay crisp: it BLURS. The staff map keeps the last known position, the error
+    // radius grows, confidence falls, and eventually the entry is dropped.
+    //
+    // That is the mechanic §4.4 calls the main source of tragic mistakes: an
+    // attack ordered against a frozen contact that moved twenty seconds ago. It
+    // is also why blackout does not erase anything -- erasing would be merciful
+    // and wrong.
+    //
+    // The sweep is amortized round-robin (ADR-0021, I-B4): at most
+    // TracksPerTickBudget slots per tick, resuming from a persistent cursor, so a
+    // load spike cannot turn decay into a frame-time cliff. The cursor is
+    // serialized and hashed because it decides WHICH tick a given track's
+    // confidence drops on.
+    const TrackTuning& TT = Settings->Tracks;
+    const ChainTuning& CT = Settings->Chain;
+
     for (int32_t P = 0; P < kMaxPlayers; ++P)
     {
         PerceivedWorld* World = Worlds[P].get();
@@ -745,19 +758,87 @@ void ReconSystem::PhaseTrackUpdate(TickIndex CurrentTick)
         {
             continue;
         }
-        const int32_t StaleAfter = Settings->Tracks.StaleAfterTicks;
-        for (uint32_t I = 0; I < World->GetTrackCapacity(); ++I)
+
+        // Whether this player's command network is silent right now. A player with
+        // no working HQ has no staff receiving anything, so every one of their
+        // tracks ages at the blackout rate.
+        const bool bNetworkDown = TickInput != nullptr && !TickInput->HasHqNode[P];
+
+        const uint32_t Capacity = World->GetTrackCapacity();
+        if (Capacity == 0)
         {
+            continue;
+        }
+        const uint32_t Budget = TT.TracksPerTickBudget > 0
+                                    ? uint32_t(TT.TracksPerTickBudget)
+                                    : Capacity;
+        const uint32_t Visits = Budget < Capacity ? Budget : Capacity;
+
+        for (uint32_t Step = 0; Step < Visits; ++Step)
+        {
+            const uint32_t I = (World->DecayCursor + Step) % Capacity;
             PerceivedTrack& T = World->Tracks[I]; // friend access: phases are the writer
-            if (!T.bAlive || T.bStale)
+            if (!T.bAlive)
             {
                 continue;
             }
-            if (CurrentTick >= T.LastUpdateTick && int32_t(CurrentTick - T.LastUpdateTick) >= StaleAfter)
+            if (CurrentTick < T.LastUpdateTick)
+            {
+                continue; // freshly written this tick; nothing to age
+            }
+            const int32_t Age = int32_t(CurrentTick - T.LastUpdateTick);
+            if (Age <= 0)
+            {
+                continue;
+            }
+
+            if (Age >= TT.StaleAfterTicks)
             {
                 T.bStale = true;
             }
+
+            // How much wall-clock this slot is accountable for: the sweep visits
+            // each slot once per (Capacity / Budget) ticks, so per-second rates
+            // must be scaled by the interval actually elapsed for THIS slot, or a
+            // bigger cap would silently slow decay down.
+            const int32_t TicksPerVisit = int32_t((Capacity + Visits - 1) / Visits);
+
+            // Confidence decay. A blacked-out network loses faith faster: the
+            // staff knows it is working from data nobody can confirm.
+            const int32_t DecayPerSecond = TT.ConfidenceDecayPerSecondPerMille +
+                                           (bNetworkDown ? CT.BlackoutConfidenceDecayPerSecondPerMille : 0);
+            const Fixed DecayThisVisit =
+                PerMilleToFixed(DecayPerSecond) * int64_t(TicksPerVisit) / int64_t(kTicksPerSecond);
+            T.Confidence = FxClamp(T.Confidence - DecayThisVisit, Fixed::Zero(), Fixed::FromInt(1));
+
+            // Error radius growth: the longer since anyone looked, the larger the
+            // area the contact could be in. Monotonic by construction -- only a
+            // fresh observation resets it, in aggregation.
+            const int64_t GrowthUnitsPerMinute =
+                int64_t(TT.ErrorRadiusGrowthTilesPerMinute) * kTileSizeUnits;
+            const Fixed GrowthThisVisit = Fixed::FromInt(GrowthUnitsPerMinute) *
+                                          int64_t(TicksPerVisit) /
+                                          int64_t(kTicksPerSecond * 60);
+            T.PositionErrorRadius = T.PositionErrorRadius + GrowthThisVisit;
+
+            // Garbage collection: belief nobody has any confidence in is noise on
+            // the map. Dropping it deterministically (same tick on every peer) is
+            // why the cursor is part of the checksum.
+            if (T.Confidence <= PerMilleToFixed(TT.DropBelowConfidencePerMille))
+            {
+                // Sever the association first, or the next report about this GT
+                // entity would write into a released slot.
+                for (uint32_t Slot = 0; Slot < EntityCapacity; ++Slot)
+                {
+                    if (AssociationTrack[P][Slot] == T.Id)
+                    {
+                        AssociationTrack[P][Slot] = TrackId{};
+                    }
+                }
+                World->ReleaseTrack(T.Id);
+            }
         }
+        World->DecayCursor = (World->DecayCursor + Visits) % Capacity;
     }
 }
 
