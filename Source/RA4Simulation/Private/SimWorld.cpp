@@ -251,6 +251,27 @@ const PlayerState& SimWorld::GetPlayer(PlayerId Id) const
     return Id < kMaxPlayers ? Players[Id] : Empty;
 }
 
+int32_t SimWorld::GetConstructionProgressPerMille(EntityId Id) const
+{
+    const BuildingComp* B = GetBuilding(Id);
+    if (B == nullptr || B->State != ConstructionState::UnderConstruction)
+    {
+        // Units, resource nodes and finished buildings are all "fully built" as far
+        // as presentation is concerned; only an in-progress building is partial.
+        return 1000;
+    }
+    const int64_t Total = int64_t(B->ConstructionTotalTicks) * kProgressScale;
+    if (Total <= 0)
+    {
+        // A zero build time means it completes on the tick it is placed. Reporting
+        // 1000 keeps presentation from dividing by zero and from flashing an empty
+        // progress bar for one frame.
+        return 1000;
+    }
+    const int64_t Clamped = std::min<int64_t>(std::max<int64_t>(B->ConstructionProgressTicks, 0), Total);
+    return int32_t((Clamped * 1000) / Total);
+}
+
 // ---------------------------------------------------------------------------
 // Spawning
 // ---------------------------------------------------------------------------
