@@ -69,6 +69,22 @@ public:
     // Nothing outside the simulation may mutate it directly.
     const RA4::SimWorld* GetSimWorld() const { return SimWorld; }
 
+    // The local player's fog-of-war visibility as a texture (ADR-0028). The
+    // landscape material and the fog post-process sample this; nothing reads it
+    // to make a gameplay decision -- those still ask SimWorld, because the
+    // texture is a picture of the answer, never the answer.
+    UFUNCTION(BlueprintCallable, Category = "RA4|Fog")
+    UTexture2D* GetFogVisibilityTexture() const { return FogVisibilityTexture; }
+
+    // Tiles across the fog texture, so a material can convert a world position
+    // into a UV without hardcoding the map size.
+    UFUNCTION(BlueprintCallable, Category = "RA4|Fog")
+    void GetFogTextureDimensions(int32& OutWidth, int32& OutHeight) const
+    {
+        OutWidth = FogTextureWidth;
+        OutHeight = FogTextureHeight;
+    }
+
     // Returns the latest computed snapshot of the match for UI presentation
     const RA4::Presentation::HudSnapshot* GetLatestHudSnapshot() const { return LatestSnapshot; }
 
@@ -146,6 +162,31 @@ private:
     // Height of the terrain surface at a world XY, or the flat sim ground level if
     // there is no landscape in this map. Visual-only: the simulation stays 2D.
     float SampleGroundHeight(double WorldX, double WorldY);
+
+    // --- Fog of war rendering (ADR-0028) ------------------------------------
+    // Uploads the local player's visibility grid into FogVisibilityTexture and
+    // publishes it to the landscape material. One-way: the simulation never
+    // learns this texture exists, so a dropped upload changes what is drawn and
+    // never what is simulated.
+    void UpdateFogVisibilityTexture();
+    // Pushes the texture and its dimensions into the landscape's material
+    // instance. Separate from the upload because the material only needs
+    // rebinding when the landscape or the texture is (re)created, while the
+    // pixels change every frame.
+    void PublishFogParametersToTerrain();
+
+    // UPROPERTY so the texture is not garbage-collected out from under the
+    // material while the match is running.
+    UPROPERTY(Transient)
+    UTexture2D* FogVisibilityTexture = nullptr;
+    UPROPERTY(Transient)
+    UMaterialInstanceDynamic* TerrainFogMaterial = nullptr;
+    int32 FogTextureWidth = 0;
+    int32 FogTextureHeight = 0;
+    // Reused between frames: a per-frame allocation of the whole grid would
+    // churn the heap 20 times a second for no reason.
+    std::vector<uint8_t> FogTexelScratch;
+    bool bFogMaterialBound = false;
 
     // Cached rather than re-found every actor every frame; a level either has one
     // landscape or none; there is no reason to search for it 20 times a second.

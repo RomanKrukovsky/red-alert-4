@@ -35,6 +35,21 @@
 #include "Materials/MaterialExpressionLandscapeLayerBlend.h"
 #include "Materials/MaterialExpressionTextureCoordinate.h"
 #include "Materials/MaterialExpressionTextureSample.h"
+// Fog nodes (ADR-0028). These live here rather than being hand-wired in the
+// editor because this commandlet rebuilds the material from scratch on every run
+// -- an editor-side edit would be silently reverted the next time it runs, which
+// is exactly how the ground-tiling fix was lost before.
+#include "Materials/MaterialExpressionAdd.h"
+#include "Materials/MaterialExpressionConstant.h"
+#include "Materials/MaterialExpressionDesaturation.h"
+#include "Materials/MaterialExpressionDivide.h"
+#include "Materials/MaterialExpressionLinearInterpolate.h"
+#include "Materials/MaterialExpressionMultiply.h"
+#include "Materials/MaterialExpressionOneMinus.h"
+#include "Materials/MaterialExpressionScalarParameter.h"
+#include "Materials/MaterialExpressionTextureObjectParameter.h"
+#include "Materials/MaterialExpressionTextureSampleParameter2D.h"
+#include "Materials/MaterialExpressionWorldPosition.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 #include "UObject/Package.h"
@@ -341,7 +356,110 @@ int32 URA4LayeredTerrainSetupCommandlet::Main(const FString& Params)
         AddLayerEntry(RoughBlend, RoughSample);
     }
 
-    UMaterialEditingLibrary::ConnectMaterialProperty(ColourBlend, TEXT(""), MP_BaseColor);
+    // --- fog of war (ADR-0028) ----------------------------------------------
+    // The layer blend result is tinted by the local player's visibility before it
+    // reaches BaseColor. Two channels carry the fog, never one: brightness AND
+    // desaturation, because UI_UX_BIBLE section 1.1 forbids conveying state by
+    // brightness or colour alone -- a player who cannot see the dimming still
+    // sees the colour drain.
+    //
+    // The fog texture is one texel per tile, sampled bilinearly, so the value
+    // arrives as a continuous 0..1 ramp with the four VisibilityStates as
+    // anchors (0 unexplored, 1/3 remembered, 2/3 radar, 1 visible). The material
+    // therefore does arithmetic on it rather than comparing it to an enum.
+    UMaterialExpressionWorldPosition* WorldPos =
+        Cast<UMaterialExpressionWorldPosition>(UMaterialEditingLibrary::CreateMaterialExpression(
+            Material, UMaterialExpressionWorldPosition::StaticClass(), -1600, 1100));
+
+    // Map world XY into fog UV by dividing by the map extent, which the subsystem
+    // publishes. Parameter names are the contract with
+    // URA4SimWorldSubsystem::PublishFogParametersToTerrain -- if they drift, Unreal
+    // silently ignores the sets and fog never appears.
+    UMaterialExpressionScalarParameter* FogWidth =
+        Cast<UMaterialExpressionScalarParameter>(UMaterialEditingLibrary::CreateMaterialExpression(
+            Material, UMaterialExpressionScalarParameter::StaticClass(), -1600, 1250));
+    FogWidth->ParameterName = TEXT("RA4FogWorldWidth");
+    FogWidth->DefaultValue = 12800.0f;   // 64 tiles * 200 units, the default test map
+
+    UMaterialExpressionDivide* FogUV =
+        Cast<UMaterialExpressionDivide>(UMaterialEditingLibrary::CreateMaterialExpression(
+            Material, UMaterialExpressionDivide::StaticClass(), -1350, 1150));
+
+    UMaterialExpressionTextureSampleParameter2D* FogSample =
+        Cast<UMaterialExpressionTextureSampleParameter2D>(UMaterialEditingLibrary::CreateMaterialExpression(
+            Material, UMaterialExpressionTextureSampleParameter2D::StaticClass(), -1100, 1150));
+
+    // Floor on darkness: unexplored ground is very dark but not pure black, so a
+    // player can still read terrain silhouette enough to navigate the camera.
+    // ADR-0028 forbids the opposite extreme -- fog strength may not be lowered to
+    // where unexplored and visible are indistinguishable -- so this is a constant
+    // in generated content, not a user setting.
+    UMaterialExpressionConstant* FogFloor =
+        Cast<UMaterialExpressionConstant>(UMaterialEditingLibrary::CreateMaterialExpression(
+            Material, UMaterialExpressionConstant::StaticClass(), -1100, 1400));
+    FogFloor->R = 0.08f;
+
+    UMaterialExpressionLinearInterpolate* FogBrightness =
+        Cast<UMaterialExpressionLinearInterpolate>(UMaterialEditingLibrary::CreateMaterialExpression(
+            Material, UMaterialExpressionLinearInterpolate::StaticClass(), -850, 1250));
+
+    UMaterialExpressionConstant* FullBright =
+        Cast<UMaterialExpressionConstant>(UMaterialEditingLibrary::CreateMaterialExpression(
+            Material, UMaterialExpressionConstant::StaticClass(), -1100, 1550));
+    FullBright->R = 1.0f;
+
+    // Desaturation is driven by the inverse of visibility: fully seen ground keeps
+    // its colour, remembered ground drains toward grey.
+    UMaterialExpressionOneMinus* FogInverse =
+        Cast<UMaterialExpressionOneMinus>(UMaterialEditingLibrary::CreateMaterialExpression(
+            Material, UMaterialExpressionOneMinus::StaticClass(), -850, 1000));
+
+    UMaterialExpressionDesaturation* FogDesat =
+        Cast<UMaterialExpressionDesaturation>(UMaterialEditingLibrary::CreateMaterialExpression(
+            Material, UMaterialExpressionDesaturation::StaticClass(), -600, 900));
+
+    UMaterialExpressionMultiply* FogTint =
+        Cast<UMaterialExpressionMultiply>(UMaterialEditingLibrary::CreateMaterialExpression(
+            Material, UMaterialExpressionMultiply::StaticClass(), -350, 1000));
+
+    const bool bFogNodesCreated = WorldPos != nullptr && FogWidth != nullptr && FogUV != nullptr &&
+                                  FogSample != nullptr && FogFloor != nullptr &&
+                                  FogBrightness != nullptr && FullBright != nullptr &&
+                                  FogInverse != nullptr && FogDesat != nullptr && FogTint != nullptr;
+
+    if (bFogNodesCreated)
+    {
+        FogSample->ParameterName = TEXT("RA4FogVisibility");
+        FogSample->SamplerType = SAMPLERTYPE_LinearGrayscale;   // data, not sRGB colour
+
+        UMaterialEditingLibrary::ConnectMaterialExpressions(WorldPos, TEXT(""), FogUV, TEXT("A"));
+        UMaterialEditingLibrary::ConnectMaterialExpressions(FogWidth, TEXT(""), FogUV, TEXT("B"));
+        UMaterialEditingLibrary::ConnectMaterialExpressions(FogUV, TEXT(""), FogSample, TEXT("UVs"));
+
+        // brightness = lerp(floor, 1, visibility)
+        UMaterialEditingLibrary::ConnectMaterialExpressions(FogFloor, TEXT(""), FogBrightness, TEXT("A"));
+        UMaterialEditingLibrary::ConnectMaterialExpressions(FullBright, TEXT(""), FogBrightness, TEXT("B"));
+        UMaterialEditingLibrary::ConnectMaterialExpressions(FogSample, TEXT("R"), FogBrightness, TEXT("Alpha"));
+
+        // desaturate(colour, 1 - visibility), then multiply by brightness
+        UMaterialEditingLibrary::ConnectMaterialExpressions(FogSample, TEXT("R"), FogInverse, TEXT(""));
+        UMaterialEditingLibrary::ConnectMaterialExpressions(ColourBlend, TEXT(""), FogDesat, TEXT(""));
+        UMaterialEditingLibrary::ConnectMaterialExpressions(FogInverse, TEXT(""), FogDesat, TEXT("Fraction"));
+        UMaterialEditingLibrary::ConnectMaterialExpressions(FogDesat, TEXT(""), FogTint, TEXT("A"));
+        UMaterialEditingLibrary::ConnectMaterialExpressions(FogBrightness, TEXT(""), FogTint, TEXT("B"));
+
+        UMaterialEditingLibrary::ConnectMaterialProperty(FogTint, TEXT(""), MP_BaseColor);
+        UE_LOG(LogTemp, Display, TEXT("RA4LayeredTerrain: fog-of-war nodes wired into BaseColor"));
+    }
+    else
+    {
+        // Fail loud but still produce a usable material: terrain without fog is a
+        // visible bug, terrain that does not compile is a broken level.
+        UE_LOG(LogTemp, Error,
+               TEXT("RA4LayeredTerrain: could not create the fog nodes -- material generated WITHOUT fog"));
+        UMaterialEditingLibrary::ConnectMaterialProperty(ColourBlend, TEXT(""), MP_BaseColor);
+    }
+
     UMaterialEditingLibrary::ConnectMaterialProperty(NormalBlend, TEXT(""), MP_Normal);
     UMaterialEditingLibrary::ConnectMaterialProperty(RoughBlend, TEXT(""), MP_Roughness);
 

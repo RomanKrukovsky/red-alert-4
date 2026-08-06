@@ -12,6 +12,7 @@
 #include "RA4Content/ContentDatabase.h"
 #include "CampaignDatabase.h"
 #include "MissionRuntime.h"
+#include "RA4Presentation/FogVisibilityTexture.h"
 #include "RA4Presentation/HudSnapshot.h"
 #include "RA4Core/Command.h"
 #include "RA4Core/SimConfig.h"
@@ -19,7 +20,10 @@
 #include "RA4AudioSubsystem.h"
 #include "RA4SimCoords.h"
 #include "RA4UIDataProviderSubsystem.h"
+#include "Engine/Texture2D.h"
 #include "Engine/World.h"
+#include "Materials/MaterialInstanceDynamic.h"
+#include "RenderUtils.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "EngineUtils.h"
@@ -435,6 +439,12 @@ void URA4SimWorldSubsystem::Tick(float DeltaTime)
 
     // Sync presentation once per render frame
     SyncPresentation();
+
+    // Fog rendering (ADR-0028). After SyncPresentation deliberately: actor
+    // visibility gating (V-A) and the fog texture describe the same grid, and
+    // updating the picture after the actors keeps them from disagreeing by one
+    // frame at a fog boundary.
+    UpdateFogVisibilityTexture();
 }
 
 TStatId URA4SimWorldSubsystem::GetStatId() const
@@ -831,6 +841,162 @@ float URA4SimWorldSubsystem::SampleGroundHeight(double WorldX, double WorldY)
 
     const TOptional<float> Height = Landscape->GetHeightAtLocation(FVector(WorldX, WorldY, 0.0));
     return Height.IsSet() ? Height.GetValue() : float(RA4Coords::GroundZ);
+}
+
+
+// --- Fog of war rendering (ADR-0028) ----------------------------------------
+
+void URA4SimWorldSubsystem::UpdateFogVisibilityTexture()
+{
+    if (SimWorld == nullptr)
+    {
+        return;
+    }
+    const RA4::FFogOfWarGrid* Fog = SimWorld->GetFogGrid();
+    if (Fog == nullptr)
+    {
+        // A match configured without fog draws no fog. Not an error -- the same
+        // rule the gameplay gates use (IsEntityVisibleTo returns true with no
+        // grid), kept consistent so the picture never contradicts the rules.
+        return;
+    }
+
+    const int32 Width = Fog->GetWidth();
+    const int32 Height = Fog->GetHeight();
+    if (Width <= 0 || Height <= 0)
+    {
+        return;
+    }
+
+    // (Re)create on first use or if the map size changed under us.
+    if (FogVisibilityTexture == nullptr || FogTextureWidth != Width || FogTextureHeight != Height)
+    {
+        // G8 is one byte per tile: a 64x64 map is 4 KB. Per-tile, not per-world-unit,
+        // is what keeps this negligible -- see ADR-0028 section 2.
+        FogVisibilityTexture = UTexture2D::CreateTransient(Width, Height, PF_G8);
+        if (FogVisibilityTexture == nullptr)
+        {
+            return;
+        }
+        // Bilinear is load-bearing, not cosmetic: hardware interpolation between
+        // texels is what turns a grid of squares into a soft fog boundary, so the
+        // material treats the sample as a continuous ramp (ADR-0028 section 2).
+        FogVisibilityTexture->Filter = TF_Bilinear;
+        // Clamp, so sampling just outside the map does not wrap the far edge's
+        // vision onto the near edge.
+        FogVisibilityTexture->AddressX = TA_Clamp;
+        FogVisibilityTexture->AddressY = TA_Clamp;
+        FogVisibilityTexture->SRGB = false;   // this is data, not colour
+        FogVisibilityTexture->CompressionSettings = TC_Grayscale;
+        FogVisibilityTexture->NeverStream = true;
+        FogVisibilityTexture->UpdateResource();
+
+        FogTextureWidth = Width;
+        FogTextureHeight = Height;
+        FogTexelScratch.clear();
+        // Rebinding is required: the material instance holds the old texture.
+        bFogMaterialBound = false;
+    }
+
+    // Local seat. Hardcoded 0 like every other seat reference in this subsystem;
+    // the debt is recorded on inventory row V-A and must be fixed in one pass,
+    // not one caller at a time.
+    constexpr RA4::PlayerId LocalPlayer = 0;
+
+    const bool bNeedsFullBuild = FogTexelScratch.size() != size_t(Width) * size_t(Height);
+    if (bNeedsFullBuild)
+    {
+        if (!RA4::BuildFogTexelBuffer(*Fog, LocalPlayer, FogTexelScratch))
+        {
+            return;
+        }
+    }
+    else
+    {
+        // Dirty regions are an optimisation over the full rebuild; the two are
+        // pinned to agree by FogOfWar.DirtyRegionUploadAgreesWithFullRebuild.
+        // An empty list after the first frame means nothing changed, so there is
+        // nothing to upload either.
+        const std::vector<FIntRect>& Dirty = Fog->GetDirtyRegions(LocalPlayer);
+        if (Dirty.empty())
+        {
+            PublishFogParametersToTerrain();
+            return;
+        }
+        for (const FIntRect& R : Dirty)
+        {
+            RA4::BlitFogTexelRegion(*Fog, LocalPlayer, R.Min.X, R.Min.Y, R.Max.X, R.Max.Y,
+                                    FogTexelScratch);
+        }
+    }
+
+    // Upload. Mip 0 only; the texture is tiny and NeverStream.
+    if (FTexturePlatformData* PlatformData = FogVisibilityTexture->GetPlatformData())
+    {
+        if (PlatformData->Mips.Num() > 0)
+        {
+            FTexture2DMipMap& Mip = PlatformData->Mips[0];
+            if (void* Dest = Mip.BulkData.Lock(LOCK_READ_WRITE))
+            {
+                FMemory::Memcpy(Dest, FogTexelScratch.data(), FogTexelScratch.size());
+            }
+            Mip.BulkData.Unlock();
+            FogVisibilityTexture->UpdateResource();
+        }
+    }
+
+    PublishFogParametersToTerrain();
+}
+
+void URA4SimWorldSubsystem::PublishFogParametersToTerrain()
+{
+    if (bFogMaterialBound || FogVisibilityTexture == nullptr)
+    {
+        return;
+    }
+
+    // Reuse the same cached landscape SampleGroundHeight found; do not start a
+    // second search with its own staleness rules.
+    SampleGroundHeight(0.0, 0.0);
+    ALandscapeProxy* Landscape = CachedLandscape.Get();
+    if (Landscape == nullptr)
+    {
+        // No landscape in this level (art lab, UI showcase): nothing to tint.
+        // Leave unbound so a level that gains one later still binds.
+        return;
+    }
+
+    if (TerrainFogMaterial == nullptr)
+    {
+        UMaterialInterface* Base = Landscape->GetLandscapeMaterial();
+        if (Base == nullptr)
+        {
+            return;
+        }
+        TerrainFogMaterial = UMaterialInstanceDynamic::Create(Base, this);
+        if (TerrainFogMaterial == nullptr)
+        {
+            return;
+        }
+        Landscape->LandscapeMaterial = TerrainFogMaterial;
+    }
+
+    // Parameter names are the contract with the generated terrain material
+    // (RA4LayeredTerrainSetupCommandlet). If the material lacks them the sets are
+    // silently ignored by Unreal, which is why the commandlet must add the nodes
+    // -- hand-wiring them in the editor would be reverted by its next run.
+    TerrainFogMaterial->SetTextureParameterValue(TEXT("RA4FogVisibility"), FogVisibilityTexture);
+    // World extent in Unreal units, so the material can map a world position to a
+    // fog UV without knowing the tile size. RA4Coords::ToUnreal is 1:1 between sim
+    // units and Unreal units (it passes the fixed value straight through), so tile
+    // count times tile size IS the Unreal extent -- no scale factor, and none
+    // invented: there is no SimToUnrealScale constant to apply.
+    const double MapWidthUU = double(FogTextureWidth) * double(RA4::kTileSizeUnits);
+    const double MapHeightUU = double(FogTextureHeight) * double(RA4::kTileSizeUnits);
+    TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogWorldWidth"), float(MapWidthUU));
+    TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogWorldHeight"), float(MapHeightUU));
+
+    bFogMaterialBound = true;
 }
 
 void URA4SimWorldSubsystem::SyncPresentation()
