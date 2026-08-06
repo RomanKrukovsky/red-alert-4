@@ -170,6 +170,16 @@ private:
     bool bSupplyModelled = false;
 
     ERA4SelectionKind SelectionKind = ERA4SelectionKind::Empty;
+
+    // Previous selection, so OnSelectionChanged fires on change rather than every tick.
+    // The delegate rebuilds the group rows, so broadcasting unconditionally meant clearing
+    // and reconstructing widgets 20 times a second at rest. Initialised to values a real
+    // snapshot cannot hold, so the first tick always counts as a change.
+    ERA4SelectionKind PreviousSelectionKind = ERA4SelectionKind::Empty;
+    int32 PreviousSelectionCount = -1;
+    uint64 PreviousPrimaryEntity = 0;
+    int32 PreviousPrimaryHealth = -1;
+    int32 PreviousSelectionGroupCount = -1;
     ERA4MatchPhase MatchPhase = ERA4MatchPhase::NotStarted;
     int32 MatchElapsedSeconds = 0;
     int32 WinningPlayer = -1;

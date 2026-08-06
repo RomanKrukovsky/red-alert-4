@@ -1013,6 +1013,16 @@ void URA4SidebarWidget::RefreshSelection()
                                                        : ESlateVisibility::Collapsed);
     }
 
+#if !UE_BUILD_SHIPPING
+    // Same reason as the resource and card lines: the group rows are 9pt text in a 232
+    // unit column and cannot be read from a screenshot. Driven by OnSelectionChanged, so
+    // this is one line per selection change, not per frame.
+    UE_LOG(LogTemp, Display,
+           TEXT("RA4 HUD sel: kind=%d count=%d owned=%d hp=%.2f groups=%d rows=%d name='%s'"),
+           int32(Provider->GetSelectionKind()), Count, bOwned ? 1 : 0, HP,
+           Groups.Num(), RowsShown, *VM->GetPrimaryEntityName());
+#endif
+
     if (SelectionDetailsText != nullptr)
     {
         if (!bOwned)

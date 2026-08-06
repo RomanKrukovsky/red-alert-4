@@ -273,10 +273,28 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
         Snapshot.Selection.TotalCount, PrimaryHealthRatio,
         KeyToText(Snapshot.Selection.PrimaryDisplayNameKey).ToString(),
         Snapshot.Selection.bPrimaryIsOwned);
-    
+
     SelectionKind = ToBlueprint(Snapshot.Selection.Kind);
     HUDViewModel->SetSelectionKind(SelectionKind);
-    OnSelectionChanged.Broadcast();
+
+    // What a selection widget actually displays. Compared before broadcasting, because
+    // the delegate is what rebuilds the group rows: a widget that clears and reconstructs
+    // its children twenty times a second while the selection has not moved is pure waste,
+    // and this class promises in its header that an idle match produces no view model
+    // traffic. Health is included because a selected unit taking damage is a real change;
+    // the entity id is what distinguishes one tank from another tank of the same type.
+    const bool bSelectionChanged =
+        PreviousSelectionKind != SelectionKind ||
+        PreviousSelectionCount != Snapshot.Selection.TotalCount ||
+        PreviousPrimaryEntity != Snapshot.Selection.Primary.Packed() ||
+        PreviousPrimaryHealth != Snapshot.Selection.PrimaryHealthCurrent ||
+        PreviousSelectionGroupCount != int32(Snapshot.Selection.Groups.size());
+
+    PreviousSelectionKind = SelectionKind;
+    PreviousSelectionCount = Snapshot.Selection.TotalCount;
+    PreviousPrimaryEntity = Snapshot.Selection.Primary.Packed();
+    PreviousPrimaryHealth = Snapshot.Selection.PrimaryHealthCurrent;
+    PreviousSelectionGroupCount = int32(Snapshot.Selection.Groups.size());
 
     // --- selection groups -----------------------------------------------------
     // FRA4SelectionGroup carries a DisplayName, but the snapshot's group rows only carry
@@ -311,6 +329,15 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
         }
 
         SelectionGroups.Add(Out);
+    }
+
+    // Broadcast only now, and only on a real change. Deliberately after the group list is
+    // filled rather than before: a handler reads GetSelectionGroups(), so firing earlier
+    // handed every widget the previous tick's rows -- one frame stale on every selection,
+    // and on the first selection of a match, empty.
+    if (bSelectionChanged)
+    {
+        OnSelectionChanged.Broadcast();
     }
 
     // --- production queue -----------------------------------------------------
