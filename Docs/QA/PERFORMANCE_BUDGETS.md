@@ -58,15 +58,29 @@ sim tick work amortizes across 2–3 render frames. Budgets below are per SIM TI
 All are gating criteria: implementation PRs for these systems must include a benchmark that measures
 the metric and fails CI above the hard maximum. Numbers marked (p) are provisional until first
 measured on the ProvingGround harness; provisional numbers may be renegotiated ONCE with evidence,
-then freeze.
+then freeze. Section 4.1 was measured 2026-08-06 and its gates are live in CI; sections 4.2/4.3
+remain (p) because their systems (CommandGraph, TerrainStateLayer) have no code yet — measuring
+nothing would be fiction.
 
-### 4.1 Intel / KnowledgeMap (ADR-0021, implemented as PerceivedWorld — ADR-0026)
+### 4.1 Recon / PerceivedWorld (ADR-0021, implemented per ADR-0026)
 
-| Metric | Target | Hard Max | Notes |
-| :--- | :--- | :--- | :--- |
-| Report ingestion + track update, 4 players | <= 0.8 ms/tick (p) | 1.5 ms/tick | At 2,000 entities, hard cap on tracks per ADR-0026. |
-| Confidence decay pass (amortized round-robin) | <= 0.2 ms/tick (p) | 0.5 ms/tick | 1/N of records per tick; N chosen so full sweep <= 2 s. |
-| Extra state-hash cost from intel state | <= 0.3 ms per checksum tick (p) | 0.6 ms | Checksum every 20 ticks (`kChecksumIntervalTicks`). |
+**MEASURED 2026-08-06** (P-7) on the agreed §4.4 baseline: 2,000 entities / 4 players, 200 measured
+ticks after 50 warm-up, four converging 500-unit blocks, recon enabled with the default profile.
+Benchmark: `ProvingGround.ReconBudgetsAt2000Entities4Players` — a permanent CI gate on the hard
+maxima (2x noise tolerance for shared hardware; the medians below are the real numbers).
+Measurement caveat: per-phase timers quantize to whole microseconds, so a sub-µs phase records 0;
+the honest reading of "median 0" is "< 7 µs upper bound across all seven phases".
+Pipeline state at measurement: M1 truthful pipeline + M2 distortion stages live; propagation (M3)
+and fabrication (M4) still empty — REMEASURE at M3/M4 (the benchmark stays green either way, being
+gated on hard maxima).
+
+| Metric | Measured (median) | Target | Hard Max (CI gate) | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| Recon full pipeline per tick, 4 players | **~0 µs (peak 5 µs)** | <= 0.8 ms/tick | 1.5 ms/tick | ~300x headroom at the baseline. |
+| Confidence decay pass (TrackUpdate phase) | **~0 µs** | <= 0.2 ms/tick | 0.5 ms/tick | Amortized budget 512 tracks/tick (I-B4) not yet stressed — track population at baseline peaked at 25 slots. |
+| Extra state-hash cost from recon state | **5 µs per checksum tick** | <= 0.3 ms | 0.6 ms | 120x headroom. Checksum every 20 ticks. |
+| Memory: PerceivedWorld per player | **~18 KB at baseline occupancy** | <= 4 MB | 8 MB | Slot storage grows lazily toward the 4,096 cap (~0.4 MB full); budget retained for full occupancy + cell layers. |
+| 5,000-entity stress (informational, never a gate) | **~0 µs/tick avg over 100 ticks** | — | — | `ProvingGround.ReconBudgetStressInformational5000`, per §4.4. |
 | Memory: PerceivedWorld, per player | <= 4 MB | 8 MB | Track table + cell layer; counted in the 4.5 GB RAM budget. |
 | Save-size growth with intel enabled | <= 0.5 MB | 1.0 MB | On top of the 2.0 MB save budget; v3 format. |
 | Kill switch (intel disabled) overhead | 0 measurable | 0 | Bit-equal hashes with pre-intel baseline (already tested: Intel.* kill-switch test). |

@@ -63,7 +63,7 @@ private:
 };
 
 // Parses a JSON string. Returns true on success.
-// Exported: consumed across module boundaries (RA4Intel loads its settings JSON),
+// Exported: consumed across module boundaries (RA4Recon loads its settings JSON),
 // and a non-exported symbol links fine in the static CMake harness but fails at
 // dylib link time in the modular editor build.
 RA4CONTENT_API bool Parse(const std::string& Text, Value& OutResult, std::string& OutError);

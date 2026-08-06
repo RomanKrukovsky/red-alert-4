@@ -41,7 +41,12 @@ void URA4BuildingPlacementController::StartPlacement(int32 BuildingTypeId, const
         
         if (GhostActor != nullptr)
         {
+#if WITH_EDITOR
+            // Editor-only convenience: names the ghost in the World Outliner while
+            // placement is being debugged. AActor::SetActorLabel does not exist in a
+            // packaged build, so guarding it is what lets the game target link.
             GhostActor->SetActorLabel(FString::Printf(TEXT("GhostPlacement_%s"), *BuildingName));
+#endif
             GhostActor->SetTeamColor(FLinearColor(0.2f, 0.9f, 0.2f, 0.6f));
         }
     }

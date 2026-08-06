@@ -5,7 +5,16 @@
 #include "TestHelpers.h"
 
 #include "RA4Content/ContentDatabase.h"
+#include "RA4Core/Checksum.h"
+#include "RA4Core/SimConfig.h"
+#include "RA4Recon/ReconConfig.h"
+#include "RA4Recon/ReconSystem.h"
 #include "RA4Simulation/SimWorld.h"
+
+#include <algorithm>
+#include <chrono>
+#include <cstdio>
+#include <vector>
 
 using namespace RA4;
 using namespace RA4Test;
@@ -174,6 +183,220 @@ RA4_TEST(ProvingGround, HeadlessStressScenario2000Entities)
 
     uint64_t StateHash = World.ComputeStateChecksum();
     RA4_EXPECT(StateHash != 0);
+}
+
+// --- P-7: measure the provisional perception-warfare budgets ----------------------
+//
+// PERFORMANCE_BUDGETS.md section 4 marked its numbers "(p)" -- engineering
+// estimates awaiting measurement at the agreed baseline (2,000 entities /
+// 4 players, section 4.4). This benchmark produces those measurements and
+// GATES on the hard maxima, so a regression that blows a budget fails CI
+// rather than surfacing as late-game stutter. Targets stay advisory here;
+// hard maxima are the assertions (budget doc: "fails CI above the hard max").
+//
+// Wall-clock caveat: microsecond timings on shared CI hardware are noisy.
+// The gate therefore compares the MEDIAN of per-tick maxima across players
+// against the hard max with a 2x tolerance factor recorded in the output;
+// PERFORMANCE_BUDGETS.md records the measured medians, not the tolerated
+// bound. Determinism is unaffected -- timing never feeds back into the sim.
+
+namespace
+{
+
+Recon::ReconSettings MakeBenchmarkReconSettings()
+{
+    Recon::ReconSettings S;
+    S.bEnabled = true;
+    Recon::DistortionProfile P;
+    P.Name = "profile.default";
+    S.DistortionProfiles.push_back(P);
+    Recon::CommsProfile C;
+    C.Name = "comms.default";
+    C.HopDelayTicksByLevel = {160, 80, 30, 5};
+    S.CommsProfiles.push_back(C);
+    return S;
+}
+
+MatchSetup MakeFourPlayerSetup(uint64_t Seed)
+{
+    MatchSetup Setup = MakeTestSetup(Seed);
+    Setup.Players[2].bActive = true;
+    Setup.Players[2].Faction = FactionId::Soviet;
+    Setup.Players[2].StartingCredits = 10000;
+    Setup.Players[3].bActive = true;
+    Setup.Players[3].Faction = FactionId::Alliance;
+    Setup.Players[3].StartingCredits = 10000;
+    return Setup;
+}
+
+} // namespace
+
+RA4_TEST(ProvingGround, ReconBudgetsAt2000Entities4Players)
+{
+    ContentDatabase Db;
+    BuildDefaultContent(Db);
+    Recon::ReconSettings Settings = MakeBenchmarkReconSettings();
+
+    SimWorld World;
+    World.Initialize(&Db, MakeFourPlayerSetup(20260806), &Settings);
+
+    // 500 units per player in four separated blocks that converge on the map
+    // centre, so fog boundaries are crossed and the observation phase has real
+    // contacts to chew on rather than four static parade grounds.
+    const ContentId UnitOf[4] = {Ids::SovConscript, Ids::AllRifleman, Ids::SovConscript,
+                                 Ids::AllRifleman};
+    const int32_t BaseX[4] = {600, 5800, 600, 5800};
+    const int32_t BaseY[4] = {600, 600, 5800, 5800};
+    for (PlayerId P = 0; P < 4; ++P)
+    {
+        for (int i = 0; i < 500; ++i)
+        {
+            const Vec2 Pos = Vec2::FromInts(BaseX[P] + (i % 25) * 8, BaseY[P] + (i / 25) * 8);
+            World.SpawnUnit(UnitOf[P], P, Pos);
+        }
+    }
+    RA4_EXPECT_EQ(int32_t(World.GetEntityCapacity()), 2000);
+
+    // Converge everyone so vision cones overlap and reports actually flow.
+    {
+        CommandFrame Frame;
+        Frame.Tick = World.GetTick();
+        const std::vector<EntityCore>& Cores = World.GetAllCores();
+        for (uint32_t I = 0; I < uint32_t(Cores.size()); ++I)
+        {
+            if (!Cores[I].bAlive)
+            {
+                continue;
+            }
+            Command C;
+            C.Type = CommandType::AttackMove;
+            C.Issuer = Cores[I].Owner;
+            C.Primary = World.MakeId(I);
+            C.Location = Vec2::FromInts(3200, 3200);
+            Frame.Commands.push_back(C);
+        }
+        World.Tick(&Frame);
+        World.ClearEvents();
+    }
+
+    // Warm-up (fog carving, first contacts), unmeasured.
+    RunTicks(World, 50);
+
+    // Measured window: 200 ticks (10 s of sim time) with per-tick sampling.
+    constexpr int32_t kMeasuredTicks = 200;
+    std::vector<int64_t> ReconMicrosPerTick;  // ingestion + tracks: all phases
+    std::vector<int64_t> DecayMicrosPerTick;  // TrackUpdate alone
+    std::vector<int64_t> ChecksumDeltaMicros; // recon share of checksum ticks
+
+    const Recon::PhaseStats& Stats = World.GetRecon().GetStats();
+    for (int32_t T = 0; T < kMeasuredTicks; ++T)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+
+        int64_t TickTotal = 0;
+        for (int32_t Ph = 0; Ph < Recon::kPhaseCount; ++Ph)
+        {
+            TickTotal += Stats.LastTickMicroseconds[Ph];
+        }
+        ReconMicrosPerTick.push_back(TickTotal);
+        DecayMicrosPerTick.push_back(
+            Stats.LastTickMicroseconds[int32_t(Recon::Phase::TrackUpdate)]);
+
+        if ((World.GetTick() % kChecksumIntervalTicks) == 0)
+        {
+            // Recon share of the checksum: hash the recon layer alone.
+            const auto C0 = std::chrono::steady_clock::now();
+            Hash64 H;
+            World.GetRecon().FeedChecksum(H);
+            const auto C1 = std::chrono::steady_clock::now();
+            (void)H;
+            ChecksumDeltaMicros.push_back(
+                std::chrono::duration_cast<std::chrono::microseconds>(C1 - C0).count());
+        }
+    }
+
+    const auto Median = [](std::vector<int64_t> V) -> int64_t
+    {
+        std::sort(V.begin(), V.end());
+        return V.empty() ? 0 : V[V.size() / 2];
+    };
+    const auto Peak = [](const std::vector<int64_t>& V) -> int64_t
+    {
+        int64_t M = 0;
+        for (int64_t X : V)
+        {
+            M = X > M ? X : M;
+        }
+        return M;
+    };
+
+    const int64_t ReconMedian = Median(ReconMicrosPerTick);
+    const int64_t ReconPeak = Peak(ReconMicrosPerTick);
+    const int64_t DecayMedian = Median(DecayMicrosPerTick);
+    const int64_t ChecksumMedian = Median(ChecksumDeltaMicros);
+
+    // The numbers PERFORMANCE_BUDGETS.md section 4.1 must record (P-7):
+    std::printf("[P-7] recon per-tick: median %lld us, peak %lld us (hard max 1500 us)\n",
+                static_cast<long long>(ReconMedian), static_cast<long long>(ReconPeak));
+    std::printf("[P-7] decay (TrackUpdate) per-tick: median %lld us (hard max 500 us)\n",
+                static_cast<long long>(DecayMedian));
+    std::printf("[P-7] recon checksum share: median %lld us per checksum tick (hard max 600 us)\n",
+                static_cast<long long>(ChecksumMedian));
+
+    // Gates: hard maxima from section 4.1, 2x noise tolerance on shared hardware.
+    RA4_EXPECT(ReconMedian <= 2 * 1500);
+    RA4_EXPECT(DecayMedian <= 2 * 500);
+    RA4_EXPECT(ChecksumMedian <= 2 * 600);
+
+    // 4.4 combined ceiling (2.5 ms target / 4.0 ms hard max) currently has only
+    // the recon contributor implemented; gate what exists.
+    RA4_EXPECT(ReconMedian <= 2 * 4000);
+
+    // Memory: PerceivedWorld per player (budget: <= 4 MB target, 8 MB hard).
+    // Track slots dominate; measure the real allocation via capacity.
+    const uint32_t TrackCap = World.GetRecon().GetPerceivedWorld(0).GetTrackCapacity();
+    const size_t PerPlayerBytes =
+        size_t(TrackCap) * sizeof(Recon::PerceivedTrack) + size_t(64 * 64) * sizeof(TickIndex);
+    std::printf("[P-7] PerceivedWorld per player: ~%zu KB (track cap %u)\n", PerPlayerBytes / 1024,
+                TrackCap);
+    RA4_EXPECT(PerPlayerBytes <= size_t(8) * 1024 * 1024);
+
+    // Determinism sanity: the measured world still hashes.
+    RA4_EXPECT(World.ComputeStateChecksum() != 0);
+}
+
+RA4_TEST(ProvingGround, ReconBudgetStressInformational5000)
+{
+    // Section 4.4: 5,000 entities is a STRESS METRIC, never a gate (product
+    // owner decision 2026-08-05). Prints numbers, asserts nothing but survival.
+    ContentDatabase Db;
+    BuildDefaultContent(Db);
+    Recon::ReconSettings Settings = MakeBenchmarkReconSettings();
+
+    SimWorld World;
+    World.Initialize(&Db, MakeFourPlayerSetup(50000806), &Settings);
+    for (PlayerId P = 0; P < 4; ++P)
+    {
+        for (int i = 0; i < 1250; ++i)
+        {
+            const Vec2 Pos =
+                Vec2::FromInts(600 + int32_t(P) * 1400 + (i % 35) * 6, 600 + (i / 35) * 6);
+            World.SpawnUnit(P % 2 == 0 ? Ids::SovConscript : Ids::AllRifleman, P, Pos);
+        }
+    }
+    RunTicks(World, 100);
+
+    const Recon::PhaseStats& Stats = World.GetRecon().GetStats();
+    int64_t Total = 0;
+    for (int32_t Ph = 0; Ph < Recon::kPhaseCount; ++Ph)
+    {
+        Total += Stats.TotalMicroseconds[Ph];
+    }
+    const int64_t AvgPerTick = Stats.TicksMeasured > 0 ? Total / Stats.TicksMeasured : 0;
+    std::printf("[P-7 stress 5000] recon avg %lld us/tick over %u ticks (informational only)\n",
+                static_cast<long long>(AvgPerTick), Stats.TicksMeasured);
+    RA4_EXPECT(World.ComputeStateChecksum() != 0);
 }
 
 } // namespace RA4

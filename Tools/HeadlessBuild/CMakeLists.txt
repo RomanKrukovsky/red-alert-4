@@ -84,13 +84,15 @@ add_library(RA4Combat STATIC
 target_include_directories(RA4Combat PUBLIC ${RA4_SOURCE_ROOT}/RA4Combat/Public)
 target_link_libraries(RA4Combat PUBLIC RA4Content)
 
-add_library(RA4Intel STATIC
-    ${RA4_SOURCE_ROOT}/RA4Intel/Private/IntelConfig.cpp
-    ${RA4_SOURCE_ROOT}/RA4Intel/Private/IntelSystem.cpp
-    ${RA4_SOURCE_ROOT}/RA4Intel/Private/PerceivedWorld.cpp
+add_library(RA4Recon STATIC
+    ${RA4_SOURCE_ROOT}/RA4Recon/Private/ReconConfig.cpp
+    ${RA4_SOURCE_ROOT}/RA4Recon/Private/ReconSystem.cpp
+    ${RA4_SOURCE_ROOT}/RA4Recon/Private/PerceivedWorld.cpp
+    ${RA4_SOURCE_ROOT}/RA4Recon/Private/DistortionPipeline.cpp
+    ${RA4_SOURCE_ROOT}/RA4Recon/Private/MoraleModel.cpp
 )
-target_include_directories(RA4Intel PUBLIC ${RA4_SOURCE_ROOT}/RA4Intel/Public)
-target_link_libraries(RA4Intel PUBLIC RA4Content RA4FogOfWar)
+target_include_directories(RA4Recon PUBLIC ${RA4_SOURCE_ROOT}/RA4Recon/Public)
+target_link_libraries(RA4Recon PUBLIC RA4Content RA4FogOfWar)
 
 add_library(RA4Simulation STATIC
     ${RA4_SOURCE_ROOT}/RA4Simulation/Private/SimWorld.cpp
@@ -98,7 +100,7 @@ add_library(RA4Simulation STATIC
     ${RA4_SOURCE_ROOT}/RA4Simulation/Private/LockstepSession.cpp
 )
 target_include_directories(RA4Simulation PUBLIC ${RA4_SOURCE_ROOT}/RA4Simulation/Public)
-target_link_libraries(RA4Simulation PUBLIC RA4Content RA4Navigation RA4FogOfWar RA4Combat RA4Intel)
+target_link_libraries(RA4Simulation PUBLIC RA4Content RA4Navigation RA4FogOfWar RA4Combat RA4Recon)
 
 add_library(RA4Input STATIC
     ${RA4_SOURCE_ROOT}/RA4Input/Private/CameraController.cpp
@@ -176,7 +178,7 @@ add_executable(RA4Tests
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestProvingGround.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestDirectControl.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestNetwork.cpp
-    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestIntel.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestRecon.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestUI.cpp
 )
 

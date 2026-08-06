@@ -9,17 +9,21 @@
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/ProgressBar.h"
 #include "Components/SizeBox.h"
+#include "Components/Spacer.h"
 #include "Components/TextBlock.h"
 #include "Components/UniformGridPanel.h"
 #include "Components/UniformGridSlot.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
+#include "Engine/GameViewportClient.h"
+#include "Engine/World.h"
 #include "Input/Reply.h"
 #include "InputCoreTypes.h"
 #include "Rendering/DrawElements.h"
 #include "Styling/CoreStyle.h"
 #include "Widgets/SLeafWidget.h"
 
+#include "RA4HUDViewModel.h"
 #include "RA4UIDataProviderSubsystem.h"
 
 namespace
@@ -160,10 +164,26 @@ private:
 namespace
 {
 // The sidebar is a fixed-width column, as in the originals: it does not reflow with
-// resolution, it stays the same slice of screen so the cards keep their positions.
+// content, it stays the same slice of screen so the cards keep their positions. It is
+// however scaled by viewport height -- see ComputeSidebarScale -- so the column is not
+// a third of a small window and a sliver of a 4K one.
 constexpr float kSidebarWidth = URA4SidebarWidget::SidebarWidth;
 constexpr float kMinimapHeight = kRadarDesiredSize;
 constexpr int32 kCardColumns = 2;
+
+// The height the reference layout was designed against, and the band the scale may move
+// within. Past that the column stops growing: a legible sidebar is the goal, not a
+// proportionally enormous one.
+constexpr float kReferenceViewportHeight = 1080.0f;
+constexpr float kMinSidebarScale = 0.82f;
+constexpr float kMaxSidebarScale = 1.45f;
+
+// How fast a card's hover swell eases, in progress per second. Fast enough to feel
+// attached to the pointer, slow enough to read as motion rather than a state flip.
+constexpr float kCardHoverSpeed = 9.0f;
+// How much a hovered card grows. Small on purpose: the grid must not shift under the
+// pointer, or the click lands on a neighbour.
+constexpr float kCardHoverScale = 0.045f;
 
 const FLinearColor kPanel(0.055f, 0.065f, 0.080f, 0.94f);
 const FLinearColor kPanelDeep(0.030f, 0.036f, 0.046f, 0.96f);
@@ -173,9 +193,39 @@ const FLinearColor kCardOk(0.13f, 0.17f, 0.14f, 1.0f);
 const FLinearColor kCardBlocked(0.13f, 0.10f, 0.10f, 1.0f);
 const FLinearColor kTextNormal(0.86f, 0.89f, 0.93f);
 const FLinearColor kTextDim(0.50f, 0.55f, 0.61f);
+const FLinearColor kTextFaint(0.34f, 0.38f, 0.44f);
 const FLinearColor kCredits(0.94f, 0.80f, 0.32f);
 const FLinearColor kPowerOk(0.42f, 0.82f, 0.48f);
 const FLinearColor kPowerLow(0.94f, 0.36f, 0.28f);
+const FLinearColor kPowerTight(0.94f, 0.74f, 0.30f);
+const FLinearColor kBarTrack(0.09f, 0.11f, 0.13f, 1.0f);
+const FLinearColor kQueueWaiting(0.30f, 0.44f, 0.58f);
+
+// Keys that commit build cards, in grid order. Deliberately not the digits: those are
+// control groups, and the ordinary RTS reflex of pressing a number to recall a squad has
+// to keep working. Every entry here is bound for real by ARA4PlayerController, which
+// asserts the two tables are the same length, so a badge cannot promise a dead key.
+//
+// H is deliberately absent: it is HoldPosition in RA4::Input::KeyBindingTable, and
+// while this table also claimed it a single press ran the hold order and committed a
+// build card. L takes the tenth slot instead.
+const TCHAR* const kCardHotkeys[] = {
+    TEXT("Q"), TEXT("E"), TEXT("R"), TEXT("T"),
+    TEXT("Y"), TEXT("U"), TEXT("I"), TEXT("O"),
+    TEXT("P"), TEXT("L"), TEXT("J"), TEXT("K"),
+};
+
+// Power is plotted as consumption against production rather than over a fixed range:
+// what the player needs to see is how close the draw is to the ceiling.
+float PowerFillRatio(int32 Produced, int32 Consumed)
+{
+    if (Produced <= 0)
+    {
+        // No plants at all: full bar if anything is drawing, empty if nothing is.
+        return Consumed > 0 ? 1.0f : 0.0f;
+    }
+    return FMath::Clamp(float(Consumed) / float(Produced), 0.0f, 1.0f);
+}
 
 // Mirrors ProductionCategory. Naval and Ability are omitted until the content has
 // entries for them -- an empty tab is worse than no tab.
@@ -201,6 +251,63 @@ UTextBlock* MakeLabel(UWidgetTree* Tree, FName Name, const FLinearColor& Colour,
     Text->SetFont(Font);
     Text->SetColorAndOpacity(FSlateColor(Colour));
     return Text;
+}
+
+// Thin bars for power and production. Centralised so every one of them gets the same
+// dark track: a progress bar on the engine default washes out against the panel.
+UProgressBar* MakeThinBar(UWidgetTree* Tree, FName Name, const FLinearColor& Fill, float Height)
+{
+    UProgressBar* Bar = Tree->ConstructWidget<UProgressBar>(UProgressBar::StaticClass(), Name);
+    FProgressBarStyle Style = Bar->GetWidgetStyle();
+    Style.BackgroundImage.TintColor = FSlateColor(kBarTrack);
+    Style.BackgroundImage.ImageSize = FVector2D(1.0f, Height);
+    Style.FillImage.ImageSize = FVector2D(1.0f, Height);
+    Bar->SetWidgetStyle(Style);
+    Bar->SetFillColorAndOpacity(Fill);
+    Bar->SetPercent(0.0f);
+    return Bar;
+}
+
+// A spacer used to keep vertical rhythm where a bar is deliberately absent.
+USpacer* MakeGap(UWidgetTree* Tree, FName Name, float Height)
+{
+    USpacer* Gap = Tree->ConstructWidget<USpacer>(USpacer::StaticClass(), Name);
+    Gap->SetSize(FVector2D(1.0f, Height));
+    return Gap;
+}
+
+FText SelectionKindCaption(ERA4SelectionKind Kind)
+{
+    switch (Kind)
+    {
+    case ERA4SelectionKind::SingleUnit:
+        return NSLOCTEXT("RA4", "SelKind_Unit", "UNIT");
+    case ERA4SelectionKind::SingleBuilding:
+        return NSLOCTEXT("RA4", "SelKind_Building", "STRUCTURE");
+    case ERA4SelectionKind::MultipleUnits:
+        return NSLOCTEXT("RA4", "SelKind_Group", "GROUP");
+    case ERA4SelectionKind::Mixed:
+        return NSLOCTEXT("RA4", "SelKind_Mixed", "MIXED");
+    default:
+        return NSLOCTEXT("RA4", "SelKind_Empty", "OBJECT INFO");
+    }
+}
+
+// mm:ss for anything a minute or longer, bare seconds below that -- which is where
+// nearly every build time lands.
+FText FormatBuildRemaining(float Seconds)
+{
+    const int32 Total = FMath::Max(0, FMath::CeilToInt(Seconds));
+    if (Total < 60)
+    {
+        return FText::Format(NSLOCTEXT("RA4", "Queue_SecondsFormat", "{0}s"), FText::AsNumber(Total));
+    }
+
+    FNumberFormattingOptions TwoDigits;
+    TwoDigits.MinimumIntegralDigits = 2;
+    return FText::Format(NSLOCTEXT("RA4", "Queue_ClockFormat", "{0}:{1}"),
+                         FText::AsNumber(Total / 60),
+                         FText::AsNumber(Total % 60, &TwoDigits));
 }
 
 void StyleButton(UButton* Button, const FLinearColor& Base)
@@ -302,6 +409,63 @@ void URA4IndexedButton::HandleClicked()
 }
 
 // ---------------------------------------------------------------------------
+// URA4SidebarWidget -- layout metrics
+// ---------------------------------------------------------------------------
+
+float URA4SidebarWidget::ComputeSidebarScale(const UObject* WorldContextObject)
+{
+    // A viewport reports 0x0 for the first frames of a standalone launch. Returning the
+    // reference scale keeps the column at its designed width until a real size arrives,
+    // rather than collapsing it to nothing on frame one.
+    if (WorldContextObject == nullptr)
+    {
+        return 1.0f;
+    }
+
+    const UWorld* World = WorldContextObject->GetWorld();
+    if (World == nullptr || World->GetGameViewport() == nullptr)
+    {
+        return 1.0f;
+    }
+
+    FVector2D ViewportSize = FVector2D::ZeroVector;
+    World->GetGameViewport()->GetViewportSize(ViewportSize);
+    if (ViewportSize.Y <= KINDA_SMALL_NUMBER)
+    {
+        return 1.0f;
+    }
+
+    // Divide out the engine's DPI curve (Config/DefaultUserInterface.ini) first. Slate
+    // has already multiplied every widget by it, so scaling by raw pixel height on top
+    // would compound the two and overshoot badly on a high-DPI display.
+    const float DPIScale = World->GetGameViewport()->GetDPIScale();
+    const float LogicalHeight = DPIScale > KINDA_SMALL_NUMBER
+                                    ? float(ViewportSize.Y) / DPIScale
+                                    : float(ViewportSize.Y);
+
+    return FMath::Clamp(LogicalHeight / kReferenceViewportHeight, kMinSidebarScale, kMaxSidebarScale);
+}
+
+float URA4SidebarWidget::ComputeSidebarWidth(const UObject* WorldContextObject)
+{
+    return kSidebarWidth * ComputeSidebarScale(WorldContextObject);
+}
+
+int32 URA4SidebarWidget::GetCardHotkeyCount()
+{
+    return int32(UE_ARRAY_COUNT(kCardHotkeys));
+}
+
+const TCHAR* URA4SidebarWidget::GetCardHotkeyLabel(int32 CardIndex)
+{
+    if (CardIndex < 0 || CardIndex >= GetCardHotkeyCount())
+    {
+        return nullptr;
+    }
+    return kCardHotkeys[CardIndex];
+}
+
+// ---------------------------------------------------------------------------
 // URA4SidebarWidget
 // ---------------------------------------------------------------------------
 
@@ -343,6 +507,10 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
     }
 
     // --- credits and power --------------------------------------------------
+    // Denser than a stack of plain lines: the credit figure gets a label so it is not
+    // read as a unit count, power gets both the raw pair and the headroom that actually
+    // decides whether the next structure runs, and the bar makes that margin visible
+    // without having to subtract two numbers under pressure.
     {
         UBorder* Frame = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("ResourceFrame"));
         Frame->SetBrushColor(kPanelDeep);
@@ -350,12 +518,80 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
 
         UVerticalBox* Stack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("ResStack"));
 
-        CreditsText = MakeLabel(WidgetTree, TEXT("SidebarCredits"), kCredits, 18, true);
-        CreditsText->SetText(FText::AsNumber(0));
-        Stack->AddChildToVerticalBox(CreditsText);
+        // Label left, figure pushed to the right edge so the digits stay in one column
+        // as the number changes width.
+        {
+            UHorizontalBox* Row = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(),
+                                                                              TEXT("CreditsRow"));
 
-        PowerText = MakeLabel(WidgetTree, TEXT("SidebarPower"), kPowerOk, 11, false);
-        Stack->AddChildToVerticalBox(PowerText);
+            UTextBlock* Mark = MakeLabel(WidgetTree, TEXT("CreditsMark"), kTextFaint, 9, true);
+            Mark->SetText(NSLOCTEXT("RA4", "Sidebar_CreditsLabel", "CREDITS"));
+            if (UHorizontalBoxSlot* Slot = Row->AddChildToHorizontalBox(Mark))
+            {
+                Slot->SetVerticalAlignment(VAlign_Center);
+            }
+
+            if (UHorizontalBoxSlot* Slot = Row->AddChildToHorizontalBox(
+                    MakeGap(WidgetTree, TEXT("CreditsGap"), 1.0f)))
+            {
+                Slot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            }
+
+            CreditsText = MakeLabel(WidgetTree, TEXT("SidebarCredits"), kCredits, 18, true);
+            CreditsText->SetText(FText::AsNumber(0));
+            if (UHorizontalBoxSlot* Slot = Row->AddChildToHorizontalBox(CreditsText))
+            {
+                Slot->SetVerticalAlignment(VAlign_Center);
+            }
+
+            Stack->AddChildToVerticalBox(Row);
+        }
+
+        // Power: produced / consumed on the left, surplus or deficit on the right.
+        {
+            UHorizontalBox* Row = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(),
+                                                                              TEXT("PowerRow"));
+
+            PowerText = MakeLabel(WidgetTree, TEXT("SidebarPower"), kPowerOk, 11, false);
+            if (UHorizontalBoxSlot* Slot = Row->AddChildToHorizontalBox(PowerText))
+            {
+                Slot->SetVerticalAlignment(VAlign_Center);
+            }
+
+            if (UHorizontalBoxSlot* Slot = Row->AddChildToHorizontalBox(
+                    MakeGap(WidgetTree, TEXT("PowerGap"), 1.0f)))
+            {
+                Slot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            }
+
+            PowerSurplusText = MakeLabel(WidgetTree, TEXT("SidebarPowerSurplus"), kTextDim, 9, true);
+            if (UHorizontalBoxSlot* Slot = Row->AddChildToHorizontalBox(PowerSurplusText))
+            {
+                Slot->SetVerticalAlignment(VAlign_Center);
+            }
+
+            if (UVerticalBoxSlot* Slot = Stack->AddChildToVerticalBox(Row))
+            {
+                Slot->SetPadding(FMargin(0.0f, 2.0f, 0.0f, 0.0f));
+            }
+        }
+
+        PowerRatioBar = MakeThinBar(WidgetTree, TEXT("PowerRatioBar"), kPowerOk, 4.0f);
+        if (UVerticalBoxSlot* Slot = Stack->AddChildToVerticalBox(PowerRatioBar))
+        {
+            Slot->SetPadding(FMargin(0.0f, 3.0f, 0.0f, 0.0f));
+        }
+
+        // Constructed but hidden while the simulation has no population cap. HudSnapshot
+        // is explicit that a fabricated limit must not be shown, so RefreshResources
+        // keeps this collapsed rather than inventing a denominator.
+        SupplyText = MakeLabel(WidgetTree, TEXT("SidebarSupply"), kTextDim, 9, false);
+        SupplyText->SetText(FText::GetEmpty());
+        SupplyText->SetVisibility(ESlateVisibility::Collapsed);
+        if (UVerticalBoxSlot* Slot = Stack->AddChildToVerticalBox(SupplyText))
+        {
+            Slot->SetPadding(FMargin(0.0f, 3.0f, 0.0f, 0.0f));
+        }
 
         Frame->AddChild(Stack);
         AddRow(Frame, 6.0f);
@@ -369,20 +605,45 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
 
         UVerticalBox* Stack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("SelStack"));
 
-        UTextBlock* Header = MakeLabel(WidgetTree, TEXT("SelHeader"), kTextDim, 9, true);
-        Header->SetText(NSLOCTEXT("RA4", "Sidebar_SelHeader", "OBJECT INFO"));
-        Stack->AddChildToVerticalBox(Header);
+        // Header: what kind of thing is selected, and how many. The count badge appears
+        // only for a real group, so a single unit is never labelled "x1".
+        {
+            UHorizontalBox* Row = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(),
+                                                                              TEXT("SelHeaderRow"));
+
+            SelectionKindText = MakeLabel(WidgetTree, TEXT("SelHeader"), kTextDim, 9, true);
+            SelectionKindText->SetText(SelectionKindCaption(ERA4SelectionKind::Empty));
+            if (UHorizontalBoxSlot* Slot = Row->AddChildToHorizontalBox(SelectionKindText))
+            {
+                Slot->SetVerticalAlignment(VAlign_Center);
+            }
+
+            if (UHorizontalBoxSlot* Slot = Row->AddChildToHorizontalBox(
+                    MakeGap(WidgetTree, TEXT("SelHeaderGap"), 1.0f)))
+            {
+                Slot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            }
+
+            SelectionCountText = MakeLabel(WidgetTree, TEXT("SelCount"), kCredits, 10, true);
+            SelectionCountText->SetText(FText::GetEmpty());
+            SelectionCountText->SetVisibility(ESlateVisibility::Collapsed);
+            if (UHorizontalBoxSlot* Slot = Row->AddChildToHorizontalBox(SelectionCountText))
+            {
+                Slot->SetVerticalAlignment(VAlign_Center);
+            }
+
+            Stack->AddChildToVerticalBox(Row);
+        }
 
         SelectionNameText = MakeLabel(WidgetTree, TEXT("SelName"), kTextNormal, 12, true);
         SelectionNameText->SetText(NSLOCTEXT("RA4", "Sidebar_NoSelection", "NO SELECTION"));
+        SelectionNameText->SetAutoWrapText(true);
         Stack->AddChildToVerticalBox(SelectionNameText);
 
-        SelectionHealthBar = WidgetTree->ConstructWidget<UProgressBar>(UProgressBar::StaticClass(), TEXT("SelHealthBar"));
-        SelectionHealthBar->SetPercent(1.0f);
-        SelectionHealthBar->SetFillColorAndOpacity(kPowerOk);
+        SelectionHealthBar = MakeThinBar(WidgetTree, TEXT("SelHealthBar"), kPowerOk, 5.0f);
         if (UVerticalBoxSlot* Slot = Stack->AddChildToVerticalBox(SelectionHealthBar))
         {
-            Slot->SetPadding(FMargin(0.0f, 2.0f, 0.0f, 2.0f));
+            Slot->SetPadding(FMargin(0.0f, 3.0f, 0.0f, 2.0f));
         }
 
         SelectionHealthText = MakeLabel(WidgetTree, TEXT("SelHealthText"), kTextDim, 10, false);
@@ -391,7 +652,18 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
 
         SelectionDetailsText = MakeLabel(WidgetTree, TEXT("SelDetails"), kTextDim, 9, false);
         SelectionDetailsText->SetText(NSLOCTEXT("RA4", "Sidebar_SelectionHint", "Select a unit or structure"));
+        SelectionDetailsText->SetAutoWrapText(true);
         Stack->AddChildToVerticalBox(SelectionDetailsText);
+
+        // One row per unit type when several are selected, so a mixed group is readable
+        // without clicking through it.
+        SelectionGroupBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(),
+                                                                      TEXT("SelGroupBox"));
+        SelectionGroupBox->SetVisibility(ESlateVisibility::Collapsed);
+        if (UVerticalBoxSlot* Slot = Stack->AddChildToVerticalBox(SelectionGroupBox))
+        {
+            Slot->SetPadding(FMargin(0.0f, 4.0f, 0.0f, 0.0f));
+        }
 
         Frame->AddChild(Stack);
         AddRow(Frame, 6.0f);
@@ -446,8 +718,20 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
         Frame->SetBrushColor(kPanelDeep);
         Frame->SetPadding(FMargin(6.0f));
 
+        UVerticalBox* Stack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(),
+                                                                        TEXT("QueueStack"));
+
+        QueueHeader = MakeLabel(WidgetTree, TEXT("QueueHeader"), kTextFaint, 9, true);
+        QueueHeader->SetText(NSLOCTEXT("RA4", "Sidebar_QueueHeader", "PRODUCTION"));
+        if (UVerticalBoxSlot* Slot = Stack->AddChildToVerticalBox(QueueHeader))
+        {
+            Slot->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 3.0f));
+        }
+
         QueueBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("QueueBox"));
-        Frame->AddChild(QueueBox);
+        Stack->AddChildToVerticalBox(QueueBox);
+
+        Frame->AddChild(Stack);
         AddRow(Frame, 0.0f);
     }
 
@@ -456,8 +740,9 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
     Background->SetPadding(FMargin(8.0f));
     Background->AddChild(Column);
 
-    USizeBox* WidthBox = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("SidebarWidth"));
-    WidthBox->SetWidthOverride(kSidebarWidth);
+    WidthBox = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("SidebarWidth"));
+    AppliedSidebarWidth = ComputeSidebarWidth(this);
+    WidthBox->SetWidthOverride(AppliedSidebarWidth);
     WidthBox->AddChild(Background);
 
     WidgetTree->RootWidget = WidthBox;
@@ -498,7 +783,58 @@ void URA4SidebarWidget::NativeDestruct()
     Super::NativeDestruct();
 }
 
-#include "RA4HUDViewModel.h"
+void URA4SidebarWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+    Super::NativeTick(MyGeometry, InDeltaTime);
+
+    // Follow a resized window. Cheap enough to check every frame -- one float compare --
+    // and the alternative is a viewport-resize delegate whose lifetime has to be managed
+    // for a value that is read here anyway.
+    if (WidthBox != nullptr)
+    {
+        const float DesiredWidth = ComputeSidebarWidth(this);
+        if (!FMath::IsNearlyEqual(DesiredWidth, AppliedSidebarWidth, 0.5f))
+        {
+            AppliedSidebarWidth = DesiredWidth;
+            WidthBox->SetWidthOverride(DesiredWidth);
+        }
+    }
+
+    // Ease each card's hover swell towards its target. Driven from the tick rather than
+    // from hover events so an interrupted transition continues from where it was instead
+    // of jumping, and so a card whose pointer left during a rebuild settles back to rest
+    // on its own.
+    const int32 CardCount = FMath::Min(CardButtons.Num(), CardHoverProgress.Num());
+    const float Step = FMath::Clamp(InDeltaTime * kCardHoverSpeed, 0.0f, 1.0f);
+    for (int32 Index = 0; Index < CardCount; ++Index)
+    {
+        const URA4IndexedButton* Button = CardButtons[Index];
+        if (Button == nullptr)
+        {
+            continue;
+        }
+
+        // A blocked card must not swell: it would advertise an interaction that is going
+        // to be refused.
+        const bool bHovered = Button->IsHovered() && Button->GetIsEnabled();
+        const float Target = bHovered ? 1.0f : 0.0f;
+        const float Current = CardHoverProgress[Index];
+        if (FMath::IsNearlyEqual(Current, Target, 0.001f))
+        {
+            continue;
+        }
+
+        const float Next = FMath::Lerp(Current, Target, Step);
+        CardHoverProgress[Index] = Next;
+
+        if (CardHoverTargets.IsValidIndex(Index) && CardHoverTargets[Index] != nullptr)
+        {
+            FWidgetTransform Transform;
+            Transform.Scale = FVector2D(1.0f + Next * kCardHoverScale);
+            CardHoverTargets[Index]->SetRenderTransform(Transform);
+        }
+    }
+}
 
 void URA4SidebarWidget::RefreshSelection()
 {
@@ -509,36 +845,199 @@ void URA4SidebarWidget::RefreshSelection()
     }
 
     const URA4HUDViewModel* VM = Provider->GetHUDViewModel();
-    if (VM == nullptr || VM->GetSelectionCount() == 0)
+    const int32 Count = VM != nullptr ? VM->GetSelectionCount() : 0;
+
+    if (SelectionKindText != nullptr)
+    {
+        SelectionKindText->SetText(SelectionKindCaption(Provider->GetSelectionKind()));
+    }
+
+    if (Count == 0)
     {
         SelectionNameText->SetText(NSLOCTEXT("RA4", "Sidebar_NoSelection", "NO SELECTION"));
-        if (SelectionHealthText) SelectionHealthText->SetText(FText::GetEmpty());
-        if (SelectionHealthBar) SelectionHealthBar->SetPercent(0.0f);
-        if (SelectionDetailsText) SelectionDetailsText->SetText(NSLOCTEXT("RA4", "Sidebar_SelectionHint", "Select a unit or structure"));
+        SelectionNameText->SetColorAndOpacity(FSlateColor(kTextDim));
+        if (SelectionCountText != nullptr)
+        {
+            SelectionCountText->SetVisibility(ESlateVisibility::Collapsed);
+        }
+        if (SelectionHealthText != nullptr)
+        {
+            SelectionHealthText->SetText(FText::GetEmpty());
+        }
+        if (SelectionHealthBar != nullptr)
+        {
+            SelectionHealthBar->SetPercent(0.0f);
+            // Hidden rather than collapsed: the card keeps its height, so the tabs and
+            // the card grid below do not jump every time the selection is cleared.
+            SelectionHealthBar->SetVisibility(ESlateVisibility::Hidden);
+        }
+        if (SelectionDetailsText != nullptr)
+        {
+            SelectionDetailsText->SetText(
+                NSLOCTEXT("RA4", "Sidebar_SelectionHint", "Select a unit or structure"));
+            SelectionDetailsText->SetColorAndOpacity(FSlateColor(kTextDim));
+        }
+        if (SelectionGroupBox != nullptr)
+        {
+            SelectionGroupBox->ClearChildren();
+            SelectionGroupBox->SetVisibility(ESlateVisibility::Collapsed);
+        }
+        return;
     }
-    else
+
+    const bool bOwned = VM->IsPrimaryOwned();
+
+    SelectionNameText->SetText(FText::FromString(VM->GetPrimaryEntityName()));
+    // An enemy selection is tinted so it cannot be mistaken for something the player is
+    // about to give orders to.
+    SelectionNameText->SetColorAndOpacity(FSlateColor(bOwned ? kTextNormal : kPowerLow));
+
+    if (SelectionCountText != nullptr)
     {
-        SelectionNameText->SetText(FText::FromString(VM->GetPrimaryEntityName()));
-        float HP = VM->GetSelectionHealthRatio();
-        if (SelectionHealthBar)
+        if (Count > 1)
         {
-            SelectionHealthBar->SetPercent(HP);
-            SelectionHealthBar->SetFillColorAndOpacity(HP > 0.5f ? kPowerOk : (HP > 0.2f ? kCredits : kPowerLow));
+            SelectionCountText->SetText(
+                FText::Format(NSLOCTEXT("RA4", "Sidebar_CountBadge", "x{0}"), FText::AsNumber(Count)));
+            SelectionCountText->SetVisibility(ESlateVisibility::HitTestInvisible);
         }
-        if (SelectionHealthText)
+        else
         {
-            SelectionHealthText->SetText(FText::Format(NSLOCTEXT("RA4", "Sidebar_HPFormat", "HEALTH: {0}%"), FText::AsNumber(int32(HP * 100.0f))));
+            SelectionCountText->SetVisibility(ESlateVisibility::Collapsed);
         }
-        if (SelectionDetailsText)
+    }
+
+    const float HP = VM->GetSelectionHealthRatio();
+    if (SelectionHealthBar != nullptr)
+    {
+        SelectionHealthBar->SetVisibility(ESlateVisibility::HitTestInvisible);
+        SelectionHealthBar->SetPercent(HP);
+        SelectionHealthBar->SetFillColorAndOpacity(HP > 0.5f ? kPowerOk : (HP > 0.2f ? kCredits : kPowerLow));
+    }
+    if (SelectionHealthText != nullptr)
+    {
+        // Rounded down, so a unit one point from death never reads as a healthy 100%.
+        SelectionHealthText->SetText(
+            FText::Format(NSLOCTEXT("RA4", "Sidebar_HPFormat", "HEALTH: {0}%"),
+                          FText::AsNumber(FMath::FloorToInt(FMath::Clamp(HP, 0.0f, 1.0f) * 100.0f))));
+    }
+
+    // --- group breakdown ----------------------------------------------------
+    // The snapshot groups a multi-selection by type, which is what the reference HUD
+    // shows. Group rows carry a content id rather than a name, so the name is resolved
+    // through the build options that describe the same content.
+    const TArray<FRA4SelectionGroup>& Groups = Provider->GetSelectionGroups();
+    int32 RowsShown = 0;
+    if (SelectionGroupBox != nullptr && WidgetTree != nullptr)
+    {
+        SelectionGroupBox->ClearChildren();
+
+        if (Count > 1 && Groups.Num() > 0)
         {
-            if (VM->GetSelectionCount() > 1)
+            const TArray<FRA4BuildOption>& AllOptions = Provider->GetBuildOptions();
+
+            // At most four rows: past that the card grid starts getting pushed around,
+            // and the remainder is summarised on the line underneath instead.
+            constexpr int32 kMaxGroupRows = 4;
+            for (const FRA4SelectionGroup& Group : Groups)
             {
-                SelectionDetailsText->SetText(FText::Format(NSLOCTEXT("RA4", "Sidebar_MultiSelFormat", "Selected Objects: {0}"), FText::AsNumber(VM->GetSelectionCount())));
+                if (RowsShown >= kMaxGroupRows)
+                {
+                    break;
+                }
+
+                // The group's own name when the provider filled one in, else the build
+                // option for the same content, else a neutral fallback. Never blank: an
+                // empty row would read as a rendering fault.
+                FText GroupName = Group.DisplayName;
+                if (GroupName.IsEmpty())
+                {
+                    for (const FRA4BuildOption& Option : AllOptions)
+                    {
+                        if (Option.ContentId == Group.ContentId)
+                        {
+                            GroupName = Option.DisplayName;
+                            break;
+                        }
+                    }
+                }
+                if (GroupName.IsEmpty())
+                {
+                    GroupName = NSLOCTEXT("RA4", "Sidebar_GroupUnknown", "Unit");
+                }
+
+                UHorizontalBox* Row = WidgetTree->ConstructWidget<UHorizontalBox>(
+                    UHorizontalBox::StaticClass(), *FString::Printf(TEXT("SelGroupRow%d"), RowsShown));
+
+                UTextBlock* CountLabel = MakeLabel(
+                    WidgetTree, *FString::Printf(TEXT("SelGroupCount%d"), RowsShown), kCredits, 9, true);
+                CountLabel->SetText(
+                    FText::Format(NSLOCTEXT("RA4", "Sidebar_GroupCount", "{0}x"), FText::AsNumber(Group.Count)));
+                if (UHorizontalBoxSlot* Slot = Row->AddChildToHorizontalBox(CountLabel))
+                {
+                    Slot->SetPadding(FMargin(0.0f, 0.0f, 4.0f, 0.0f));
+                    Slot->SetVerticalAlignment(VAlign_Center);
+                }
+
+                UTextBlock* NameLabel = MakeLabel(
+                    WidgetTree, *FString::Printf(TEXT("SelGroupName%d"), RowsShown), kTextDim, 9, false);
+                NameLabel->SetText(GroupName);
+                if (UHorizontalBoxSlot* Slot = Row->AddChildToHorizontalBox(NameLabel))
+                {
+                    Slot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+                    Slot->SetVerticalAlignment(VAlign_Center);
+                }
+
+                // Per-type condition, so a mauled squad inside an otherwise healthy group
+                // is visible without clicking through the selection.
+                UTextBlock* HealthLabel = MakeLabel(
+                    WidgetTree, *FString::Printf(TEXT("SelGroupHP%d"), RowsShown),
+                    Group.HealthRatio > 0.5f ? kPowerOk : (Group.HealthRatio > 0.2f ? kPowerTight : kPowerLow),
+                    9, false);
+                HealthLabel->SetText(FText::Format(
+                    NSLOCTEXT("RA4", "Sidebar_GroupHP", "{0}%"),
+                    FText::AsNumber(FMath::FloorToInt(FMath::Clamp(Group.HealthRatio, 0.0f, 1.0f) * 100.0f))));
+                if (UHorizontalBoxSlot* Slot = Row->AddChildToHorizontalBox(HealthLabel))
+                {
+                    Slot->SetVerticalAlignment(VAlign_Center);
+                }
+
+                if (UVerticalBoxSlot* Slot = SelectionGroupBox->AddChildToVerticalBox(Row))
+                {
+                    Slot->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 1.0f));
+                }
+                ++RowsShown;
             }
-            else
-            {
-                SelectionDetailsText->SetText(VM->IsPrimaryOwned() ? NSLOCTEXT("RA4", "Sidebar_Owned", "Allied Unit") : NSLOCTEXT("RA4", "Sidebar_Enemy", "Enemy Unit"));
-            }
+        }
+
+        SelectionGroupBox->SetVisibility(RowsShown > 0 ? ESlateVisibility::HitTestInvisible
+                                                       : ESlateVisibility::Collapsed);
+    }
+
+    if (SelectionDetailsText != nullptr)
+    {
+        if (!bOwned)
+        {
+            SelectionDetailsText->SetText(NSLOCTEXT("RA4", "Sidebar_Enemy", "Enemy — cannot be ordered"));
+            SelectionDetailsText->SetColorAndOpacity(FSlateColor(kPowerLow));
+        }
+        else if (RowsShown > 0 && Groups.Num() > RowsShown)
+        {
+            // Say what was left out rather than silently truncating the list.
+            SelectionDetailsText->SetText(
+                FText::Format(NSLOCTEXT("RA4", "Sidebar_GroupOverflow", "+{0} more types"),
+                              FText::AsNumber(Groups.Num() - RowsShown)));
+            SelectionDetailsText->SetColorAndOpacity(FSlateColor(kTextFaint));
+        }
+        else if (Count > 1)
+        {
+            SelectionDetailsText->SetText(
+                FText::Format(NSLOCTEXT("RA4", "Sidebar_MultiSelFormat", "{0} selected"), FText::AsNumber(Count)));
+            SelectionDetailsText->SetColorAndOpacity(FSlateColor(kTextDim));
+        }
+        else
+        {
+            SelectionDetailsText->SetText(NSLOCTEXT("RA4", "Sidebar_Owned", "Under your command"));
+            SelectionDetailsText->SetColorAndOpacity(FSlateColor(kTextDim));
         }
     }
 }
@@ -583,6 +1082,28 @@ void URA4SidebarWidget::HandleCardClicked(int32 CardIndex)
     }
 }
 
+bool URA4SidebarWidget::ActivateCardByIndex(int32 CardIndex)
+{
+    if (!CardContentIds.IsValidIndex(CardIndex))
+    {
+        return false;
+    }
+
+    // A hotkey obeys the same rule as a click: a blocked card is inert, and pressing its
+    // key queues nothing rather than sending a command the simulation will reject.
+    if (CardButtons.IsValidIndex(CardIndex))
+    {
+        const URA4IndexedButton* Button = CardButtons[CardIndex];
+        if (Button != nullptr && !Button->GetIsEnabled())
+        {
+            return false;
+        }
+    }
+
+    OnBuildCardClicked.Broadcast(CardContentIds[CardIndex]);
+    return true;
+}
+
 void URA4SidebarWidget::RefreshResources()
 {
     const URA4UIDataProviderSubsystem* Provider = GetProvider();
@@ -595,12 +1116,62 @@ void URA4SidebarWidget::RefreshResources()
     {
         CreditsText->SetText(FText::AsNumber(Provider->GetCredits()));
     }
+
+    const int32 Produced = Provider->GetPowerProduced();
+    const int32 Consumed = Provider->GetPowerConsumed();
+    const int32 Surplus = Produced - Consumed;
+    const bool bShortage = Provider->IsPowerShortage();
+    // Amber before red: a base running inside a tenth of its ceiling is one structure
+    // away from a brownout, and that is worth seeing before it happens rather than after.
+    const bool bTight = !bShortage && Produced > 0 && Surplus < FMath::Max(1, Produced / 10);
+    const FLinearColor PowerColour = bShortage ? kPowerLow : (bTight ? kPowerTight : kPowerOk);
+
     if (PowerText != nullptr)
     {
         PowerText->SetText(FText::Format(NSLOCTEXT("RA4", "Sidebar_PowerFormat", "POWER  {0} / {1}"),
-                                         FText::AsNumber(Provider->GetPowerProduced()),
-                                         FText::AsNumber(Provider->GetPowerConsumed())));
-        PowerText->SetColorAndOpacity(FSlateColor(Provider->IsPowerShortage() ? kPowerLow : kPowerOk));
+                                         FText::AsNumber(Produced),
+                                         FText::AsNumber(Consumed)));
+        PowerText->SetColorAndOpacity(FSlateColor(PowerColour));
+    }
+
+    if (PowerSurplusText != nullptr)
+    {
+        if (Surplus < 0)
+        {
+            PowerSurplusText->SetText(FText::Format(NSLOCTEXT("RA4", "Sidebar_PowerDeficit", "{0} DEFICIT"),
+                                                    FText::AsNumber(Surplus)));
+        }
+        else
+        {
+            PowerSurplusText->SetText(FText::Format(NSLOCTEXT("RA4", "Sidebar_PowerSurplus", "+{0} SPARE"),
+                                                    FText::AsNumber(Surplus)));
+        }
+        PowerSurplusText->SetColorAndOpacity(FSlateColor(PowerColour));
+    }
+
+    if (PowerRatioBar != nullptr)
+    {
+        PowerRatioBar->SetPercent(PowerFillRatio(Produced, Consumed));
+        PowerRatioBar->SetFillColorAndOpacity(PowerColour);
+    }
+
+    if (SupplyText != nullptr)
+    {
+        // HudSnapshot is explicit that the counter must be hidden rather than show an
+        // invented cap while the simulation has no population limit.
+        if (Provider->IsSupplyModelled())
+        {
+            const int32 Used = Provider->GetSupplyUsed();
+            const int32 Cap = Provider->GetSupplyCap();
+            SupplyText->SetVisibility(ESlateVisibility::HitTestInvisible);
+            SupplyText->SetText(FText::Format(NSLOCTEXT("RA4", "Sidebar_SupplyFormat", "UNITS  {0} / {1}"),
+                                              FText::AsNumber(Used), FText::AsNumber(Cap)));
+            SupplyText->SetColorAndOpacity(FSlateColor(Cap > 0 && Used >= Cap ? kPowerLow : kTextDim));
+        }
+        else
+        {
+            SupplyText->SetVisibility(ESlateVisibility::Collapsed);
+        }
     }
 }
 
@@ -633,7 +1204,12 @@ void URA4SidebarWidget::RefreshCards()
 
     CardGrid->ClearChildren();
     CardButtons.Reset();
+    CardHoverTargets.Reset();
     CardContentIds.Reset();
+    // Rebuilt cards start at rest: carrying a stale swell over would leave a card
+    // enlarged with the pointer nowhere near it.
+    CardHoverProgress.Reset();
+    CardHoverProgress.SetNumZeroed(Options.Num());
 
     for (int32 Index = 0; Index < Options.Num(); ++Index)
     {
@@ -653,11 +1229,53 @@ void URA4SidebarWidget::RefreshCards()
         UVerticalBox* CardStack = WidgetTree->ConstructWidget<UVerticalBox>(
             UVerticalBox::StaticClass(), *FString::Printf(TEXT("CardStack%d"), Index));
 
-        UTextBlock* Name = MakeLabel(WidgetTree, *FString::Printf(TEXT("CardName%d"), Index), kTextNormal, 10, true);
-        Name->SetText(Option.DisplayName);
-        Name->SetJustification(ETextJustify::Center);
-        Name->SetAutoWrapText(true);
-        CardStack->AddChildToVerticalBox(Name);
+        // Name row, with the hotkey badge pinned to its left. The badge is drawn only for
+        // indices the controller actually binds, so it can never promise a dead key.
+        if (const TCHAR* Hotkey = GetCardHotkeyLabel(Index))
+        {
+            UHorizontalBox* NameRow = WidgetTree->ConstructWidget<UHorizontalBox>(
+                UHorizontalBox::StaticClass(), *FString::Printf(TEXT("CardNameRow%d"), Index));
+
+            UBorder* Badge = WidgetTree->ConstructWidget<UBorder>(
+                UBorder::StaticClass(), *FString::Printf(TEXT("CardKeyBadge%d"), Index));
+            Badge->SetBrushColor(Option.bAvailable ? FLinearColor(0.06f, 0.09f, 0.07f, 0.95f)
+                                                   : FLinearColor(0.09f, 0.06f, 0.06f, 0.95f));
+            Badge->SetPadding(FMargin(3.0f, 0.0f));
+
+            UTextBlock* KeyLabel = MakeLabel(WidgetTree, *FString::Printf(TEXT("CardKey%d"), Index),
+                                             Option.bAvailable ? kCredits : kTextFaint, 8, true);
+            KeyLabel->SetText(FText::FromString(Hotkey));
+            KeyLabel->SetJustification(ETextJustify::Center);
+            Badge->AddChild(KeyLabel);
+
+            if (UHorizontalBoxSlot* Slot = NameRow->AddChildToHorizontalBox(Badge))
+            {
+                Slot->SetPadding(FMargin(0.0f, 0.0f, 3.0f, 0.0f));
+                Slot->SetVerticalAlignment(VAlign_Top);
+            }
+
+            UTextBlock* Name = MakeLabel(WidgetTree, *FString::Printf(TEXT("CardName%d"), Index),
+                                         kTextNormal, 10, true);
+            Name->SetText(Option.DisplayName);
+            Name->SetAutoWrapText(true);
+            if (UHorizontalBoxSlot* Slot = NameRow->AddChildToHorizontalBox(Name))
+            {
+                Slot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+                Slot->SetVerticalAlignment(VAlign_Center);
+            }
+
+            CardStack->AddChildToVerticalBox(NameRow);
+        }
+        else
+        {
+            // Past the end of the hotkey table: centred name, no badge.
+            UTextBlock* Name = MakeLabel(WidgetTree, *FString::Printf(TEXT("CardName%d"), Index),
+                                         kTextNormal, 10, true);
+            Name->SetText(Option.DisplayName);
+            Name->SetJustification(ETextJustify::Center);
+            Name->SetAutoWrapText(true);
+            CardStack->AddChildToVerticalBox(Name);
+        }
 
         FText InfoText = FText::Format(NSLOCTEXT("RA4", "Card_CostTimeFormat", "{0} Cr. | {1}s"),
                                        FText::AsNumber(Option.Cost),
@@ -703,6 +1321,9 @@ void URA4SidebarWidget::RefreshCards()
         }
 
         CardButtons.Add(Button);
+        // The stack, not the button, carries the swell: a UButton's render transform is
+        // overwritten by its own style states, and scaling the contents reads the same.
+        CardHoverTargets.Add(CardStack);
         CardContentIds.Add(Option.ContentId);
     }
 
@@ -717,49 +1338,164 @@ void URA4SidebarWidget::RefreshQueue()
         return;
     }
 
-    QueueBox->ClearChildren();
-
     const TArray<FRA4ProductionEntry>& Queue = Provider->GetProductionQueue();
-    if (Queue.Num() == 0)
+
+    // The queue changes every tick while a factory runs, but only the head row's bar and
+    // countdown actually move. Rebuilding the whole box for that throws away Slate's
+    // layout for no visible gain, so rows are rebuilt only when their identity or state
+    // changes; progress alone is pushed into the existing widgets.
+    uint32 Signature = ::GetTypeHash(Queue.Num());
+    for (const FRA4ProductionEntry& Entry : Queue)
     {
-        UTextBlock* Idle = MakeLabel(WidgetTree, TEXT("QueueIdle"), kTextDim, 9, false);
-        Idle->SetText(NSLOCTEXT("RA4", "Sidebar_QueueIdle", "QUEUE IDLE"));
-        QueueBox->AddChildToVerticalBox(Idle);
-        return;
+        Signature = HashCombine(Signature, ::GetTypeHash(Entry.ContentId));
+        Signature = HashCombine(Signature, ::GetTypeHash(Entry.bPaused));
+        Signature = HashCombine(Signature, ::GetTypeHash(Entry.bAwaitingPlacement));
     }
 
-    for (int32 Index = 0; Index < Queue.Num(); ++Index)
+    if (QueueHeader != nullptr)
     {
-        const FRA4ProductionEntry& Entry = Queue[Index];
-
-        UTextBlock* Line = MakeLabel(WidgetTree, *FString::Printf(TEXT("QueueLine%d"), Index), kTextNormal, 9, false);
-        if (Entry.bAwaitingPlacement)
+        if (Queue.Num() > 1)
         {
-            // The one queue state that needs the player to act, so it says so instead
-            // of showing a finished bar and waiting to be understood.
-            Line->SetText(FText::Format(NSLOCTEXT("RA4", "Sidebar_QueuePlace", "{0} — READY TO PLACE"),
-                                        Entry.DisplayName));
-            Line->SetColorAndOpacity(FSlateColor(kPowerOk));
-        }
-        else if (Entry.bPaused)
-        {
-            Line->SetText(FText::Format(NSLOCTEXT("RA4", "Sidebar_QueuePaused", "{0} — PAUSED"), Entry.DisplayName));
-            Line->SetColorAndOpacity(FSlateColor(kTextDim));
+            QueueHeader->SetText(FText::Format(NSLOCTEXT("RA4", "Sidebar_QueueHeaderCount", "PRODUCTION  ({0})"),
+                                               FText::AsNumber(Queue.Num())));
         }
         else
         {
-            Line->SetText(FText::Format(NSLOCTEXT("RA4", "Sidebar_QueueLine", "{0}  {1}%"), Entry.DisplayName,
-                                        FText::AsNumber(Entry.ProgressPercent)));
+            QueueHeader->SetText(NSLOCTEXT("RA4", "Sidebar_QueueHeader", "PRODUCTION"));
         }
-        QueueBox->AddChildToVerticalBox(Line);
+    }
 
-        UProgressBar* Bar = WidgetTree->ConstructWidget<UProgressBar>(UProgressBar::StaticClass(),
-                                                                      *FString::Printf(TEXT("QueueBar%d"), Index));
-        Bar->SetPercent(float(Entry.ProgressPercent) / 100.0f);
-        Bar->SetFillColorAndOpacity(Entry.bPaused ? kTextDim : kPowerOk);
-        if (UVerticalBoxSlot* Slot = QueueBox->AddChildToVerticalBox(Bar))
+    const bool bRebuild = Signature != QueueSignature;
+    if (bRebuild)
+    {
+        QueueSignature = Signature;
+        QueueBox->ClearChildren();
+    }
+
+    if (Queue.Num() == 0)
+    {
+        if (bRebuild)
         {
-            Slot->SetPadding(FMargin(0.0f, 1.0f, 0.0f, 4.0f));
+            UTextBlock* Idle = MakeLabel(WidgetTree, TEXT("QueueIdle"), kTextFaint, 9, false);
+            Idle->SetText(NSLOCTEXT("RA4", "Sidebar_QueueIdle", "NOTHING IN PRODUCTION"));
+            QueueBox->AddChildToVerticalBox(Idle);
+        }
+        return;
+    }
+
+    // Only the head of the queue is being worked on; everything behind it is waiting its
+    // turn, and saying so is the difference between "why is nothing happening" and a
+    // pipeline the player can read.
+    for (int32 Index = 0; Index < Queue.Num(); ++Index)
+    {
+        const FRA4ProductionEntry& Entry = Queue[Index];
+        const bool bActive = Index == 0 && !Entry.bPaused && !Entry.bAwaitingPlacement;
+        const float Fraction = FMath::Clamp(float(Entry.ProgressPercent) / 100.0f, 0.0f, 1.0f);
+        const bool bHasBar = bActive || Entry.bPaused || Entry.bAwaitingPlacement;
+
+        FLinearColor RowColour = kQueueWaiting;
+        if (Entry.bAwaitingPlacement)
+        {
+            RowColour = kPowerOk;
+        }
+        else if (Entry.bPaused)
+        {
+            RowColour = kPowerTight;
+        }
+        else if (bActive)
+        {
+            RowColour = kTextNormal;
+        }
+
+        if (bRebuild)
+        {
+            // Name left, state or countdown right, so the eye tracks one column for
+            // "what" and one for "when" instead of parsing a run-on line.
+            UHorizontalBox* Row = WidgetTree->ConstructWidget<UHorizontalBox>(
+                UHorizontalBox::StaticClass(), *FString::Printf(TEXT("QueueRow%d"), Index));
+
+            // A caret for the item being built, an ordinal for the ones behind it.
+            UTextBlock* Position = MakeLabel(WidgetTree, *FString::Printf(TEXT("QueuePos%d"), Index),
+                                             bActive ? kPowerOk : kQueueWaiting, 8, true);
+            Position->SetText(bActive
+                                  ? NSLOCTEXT("RA4", "Queue_ActiveMark", ">")
+                                  : FText::Format(NSLOCTEXT("RA4", "Queue_PositionMark", "{0}."),
+                                                  FText::AsNumber(Index + 1)));
+            if (UHorizontalBoxSlot* Slot = Row->AddChildToHorizontalBox(Position))
+            {
+                Slot->SetPadding(FMargin(0.0f, 0.0f, 3.0f, 0.0f));
+                Slot->SetVerticalAlignment(VAlign_Center);
+            }
+
+            UTextBlock* Name = MakeLabel(WidgetTree, *FString::Printf(TEXT("QueueLine%d"), Index), RowColour, 9,
+                                         bActive || Entry.bAwaitingPlacement);
+            Name->SetText(Entry.DisplayName);
+            if (UHorizontalBoxSlot* Slot = Row->AddChildToHorizontalBox(Name))
+            {
+                Slot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+                Slot->SetVerticalAlignment(VAlign_Center);
+            }
+
+            UTextBlock* Status = MakeLabel(WidgetTree, *FString::Printf(TEXT("QueueStatus%d"), Index), RowColour, 8,
+                                           Entry.bAwaitingPlacement);
+            if (Entry.bAwaitingPlacement)
+            {
+                // The one queue state that needs the player to act, so it says so instead
+                // of showing a full bar and waiting to be understood.
+                Status->SetText(NSLOCTEXT("RA4", "Sidebar_QueuePlace", "PLACE IT"));
+            }
+            else if (Entry.bPaused)
+            {
+                Status->SetText(NSLOCTEXT("RA4", "Sidebar_QueuePaused", "HELD"));
+            }
+            else if (bActive)
+            {
+                Status->SetText(FormatBuildRemaining(Entry.RemainingSeconds));
+            }
+            else
+            {
+                Status->SetText(NSLOCTEXT("RA4", "Sidebar_QueueWaiting", "QUEUED"));
+            }
+            if (UHorizontalBoxSlot* Slot = Row->AddChildToHorizontalBox(Status))
+            {
+                Slot->SetVerticalAlignment(VAlign_Center);
+            }
+
+            QueueBox->AddChildToVerticalBox(Row);
+
+            // Only what is under construction gets a bar. A stack of identical empty bars
+            // behind it says nothing and makes the panel look busier than it is.
+            if (bHasBar)
+            {
+                UProgressBar* Bar = MakeThinBar(WidgetTree, *FString::Printf(TEXT("QueueBar%d"), Index),
+                                                RowColour, 3.0f);
+                Bar->SetPercent(Entry.bAwaitingPlacement ? 1.0f : Fraction);
+                if (UVerticalBoxSlot* Slot = QueueBox->AddChildToVerticalBox(Bar))
+                {
+                    Slot->SetPadding(FMargin(0.0f, 1.0f, 0.0f, 4.0f));
+                }
+            }
+            else if (UVerticalBoxSlot* Slot = QueueBox->AddChildToVerticalBox(
+                         MakeGap(WidgetTree, *FString::Printf(TEXT("QueueGap%d"), Index), 2.0f)))
+            {
+                Slot->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 2.0f));
+            }
+        }
+        else if (bActive)
+        {
+            // Same rows, moved progress: update the two widgets that changed. Found by
+            // name rather than cached in an array parallel to the queue, because a rebuild
+            // is exactly what would invalidate such an array.
+            if (UProgressBar* Bar = Cast<UProgressBar>(
+                    WidgetTree->FindWidget(*FString::Printf(TEXT("QueueBar%d"), Index))))
+            {
+                Bar->SetPercent(Fraction);
+            }
+            if (UTextBlock* Status = Cast<UTextBlock>(
+                    WidgetTree->FindWidget(*FString::Printf(TEXT("QueueStatus%d"), Index))))
+            {
+                Status->SetText(FormatBuildRemaining(Entry.RemainingSeconds));
+            }
         }
     }
 }

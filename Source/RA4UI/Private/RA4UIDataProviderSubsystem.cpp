@@ -282,6 +282,11 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
     OnSelectionChanged.Broadcast();
 
     // --- selection groups -----------------------------------------------------
+    // FRA4SelectionGroup carries a DisplayName, but the snapshot's group rows only carry
+    // a content id. Fill it here from the keys already present in this same snapshot --
+    // the build options for producible types, and the primary's own key for anything not
+    // in a build list (captured structures, campaign-only units) -- so every consumer of
+    // the group list gets a name instead of each widget repeating the lookup.
     SelectionGroups.Reset(int32(Snapshot.Selection.Groups.size()));
     for (const RP::SelectionGroup& Group : Snapshot.Selection.Groups)
     {
@@ -289,6 +294,25 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
         Out.ContentId = int64(Group.Content.Value);
         Out.Count = Group.Count;
         Out.HealthRatio = Group.HealthMax > 0 ? float(Group.HealthCurrent) / float(Group.HealthMax) : 1.0f;
+
+        const std::string* NameKey = nullptr;
+        for (const RP::BuildOption& Option : Snapshot.Production.Options)
+        {
+            if (Option.Content.Value == Group.Content.Value)
+            {
+                NameKey = &Option.DisplayNameKey;
+                break;
+            }
+        }
+        if (NameKey == nullptr && Snapshot.Selection.PrimaryContent.Value == Group.Content.Value)
+        {
+            NameKey = &Snapshot.Selection.PrimaryDisplayNameKey;
+        }
+        if (NameKey != nullptr)
+        {
+            Out.DisplayName = KeyToText(*NameKey);
+        }
+
         SelectionGroups.Add(Out);
     }
 

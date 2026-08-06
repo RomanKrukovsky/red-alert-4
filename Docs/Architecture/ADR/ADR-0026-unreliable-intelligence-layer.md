@@ -195,3 +195,18 @@ within `SimWorld::Tick` after `SystemFogOfWar`, without a record. Terminology di
 ADR-0021 remains **Proposed** and is superseded in part by this document. It must gain an explicit
 rejection log covering every row of the table above. Until then the two ADRs mislead any reader who
 takes ADR-0021 as current. Tracked as NEXT_ACTIONS P-2.
+
+## Amendment 2026-08-06: module renamed RA4Intel → RA4Recon
+
+Project-owner decision. Scope of the mechanical rename (commit on main):
+directory `Source/RA4Intel` → `Source/RA4Recon`; namespace `RA4::Intel` →
+`RA4::Recon`; types `IntelSystem/IntelSettings/IntelReport/IntelReporterComp` →
+`ReconSystem/ReconSettings/ReconReport/ReconReporterComp`; SimWorld members
+`IntelLayer/IntelRng/SystemIntel/GetIntel` → `ReconLayer/ReconRng/SystemRecon/
+GetRecon`; config `Content/RA4/Data/Intel/intel_settings.json` →
+`Content/RA4/Data/Recon/recon_settings.json`; tests `TestIntel.cpp` →
+`TestRecon.cpp` (suite prefix `Recon.`). Save/replay compatibility is unaffected:
+serialized bytes carry no identifier names. Task IDs I-B*/I-M* in NEXT_ACTIONS
+keep their historical names. The RNG sequence constant 0x496e74656cULL ("Intel")
+is deliberately UNCHANGED: changing it would alter every seeded stream and
+invalidate determinism baselines for zero functional benefit.

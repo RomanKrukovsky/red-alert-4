@@ -947,8 +947,22 @@ void URA4SimWorldSubsystem::SyncPresentation()
 
             if (Actor)
             {
+                // V-A (VISIBILITY_CALLSITE_INVENTORY): fog must actually hide things.
+                // This sync path spawns an actor for EVERY alive entity; without this
+                // gate, fogged enemies rendered on screen -- a player-facing fog hole
+                // independent of the recon layer. The actor is hidden rather than
+                // destroyed: its entity is alive, and destroy/respawn churn on every
+                // fog edge crossing would thrash actor allocation for nothing.
+                // IsEntityVisibleTo returns true for own units and for matches
+                // configured without fog, so this is a no-op in those cases.
+                // Local player is 0 today everywhere in this subsystem (see
+                // Initialize/AttachAICommanders); when real multiplayer seats land,
+                // this must read the seat, not the constant -- same as the rest.
+                const bool bVisibleToLocalPlayer = SimWorld->IsEntityVisibleTo(/*LocalPlayer*/ 0, Index);
+                Actor->SetActorHiddenInGame(!bVisibleToLocalPlayer);
+
                 const RA4::TransformComp& SimTransform = Transforms[Index];
-                
+
                 FVector UnrealPos = RA4Coords::ToUnreal(SimTransform.Position);
                 // The simulation itself is flat -- this only lifts the visual actor to
                 // sit on whatever terrain relief the level happens to have.

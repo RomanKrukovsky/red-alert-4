@@ -23,7 +23,7 @@
    - State hashes are calculated every 20 ticks (`kChecksumIntervalTicks`, `SimConfig.h`) and validated across all peers in lockstep frames. Divergence triggers immediate desync abort.
 
 6. **INVARIANT 6: Belief State Is Simulation State** (ADR-0026)
-   - Each player's perceived world (`RA4Intel`) is deterministic simulation state: fixed-point only, updated only inside the tick, serialized with saves and fed into the state hash. Belief divergence between peers is a desync.
+   - Each player's perceived world (`RA4Recon` (renamed from `RA4Intel` 2026-08-06)) is deterministic simulation state: fixed-point only, updated only inside the tick, serialized with saves and fed into the state hash. Belief divergence between peers is a desync.
 
 7. **INVARIANT 7: Belief Is the Only Enemy-Information Interface**
    - When the unreliable-intelligence layer is enabled, presentation, UI and the AI commander read enemy information exclusively through `SimWorld::GetIntel()` perceived tracks. `PerceivedTrack` carries no ground-truth `EntityId`; the track↔entity association never leaves the simulation core.
@@ -32,7 +32,7 @@
    - With the intel layer disabled (shipped default), simulation results are bit-identical to a build without the module. Pinned by test `Intel.DisabledLayerDoesNotChangeSimulationResults`.
 
 9. **INVARIANT 9: Belief Is Written Only By The Simulation** (ADR-0021 K1)
-   - No code outside `RA4Simulation`/`RA4Intel` may mutate any player's perceived world. A public mutable accessor to belief state is a violation of this invariant, not a convenience.
+   - No code outside `RA4Simulation`/`RA4Recon` (renamed from `RA4Intel` 2026-08-06) may mutate any player's perceived world. A public mutable accessor to belief state is a violation of this invariant, not a convenience.
    - **Fixed 2026-08-05** (branch `fix/intel-invariant-blockers`): `GetPerceivedWorldMutable` removed; all `PerceivedWorld` writer methods are private, reachable only by `IntelSystem` (friend) and the deterministic test harness via `PerceivedWorldTestAccess`.
 
 10. **INVARIANT 10: No Ground Truth In The Belief Read Surface** (ADR-0021 K3)

@@ -3,6 +3,8 @@
 
 #include "RA4Core/Checksum.h"
 #include "RA4Core/SimConfig.h"
+
+#include "RA4Recon/DistortionPipeline.h"
 #include "FogOfWarGrid.h"
 #include "RA4Navigation/MNavRouter.h"
 #include "RA4Navigation/ReservationGrid.h"
@@ -96,7 +98,7 @@ void SimWorld::Reset()
     FlowFieldBuildsThisTick = 0;
     MacroPathBuildsThisTick = 0;
     Stats = MovementStats{};
-    IntelLayer.Reset();
+    ReconLayer.Reset();
     Core.clear();
     Transforms.clear();
     Healths.clear();
@@ -108,6 +110,7 @@ void SimWorld::Reset()
     Projectiles.clear();
     Orders.clear();
     DirectControls.clear();
+    Morales.clear();
     FreeSlots.clear();
     PendingDestroy.clear();
     Events.clear();
@@ -139,7 +142,7 @@ void SimWorld::Reset()
 }
 
 void SimWorld::Initialize(const ContentDatabase* InContent, const MatchSetup& Setup,
-                          const Intel::IntelSettings* InIntelSettings)
+                          const Recon::ReconSettings* InReconSettings)
 {
     Reset();
     Content = InContent;
@@ -153,9 +156,9 @@ void SimWorld::Initialize(const ContentDatabase* InContent, const MatchSetup& Se
     Rng.Reset(Setup.Seed);
     // Distinct sequence constant gives the intel layer an independent stream from
     // the same match seed (see SimWorld.h for why isolation matters).
-    IntelRng.Reset(Setup.Seed, 0x496e74656cULL /* "Intel" */);
-    IntelSettingsRef = InIntelSettings;
-    IntelLayer.Initialize(InIntelSettings, Map.Width, Map.Height);
+    ReconRng.Reset(Setup.Seed, 0x496e74656cULL /* "Recon" */);
+    ReconSettingsRef = InReconSettings;
+    ReconLayer.Initialize(InReconSettings, Map.Width, Map.Height);
 
     for (PlayerId I = 0; I < kMaxPlayers; ++I)
     {
@@ -182,8 +185,8 @@ void SimWorld::Restart()
 {
     const ContentDatabase* SavedContent = Content;
     const MatchSetup SavedSetup = SetupConfig;
-    const Intel::IntelSettings* SavedIntel = IntelSettingsRef;
-    Initialize(SavedContent, SavedSetup, SavedIntel);
+    const Recon::ReconSettings* SavedRecon = ReconSettingsRef;
+    Initialize(SavedContent, SavedSetup, SavedRecon);
 }
 
 // ---------------------------------------------------------------------------
@@ -216,6 +219,7 @@ EntityId SimWorld::AllocateEntity()
         Projectiles.emplace_back();
         Orders.emplace_back();
         DirectControls.emplace_back();
+        Morales.emplace_back();
         HighWaterMark = uint32_t(Core.size());
     }
 
@@ -235,6 +239,7 @@ EntityId SimWorld::AllocateEntity()
     Projectiles[Index] = ProjectileComp();
     Orders[Index].Clear();
     DirectControls[Index] = DirectControlComp();
+    Morales[Index] = Recon::MoraleComp();
  
     return EntityId(Index, Generation);
 }
@@ -2979,6 +2984,13 @@ EntityId SimWorld::AcquireTarget(EntityId Attacker) const
 
 bool SimWorld::IsEntityVisibleTo(PlayerId Viewer, uint32_t EntityIndex) const
 {
+    // Liveness and range come first: a dead or out-of-range entity is visible to
+    // nobody, fog or not (review MINOR-2 -- with the old order, a fogless match
+    // answered "visible" for garbage indices).
+    if (EntityIndex >= Core.size() || !Core[EntityIndex].bAlive)
+    {
+        return false;
+    }
     // Fog is optional. A match configured without it, and every headless fixture that
     // never builds a grid, has to behave as though the map is in the open -- the
     // alternative is that absent fog blinds every side and combat stops entirely.
@@ -2989,10 +3001,6 @@ bool SimWorld::IsEntityVisibleTo(PlayerId Viewer, uint32_t EntityIndex) const
     if (int32_t(Viewer) >= FogGrid->GetNumPlayers())
     {
         return true;
-    }
-    if (EntityIndex >= Core.size() || !Core[EntityIndex].bAlive)
-    {
-        return false;
     }
 
     // A side always sees its own. The grid is rebuilt from unit vision every tick, so
@@ -3434,7 +3442,7 @@ void SimWorld::Tick(const CommandFrame* Frame)
     SystemProjectiles();
     SystemFactionResources();
     SystemFogOfWar();
-    SystemIntel();
+    SystemRecon();
     SystemDirectControl();
     SystemDeaths();
     SystemVictory();
@@ -3442,30 +3450,92 @@ void SimWorld::Tick(const CommandFrame* Frame)
     CurrentTick += 1;
 }
 
-void SimWorld::SystemIntel()
+void SimWorld::SystemRecon()
 {
     // Runs right after fog of war: fog decides what is physically visible this
-    // tick, intel turns that into (delayed, distorted) belief. Disabled layer
+    // tick, recon turns that into (delayed, distorted) belief. Disabled layer
     // returns immediately -- classic perfect-information behaviour (ADR-0026).
-    if (!IntelLayer.IsEnabled())
+    if (!ReconLayer.IsEnabled())
     {
         return;
     }
 
-    // Build this tick's visibility view. Iteration is by entity slot and then by
-    // player, so the observation order is deterministic by construction. Only
-    // non-owned, non-projectile entities are observable: a player's own units are
-    // exact by decision D3 of ADR-0026 (own-troop self-report bias is M4 and
-    // touches info panels, not selection).
-    IntelInput.Clear();
-    IntelInput.EntityCapacity = uint32_t(Core.size());
+    // --- 1. Morale: harvest this tick's combat events into per-unit state ----
+    // Runs before observation so today's fear distorts today's reports.
+    const Recon::MoraleTuning& MT = ReconSettingsRef->Morale;
+    const Fixed AllyDeathRadius = Fixed::FromInt(int64_t(MT.AllyDeathRadiusTiles) * kTileSizeUnits);
+    for (const SimEvent& Ev : Events)
+    {
+        if (Ev.Type == SimEventType::DamageApplied)
+        {
+            if (Ev.Entity.Index < Morales.size() && IsAlive(Ev.Entity))
+            {
+                Recon::MoraleApplyDamage(Morales[Ev.Entity.Index], Ev.Value, MT);
+            }
+        }
+        else if (Ev.Type == SimEventType::EntityDestroyed)
+        {
+            // Every living ally near the death point flinches. O(deaths x units)
+            // worst case; deaths per tick are few and the inner loop is a flat
+            // scan -- measured, not assumed, in the M2 perf pass.
+            for (uint32_t I = 0; I < HighWaterMark; ++I)
+            {
+                if (!Core[I].bAlive || Core[I].Owner != Ev.Player || Core[I].Kind != EntityKind::Unit)
+                {
+                    continue;
+                }
+                const Vec2 D(Transforms[I].Position.X - Ev.Location.X,
+                             Transforms[I].Position.Y - Ev.Location.Y);
+                if (D.X * D.X + D.Y * D.Y <= AllyDeathRadius * AllyDeathRadius)
+                {
+                    Recon::MoraleApplyAllyDeath(Morales[I], MT);
+                }
+            }
+        }
+    }
+
+    // --- 2. Visibility view + raw force counts --------------------------------
+    // Iteration is by entity slot and then by player, so the observation order
+    // is deterministic by construction. Only non-owned, non-projectile entities
+    // are observable: a player's own units are exact by decision D3 of ADR-0026.
+    ReconInput.Clear();
+    ReconInput.EntityCapacity = uint32_t(Core.size());
+    int32_t VisibleEnemiesOf[kMaxPlayers] = {};
+    int32_t LiveUnitsOf[kMaxPlayers] = {};
+
+    // Completed radar buildings per player (owner decision D6: radar produces
+    // anonymous contacts). Gathered once per tick; the per-entity check below
+    // is a squared-distance test against these centres.
+    std::vector<Vec2> RadarCentersOf[kMaxPlayers];
+    const Fixed RadarRange = Fixed::FromInt(int64_t(ReconSettingsRef->RadarRangeTiles) * kTileSizeUnits);
+    for (uint32_t I = 0; I < HighWaterMark; ++I)
+    {
+        if (!Core[I].bAlive || Core[I].Kind != EntityKind::Building || Core[I].Owner >= kMaxPlayers)
+        {
+            continue;
+        }
+        if (Buildings[I].State != ConstructionState::Complete)
+        {
+            continue;
+        }
+        const EntityDef* BD = Content ? Content->FindEntity(Core[I].Def) : nullptr;
+        if (BD != nullptr && BD->Building.bIsRadar)
+        {
+            RadarCentersOf[Core[I].Owner].push_back(Transforms[I].Position);
+        }
+    }
     for (uint32_t I = 0; I < HighWaterMark; ++I)
     {
         if (!Core[I].bAlive || Core[I].Kind == EntityKind::Projectile)
         {
             continue;
         }
+        if (Core[I].Kind == EntityKind::Unit && Core[I].Owner < kMaxPlayers)
+        {
+            LiveUnitsOf[Core[I].Owner] += 1;
+        }
         const TileCoord Tile = Map.WorldToTile(Transforms[I].Position);
+        const EntityDef* D = Content ? Content->FindEntity(Core[I].Def) : nullptr;
         for (PlayerId P = 0; P < kMaxPlayers; ++P)
         {
             if (!Players[P].bActive || Players[P].bDefeated)
@@ -3476,21 +3546,96 @@ void SimWorld::SystemIntel()
             {
                 continue; // own units are known exactly, not tracked as contacts
             }
+            bool bRadarOnly = false;
             if (!IsEntityVisibleTo(P, I))
             {
-                continue;
+                // Not eyes-on: maybe a radar blip. Ground truth stays hidden --
+                // the contact enters the pipeline as anonymous (D6).
+                bool bOnRadar = false;
+                for (const Vec2& Center : RadarCentersOf[P])
+                {
+                    const Vec2 Dv(Transforms[I].Position.X - Center.X,
+                                  Transforms[I].Position.Y - Center.Y);
+                    if (Dv.X * Dv.X + Dv.Y * Dv.Y <= RadarRange * RadarRange)
+                    {
+                        bOnRadar = true;
+                        break;
+                    }
+                }
+                if (!bOnRadar)
+                {
+                    continue;
+                }
+                bRadarOnly = true;
             }
-            Intel::ObservedEntity Seen;
+            Recon::ObservedEntity Seen;
             Seen.Id = MakeId(I);
             Seen.Class = Core[I].Def;
             Seen.Position = Transforms[I].Position;
             Seen.TileX = Tile.X;
             Seen.TileY = Tile.Y;
-            IntelInput.VisibleToPlayer[P].push_back(Seen);
+            if (D != nullptr)
+            {
+                Seen.Category = Recon::CategorizeForConfusion(
+                    Core[I].Kind == EntityKind::Building,
+                    D->Unit.Layer == MovementLayer::Air,
+                    D->Unit.Layer == MovementLayer::Naval,
+                    D->Unit.Layer == MovementLayer::Infantry,
+                    D->Armor == ArmorClass::HeavyVehicle || D->Armor == ArmorClass::SiegeVehicle);
+            }
+            Seen.bRadarContact = bRadarOnly;
+            ReconInput.VisibleToPlayer[P].push_back(Seen);
+            if (!bRadarOnly && IsHostile(P, Core[I].Owner))
+            {
+                // Radar blips do not feed superiority dread: troops fear what
+                // they can SEE outnumbering them, not a screen in a bunker.
+                VisibleEnemiesOf[P] += 1;
+            }
         }
     }
 
-    IntelLayer.Tick(CurrentTick, IntelInput);
+    // --- 3. Superiority dread + recovery + aggregate observer -----------------
+    // Superiority uses RAW visible counts against the player's own live units:
+    // the anti-runaway rule from the owner decision (distorted counts would
+    // feed fear, fear inflates counts, and the loop runs away).
+    for (uint32_t I = 0; I < HighWaterMark; ++I)
+    {
+        if (!Core[I].bAlive || Core[I].Kind != EntityKind::Unit || Core[I].Owner >= kMaxPlayers)
+        {
+            continue;
+        }
+        const PlayerId Owner = Core[I].Owner;
+        Recon::MoraleApplySuperiority(Morales[I], VisibleEnemiesOf[Owner], LiveUnitsOf[Owner], MT);
+        Recon::MoraleTickRecovery(Morales[I], MT);
+    }
+
+    // Aggregate observer per player: mean morale state of its live units. M3
+    // replaces this with per-unit reporters; until then one virtual observer
+    // per player keeps the distortion honest without per-unit bookkeeping.
+    for (PlayerId P = 0; P < kMaxPlayers; ++P)
+    {
+        if (!Players[P].bActive || LiveUnitsOf[P] == 0)
+        {
+            continue;
+        }
+        Fixed SumMorale = Fixed::Zero(), SumFatigue = Fixed::Zero(), SumSuppression = Fixed::Zero();
+        for (uint32_t I = 0; I < HighWaterMark; ++I)
+        {
+            if (Core[I].bAlive && Core[I].Kind == EntityKind::Unit && Core[I].Owner == P)
+            {
+                SumMorale += Morales[I].Morale;
+                SumFatigue += Morales[I].Fatigue;
+                SumSuppression += Morales[I].Suppression;
+            }
+        }
+        Recon::ObserverSnapshot& Obs = ReconInput.Observers[P];
+        Obs.Morale = SumMorale / int64_t(LiveUnitsOf[P]);
+        Obs.Fatigue = SumFatigue / int64_t(LiveUnitsOf[P]);
+        Obs.Suppression = SumSuppression / int64_t(LiveUnitsOf[P]);
+        Obs.Competence = Recon::PerMilleToFixed(MT.DefaultCompetencePerMille);
+    }
+
+    ReconLayer.Tick(CurrentTick, ReconInput, ReconRng);
 }
 
 void SimWorld::SystemFactionResources()
@@ -3530,7 +3675,7 @@ uint64_t SimWorld::ComputeStateChecksum() const
     H.FeedUInt8(uint8_t(Phase));
     H.FeedUInt8(Winner);
     H.FeedUInt64(Rng.GetState());
-    H.FeedUInt64(IntelRng.GetState());
+    H.FeedUInt64(ReconRng.GetState());
 
     for (PlayerId I = 0; I < kMaxPlayers; ++I)
     {
@@ -3583,6 +3728,10 @@ uint64_t SimWorld::ComputeStateChecksum() const
         H.FeedInt32(DirectControls[I].TurretPitchCentiDeg);
         H.FeedInt32(DirectControls[I].CooldownTicksPrimary);
         H.FeedInt32(DirectControls[I].CooldownTicksSecondary);
+        H.FeedInt64(Morales[I].Morale.Raw);
+        H.FeedInt64(Morales[I].Fatigue.Raw);
+        H.FeedInt64(Morales[I].Suppression.Raw);
+        H.FeedInt32(Morales[I].TicksUnderFire);
 
         if (Core[I].Kind == EntityKind::Building)
         {
@@ -3616,7 +3765,7 @@ uint64_t SimWorld::ComputeStateChecksum() const
 
     // Belief state influences future commands once the AI reads it (M6), so a
     // divergent belief is a real desync and must be caught here, on this tick.
-    IntelLayer.FeedChecksum(H);
+    ReconLayer.FeedChecksum(H);
 
     return H.Get();
 }
@@ -3626,30 +3775,32 @@ uint64_t SimWorld::ComputeStateChecksum() const
 // ---------------------------------------------------------------------------
 
 constexpr uint32_t kSimSaveMagic = 0x52413453u; // "RA4S"
-// Both branches independently claimed v2 and v3 for different format changes, so the
-// merged format is v4. Two saves both stamped "3" but written by different branches
-// are not interchangeable, and a version number cannot express that -- v4 is the only
-// honest way to say "this is the format that has all four changes".
+// The two branches kept claiming the same version numbers for different format
+// changes, so each merge has to allocate a fresh one for the union. Two saves both
+// stamped "4" but written by different branches are not interchangeable, and a version
+// number cannot express that.
 //
 //   v2: DirectControlComp (main) and ProductionItem flow-payment fields (ADR-0012)
-//   v3: intel layer, IntelRng + IntelSystem (main); BuildingComp::bSelling removed
-//       (ADR-0012 -- it was tick-scoped intent held in durable state, so a save taken
-//       between the sell command and the death sweep reloaded a building flagged
+//   v3: recon/intel layer, IntelRng + IntelSystem (main); BuildingComp::bSelling
+//       removed (ADR-0012 -- it was tick-scoped intent held in durable state, so a save
+//       taken between the sell command and the death sweep reloaded a building flagged
 //       selling forever and then silently forfeited its destruction refund; the intent
 //       now lives in the non-serialized PendingSales list)
-//   v4: the union of the above
+//   v4: MoraleComp (main, M2); separately the union of the two v2/v3 lines above
 //   v5: PlayerState::LastPowerTier (ADR-0013 edge-triggered deficit warning)
+//   v6: the union of all of the above
 //
 // Older saves are still readable; missing fields are reconstructed on load and
 // retired fields are read and discarded to keep the byte stream aligned.
-constexpr uint32_t kSimSaveVersion = 5;
+constexpr uint32_t kSimSaveVersion = 6;
 constexpr uint32_t kSimSaveVersionFlowPayment = 4;
 constexpr uint32_t kSimSaveVersionNoSellingFlag = 4;
 constexpr uint32_t kSimSaveVersionPowerTier = 5;
-// The intel layer landed in v3 on main and is still present in v4, so its gate is a
-// minimum rather than an equality: named here so the two read sites do not carry a
-// bare 3 that nobody can tie back to a format change.
+// Both landed on main before this merge, so their gates are minimums rather than
+// equalities: named so the read sites do not carry a bare number that nobody can tie
+// back to a format change.
 constexpr uint32_t kSimSaveVersionIntel = 3;
+constexpr uint32_t kSimSaveVersionMorale = 4;
 constexpr uint32_t kSimSaveVersionMinSupported = 1;
 
 void SimWorld::Serialize(ByteWriter& W) const
@@ -3661,8 +3812,8 @@ void SimWorld::Serialize(ByteWriter& W) const
     W.WriteUInt8(Winner);
     W.WriteUInt64(Rng.GetState());
     W.WriteUInt64(Rng.GetIncrement());
-    W.WriteUInt64(IntelRng.GetState());
-    W.WriteUInt64(IntelRng.GetIncrement());
+    W.WriteUInt64(ReconRng.GetState());
+    W.WriteUInt64(ReconRng.GetIncrement());
 
     // Map description
     W.WriteString(Map.Name);
@@ -3802,11 +3953,18 @@ void SimWorld::Serialize(ByteWriter& W) const
         W.WriteInt32(Dc.CooldownTicksPrimary);
         W.WriteInt32(Dc.CooldownTicksSecondary);
         W.WriteUInt8(Dc.bOpticsZoomed ? 1 : 0);
+        // v4: morale (M2) -- fear drives distortion rolls, so it saves and
+        // hashes like any other future-state-shaping component.
+        const Recon::MoraleComp& Mo = Morales[I];
+        W.WriteInt64(Mo.Morale.Raw);
+        W.WriteInt64(Mo.Fatigue.Raw);
+        W.WriteInt64(Mo.Suppression.Raw);
+        W.WriteInt32(Mo.TicksUnderFire);
     }
 
     // Belief state (ADR-0026). Serialized with the match: a save/load cycle that
     // diverged GT from PS would be a critical bug, and this is what prevents it.
-    IntelLayer.Serialize(W);
+    ReconLayer.Serialize(W);
 }
 
 bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
@@ -3837,9 +3995,9 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
     Rng.SetState(RState, RInc);
     if (Version >= kSimSaveVersionIntel)
     {
-        const uint64_t IntelState = R.ReadUInt64();
-        const uint64_t IntelInc = R.ReadUInt64();
-        IntelRng.SetState(IntelState, IntelInc);
+        const uint64_t ReconState = R.ReadUInt64();
+        const uint64_t ReconInc = R.ReadUInt64();
+        ReconRng.SetState(ReconState, ReconInc);
     }
 
     Map.Name = R.ReadString();
@@ -3898,6 +4056,7 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
     Healths.resize(HighWaterMark);
     Movements.resize(HighWaterMark);
     Combats.resize(HighWaterMark);
+    Morales.resize(HighWaterMark);
     Buildings.resize(HighWaterMark);
     Harvesters.resize(HighWaterMark);
     ResourceNodes.resize(HighWaterMark);
@@ -4024,6 +4183,22 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
         Dc.CooldownTicksPrimary = R.ReadInt32();
         Dc.CooldownTicksSecondary = R.ReadInt32();
         Dc.bOpticsZoomed = (R.ReadUInt8() != 0);
+        Recon::MoraleComp& Mo = Morales[I];
+        if (Version >= kSimSaveVersionMorale)
+        {
+            Mo.Morale = Fixed::FromRaw(R.ReadInt64());
+            Mo.Fatigue = Fixed::FromRaw(R.ReadInt64());
+            Mo.Suppression = Fixed::FromRaw(R.ReadInt64());
+            Mo.TicksUnderFire = R.ReadInt32();
+        }
+        else
+        {
+            // Morale arrived in v4. An older save has no such bytes, and reading them
+            // anyway would consume 28 bytes of the *next* entity and misalign the whole
+            // remaining stream. Reset() already default-constructed it, which is the
+            // right starting state for a unit that never had morale recorded.
+            Mo = Recon::MoraleComp();
+        }
     }
 
     BuildNavigationGrid();
@@ -4041,16 +4216,16 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
 
     // Reset() cleared the intel layer; re-arm it with the settings this session
     // was initialized with before reading the belief payload. Enabled-ness must
-    // match the save or IntelSystem::Deserialize refuses (see its comment).
-    IntelLayer.Initialize(IntelSettingsRef, Map.Width, Map.Height);
+    // match the save or ReconSystem::Deserialize refuses (see its comment).
+    ReconLayer.Initialize(ReconSettingsRef, Map.Width, Map.Height);
     if (Version >= kSimSaveVersionIntel)
     {
-        if (!IntelLayer.Deserialize(R))
+        if (!ReconLayer.Deserialize(R))
         {
             return false;
         }
     }
-    else if (IntelLayer.IsEnabled())
+    else if (ReconLayer.IsEnabled())
     {
         // A pre-intel save has no belief state to restore; refusing beats
         // silently starting the HQ map empty mid-match.

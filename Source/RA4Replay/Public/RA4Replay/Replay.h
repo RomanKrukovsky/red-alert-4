@@ -20,10 +20,17 @@ namespace RA4
 // Bump on any change to the tick order, the command layout or the checksum
 // contents. Old replays are then rejected up front instead of desyncing.
 //
-// v2 (ADR-0012): SystemFlowPayment was inserted into the tick order and the state
-// checksum gained the per-item payment state, so a v1 replay would replay to a
-// different hash and be reported as a desync rather than as an old file.
-constexpr uint32_t kReplayFormatVersion = 2;
+// Both branches independently claimed v2 for different changes, so the merged format
+// is v3 -- two recordings both stamped "2" but produced by different branches are not
+// interchangeable, and a version number cannot express that.
+//
+//   v2: header gains IntelEnabled + ReconSettingsHash (ADR-0022: the intel
+//       configuration is part of the match ruleset; I-B5 / INVARIANT 11), and
+//       separately SystemFlowPayment + SystemPower/SystemFlowPayment ordering with
+//       the payment and power-tier fields added to the state checksum (ADR-0012,
+//       ADR-0013) -- either alone makes an older recording replay to a different hash
+//   v3: the union of the above
+constexpr uint32_t kReplayFormatVersion = 3;
 constexpr uint32_t kReplayMagic = 0x34414952;   // 'RA4R'
 
 struct ReplayHeader
@@ -46,6 +53,13 @@ struct ReplayHeader
         std::string Name;
     };
     PlayerEntry Players[kMaxPlayers];
+
+    // Recon ruleset identity (I-B5). bReconEnabled says which mode produced the
+    // recording; ReconSettingsHash pins the exact tunables. VerifyReplay refuses
+    // a mismatch the same way it refuses a content-hash mismatch, because belief
+    // state is checksummed and any settings drift is a guaranteed divergence.
+    bool bReconEnabled = false;
+    uint64_t ReconSettingsHash = 0;
 };
 
 // A checkpoint lets playback detect where a divergence started instead of only
@@ -107,10 +121,14 @@ struct ReplayVerifyResult
 
 // Replays the command stream into a fresh SimWorld and compares every recorded
 // checkpoint. This is the determinism regression test the CI runs on every commit.
-ReplayVerifyResult VerifyReplay(const ReplayData& Replay, const ContentDatabase& Content);
+// ReconSettings must be supplied when the header says the recording was made
+// with intel enabled, and must hash to the recorded ReconSettingsHash.
+ReplayVerifyResult VerifyReplay(const ReplayData& Replay, const ContentDatabase& Content,
+                                const Recon::ReconSettings* ReconSettings = nullptr);
 
 // Builds the header from a match setup so recording sites cannot forget a field.
 ReplayHeader MakeHeaderFromSetup(const MatchSetup& Setup, const ContentDatabase& Content,
-                                 const std::string& GameVersion);
+                                 const std::string& GameVersion,
+                                 const Recon::ReconSettings* ReconSettings = nullptr);
 
 } // namespace RA4
