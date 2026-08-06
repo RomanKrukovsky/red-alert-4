@@ -68,6 +68,44 @@ enum class ERA4MatchPhase : uint8
 // the simulation enums are plain C++ and Blueprint cannot see them. The values are compared
 // with static_assert in RA4SidebarWidget.cpp, where both headers are visible, so a change to
 // either side is a build failure rather than a silently mismatched colour.
+// Mirrors RA4::Presentation::RadarPingKind; the values are checked with static_assert in
+// RA4SidebarWidget.cpp, where both headers are visible.
+UENUM(BlueprintType)
+enum class ERA4RadarPingKind : uint8
+{
+    Attack,
+    Loss,
+    Construction,
+};
+
+USTRUCT(BlueprintType)
+struct FRA4RadarPing
+{
+    GENERATED_BODY()
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|Radar")
+    FVector2D WorldPosition = FVector2D::ZeroVector;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|Radar")
+    ERA4RadarPingKind Kind = ERA4RadarPingKind::Attack;
+
+    /** 0..1, counting down as the ping ages. Drives both size and opacity. */
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|Radar")
+    float Intensity = 1.0f;
+};
+
+/** The colour a ping is drawn in. Attack is the loud one; the others must not compete. */
+inline FLinearColor RA4RadarPingColour(ERA4RadarPingKind Kind)
+{
+    switch (Kind)
+    {
+        case ERA4RadarPingKind::Attack:       return FLinearColor(1.00f, 0.25f, 0.15f, 1.0f);
+        case ERA4RadarPingKind::Loss:         return FLinearColor(0.95f, 0.65f, 0.15f, 1.0f);
+        case ERA4RadarPingKind::Construction: return FLinearColor(0.35f, 0.80f, 1.00f, 1.0f);
+    }
+    return FLinearColor::White;
+}
+
 UENUM(BlueprintType)
 enum class ERA4MinimapTerrain : uint8
 {

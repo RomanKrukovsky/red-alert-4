@@ -442,6 +442,19 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
         MinimapBackgroundRevision = int32(Snapshot.Radar.BackgroundRevision);
     }
 
+    // Rebuilt every tick because the intensities are counting down; the list is bounded by
+    // the alert feed, so this is a handful of entries at most.
+    RadarPings.Reset(int32(Snapshot.Radar.Pings.size()));
+    for (const RP::RadarPing& Ping : Snapshot.Radar.Pings)
+    {
+        FRA4RadarPing Out;
+        Out.WorldPosition = FVector2D(Ping.Position.X.ToDoubleUnsafe(),
+                                      Ping.Position.Y.ToDoubleUnsafe());
+        Out.Kind = ERA4RadarPingKind(Ping.Kind);
+        Out.Intensity = float(Ping.IntensityPercent) / 100.0f;
+        RadarPings.Add(Out);
+    }
+
     // --- alerts ---------------------------------------------------------------
     // Compared by content, not rebuilt blindly: the feed should animate when there
     // is news, not every tick.

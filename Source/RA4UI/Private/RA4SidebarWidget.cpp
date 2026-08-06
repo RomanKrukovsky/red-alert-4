@@ -46,6 +46,9 @@ static_assert(uint8(ERA4MinimapTerrain::Structure) == uint8(RA4::Presentation::M
 static_assert(uint8(ERA4MinimapShroud::NeverSeen) == uint8(RA4::Presentation::MinimapShroud::NeverSeen), "minimap shroud drift");
 static_assert(uint8(ERA4MinimapShroud::Remembered) == uint8(RA4::Presentation::MinimapShroud::Remembered), "minimap shroud drift");
 static_assert(uint8(ERA4MinimapShroud::Visible) == uint8(RA4::Presentation::MinimapShroud::Visible), "minimap shroud drift");
+static_assert(uint8(ERA4RadarPingKind::Attack) == uint8(RA4::Presentation::RadarPingKind::Attack), "radar ping drift");
+static_assert(uint8(ERA4RadarPingKind::Loss) == uint8(RA4::Presentation::RadarPingKind::Loss), "radar ping drift");
+static_assert(uint8(ERA4RadarPingKind::Construction) == uint8(RA4::Presentation::RadarPingKind::Construction), "radar ping drift");
 
 class SRA4RadarSlate final : public SLeafWidget
 {
@@ -234,7 +237,35 @@ public:
                 WhiteBrush, ESlateDrawEffect::None, Colour);
         }
 
-        return LayerId + 5;
+        // Pings last, above every marker: they are the "look here now" layer, and an event
+        // hidden behind a unit icon would defeat the point.
+        for (const FRA4RadarPing& Ping : RadarOwner->GetPings())
+        {
+            const float Intensity = FMath::Clamp(Ping.Intensity, 0.0f, 1.0f);
+            if (Intensity <= 0.0f)
+            {
+                continue;
+            }
+            const float NormalizedX = FMath::Clamp(float(Ping.WorldPosition.X / MapSize.X), 0.0f, 1.0f);
+            const float NormalizedY = FMath::Clamp(float(Ping.WorldPosition.Y / MapSize.Y), 0.0f, 1.0f);
+            const FVector2D Centre(MapOffset.X + NormalizedX * MapExtent.X,
+                                   MapOffset.Y + (1.0f - NormalizedY) * MapExtent.Y);
+
+            // Shrinks as it fades, so a new event is unmistakable and an old one recedes
+            // instead of sitting there at full size competing with the live markers.
+            const float Extent = 6.0f + 10.0f * Intensity;
+            FLinearColor Colour = RA4RadarPingColour(Ping.Kind);
+            Colour.A = Intensity;
+
+            const FVector2D RingSize(Extent, Extent);
+            FSlateDrawElement::MakeBox(
+                OutDrawElements, LayerId + 6,
+                AllottedGeometry.ToPaintGeometry(
+                    RingSize, FSlateLayoutTransform(Centre - RingSize * 0.5f)),
+                WhiteBrush, ESlateDrawEffect::None, Colour);
+        }
+
+        return LayerId + 6;
     }
 
     virtual FReply OnMouseButtonDown(const FGeometry& MyGeometry,
@@ -602,6 +633,13 @@ const TArray<uint8>& URA4RadarWidget::GetBackgroundShroud() const
     static const TArray<uint8> Empty;
     const URA4UIDataProviderSubsystem* Provider = GetProvider();
     return Provider != nullptr ? Provider->GetMinimapShroud() : Empty;
+}
+
+const TArray<FRA4RadarPing>& URA4RadarWidget::GetPings() const
+{
+    static const TArray<FRA4RadarPing> Empty;
+    const URA4UIDataProviderSubsystem* Provider = GetProvider();
+    return Provider != nullptr ? Provider->GetRadarPings() : Empty;
 }
 
 FIntPoint URA4RadarWidget::GetBackgroundCellCounts() const

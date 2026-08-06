@@ -84,6 +84,10 @@ public:
     UFUNCTION(BlueprintPure, Category = "RA4|Radar")
     int32 GetMinimapBackgroundRevision() const { return MinimapBackgroundRevision; }
 
+    /** Transient alert markers, brightest first. Empty when nothing has just happened. */
+    UFUNCTION(BlueprintPure, Category = "RA4|Radar")
+    const TArray<FRA4RadarPing>& GetRadarPings() const { return RadarPings; }
+
     /** Resolves the stable simulation display key through the HUD localization map. */
     UFUNCTION(BlueprintPure, Category = "RA4|UI")
     FText GetDisplayNameForKey(const FString& Key) const;
@@ -212,6 +216,7 @@ private:
     TArray<uint8> MinimapShroud;
     FIntPoint MinimapCellCounts = FIntPoint::ZeroValue;
     int32 MinimapBackgroundRevision = 0;
+    TArray<FRA4RadarPing> RadarPings;
 
     int32 Credits = 0;
     int32 PowerProduced = 0;

@@ -56,6 +56,8 @@ public:
     const TArray<uint8>& GetBackgroundTerrain() const;
     const TArray<uint8>& GetBackgroundShroud() const;
     FIntPoint GetBackgroundCellCounts() const;
+    /** Transient alert markers, brightest first. */
+    const TArray<FRA4RadarPing>& GetPings() const;
     void HandleSlateClick(const FVector2D& NormalizedPosition);
     /** Right-click equivalent: resolves to world units and fires OnRadarOrdered. */
     void HandleSlateOrder(const FVector2D& NormalizedPosition);

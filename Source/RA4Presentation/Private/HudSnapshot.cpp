@@ -546,6 +546,56 @@ MinimapShroud ShroudForVisibility(VisibilityState Visibility)
 
 } // namespace
 
+bool RadarPingKindForAlert(AlertType Type, RadarPingKind& OutKind)
+{
+    switch (Type)
+    {
+        case AlertType::BaseUnderAttack:
+        case AlertType::UnitsUnderAttack:
+            OutKind = RadarPingKind::Attack;
+            return true;
+        case AlertType::BuildingLost:
+        case AlertType::UnitLost:
+            OutKind = RadarPingKind::Loss;
+            return true;
+        case AlertType::ConstructionComplete:
+        case AlertType::UnitReady:
+            OutKind = RadarPingKind::Construction;
+            return true;
+
+        // Conditions rather than places. Pinging the map for "low power" would put a marker
+        // somewhere arbitrary and teach the player that pings mean nothing.
+        case AlertType::LowPower:
+        case AlertType::InsufficientFunds:
+        case AlertType::ResourcesDepleted:
+        case AlertType::None:
+            break;
+    }
+    return false;
+}
+
+int32_t RadarPingIntensityPercent(TickIndex RaisedTick, TickIndex Now, int32_t LifetimeTicks)
+{
+    if (LifetimeTicks <= 0)
+    {
+        return 0;
+    }
+    // A tick in the future means the caller mixed up its ordering; treat it as brand new
+    // rather than returning a value above full, which would scale a marker past its cell.
+    if (Now <= RaisedTick)
+    {
+        return 100;
+    }
+    const TickIndex Age = Now - RaisedTick;
+    if (Age >= TickIndex(LifetimeTicks))
+    {
+        return 0;
+    }
+    // Linear: a ping is at its most visible the instant it appears and fades evenly. Integer
+    // arithmetic throughout, so this cannot drift between platforms.
+    return int32_t(100 - (int64_t(Age) * 100) / int64_t(LifetimeTicks));
+}
+
 void HudSnapshotBuilder::BuildMinimapBackground(const SimWorld& World, RadarState& Out)
 {
     Out.bBackgroundChanged = false;
@@ -925,6 +975,42 @@ void HudSnapshotBuilder::Build(const SimWorld& World, const std::vector<EntityId
     AccumulateAlerts(World, Out.Resources);
 
     Out.Alerts = ActiveAlerts;
+
+    // Pings are derived from the alerts, so this must come after AccumulateAlerts. Alerts
+    // with no location -- and conditions like low power, which have no place on a map -- do
+    // not produce one.
+    const TickIndex Now = World.GetTick();
+    for (const Alert& A : ActiveAlerts)
+    {
+        if (!A.bHasLocation)
+        {
+            continue;
+        }
+        RadarPingKind Kind = RadarPingKind::Attack;
+        if (!RadarPingKindForAlert(A.Type, Kind))
+        {
+            continue;
+        }
+        // Measured from LastTick, not FirstTick: a merged alert that is still firing must
+        // stay lit rather than fading out while the base is still being shelled.
+        const int32_t Intensity = RadarPingIntensityPercent(A.LastTick, Now, kRadarPingLifetimeTicks);
+        if (Intensity <= 0)
+        {
+            continue;   // the alert row may outlive its ping
+        }
+        RadarPing Ping;
+        Ping.Position = A.Location;
+        Ping.Kind = Kind;
+        Ping.IntensityPercent = Intensity;
+        Out.Radar.Pings.push_back(Ping);
+    }
+
+    // No sort here on purpose. ActiveAlerts is already ordered most-severe-then-most-recent,
+    // and the pings are appended in that order, so re-sorting them would be a second copy of
+    // the same policy -- and the two would drift the moment one was changed. The invariant the
+    // widget relies on is asserted by the ping-ordering tests, which read the snapshot rather
+    // than any sort call, so they hold whichever layer establishes the order.
+
 }
 
 } // namespace Presentation

@@ -251,6 +251,44 @@ struct MinimapBackground
     std::vector<uint8_t> Shroud;
 };
 
+// A transient marker on the minimap for something that just happened: a base being shelled,
+// a structure finishing. The alert feed already carries these events with coordinates, but a
+// line of text does not tell a player *where* to look, which is the whole reason a minimap
+// exists during an attack.
+//
+// Derived from the alert list rather than being a second event channel, so a ping cannot
+// appear for something the feed does not also report -- one source of truth for "what just
+// happened", presented two ways.
+enum class RadarPingKind : uint8_t
+{
+    Attack = 0,     // own base or forces under fire: the urgent one
+    Loss,           // something of the player's was destroyed
+    Construction,   // a building finished or a unit rolled out
+};
+
+struct RadarPing
+{
+    Vec2 Position;
+    RadarPingKind Kind = RadarPingKind::Attack;
+    // 0..1, counting down. The widget scales and fades by this, so a ping draws attention
+    // when it is new and stops competing with live markers as it ages. Computed here so the
+    // decay curve is testable and does not depend on the UI's frame rate.
+    int32_t IntensityPercent = 100;
+};
+
+// How long a ping stays on the panel. Shorter than the alert feed's own lifetime: a text row
+// is worth re-reading, a flashing dot stops being information and becomes noise.
+constexpr int32_t kRadarPingLifetimeTicks = 60;   // 3 s at 20 Hz
+
+// Maps an alert to a ping kind. Returns false for alerts that have no place on the map --
+// "low power" and "insufficient funds" are conditions, not locations, and pinging the map for
+// them would train the player to ignore pings.
+bool RA4PRESENTATION_API RadarPingKindForAlert(AlertType Type, RadarPingKind& OutKind);
+
+// Remaining intensity of a ping raised at RaisedTick, as of Now. Zero once expired.
+int32_t RA4PRESENTATION_API RadarPingIntensityPercent(TickIndex RaisedTick, TickIndex Now,
+                                                      int32_t LifetimeTicks);
+
 struct RadarState
 {
     int32_t MapWidthUnits = 0;
@@ -266,6 +304,9 @@ struct RadarState
     uint32_t BackgroundRevision = 0;
     bool bBackgroundChanged = false;
     MinimapBackground Background;
+
+    // Newest first, so a widget that draws only the top few shows the most urgent.
+    std::vector<RadarPing> Pings;
 
     // ADR-0013: the minimap itself goes dark from Moderate. The effect matrix lists
     // "Radar / minimap" as one row, and only half of it was implemented -- radar coverage

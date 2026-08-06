@@ -1252,3 +1252,247 @@ RA4_TEST(MinimapCamera, UnknownOrDegenerateInputDrawsNothing)
     RA4_EXPECT(!ComputeMinimapCameraFrame(0, 0, 0, 0, 12800, 12800,
                                           6400, 6400, 3200, 3200, L, T, R, B));
 }
+
+// ---------------------------------------------------------------------------
+// Minimap alert pings (M4)
+// ---------------------------------------------------------------------------
+
+// The alert feed said "base under attack" but a line of text does not tell a player where to
+// look, which is the whole reason a minimap matters during an attack.
+RA4_TEST(MinimapPing, BaseUnderAttackRaisesAPingWhereItHappened)
+{
+    HudFixture F;
+    SpawnEnemyOutpost(F.World);
+    const EntityId Yard = F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    RA4_REQUIRE(Yard.IsValid());
+    // Placing the yard is itself a located event, so it pings as a Construction. Wait for
+    // that to expire, so what follows can only have come from the attack.
+    F.Step(kRadarPingLifetimeTicks + 2);
+    for (const RadarPing& Existing : F.Snapshot.Radar.Pings)
+    {
+        RA4_EXPECT(Existing.Kind != RadarPingKind::Attack);
+    }
+
+    // Park an enemy next to the yard and let it open fire, which is what raises the alert.
+    F.World.SpawnUnit(Ids::AllRifleman, 1, Vec2::FromInts(11 * 200, 10 * 200));
+    const RadarPing* Attack = nullptr;
+    for (int32_t I = 0; I < 400 && Attack == nullptr; ++I)
+    {
+        F.Step(1);
+        for (const RadarPing& Candidate : F.Snapshot.Radar.Pings)
+        {
+            if (Candidate.Kind == RadarPingKind::Attack) { Attack = &Candidate; break; }
+        }
+    }
+
+    RA4_REQUIRE(Attack != nullptr);
+    RA4_EXPECT(Attack->IntensityPercent > 0 && Attack->IntensityPercent <= 100);
+    // Near the yard, not at the origin: a ping in the wrong place is worse than none.
+    const int32_t PingTileX = int32_t(Attack->Position.X.ToIntFloor() / 200);
+    const int32_t PingTileY = int32_t(Attack->Position.Y.ToIntFloor() / 200);
+    RA4_EXPECT(PingTileX >= 8 && PingTileX <= 14);
+    RA4_EXPECT(PingTileY >= 8 && PingTileY <= 14);
+}
+
+// A ping that never expires is a permanent dot the player learns to ignore.
+RA4_TEST(MinimapPing, PingsFadeAndThenDisappear)
+{
+    // Fresh: full intensity.
+    RA4_EXPECT_EQ(RadarPingIntensityPercent(/*Raised*/ 100, /*Now*/ 100, 60), 100);
+    // Half way through its life: roughly half.
+    RA4_EXPECT_EQ(RadarPingIntensityPercent(100, 130, 60), 50);
+    // One tick before expiry: still visible.
+    RA4_EXPECT(RadarPingIntensityPercent(100, 159, 60) > 0);
+    // At and past expiry: gone.
+    RA4_EXPECT_EQ(RadarPingIntensityPercent(100, 160, 60), 0);
+    RA4_EXPECT_EQ(RadarPingIntensityPercent(100, 5000, 60), 0);
+
+    // Monotonically decreasing, so a ping never brightens as it ages.
+    int32_t Previous = 101;
+    for (TickIndex Now = 100; Now <= 160; ++Now)
+    {
+        const int32_t Current = RadarPingIntensityPercent(100, Now, 60);
+        RA4_EXPECT(Current <= Previous);
+        Previous = Current;
+    }
+
+    // Degenerate lifetimes must not divide by zero or produce something above full.
+    RA4_EXPECT_EQ(RadarPingIntensityPercent(100, 120, 0), 0);
+    RA4_EXPECT_EQ(RadarPingIntensityPercent(100, 120, -5), 0);
+    // A "future" tick is a caller ordering mistake; clamped to full rather than overflowing,
+    // which would scale a marker past its own cell.
+    RA4_EXPECT_EQ(RadarPingIntensityPercent(200, 100, 60), 100);
+}
+
+// A ping must mean "look here". Pinging the map for a condition with no location would put a
+// marker somewhere arbitrary and teach the player that pings mean nothing.
+RA4_TEST(MinimapPing, ConditionsWithNoPlaceOnTheMapDoNotPing)
+{
+    RadarPingKind Kind = RadarPingKind::Attack;
+
+    // Located events do ping, and are categorised so the widget can colour them.
+    RA4_EXPECT(RadarPingKindForAlert(AlertType::BaseUnderAttack, Kind));
+    RA4_EXPECT(Kind == RadarPingKind::Attack);
+    RA4_EXPECT(RadarPingKindForAlert(AlertType::UnitsUnderAttack, Kind));
+    RA4_EXPECT(Kind == RadarPingKind::Attack);
+    RA4_EXPECT(RadarPingKindForAlert(AlertType::BuildingLost, Kind));
+    RA4_EXPECT(Kind == RadarPingKind::Loss);
+    RA4_EXPECT(RadarPingKindForAlert(AlertType::UnitLost, Kind));
+    RA4_EXPECT(Kind == RadarPingKind::Loss);
+    RA4_EXPECT(RadarPingKindForAlert(AlertType::ConstructionComplete, Kind));
+    RA4_EXPECT(Kind == RadarPingKind::Construction);
+    RA4_EXPECT(RadarPingKindForAlert(AlertType::UnitReady, Kind));
+    RA4_EXPECT(Kind == RadarPingKind::Construction);
+
+    // Conditions do not.
+    RA4_EXPECT(!RadarPingKindForAlert(AlertType::LowPower, Kind));
+    RA4_EXPECT(!RadarPingKindForAlert(AlertType::InsufficientFunds, Kind));
+    RA4_EXPECT(!RadarPingKindForAlert(AlertType::ResourcesDepleted, Kind));
+    RA4_EXPECT(!RadarPingKindForAlert(AlertType::None, Kind));
+}
+
+// Conditions with no place on the map produce no ping. Verified through a real match, which
+// is the case that actually occurs today: every alert type that can ping currently sets its
+// location, so the builder's bHasLocation guard is unreachable from here.
+//
+// The guard is kept regardless -- it is one line, and the alternative failure mode is a
+// cluster of pings stacked in the map corner if a future alert type ever forgets its
+// coordinates. It is deliberately not claimed as tested: an assertion that cannot fail is
+// worse than none, because it reads as coverage.
+RA4_TEST(MinimapPing, ConditionOnlyMatchProducesNoPings)
+{
+    HudFixture F;
+    SpawnEnemyOutpost(F.World);
+    // A war factory with no reactor raises LowPower, which is a condition, not a place.
+    F.World.SpawnBuilding(Ids::SovWarFactory, 0, TileCoord(14, 14), true);
+    F.Step(6);
+
+    RA4_REQUIRE(F.CountAlerts(AlertType::LowPower) > 0);   // the alert really did fire
+    for (const RadarPing& Ping : F.Snapshot.Radar.Pings)
+    {
+        // Nothing is stacked in the corner, and nothing pinged for the power condition.
+        RA4_EXPECT(Ping.Kind != RadarPingKind::Attack);
+        RA4_EXPECT(!(Ping.Position.X.ToIntFloor() == 0 && Ping.Position.Y.ToIntFloor() == 0));
+    }
+}
+
+// A base still being shelled must stay lit. Measuring the fade from when the alert first
+// fired would let the ping expire mid-attack, which is precisely when it is needed.
+RA4_TEST(MinimapPing, AnOngoingAttackKeepsItsPingLit)
+{
+    HudFixture F;
+    SpawnEnemyOutpost(F.World);
+    F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    F.Step(2);
+
+    // Two riflemen, so the fire keeps coming for a long time.
+    F.World.SpawnUnit(Ids::AllRifleman, 1, Vec2::FromInts(11 * 200, 10 * 200));
+    F.World.SpawnUnit(Ids::AllRifleman, 1, Vec2::FromInts(11 * 200, 11 * 200));
+    for (int32_t I = 0; I < 200 && F.Snapshot.Radar.Pings.empty(); ++I)
+    {
+        F.Step(1);
+    }
+    RA4_REQUIRE(!F.Snapshot.Radar.Pings.empty());
+
+    // Well past a single ping's lifetime, the attack is still in progress, so a ping must
+    // still be there.
+    F.Step(kRadarPingLifetimeTicks * 2);
+    bool bStillLit = false;
+    for (const RadarPing& Ping : F.Snapshot.Radar.Pings)
+    {
+        if (Ping.Kind == RadarPingKind::Attack) { bStillLit = true; }
+    }
+    RA4_EXPECT(bStillLit);
+}
+
+
+// A widget that draws only the top few pings must get the ones that matter. Without an
+// ordering it would get whatever the alert feed happened to hold, so a construction ping
+// could hide an attack the player needs to see.
+// A widget that draws only the top few pings must get the ones that matter. The alert feed is
+// already ordered by severity, so an attack that has begun to fade still sits above a fresh
+// construction there; the ping list has to agree, or the two views of the same event would
+// disagree about which is urgent.
+RA4_TEST(MinimapPing, UrgentPingsOutrankFresherHarmlessOnes)
+{
+    HudFixture F;
+    SpawnEnemyOutpost(F.World);
+    F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    F.Step(2);
+
+    // Start an attack, then let it age a little.
+    F.World.SpawnUnit(Ids::AllRifleman, 1, Vec2::FromInts(11 * 200, 10 * 200));
+    bool bSawAttack = false;
+    for (int32_t I = 0; I < 400 && !bSawAttack; ++I)
+    {
+        F.Step(1);
+        for (const RadarPing& P : F.Snapshot.Radar.Pings)
+        {
+            if (P.Kind == RadarPingKind::Attack) { bSawAttack = true; }
+        }
+    }
+    RA4_REQUIRE(bSawAttack);
+
+    // Now finish a building far away, which is newer and therefore brighter than the attack.
+    F.World.SpawnBuilding(Ids::SovPower, 0, TileCoord(40, 40), true);
+    F.Step(1);
+
+    const RadarPing* Attack = nullptr;
+    const RadarPing* Construction = nullptr;
+    int32_t AttackIndex = -1;
+    int32_t ConstructionIndex = -1;
+    for (int32_t I = 0; I < int32_t(F.Snapshot.Radar.Pings.size()); ++I)
+    {
+        const RadarPing& P = F.Snapshot.Radar.Pings[size_t(I)];
+        if (P.Kind == RadarPingKind::Attack && Attack == nullptr) { Attack = &P; AttackIndex = I; }
+        if (P.Kind == RadarPingKind::Construction && Construction == nullptr)
+        {
+            Construction = &P;
+            ConstructionIndex = I;
+        }
+    }
+    RA4_REQUIRE(Attack != nullptr);
+    RA4_REQUIRE(Construction != nullptr);
+
+    // The construction really is the fresher of the two, so this is the case that
+    // distinguishes "most urgent first" from "newest first".
+    RA4_REQUIRE(Construction->IntensityPercent >= Attack->IntensityPercent);
+    // And the attack still comes first.
+    RA4_EXPECT(AttackIndex < ConstructionIndex);
+}
+
+// Within one kind the freshest comes first, so among several attacks the widget shows the one
+// that is happening right now.
+RA4_TEST(MinimapPing, WithinAKindTheFreshestComesFirst)
+{
+    HudFixture F;
+    SpawnEnemyOutpost(F.World);
+    // Three separate buildings, so their construction pings are distinct alert rows of
+    // differing ages rather than one merged row.
+    F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    F.Step(1);
+    F.World.SpawnBuilding(Ids::SovPower, 0, TileCoord(30, 30), true);
+    F.Step(1);
+    F.World.SpawnBuilding(Ids::SovBarracks, 0, TileCoord(40, 40), true);
+    F.Step(1);
+    RA4_REQUIRE(F.Snapshot.Radar.Pings.size() >= 3u);   // otherwise this proves nothing
+
+    int32_t Previous = 101;
+    bool bSawDifferingIntensities = false;
+    for (const RadarPing& P : F.Snapshot.Radar.Pings)
+    {
+        RA4_EXPECT(P.Kind == RadarPingKind::Construction);   // all one kind, so age decides
+        if (Previous <= 100 && P.IntensityPercent != Previous)
+        {
+            bSawDifferingIntensities = true;
+        }
+        RA4_EXPECT(P.IntensityPercent <= Previous);
+        Previous = P.IntensityPercent;
+    }
+    // The pings really do differ in age, so the ordering was exercised rather than trivially
+    // satisfied by three identical values.
+    RA4_EXPECT(bSawDifferingIntensities);
+
+    RA4_EXPECT(uint8_t(RadarPingKind::Attack) < uint8_t(RadarPingKind::Loss));
+    RA4_EXPECT(uint8_t(RadarPingKind::Loss) < uint8_t(RadarPingKind::Construction));
+}
