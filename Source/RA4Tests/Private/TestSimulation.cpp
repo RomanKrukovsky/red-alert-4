@@ -2567,6 +2567,22 @@ RA4_TEST(Repair, CannotBeBoughtOnCreditAndTogglingOffBanksNothing)
 {
     // Two ways repair could have become free: healing without paying, and pocketing the
     // part-credit across a stop/start cycle.
+    //
+    // The deficit case is the one that actually caught a bug and is checked first. At
+    // Moderate the per-tick bill is half a credit, so the whole-credit slice is zero on
+    // every other tick -- and billing only on the non-zero ticks handed out health for
+    // nothing on all the others. At Normal the bill lands exactly on a whole credit
+    // every tick, which is why a Normal-only test saw nothing wrong.
+    {
+        RepairScenario S(1, 5, /*StartingCredits*/ 0);
+        RA4_REQUIRE(S.World.GetPlayer(0).GetPowerTier() == PowerTier::Moderate);
+        RA4_REQUIRE(S.StartRepair());
+        const int32_t Wounded = S.Health();
+        RunTicks(S.World, 60);
+        RA4_EXPECT_EQ(S.Health(), Wounded);
+        RA4_EXPECT_EQ(S.World.GetPlayer(0).Credits, 0);
+    }
+
     RepairScenario S(2, 0, /*StartingCredits*/ 0);
     RA4_REQUIRE(S.World.GetPlayer(0).GetPowerTier() == PowerTier::Normal);
     RA4_REQUIRE(S.StartRepair());
@@ -2590,12 +2606,11 @@ RA4_TEST(Repair, CannotBeBoughtOnCreditAndTogglingOffBanksNothing)
     }
     const int32_t Gained = S.Health() - Wounded;
     const int32_t Spent = 100000 - S.World.GetPlayer(0).Credits;
-    // Whatever was healed was paid for at the intended rate, within rounding.
-    RA4_EXPECT(Gained >= 0);
-    if (Gained > 0)
-    {
-        RA4_EXPECT(Spent > 0);
-    }
+    // Every hitpoint gained was paid for at the intended rate. Asserted as a floor on
+    // the spend rather than an exact figure, because a toggle mid-tick legitimately
+    // discards a part-credit -- but it can never be less than the whole credits owed.
+    RA4_EXPECT(Gained > 0);   // it did heal, so the comparison below means something
+    RA4_EXPECT(Spent >= (Gained * kRepairCostPerHealthCenti) / kRepairCostScale);
 }
 
 RA4_TEST(PowerTier, RadarGoesDarkAtModerateAndComesBackOnRecovery)
@@ -2733,4 +2748,47 @@ RA4_TEST(Repair, StateSurvivesSaveAndFeedsTheChecksum)
     RA4_EXPECT(Restored.ComputeStateChecksum() != Before);
     RA4_REQUIRE(Restored.ApplyCommand(Toggle).IsAccepted());
     RA4_EXPECT(Restored.ComputeStateChecksum() == Before);
+}
+
+// Repair and flow payment both spend from the same treasury on the same tick, in
+// different systems, and neither knows about the other. Nothing coordinates them, so the
+// only thing preventing an overdraft is that each clamps to the balance it sees -- worth
+// pinning, because a later edit to either could quietly break it.
+RA4_TEST(Repair, CompetingWithProductionNeverOverdrawsTheTreasury)
+{
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    MatchSetup Setup = MakeTestSetup(99);
+    Setup.Players[0].StartingCredits = 30;   // far less than either wants
+
+    SimWorld World;
+    World.Initialize(&Content, Setup);
+    SpawnEnemyOutpost(World);
+    const EntityId Yard = World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    World.SpawnBuilding(Ids::SovPower, 0, TileCoord(14, 10), true);
+    World.SpawnBuilding(Ids::SovPower, 0, TileCoord(18, 10), true);
+    const EntityId Barracks = World.SpawnBuilding(Ids::SovBarracks, 0, TileCoord(10, 20), true);
+    RA4_REQUIRE(Yard.IsValid() && Barracks.IsValid());
+    World.Tick(nullptr);
+
+    const HealthComp* H = World.GetHealth(Barracks);
+    RA4_REQUIRE(H != nullptr);
+    World.DebugDamage(Barracks, H->Max / 2);
+
+    Command Repair = MakeCommand(CommandType::RepairBuilding, 0);
+    Repair.Primary = Barracks;
+    RA4_REQUIRE(World.ApplyCommand(Repair).IsAccepted());
+
+    Command Produce = MakeCommand(CommandType::StartProduction, 0);
+    Produce.Primary = Yard;
+    Produce.Content = Ids::SovPower;
+    RA4_REQUIRE(World.ApplyCommand(Produce).IsAccepted());
+
+    // Watch every tick, not just the end: an overdraft could be transient and repaid by
+    // harvest income before the final read.
+    for (int32_t T = 0; T < 600; ++T)
+    {
+        World.Tick(nullptr);
+        RA4_REQUIRE(World.GetPlayer(0).Credits >= 0);
+    }
 }

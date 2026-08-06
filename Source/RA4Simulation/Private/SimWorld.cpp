@@ -2256,22 +2256,36 @@ void SimWorld::SystemRepair()
         int32_t Heal = std::max(1, (kRepairHealthPerTick * SpeedPercent) / 100);
         Heal = std::min(Heal, Missing);
 
-        // Bill in hundredths and only spend whole credits, so a sub-credit-per-tick rate
-        // is neither rounded up into extortion nor down into free repair.
+        // Bill in hundredths and spend only whole credits, so a sub-credit-per-tick rate
+        // is neither rounded up into extortion nor down into free repair. A tick whose
+        // accumulated bill has not yet reached a whole credit still heals -- the charge
+        // is deferred, not waived, and over any run of ticks the totals balance exactly.
+        //
+        // The exception is a player who cannot pay. Deferring a bill they will never
+        // settle *is* free repair, so affordability is checked against the accumulated
+        // total rather than against this tick's whole-credit slice: at Moderate the slice
+        // is zero on every other tick, and billing only when it is non-zero handed out
+        // health for nothing on all the others.
+        const int32_t PendingCenti = B.RepairCreditAccumulator + Heal * kRepairCostPerHealthCenti;
+        const int32_t Affordable = std::max(0, P.Credits) * kRepairCostScale;
+        if (PendingCenti > Affordable)
+        {
+            // Heal only what the treasury actually covers, and take every credit of it.
+            const int32_t HealableCenti = std::max(0, Affordable - B.RepairCreditAccumulator);
+            Heal = HealableCenti / kRepairCostPerHealthCenti;
+            if (Heal <= 0)
+            {
+                continue;   // cannot afford even one hitpoint
+            }
+        }
+
         B.RepairCreditAccumulator += Heal * kRepairCostPerHealthCenti;
         const int32_t Due = B.RepairCreditAccumulator / kRepairCostScale;
         if (Due > 0)
         {
-            const int32_t Charged = std::min(Due, std::max(0, P.Credits));
-            P.Credits -= Charged;
-            B.RepairCreditAccumulator -= Charged * kRepairCostScale;
-            if (Charged < Due)
-            {
-                // Out of money. Heal only what was actually paid for -- repairing on
-                // credit would be a way to conjure hitpoints from nothing.
-                Heal = (Charged * kRepairCostScale) / kRepairCostPerHealthCenti;
-                B.RepairCreditAccumulator = 0;
-            }
+            // Affordable by construction above, so this never partially pays.
+            P.Credits -= Due;
+            B.RepairCreditAccumulator -= Due * kRepairCostScale;
         }
 
         if (Heal > 0)
