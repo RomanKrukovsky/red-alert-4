@@ -35,6 +35,7 @@ Red Alert 4 (RA4) is a deterministic real-time strategy (RTS) game engine built 
 | **Presentation Mapping** | **Functional** | `URA4PresentationSubsystem`, `URA4ArtMapping` | Maps entity IDs to skeletal/static meshes. |
 | **UI Framework (NoesisGUI)** | **Blocked** | `RA4NoesisHUDViewModel.h` | Missing `Plugins/NoesisGUI` in repo. |
 | **UI Framework (UMG)** | **Functional** | `Content/RA4UI/Widgets/` | Native Unreal UMG fallback widgets. |
+| **Minimap / radar panel** | **Code complete, unverified in editor** | `HudSnapshot.cpp`, `RA4SidebarWidget.cpp`, `FogOfWarGrid.cpp` | M1–M4 (2026-08-06): radar contacts, letterboxed non-square maps, blackout handling, terrain/shroud background, drag-pan, right-click orders, camera frame, alert pings. Fog-gated throughout. Editor target links; **nobody has launched Unreal and looked**. No shipped definition sets `bIsRadar`, so the sweep is test-only until content authors one. |
 | **Web UI Prototype** | **Functional Prototype** | `ra4-ui/` | React/Vite web application (`npm run build` PASS). |
 
 ---
