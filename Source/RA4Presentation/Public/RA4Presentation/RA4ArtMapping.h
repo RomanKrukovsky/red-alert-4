@@ -43,6 +43,17 @@ struct RA4PRESENTATION_API FRA4UnitArtDefinition
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sockets")
     FName TurretSocketName = FName("Socket_Turret");
 
+    // Optional separate turret mesh. The blockout vehicles are single meshes with
+    // no detachable turret, so this is empty for them and the hull rotates to aim
+    // instead (see ARA4EntityActor::SetTurretYaw). When real art arrives with a
+    // split hull/turret, filling this in is the whole integration -- no code change.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh")
+    TSoftObjectPtr<UStaticMesh> TurretMesh;
+
+    // Height on the hull where the turret sits, in Unreal units.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh")
+    float TurretMountHeight = 0.0f;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sockets")
     FName MuzzleSocketName = FName("Socket_Muzzle");
 

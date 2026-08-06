@@ -244,6 +244,16 @@ struct BuildingInfo
 
     ContentId BundledUnit;
     int32_t SellRefundPercent = 50;
+
+    // --- Superweapon ------------------------------------------------------
+    // A building is a superweapon when SuperweaponRechargeTicks > 0. Keeping the
+    // parameters here rather than in a parallel table means a new superweapon is
+    // a content edit, and the recharge clock is per-building so two of them fire
+    // independently.
+    int32_t SuperweaponRechargeTicks = 0;   // 0 = not a superweapon
+    int32_t SuperweaponDamage = 0;          // applied at the impact centre
+    Fixed SuperweaponRadius = Fixed::Zero();
+    WarheadClass SuperweaponWarhead = WarheadClass::Siege;
 };
 
 struct UnitInfo

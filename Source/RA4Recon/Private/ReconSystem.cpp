@@ -15,7 +15,7 @@ namespace Recon
 
 namespace
 {
-constexpr uint32_t kReconSystemVersion = 4; // v4: report NodeId, chain latency (M3); v3: category/anonymous (M2); v2: association tables (M1)
+constexpr uint32_t kReconSystemVersion = 5; // v5: OwnerPlayer + ObserverNodeId serialized (M3 review B1/B2) // v4: report NodeId, chain latency (M3); v3: category/anonymous (M2); v2: association tables (M1)
 } // namespace
 
 const char* PhaseName(Phase P)
@@ -314,7 +314,6 @@ void ReconSystem::PhaseReportEmission(TickIndex CurrentTick)
         // Distinct nodes present in this tick's observations, in first-seen order
         // (deterministic: PendingObservations is built in entity-slot order).
         NodeBatchIds.clear();
-        NodeBatchStart.clear();
         for (const Observation& Obs : PendingObservations[P])
         {
             bool bKnown = false;
@@ -342,13 +341,31 @@ void ReconSystem::PhaseReportEmission(TickIndex CurrentTick)
                 continue;
             }
 
+            // Two different reasons an observer can be node-less, with two
+            // different meanings (found by the M5 blackout test: the veto above was
+            // UNREACHABLE, because attachment already skips blacked-out nodes, so
+            // every blackout silently degraded into an orphan report that arrived
+            // anyway -- the opposite of §4.4).
+            //
+            //  * The player has no command structure at all (headless fixtures, and
+            //    a player who has lost every command building): reports still walk
+            //    in by runner at OrphanDelayTicks. Slow, but a staff of some kind
+            //    is assumed to exist.
+            //  * The player HAS command buildings but none of them can receive --
+            //    every node dark, or no HQ standing: there is nobody to report TO,
+            //    so nothing arrives at all. This is the blackout §4.4 describes.
+            const bool bHasAnyNode = !Nodes.empty();
+            if (bHasAnyNode && !TickInput->HasHqNode[P])
+            {
+                continue; // network dark: the staff map freezes rather than updates
+            }
+
             // Latency and hop count. An observer attached to the HQ itself is one
             // hop from the staff map; attached to a subordinate node it is
-            // HopsFromNodeToHq; attached to nothing, or reporting to a player with
-            // no HQ standing, it takes the orphan delay.
+            // HopsFromNodeToHq; with no command structure at all, courier speed.
             int32_t Hops = 0;
             int32_t DelayTicks = 0;
-            if (Node == nullptr || !TickInput->HasHqNode[P])
+            if (Node == nullptr)
             {
                 Hops = 1;
                 DelayTicks = CT.OrphanDelayTicks;
@@ -369,9 +386,7 @@ void ReconSystem::PhaseReportEmission(TickIndex CurrentTick)
 
             // Reliability degrades per hop: each relay summarises, rounds and
             // loses detail. Clamped at zero rather than going negative.
-            Fixed Reliability = Fixed::FromInt(1) -
-                                PerMilleToFixed(CT.ReliabilityLossPerHopPerMille * Hops);
-            Reliability = FxClamp(Reliability, Fixed::Zero(), Fixed::FromInt(1));
+            const Fixed Reliability = ReliabilityAfterHops(CT, Hops);
 
             ReconReport Report;
             Report.ReportId = NextReportId;
@@ -399,8 +414,19 @@ void ReconSystem::PhaseReportEmission(TickIndex CurrentTick)
 
 void ReconSystem::PhasePropagation(TickIndex)
 {
-    // M3 territory (hops, delays, blackout). With zero-delay reports there is
-    // nothing to advance.
+    // Intentionally empty, and kept.
+    //
+    // M3 put hop counting and latency in PhaseReportEmission, because a report's
+    // route is known the moment it is filed: the node that saw the contact decides
+    // both the hop count and the arrival tick, so walking the queue every tick to
+    // advance it would be bookkeeping with no decision in it.
+    //
+    // The phase stays in the pipeline as the seat for propagation that genuinely
+    // needs per-tick evaluation -- a relay destroyed mid-flight re-routing its
+    // queued traffic, or jamming applied to reports already on the wire (finding
+    // m3: today a report survives its node's destruction, which is defensible but
+    // undocumented). Deleting the phase would mean renumbering the pipeline and
+    // its profiling counters to add it back.
 }
 
 // --- M3 aggregation helpers ------------------------------------------------------
@@ -437,13 +463,8 @@ int64_t TileDistanceSquared(const Vec2& A, const Vec2& B)
 // genuine contradiction, and a fixed threshold would confuse the two.
 bool CountsMateriallyDiffer(int32_t A, int32_t B, int32_t TolerancePerMille)
 {
-    const int32_t Larger = A > B ? A : B;
-    if (Larger <= 0)
-    {
-        return false;
-    }
-    const int32_t Difference = A > B ? A - B : B - A;
-    return int64_t(Difference) * 1000 > int64_t(Larger) * int64_t(TolerancePerMille);
+    // One definition, shared with the tests (see ReconConfig.h).
+    return CountsMateriallyDifferForTest(A, B, TolerancePerMille);
 }
 
 } // namespace
@@ -576,10 +597,19 @@ void ReconSystem::ApplyGroupedReport(PerceivedWorld& World, PlayerId P, const Re
         // is an independent source. Same node again is the same source saying the
         // same thing, which is not evidence.
         const bool bNewSource = Track->LastReportNodeId != Report.NodeId;
-        const bool bWasObserved = Track->LastUpdateTick != 0 || Track->IndependentSourceCount > 0;
+        // "Has anyone reported this before?" A track written on tick 0 would read as
+        // never-observed, which is unreachable today because aggregation runs after
+        // emission so the earliest arrival is tick 1 -- but the coupling to phase
+        // order was implicit, so IndependentSourceCount carries the real answer and
+        // the tick test is only a fallback (finding m6).
+        const bool bWasObserved = Track->IndependentSourceCount > 0 || Track->LastUpdateTick != 0;
+        // Compare against the PREVIOUS CLAIM, not the accumulated interval maximum.
+        // Comparing to the max let one early over-count poison the tolerance test
+        // forever: a track that once read [1,30] would call every later 20-ish
+        // report "agreeing" and every 5-ish report "contested" (review M3).
         const bool bContestedNow =
             bWasObserved && bNewSource &&
-            CountsMateriallyDiffer(Track->BelievedCountMax, Group.Count, TT.ContestedCountTolerancePerMille);
+            CountsMateriallyDiffer(Track->LastClaimedCount, Group.Count, TT.ContestedCountTolerancePerMille);
 
         Track->BelievedCategory = Group.Category;
         Track->bAnonymous = Group.bAnonymous;
@@ -595,9 +625,16 @@ void ReconSystem::ApplyGroupedReport(PerceivedWorld& World, PlayerId P, const Re
             // Sources disagree: keep BOTH claims by widening the interval, and say
             // so. Picking a winner here would hide exactly the uncertainty the
             // player needs in order to send someone to look again.
+            //
+            // The interval spans the two CONFLICTING CLAIMS only -- the previous
+            // claim and this one -- rather than ratcheting outward across the whole
+            // history of the track. An interval that only ever grows would drift to
+            // the historical extreme and stop describing the present (review M3).
             Track->bContested = true;
-            Track->BelievedCountMin = Track->BelievedCountMin < Group.Count ? Track->BelievedCountMin : Group.Count;
-            Track->BelievedCountMax = Track->BelievedCountMax > Group.Count ? Track->BelievedCountMax : Group.Count;
+            const int32_t Low = Track->LastClaimedCount < Group.Count ? Track->LastClaimedCount : Group.Count;
+            const int32_t High = Track->LastClaimedCount > Group.Count ? Track->LastClaimedCount : Group.Count;
+            Track->BelievedCountMin = Low;
+            Track->BelievedCountMax = High;
         }
         else
         {
@@ -615,16 +652,12 @@ void ReconSystem::ApplyGroupedReport(PerceivedWorld& World, PlayerId P, const Re
         // sum of its parts (§4.4): two eyes on the same formation is qualitatively
         // better evidence than one looking twice. Contested data does not earn the
         // bonus -- the sources cancel rather than reinforce.
-        Fixed Confidence = Fixed::FromInt(1);
-        if (Track->bContested)
-        {
-            Confidence = Fixed::FromInt(1) - PerMilleToFixed(TT.AgreementConfidenceBonusPerMille);
-        }
-        else if (Track->IndependentSourceCount > 1)
-        {
-            Confidence = Fixed::FromInt(1) + PerMilleToFixed(TT.AgreementConfidenceBonusPerMille);
-        }
-        Track->Confidence = FxClamp(Confidence, Fixed::Zero(), Fixed::FromInt(1));
+        Track->Confidence =
+            ConfidenceForSources(TT, Track->IndependentSourceCount, Track->bContested);
+
+        // The claim this report actually made, kept apart from the interval shown
+        // to the player: the next contest test compares against this.
+        Track->LastClaimedCount = Group.Count;
 
         Track->ProvenanceReportIds[Track->ProvenanceCount % kTrackProvenanceSize] = Report.ReportId;
         Track->ProvenanceCount = uint8_t((Track->ProvenanceCount + 1) % (kTrackProvenanceSize * 2));
@@ -797,11 +830,20 @@ void ReconSystem::PhaseTrackUpdate(TickIndex CurrentTick)
                 T.bStale = true;
             }
 
-            // How much wall-clock this slot is accountable for: the sweep visits
-            // each slot once per (Capacity / Budget) ticks, so per-second rates
-            // must be scaled by the interval actually elapsed for THIS slot, or a
-            // bigger cap would silently slow decay down.
-            const int32_t TicksPerVisit = int32_t((Capacity + Visits - 1) / Visits);
+            // How much wall-clock this slot is accountable for. Measured, not
+            // estimated: charging a ceil-rounded (Capacity / Visits) made the
+            // effective decay rate a function of how many tracks happened to exist,
+            // so "per second" meant different things at different moments and any
+            // tuning done at one track count was wrong at another (review M4).
+            // LastDecayTick records the tick this slot was last charged, so the
+            // interval is exact regardless of cap, budget or sweep phase.
+            const int32_t TicksPerVisit =
+                T.LastDecayTick == 0 ? 1 : int32_t(CurrentTick - T.LastDecayTick);
+            T.LastDecayTick = CurrentTick;
+            if (TicksPerVisit <= 0)
+            {
+                continue; // already charged this tick
+            }
 
             // Confidence decay. A blacked-out network loses faith faster: the
             // staff knows it is working from data nobody can confirm.
@@ -833,6 +875,12 @@ void ReconSystem::PhaseTrackUpdate(TickIndex CurrentTick)
                     if (AssociationTrack[P][Slot] == T.Id)
                     {
                         AssociationTrack[P][Slot] = TrackId{};
+                        // Clear the generation too. The staleness check happens to
+                        // short-circuit on the invalid handle today, so a stale
+                        // generation is currently harmless -- which is exactly how
+                        // it would survive until a future reader checked generation
+                        // first and got a wrong answer (review M1).
+                        AssociationGeneration[P][Slot] = 0;
                     }
                 }
                 World->ReleaseTrack(T.Id);
@@ -858,6 +906,11 @@ void ReconSystem::Serialize(ByteWriter& W) const
     for (const ReconReport& Report : InFlightReports)
     {
         W.WriteUInt32(Report.ReportId);
+        // OwnerPlayer decides WHOSE staff map the report feeds. Omitting it made
+        // every in-flight report load as kInvalidPlayer and get dropped in
+        // aggregation -- invisible in M1 (the queue was empty at end of tick) and a
+        // guaranteed post-load desync in M3, where the queue lives for seconds.
+        W.WriteUInt8(Report.OwnerPlayer);
         W.WriteUInt32(Report.Author.Index);
         W.WriteUInt32(Report.Author.Generation);
         W.WriteUInt32(Report.EmitTick);
@@ -868,6 +921,10 @@ void ReconSystem::Serialize(ByteWriter& W) const
         W.WriteUInt32(uint32_t(Report.Payload.size()));
         for (const Observation& Obs : Report.Payload)
         {
+            // ObserverNodeId drives node batching in emission and is the report's
+            // own routing record; a restored report without it is internally
+            // inconsistent with its serialized Report.NodeId.
+            W.WriteUInt32(Obs.ObserverNodeId);
             W.WriteUInt32(Obs.Subject.Index);
             W.WriteUInt32(Obs.Subject.Generation);
             W.WriteUInt32(Obs.ObservedClass.Value);
@@ -939,6 +996,7 @@ bool ReconSystem::Deserialize(ByteReader& R)
     {
         ReconReport Report;
         Report.ReportId = R.ReadUInt32();
+        Report.OwnerPlayer = R.ReadUInt8();
         Report.Author.Index = R.ReadUInt32();
         Report.Author.Generation = R.ReadUInt32();
         Report.EmitTick = R.ReadUInt32();
@@ -951,6 +1009,7 @@ bool ReconSystem::Deserialize(ByteReader& R)
         for (uint32_t J = 0; J < PayloadCount; ++J)
         {
             Observation Obs;
+            Obs.ObserverNodeId = uint16_t(R.ReadUInt32());
             Obs.Subject.Index = R.ReadUInt32();
             Obs.Subject.Generation = R.ReadUInt32();
             Obs.ObservedClass = ContentId(R.ReadUInt32());

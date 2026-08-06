@@ -8,9 +8,14 @@ URA4UIScreenViewModel::URA4UIScreenViewModel()
     : ModalTitle(LOCTEXT("DefaultModalTitle", "SYSTEM MESSAGE"))
     , ModalBody(LOCTEXT("DefaultModalBody", "Awaiting commander orders."))
 {
+    // Showcase filler, but it ships: RA4UI is in RedAlert4.Target.cs's ExtraModuleNames,
+    // so these strings are in the Game build and get harvested into the shipped
+    // localization catalogs. They therefore use the project's own unit names -- the same
+    // ones RA4UIDataProviderSubsystem maps content ids to -- rather than trademarked
+    // Red Alert 2 names, which the project is not licensed to use.
     ProductionQueue = {
-        {LOCTEXT("QueueTeslaTank", "Tesla Tank"), 1400, 0.62f, 1},
-        {LOCTEXT("QueueConscript", "Conscript"), 100, 0.0f, 5},
+        {LOCTEXT("QueueGranitMBT", "Tank «Granit»"), 1400, 0.62f, 1},
+        {LOCTEXT("QueueRubezhRifleman", "Strelok «Rubezh»"), 100, 0.0f, 5},
     };
 
     LobbySlots = {

@@ -22,6 +22,9 @@ constexpr ContentId WpnRocketLauncher = MakeContentId("weapon.rocket_launcher");
 constexpr ContentId WpnTankCannonLight = MakeContentId("weapon.tank_cannon_light");
 constexpr ContentId WpnTankCannonHeavy = MakeContentId("weapon.tank_cannon_heavy");
 constexpr ContentId WpnTurretCannon = MakeContentId("weapon.turret_cannon");
+constexpr ContentId WpnSiegeArtillery = MakeContentId("weapon.siege_artillery");
+constexpr ContentId WpnAircraftBomb = MakeContentId("weapon.aircraft_bomb");
+constexpr ContentId WpnFlakCannon = MakeContentId("weapon.flak_cannon");
 constexpr ContentId WpnTurretMachineGun = MakeContentId("weapon.turret_machinegun");
 constexpr ContentId WpnPrismBeam = MakeContentId("weapon.prism_beam");
 
@@ -33,6 +36,8 @@ constexpr ContentId BldSovBarracks = MakeContentId("building.sov.barracks");
 constexpr ContentId BldSovWarFactory = MakeContentId("building.sov.war_factory");
 constexpr ContentId BldSovTurret = MakeContentId("building.sov.gun_turret");
 constexpr ContentId BldSovRadar = MakeContentId("building.sov.radar_complex");
+constexpr ContentId BldSovAaTurret = MakeContentId("building.sov.flak_turret");
+constexpr ContentId BldSovSuper = MakeContentId("building.sov.iron_barrage");
 
 constexpr ContentId BldAllConYard = MakeContentId("building.all.construction_yard");
 constexpr ContentId BldAllPower = MakeContentId("building.all.power_plant");
@@ -41,6 +46,8 @@ constexpr ContentId BldAllBarracks = MakeContentId("building.all.barracks");
 constexpr ContentId BldAllWarFactory = MakeContentId("building.all.war_factory");
 constexpr ContentId BldAllTurret = MakeContentId("building.all.pillbox");
 constexpr ContentId BldAllRadar = MakeContentId("building.all.radar_complex");
+constexpr ContentId BldAllAaTurret = MakeContentId("building.all.patriot_battery");
+constexpr ContentId BldAllSuper = MakeContentId("building.all.aegis_lance");
 
 // --- Unit ids -------------------------------------------------------------
 constexpr ContentId UnitSovMcv = MakeContentId("unit.sov.mcv");
@@ -48,12 +55,16 @@ constexpr ContentId UnitSovHarvester = MakeContentId("unit.sov.ore_harvester");
 constexpr ContentId UnitSovConscript = MakeContentId("unit.sov.conscript");
 constexpr ContentId UnitSovRocketeer = MakeContentId("unit.sov.rocket_trooper");
 constexpr ContentId UnitSovHeavyTank = MakeContentId("unit.sov.heavy_tank");
+constexpr ContentId UnitSovArtillery = MakeContentId("unit.sov.zarevo_mlrs");
+constexpr ContentId UnitSovAircraft = MakeContentId("unit.sov.mig_bomber");
 
 constexpr ContentId UnitAllMcv = MakeContentId("unit.all.mcv");
 constexpr ContentId UnitAllHarvester = MakeContentId("unit.all.ore_harvester");
 constexpr ContentId UnitAllRifleman = MakeContentId("unit.all.rifleman");
 constexpr ContentId UnitAllRocketeer = MakeContentId("unit.all.missile_infantry");
 constexpr ContentId UnitAllLightTank = MakeContentId("unit.all.light_tank");
+constexpr ContentId UnitAllArtillery = MakeContentId("unit.all.oracle_artillery");
+constexpr ContentId UnitAllAircraft = MakeContentId("unit.all.harrier_jet");
 
 constexpr ContentId ResOreField = MakeContentId("resource.ore_field");
 
@@ -112,6 +123,56 @@ void BuildWeapons(ContentDatabase& Db)
         Db.AddWeapon(W);
     }
     {
+        // Siege artillery: the counter to static defence. Out-ranges the turret
+        // (14 m vs 9 m) so it can shell a wall without being shot back, but is
+        // slow, fragile and near-useless against units -- the trade is deliberate.
+        WeaponDef W;
+        W.Id = WpnSiegeArtillery;
+        W.Name = "weapon.siege_artillery";
+        W.Damage = 60;
+        W.Warhead = WarheadClass::Siege;
+        W.MaxRange = Metres(14);
+        W.MinRange = Metres(4);      // cannot defend itself up close
+        W.CooldownTicks = 60;        // 3 s at 20 Hz: slow, telegraphed
+        W.ProjectileSpeed = Metres(45);
+        W.SplashRadius = Metres(2);
+        Db.AddWeapon(W);
+    }
+    {
+        // Aircraft bomb: hits hard but only downward. Aircraft ignore terrain and
+        // ground defences that cannot elevate, so the counter is dedicated AA
+        // rather than more tanks -- that is the point of opening the air layer.
+        WeaponDef W;
+        W.Id = WpnAircraftBomb;
+        W.Name = "weapon.aircraft_bomb";
+        W.Damage = 80;
+        W.Warhead = WarheadClass::Siege;   // 1.7x vs Building: real siege capability
+        W.MaxRange = Metres(3);            // must fly over the target
+        W.CooldownTicks = 50;
+        W.ProjectileSpeed = Metres(60);
+        W.SplashRadius = Metres(2);
+        W.bCanTargetGround = true;
+        W.bCanTargetAir = false;           // a bomber cannot dogfight
+        W.bRequiresTurretAligned = false;
+        Db.AddWeapon(W);
+    }
+    {
+        // Flak: the answer to aircraft. AntiAir warhead is 2.0x vs Air and 0.1x vs
+        // everything on the ground, so this cannot double as a ground turret.
+        WeaponDef W;
+        W.Id = WpnFlakCannon;
+        W.Name = "weapon.flak_cannon";
+        W.Damage = 55;
+        W.Warhead = WarheadClass::AntiAir;
+        W.MaxRange = Metres(11);           // reaches further than a bomber's 3 m
+        W.CooldownTicks = 20;
+        W.ProjectileSpeed = Metres(120);
+        W.bCanTargetGround = false;        // strictly anti-air
+        W.bCanTargetAir = true;
+        W.bRequiresTurretAligned = false;
+        Db.AddWeapon(W);
+    }
+    {
         WeaponDef W;
         W.Id = WpnTurretCannon;
         W.Name = "weapon.turret_cannon";
@@ -159,8 +220,8 @@ struct FactionSetup
 {
     FactionId Faction;
     const char* KeyPrefix;
-    ContentId ConYard, Power, Refinery, Barracks, WarFactory, Turret, Radar;
-    ContentId Mcv, Harvester, BasicInfantry, AntiArmorInfantry, MainTank;
+    ContentId ConYard, Power, Refinery, Barracks, WarFactory, Turret, Radar, AaTurret, Airfield, Superweapon;
+    ContentId Mcv, Harvester, BasicInfantry, AntiArmorInfantry, MainTank, Artillery, Aircraft;
     const char* ConYardName;
     const char* PowerName;
     const char* RefineryName;
@@ -173,6 +234,10 @@ struct FactionSetup
     const char* BasicInfantryName;
     const char* AntiArmorInfantryName;
     const char* MainTankName;
+    const char* ArtilleryName;
+    const char* AircraftName;
+    const char* AaTurretName;
+    const char* SuperweaponName;
 
     int32_t PowerOutput;
     int32_t TankHealth;
@@ -403,6 +468,136 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         Db.AddEntity(E);
     }
 
+    // --- Siege artillery ---------------------------------------------------
+    // Exists to answer static defence. League pass 1 and 2 both showed Turtle
+    // winning ~80% because NOTHING in the roster out-ranged a 9 m turret, so an
+    // attack could only ever trade at a loss: a 600-credit turret killed a
+    // 900-credit tank and survived. This unit shells from 14 m, uses the Siege
+    // warhead (x2 vs Building where AP is x0.6), and cannot fire inside 4 m --
+    // so it beats walls but dies to anything that reaches it.
+    {
+        EntityDef E;
+        E.Id = S.Artillery;
+        E.Name = S.ArtilleryName;
+        E.DisplayNameKey = Prefix + ".unit.artillery";
+        E.Kind = EntityKind::Unit;
+        E.Faction = S.Faction;
+        E.MaxHealth = 220;                       // fragile: half a main tank
+        E.Armor = ArmorClass::SiegeVehicle;
+        E.VisionRange = Metres(10);              // shorter than its own range:
+                                                 // needs a spotter to shoot blind
+        E.Weapon = WpnSiegeArtillery;
+        E.Roles = EntityRole::Combat | EntityRole::Artillery;
+        E.Unit.Layer = MovementLayer::Tracked;
+        E.Unit.MaxSpeed = Metres(4);             // slow, cannot escape a raid
+        E.Unit.Acceleration = Metres(10);
+        E.Unit.TurnRatePerSecond = 400;
+        E.Unit.TurretTurnRatePerSecond = 600;
+        E.Unit.CollisionRadius = Fixed::FromInt(120);
+        E.Production.Cost = 800;
+        E.Production.BuildTimeTicks = SecondsToTicks(15);
+        E.Production.Category = ProductionCategory::Vehicle;
+        E.Production.Tier = TechTier::T2;
+        E.Production.ProducedBy = {S.WarFactory};
+        E.Production.Prerequisites = {S.WarFactory};
+        Db.AddEntity(E);
+    }
+
+    // --- Anti-air turret ---------------------------------------------------
+    // Opening the air layer without this would make aircraft unanswerable: the
+    // gun turret has bCanTargetAir = false, so nothing on a base could shoot up.
+    {
+        EntityDef E;
+        E.Id = S.AaTurret;
+        E.Name = S.AaTurretName;
+        E.DisplayNameKey = Prefix + ".building.aa_turret";
+        E.Kind = EntityKind::Building;
+        E.Faction = S.Faction;
+        E.MaxHealth = 400;
+        E.Armor = ArmorClass::Defense;
+        E.VisionRange = Metres(13);        // must see a bomber before it arrives
+        E.Weapon = WpnFlakCannon;
+        E.Roles = EntityRole::Defense | EntityRole::AntiAir;
+        E.Building.FootprintX = 1;
+        E.Building.FootprintY = 1;
+        E.Building.PowerConsumed = 50;
+        E.Production.Cost = 500;
+        E.Production.BuildTimeTicks = SecondsToTicks(7);
+        E.Production.Category = ProductionCategory::Defense;
+        E.Production.Tier = TechTier::T1;
+        E.Production.ProducedBy = {S.ConYard};
+        E.Production.Prerequisites = {S.Barracks};
+        Db.AddEntity(E);
+    }
+
+    // --- Superweapon -------------------------------------------------------
+    // The late-game answer to a stalemate. Expensive, power-hungry, and it only
+    // charges while the owner holds a power surplus -- so killing an opponent's
+    // power stalls their superweapon instead of merely delaying it. The charge
+    // clock lives per building (BuildingComp::SuperweaponChargeTicks), and a
+    // freshly built one starts at zero so rebuilding cannot bypass the cooldown.
+    {
+        EntityDef E;
+        E.Id = S.Superweapon;
+        E.Name = S.SuperweaponName;
+        E.DisplayNameKey = Prefix + ".building.superweapon";
+        E.Kind = EntityKind::Building;
+        E.Faction = S.Faction;
+        E.MaxHealth = 900;
+        E.Armor = ArmorClass::Building;
+        E.VisionRange = Metres(8);
+        E.Roles = EntityRole::Production;
+        E.Building.FootprintX = 3;
+        E.Building.FootprintY = 3;
+        E.Building.PowerConsumed = 200;          // a real economic commitment
+        E.Building.SuperweaponRechargeTicks = SecondsToTicks(180);   // 3 minutes
+        E.Building.SuperweaponDamage = 900;      // flattens a cluster of buildings
+        E.Building.SuperweaponRadius = Metres(6);
+        E.Building.SuperweaponWarhead = WarheadClass::Siege;
+        E.Production.Cost = 3500;
+        E.Production.BuildTimeTicks = SecondsToTicks(60);
+        E.Production.Category = ProductionCategory::Structure;
+        E.Production.Tier = TechTier::T2;
+        E.Production.ProducedBy = {S.ConYard};
+        E.Production.Prerequisites = {S.WarFactory};
+        Db.AddEntity(E);
+    }
+
+    // --- Strike aircraft ---------------------------------------------------
+    // Ignores terrain and ground-only defences, so it answers the fortified base
+    // from a direction artillery cannot. Fragile and expensive on purpose: flak
+    // out-ranges its bomb by 11 m to 3 m, so a defended base still punishes it.
+    {
+        EntityDef E;
+        E.Id = S.Aircraft;
+        E.Name = S.AircraftName;
+        E.DisplayNameKey = Prefix + ".unit.aircraft";
+        E.Kind = EntityKind::Unit;
+        E.Faction = S.Faction;
+        E.MaxHealth = 180;
+        E.Armor = ArmorClass::Air;
+        E.VisionRange = Metres(14);        // fast scout as a side effect
+        E.Weapon = WpnAircraftBomb;
+        E.Roles = EntityRole::Combat | EntityRole::Scout;
+        E.Unit.Layer = MovementLayer::Air;
+        E.Unit.MaxSpeed = Metres(14);      // fastest unit in the game
+        E.Unit.Acceleration = Metres(28);
+        E.Unit.TurnRatePerSecond = 1200;
+        E.Unit.TurretTurnRatePerSecond = 2000;
+        E.Unit.CollisionRadius = Fixed::FromInt(90);
+        // Priced off the faction's own tank rather than a flat number: tank cost
+        // differs per faction (Soviet 1000, Alliance 700), and a bomber that is
+        // cheaper than a tank would make the air layer the default opening rather
+        // than a considered investment.
+        E.Production.Cost = S.TankCost + 300;
+        E.Production.BuildTimeTicks = SecondsToTicks(18);
+        E.Production.Category = ProductionCategory::Aircraft;
+        E.Production.Tier = TechTier::T2;
+        E.Production.ProducedBy = {S.WarFactory};
+        E.Production.Prerequisites = {S.WarFactory};
+        Db.AddEntity(E);
+    }
+
     // --- Harvester ---------------------------------------------------------
     {
         EntityDef E;
@@ -552,6 +747,14 @@ void BuildDefaultContent(ContentDatabase& Db)
     Soviet.BasicInfantryName = "unit.sov.conscript";
     Soviet.AntiArmorInfantryName = "unit.sov.rocket_trooper";
     Soviet.MainTankName = "unit.sov.heavy_tank";
+    Soviet.Artillery = UnitSovArtillery;
+    Soviet.Aircraft = UnitSovAircraft;
+    Soviet.AaTurret = BldSovAaTurret;
+    Soviet.Superweapon = BldSovSuper;
+    Soviet.ArtilleryName = "unit.sov.zarevo_mlrs";
+    Soviet.AircraftName = "unit.sov.mig_bomber";
+    Soviet.AaTurretName = "building.sov.flak_turret";
+    Soviet.SuperweaponName = "building.sov.iron_barrage";
     Soviet.PowerOutput = 150;
     Soviet.TankHealth = 520;
     Soviet.TankWeapon = WpnTankCannonHeavy;
@@ -577,6 +780,10 @@ void BuildDefaultContent(ContentDatabase& Db)
     Alliance.BasicInfantry = UnitAllRifleman;
     Alliance.AntiArmorInfantry = UnitAllRocketeer;
     Alliance.MainTank = UnitAllLightTank;
+    Alliance.Artillery = UnitAllArtillery;
+    Alliance.Aircraft = UnitAllAircraft;
+    Alliance.AaTurret = BldAllAaTurret;
+    Alliance.Superweapon = BldAllSuper;
     Alliance.ConYardName = "building.all.construction_yard";
     Alliance.PowerName = "building.all.power_plant";
     Alliance.RefineryName = "building.all.ore_refinery";
@@ -589,6 +796,10 @@ void BuildDefaultContent(ContentDatabase& Db)
     Alliance.BasicInfantryName = "unit.all.rifleman";
     Alliance.AntiArmorInfantryName = "unit.all.missile_infantry";
     Alliance.MainTankName = "unit.all.light_tank";
+    Alliance.ArtilleryName = "unit.all.oracle_artillery";
+    Alliance.AircraftName = "unit.all.harrier_jet";
+    Alliance.AaTurretName = "building.all.patriot_battery";
+    Alliance.SuperweaponName = "building.all.aegis_lance";
     Alliance.PowerOutput = 100;
     Alliance.TankHealth = 380;
     Alliance.TankWeapon = WpnTankCannonLight;

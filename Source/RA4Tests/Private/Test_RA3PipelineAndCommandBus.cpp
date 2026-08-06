@@ -1,8 +1,8 @@
-// Copyright (c) Red Alert 4 project. Unit tests for ArmorMatrix and CommandBus.
+// Copyright (c) Red Alert 4 project. Unit tests for the damage table and CommandBus.
 #include "TestFramework.h"
 #include "TestHelpers.h"
 
-#include "RA4Combat/ArmorMatrix.h"
+#include "RA4Content/ContentDatabase.h"
 #include "RA4Simulation/CommandBus.h"
 #include "RA4Simulation/SimWorld.h"
 
@@ -25,25 +25,56 @@ struct CommandBusFixture
 };
 } // namespace
 
-RA4_TEST(ArmorMatrix, DamageCalculation)
+// The damage table the game actually consults, pinned against the balance document.
+//
+// This replaces a test that asserted the values of RA4Combat::ArmorMatrix -- a second,
+// unreachable copy of the table that no module depended on. That test passed while
+// disagreeing with the shipped numbers on most entries (Ballistic vs HeavyVehicle: live
+// 50, the copy 25), so a green "ArmorMatrix.DamageCalculation" implied the balance was
+// covered when nothing covered it. The copy has been deleted; this guards the real path.
+//
+// Spot values are quoted from RA4Content/DamageMatrix.h, itself taken from Section 2 of
+// the units bible. They are asserted through ContentDatabase because that is what
+// SimWorld::ApplyDamage calls -- testing DamageMatrix directly would skip the copy step
+// that actually feeds combat.
+RA4_TEST(DamageTable, LiveMultipliersMatchTheBalanceDocument)
 {
-    const RA4::ArmorMatrix& Matrix = RA4::GetDefaultArmorMatrix();
+    RA4::ContentDatabase Content;
+    Content.ResetDamageTableToDefaults();
 
-    // Ballistic vs LightInfantry (100% -> 100 dmg)
-    int32_t Dmg1 = Matrix.CalculateDamage(100, RA4::WarheadClass::Ballistic, RA4::ArmorClass::LightInfantry);
-    RA4_EXPECT_EQ(Dmg1, 100);
+    auto Mult = [&Content](RA4::WarheadClass W, RA4::ArmorClass A)
+    {
+        return Content.GetDamageMultiplier(W, A);
+    };
 
-    // Ballistic vs HeavyVehicle (25% -> 25 dmg)
-    int32_t Dmg2 = Matrix.CalculateDamage(100, RA4::WarheadClass::Ballistic, RA4::ArmorClass::HeavyVehicle);
-    RA4_EXPECT_EQ(Dmg2, 25);
+    // Small arms: full effect on unarmoured infantry, poor against armour and structures.
+    RA4_EXPECT_EQ(Mult(RA4::WarheadClass::Ballistic, RA4::ArmorClass::LightInfantry), 100);
+    RA4_EXPECT_EQ(Mult(RA4::WarheadClass::Ballistic, RA4::ArmorClass::HeavyVehicle), 50);
+    RA4_EXPECT_EQ(Mult(RA4::WarheadClass::Ballistic, RA4::ArmorClass::Building), 30);
 
-    // ArmorPiercing vs HeavyVehicle (100% -> 100 dmg)
-    int32_t Dmg3 = Matrix.CalculateDamage(100, RA4::WarheadClass::ArmorPiercing, RA4::ArmorClass::HeavyVehicle);
-    RA4_EXPECT_EQ(Dmg3, 100);
+    // Fragmentation is the anti-infantry answer and is deliberately poor against armour.
+    RA4_EXPECT_EQ(Mult(RA4::WarheadClass::Fragmentation, RA4::ArmorClass::LightInfantry), 150);
+    RA4_EXPECT_EQ(Mult(RA4::WarheadClass::Fragmentation, RA4::ArmorClass::HeavyVehicle), 50);
 
-    // Siege vs LightInfantry (200% -> 200 dmg)
-    int32_t Dmg4 = Matrix.CalculateDamage(100, RA4::WarheadClass::Siege, RA4::ArmorClass::LightInfantry);
-    RA4_EXPECT_EQ(Dmg4, 200);
+    // Armour-piercing inverts that: strong into vehicles, wasteful on infantry.
+    RA4_EXPECT_EQ(Mult(RA4::WarheadClass::ArmorPiercing, RA4::ArmorClass::LightInfantry), 50);
+    RA4_EXPECT_EQ(Mult(RA4::WarheadClass::ArmorPiercing, RA4::ArmorClass::HeavyVehicle), 150);
+
+    // Siege exists to level bases, and must stay unable to hit aircraft.
+    RA4_EXPECT_EQ(Mult(RA4::WarheadClass::Siege, RA4::ArmorClass::Building), 200);
+    RA4_EXPECT_EQ(Mult(RA4::WarheadClass::Siege, RA4::ArmorClass::Air), 10);
+
+    // AntiAir is the sharpest asymmetry in the table: near-useless on the ground, and
+    // literally zero against buildings, so a flak battery cannot chip a structure down.
+    RA4_EXPECT_EQ(Mult(RA4::WarheadClass::AntiAir, RA4::ArmorClass::Air), 200);
+    RA4_EXPECT_EQ(Mult(RA4::WarheadClass::AntiAir, RA4::ArmorClass::Building), 0);
+
+    // Out-of-range indices must degrade to neutral rather than read past the array: a
+    // content bug should not become an out-of-bounds read in the damage path.
+    RA4_EXPECT_EQ(Mult(static_cast<RA4::WarheadClass>(RA4::WarheadClass::Count),
+                       RA4::ArmorClass::LightInfantry), 100);
+    RA4_EXPECT_EQ(Mult(RA4::WarheadClass::Ballistic,
+                       static_cast<RA4::ArmorClass>(RA4::ArmorClass::Count)), 100);
 }
 
 RA4_TEST(CommandBus, QueueAndDispatch)

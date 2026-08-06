@@ -260,6 +260,11 @@ ContentId AICommander::FindCombatUnit(const SimWorld& World) const
     // Determine observed enemy composition from Knowledge to select counter-units
     bool bEnemyHasArmored = false;
     bool bEnemyHasAir = false;
+    // Static defence is the case the roster used to have no answer to, so it is
+    // tracked separately: a remembered turret should pull production toward siege
+    // artillery, which out-ranges it, rather than toward more tanks that cannot
+    // trade with it profitably.
+    int32_t EnemyDefenceCount = 0;
     if (Knowledge != nullptr)
     {
         for (const EnemyMemory& Mem : Knowledge->GetKnownEnemies())
@@ -277,6 +282,16 @@ ContentId AICommander::FindCombatUnit(const SimWorld& World) const
                     {
                         bEnemyHasAir = true;
                     }
+                }
+            }
+            else if (Mem.Kind == EntityKind::Building && Content != nullptr)
+            {
+                const EntityDef* EnemyDef = Content->FindEntity(Mem.DefId);
+                if (EnemyDef != nullptr &&
+                    (EnemyDef->Production.Category == ProductionCategory::Defense ||
+                     HasRole(EnemyDef->Roles, EntityRole::Defense)))
+                {
+                    ++EnemyDefenceCount;
                 }
             }
         }
@@ -317,6 +332,16 @@ ContentId AICommander::FindCombatUnit(const SimWorld& World) const
         if (bEnemyHasAir && HasRole(Def.Roles, EntityRole::AntiAir))
         {
             Score += 150;
+        }
+        // Siege units are the structural counter to a fortified base. Scoring by
+        // cost alone permanently hid them: artillery is cheaper than a main tank
+        // here, so "most expensive affordable unit" never once chose it, and the
+        // Turtle profile stayed at ~80% through two balance passes. The bonus
+        // scales with how much defence we have actually seen, so it cannot make
+        // the AI build artillery against an undefended opponent.
+        if (EnemyDefenceCount > 0 && HasRole(Def.Roles, EntityRole::Artillery))
+        {
+            Score += 200 + std::min(EnemyDefenceCount, 4) * 120;
         }
 
         // The opponent model reinforces what the current sighting list already hints

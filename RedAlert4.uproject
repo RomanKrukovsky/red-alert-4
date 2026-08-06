@@ -39,11 +39,6 @@
 			]
 		},
 		{
-			"Name": "RA4Combat",
-			"Type": "Runtime",
-			"LoadingPhase": "Default"
-		},
-		{
 			"Name": "RA4Navigation",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"

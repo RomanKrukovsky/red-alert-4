@@ -1483,6 +1483,19 @@ void URA4SidebarWidget::RefreshResources()
             SupplyText->SetVisibility(ESlateVisibility::Collapsed);
         }
     }
+
+#if !UE_BUILD_SHIPPING
+    // The sidebar is 232 slate units wide, which is unreadable in a screenshot of a
+    // 3456x2234 desktop -- upscaling blurred glyphs does not make them legible. So the
+    // panel states what it actually put on screen, once per real change (this function
+    // is driven by OnResourcesChanged, not by tick). Without this the only available
+    // evidence was "the widget attached", which says nothing about its contents.
+    UE_LOG(LogTemp, Display,
+           TEXT("RA4 HUD res: credits=%d power=%d/%d surplus=%d shortage=%d tight=%d bar=%.2f supply=%s"),
+           Provider->GetCredits(), Produced, Consumed, Surplus,
+           bShortage ? 1 : 0, bTight ? 1 : 0, PowerFillRatio(Produced, Consumed),
+           Provider->IsSupplyModelled() ? TEXT("shown") : TEXT("hidden"));
+#endif
 }
 
 void URA4SidebarWidget::RefreshCards()
@@ -1636,6 +1649,26 @@ void URA4SidebarWidget::RefreshCards()
         CardHoverTargets.Add(CardStack);
         CardContentIds.Add(Option.ContentId);
     }
+
+#if !UE_BUILD_SHIPPING
+    // What the grid actually built, so a hotkey badge can be verified as present rather
+    // than inferred from the code that was supposed to draw it. Emitted only on a real
+    // rebuild -- the signature check above returns early while only progress moves.
+    {
+        FString Built;
+        for (int32 Index = 0; Index < CardContentIds.Num(); ++Index)
+        {
+            const TCHAR* Key = GetCardHotkeyLabel(Index);
+            const bool bEnabled = CardButtons.IsValidIndex(Index) && CardButtons[Index] != nullptr
+                                      ? CardButtons[Index]->GetIsEnabled()
+                                      : false;
+            Built += FString::Printf(TEXT(" [%s%s]"), Key != nullptr ? Key : TEXT("-"),
+                                     bEnabled ? TEXT("") : TEXT(" blocked"));
+        }
+        UE_LOG(LogTemp, Display, TEXT("RA4 HUD cards: category=%d count=%d hotkeys=%d%s"),
+               ActiveCategory, CardContentIds.Num(), GetCardHotkeyCount(), *Built);
+    }
+#endif
 
     RefreshQueue();
 }

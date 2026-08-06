@@ -424,4 +424,78 @@ RA4_TEST(Lockstep, DesyncIsCaughtOnTheTickItHappens)
     RA4_EXPECT(P0.World.ComputeStateChecksum() != P1.World.ComputeStateChecksum());
 }
 
+// A command submitted after the frame for its target tick has been flushed is lost.
+//
+// This is the protocol rule that URA4SimWorldSubsystem::TickSimulation breaks for the
+// AI. Its networked branch does, in this order:
+//
+//     Network->FlushLocalFrame(CurrentTick + InputDelay);   // posts bucket T+D
+//     ...
+//     Network->SendCommandToServer(AICommand, CurrentTick); // writes bucket T+D
+//
+// SubmitLocalCommand schedules onto CurrentTick + InputDelay, which is the bucket
+// TakeOutgoingFrame just emptied and will never revisit -- the flush target only ever
+// increases. So every AI order rots in OutgoingCommands until PruneUpToTick erases it.
+//
+// Nothing detects it: the drop is silent, and because every peer runs the same empty
+// frame the checksums still agree. There is no desync to notice, just an AI that never
+// does anything.
+//
+// This test pins the rule at the LockstepSession level rather than reaching into the
+// subsystem, which needs an engine world. It is written to PASS -- it documents the
+// mechanism and will fail if scheduling is ever changed such that a late submission
+// silently starts working again for the wrong reason.
+RA4_TEST(Lockstep, CommandSubmittedAfterItsFrameWasFlushedIsLost)
+{
+    LockstepSession Session;
+    Session.Initialize(0, 1, /*bIsAuthority*/ true, /*InInputDelay*/ 2);
+
+    const TickIndex CurrentTick = 0;
+    const TickIndex TargetTick = CurrentTick + 2;
+
+    // The subsystem's order: flush first...
+    const CommandFrame Flushed = Session.TakeOutgoingFrame(TargetTick);
+    RA4_EXPECT_EQ(Flushed.Commands.size(), size_t(0));
+
+    // ...then submit, which lands in the bucket that was just emptied.
+    Command Late;
+    Late.Type = CommandType::Move;
+    Late.Issuer = 0;
+    Late.Location = Vec2::FromInts(1000, 1000);
+    const TickIndex Scheduled = Session.SubmitLocalCommand(CurrentTick, Late);
+    RA4_EXPECT_EQ(Scheduled, TargetTick);
+
+    // The flush target only moves forward, so nothing ever posts TargetTick again and
+    // the command is unreachable. Taking the next frame does not pick it up.
+    const CommandFrame NextFrame = Session.TakeOutgoingFrame(TargetTick + 1);
+    RA4_EXPECT_EQ(NextFrame.Commands.size(), size_t(0));
+
+    // Proof that the command is not merely delayed: it is still sitting in the bucket
+    // for a tick that has already been posted.
+    const CommandFrame Orphaned = Session.TakeOutgoingFrame(TargetTick);
+    RA4_EXPECT_EQ(Orphaned.Commands.size(), size_t(1));
+}
+
+// The same submission, ordered correctly, survives. This is the control: without it the
+// test above could pass because submission is broken in general rather than because the
+// ordering is wrong.
+RA4_TEST(Lockstep, CommandSubmittedBeforeTheFlushTravelsInThatFrame)
+{
+    LockstepSession Session;
+    Session.Initialize(0, 1, /*bIsAuthority*/ true, /*InInputDelay*/ 2);
+
+    const TickIndex CurrentTick = 0;
+    const TickIndex TargetTick = CurrentTick + 2;
+
+    Command Early;
+    Early.Type = CommandType::Move;
+    Early.Issuer = 0;
+    Early.Location = Vec2::FromInts(1000, 1000);
+    RA4_EXPECT_EQ(Session.SubmitLocalCommand(CurrentTick, Early), TargetTick);
+
+    const CommandFrame Flushed = Session.TakeOutgoingFrame(TargetTick);
+    RA4_EXPECT_EQ(Flushed.Commands.size(), size_t(1));
+    RA4_EXPECT_EQ(Flushed.Tick, TargetTick);
+}
+
 } // namespace RA4

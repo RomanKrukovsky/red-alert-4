@@ -28,6 +28,7 @@ const char* ToString(CommandType Type)
         case CommandType::DirectControlExit: return "DirectControlExit";
         case CommandType::DirectControlDrive: return "DirectControlDrive";
         case CommandType::DirectControlFire: return "DirectControlFire";
+        case CommandType::FireSuperweapon: return "FireSuperweapon";
         default: return "Unknown";
     }
 }
@@ -57,6 +58,8 @@ const char* ToString(CommandReject Reason)
         case CommandReject::DirectNotControlling: return "DirectNotControlling";
         case CommandReject::DirectWeaponCooldown: return "DirectWeaponCooldown";
         case CommandReject::DirectWeaponEmpty: return "DirectWeaponEmpty";
+        case CommandReject::SuperweaponNotReady: return "SuperweaponNotReady";
+        case CommandReject::SuperweaponUnpowered: return "SuperweaponUnpowered";
         default: return "Unknown";
     }
 }

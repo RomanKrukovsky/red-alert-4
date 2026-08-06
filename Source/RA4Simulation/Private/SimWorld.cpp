@@ -297,6 +297,27 @@ const PlayerState& SimWorld::GetPlayer(PlayerId Id) const
     return Id < kMaxPlayers ? Players[Id] : Empty;
 }
 
+int32_t SimWorld::GetConstructionProgressPerMille(EntityId Id) const
+{
+    const BuildingComp* B = GetBuilding(Id);
+    if (B == nullptr || B->State != ConstructionState::UnderConstruction)
+    {
+        // Units, resource nodes and finished buildings are all "fully built" as far
+        // as presentation is concerned; only an in-progress building is partial.
+        return 1000;
+    }
+    const int64_t Total = int64_t(B->ConstructionTotalTicks) * kProgressScale;
+    if (Total <= 0)
+    {
+        // A zero build time means it completes on the tick it is placed. Reporting
+        // 1000 keeps presentation from dividing by zero and from flashing an empty
+        // progress bar for one frame.
+        return 1000;
+    }
+    const int64_t Clamped = std::min<int64_t>(std::max<int64_t>(B->ConstructionProgressTicks, 0), Total);
+    return int32_t((Clamped * 1000) / Total);
+}
+
 // ---------------------------------------------------------------------------
 // Spawning
 // ---------------------------------------------------------------------------
@@ -1365,6 +1386,67 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
             break;
         }
 
+        // --- Superweapon -----------------------------------------------
+        // Validated like any other order: ownership, liveness, and the building
+        // actually being a charged superweapon. There is no separate "cheat"
+        // path -- the AI issues this exact command through the same bus.
+        case CommandType::FireSuperweapon:
+        {
+            if (!IsAlive(Cmd.Primary))
+            {
+                return Reject(CommandReject::NoSuchEntity);
+            }
+            if (Core[Cmd.Primary.Index].Owner != Cmd.Issuer)
+            {
+                return Reject(CommandReject::NotOwner);
+            }
+            const EntityDef* Def = Content ? Content->FindEntity(Core[Cmd.Primary.Index].Def) : nullptr;
+            if (Def == nullptr || Def->Building.SuperweaponRechargeTicks <= 0)
+            {
+                return Reject(CommandReject::UnknownContent);
+            }
+            BuildingComp& B = Buildings[Cmd.Primary.Index];
+            if (B.State != ConstructionState::Complete)
+            {
+                return Reject(CommandReject::SuperweaponNotReady);
+            }
+            if (B.SuperweaponChargeTicks < Def->Building.SuperweaponRechargeTicks)
+            {
+                return Reject(CommandReject::SuperweaponNotReady);
+            }
+            if (Player.PowerConsumed > Player.PowerProduced)
+            {
+                return Reject(CommandReject::SuperweaponUnpowered);
+            }
+            if (!Map.IsInBounds(Cmd.Tile.X, Cmd.Tile.Y))
+            {
+                return Reject(CommandReject::TargetInvalid);
+            }
+
+            // Spend the charge before applying damage: a rejected-after-fire path
+            // would let a player fire twice if damage resolution ever throws.
+            B.SuperweaponChargeTicks = 0;
+
+            const Vec2 Impact = Map.TileCenterToWorld(Cmd.Tile);
+            // Reuses the ordinary splash path, so the armour table, fog and event
+            // emission behave exactly as they do for a shell.
+            ApplySplashDamage(Impact, Def->Building.SuperweaponRadius,
+                              Def->Building.SuperweaponDamage,
+                              Def->Building.SuperweaponWarhead,
+                              /*FalloffPercent*/ 50, Cmd.Primary, Cmd.Issuer);
+
+            SimEvent Ev;
+            Ev.Type = SimEventType::WeaponFired;
+            Ev.Tick = CurrentTick;
+            Ev.Entity = Cmd.Primary;
+            Ev.Player = Cmd.Issuer;
+            Ev.Content = Core[Cmd.Primary.Index].Def;
+            Ev.Location = Impact;
+            Ev.Value = Def->Building.SuperweaponDamage;
+            EmitEvent(Ev);
+            break;
+        }
+
         case CommandType::Surrender:
         {
             Player.bDefeated = true;
@@ -1948,6 +2030,40 @@ void SimWorld::SystemPower()
         }
     }
 
+    // Superweapon charge, in a second pass because it depends on the power totals
+    // the loop above has just finished computing. Charging requires a power
+    // surplus, so cutting an opponent's power stalls their superweapon -- the
+    // clock is a consequence of holding a working base, not a wall-clock timer.
+    // Placed inside SystemPower rather than as a new system so the fixed system
+    // order, which is part of the replay compatibility contract, is unchanged.
+    for (uint32_t I = 0; I < Core.size(); ++I)
+    {
+        if (!Core[I].bAlive || Core[I].Kind != EntityKind::Building ||
+            Core[I].Owner >= kMaxPlayers)
+        {
+            continue;
+        }
+        if (Buildings[I].State != ConstructionState::Complete)
+        {
+            continue;
+        }
+        const EntityDef* D = Content ? Content->FindEntity(Core[I].Def) : nullptr;
+        if (D == nullptr || D->Building.SuperweaponRechargeTicks <= 0)
+        {
+            continue;
+        }
+        const PlayerState& Owner = Players[Core[I].Owner];
+        if (Owner.PowerConsumed > Owner.PowerProduced)
+        {
+            continue;   // brownout: no charge this tick
+        }
+        BuildingComp& B = Buildings[I];
+        if (B.SuperweaponChargeTicks < D->Building.SuperweaponRechargeTicks)
+        {
+            B.SuperweaponChargeTicks += 1;
+        }
+    }
+
     // ADR-0013: announce tier crossings. Edge-triggered, because a base parked at 45%
     // power would otherwise emit an event every tick and bury the alert feed -- the
     // same reason ProductionStarved is edge-triggered.
@@ -2153,6 +2269,7 @@ void SimWorld::SystemFlowPayment()
         }
     }
 }
+
 
 void SimWorld::SystemConstruction()
 {
@@ -3144,6 +3261,90 @@ void SimWorld::SystemMovement()
     }
 }
 
+void SimWorld::RebuildSpatialGrid()
+{
+    // Cell edge in world units. A multiple of the tile size keeps cell lookup an
+    // integer division, so there is no float rounding to diverge between platforms.
+    constexpr int64_t kCellUnits = MapDescription::kTileSizeUnitsLocal * kSpatialCellTiles;
+
+    const int32_t WantX = Map.Width > 0
+        ? int32_t((int64_t(Map.Width) + kSpatialCellTiles - 1) / kSpatialCellTiles) : 1;
+    const int32_t WantY = Map.Height > 0
+        ? int32_t((int64_t(Map.Height) + kSpatialCellTiles - 1) / kSpatialCellTiles) : 1;
+
+    if (WantX != SpatialCellsX || WantY != SpatialCellsY)
+    {
+        SpatialCellsX = WantX;
+        SpatialCellsY = WantY;
+        SpatialCells.assign(size_t(WantX) * size_t(WantY), std::vector<uint32_t>());
+    }
+    else
+    {
+        // clear() keeps each cell's capacity, so steady-state ticks do no allocation.
+        for (std::vector<uint32_t>& Cell : SpatialCells)
+        {
+            Cell.clear();
+        }
+    }
+
+    // Ascending index order matters: it is what makes the candidate sequence, and
+    // therefore tie-breaking, identical to the old full linear scan.
+    for (uint32_t I = 0; I < uint32_t(Core.size()); ++I)
+    {
+        if (!Core[I].bAlive)
+        {
+            continue;
+        }
+        // Projectiles and resource nodes are never acquisition candidates, so
+        // keeping them out shrinks every query.
+        if (Core[I].Kind == EntityKind::Projectile || Core[I].Kind == EntityKind::ResourceNode)
+        {
+            continue;
+        }
+        const Vec2& P = Transforms[I].Position;
+        int64_t CX = P.X.ToIntFloor() / kCellUnits;
+        int64_t CY = P.Y.ToIntFloor() / kCellUnits;
+        // Clamp rather than drop: an entity nudged outside the map bounds must stay
+        // targetable, otherwise it becomes silently invulnerable.
+        CX = CX < 0 ? 0 : (CX >= SpatialCellsX ? SpatialCellsX - 1 : CX);
+        CY = CY < 0 ? 0 : (CY >= SpatialCellsY ? SpatialCellsY - 1 : CY);
+        SpatialCells[size_t(CY) * size_t(SpatialCellsX) + size_t(CX)].push_back(I);
+    }
+}
+
+void SimWorld::QuerySpatial(const Vec2& Centre, Fixed Radius,
+                            std::vector<uint32_t>& Out) const
+{
+    Out.clear();
+    if (SpatialCells.empty())
+    {
+        return;
+    }
+    constexpr int64_t kCellUnits = MapDescription::kTileSizeUnitsLocal * kSpatialCellTiles;
+
+    const int64_t R = Radius.ToIntFloor();
+    const int64_t MinX = (Centre.X.ToIntFloor() - R) / kCellUnits;
+    const int64_t MaxX = (Centre.X.ToIntFloor() + R) / kCellUnits;
+    const int64_t MinY = (Centre.Y.ToIntFloor() - R) / kCellUnits;
+    const int64_t MaxY = (Centre.Y.ToIntFloor() + R) / kCellUnits;
+
+    const int64_t X0 = MinX < 0 ? 0 : MinX;
+    const int64_t Y0 = MinY < 0 ? 0 : MinY;
+    const int64_t X1 = MaxX >= SpatialCellsX ? SpatialCellsX - 1 : MaxX;
+    const int64_t Y1 = MaxY >= SpatialCellsY ? SpatialCellsY - 1 : MaxY;
+
+    // Row-major, ascending: fixed visitation order on every machine.
+    for (int64_t CY = Y0; CY <= Y1; ++CY)
+    {
+        for (int64_t CX = X0; CX <= X1; ++CX)
+        {
+            const std::vector<uint32_t>& Cell =
+                SpatialCells[size_t(CY) * size_t(SpatialCellsX) + size_t(CX)];
+            Out.insert(Out.end(), Cell.begin(), Cell.end());
+        }
+    }
+}
+
 EntityId SimWorld::AcquireTarget(EntityId Attacker) const
 {
     if (!IsAlive(Attacker))
@@ -3170,13 +3371,26 @@ EntityId SimWorld::AcquireTarget(EntityId Attacker) const
 
     EntityId Best = EntityId::Invalid();
     Fixed BestDistSq = Fixed::Max();
-    for (uint32_t I = 0; I < Core.size(); ++I)
+
+    // Only the cells the search radius actually reaches, instead of every entity in
+    // the world. Candidates arrive in ascending index order within each cell and the
+    // cells are walked row-major, so the "strictly closer, else lower index"
+    // tie-break below resolves identically to the previous full scan. Cells never
+    // contain projectiles or resource nodes, so those checks are gone from the loop.
+    //
+    // The radius is padded by one whole cell. The grid is built at the top of the
+    // tick but SystemMovement runs before SystemCombat, so a position can be up to
+    // one tick of travel stale by the time targets are acquired - at the fastest
+    // content speed that is ~9% of a cell, and without the pad an entity sitting
+    // just past a cell boundary could be missed. Padding cannot introduce a false
+    // positive because every candidate is still range-checked against SearchSq
+    // below; it only guarantees the candidate set is a superset of the true one, so
+    // the result is identical to the linear scan.
+    QuerySpatial(Pos, SearchRange + Fixed::FromInt(MapDescription::kTileSizeUnitsLocal * kSpatialCellTiles),
+                 SpatialQueryScratch);
+    for (const uint32_t I : SpatialQueryScratch)
     {
         if (!Core[I].bAlive || I == A)
-        {
-            continue;
-        }
-        if (Core[I].Kind == EntityKind::Projectile || Core[I].Kind == EntityKind::ResourceNode)
         {
             continue;
         }
@@ -3210,6 +3424,22 @@ EntityId SimWorld::AcquireTarget(EntityId Attacker) const
         }
     }
     return Best;
+}
+
+bool SimWorld::IsLocationVisibleTo(PlayerId Viewer, const Vec2& Location) const
+{
+    // Same fog-is-optional rule as IsEntityVisibleTo: a match without a grid, and
+    // every headless fixture, behaves as though the map is in the open.
+    if (Viewer >= kMaxPlayers || FogGrid == nullptr)
+    {
+        return true;
+    }
+    if (int32_t(Viewer) >= FogGrid->GetNumPlayers())
+    {
+        return true;
+    }
+    const TileCoord Tile = Map.WorldToTile(Location);
+    return FogGrid->GetVisibility(int32_t(Viewer), Tile.X, Tile.Y) == VisibilityState::CurrentlyVisible;
 }
 
 bool SimWorld::IsEntityVisibleTo(PlayerId Viewer, uint32_t EntityIndex) const
@@ -3702,6 +3932,12 @@ void SimWorld::Tick(const CommandFrame* Frame)
         return;
     }
 
+    // Spatial acceleration for this tick's queries, refreshed before any system
+    // reads it. This is not a simulation system: it derives purely from positions
+    // that are already settled, writes no game state, and only makes lookups
+    // cheaper. It therefore sits outside the versioned system order below.
+    RebuildSpatialGrid();
+
     // Fixed system order. Changing it changes simulation results, so it is part of
     // the replay compatibility contract and is versioned in ReplayFormat.
     SystemApplyCommands(Frame);
@@ -3842,9 +4078,19 @@ void SimWorld::SystemRecon()
                 // Blackout is driven by the node's own power state: an unpowered
                 // command post cannot run its radios. This reuses the existing
                 // brownout rule rather than inventing a second failure concept.
-                Node.bBlackout = Players[Core[I].Owner].GetPowerRatioPercent() < 50;
+                // Blackout is driven by the node's own power state: an unpowered
+                // command post cannot run its radios. The threshold is a designer
+                // setting rather than a literal, and is deliberately stricter than
+                // the production brownout rule -- comms fail before factories do.
+                Node.bBlackout = Players[Core[I].Owner].GetPowerRatioPercent() <
+                                 ReconSettingsRef->Chain.BlackoutPowerRatioPercent;
                 ReconInput.ChainNodes[Core[I].Owner].push_back(Node);
-                if (bIsHq && !Node.bBlackout)
+                // "Somewhere for reports to arrive" is what makes the network live.
+                // A construction yard is the obvious staff, but a powered radar
+                // station is a receiving post in its own right -- a forward base
+                // with radar and no HQ still plots contacts.
+                const bool bCanReceive = bIsHq || BD->Building.bIsRadar;
+                if (bCanReceive && !Node.bBlackout)
                 {
                     ReconInput.HasHqNode[Core[I].Owner] = true;
                 }
@@ -4448,6 +4694,7 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
     ResourceNodes.resize(HighWaterMark);
     Projectiles.resize(HighWaterMark);
     Orders.resize(HighWaterMark);
+    DirectControls.resize(HighWaterMark);
 
     for (uint32_t I = 0; I < HighWaterMark; ++I)
     {

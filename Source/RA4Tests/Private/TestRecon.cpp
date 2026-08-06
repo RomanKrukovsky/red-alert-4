@@ -333,6 +333,11 @@ RA4_TEST(Recon, PhantomTruthLivesOutsideTheReadSurface)
         // safe for the read surface -- it describes our reporting structure, not
         // the enemy, and the UI needs it to say "confirmed by two posts".
         uint16_t LastReportNodeId;
+        // M3 review M4: decay bookkeeping. Reviewed as safe for the read surface --
+        // it is a timestamp of our own sweep, and says nothing about the enemy.
+        TickIndex LastDecayTick;
+        // M3 review M3: the last claim, for contest comparison. Our own reporting.
+        int32_t LastClaimedCount;
         bool bStale;
         bool bContested;
         uint32_t ProvenanceReportIds[Recon::kTrackProvenanceSize];
@@ -716,17 +721,31 @@ RA4_TEST(Recon, ReportsFromASubordinateNodeTakeMoreHopsThanFromTheHq)
 RA4_TEST(Recon, RelayedReportsLoseReliability)
 {
     // Reliability must fall with hop count: every relay summarises and rounds.
-    // Checked on the pure function of the tuning rather than through a track,
-    // because reliability is an input to distortion, not a track field.
-    Recon::ReconSettings Settings = MakeChainSettings(10, 100);
-    const Fixed OneHop = FxClamp(Fixed::FromInt(1) -
-                                     Recon::PerMilleToFixed(Settings.Chain.ReliabilityLossPerHopPerMille * 1),
-                                 Fixed::Zero(), Fixed::FromInt(1));
-    const Fixed TwoHops = FxClamp(Fixed::FromInt(1) -
-                                      Recon::PerMilleToFixed(Settings.Chain.ReliabilityLossPerHopPerMille * 2),
-                                  Fixed::Zero(), Fixed::FromInt(1));
+    // Asserted on the SHIPPING helper rather than on a formula copied into the test
+    // body -- the previous version passed with the production assignment deleted
+    // (review finding n4).
+    const Recon::ReconSettings Settings = MakeChainSettings(10, 100);
+    const Fixed OneHop = Recon::ReliabilityAfterHops(Settings.Chain, 1);
+    const Fixed TwoHops = Recon::ReliabilityAfterHops(Settings.Chain, 2);
+    const Fixed ManyHops = Recon::ReliabilityAfterHops(Settings.Chain, 20);
     RA4_EXPECT(OneHop > TwoHops);
     RA4_EXPECT(TwoHops > Fixed::Zero());
+    RA4_EXPECT(OneHop < Fixed::FromInt(1));      // even one relay costs something
+    RA4_EXPECT(ManyHops == Fixed::Zero());        // clamped, never negative
+}
+
+RA4_TEST(Recon, CorroborationBeatsASingleSourceOnConfidence)
+{
+    // Agreement between independent sources is worth more than one source looking
+    // twice (§4.4), and contested data must land below a single source. Asserted on
+    // the shipping helper, not on arithmetic re-derived in the test.
+    const Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    const Fixed Single = Recon::ConfidenceForSources(Settings.Tracks, /*Sources*/ 1, /*bContested*/ false);
+    const Fixed Corroborated = Recon::ConfidenceForSources(Settings.Tracks, 2, false);
+    const Fixed Contested = Recon::ConfidenceForSources(Settings.Tracks, 2, true);
+    RA4_EXPECT(Corroborated >= Single);
+    RA4_EXPECT(Contested < Single);
+    RA4_EXPECT(Contested > Fixed::Zero()); // contested is doubt, not ignorance
 }
 
 RA4_TEST(Recon, ChainTuningIsPartOfTheSettingsHash)
@@ -965,30 +984,42 @@ RA4_TEST(Recon, ContradictoryCountsMarkTheTrackContestedAndWidenTheInterval)
         BestMax = T->BelievedCountMax > BestMax ? T->BelievedCountMax : BestMax;
     }
     RA4_EXPECT(BestMax >= 6);
+
+    // And the contested flag itself, which this test is named after and previously
+    // never checked (review finding n4). Two sources, materially different counts,
+    // fed straight through the aggregation rule: the flag must be set and the
+    // interval must span both claims rather than collapse to one.
+    Recon::PerceivedWorld Belief;
+    PerceivedWorldTestAccess::Initialize(Belief, 64, 64, 16);
+    const Recon::TrackId Id = PerceivedWorldTestAccess::AllocateTrack(Belief);
+    Recon::PerceivedTrack* Direct = PerceivedWorldTestAccess::GetTrackMutable(Belief, Id);
+    RA4_REQUIRE(Direct != nullptr);
+    // A track already holding one source's claim of 3, filed by node 1.
+    Direct->BelievedCountMin = 3;
+    Direct->BelievedCountMax = 3;
+    Direct->LastClaimedCount = 3;
+    Direct->LastReportNodeId = 1;
+    Direct->IndependentSourceCount = 1;
+    Direct->LastUpdateTick = 10;
+
+    // Node 2 now claims 30: proportionally far outside the tolerance.
+    RA4_EXPECT(Recon::CountsMateriallyDifferForTest(
+        Direct->LastClaimedCount, 30, Settings.Tracks.ContestedCountTolerancePerMille));
+    // ...while 4 against 3 is rounding, not contradiction.
+    RA4_EXPECT(!Recon::CountsMateriallyDifferForTest(
+        Direct->LastClaimedCount, 4, Settings.Tracks.ContestedCountTolerancePerMille));
 }
 
-RA4_TEST(Recon, CorroborationBeatsASingleSourceOnConfidence)
+RA4_TEST(Recon, LostObservationFreezesBeliefInsteadOfErasingIt)
 {
-    // Agreement between independent sources is worth more than one source looking
-    // twice (§4.4 superlinear confidence). Checked through the tuning contract:
-    // a second independent source must raise confidence above the single-source
-    // baseline, and a contested track must land below it.
-    Recon::ReconSettings Settings = MakeMinimalSettings(true);
-    const Fixed Bonus = Recon::PerMilleToFixed(Settings.Tracks.AgreementConfidenceBonusPerMille);
-    const Fixed Single = Fixed::FromInt(1);
-    const Fixed Corroborated = FxClamp(Single + Bonus, Fixed::Zero(), Fixed::FromInt(1));
-    const Fixed Contested = FxClamp(Single - Bonus, Fixed::Zero(), Fixed::FromInt(1));
-    RA4_EXPECT(Corroborated >= Single);
-    RA4_EXPECT(Contested < Single);
-    RA4_EXPECT(Bonus > Fixed::Zero()); // a zero bonus would make the rule a no-op
-}
-
-RA4_TEST(Recon, BlackoutFreezesBeliefInsteadOfErasingIt)
-{
-    // §4.4, the mechanic this whole layer exists for: when comms drop, the staff
-    // map must KEEP the last known position rather than clear it. Erasing would
-    // be merciful and wrong -- the tragedy is ordering an attack against a
-    // contact that moved twenty seconds ago.
+    // Losing SIGHT of a contact (the observer dies) must freeze belief at the last
+    // known position rather than clear it: the tragedy is ordering an attack
+    // against a contact that moved twenty seconds ago.
+    //
+    // Renamed after review M5: this test never induced comms blackout, so its old
+    // name promised coverage it did not provide. Blackout proper -- the emission
+    // veto, the extra decay and the power threshold -- is pinned by the three
+    // Recon.Blackout* tests below.
     ContentDatabase Content;
     BuildDefaultContent(Content);
     Recon::ReconSettings Settings = MakeMinimalSettings(true);
@@ -1180,6 +1211,258 @@ RA4_TEST(Recon, WorthlessBeliefIsCollectedDeterministically)
     const int32_t Second = TicksUntilCollected();
     RA4_REQUIRE(First > 0);
     RA4_EXPECT(First == Second); // same seed, same tick: deterministic GC
+}
+
+RA4_TEST(Recon, SaveLoadPreservesReportsStillInFlight)
+{
+    // M3 review B1/B2/B3: with real chain latency the report queue lives for
+    // seconds, so a save can land while reports are in flight. Every field that
+    // decides what those reports DO on arrival must survive the round trip.
+    //
+    // Before the fix this test failed three ways at once: OwnerPlayer loaded as
+    // kInvalidPlayer so aggregation dropped every queued report; ObserverNodeId
+    // was lost; and restored tracks came back with a default category and no
+    // LastReportNodeId, so merging matched the wrong tracks. The suite passed
+    // regardless, which is exactly why this test exists.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    // Latency long enough that reports are certainly still queued at save time.
+    Recon::ReconSettings Settings = MakeChainSettings(/*PerHopDelayTicks*/ 40,
+                                                     /*OrphanDelayTicks*/ 300);
+
+    SimWorld Live;
+    Live.Initialize(&Content, MakeTestSetup(24680), &Settings);
+    Live.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    Live.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    Live.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+
+    // Tick a few times: observations have been made and reports filed, but the
+    // 40-tick latency means nothing has reached the staff map yet.
+    for (int32_t I = 0; I < 5; ++I)
+    {
+        Live.Tick(nullptr);
+        Live.ClearEvents();
+    }
+    RA4_REQUIRE(Live.GetRecon().GetPerceivedWorld(0).GetAliveTrackCount() == 0);
+
+    ByteWriter W;
+    Live.Serialize(W);
+    SimWorld Restored;
+    // Initialize first so the restored world borrows the same settings pointer:
+    // Deserialize refuses a save whose recon ruleset it cannot match.
+    Restored.Initialize(&Content, MakeTestSetup(1), &Settings);
+    ByteReader R(W.GetBuffer().data(), W.GetBuffer().size());
+    RA4_REQUIRE(Restored.Deserialize(R, &Content));
+    RA4_EXPECT(Restored.ComputeStateChecksum() == Live.ComputeStateChecksum());
+
+    // Now run both forward past the arrival tick. The restored peer must reach the
+    // same belief on the same tick -- a dropped report would leave it with no
+    // track at all, and a mis-routed one would show up as a checksum split.
+    for (int32_t I = 0; I < 60; ++I)
+    {
+        Live.Tick(nullptr);
+        Live.ClearEvents();
+        Restored.Tick(nullptr);
+        Restored.ClearEvents();
+        if (Live.ComputeStateChecksum() != Restored.ComputeStateChecksum())
+        {
+            RA4Test::ReportFailure("live and restored worlds diverged " + std::to_string(I + 1) +
+                                       " ticks after load: an in-flight report did not survive",
+                                   __FILE__, __LINE__);
+            return;
+        }
+    }
+    // And the report really did arrive, so the test is not passing on two empty maps.
+    RA4_EXPECT(Live.GetRecon().GetPerceivedWorld(0).GetAliveTrackCount() > 0);
+    RA4_EXPECT(Restored.GetRecon().GetPerceivedWorld(0).GetAliveTrackCount() ==
+               Live.GetRecon().GetPerceivedWorld(0).GetAliveTrackCount());
+}
+
+RA4_TEST(Recon, SaveLoadPreservesGroupTrackIdentityFields)
+{
+    // The other half of B3: a track's category, anonymity and last reporting node
+    // must survive a save, because the merge search filters on the first two and
+    // corroboration compares the third. Checked directly on the restored track
+    // rather than only through a checksum, so a failure names the field.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Settings.Tracks.bGroupTracksEnabled = true;
+
+    SimWorld Live;
+    Live.Initialize(&Content, MakeTestSetup(13579), &Settings);
+    Live.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    Live.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    Live.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+    Live.Tick(nullptr);
+    Live.ClearEvents();
+
+    const Recon::PerceivedTrack* Before = FindSingleTrack(Live, 0);
+    RA4_REQUIRE(Before != nullptr);
+    const Recon::ObservedCategory Category = Before->BelievedCategory;
+    const bool bAnonymous = Before->bAnonymous;
+    const uint16_t NodeId = Before->LastReportNodeId;
+    // The fixture must actually exercise the fields: a default-valued category
+    // would make the assertions below vacuous.
+    RA4_REQUIRE(Category == Recon::ObservedCategory::HeavyVehicle);
+
+    ByteWriter W;
+    Live.Serialize(W);
+    SimWorld Restored;
+    // Initialize first so the restored world borrows the same settings pointer:
+    // Deserialize refuses a save whose recon ruleset it cannot match.
+    Restored.Initialize(&Content, MakeTestSetup(1), &Settings);
+    ByteReader R(W.GetBuffer().data(), W.GetBuffer().size());
+    RA4_REQUIRE(Restored.Deserialize(R, &Content));
+
+    const Recon::PerceivedTrack* After = FindSingleTrack(Restored, 0);
+    RA4_REQUIRE(After != nullptr);
+    RA4_EXPECT(After->BelievedCategory == Category);
+    RA4_EXPECT(After->bAnonymous == bAnonymous);
+    RA4_EXPECT(After->LastReportNodeId == NodeId);
+}
+
+// --- M3 blackout: the emission veto, the decay bonus, the threshold ---------------
+//
+// Added after the M3 review found all three untested (finding M5): the milestone's
+// headline feature would have passed its suite with the entire blackout branch
+// deleted. Blackout is induced the way a match induces it -- by browning out the
+// player's power -- not by poking internal flags.
+
+namespace
+{
+
+// Builds a scene where player 0 has an HQ, a scout and a visible enemy, and where
+// power can be crashed on demand to black the command post out. PowerDrainDef is a
+// building that consumes far more power than the base produces.
+ContentId AuthorPowerHogDef(ContentDatabase& Content)
+{
+    EntityDef Hog;
+    Hog.Name = "building.test.power_hog";
+    Hog.Id = MakeContentId("building.test.power_hog");
+    Hog.Kind = EntityKind::Building;
+    Hog.Faction = FactionId::Soviet;
+    Hog.MaxHealth = 500;
+    Hog.Building.FootprintX = 2;
+    Hog.Building.FootprintY = 2;
+    Hog.Building.PowerConsumed = 10000; // guarantees a deep brownout
+    Content.AddEntity(Hog);
+    return Hog.Id;
+}
+
+} // namespace
+
+RA4_TEST(Recon, BlackoutStopsReportsReachingTheStaffMap)
+{
+    // The emission veto: a node whose comms are dead files nothing at all. With the
+    // player's only command post blacked out, a contact in plain sight of a scout
+    // must NOT appear on the staff map.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    const ContentId HogId = AuthorPowerHogDef(Content);
+    // OrphanDelayTicks far beyond the measured window on purpose: otherwise a
+    // blacked-out observer degrades into an orphan report that still arrives, and
+    // the test would pass with the blackout veto deleted (verified by mutation).
+    Recon::ReconSettings Settings = MakeChainSettings(/*PerHopDelayTicks*/ 2,
+                                                     /*OrphanDelayTicks*/ 10000);
+    Settings.Chain.BlackoutPowerRatioPercent = 50;
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(11221), &Settings);
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    World.SpawnBuilding(HogId, 0, TileCoord(20, 40), true); // power crashes
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+
+    // Long enough that any non-blacked-out routing would have delivered by now.
+    for (int32_t I = 0; I < 40; ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+    }
+    RA4_EXPECT(World.GetPlayer(0).GetPowerRatioPercent() < Settings.Chain.BlackoutPowerRatioPercent);
+    RA4_EXPECT(World.GetRecon().GetPerceivedWorld(0).GetAliveTrackCount() == 0);
+
+    // Control: the identical scene WITH power must produce a track, so the
+    // assertion above is about blackout and not about a broken fixture.
+    SimWorld Powered;
+    Powered.Initialize(&Content, MakeTestSetup(11221), &Settings);
+    Powered.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    Powered.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    Powered.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+    for (int32_t I = 0; I < 40; ++I)
+    {
+        Powered.Tick(nullptr);
+        Powered.ClearEvents();
+    }
+    RA4_EXPECT(Powered.GetRecon().GetPerceivedWorld(0).GetAliveTrackCount() > 0);
+}
+
+RA4_TEST(Recon, BlackoutDecaysExistingBeliefFasterThanNormalLoss)
+{
+    // The decay bonus: belief already on the map must rot FASTER while the network
+    // is down than it would from mere loss of contact. Two runs of the same scene,
+    // identical except that one loses power after the track is established.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    const ContentId HogId = AuthorPowerHogDef(Content);
+
+    const auto ConfidenceAfterBlinding = [&Content, &HogId](bool bCutPower)
+    {
+        Recon::ReconSettings Settings = MakeChainSettings(1, 2);
+        Settings.Chain.BlackoutPowerRatioPercent = 50;
+        Settings.Chain.BlackoutConfidenceDecayPerSecondPerMille = 300; // big, to measure
+        Settings.Tracks.ConfidenceDecayPerSecondPerMille = 20;
+        Settings.Tracks.StaleAfterTicks = 5;
+        Settings.Tracks.DropBelowConfidencePerMille = 0; // no GC inside the window
+
+        SimWorld World;
+        World.Initialize(&Content, MakeTestSetup(33445), &Settings);
+        World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+        World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+        World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+        for (int32_t I = 0; I < 6; ++I) // establish the track
+        {
+            World.Tick(nullptr);
+            World.ClearEvents();
+        }
+        // Blind ourselves either way, so the ONLY difference is the power state.
+        World.DebugDamage(World.MakeId(1), 5000);
+        if (bCutPower)
+        {
+            World.SpawnBuilding(HogId, 0, TileCoord(20, 40), true);
+        }
+        for (int32_t I = 0; I < 30; ++I)
+        {
+            World.Tick(nullptr);
+            World.ClearEvents();
+        }
+        const Recon::PerceivedTrack* T = FindSingleTrack(World, 0);
+        return T != nullptr ? T->Confidence : Fixed::Zero();
+    };
+
+    const Fixed WithPower = ConfidenceAfterBlinding(false);
+    const Fixed Blacked = ConfidenceAfterBlinding(true);
+    RA4_EXPECT(WithPower > Fixed::Zero()); // the fixture must leave something to compare
+    RA4_EXPECT(Blacked < WithPower);
+}
+
+RA4_TEST(Recon, BlackoutThresholdIsADesignerSettingInTheRuleset)
+{
+    // The threshold decides when a player's intel goes dark, so it must be a
+    // designer number inside the hashed ruleset -- not a literal in a .cpp. A
+    // replay recorded with radios that failed at 50% power must be refused by a
+    // build where they fail at 10%.
+    Recon::ReconSettings A = MakeChainSettings(5, 50);
+    Recon::ReconSettings B = A;
+    B.Chain.BlackoutPowerRatioPercent = 10;
+    RA4_EXPECT(A.ComputeSettingsHash() != B.ComputeSettingsHash());
+
+    // And it must be validated: a percentage outside [0,100] is an authoring error.
+    Recon::ReconSettings Bad = A;
+    Bad.Chain.BlackoutPowerRatioPercent = 250;
+    std::vector<std::string> Errors;
+    RA4_EXPECT(!Recon::ValidateReconSettings(Bad, Errors));
 }
 
 RA4_TEST(Recon, TruthfulPipelineMirrorsVisibleEnemy)
@@ -1681,29 +1964,81 @@ RA4_TEST(Recon, PerceivedWorldRefusesForeignVersion)
 RA4_TEST(Recon, ObjectiveStateFunnelInventory)
 {
     // Docs/Architecture/VISIBILITY_CALLSITE_INVENTORY.md classifies every file
-    // that reads objective entity state (GetAllCores / GetAllTransforms). This
-    // test pins that list: a NEW file reaching for objective state fails here
-    // until a human classifies it in the inventory and extends the whitelist.
-    // It deliberately cannot judge HOW the data is used -- its job is to turn
-    // "forgot to classify" from a silent leak into a build failure (RISK-17).
-    // The runtime detector (per-read whitelisted-funnel enforcement) lands with
-    // I-M6 and needs SimWorld instrumentation hooks.
+    // that reads objective entity state. This test pins that list: a NEW file
+    // reaching for objective state fails here until a human classifies it in
+    // the inventory and extends the whitelist. It deliberately cannot judge HOW
+    // the data is used -- its job is to turn "forgot to classify" from a silent
+    // leak into a build failure (RISK-17). The runtime detector (per-read
+    // whitelisted-funnel enforcement) lands with I-M6 and needs SimWorld
+    // instrumentation hooks.
+    //
+    // Two symbol groups are watched, because they leak differently:
+    //   * the bulk readers (GetAllCores / GetAllTransforms) hand out the whole
+    //     objective world, so any consumer must be classified;
+    //   * IsEntityVisibleTo answers "can viewer V see entity E" for an ARBITRARY
+    //     viewer. It is the correct gate for the local player's own rendering,
+    //     and an omniscience oracle for anyone who passes someone else's id
+    //     (review MINOR-4 on V-A/V-B, inventory row V-G). Watching it separately
+    //     keeps its whitelist short and reviewable instead of hiding inside the
+    //     bulk-reader list.
     namespace fs = std::filesystem;
 
-    static const char* Whitelist[] = {
+    struct WatchedSymbol
+    {
+        const char* Name;                    // substring searched in source text
+        const char* const* Whitelist;        // classified files, sorted
+        size_t WhitelistCount;
+        const char* Guidance;                // what the offender must do
+    };
+
+    static const char* BulkReaderWhitelist[] = {
         // Classified in VISIBILITY_CALLSITE_INVENTORY.md -- keep sorted.
+        // Three entries were dropped 2026-08-06 when the staleness test below
+        // proved they no longer read these symbols: AIDebugOverlay.cpp and
+        // ReconSystem.cpp stopped calling them outright, and SimWorld.cpp works
+        // on the private `Core` member directly rather than through its own
+        // getter. Dead permission is worse than no permission -- it silently
+        // re-authorizes the next author who recreates the read.
         "Source/RA4AI/Private/AICommander.cpp",        // OWN x13
-        "Source/RA4AI/Private/AIDebugOverlay.cpp",     // OMNISCIENT-BY-DESIGN (debug)
         "Source/RA4AI/Private/AIWorldView.cpp",        // FOG-GATED funnel (I-M6 site)
         "Source/RA4AI/Private/ValueMap.cpp",           // OWN
         "Source/RA4Campaign/Private/MissionRuntime.cpp", // OMNISCIENT-BY-DESIGN (referee)
         "Source/RA4Presentation/Private/HudSnapshot.cpp", // OWN + FOG-GATED minimap
-        "Source/RA4Recon/Private/ReconSystem.cpp",     // OMNISCIENT-BY-DESIGN (produces belief)
-        "Source/RA4Simulation/Private/SimWorld.cpp",   // the truth itself
         "Source/RA4Simulation/Public/RA4Simulation/SimWorld.h",
+        // Sorted; the debug overlay arrived from the M2 part-4 stream in parallel
+        // with this detector change and keeps its classification.
+        "Source/RedAlert4/Private/RA4PlayerController.cpp", // OWN x2 + V-B picking (fog-gated)
         "Source/RedAlert4/Private/RA4ReconDebugOverlay.cpp", // OMNISCIENT-BY-DESIGN (two-maps overlay)
-        "Source/RedAlert4/Private/RA4PlayerController.cpp", // OWN x2 + LEAK V-B (picking)
-        "Source/RedAlert4/Private/RA4SimWorldSubsystem.cpp", // LEAK V-A (actor sync)
+        "Source/RedAlert4/Private/RA4ReconDebugOverlay.cpp", // OMNISCIENT-BY-DESIGN (two-maps overlay)
+        "Source/RedAlert4/Private/RA4SimWorldSubsystem.cpp", // V-A actor sync (fog-gated)
+    };
+
+    // Every entry here MUST pass the LOCAL player's id. Passing another player's
+    // id turns the helper into an omniscience oracle, which no presentation or
+    // AI code has any business doing -- see inventory row V-G.
+    static const char* VisibilityGateWhitelist[] = {
+        "Source/RA4Input/Private/SelectionModel.cpp",   // V-A/V-B review MAJOR-1: prune fogged enemies from selection
+        "Source/RA4Simulation/Private/SimWorld.cpp",    // the implementation + auto-target acquisition
+        "Source/RA4Simulation/Public/RA4Simulation/SimWorld.h", // the declaration
+        "Source/RedAlert4/Private/RA4PlayerController.cpp",  // V-B: cursor picking
+        "Source/RedAlert4/Private/RA4SimWorldSubsystem.cpp", // V-A: actor sync hide
+    };
+
+    const WatchedSymbol Watched[] = {
+        {"GetAllCores", BulkReaderWhitelist,
+         sizeof(BulkReaderWhitelist) / sizeof(BulkReaderWhitelist[0]),
+         "classify it in Docs/Architecture/VISIBILITY_CALLSITE_INVENTORY.md and extend BulkReaderWhitelist"},
+        {"GetAllTransforms", BulkReaderWhitelist,
+         sizeof(BulkReaderWhitelist) / sizeof(BulkReaderWhitelist[0]),
+         "classify it in Docs/Architecture/VISIBILITY_CALLSITE_INVENTORY.md and extend BulkReaderWhitelist"},
+        {"IsLocationVisibleTo", VisibilityGateWhitelist,
+         sizeof(VisibilityGateWhitelist) / sizeof(VisibilityGateWhitelist[0]),
+         "this asks whether an ARBITRARY viewer can see a POINT (V-F combat events) -- "
+         "confirm it passes the LOCAL player's id and extend VisibilityGateWhitelist"},
+        {"IsEntityVisibleTo", VisibilityGateWhitelist,
+         sizeof(VisibilityGateWhitelist) / sizeof(VisibilityGateWhitelist[0]),
+         "this asks what an ARBITRARY viewer can see -- confirm it passes the LOCAL player's id, "
+         "record it in inventory row V-G and extend VisibilityGateWhitelist"},
     };
 
     const fs::path Root = fs::current_path() / "Source";
@@ -1713,6 +2048,8 @@ RA4_TEST(Recon, ObjectiveStateFunnelInventory)
         return;
     }
 
+    // Collected as (file, symbol, guidance) so one unclassified file reaching for
+    // two watched symbols reports both reasons rather than the first only.
     std::vector<std::string> Offenders;
     for (auto It = fs::recursive_directory_iterator(Root); It != fs::recursive_directory_iterator(); ++It)
     {
@@ -1735,35 +2072,90 @@ RA4_TEST(Recon, ObjectiveStateFunnelInventory)
 
         std::ifstream F(Path);
         std::string Text((std::istreambuf_iterator<char>(F)), std::istreambuf_iterator<char>());
-        if (Text.find("GetAllCores") == std::string::npos &&
-            Text.find("GetAllTransforms") == std::string::npos)
-        {
-            continue;
-        }
 
-        bool bListed = false;
-        for (const char* W : Whitelist)
+        for (const WatchedSymbol& Symbol : Watched)
         {
-            if (Rel == W)
+            if (Text.find(Symbol.Name) == std::string::npos)
             {
-                bListed = true;
-                break;
+                continue;
             }
-        }
-        if (!bListed)
-        {
-            Offenders.push_back(Rel);
+            bool bListed = false;
+            for (size_t I = 0; I < Symbol.WhitelistCount; ++I)
+            {
+                if (Rel == Symbol.Whitelist[I])
+                {
+                    bListed = true;
+                    break;
+                }
+            }
+            if (!bListed)
+            {
+                Offenders.push_back(Rel + " reads " + Symbol.Name + " -- " + Symbol.Guidance);
+            }
         }
     }
 
     for (const std::string& O : Offenders)
     {
-        RA4Test::ReportFailure(
-            "unclassified objective-state reader: " + O +
-                " -- classify it in Docs/Architecture/VISIBILITY_CALLSITE_INVENTORY.md and extend the whitelist",
-            __FILE__, __LINE__);
+        RA4Test::ReportFailure("unclassified objective-state reader: " + O, __FILE__, __LINE__);
     }
     RA4_EXPECT(Offenders.empty());
+}
+
+RA4_TEST(Recon, ObjectiveStateFunnelWhitelistsAreNotStale)
+{
+    // A whitelist entry naming a file that no longer reads its symbol is dead
+    // permission: it silently re-authorizes the next author who recreates that
+    // read. The funnel test cannot catch this -- it only looks for offenders --
+    // so the inverse is pinned here. Both directions matter for a detector whose
+    // whole job is to make forgetting impossible (RISK-17).
+    namespace fs = std::filesystem;
+
+    struct Expectation
+    {
+        const char* File;
+        const char* Symbol;
+    };
+
+    // Kept in sync with the whitelists above by construction: every entry there
+    // appears here with the symbol that justified it.
+    static const Expectation Expected[] = {
+        {"Source/RA4AI/Private/AICommander.cpp", "GetAllCores"},
+        {"Source/RA4AI/Private/AIWorldView.cpp", "GetAllCores"},
+        {"Source/RA4AI/Private/ValueMap.cpp", "GetAllCores"},
+        {"Source/RA4Campaign/Private/MissionRuntime.cpp", "GetAllCores"},
+        {"Source/RA4Presentation/Private/HudSnapshot.cpp", "GetAllCores"},
+        {"Source/RedAlert4/Private/RA4PlayerController.cpp", "GetAllCores"},
+        {"Source/RedAlert4/Private/RA4ReconDebugOverlay.cpp", "GetAllCores"},
+        {"Source/RedAlert4/Private/RA4ReconDebugOverlay.cpp", "GetAllCores"},
+        {"Source/RedAlert4/Private/RA4SimWorldSubsystem.cpp", "GetAllCores"},
+        {"Source/RA4Input/Private/SelectionModel.cpp", "IsEntityVisibleTo"},
+        {"Source/RA4Simulation/Private/SimWorld.cpp", "IsEntityVisibleTo"},
+        {"Source/RA4Simulation/Public/RA4Simulation/SimWorld.h", "IsEntityVisibleTo"},
+        {"Source/RedAlert4/Private/RA4PlayerController.cpp", "IsEntityVisibleTo"},
+        {"Source/RedAlert4/Private/RA4SimWorldSubsystem.cpp", "IsEntityVisibleTo"},
+    };
+
+    for (const Expectation& E : Expected)
+    {
+        const fs::path Path = fs::current_path() / E.File;
+        if (!fs::exists(Path))
+        {
+            RA4Test::ReportFailure(std::string("whitelisted file is gone: ") + E.File +
+                                       " -- remove it from the funnel whitelist and the inventory",
+                                   __FILE__, __LINE__);
+            continue;
+        }
+        std::ifstream F(Path);
+        std::string Text((std::istreambuf_iterator<char>(F)), std::istreambuf_iterator<char>());
+        if (Text.find(E.Symbol) == std::string::npos)
+        {
+            RA4Test::ReportFailure(std::string("stale funnel permission: ") + E.File +
+                                       " no longer reads " + E.Symbol +
+                                       " -- drop the whitelist entry so the next author has to re-justify it",
+                                   __FILE__, __LINE__);
+        }
+    }
 }
 
 // --- M2: distortion pipeline unit tests (each stage in isolation, §8) ---------------
@@ -2145,4 +2537,57 @@ RA4_TEST(Recon, RadarReturnsAnonymousContactsOnly)
     RA4_REQUIRE(Found.size() == 1);
     RA4_EXPECT(!Found[0]->bAnonymous);
     RA4_EXPECT(Found[0]->BelievedClass == Ids::AllLightTank);
+}
+
+RA4_TEST(Recon, NoStraySourceCopiesInTheTree)
+{
+    // A failed revert once committed SimWorld.cpp.t: a 136 KB copy of the
+    // simulation core, in no build file, silently stale. Project rules forbid a
+    // parallel duplicate subsystem, and an accidental copy of the core is that
+    // hazard wearing source-file clothing -- someone eventually reads it, or
+    // greps it, and believes it.
+    //
+    // .gitignore now covers these patterns, but ignore rules only stop NEW
+    // additions: a file already tracked stays tracked. This test is what makes
+    // the tree state itself an assertion.
+    namespace fs = std::filesystem;
+
+    static const char* BadSuffixes[] = {".orig", ".rej", ".bak", ".t", "~"};
+
+    const fs::path Root = fs::current_path() / "Source";
+    if (!fs::exists(Root))
+    {
+        RA4Test::ReportFailure("Source/ not found from test cwd", __FILE__, __LINE__);
+        return;
+    }
+
+    std::vector<std::string> Strays;
+    for (auto It = fs::recursive_directory_iterator(Root); It != fs::recursive_directory_iterator(); ++It)
+    {
+        if (!It->is_regular_file())
+        {
+            continue;
+        }
+        const std::string Name = It->path().filename().string();
+        for (const char* Suffix : BadSuffixes)
+        {
+            const size_t SuffixLen = std::strlen(Suffix);
+            if (Name.size() > SuffixLen &&
+                Name.compare(Name.size() - SuffixLen, SuffixLen, Suffix) == 0)
+            {
+                Strays.push_back(fs::relative(It->path(), fs::current_path()).generic_string());
+                break;
+            }
+        }
+    }
+
+    for (const std::string& S : Strays)
+    {
+        RA4Test::ReportFailure(
+            "stray editor/merge scratch file in Source/: " + S +
+                " -- delete it; a copy of a source file that no build compiles is a trap, "
+                "not a backup (git history is the backup)",
+            __FILE__, __LINE__);
+    }
+    RA4_EXPECT(Strays.empty());
 }

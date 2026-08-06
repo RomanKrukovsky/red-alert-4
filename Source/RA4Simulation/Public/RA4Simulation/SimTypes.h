@@ -434,6 +434,11 @@ struct BuildingComp
 
     EntityId DockedHarvester;
     std::vector<EntityId> UnloadingQueue;
+
+    // Superweapon charge, counted up in ticks. Starts at 0 so a freshly built
+    // superweapon must charge before its first shot -- otherwise rebuilding one
+    // would be a way to bypass the cooldown entirely.
+    int32_t SuperweaponChargeTicks = 0;
 };
 
 enum class HarvesterState : uint8_t

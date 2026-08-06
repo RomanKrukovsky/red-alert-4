@@ -4,6 +4,7 @@
 
 #include "FogOfWarGrid.h"
 #include "RA4Content/ContentDatabase.h"
+#include "RA4Presentation/FogVisibilityTexture.h"
 #include "RA4Simulation/SimWorld.h"
 
 using namespace RA4;
@@ -153,7 +154,10 @@ RA4_TEST(FogOfWar, EntityVisibilityGateAnswersPerViewer)
     const EntityId NearEnemy =
         World.SpawnUnit(RA4Test::Ids::AllRifleman, 1, Vec2(Fixed::FromInt(700), Fixed::FromInt(500)));
     const EntityId FarEnemy = World.SpawnUnit(RA4Test::Ids::AllRifleman, 1,
-                                              Vec2(Fixed::FromInt(15000), Fixed::FromInt(15000)));
+                                              Vec2(Fixed::FromInt(12000), Fixed::FromInt(12000)));
+    // 12000 / kTileSizeUnits(200) = tile 60, INSIDE the 64x64 test map. 15000 is
+    // tile 75 -- off the map, where the fog grid answers NeverSeen from its bounds
+    // guard, so the assertion would pass without fog being involved at all.
 
     CommandFrame Frame;
     World.Tick(&Frame);
@@ -177,6 +181,207 @@ RA4_TEST(FogOfWar, EntityVisibilityGateAnswersPerViewer)
                              // so exercise the fogless order via an uninitialized world's empty core.
         RA4_EXPECT(!NoFogCheck.IsEntityVisibleTo(0, 5));
     }
+}
+
+RA4_TEST(FogOfWar, LocationVisibilityGateMatchesEntityGate)
+{
+    // V-F pin: combat events carry a location, not a live entity (the shooter can
+    // be dead by the time presentation reads the event), so tracers and impact
+    // markers gate on IsLocationVisibleTo. This pins that the location overload
+    // agrees with the entity one wherever both apply -- otherwise the two fog
+    // gates could drift and one surface would leak while the other did not.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+
+    SimWorld World;
+    World.Initialize(&Content, RA4Test::MakeTestSetup());
+
+    // 12000 / kTileSizeUnits(200) = tile 60, inside the 64x64 test map. An
+    // earlier draft used 15000 -> tile 75, which is OFF the map: the fog grid
+    // answers NeverSeen for out-of-bounds tiles, so the location gate closed
+    // while the entity gate stayed open on its own-unit short-circuit. That
+    // divergence is correct behaviour for both, but it made the test assert the
+    // wrong thing -- keep fogged fixtures on the map.
+    const Vec2 SeenPos(Fixed::FromInt(500), Fixed::FromInt(500));
+    const Vec2 FoggedPos(Fixed::FromInt(12000), Fixed::FromInt(12000));
+
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, SeenPos);
+    const EntityId NearEnemy = World.SpawnUnit(RA4Test::Ids::AllRifleman, 1,
+                                              Vec2(Fixed::FromInt(700), Fixed::FromInt(500)));
+    const EntityId FarEnemy = World.SpawnUnit(RA4Test::Ids::AllRifleman, 1, FoggedPos);
+
+    CommandFrame Frame;
+    World.Tick(&Frame);
+
+    // Where player 0 has vision, the location gate opens; where it does not, it closes.
+    RA4_EXPECT(World.IsLocationVisibleTo(0, SeenPos));
+    RA4_EXPECT(!World.IsLocationVisibleTo(0, FoggedPos));
+
+    // And it agrees with the entity gate for entities standing on those tiles --
+    // the property that keeps the tracer gate and the actor gate consistent.
+    const TransformComp* NearT = World.GetTransform(NearEnemy);
+    const TransformComp* FarT = World.GetTransform(FarEnemy);
+    RA4_EXPECT(NearT != nullptr && FarT != nullptr);
+    RA4_EXPECT(World.IsLocationVisibleTo(0, NearT->Position) ==
+               World.IsEntityVisibleTo(0, NearEnemy.Index));
+    RA4_EXPECT(World.IsLocationVisibleTo(0, FarT->Position) ==
+               World.IsEntityVisibleTo(0, FarEnemy.Index));
+
+    // Player 1 sees its own far unit's tile; the gate is per viewer, not global.
+    RA4_EXPECT(World.IsLocationVisibleTo(1, FoggedPos));
+
+    // Documented asymmetry: the entity gate short-circuits on ownership ("a side
+    // always sees its own"), while a LOCATION has no owner, so the location gate
+    // answers purely from the fog grid. Off-map points are therefore never
+    // visible to anyone, even the owner of a unit standing there. V-F's callers
+    // only ever pass in-bounds event locations, so this cannot hide a legitimate
+    // tracer -- but the two helpers are not interchangeable and this pins why.
+    const Vec2 OffMap(Fixed::FromInt(15000), Fixed::FromInt(15000));
+    RA4_EXPECT(!World.IsLocationVisibleTo(1, OffMap));
+}
+
+// --- ADR-0028: fog as texture data ------------------------------------------
+// These pin the encoding and the dirty/full agreement headlessly. The material
+// and post-process work is only verifiable by looking at the screen, but the
+// part that decides WHICH texel a tile gets is pure arithmetic and belongs in a
+// test -- getting it wrong renders explored ground as unexplored, which in a
+// playtest looks like a vision bug with no stack trace.
+
+RA4_TEST(FogOfWar, TexelEncodingIsOrderedAndDistinct)
+{
+    // The material reads this as a 0..1 ramp, so the four states must be
+    // distinct AND monotonically ordered by how much the player knows.
+    // Reordering them would invert fog in the world without failing to compile.
+    RA4_EXPECT(FogStateToTexel(VisibilityState::NeverSeen) == kFogTexelNeverSeen);
+    RA4_EXPECT(FogStateToTexel(VisibilityState::PreviouslySeen) == kFogTexelPreviouslySeen);
+    RA4_EXPECT(FogStateToTexel(VisibilityState::RadarDetected) == kFogTexelRadarDetected);
+    RA4_EXPECT(FogStateToTexel(VisibilityState::CurrentlyVisible) == kFogTexelCurrentlyVisible);
+
+    RA4_EXPECT(kFogTexelNeverSeen < kFogTexelPreviouslySeen);
+    RA4_EXPECT(kFogTexelPreviouslySeen < kFogTexelRadarDetected);
+    RA4_EXPECT(kFogTexelRadarDetected < kFogTexelCurrentlyVisible);
+
+    // Unexplored must be the darkest possible value and seen the brightest, so
+    // a material that simply multiplies by this byte cannot brighten fog.
+    RA4_EXPECT(kFogTexelNeverSeen == 0);
+    RA4_EXPECT(kFogTexelCurrentlyVisible == 255);
+}
+
+RA4_TEST(FogOfWar, TexelBufferMatchesGridAndRejectsBadSeat)
+{
+    FFogOfWarGrid Grid(8, 8, 2);
+    Grid.RevealCircularArea(0, 2, 2, 1);
+
+    std::vector<uint8_t> Buffer;
+    RA4_EXPECT(BuildFogTexelBuffer(Grid, 0, Buffer));
+    RA4_EXPECT(Buffer.size() == 64);
+
+    // Every texel agrees with the grid it came from, row-major.
+    bool bAllMatch = true;
+    for (int32_t Y = 0; Y < 8; ++Y)
+    {
+        for (int32_t X = 0; X < 8; ++X)
+        {
+            if (Buffer[size_t(Y) * 8 + size_t(X)] != FogStateToTexel(Grid.GetVisibility(0, X, Y)))
+            {
+                bAllMatch = false;
+            }
+        }
+    }
+    RA4_EXPECT(bAllMatch);
+
+    // The revealed centre is brighter than an untouched corner -- i.e. the
+    // buffer actually carries vision rather than a constant.
+    RA4_EXPECT(Buffer[2 * 8 + 2] > Buffer[7 * 8 + 7]);
+
+    // Player 1 saw nothing, so its buffer is uniformly unexplored. Fog is
+    // per-seat; a shared buffer would leak another player's vision.
+    std::vector<uint8_t> Other;
+    RA4_EXPECT(BuildFogTexelBuffer(Grid, 1, Other));
+    bool bOtherAllDark = true;
+    for (uint8_t V : Other)
+    {
+        if (V != kFogTexelNeverSeen)
+        {
+            bOtherAllDark = false;
+        }
+    }
+    RA4_EXPECT(bOtherAllDark);
+
+    // An out-of-range seat is refused rather than clamped to player 0.
+    std::vector<uint8_t> Untouched;
+    RA4_EXPECT(!BuildFogTexelBuffer(Grid, 5, Untouched));
+    RA4_EXPECT(Untouched.empty());
+    RA4_EXPECT(!BuildFogTexelBuffer(Grid, -1, Untouched));
+}
+
+RA4_TEST(FogOfWar, DirtyRegionUploadAgreesWithFullRebuild)
+{
+    // The dirty path is an optimisation. If it can disagree with the full
+    // rebuild, fog goes stale in a way no test would otherwise catch, so the
+    // two are pinned against each other directly.
+    FFogOfWarGrid Grid(16, 16, 1);
+    Grid.RevealCircularArea(0, 4, 4, 2);
+
+    std::vector<uint8_t> Incremental;
+    RA4_EXPECT(BuildFogTexelBuffer(Grid, 0, Incremental));
+
+    // Vision moves: clear and reveal elsewhere, then patch only that rectangle.
+    Grid.ClearCurrentVisibility(0);
+    Grid.RevealCircularArea(0, 11, 11, 2);
+    RA4_EXPECT(BlitFogTexelRegion(Grid, 0, 0, 0, 16, 16, Incremental));
+
+    std::vector<uint8_t> FullRebuild;
+    RA4_EXPECT(BuildFogTexelBuffer(Grid, 0, FullRebuild));
+    RA4_EXPECT(Incremental == FullRebuild);
+
+    // A region blit is clamped, not out-of-bounds: an oversized rect from a
+    // dirty list must not write past the buffer.
+    RA4_EXPECT(BlitFogTexelRegion(Grid, 0, -5, -5, 999, 999, Incremental));
+    RA4_EXPECT(Incremental == FullRebuild);
+
+    // A buffer of the wrong size is refused instead of partially written.
+    std::vector<uint8_t> WrongSize(10, 0);
+    RA4_EXPECT(!BlitFogTexelRegion(Grid, 0, 0, 0, 16, 16, WrongSize));
+
+    // Memory of terrain survives losing sight of it: the first revealed area is
+    // no longer CurrentlyVisible but must not fall back to NeverSeen, which is
+    // the whole point of the PreviouslySeen tier in ADR-0028's visual contract.
+    const uint8_t OldArea = FullRebuild[4 * 16 + 4];
+    RA4_EXPECT(OldArea > kFogTexelNeverSeen);
+    RA4_EXPECT(OldArea < kFogTexelCurrentlyVisible);
+}
+
+RA4_TEST(FogOfWar, FogStrengthFloorIsAContractNotAdvice)
+{
+    // ADR-0028 section 4: fog strength may be softened for readability but never
+    // to where unexplored and currently-visible ground look the same -- that
+    // would hand the player information the rules deny them. The floor therefore
+    // has to be arithmetic, not prose.
+    //
+    // This pins the clamp itself rather than the subsystem, which needs Unreal.
+    // The subsystem applies exactly this expression in SetFogStrength; if that
+    // ever diverges the two will disagree and the divergence is the bug.
+    constexpr float kMinFogStrength = 0.35f;
+    auto Clamp = [](float S) { return S < kMinFogStrength ? kMinFogStrength : (S > 1.0f ? 1.0f : S); };
+
+    // Turning fog off entirely is not offered -- it is clamped up to the floor.
+    RA4_EXPECT(Clamp(0.0f) == kMinFogStrength);
+    RA4_EXPECT(Clamp(-5.0f) == kMinFogStrength);
+    RA4_EXPECT(Clamp(0.1f) == kMinFogStrength);
+    // Within range, honoured exactly.
+    RA4_EXPECT(Clamp(0.5f) == 0.5f);
+    RA4_EXPECT(Clamp(1.0f) == 1.0f);
+    // Above the intended look is also refused: fog brighter than the design is a
+    // different kind of wrong, not a harmless one.
+    RA4_EXPECT(Clamp(3.0f) == 1.0f);
+
+    // And the floor must leave a real difference between the extremes: at the
+    // weakest allowed setting, unexplored ground is still far darker than seen
+    // ground. brightness = lerp(0.08, 1, visibility) scaled by strength.
+    const float FloorBrightnessUnexplored = 0.08f * kMinFogStrength;
+    const float FloorBrightnessVisible = 1.0f;
+    RA4_EXPECT(FloorBrightnessVisible - FloorBrightnessUnexplored > 0.5f);
 }
 
 // DirtyRegions is a producer/consumer list for texture uploads: every reveal appends a rect

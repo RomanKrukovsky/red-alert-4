@@ -143,6 +143,14 @@ struct ChainTuning
     // mechanic. This is the extra confidence decay a blackout node's tracks take
     // per second on top of the normal decay curve.
     int32_t BlackoutConfidenceDecayPerSecondPerMille = 40;
+
+    // Power ratio (percent) below which a command node's radios stop working. A
+    // designer number, not a hidden literal: it decides when the player's intel
+    // goes dark, so it belongs in the config and in the settings hash. It is
+    // deliberately NOT the production brownout threshold (kMinPowerRatioPercent,
+    // 20%) -- comms fail before factories do, which is what makes a power raid
+    // interesting rather than merely slow.
+    int32_t BlackoutPowerRatioPercent = 50;
 };
 
 // --- Morale model (inputs of the distortion pipeline, M2) -----------------------
@@ -249,6 +257,52 @@ struct ReconSettings
     // not stored because settings are data-driven and shipped with the build.
     uint64_t ComputeSettingsHash() const;
 };
+
+// --- Shared rules (one definition, used by the pipeline AND by its tests) --------
+//
+// These were inline expressions in ReconSystem.cpp, which meant the tests
+// re-derived the arithmetic and would have passed with the production code deleted
+// (M3 review finding n4). Named functions make the rule the thing under test.
+
+// Reliability left in a report after N relay hops. Each hop summarises and rounds,
+// so information degrades with distance from the observer. Clamped: never negative.
+inline Fixed ReliabilityAfterHops(const ChainTuning& Chain, int32_t Hops)
+{
+    const Fixed Loss = PerMilleToFixed(Chain.ReliabilityLossPerHopPerMille * Hops);
+    return FxClamp(Fixed::FromInt(1) - Loss, Fixed::Zero(), Fixed::FromInt(1));
+}
+
+// Confidence for a track backed by the given number of INDEPENDENT sources.
+// Agreement is superlinear (§4.4): two posts seeing the same formation is
+// qualitatively better evidence than one post looking twice. Contested data earns
+// no bonus and takes a penalty -- the sources cancel rather than reinforce.
+inline Fixed ConfidenceForSources(const TrackTuning& Tracks, int32_t Sources, bool bContested)
+{
+    const Fixed Bonus = PerMilleToFixed(Tracks.AgreementConfidenceBonusPerMille);
+    Fixed Result = Fixed::FromInt(1);
+    if (bContested)
+    {
+        Result = Fixed::FromInt(1) - Bonus;
+    }
+    else if (Sources > 1)
+    {
+        Result = Fixed::FromInt(1) + Bonus;
+    }
+    return FxClamp(Result, Fixed::Zero(), Fixed::FromInt(1));
+}
+
+// Whether two believed counts disagree enough to call a track contested.
+// Proportional, not absolute: 3 vs 4 is rounding, 3 vs 30 is a contradiction.
+inline bool CountsMateriallyDifferForTest(int32_t A, int32_t B, int32_t TolerancePerMille)
+{
+    const int32_t Larger = A > B ? A : B;
+    if (Larger <= 0)
+    {
+        return false;
+    }
+    const int32_t Difference = A > B ? A - B : B - A;
+    return int64_t(Difference) * 1000 > int64_t(Larger) * int64_t(TolerancePerMille);
+}
 
 // Loads settings from a JSON document (see Content/RA4/Data/Recon/recon_settings.json).
 // Returns false and fills OutErrors on any authoring mistake; a bad config must
