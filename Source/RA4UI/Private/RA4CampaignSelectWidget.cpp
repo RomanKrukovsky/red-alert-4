@@ -247,14 +247,14 @@ void URA4CampaignSelectWidget::BuildLayout()
         return Button;
     };
 
-    AddNav(LOCTEXT("MainNav", "GLAVNAYa"), TEXT("MainNavButton"), false)
+    AddNav(LOCTEXT("MainNav", "ГЛАВНАЯ"), TEXT("MainNavButton"), false)
         ->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::OpenMainMenu);
     UButton* CampaignNav = AddNav(
-        LOCTEXT("CampaignNav", "KAMPANIYa"), TEXT("CampaignNavButton"), true);
+        LOCTEXT("CampaignNav", "КАМПАНИЯ"), TEXT("CampaignNavButton"), true);
     CampaignNav->SetIsEnabled(false);
-    AddNav(LOCTEXT("NetworkNav", "SETEVAYa IGRA"), TEXT("NetworkNavButton"), false)
+    AddNav(LOCTEXT("NetworkNav", "СЕТЕВАЯ ИГРА"), TEXT("NetworkNavButton"), false)
         ->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::OpenMultiplayer);
-    AddNav(LOCTEXT("ChallengesNav", "ISPYTANIYa"), TEXT("ChallengesNavButton"), false)
+    AddNav(LOCTEXT("ChallengesNav", "ИСПЫТАНИЯ"), TEXT("ChallengesNavButton"), false)
         ->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::OpenChallenges);
     AddNav(LOCTEXT("BarracksNav", "BARRACKS"), TEXT("BarracksNavButton"), false)
         ->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::OpenBarracks);
@@ -268,9 +268,9 @@ void URA4CampaignSelectWidget::BuildLayout()
     UVerticalBox* Profile = WidgetTree->ConstructWidget<UVerticalBox>(
         UVerticalBox::StaticClass(), TEXT("CampaignProfile"));
     Profile->AddChildToVerticalBox(MakeText(
-        WidgetTree, LOCTEXT("ProfileCommander", "TOVARIShch KOMANDIR"), 15, SovietRed, TEXT("ProfileCommander")));
+        WidgetTree, LOCTEXT("ProfileCommander", "ТОВАРИЩ КОМАНДИР"), 15, SovietRed, TEXT("ProfileCommander")));
     Profile->AddChildToVerticalBox(MakeText(
-        WidgetTree, LOCTEXT("ProfileLevel", "UROVEN 47  //  SET PODKLYuChENA"), 11, TextMuted, TEXT("ProfileLevel"), false));
+        WidgetTree, LOCTEXT("ProfileLevel", "УРОВЕНЬ 47  //  СЕТЬ ПОДКЛЮЧЕНА"), 11, TextMuted, TEXT("ProfileLevel"), false));
     UProgressBar* ProfileProgress = WidgetTree->ConstructWidget<UProgressBar>(
         UProgressBar::StaticClass(), TEXT("ProfileProgress"));
     ProfileProgress->SetPercent(0.54f);
@@ -305,9 +305,9 @@ void URA4CampaignSelectWidget::BuildLayout()
     };
     const FText FactionLabels[] = {
         LOCTEXT("USSRCard", "Soviet"),
-        LOCTEXT("AllianceCard", "ALYaNS"),
-        LOCTEXT("EasternCard", "VOSTOChNAYa\nKOALITsIYa"),
-        LOCTEXT("ChronoCard", "KhRONOLEGION")
+        LOCTEXT("AllianceCard", "АЛЬЯНС"),
+        LOCTEXT("EasternCard", "ВОСТОЧНАЯ\nКОАЛИЦИЯ"),
+        LOCTEXT("ChronoCard", "ХРОНОЛЕГИОН")
     };
     const FLinearColor FactionAccents[] = {
         SovietRed, AllianceBlue, EasternGold, ChronoViolet
@@ -434,11 +434,11 @@ void URA4CampaignSelectWidget::BuildLayout()
     UButton* TrainingButton = WidgetTree->ConstructWidget<UButton>(
         UButton::StaticClass(), TEXT("TrainingButton"));
     TrainingButton->AddChild(MakeText(
-        WidgetTree, LOCTEXT("Training", "OBUChENIE"), 17, TextPrimary, TEXT("TrainingLabel")));
+        WidgetTree, LOCTEXT("Training", "ОБУЧЕНИЕ"), 17, TextPrimary, TEXT("TrainingLabel")));
     TrainingButton->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::OpenChallenges);
     Footer->AddChildToHorizontalBox(TrainingButton)->SetPadding(FMargin(8.0f));
     UTextBlock* EraText = MakeText(
-        WidgetTree, LOCTEXT("Era", "1927  —  2047  //  ARKhIV KOMANDOVANIYa"),
+        WidgetTree, LOCTEXT("Era", "1927  —  2047  //  АРХИВ КОМАНДОВАНИЯ"),
         13, TextMuted, TEXT("CampaignEra"), false);
     EraText->SetJustification(ETextJustify::Center);
     UHorizontalBoxSlot* EraSlot = Footer->AddChildToHorizontalBox(EraText);
@@ -470,15 +470,15 @@ void URA4CampaignSelectWidget::SelectFaction(const int32 FactionIndex)
 
     const FText Names[] = {
         LOCTEXT("USSRName", "Soviet"),
-        LOCTEXT("AllianceName", "ALYaNS"),
-        LOCTEXT("EasternName", "VOSTOChNAYa KOALITsIYa"),
-        LOCTEXT("ChronoName", "KhRONOLEGION")
+        LOCTEXT("AllianceName", "АЛЬЯНС"),
+        LOCTEXT("EasternName", "ВОСТОЧНАЯ КОАЛИЦИЯ"),
+        LOCTEXT("ChronoName", "ХРОНОЛЕГИОН")
     };
     const FText Mottos[] = {
-        LOCTEXT("USSRMotto", "SLAVA RODINE. BUDUShchEE ZA NAMI."),
-        LOCTEXT("AllianceMotto", "SVDEFDA. TOChNOST. PREVOSKhODSTVO."),
+        LOCTEXT("USSRMotto", "СЛАВА РОДИНЕ. БУДУЩЕЕ ЗА НАМИ."),
+        LOCTEXT("AllianceMotto", "СВОБОДА. ТОЧНОСТЬ. ПРЕВОСХОДСТВО."),
         LOCTEXT("EasternMotto", "EDINSTVO SOZDAYoT POBEDU."),
-        LOCTEXT("ChronoMotto", "VREMYa — NAShE ORUZhIE.")
+        LOCTEXT("ChronoMotto", "ВРЕМЯ — НАШЕ ОРУЖИЕ.")
     };
     const FText Descriptions[] = {
         LOCTEXT("USSRDescription", "Vozglavte vozrozhdyonnyy Sovetskiy Soyuz v borbe za mirovoe gospodstvo. Tyazhyolaya bronya, distsiplina i nesokrushimaya volya sokrushat vragov revolyutsii."),
@@ -487,9 +487,9 @@ void URA4CampaignSelectWidget::SelectFaction(const int32 FactionIndex)
         LOCTEXT("ChronoDescription", "Komanduyte armiey vne vremeni. Iskazhayte pole boya, peremeshchayte voyska cherez khronokoridory i perepisyvayte iskhod voyny.")
     };
     const FText Progress[] = {
-        LOCTEXT("USSRProgress", "MISSII PROYDENO          06 / 18\nDOP. ZADANIYa             09 / 36\nDIFFICULTY                VETERAN"),
-        LOCTEXT("AllianceProgress", "MISSII PROYDENO          02 / 16\nDOP. ZADANIYa             03 / 28\nDIFFICULTY                OFITsER"),
-        LOCTEXT("EasternProgress", "MISSII PROYDENO          00 / 15\nDOP. ZADANIYa             00 / 30\nDIFFICULTY                NE VYBRANA"),
+        LOCTEXT("USSRProgress", "МИССИИ ПРОЙДЕНО          06 / 18\nДОП. ЗАДАНИЯ             09 / 36\nСЛОЖНОСТЬ                ВЕТЕРАН"),
+        LOCTEXT("AllianceProgress", "МИССИИ ПРОЙДЕНО          02 / 16\nДОП. ЗАДАНИЯ             03 / 28\nСЛОЖНОСТЬ                ОФИЦЕР"),
+        LOCTEXT("EasternProgress", "МИССИИ ПРОЙДЕНО          00 / 15\nДОП. ЗАДАНИЯ             00 / 30\nСЛОЖНОСТЬ                НЕ ВЫБРАНА"),
         LOCTEXT("ChronoProgress", "MISSII PROYDENO          00 / 12\nVREMENNYE UZLY           00 / 24\nDIFFICULTY                NE VYBRANA")
     };
     if (FactionNameText)
@@ -512,8 +512,8 @@ void URA4CampaignSelectWidget::SelectFaction(const int32 FactionIndex)
     if (ContinueLabelText)
     {
         ContinueLabelText->SetText(SelectedFactionIndex == 0
-            ? LOCTEXT("ContinueCampaign", "CONTINUE KAMPANIYu")
-            : LOCTEXT("StartCampaign", "NAChAT KAMPANIYu"));
+            ? LOCTEXT("ContinueCampaign", "ПРОДОЛЖИТЬ КАМПАНИЮ")
+            : LOCTEXT("StartCampaign", "НАЧАТЬ КАМПАНИЮ"));
     }
 }
 

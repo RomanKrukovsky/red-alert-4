@@ -185,7 +185,7 @@ void URA4MatchResultOverlayWidget::RefreshTexts()
     if (ExitButtonText != nullptr)
     {
         ExitButtonText->SetText(
-            bHasMainMenuLevel ? NSLOCTEXT("RA4", "MatchResultExitToMenu", "VYYTI V MENYu")
+            bHasMainMenuLevel ? NSLOCTEXT("RA4", "MatchResultExitToMenu", "ВЫЙТИ В МЕНЮ")
                               : NSLOCTEXT("RA4", "MatchResultExit", "VYYTI"));
     }
 }
