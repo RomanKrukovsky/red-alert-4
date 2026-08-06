@@ -121,24 +121,26 @@ int32 URA4TerrainSetupCommandlet::Main(const FString& Params)
     const FString MaterialName = TEXT("M_RA4_Terrain");
     const FString MaterialPackageName = FString(kGeneratedRoot) + TEXT("/") + MaterialName;
 
-    UMaterial* Material = nullptr;
-    if (FPackageName::DoesPackageExist(MaterialPackageName))
-    {
-        Material = LoadObject<UMaterial>(nullptr, *(MaterialPackageName + TEXT(".") + MaterialName));
-    }
-
+    // Rebuilt from scratch on every run rather than reused when present.
+    //
+    // This used to load the existing material and skip the whole graph-building
+    // block, which meant a change to the tiling constants below silently did
+    // nothing: the commandlet reported success, resaved the package, and left the
+    // old node graph in place. That is how the 64-repeat tiling survived a fix.
+    // Reconciling an existing graph against changed constants is far more
+    // error-prone than regenerating a graph this small, and the asset is generated
+    // content with no hand edits to preserve.
+    UPackage* MatPackage = CreatePackage(*MaterialPackageName);
+    MatPackage->FullyLoad();
+    UMaterial* Material = NewObject<UMaterial>(MatPackage, *MaterialName,
+                                              RF_Public | RF_Standalone);
     if (Material == nullptr)
     {
-        UPackage* MatPackage = CreatePackage(*MaterialPackageName);
-        MatPackage->FullyLoad();
-        Material = NewObject<UMaterial>(MatPackage, *MaterialName, RF_Public | RF_Standalone);
-        if (Material == nullptr)
-        {
-            UE_LOG(LogTemp, Error, TEXT("RA4TerrainSetup: could not create the material"));
-            return 1;
-        }
+        UE_LOG(LogTemp, Error, TEXT("RA4TerrainSetup: could not create the material"));
+        return 1;
+    }
 
-        // One tiling coordinate drives all three samplers, so the maps stay in
+    {
         // One tiling coordinate drives all three samplers, so the maps stay in
         // register.
         //
