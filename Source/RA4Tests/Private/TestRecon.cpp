@@ -1964,29 +1964,81 @@ RA4_TEST(Recon, PerceivedWorldRefusesForeignVersion)
 RA4_TEST(Recon, ObjectiveStateFunnelInventory)
 {
     // Docs/Architecture/VISIBILITY_CALLSITE_INVENTORY.md classifies every file
-    // that reads objective entity state (GetAllCores / GetAllTransforms). This
-    // test pins that list: a NEW file reaching for objective state fails here
-    // until a human classifies it in the inventory and extends the whitelist.
-    // It deliberately cannot judge HOW the data is used -- its job is to turn
-    // "forgot to classify" from a silent leak into a build failure (RISK-17).
-    // The runtime detector (per-read whitelisted-funnel enforcement) lands with
-    // I-M6 and needs SimWorld instrumentation hooks.
+    // that reads objective entity state. This test pins that list: a NEW file
+    // reaching for objective state fails here until a human classifies it in
+    // the inventory and extends the whitelist. It deliberately cannot judge HOW
+    // the data is used -- its job is to turn "forgot to classify" from a silent
+    // leak into a build failure (RISK-17). The runtime detector (per-read
+    // whitelisted-funnel enforcement) lands with I-M6 and needs SimWorld
+    // instrumentation hooks.
+    //
+    // Two symbol groups are watched, because they leak differently:
+    //   * the bulk readers (GetAllCores / GetAllTransforms) hand out the whole
+    //     objective world, so any consumer must be classified;
+    //   * IsEntityVisibleTo answers "can viewer V see entity E" for an ARBITRARY
+    //     viewer. It is the correct gate for the local player's own rendering,
+    //     and an omniscience oracle for anyone who passes someone else's id
+    //     (review MINOR-4 on V-A/V-B, inventory row V-G). Watching it separately
+    //     keeps its whitelist short and reviewable instead of hiding inside the
+    //     bulk-reader list.
     namespace fs = std::filesystem;
 
-    static const char* Whitelist[] = {
+    struct WatchedSymbol
+    {
+        const char* Name;                    // substring searched in source text
+        const char* const* Whitelist;        // classified files, sorted
+        size_t WhitelistCount;
+        const char* Guidance;                // what the offender must do
+    };
+
+    static const char* BulkReaderWhitelist[] = {
         // Classified in VISIBILITY_CALLSITE_INVENTORY.md -- keep sorted.
+        // Three entries were dropped 2026-08-06 when the staleness test below
+        // proved they no longer read these symbols: AIDebugOverlay.cpp and
+        // ReconSystem.cpp stopped calling them outright, and SimWorld.cpp works
+        // on the private `Core` member directly rather than through its own
+        // getter. Dead permission is worse than no permission -- it silently
+        // re-authorizes the next author who recreates the read.
         "Source/RA4AI/Private/AICommander.cpp",        // OWN x13
-        "Source/RA4AI/Private/AIDebugOverlay.cpp",     // OMNISCIENT-BY-DESIGN (debug)
         "Source/RA4AI/Private/AIWorldView.cpp",        // FOG-GATED funnel (I-M6 site)
         "Source/RA4AI/Private/ValueMap.cpp",           // OWN
         "Source/RA4Campaign/Private/MissionRuntime.cpp", // OMNISCIENT-BY-DESIGN (referee)
         "Source/RA4Presentation/Private/HudSnapshot.cpp", // OWN + FOG-GATED minimap
-        "Source/RA4Recon/Private/ReconSystem.cpp",     // OMNISCIENT-BY-DESIGN (produces belief)
-        "Source/RA4Simulation/Private/SimWorld.cpp",   // the truth itself
         "Source/RA4Simulation/Public/RA4Simulation/SimWorld.h",
+        // Sorted; the debug overlay arrived from the M2 part-4 stream in parallel
+        // with this detector change and keeps its classification.
+        "Source/RedAlert4/Private/RA4PlayerController.cpp", // OWN x2 + V-B picking (fog-gated)
         "Source/RedAlert4/Private/RA4ReconDebugOverlay.cpp", // OMNISCIENT-BY-DESIGN (two-maps overlay)
-        "Source/RedAlert4/Private/RA4PlayerController.cpp", // OWN x2 + LEAK V-B (picking)
-        "Source/RedAlert4/Private/RA4SimWorldSubsystem.cpp", // LEAK V-A (actor sync)
+        "Source/RedAlert4/Private/RA4ReconDebugOverlay.cpp", // OMNISCIENT-BY-DESIGN (two-maps overlay)
+        "Source/RedAlert4/Private/RA4SimWorldSubsystem.cpp", // V-A actor sync (fog-gated)
+    };
+
+    // Every entry here MUST pass the LOCAL player's id. Passing another player's
+    // id turns the helper into an omniscience oracle, which no presentation or
+    // AI code has any business doing -- see inventory row V-G.
+    static const char* VisibilityGateWhitelist[] = {
+        "Source/RA4Input/Private/SelectionModel.cpp",   // V-A/V-B review MAJOR-1: prune fogged enemies from selection
+        "Source/RA4Simulation/Private/SimWorld.cpp",    // the implementation + auto-target acquisition
+        "Source/RA4Simulation/Public/RA4Simulation/SimWorld.h", // the declaration
+        "Source/RedAlert4/Private/RA4PlayerController.cpp",  // V-B: cursor picking
+        "Source/RedAlert4/Private/RA4SimWorldSubsystem.cpp", // V-A: actor sync hide
+    };
+
+    const WatchedSymbol Watched[] = {
+        {"GetAllCores", BulkReaderWhitelist,
+         sizeof(BulkReaderWhitelist) / sizeof(BulkReaderWhitelist[0]),
+         "classify it in Docs/Architecture/VISIBILITY_CALLSITE_INVENTORY.md and extend BulkReaderWhitelist"},
+        {"GetAllTransforms", BulkReaderWhitelist,
+         sizeof(BulkReaderWhitelist) / sizeof(BulkReaderWhitelist[0]),
+         "classify it in Docs/Architecture/VISIBILITY_CALLSITE_INVENTORY.md and extend BulkReaderWhitelist"},
+        {"IsLocationVisibleTo", VisibilityGateWhitelist,
+         sizeof(VisibilityGateWhitelist) / sizeof(VisibilityGateWhitelist[0]),
+         "this asks whether an ARBITRARY viewer can see a POINT (V-F combat events) -- "
+         "confirm it passes the LOCAL player's id and extend VisibilityGateWhitelist"},
+        {"IsEntityVisibleTo", VisibilityGateWhitelist,
+         sizeof(VisibilityGateWhitelist) / sizeof(VisibilityGateWhitelist[0]),
+         "this asks what an ARBITRARY viewer can see -- confirm it passes the LOCAL player's id, "
+         "record it in inventory row V-G and extend VisibilityGateWhitelist"},
     };
 
     const fs::path Root = fs::current_path() / "Source";
@@ -1996,6 +2048,8 @@ RA4_TEST(Recon, ObjectiveStateFunnelInventory)
         return;
     }
 
+    // Collected as (file, symbol, guidance) so one unclassified file reaching for
+    // two watched symbols reports both reasons rather than the first only.
     std::vector<std::string> Offenders;
     for (auto It = fs::recursive_directory_iterator(Root); It != fs::recursive_directory_iterator(); ++It)
     {
@@ -2018,35 +2072,90 @@ RA4_TEST(Recon, ObjectiveStateFunnelInventory)
 
         std::ifstream F(Path);
         std::string Text((std::istreambuf_iterator<char>(F)), std::istreambuf_iterator<char>());
-        if (Text.find("GetAllCores") == std::string::npos &&
-            Text.find("GetAllTransforms") == std::string::npos)
-        {
-            continue;
-        }
 
-        bool bListed = false;
-        for (const char* W : Whitelist)
+        for (const WatchedSymbol& Symbol : Watched)
         {
-            if (Rel == W)
+            if (Text.find(Symbol.Name) == std::string::npos)
             {
-                bListed = true;
-                break;
+                continue;
             }
-        }
-        if (!bListed)
-        {
-            Offenders.push_back(Rel);
+            bool bListed = false;
+            for (size_t I = 0; I < Symbol.WhitelistCount; ++I)
+            {
+                if (Rel == Symbol.Whitelist[I])
+                {
+                    bListed = true;
+                    break;
+                }
+            }
+            if (!bListed)
+            {
+                Offenders.push_back(Rel + " reads " + Symbol.Name + " -- " + Symbol.Guidance);
+            }
         }
     }
 
     for (const std::string& O : Offenders)
     {
-        RA4Test::ReportFailure(
-            "unclassified objective-state reader: " + O +
-                " -- classify it in Docs/Architecture/VISIBILITY_CALLSITE_INVENTORY.md and extend the whitelist",
-            __FILE__, __LINE__);
+        RA4Test::ReportFailure("unclassified objective-state reader: " + O, __FILE__, __LINE__);
     }
     RA4_EXPECT(Offenders.empty());
+}
+
+RA4_TEST(Recon, ObjectiveStateFunnelWhitelistsAreNotStale)
+{
+    // A whitelist entry naming a file that no longer reads its symbol is dead
+    // permission: it silently re-authorizes the next author who recreates that
+    // read. The funnel test cannot catch this -- it only looks for offenders --
+    // so the inverse is pinned here. Both directions matter for a detector whose
+    // whole job is to make forgetting impossible (RISK-17).
+    namespace fs = std::filesystem;
+
+    struct Expectation
+    {
+        const char* File;
+        const char* Symbol;
+    };
+
+    // Kept in sync with the whitelists above by construction: every entry there
+    // appears here with the symbol that justified it.
+    static const Expectation Expected[] = {
+        {"Source/RA4AI/Private/AICommander.cpp", "GetAllCores"},
+        {"Source/RA4AI/Private/AIWorldView.cpp", "GetAllCores"},
+        {"Source/RA4AI/Private/ValueMap.cpp", "GetAllCores"},
+        {"Source/RA4Campaign/Private/MissionRuntime.cpp", "GetAllCores"},
+        {"Source/RA4Presentation/Private/HudSnapshot.cpp", "GetAllCores"},
+        {"Source/RedAlert4/Private/RA4PlayerController.cpp", "GetAllCores"},
+        {"Source/RedAlert4/Private/RA4ReconDebugOverlay.cpp", "GetAllCores"},
+        {"Source/RedAlert4/Private/RA4ReconDebugOverlay.cpp", "GetAllCores"},
+        {"Source/RedAlert4/Private/RA4SimWorldSubsystem.cpp", "GetAllCores"},
+        {"Source/RA4Input/Private/SelectionModel.cpp", "IsEntityVisibleTo"},
+        {"Source/RA4Simulation/Private/SimWorld.cpp", "IsEntityVisibleTo"},
+        {"Source/RA4Simulation/Public/RA4Simulation/SimWorld.h", "IsEntityVisibleTo"},
+        {"Source/RedAlert4/Private/RA4PlayerController.cpp", "IsEntityVisibleTo"},
+        {"Source/RedAlert4/Private/RA4SimWorldSubsystem.cpp", "IsEntityVisibleTo"},
+    };
+
+    for (const Expectation& E : Expected)
+    {
+        const fs::path Path = fs::current_path() / E.File;
+        if (!fs::exists(Path))
+        {
+            RA4Test::ReportFailure(std::string("whitelisted file is gone: ") + E.File +
+                                       " -- remove it from the funnel whitelist and the inventory",
+                                   __FILE__, __LINE__);
+            continue;
+        }
+        std::ifstream F(Path);
+        std::string Text((std::istreambuf_iterator<char>(F)), std::istreambuf_iterator<char>());
+        if (Text.find(E.Symbol) == std::string::npos)
+        {
+            RA4Test::ReportFailure(std::string("stale funnel permission: ") + E.File +
+                                       " no longer reads " + E.Symbol +
+                                       " -- drop the whitelist entry so the next author has to re-justify it",
+                                   __FILE__, __LINE__);
+        }
+    }
 }
 
 // --- M2: distortion pipeline unit tests (each stage in isolation, §8) ---------------
