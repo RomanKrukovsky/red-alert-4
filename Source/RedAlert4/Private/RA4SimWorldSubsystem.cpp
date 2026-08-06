@@ -22,7 +22,10 @@
 #include "RA4UIDataProviderSubsystem.h"
 #include "Engine/Texture2D.h"
 #include "Engine/World.h"
+#include "Camera/CameraComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "RA4CameraPawn.h"
+#include "UObject/ConstructorHelpers.h"
 #include "RenderUtils.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
@@ -921,6 +924,7 @@ void URA4SimWorldSubsystem::UpdateFogVisibilityTexture()
         if (Dirty.empty())
         {
             PublishFogParametersToTerrain();
+            PublishFogParametersToCamera();
             return;
         }
         for (const FIntRect& R : Dirty)
@@ -946,6 +950,128 @@ void URA4SimWorldSubsystem::UpdateFogVisibilityTexture()
     }
 
     PublishFogParametersToTerrain();
+    PublishFogParametersToCamera();
+}
+
+
+namespace
+{
+// Floor from ADR-0028 section 4: fog strength may be reduced for readability but
+// never to where unexplored and currently-visible ground are indistinguishable.
+// 0.35 still leaves an unmistakable difference; below that the signal stops
+// carrying the rule.
+constexpr float kMinFogStrength = 0.35f;
+constexpr const TCHAR* kFogPostProcessPath =
+    TEXT("/Game/RA4/Generated/Terrain/M_RA4_FogPostProcess.M_RA4_FogPostProcess");
+}
+
+void URA4SimWorldSubsystem::SetFogStrength(float Strength)
+{
+    // Clamped, not validated-and-rejected: a caller passing 0 wants "as little as
+    // allowed", and refusing the call outright would leave fog at whatever it was
+    // with no feedback. The clamp is the contract.
+    FogStrength = FMath::Clamp(Strength, kMinFogStrength, 1.0f);
+    if (TerrainFogMaterial != nullptr)
+    {
+        TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogStrength"), FogStrength);
+    }
+    if (CameraFogMaterial != nullptr)
+    {
+        CameraFogMaterial->SetScalarParameterValue(TEXT("RA4FogStrength"), FogStrength);
+    }
+}
+
+void URA4SimWorldSubsystem::SetHighContrastFog(bool bEnabled)
+{
+    bHighContrastFog = bEnabled;
+    const float Value = bEnabled ? 1.0f : 0.0f;
+    if (TerrainFogMaterial != nullptr)
+    {
+        TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogHighContrast"), Value);
+    }
+    if (CameraFogMaterial != nullptr)
+    {
+        CameraFogMaterial->SetScalarParameterValue(TEXT("RA4FogHighContrast"), Value);
+    }
+}
+
+void URA4SimWorldSubsystem::PublishFogParametersToCamera()
+{
+    if (FogVisibilityTexture == nullptr)
+    {
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    if (World == nullptr)
+    {
+        return;
+    }
+
+    // The camera pawn is spawned by the game mode, so on the first frames of a
+    // match there may not be one yet. Returning without setting bCameraFogBound
+    // means this retries next frame rather than giving up for the match.
+    // First camera pawn only: a level has one. Written as an if rather than a
+    // for-with-break because the compiler rightly rejects a loop that never
+    // increments (-Wunreachable-code-loop-increment, warnings are errors here).
+    TActorIterator<ARA4CameraPawn> CameraIt(World);
+    ARA4CameraPawn* CameraPawn = CameraIt ? *CameraIt : nullptr;
+    if (CameraPawn == nullptr)
+    {
+        return;
+    }
+    UCameraComponent* CameraComp = CameraPawn->FindComponentByClass<UCameraComponent>();
+    if (CameraComp == nullptr)
+    {
+        return;
+    }
+
+    if (CameraFogMaterial == nullptr)
+    {
+        UMaterialInterface* Base =
+            LoadObject<UMaterialInterface>(nullptr, kFogPostProcessPath);
+        if (Base == nullptr)
+        {
+            // The generated asset is missing: the commandlet has not been run in
+            // this branch yet. Log once and leave the landscape-only fog in place
+            // rather than crashing -- a missing generated asset must not break a
+            // match (the "missing decorative asset" invariant), but it IS a real
+            // gap, so it is an error and not a silent return.
+            if (!bReportedPresentationState)
+            {
+                UE_LOG(LogTemp, Error,
+                       TEXT("RA4 fog: %s not found -- props and water will not be fogged. ")
+                       TEXT("Run the RA4LayeredTerrainSetup commandlet to generate it."),
+                       kFogPostProcessPath);
+            }
+            bCameraFogBound = true;   // do not spam the log every frame
+            return;
+        }
+        CameraFogMaterial = UMaterialInstanceDynamic::Create(Base, this);
+        if (CameraFogMaterial == nullptr)
+        {
+            return;
+        }
+        // Weight 1: the fog is not an optional grade, it is the rule made visible.
+        CameraComp->PostProcessSettings.WeightedBlendables.Array.Empty();
+        CameraComp->PostProcessSettings.AddBlendable(CameraFogMaterial, 1.0f);
+        CameraComp->PostProcessBlendWeight = 1.0f;
+    }
+
+    if (bCameraFogBound)
+    {
+        return;
+    }
+
+    CameraFogMaterial->SetTextureParameterValue(TEXT("RA4FogVisibility"), FogVisibilityTexture);
+    const double MapWidthUU = double(FogTextureWidth) * double(RA4::kTileSizeUnits);
+    const double MapHeightUU = double(FogTextureHeight) * double(RA4::kTileSizeUnits);
+    CameraFogMaterial->SetScalarParameterValue(TEXT("RA4FogWorldWidth"), float(MapWidthUU));
+    CameraFogMaterial->SetScalarParameterValue(TEXT("RA4FogWorldHeight"), float(MapHeightUU));
+    CameraFogMaterial->SetScalarParameterValue(TEXT("RA4FogStrength"), FogStrength);
+    CameraFogMaterial->SetScalarParameterValue(TEXT("RA4FogHighContrast"),
+                                               bHighContrastFog ? 1.0f : 0.0f);
+    bCameraFogBound = true;
 }
 
 void URA4SimWorldSubsystem::PublishFogParametersToTerrain()
@@ -995,6 +1121,9 @@ void URA4SimWorldSubsystem::PublishFogParametersToTerrain()
     const double MapHeightUU = double(FogTextureHeight) * double(RA4::kTileSizeUnits);
     TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogWorldWidth"), float(MapWidthUU));
     TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogWorldHeight"), float(MapHeightUU));
+    TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogStrength"), FogStrength);
+    TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogHighContrast"),
+                                                bHighContrastFog ? 1.0f : 0.0f);
 
     bFogMaterialBound = true;
 }

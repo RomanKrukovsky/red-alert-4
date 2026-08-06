@@ -351,3 +351,35 @@ RA4_TEST(FogOfWar, DirtyRegionUploadAgreesWithFullRebuild)
     RA4_EXPECT(OldArea > kFogTexelNeverSeen);
     RA4_EXPECT(OldArea < kFogTexelCurrentlyVisible);
 }
+
+RA4_TEST(FogOfWar, FogStrengthFloorIsAContractNotAdvice)
+{
+    // ADR-0028 section 4: fog strength may be softened for readability but never
+    // to where unexplored and currently-visible ground look the same -- that
+    // would hand the player information the rules deny them. The floor therefore
+    // has to be arithmetic, not prose.
+    //
+    // This pins the clamp itself rather than the subsystem, which needs Unreal.
+    // The subsystem applies exactly this expression in SetFogStrength; if that
+    // ever diverges the two will disagree and the divergence is the bug.
+    constexpr float kMinFogStrength = 0.35f;
+    auto Clamp = [](float S) { return S < kMinFogStrength ? kMinFogStrength : (S > 1.0f ? 1.0f : S); };
+
+    // Turning fog off entirely is not offered -- it is clamped up to the floor.
+    RA4_EXPECT(Clamp(0.0f) == kMinFogStrength);
+    RA4_EXPECT(Clamp(-5.0f) == kMinFogStrength);
+    RA4_EXPECT(Clamp(0.1f) == kMinFogStrength);
+    // Within range, honoured exactly.
+    RA4_EXPECT(Clamp(0.5f) == 0.5f);
+    RA4_EXPECT(Clamp(1.0f) == 1.0f);
+    // Above the intended look is also refused: fog brighter than the design is a
+    // different kind of wrong, not a harmless one.
+    RA4_EXPECT(Clamp(3.0f) == 1.0f);
+
+    // And the floor must leave a real difference between the extremes: at the
+    // weakest allowed setting, unexplored ground is still far darker than seen
+    // ground. brightness = lerp(0.08, 1, visibility) scaled by strength.
+    const float FloorBrightnessUnexplored = 0.08f * kMinFogStrength;
+    const float FloorBrightnessVisible = 1.0f;
+    RA4_EXPECT(FloorBrightnessVisible - FloorBrightnessUnexplored > 0.5f);
+}

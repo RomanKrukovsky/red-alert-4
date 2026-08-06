@@ -50,6 +50,11 @@
 #include "Materials/MaterialExpressionTextureObjectParameter.h"
 #include "Materials/MaterialExpressionTextureSampleParameter2D.h"
 #include "Materials/MaterialExpressionWorldPosition.h"
+// Post-process fog (ADR-0028 / V-7): needed so props, water and buildings are
+// fogged too. The landscape material only tints the ground, which leaves lit
+// objects floating over unexplored black -- worse than no fog, because it points
+// at exactly what the player is not supposed to know is there.
+#include "Materials/MaterialExpressionSceneTexture.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 #include "UObject/Package.h"
@@ -467,6 +472,125 @@ int32 URA4LayeredTerrainSetupCommandlet::Main(const FString& Params)
     Material->MarkPackageDirty();
     FAssetRegistryModule::AssetCreated(Material);
     UMaterialEditingLibrary::RecompileMaterial(Material);
+
+    // --- post-process fog (ADR-0028 / V-7) -----------------------------------
+    // A second material, applied to the camera, fogs EVERYTHING the landscape
+    // material cannot reach: props, water, buildings, particles. It reconstructs
+    // the same fog UV from world position, so both surfaces read the same texture
+    // and cannot disagree about where the boundary is.
+    //
+    // Generated here rather than authored by hand for the same reason as the
+    // terrain nodes: this commandlet is the only writer of generated art, and an
+    // editor-side asset would drift from the terrain material it must match.
+    {
+        const FString FogPPName = TEXT("M_RA4_FogPostProcess");
+        const FString FogPPPackageName = FString(kGeneratedRoot) + TEXT("/") + FogPPName;
+        UPackage* FogPPPackage = CreatePackage(*FogPPPackageName);
+        FogPPPackage->FullyLoad();
+        UMaterial* FogPP =
+            NewObject<UMaterial>(FogPPPackage, *FogPPName, RF_Public | RF_Standalone);
+        if (FogPP == nullptr)
+        {
+            UE_LOG(LogTemp, Error, TEXT("RA4LayeredTerrain: could not create the fog post-process material"));
+        }
+        else
+        {
+            FogPP->MaterialDomain = MD_PostProcess;
+            // BeforeTonemapping: fog is part of the scene, so it must be graded
+            // with the scene. Applied after tonemapping it would sit on top of
+            // colour grading and read as a UI overlay rather than as distance.
+            FogPP->BlendableLocation = BL_SceneColorBeforeDOF;
+
+            UMaterialExpressionSceneTexture* SceneColour =
+                Cast<UMaterialExpressionSceneTexture>(UMaterialEditingLibrary::CreateMaterialExpression(
+                    FogPP, UMaterialExpressionSceneTexture::StaticClass(), -900, -100));
+            // AbsoluteWorldPosition in a post-process material reads the depth
+            // buffer, so every pixel -- ground, prop or unit -- resolves to the
+            // world position actually visible there. That is what lets one fog
+            // texture cover geometry the landscape material never sees.
+            UMaterialExpressionWorldPosition* PPWorldPos =
+                Cast<UMaterialExpressionWorldPosition>(UMaterialEditingLibrary::CreateMaterialExpression(
+                    FogPP, UMaterialExpressionWorldPosition::StaticClass(), -1400, 200));
+            UMaterialExpressionScalarParameter* PPFogWidth =
+                Cast<UMaterialExpressionScalarParameter>(UMaterialEditingLibrary::CreateMaterialExpression(
+                    FogPP, UMaterialExpressionScalarParameter::StaticClass(), -1400, 350));
+            UMaterialExpressionDivide* PPFogUV =
+                Cast<UMaterialExpressionDivide>(UMaterialEditingLibrary::CreateMaterialExpression(
+                    FogPP, UMaterialExpressionDivide::StaticClass(), -1150, 250));
+            UMaterialExpressionTextureSampleParameter2D* PPFogSample =
+                Cast<UMaterialExpressionTextureSampleParameter2D>(UMaterialEditingLibrary::CreateMaterialExpression(
+                    FogPP, UMaterialExpressionTextureSampleParameter2D::StaticClass(), -900, 250));
+            UMaterialExpressionConstant* PPFloor =
+                Cast<UMaterialExpressionConstant>(UMaterialEditingLibrary::CreateMaterialExpression(
+                    FogPP, UMaterialExpressionConstant::StaticClass(), -900, 500));
+            UMaterialExpressionConstant* PPFull =
+                Cast<UMaterialExpressionConstant>(UMaterialEditingLibrary::CreateMaterialExpression(
+                    FogPP, UMaterialExpressionConstant::StaticClass(), -900, 620));
+            UMaterialExpressionLinearInterpolate* PPBrightness =
+                Cast<UMaterialExpressionLinearInterpolate>(UMaterialEditingLibrary::CreateMaterialExpression(
+                    FogPP, UMaterialExpressionLinearInterpolate::StaticClass(), -650, 400));
+            UMaterialExpressionOneMinus* PPInverse =
+                Cast<UMaterialExpressionOneMinus>(UMaterialEditingLibrary::CreateMaterialExpression(
+                    FogPP, UMaterialExpressionOneMinus::StaticClass(), -650, 150));
+            UMaterialExpressionDesaturation* PPDesat =
+                Cast<UMaterialExpressionDesaturation>(UMaterialEditingLibrary::CreateMaterialExpression(
+                    FogPP, UMaterialExpressionDesaturation::StaticClass(), -400, 0));
+            UMaterialExpressionMultiply* PPTint =
+                Cast<UMaterialExpressionMultiply>(UMaterialEditingLibrary::CreateMaterialExpression(
+                    FogPP, UMaterialExpressionMultiply::StaticClass(), -150, 200));
+
+            const bool bPPCreated = SceneColour != nullptr && PPWorldPos != nullptr &&
+                                    PPFogWidth != nullptr && PPFogUV != nullptr &&
+                                    PPFogSample != nullptr && PPFloor != nullptr &&
+                                    PPFull != nullptr && PPBrightness != nullptr &&
+                                    PPInverse != nullptr && PPDesat != nullptr && PPTint != nullptr;
+            if (bPPCreated)
+            {
+                SceneColour->SceneTextureId = PPI_PostProcessInput0;
+                // Same parameter names as the terrain material: the subsystem sets
+                // both from one place, so a rename breaks both loudly instead of
+                // leaving one surface silently unfogged.
+                PPFogWidth->ParameterName = TEXT("RA4FogWorldWidth");
+                PPFogWidth->DefaultValue = 12800.0f;
+                PPFogSample->ParameterName = TEXT("RA4FogVisibility");
+                PPFogSample->SamplerType = SAMPLERTYPE_LinearGrayscale;
+                // Same floor as the terrain: if the two differed, the boundary
+                // would be visible as a step between ground and props.
+                PPFloor->R = 0.08f;
+                PPFull->R = 1.0f;
+
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPWorldPos, TEXT(""), PPFogUV, TEXT("A"));
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPFogWidth, TEXT(""), PPFogUV, TEXT("B"));
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPFogUV, TEXT(""), PPFogSample, TEXT("UVs"));
+
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPFloor, TEXT(""), PPBrightness, TEXT("A"));
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPFull, TEXT(""), PPBrightness, TEXT("B"));
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPFogSample, TEXT("R"), PPBrightness, TEXT("Alpha"));
+
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPFogSample, TEXT("R"), PPInverse, TEXT(""));
+                UMaterialEditingLibrary::ConnectMaterialExpressions(SceneColour, TEXT(""), PPDesat, TEXT(""));
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPInverse, TEXT(""), PPDesat, TEXT("Fraction"));
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPDesat, TEXT(""), PPTint, TEXT("A"));
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPBrightness, TEXT(""), PPTint, TEXT("B"));
+
+                UMaterialEditingLibrary::ConnectMaterialProperty(PPTint, TEXT(""), MP_EmissiveColor);
+
+                FogPP->PostEditChange();
+                FogPP->MarkPackageDirty();
+                FAssetRegistryModule::AssetCreated(FogPP);
+                UMaterialEditingLibrary::RecompileMaterial(FogPP);
+                SavePackageFor(FogPP);
+                UE_LOG(LogTemp, Display,
+                       TEXT("RA4LayeredTerrain: fog post-process material generated at %s"),
+                       *FogPPPackageName);
+            }
+            else
+            {
+                UE_LOG(LogTemp, Error,
+                       TEXT("RA4LayeredTerrain: could not create the fog post-process nodes -- props will not be fogged"));
+            }
+        }
+    }
 
     // Save the textures too: they were imported into memory above and are lost
     // otherwise, leaving a material that references packages which do not exist.
