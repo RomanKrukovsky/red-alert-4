@@ -185,6 +185,29 @@ These are code changes, not documentation. Both were re-verified in the headers,
 | **M-3** | ~~No drag-to-pan, right button swallowed, no camera frame~~ — **CODE DONE 2026-08-06; in-editor drag/order check STILL REQUIRED** | Left button pans continuously with mouse capture (released on button-up *and* `OnMouseCaptureLost`). Right button orders the selection through `MakeOrderContext` / `ResolveOrder` / `SubmitOrders` — the same resolver, queue, validation and replay path as a world right-click, with `HoveredEntity` cleared so a minimap click cannot become an attack on something off-screen. The camera footprint is deprojected from the real viewport corners (stopping at the sidebar strip) and outlined via `ComputeMinimapCameraFrame`, which lives in RA4Presentation so the Y flip and the per-edge clamp are headless-tested. 4 tests, each revert-verified. Commit `9510cf9`. |
 | **M-4** | ~~The alert feed named events but nothing showed *where*~~ — **CODE DONE 2026-08-06; in-editor visual check STILL REQUIRED** | Located alerts produce transient `RadarPing`s, derived from the alert list rather than a second event channel, so a ping cannot exist without a feed row. Conditions with no place on a map (low power, funds, depleted ore) do not ping. Intensity decays linearly from `LastTick`, so an ongoing barrage stays lit; integer-only, 3 s lifetime. Ordering (urgent kind, then freshest) is inherited from the alert feed's severity sort — a second sort was written, found to be dead code by reverting it, and removed. 7 tests; the ordering pair is revert-verified against the feed's comparators. Commit `b550dae`. |
 
+### Independent review of M1–M4 (2026-08-06)
+
+A reviewer who did not write the code found five defects. All five were reproduced with probes
+before being fixed, and each fix is revert-verified except where noted.
+
+| Defect | Severity | Fix |
+| :--- | :--- | :--- |
+| **Radar revealed terrain and ore across unexplored map** | **Critical (maphack)** | Radar coverage marked cells Visible and the terrain sampler gated on the shroud, so a 24-tile sweep mapped the coastline, cliffs and every ore patch on unscouted ground. Reproduced at 33 water cells + 1 ore cell. `HasLearnedTerrain` now answers "has anyone seen the ground" separately from "how brightly is this lit". The M2 test that claimed to cover this used a fixture with no radar. Commit `bed88e9`. |
+| **`DirtyRegions` grew without bound** | **Critical (leak)** | Producer/consumer list for texture uploads that nothing in the shipping path ever drained — 2400 rects after 600 ticks, ~144k per player per half-hour, for a list nobody reads. Pre-existing in `RevealCircularArea`; the radar sweep doubled the rate. Now cleared at the top of `SystemFogOfWar`. Commit `294785a`. |
+| **Background copied into every snapshot** | Medium | M2 claimed "zero background traffic per tick"; measured 14792 bytes on all 30 unchanged ticks (~296 KB/s at 20 Hz). Now attached only on change, or on an explicit `RequestBackgroundResend` for a consumer that starts mid-match. Commit `bc79eca`. |
+| **`ComputeMinimapCameraFrame` returned true for a zero-area rect** | Medium | Contract promises false when there is nothing to draw; a camera fully off the map returned `ok=1, w=0, h=0` and the widget drew a degenerate line at the map edge. Guarded after clamping. Commit `bc79eca`. |
+| **`int32` overflow in both reveal functions** | Low (UB) | `Radius * Radius` overflows above 46340 — undefined behaviour, not a wrong number. Now `int64`. Demonstrated with UBSan on the identical arithmetic; **the accompanying test cannot fail without the fix on arm64 -O2, and says so in its own comment** rather than reading as coverage it does not provide. Commit `294785a`. |
+
+Two of my own tests were found to be worthless by reverting the code they claimed to cover, and
+were rebuilt: the terrain-merge test ran on a 64×64 map where the stride is 1 and merging never
+happens, and a ping-ordering sort turned out to be dead code because the alert feed already
+established the order.
+
+**Also shipped**: both factions now have a buildable Radar Complex (`294785a`). Until then no
+entity definition set `Building.bIsRadar`, so the entire radar mechanic — sweep, ADR-0013
+minimap row, blackout behaviour — was reachable only from tests and a real match had no radar
+to construct.
+
 **Owed on all four rows**: Unreal was never launched. The editor target builds
 and links (`Result: Succeeded`), the geometry and the data rules are covered
 headlessly, but nobody has looked at the painted panel, performed a drag, issued
