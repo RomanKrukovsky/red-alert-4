@@ -51,3 +51,11 @@ __pycache__/
 
 # Headless CMake build artifacts
 /Tools/HeadlessBuild/build/
+
+# FactoryEnvironment: a 7 GB third-party environment pack that was never tracked
+# in git, is referenced by no map, no material and no source file, and was the
+# sole source of 208 of the 212 errors from a full-package ResavePackages -verify
+# run (152 LogBlueprint + 95 LogScript). Those errors made every full-package
+# commandlet exit non-zero, which hides real regressions. Moved out of Content/
+# rather than deleted; see Docs/Production/THIRD_PARTY_PACK_AUDIT.md.
+/Content/ThirdParty/FactoryEnvironment/
