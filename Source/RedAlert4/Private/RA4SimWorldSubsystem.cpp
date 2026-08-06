@@ -1,6 +1,10 @@
 // Copyright (c) Red Alert 4 project.
 
 #include "RA4SimWorldSubsystem.h"
+
+#include "HAL/IConsoleManager.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
 #include "RA4NetworkManager.h"
 #include "RA4AI/AICommander.h"
 #include "RA4AI/AIStrategy.h"
@@ -117,12 +121,57 @@ void URA4SimWorldSubsystem::AttachAICommanders(int32 Difficulty, uint64 Seed, RA
     }
 }
 
+void URA4SimWorldSubsystem::ConfigureRecon(bool bEnabled, bool bShowTruth)
+{
+    bReconEnabled = bEnabled;
+    bReconShowTruth = bShowTruth;
+    if (!bEnabled)
+    {
+        return;
+    }
+
+    // Load the shipped settings and force the master switch on: the designer file
+    // ships disabled by default, and the skirmish option IS the opt-in.
+    const FString Path = FPaths::ProjectContentDir() / TEXT("RA4/Data/Recon/recon_settings.json");
+    FString JsonText;
+    std::vector<std::string> Errors;
+    bool bLoaded = false;
+    if (FFileHelper::LoadFileToString(JsonText, *Path))
+    {
+        bLoaded = RA4::Recon::LoadReconSettingsFromJson(TCHAR_TO_UTF8(*JsonText), ReconSettings, Errors);
+    }
+    if (!bLoaded)
+    {
+        // A broken config fails loudly. Silently playing classic rules the player
+        // did not choose is the "fallback that hides a problem" CLAUDE.md forbids.
+        for (const std::string& Error : Errors)
+        {
+            UE_LOG(LogTemp, Error, TEXT("RA4 recon settings: %s"), UTF8_TO_TCHAR(Error.c_str()));
+        }
+        UE_LOG(LogTemp, Error, TEXT("RA4 recon settings failed to load from %s; recon stays OFF"), *Path);
+        bReconEnabled = false;
+        return;
+    }
+    ReconSettings.bEnabled = true;
+
+    if (bShowTruth)
+    {
+        // The open skirmish option raises the same overlay developers use.
+        if (IConsoleVariable* Var = IConsoleManager::Get().FindConsoleVariable(TEXT("recon.Overlay")))
+        {
+            Var->Set(2);
+        }
+    }
+    UE_LOG(LogTemp, Display, TEXT("RA4 recon enabled (showTruth=%d)"), bShowTruth ? 1 : 0);
+}
+
 void URA4SimWorldSubsystem::StartSkirmishMatch(uint8 PlayerFaction, uint8 EnemyFaction, int32 Difficulty, int32 NumAI, int32 AISpot)
 {
     // The lobby or GameMode supplies the match setup.
     FRA4MatchBootstrap::BuildSkirmish(*Content, *SimWorld, /*Seed*/ 20260728,
         static_cast<RA4::FactionId>(PlayerFaction), static_cast<RA4::FactionId>(EnemyFaction),
-        NumAI, AISpot);
+        NumAI, AISpot,
+        bReconEnabled ? &ReconSettings : nullptr);
     bWasLocalPowerShortage = false;
 
     AttachAICommanders(Difficulty, 20260728ull, /*LocalPlayer*/ 0);

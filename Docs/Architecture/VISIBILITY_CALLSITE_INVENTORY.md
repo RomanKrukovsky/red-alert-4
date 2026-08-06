@@ -52,6 +52,7 @@ I-M6 is a one-funnel replacement plus deleting `EnemyMemory` in favour of `Perce
 | `RA4PlayerController.cpp` :677 cursor picking | **LEAK (minor today, real at I-M6)** | Picking loop iterates ALL alive non-projectile entities with no fog filter: the cursor can "find" a fogged enemy. Today's damage is limited by downstream command validation, but tooltips/cursor state can reveal presence. Must become visibility-gated (today) and belief-gated (I-M6). |
 | `RA4SimWorldSubsystem.cpp` :770 actor sync | **LEAK (presentation)** | Spawns/updates an `ARA4EntityActor` for EVERY alive entity, fogged or not, and nothing in the sync path hides enemy actors by visibility. Unless a render-side fog masking pass exists elsewhere (none found in `RA4EntityActor.cpp` — its `SetVisibility` calls are selection decals and death anims), **fogged enemy units are visible on screen**. This is a player-facing fog hole *today*, independent of the recon layer. |
 | `RA4SimWorldSubsystem.cpp` :131 | **OMNISCIENT-BY-DESIGN** | Entity-count logging. |
+| `RA4ReconDebugOverlay.cpp` mode 2 | **OMNISCIENT-BY-DESIGN** (debug/option) | The two-maps overlay ADR-0026 §7 mandates: mode 2 draws ground-truth crosses beside belief boxes so distortion is tunable at a glance. Behind `recon.Overlay` (ECVF_Cheat) for developers and the explicit `?ShowTruth=1` skirmish option for players. Draw-only: emits no commands and writes nothing. Modes 0/1 read belief only. |
 
 ### RA4Campaign (mission scripting)
 

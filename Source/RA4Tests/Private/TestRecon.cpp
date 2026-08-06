@@ -1003,6 +1003,7 @@ RA4_TEST(Recon, ObjectiveStateFunnelInventory)
         "Source/RA4Recon/Private/ReconSystem.cpp",     // OMNISCIENT-BY-DESIGN (produces belief)
         "Source/RA4Simulation/Private/SimWorld.cpp",   // the truth itself
         "Source/RA4Simulation/Public/RA4Simulation/SimWorld.h",
+        "Source/RedAlert4/Private/RA4ReconDebugOverlay.cpp", // OMNISCIENT-BY-DESIGN (two-maps overlay)
         "Source/RedAlert4/Private/RA4PlayerController.cpp", // OWN x2 + LEAK V-B (picking)
         "Source/RedAlert4/Private/RA4SimWorldSubsystem.cpp", // LEAK V-A (actor sync)
     };

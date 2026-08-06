@@ -11,6 +11,7 @@
 // to minimize compile-time dependencies. Command.h is engine-free and cheap, and is
 // included because the pending-command queue needs the complete type.
 #include "RA4Core/Command.h"
+#include "RA4Recon/ReconConfig.h"
 
 #include <vector>
 
@@ -73,6 +74,12 @@ public:
 
     // Initializes the simulation state for a skirmish match. Should be called by the
     // GameMode. NumAI and AISpot default to the classic 1v1 layout.
+    // Skirmish option (owner decision: an open option, not a cheat code). Call
+    // BEFORE StartSkirmishMatch; true loads Content/RA4/Data/Recon/recon_settings.json
+    // with enabled=true so belief drives the HUD. ShowTruth additionally raises
+    // the two-maps overlay for the whole match.
+    void ConfigureRecon(bool bEnabled, bool bShowTruth);
+
     void StartSkirmishMatch(uint8 PlayerFaction, uint8 EnemyFaction, int32 Difficulty,
                             int32 NumAI = 1, int32 AISpot = -1);
 
@@ -154,6 +161,11 @@ private:
     // Owned by the subsystem and outlives SimWorld, which holds a raw pointer to it
     // for the whole match.
     RA4::ContentDatabase* Content;
+    // Owned here because SimWorld only borrows the settings pointer (Restart()
+    // re-reads it), so its lifetime must span the whole match.
+    RA4::Recon::ReconSettings ReconSettings;
+    bool bReconEnabled = false;
+    bool bReconShowTruth = false;
 
     // Null in a skirmish. Both are owned here and freed in Deinitialize; the runtime
     // holds copies of the mission's objectives rather than a pointer into the
