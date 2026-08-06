@@ -316,6 +316,10 @@ bool ValidateReconSettings(const ReconSettings& Settings, std::vector<std::strin
     CheckPerMilleRange(CT.ReliabilityLossPerHopPerMille, "reliability_loss_per_hop", OutErrors);
     CheckPerMilleRange(CT.BlackoutConfidenceDecayPerSecondPerMille, "blackout_confidence_decay_per_second",
                        OutErrors);
+    if (CT.BlackoutPowerRatioPercent < 0 || CT.BlackoutPowerRatioPercent > 100)
+    {
+        OutErrors.push_back("chain_tuning: blackout_power_ratio_percent outside [0, 100]");
+    }
     if (CT.NodeAttachRadiusTiles < 0 || CT.OrphanDelayTicks < 0 || CT.HopsFromNodeToHq < 0)
     {
         OutErrors.push_back("chain_tuning: negative radius, delay or hop count");
@@ -438,6 +442,7 @@ bool LoadReconSettingsFromJson(const std::string& JsonText, ReconSettings& OutSe
         T.ReliabilityLossPerHopPerMille = ReadPerMille(*C, "reliability_loss_per_hop", T.ReliabilityLossPerHopPerMille);
         T.BlackoutConfidenceDecayPerSecondPerMille =
             ReadPerMille(*C, "blackout_confidence_decay_per_second", T.BlackoutConfidenceDecayPerSecondPerMille);
+        T.BlackoutPowerRatioPercent = ReadInt(*C, "blackout_power_ratio_percent", T.BlackoutPowerRatioPercent);
     }
 
     if (const Json::Value* Tracks = Root.Find("track_tuning"); Tracks != nullptr && Tracks->IsObject())
@@ -495,6 +500,7 @@ uint64_t ReconSettings::ComputeSettingsHash() const
     H.FeedUInt32(uint32_t(Chain.HopsFromNodeToHq));
     H.FeedUInt32(uint32_t(Chain.ReliabilityLossPerHopPerMille));
     H.FeedUInt32(uint32_t(Chain.BlackoutConfidenceDecayPerSecondPerMille));
+    H.FeedUInt32(uint32_t(Chain.BlackoutPowerRatioPercent));
 
     H.FeedUInt32(uint32_t(DistortionProfiles.size()));
     for (const DistortionProfile& P : DistortionProfiles)

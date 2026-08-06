@@ -3095,9 +3095,19 @@ void SimWorld::SystemRecon()
                 // Blackout is driven by the node's own power state: an unpowered
                 // command post cannot run its radios. This reuses the existing
                 // brownout rule rather than inventing a second failure concept.
-                Node.bBlackout = Players[Core[I].Owner].GetPowerRatioPercent() < 50;
+                // Blackout is driven by the node's own power state: an unpowered
+                // command post cannot run its radios. The threshold is a designer
+                // setting rather than a literal, and is deliberately stricter than
+                // the production brownout rule -- comms fail before factories do.
+                Node.bBlackout = Players[Core[I].Owner].GetPowerRatioPercent() <
+                                 ReconSettingsRef->Chain.BlackoutPowerRatioPercent;
                 ReconInput.ChainNodes[Core[I].Owner].push_back(Node);
-                if (bIsHq && !Node.bBlackout)
+                // "Somewhere for reports to arrive" is what makes the network live.
+                // A construction yard is the obvious staff, but a powered radar
+                // station is a receiving post in its own right -- a forward base
+                // with radar and no HQ still plots contacts.
+                const bool bCanReceive = bIsHq || BD->Building.bIsRadar;
+                if (bCanReceive && !Node.bBlackout)
                 {
                     ReconInput.HasHqNode[Core[I].Owner] = true;
                 }

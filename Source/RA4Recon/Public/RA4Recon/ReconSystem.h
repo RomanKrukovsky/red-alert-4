@@ -224,7 +224,6 @@ private:
     // rather than locals so capacity survives across ticks (no steady-state
     // allocation, §6). Cleared per player inside PhaseReportEmission.
     std::vector<uint16_t> NodeBatchIds;
-    std::vector<uint32_t> NodeBatchStart;
 
     // One bucket of nearby same-category observations from a single report.
     // Tick-scoped scratch; a member so its capacity survives (no steady-state

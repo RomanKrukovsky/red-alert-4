@@ -17,7 +17,7 @@ namespace
 // Serialization is versioned independently of the SimWorld save version so that
 // intel format changes (frequent while the feature matures) do not force a bump
 // of the outer save format every time.
-constexpr uint32_t kPerceivedWorldVersion = 3; // v3: DecayCursor (I-B4); v2: phantom side table
+constexpr uint32_t kPerceivedWorldVersion = 4; // v4: category/anonymous/node (M3 review B3) // v3: DecayCursor (I-B4); v2: phantom side table
 } // namespace
 
 void PerceivedWorld::Initialize(int32_t MapWidthTiles, int32_t MapHeightTiles, int32_t MaxTracks)
@@ -194,6 +194,15 @@ void PerceivedWorld::Serialize(ByteWriter& W) const
             continue;
         }
         W.WriteUInt32(T.BelievedClass.Value);
+        // All three gate FUTURE aggregation: the nearby-track merge search filters
+        // on category and anonymity, and corroboration compares LastReportNodeId.
+        // Restoring a track without them makes the merge match the wrong tracks and
+        // makes every node look like a new independent source (M3 review B3).
+        W.WriteUInt8(uint8_t(T.BelievedCategory));
+        W.WriteBool(T.bAnonymous);
+        W.WriteUInt32(T.LastReportNodeId);
+        W.WriteUInt32(T.LastDecayTick);
+        W.WriteInt32(T.LastClaimedCount);
         W.WriteInt64(T.BelievedPosition.X.Raw);
         W.WriteInt64(T.BelievedPosition.Y.Raw);
         W.WriteInt64(T.PositionErrorRadius.Raw);
@@ -268,6 +277,11 @@ bool PerceivedWorld::Deserialize(ByteReader& R)
         }
         AliveCount += 1;
         T.BelievedClass = ContentId(R.ReadUInt32());
+        T.BelievedCategory = ObservedCategory(R.ReadUInt8());
+        T.bAnonymous = R.ReadBool();
+        T.LastReportNodeId = uint16_t(R.ReadUInt32());
+        T.LastDecayTick = R.ReadUInt32();
+        T.LastClaimedCount = R.ReadInt32();
         T.BelievedPosition.X = Fixed::FromRaw(R.ReadInt64());
         T.BelievedPosition.Y = Fixed::FromRaw(R.ReadInt64());
         T.PositionErrorRadius = Fixed::FromRaw(R.ReadInt64());
@@ -330,6 +344,14 @@ void PerceivedWorld::FeedChecksum(Hash64& H) const
         H.FeedBool(T.bStale);
         H.FeedBool(PhantomFlags[I] != 0);
         H.FeedBool(T.bContested);
+        // Hashed alongside serialization, not instead of it: the M3 review found
+        // fields hashed but not written, which turns a quiet divergence into a
+        // guaranteed post-load desync. Both halves must list the same fields.
+        H.FeedUInt8(uint8_t(T.BelievedCategory));
+        H.FeedBool(T.bAnonymous);
+        H.FeedUInt32(T.LastReportNodeId);
+        H.FeedUInt32(T.LastDecayTick);
+        H.FeedInt32(T.LastClaimedCount);
     }
     // LastObserved is hashed coarsely (size only): per-tile hashing of a 256x256
     // map every checksum tick would dominate the hash cost for data that only

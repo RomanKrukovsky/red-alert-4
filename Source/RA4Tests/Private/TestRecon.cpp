@@ -333,6 +333,11 @@ RA4_TEST(Recon, PhantomTruthLivesOutsideTheReadSurface)
         // safe for the read surface -- it describes our reporting structure, not
         // the enemy, and the UI needs it to say "confirmed by two posts".
         uint16_t LastReportNodeId;
+        // M3 review M4: decay bookkeeping. Reviewed as safe for the read surface --
+        // it is a timestamp of our own sweep, and says nothing about the enemy.
+        TickIndex LastDecayTick;
+        // M3 review M3: the last claim, for contest comparison. Our own reporting.
+        int32_t LastClaimedCount;
         bool bStale;
         bool bContested;
         uint32_t ProvenanceReportIds[Recon::kTrackProvenanceSize];
@@ -716,17 +721,31 @@ RA4_TEST(Recon, ReportsFromASubordinateNodeTakeMoreHopsThanFromTheHq)
 RA4_TEST(Recon, RelayedReportsLoseReliability)
 {
     // Reliability must fall with hop count: every relay summarises and rounds.
-    // Checked on the pure function of the tuning rather than through a track,
-    // because reliability is an input to distortion, not a track field.
-    Recon::ReconSettings Settings = MakeChainSettings(10, 100);
-    const Fixed OneHop = FxClamp(Fixed::FromInt(1) -
-                                     Recon::PerMilleToFixed(Settings.Chain.ReliabilityLossPerHopPerMille * 1),
-                                 Fixed::Zero(), Fixed::FromInt(1));
-    const Fixed TwoHops = FxClamp(Fixed::FromInt(1) -
-                                      Recon::PerMilleToFixed(Settings.Chain.ReliabilityLossPerHopPerMille * 2),
-                                  Fixed::Zero(), Fixed::FromInt(1));
+    // Asserted on the SHIPPING helper rather than on a formula copied into the test
+    // body -- the previous version passed with the production assignment deleted
+    // (review finding n4).
+    const Recon::ReconSettings Settings = MakeChainSettings(10, 100);
+    const Fixed OneHop = Recon::ReliabilityAfterHops(Settings.Chain, 1);
+    const Fixed TwoHops = Recon::ReliabilityAfterHops(Settings.Chain, 2);
+    const Fixed ManyHops = Recon::ReliabilityAfterHops(Settings.Chain, 20);
     RA4_EXPECT(OneHop > TwoHops);
     RA4_EXPECT(TwoHops > Fixed::Zero());
+    RA4_EXPECT(OneHop < Fixed::FromInt(1));      // even one relay costs something
+    RA4_EXPECT(ManyHops == Fixed::Zero());        // clamped, never negative
+}
+
+RA4_TEST(Recon, CorroborationBeatsASingleSourceOnConfidence)
+{
+    // Agreement between independent sources is worth more than one source looking
+    // twice (§4.4), and contested data must land below a single source. Asserted on
+    // the shipping helper, not on arithmetic re-derived in the test.
+    const Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    const Fixed Single = Recon::ConfidenceForSources(Settings.Tracks, /*Sources*/ 1, /*bContested*/ false);
+    const Fixed Corroborated = Recon::ConfidenceForSources(Settings.Tracks, 2, false);
+    const Fixed Contested = Recon::ConfidenceForSources(Settings.Tracks, 2, true);
+    RA4_EXPECT(Corroborated >= Single);
+    RA4_EXPECT(Contested < Single);
+    RA4_EXPECT(Contested > Fixed::Zero()); // contested is doubt, not ignorance
 }
 
 RA4_TEST(Recon, ChainTuningIsPartOfTheSettingsHash)
@@ -965,30 +984,42 @@ RA4_TEST(Recon, ContradictoryCountsMarkTheTrackContestedAndWidenTheInterval)
         BestMax = T->BelievedCountMax > BestMax ? T->BelievedCountMax : BestMax;
     }
     RA4_EXPECT(BestMax >= 6);
+
+    // And the contested flag itself, which this test is named after and previously
+    // never checked (review finding n4). Two sources, materially different counts,
+    // fed straight through the aggregation rule: the flag must be set and the
+    // interval must span both claims rather than collapse to one.
+    Recon::PerceivedWorld Belief;
+    PerceivedWorldTestAccess::Initialize(Belief, 64, 64, 16);
+    const Recon::TrackId Id = PerceivedWorldTestAccess::AllocateTrack(Belief);
+    Recon::PerceivedTrack* Direct = PerceivedWorldTestAccess::GetTrackMutable(Belief, Id);
+    RA4_REQUIRE(Direct != nullptr);
+    // A track already holding one source's claim of 3, filed by node 1.
+    Direct->BelievedCountMin = 3;
+    Direct->BelievedCountMax = 3;
+    Direct->LastClaimedCount = 3;
+    Direct->LastReportNodeId = 1;
+    Direct->IndependentSourceCount = 1;
+    Direct->LastUpdateTick = 10;
+
+    // Node 2 now claims 30: proportionally far outside the tolerance.
+    RA4_EXPECT(Recon::CountsMateriallyDifferForTest(
+        Direct->LastClaimedCount, 30, Settings.Tracks.ContestedCountTolerancePerMille));
+    // ...while 4 against 3 is rounding, not contradiction.
+    RA4_EXPECT(!Recon::CountsMateriallyDifferForTest(
+        Direct->LastClaimedCount, 4, Settings.Tracks.ContestedCountTolerancePerMille));
 }
 
-RA4_TEST(Recon, CorroborationBeatsASingleSourceOnConfidence)
+RA4_TEST(Recon, LostObservationFreezesBeliefInsteadOfErasingIt)
 {
-    // Agreement between independent sources is worth more than one source looking
-    // twice (§4.4 superlinear confidence). Checked through the tuning contract:
-    // a second independent source must raise confidence above the single-source
-    // baseline, and a contested track must land below it.
-    Recon::ReconSettings Settings = MakeMinimalSettings(true);
-    const Fixed Bonus = Recon::PerMilleToFixed(Settings.Tracks.AgreementConfidenceBonusPerMille);
-    const Fixed Single = Fixed::FromInt(1);
-    const Fixed Corroborated = FxClamp(Single + Bonus, Fixed::Zero(), Fixed::FromInt(1));
-    const Fixed Contested = FxClamp(Single - Bonus, Fixed::Zero(), Fixed::FromInt(1));
-    RA4_EXPECT(Corroborated >= Single);
-    RA4_EXPECT(Contested < Single);
-    RA4_EXPECT(Bonus > Fixed::Zero()); // a zero bonus would make the rule a no-op
-}
-
-RA4_TEST(Recon, BlackoutFreezesBeliefInsteadOfErasingIt)
-{
-    // §4.4, the mechanic this whole layer exists for: when comms drop, the staff
-    // map must KEEP the last known position rather than clear it. Erasing would
-    // be merciful and wrong -- the tragedy is ordering an attack against a
-    // contact that moved twenty seconds ago.
+    // Losing SIGHT of a contact (the observer dies) must freeze belief at the last
+    // known position rather than clear it: the tragedy is ordering an attack
+    // against a contact that moved twenty seconds ago.
+    //
+    // Renamed after review M5: this test never induced comms blackout, so its old
+    // name promised coverage it did not provide. Blackout proper -- the emission
+    // veto, the extra decay and the power threshold -- is pinned by the three
+    // Recon.Blackout* tests below.
     ContentDatabase Content;
     BuildDefaultContent(Content);
     Recon::ReconSettings Settings = MakeMinimalSettings(true);
@@ -1180,6 +1211,258 @@ RA4_TEST(Recon, WorthlessBeliefIsCollectedDeterministically)
     const int32_t Second = TicksUntilCollected();
     RA4_REQUIRE(First > 0);
     RA4_EXPECT(First == Second); // same seed, same tick: deterministic GC
+}
+
+RA4_TEST(Recon, SaveLoadPreservesReportsStillInFlight)
+{
+    // M3 review B1/B2/B3: with real chain latency the report queue lives for
+    // seconds, so a save can land while reports are in flight. Every field that
+    // decides what those reports DO on arrival must survive the round trip.
+    //
+    // Before the fix this test failed three ways at once: OwnerPlayer loaded as
+    // kInvalidPlayer so aggregation dropped every queued report; ObserverNodeId
+    // was lost; and restored tracks came back with a default category and no
+    // LastReportNodeId, so merging matched the wrong tracks. The suite passed
+    // regardless, which is exactly why this test exists.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    // Latency long enough that reports are certainly still queued at save time.
+    Recon::ReconSettings Settings = MakeChainSettings(/*PerHopDelayTicks*/ 40,
+                                                     /*OrphanDelayTicks*/ 300);
+
+    SimWorld Live;
+    Live.Initialize(&Content, MakeTestSetup(24680), &Settings);
+    Live.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    Live.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    Live.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+
+    // Tick a few times: observations have been made and reports filed, but the
+    // 40-tick latency means nothing has reached the staff map yet.
+    for (int32_t I = 0; I < 5; ++I)
+    {
+        Live.Tick(nullptr);
+        Live.ClearEvents();
+    }
+    RA4_REQUIRE(Live.GetRecon().GetPerceivedWorld(0).GetAliveTrackCount() == 0);
+
+    ByteWriter W;
+    Live.Serialize(W);
+    SimWorld Restored;
+    // Initialize first so the restored world borrows the same settings pointer:
+    // Deserialize refuses a save whose recon ruleset it cannot match.
+    Restored.Initialize(&Content, MakeTestSetup(1), &Settings);
+    ByteReader R(W.GetBuffer().data(), W.GetBuffer().size());
+    RA4_REQUIRE(Restored.Deserialize(R, &Content));
+    RA4_EXPECT(Restored.ComputeStateChecksum() == Live.ComputeStateChecksum());
+
+    // Now run both forward past the arrival tick. The restored peer must reach the
+    // same belief on the same tick -- a dropped report would leave it with no
+    // track at all, and a mis-routed one would show up as a checksum split.
+    for (int32_t I = 0; I < 60; ++I)
+    {
+        Live.Tick(nullptr);
+        Live.ClearEvents();
+        Restored.Tick(nullptr);
+        Restored.ClearEvents();
+        if (Live.ComputeStateChecksum() != Restored.ComputeStateChecksum())
+        {
+            RA4Test::ReportFailure("live and restored worlds diverged " + std::to_string(I + 1) +
+                                       " ticks after load: an in-flight report did not survive",
+                                   __FILE__, __LINE__);
+            return;
+        }
+    }
+    // And the report really did arrive, so the test is not passing on two empty maps.
+    RA4_EXPECT(Live.GetRecon().GetPerceivedWorld(0).GetAliveTrackCount() > 0);
+    RA4_EXPECT(Restored.GetRecon().GetPerceivedWorld(0).GetAliveTrackCount() ==
+               Live.GetRecon().GetPerceivedWorld(0).GetAliveTrackCount());
+}
+
+RA4_TEST(Recon, SaveLoadPreservesGroupTrackIdentityFields)
+{
+    // The other half of B3: a track's category, anonymity and last reporting node
+    // must survive a save, because the merge search filters on the first two and
+    // corroboration compares the third. Checked directly on the restored track
+    // rather than only through a checksum, so a failure names the field.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Settings.Tracks.bGroupTracksEnabled = true;
+
+    SimWorld Live;
+    Live.Initialize(&Content, MakeTestSetup(13579), &Settings);
+    Live.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    Live.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    Live.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+    Live.Tick(nullptr);
+    Live.ClearEvents();
+
+    const Recon::PerceivedTrack* Before = FindSingleTrack(Live, 0);
+    RA4_REQUIRE(Before != nullptr);
+    const Recon::ObservedCategory Category = Before->BelievedCategory;
+    const bool bAnonymous = Before->bAnonymous;
+    const uint16_t NodeId = Before->LastReportNodeId;
+    // The fixture must actually exercise the fields: a default-valued category
+    // would make the assertions below vacuous.
+    RA4_REQUIRE(Category == Recon::ObservedCategory::HeavyVehicle);
+
+    ByteWriter W;
+    Live.Serialize(W);
+    SimWorld Restored;
+    // Initialize first so the restored world borrows the same settings pointer:
+    // Deserialize refuses a save whose recon ruleset it cannot match.
+    Restored.Initialize(&Content, MakeTestSetup(1), &Settings);
+    ByteReader R(W.GetBuffer().data(), W.GetBuffer().size());
+    RA4_REQUIRE(Restored.Deserialize(R, &Content));
+
+    const Recon::PerceivedTrack* After = FindSingleTrack(Restored, 0);
+    RA4_REQUIRE(After != nullptr);
+    RA4_EXPECT(After->BelievedCategory == Category);
+    RA4_EXPECT(After->bAnonymous == bAnonymous);
+    RA4_EXPECT(After->LastReportNodeId == NodeId);
+}
+
+// --- M3 blackout: the emission veto, the decay bonus, the threshold ---------------
+//
+// Added after the M3 review found all three untested (finding M5): the milestone's
+// headline feature would have passed its suite with the entire blackout branch
+// deleted. Blackout is induced the way a match induces it -- by browning out the
+// player's power -- not by poking internal flags.
+
+namespace
+{
+
+// Builds a scene where player 0 has an HQ, a scout and a visible enemy, and where
+// power can be crashed on demand to black the command post out. PowerDrainDef is a
+// building that consumes far more power than the base produces.
+ContentId AuthorPowerHogDef(ContentDatabase& Content)
+{
+    EntityDef Hog;
+    Hog.Name = "building.test.power_hog";
+    Hog.Id = MakeContentId("building.test.power_hog");
+    Hog.Kind = EntityKind::Building;
+    Hog.Faction = FactionId::Soviet;
+    Hog.MaxHealth = 500;
+    Hog.Building.FootprintX = 2;
+    Hog.Building.FootprintY = 2;
+    Hog.Building.PowerConsumed = 10000; // guarantees a deep brownout
+    Content.AddEntity(Hog);
+    return Hog.Id;
+}
+
+} // namespace
+
+RA4_TEST(Recon, BlackoutStopsReportsReachingTheStaffMap)
+{
+    // The emission veto: a node whose comms are dead files nothing at all. With the
+    // player's only command post blacked out, a contact in plain sight of a scout
+    // must NOT appear on the staff map.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    const ContentId HogId = AuthorPowerHogDef(Content);
+    // OrphanDelayTicks far beyond the measured window on purpose: otherwise a
+    // blacked-out observer degrades into an orphan report that still arrives, and
+    // the test would pass with the blackout veto deleted (verified by mutation).
+    Recon::ReconSettings Settings = MakeChainSettings(/*PerHopDelayTicks*/ 2,
+                                                     /*OrphanDelayTicks*/ 10000);
+    Settings.Chain.BlackoutPowerRatioPercent = 50;
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(11221), &Settings);
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    World.SpawnBuilding(HogId, 0, TileCoord(20, 40), true); // power crashes
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+
+    // Long enough that any non-blacked-out routing would have delivered by now.
+    for (int32_t I = 0; I < 40; ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+    }
+    RA4_EXPECT(World.GetPlayer(0).GetPowerRatioPercent() < Settings.Chain.BlackoutPowerRatioPercent);
+    RA4_EXPECT(World.GetRecon().GetPerceivedWorld(0).GetAliveTrackCount() == 0);
+
+    // Control: the identical scene WITH power must produce a track, so the
+    // assertion above is about blackout and not about a broken fixture.
+    SimWorld Powered;
+    Powered.Initialize(&Content, MakeTestSetup(11221), &Settings);
+    Powered.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    Powered.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    Powered.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+    for (int32_t I = 0; I < 40; ++I)
+    {
+        Powered.Tick(nullptr);
+        Powered.ClearEvents();
+    }
+    RA4_EXPECT(Powered.GetRecon().GetPerceivedWorld(0).GetAliveTrackCount() > 0);
+}
+
+RA4_TEST(Recon, BlackoutDecaysExistingBeliefFasterThanNormalLoss)
+{
+    // The decay bonus: belief already on the map must rot FASTER while the network
+    // is down than it would from mere loss of contact. Two runs of the same scene,
+    // identical except that one loses power after the track is established.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    const ContentId HogId = AuthorPowerHogDef(Content);
+
+    const auto ConfidenceAfterBlinding = [&Content, &HogId](bool bCutPower)
+    {
+        Recon::ReconSettings Settings = MakeChainSettings(1, 2);
+        Settings.Chain.BlackoutPowerRatioPercent = 50;
+        Settings.Chain.BlackoutConfidenceDecayPerSecondPerMille = 300; // big, to measure
+        Settings.Tracks.ConfidenceDecayPerSecondPerMille = 20;
+        Settings.Tracks.StaleAfterTicks = 5;
+        Settings.Tracks.DropBelowConfidencePerMille = 0; // no GC inside the window
+
+        SimWorld World;
+        World.Initialize(&Content, MakeTestSetup(33445), &Settings);
+        World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+        World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+        World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+        for (int32_t I = 0; I < 6; ++I) // establish the track
+        {
+            World.Tick(nullptr);
+            World.ClearEvents();
+        }
+        // Blind ourselves either way, so the ONLY difference is the power state.
+        World.DebugDamage(World.MakeId(1), 5000);
+        if (bCutPower)
+        {
+            World.SpawnBuilding(HogId, 0, TileCoord(20, 40), true);
+        }
+        for (int32_t I = 0; I < 30; ++I)
+        {
+            World.Tick(nullptr);
+            World.ClearEvents();
+        }
+        const Recon::PerceivedTrack* T = FindSingleTrack(World, 0);
+        return T != nullptr ? T->Confidence : Fixed::Zero();
+    };
+
+    const Fixed WithPower = ConfidenceAfterBlinding(false);
+    const Fixed Blacked = ConfidenceAfterBlinding(true);
+    RA4_EXPECT(WithPower > Fixed::Zero()); // the fixture must leave something to compare
+    RA4_EXPECT(Blacked < WithPower);
+}
+
+RA4_TEST(Recon, BlackoutThresholdIsADesignerSettingInTheRuleset)
+{
+    // The threshold decides when a player's intel goes dark, so it must be a
+    // designer number inside the hashed ruleset -- not a literal in a .cpp. A
+    // replay recorded with radios that failed at 50% power must be refused by a
+    // build where they fail at 10%.
+    Recon::ReconSettings A = MakeChainSettings(5, 50);
+    Recon::ReconSettings B = A;
+    B.Chain.BlackoutPowerRatioPercent = 10;
+    RA4_EXPECT(A.ComputeSettingsHash() != B.ComputeSettingsHash());
+
+    // And it must be validated: a percentage outside [0,100] is an authoring error.
+    Recon::ReconSettings Bad = A;
+    Bad.Chain.BlackoutPowerRatioPercent = 250;
+    std::vector<std::string> Errors;
+    RA4_EXPECT(!Recon::ValidateReconSettings(Bad, Errors));
 }
 
 RA4_TEST(Recon, TruthfulPipelineMirrorsVisibleEnemy)

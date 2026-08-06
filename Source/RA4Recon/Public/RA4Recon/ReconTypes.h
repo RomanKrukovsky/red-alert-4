@@ -53,8 +53,13 @@ struct ReconReporterComp
     int32_t ObservationRadiusTiles = 0;     // 0 = uses the entity's vision range
     int32_t ReportIntervalTicks = 20;       // one report per second by default
     TickIndex LastReportTick = 0;
-    uint16_t ChainNodeId = 0;               // command-chain node this entity reports to
-    bool bBlackout = false;                 // comms lost: emits nothing, HQ map freezes
+    // UNUSED since M3, kept only so a save written by an M2 build still reads.
+    // Node attachment is computed per tick in SimWorld::SystemRecon and blackout is
+    // derived from node power, so these two are dead weight that would mislead a
+    // future contributor into wiring the wrong one (finding n2). Remove with the
+    // next save-format break.
+    uint16_t ChainNodeId = 0;
+    bool bBlackout = false;
 };
 
 // Psychological state feeding the distortion model. Fear exaggerates, fatigue
@@ -134,6 +139,15 @@ struct PerceivedTrack
     // "a second source agrees" from "the same source repeating itself" -- only the
     // former is corroboration. Belief about our own sources, not ground truth.
     uint16_t LastReportNodeId = 0;
+    // Tick this track was last charged for decay. The amortized sweep visits each
+    // slot every few ticks, so the elapsed interval must be measured rather than
+    // assumed from the budget (review M4). Simulation state: serialized and hashed.
+    TickIndex LastDecayTick = 0;
+    // Strength the most recent report claimed, as opposed to the interval shown to
+    // the player. Contest detection compares claim against claim; comparing against
+    // the widened interval let one early over-count poison the test permanently
+    // (review M3). Belief about our own reporting, not ground truth.
+    int32_t LastClaimedCount = 0;
     bool bStale = false;                    // no fresh reports for a while
     bool bContested = false;                // independent sources disagree (ADR-0026)
     // Unidentified contact: BelievedClass is meaningless, UI shows "unknown".
