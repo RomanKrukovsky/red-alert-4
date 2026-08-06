@@ -251,27 +251,6 @@ const PlayerState& SimWorld::GetPlayer(PlayerId Id) const
     return Id < kMaxPlayers ? Players[Id] : Empty;
 }
 
-int32_t SimWorld::GetConstructionProgressPerMille(EntityId Id) const
-{
-    const BuildingComp* B = GetBuilding(Id);
-    if (B == nullptr || B->State != ConstructionState::UnderConstruction)
-    {
-        // Units, resource nodes and finished buildings are all "fully built" as far
-        // as presentation is concerned; only an in-progress building is partial.
-        return 1000;
-    }
-    const int64_t Total = int64_t(B->ConstructionTotalTicks) * kProgressScale;
-    if (Total <= 0)
-    {
-        // A zero build time means it completes on the tick it is placed. Reporting
-        // 1000 keeps presentation from dividing by zero and from flashing an empty
-        // progress bar for one frame.
-        return 1000;
-    }
-    const int64_t Clamped = std::min<int64_t>(std::max<int64_t>(B->ConstructionProgressTicks, 0), Total);
-    return int32_t((Clamped * 1000) / Total);
-}
-
 // ---------------------------------------------------------------------------
 // Spawning
 // ---------------------------------------------------------------------------
@@ -2853,6 +2832,12 @@ void SimWorld::FireWeapon(EntityId Attacker, EntityId TargetId, const WeaponDef&
     }
 }
 
+// Ticks an entity waits before retrying target acquisition after a search that
+// found nothing. 4 ticks = 200 ms at 20 Hz. Chosen as the largest delay that is
+// still below the threshold where a player would notice a unit being slow to
+// return fire, while cutting fruitless searches to a quarter.
+static constexpr int32_t kAcquireRetryTicks = 4;
+
 void SimWorld::SystemCombat()
 {
     for (uint32_t I = 0; I < Core.size(); ++I)
@@ -2896,7 +2881,21 @@ void SimWorld::SystemCombat()
         }
         if (!C.Target.IsValid())
         {
+            // Re-searching every tick after a failed search is pure waste: the world
+            // barely changes in 50 ms, so the answer is almost always "still nothing".
+            // Wait a few ticks instead. 4 ticks is 200 ms at 20 Hz, well inside the
+            // reaction time a player can perceive, and it cannot make a unit miss an
+            // enemy that stays in range - only delay the notice by at most 200 ms.
+            if (C.AcquireCooldownTicks > 0)
+            {
+                C.AcquireCooldownTicks -= 1;
+                continue;
+            }
             C.Target = AcquireTarget(MakeId(I));
+            if (!C.Target.IsValid())
+            {
+                C.AcquireCooldownTicks = kAcquireRetryTicks;
+            }
         }
         if (!C.Target.IsValid())
         {
@@ -3556,6 +3555,7 @@ uint64_t SimWorld::ComputeStateChecksum() const
         H.FeedInt32(Transforms[I].TurretFacing);
         H.FeedInt32(Healths[I].Current);
         H.FeedInt32(Combats[I].CooldownTicks);
+        H.FeedInt32(Combats[I].AcquireCooldownTicks);
         H.FeedUInt64(Combats[I].Target.Packed());
         H.FeedInt64(Movements[I].CurrentSpeed.Raw);
         H.FeedBool(Movements[I].bHasDestination);
@@ -3608,7 +3608,7 @@ uint64_t SimWorld::ComputeStateChecksum() const
 // ---------------------------------------------------------------------------
 
 constexpr uint32_t kSimSaveMagic = 0x52413453u; // "RA4S"
-constexpr uint32_t kSimSaveVersion = 4; // v4: MoraleComp (M2); v3: recon layer; v2: DirectControlComp
+constexpr uint32_t kSimSaveVersion = 5; // v5: CombatComp::AcquireCooldownTicks; v4: MoraleComp (M2); v3: recon layer; v2: DirectControlComp
 
 void SimWorld::Serialize(ByteWriter& W) const
 {
@@ -3695,6 +3695,7 @@ void SimWorld::Serialize(ByteWriter& W) const
         W.WriteUInt32(Cm.Target.Index);
         W.WriteUInt32(Cm.Target.Generation);
         W.WriteInt32(Cm.CooldownTicks);
+        W.WriteInt32(Cm.AcquireCooldownTicks);
         W.WriteBool(Cm.bTargetIsForced);
 
         const BuildingComp& B = Buildings[I];
@@ -3882,6 +3883,10 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
         Cm.Target.Index = R.ReadUInt32();
         Cm.Target.Generation = R.ReadUInt32();
         Cm.CooldownTicks = R.ReadInt32();
+        // v5 added the acquisition retry countdown. A v4 save has no such field, and
+        // defaulting it to 0 is the correct migration: it means "may search this
+        // tick", which is exactly the behaviour v4 had unconditionally.
+        Cm.AcquireCooldownTicks = (Version >= 5) ? R.ReadInt32() : 0;
         Cm.bTargetIsForced = R.ReadBool();
 
         BuildingComp& B = Buildings[I];

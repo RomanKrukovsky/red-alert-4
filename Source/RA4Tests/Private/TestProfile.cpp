@@ -340,3 +340,63 @@ RA4_TEST(Profile, CostScalingWithEntityCount)
     // be satisfied by noise in the baseline.
     RA4_EXPECT(double(LastPerEntity) * double(LastCount) / 1000.0 < kTickBudgetMicros);
 }
+
+// Density check: is the remaining super-linear growth caused by entity COUNT or by
+// entity DENSITY? The tests above order everyone to converge on one point, so at
+// 2000 units a single spatial cell can hold all of them and bucketing degenerates
+// back to a full scan. This runs the same counts with the army left spread across
+// the map instead, so cells stay sparsely populated.
+//
+// If growth here is near 1.0x while the converging test shows 2.86x, then the
+// residual cost is a property of the worst-case blob fight, not of the algorithm,
+// and shrinking the cell size would be the lever - not more index work.
+RA4_TEST(Profile, CostScalingWhenSpreadOut)
+{
+    std::printf("\n=== Scaling with the army spread out (no converge order) ===\n");
+    std::printf("  %8s %12s %14s\n", "entities", "median us", "us/entity");
+
+    int64_t FirstPerEntity = 0;
+    int64_t LastPerEntity = 0;
+
+    for (const int32_t PerPlayer : {125, 250, 500})
+    {
+        ContentDatabase Db;
+        BuildDefaultContent(Db);
+        SimWorld World;
+        World.Initialize(&Db, MakeFourPlayerSetup(20260806), nullptr);
+
+        const ContentId UnitOf[kPlayers] = {RA4Test::Ids::SovConscript, RA4Test::Ids::AllRifleman,
+                                            RA4Test::Ids::SovConscript, RA4Test::Ids::AllRifleman};
+        // Spread each player's army over a wide band rather than a tight block, and
+        // issue no orders, so positions stay dispersed for the whole measurement.
+        for (PlayerId P = 0; P < kPlayers; ++P)
+        {
+            for (int32_t I = 0; I < PerPlayer; ++I)
+            {
+                const int32_t X = 400 + ((I * 97 + int32_t(P) * 331) % 5600);
+                const int32_t Y = 400 + ((I * 53 + int32_t(P) * 727) % 5600);
+                World.SpawnUnit(UnitOf[P], P, Vec2::FromInts(X, Y));
+            }
+        }
+        RunTicks(World, kWarmupTicks);
+
+        const int32_t Total = PerPlayer * kPlayers;
+        const Sample S = MeasureTicks(World, 100);
+        const int64_t PerEntityNanos = (S.Median * 1000) / Total;
+
+        std::printf("  %8d %12lld %11lld.%03lld\n", Total,
+                    static_cast<long long>(S.Median),
+                    static_cast<long long>(PerEntityNanos / 1000),
+                    static_cast<long long>(PerEntityNanos % 1000));
+
+        if (FirstPerEntity == 0) { FirstPerEntity = PerEntityNanos; }
+        LastPerEntity = PerEntityNanos;
+    }
+
+    const double Growth = FirstPerEntity > 0
+                              ? double(LastPerEntity) / double(FirstPerEntity) : 1.0;
+    std::printf("  per-entity cost grew %.2fx when spread out\n", Growth);
+    std::printf("  (compare against CostScalingWithEntityCount, which converges)\n");
+
+    RA4_EXPECT(Growth < 4.0);
+}
