@@ -209,6 +209,12 @@ entity definition set `Building.bIsRadar`, so the entire radar mechanic — swee
 minimap row, blackout behaviour — was reachable only from tests and a real match had no radar
 to construct.
 
+### Exposed by the merge with main (2026-08-06) — open
+
+| Task ID | Task | Acceptance criteria |
+| :--- | :--- | :--- |
+| **A-1** | **No AI ever builds anti-air, so aircraft are unanswerable** — **OPEN, diagnosed not fixed** | `AICommander::FindDefenceStructure` returns the *first* `ProductionCategory::Defense` building in the database, which is always the plain turret. Only two weapons in the whole content set set `bCanTargetAir`, both on anti-air buildings, so an enemy air force cannot be shot at by anything an AI will build. Symptom: `AI.FiveSkirmishScenariosFinishWithAWinner` scenario 5 stalemates — the loser is reduced to zero buildings but keeps three jets, and `SystemVictory` needs no buildings *and* no units. Probe: `AA p0=0 p1=0, JETS p0=3 p1=3`. This passed on main by coincidence (matches finished before aircraft accumulated), and merging ADR-0012/0013 shifted pacing enough to expose it. **The obvious one-line fix was tried and rejected**: preferring anti-air when enemy air is visible made three scenarios stalemate instead of one, because the commander then spent on the wrong gun against a ground attack. Needs a real threat-weighted defence mix, which is its own package. `AI.CommanderCanFindAnAntiAirBuilding` pins that the content half is sound, so the remaining gap is unambiguously the commander's choice; the skirmish test asserts the stalemate as a known state so any change in it fails loudly. |
+
 **Owed on all four rows**: Unreal was never launched. The editor target builds
 and links (`Result: Succeeded`), the geometry and the data rules are covered
 headlessly, but nobody has looked at the painted panel, performed a drag, issued
