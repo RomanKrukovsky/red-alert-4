@@ -49,7 +49,14 @@ enum class CommandType : uint8_t
     DirectControlDrive = 52,   // hull throttle/steering + turret yaw/pitch + flags
     DirectControlFire  = 53,   // primary/secondary/ability/optics toggle
 
-    Max = 54,
+    // --- Superweapons / abilities ---------------------------------------
+    // Primary = the charged support structure, Tile = impact centre. Deliberately
+    // one command rather than one per weapon: the structure's content definition
+    // carries damage, radius and recharge, so a new superweapon is content, not
+    // protocol.
+    FireSuperweapon = 54,
+
+    Max = 55,
 };
 
 // Quantized input axes for DirectControlDrive. Stored as int8 (-127..127) so a
@@ -200,6 +207,9 @@ enum class CommandReject : uint8_t
     DirectNotControlling,      // exit/fire without active possession
     DirectWeaponCooldown,      // fire rejected on cooldown
     DirectWeaponEmpty,         // no ammo / no weapon
+    // Superweapon specific
+    SuperweaponNotReady,       // still recharging
+    SuperweaponUnpowered,      // base is in a power deficit
 };
 
 const char* ToString(CommandType Type);

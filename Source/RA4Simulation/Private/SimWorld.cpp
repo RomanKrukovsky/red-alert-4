@@ -1106,6 +1106,67 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
             break;
         }
 
+        // --- Superweapon -----------------------------------------------
+        // Validated like any other order: ownership, liveness, and the building
+        // actually being a charged superweapon. There is no separate "cheat"
+        // path -- the AI issues this exact command through the same bus.
+        case CommandType::FireSuperweapon:
+        {
+            if (!IsAlive(Cmd.Primary))
+            {
+                return Reject(CommandReject::NoSuchEntity);
+            }
+            if (Core[Cmd.Primary.Index].Owner != Cmd.Issuer)
+            {
+                return Reject(CommandReject::NotOwner);
+            }
+            const EntityDef* Def = Content ? Content->FindEntity(Core[Cmd.Primary.Index].Def) : nullptr;
+            if (Def == nullptr || Def->Building.SuperweaponRechargeTicks <= 0)
+            {
+                return Reject(CommandReject::UnknownContent);
+            }
+            BuildingComp& B = Buildings[Cmd.Primary.Index];
+            if (B.State != ConstructionState::Complete)
+            {
+                return Reject(CommandReject::SuperweaponNotReady);
+            }
+            if (B.SuperweaponChargeTicks < Def->Building.SuperweaponRechargeTicks)
+            {
+                return Reject(CommandReject::SuperweaponNotReady);
+            }
+            if (Player.PowerConsumed > Player.PowerProduced)
+            {
+                return Reject(CommandReject::SuperweaponUnpowered);
+            }
+            if (!Map.IsInBounds(Cmd.Tile.X, Cmd.Tile.Y))
+            {
+                return Reject(CommandReject::TargetInvalid);
+            }
+
+            // Spend the charge before applying damage: a rejected-after-fire path
+            // would let a player fire twice if damage resolution ever throws.
+            B.SuperweaponChargeTicks = 0;
+
+            const Vec2 Impact = Map.TileCenterToWorld(Cmd.Tile);
+            // Reuses the ordinary splash path, so the armour table, fog and event
+            // emission behave exactly as they do for a shell.
+            ApplySplashDamage(Impact, Def->Building.SuperweaponRadius,
+                              Def->Building.SuperweaponDamage,
+                              Def->Building.SuperweaponWarhead,
+                              /*FalloffPercent*/ 50, Cmd.Primary, Cmd.Issuer);
+
+            SimEvent Ev;
+            Ev.Type = SimEventType::WeaponFired;
+            Ev.Tick = CurrentTick;
+            Ev.Entity = Cmd.Primary;
+            Ev.Player = Cmd.Issuer;
+            Ev.Content = Core[Cmd.Primary.Index].Def;
+            Ev.Location = Impact;
+            Ev.Value = Def->Building.SuperweaponDamage;
+            EmitEvent(Ev);
+            break;
+        }
+
         case CommandType::Surrender:
         {
             Player.bDefeated = true;
@@ -1647,6 +1708,40 @@ void SimWorld::SystemPower()
         if (P.Faction == FactionId::ChronoLegion && (CurrentTick % 40) == 0)
         {
             P.FactionResource = std::min(100, P.FactionResource + 1);
+        }
+    }
+
+    // Superweapon charge, in a second pass because it depends on the power totals
+    // the loop above has just finished computing. Charging requires a power
+    // surplus, so cutting an opponent's power stalls their superweapon -- the
+    // clock is a consequence of holding a working base, not a wall-clock timer.
+    // Placed inside SystemPower rather than as a new system so the fixed system
+    // order, which is part of the replay compatibility contract, is unchanged.
+    for (uint32_t I = 0; I < Core.size(); ++I)
+    {
+        if (!Core[I].bAlive || Core[I].Kind != EntityKind::Building ||
+            Core[I].Owner >= kMaxPlayers)
+        {
+            continue;
+        }
+        if (Buildings[I].State != ConstructionState::Complete)
+        {
+            continue;
+        }
+        const EntityDef* D = Content ? Content->FindEntity(Core[I].Def) : nullptr;
+        if (D == nullptr || D->Building.SuperweaponRechargeTicks <= 0)
+        {
+            continue;
+        }
+        const PlayerState& Owner = Players[Core[I].Owner];
+        if (Owner.PowerConsumed > Owner.PowerProduced)
+        {
+            continue;   // brownout: no charge this tick
+        }
+        BuildingComp& B = Buildings[I];
+        if (B.SuperweaponChargeTicks < D->Building.SuperweaponRechargeTicks)
+        {
+            B.SuperweaponChargeTicks += 1;
         }
     }
 }

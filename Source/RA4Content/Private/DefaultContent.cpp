@@ -36,6 +36,7 @@ constexpr ContentId BldSovBarracks = MakeContentId("building.sov.barracks");
 constexpr ContentId BldSovWarFactory = MakeContentId("building.sov.war_factory");
 constexpr ContentId BldSovTurret = MakeContentId("building.sov.gun_turret");
 constexpr ContentId BldSovAaTurret = MakeContentId("building.sov.flak_turret");
+constexpr ContentId BldSovSuper = MakeContentId("building.sov.iron_barrage");
 
 constexpr ContentId BldAllConYard = MakeContentId("building.all.construction_yard");
 constexpr ContentId BldAllPower = MakeContentId("building.all.power_plant");
@@ -44,6 +45,7 @@ constexpr ContentId BldAllBarracks = MakeContentId("building.all.barracks");
 constexpr ContentId BldAllWarFactory = MakeContentId("building.all.war_factory");
 constexpr ContentId BldAllTurret = MakeContentId("building.all.pillbox");
 constexpr ContentId BldAllAaTurret = MakeContentId("building.all.patriot_battery");
+constexpr ContentId BldAllSuper = MakeContentId("building.all.aegis_lance");
 
 // --- Unit ids -------------------------------------------------------------
 constexpr ContentId UnitSovMcv = MakeContentId("unit.sov.mcv");
@@ -216,7 +218,7 @@ struct FactionSetup
 {
     FactionId Faction;
     const char* KeyPrefix;
-    ContentId ConYard, Power, Refinery, Barracks, WarFactory, Turret, AaTurret, Airfield;
+    ContentId ConYard, Power, Refinery, Barracks, WarFactory, Turret, AaTurret, Airfield, Superweapon;
     ContentId Mcv, Harvester, BasicInfantry, AntiArmorInfantry, MainTank, Artillery, Aircraft;
     const char* ConYardName;
     const char* PowerName;
@@ -232,6 +234,7 @@ struct FactionSetup
     const char* ArtilleryName;
     const char* AircraftName;
     const char* AaTurretName;
+    const char* SuperweaponName;
 
     int32_t PowerOutput;
     int32_t TankHealth;
@@ -477,6 +480,38 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         Db.AddEntity(E);
     }
 
+    // --- Superweapon -------------------------------------------------------
+    // The late-game answer to a stalemate. Expensive, power-hungry, and it only
+    // charges while the owner holds a power surplus -- so killing an opponent's
+    // power stalls their superweapon instead of merely delaying it. The charge
+    // clock lives per building (BuildingComp::SuperweaponChargeTicks), and a
+    // freshly built one starts at zero so rebuilding cannot bypass the cooldown.
+    {
+        EntityDef E;
+        E.Id = S.Superweapon;
+        E.Name = S.SuperweaponName;
+        E.DisplayNameKey = Prefix + ".building.superweapon";
+        E.Kind = EntityKind::Building;
+        E.Faction = S.Faction;
+        E.MaxHealth = 900;
+        E.Armor = ArmorClass::Building;
+        E.VisionRange = Metres(8);
+        E.Roles = EntityRole::Production;
+        E.Building.FootprintX = 3;
+        E.Building.FootprintY = 3;
+        E.Building.PowerConsumed = 200;          // a real economic commitment
+        E.Building.SuperweaponRechargeTicks = SecondsToTicks(180);   // 3 minutes
+        E.Building.SuperweaponDamage = 900;      // flattens a cluster of buildings
+        E.Building.SuperweaponRadius = Metres(6);
+        E.Building.SuperweaponWarhead = WarheadClass::Siege;
+        E.Production.Cost = 3500;
+        E.Production.BuildTimeTicks = SecondsToTicks(60);
+        E.Production.Category = ProductionCategory::Structure;
+        E.Production.ProducedBy = {S.ConYard};
+        E.Production.Prerequisites = {S.WarFactory};
+        Db.AddEntity(E);
+    }
+
     // --- Strike aircraft ---------------------------------------------------
     // Ignores terrain and ground-only defences, so it answers the fortified base
     // from a direction artillery cannot. Fragile and expensive on purpose: flak
@@ -657,9 +692,11 @@ void BuildDefaultContent(ContentDatabase& Db)
     Soviet.Artillery = UnitSovArtillery;
     Soviet.Aircraft = UnitSovAircraft;
     Soviet.AaTurret = BldSovAaTurret;
+    Soviet.Superweapon = BldSovSuper;
     Soviet.ArtilleryName = "unit.sov.zarevo_mlrs";
     Soviet.AircraftName = "unit.sov.mig_bomber";
     Soviet.AaTurretName = "building.sov.flak_turret";
+    Soviet.SuperweaponName = "building.sov.iron_barrage";
     Soviet.PowerOutput = 150;
     Soviet.TankHealth = 520;
     Soviet.TankWeapon = WpnTankCannonHeavy;
@@ -687,6 +724,7 @@ void BuildDefaultContent(ContentDatabase& Db)
     Alliance.Artillery = UnitAllArtillery;
     Alliance.Aircraft = UnitAllAircraft;
     Alliance.AaTurret = BldAllAaTurret;
+    Alliance.Superweapon = BldAllSuper;
     Alliance.ConYardName = "building.all.construction_yard";
     Alliance.PowerName = "building.all.power_plant";
     Alliance.RefineryName = "building.all.ore_refinery";
@@ -701,6 +739,7 @@ void BuildDefaultContent(ContentDatabase& Db)
     Alliance.ArtilleryName = "unit.all.oracle_artillery";
     Alliance.AircraftName = "unit.all.harrier_jet";
     Alliance.AaTurretName = "building.all.patriot_battery";
+    Alliance.SuperweaponName = "building.all.aegis_lance";
     Alliance.PowerOutput = 100;
     Alliance.TankHealth = 380;
     Alliance.TankWeapon = WpnTankCannonLight;

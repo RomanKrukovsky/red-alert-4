@@ -2924,3 +2924,172 @@ RA4_TEST(Aviation, GunTurretAloneCannotStopABomber)
     }
     RA4_EXPECT(World.IsAlive(Plane));
 }
+
+namespace
+{
+
+// Builds a powered superweapon for player 0 and returns its id. Three reactors
+// because the superweapon draws 200 power and charging requires a surplus.
+EntityId SpawnPoweredSuperweapon(SimWorld& World)
+{
+    const EntityId Sw = World.SpawnBuilding(MakeContentId("building.sov.iron_barrage"),
+                                           0, TileCoord(10, 10), true);
+    for (int32_t I = 0; I < 3; ++I)
+    {
+        World.SpawnBuilding(MakeContentId("building.sov.tesla_reactor"), 0,
+                            TileCoord(14 + I * 2, 10), true);
+    }
+    return Sw;
+}
+
+Command MakeSuperweaponCommand(EntityId Sw, TileCoord Target)
+{
+    Command C;
+    C.Type = CommandType::FireSuperweapon;
+    C.Issuer = 0;
+    C.Primary = Sw;
+    C.Tile = Target;
+    return C;
+}
+
+} // namespace
+
+RA4_TEST(Superweapon, CannotFireBeforeItHasCharged)
+{
+    // A freshly built superweapon starts at zero charge, so rebuilding one cannot
+    // be used to bypass the cooldown.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(777));
+
+    const EntityId Sw = SpawnPoweredSuperweapon(World);
+    RA4_REQUIRE(Sw.IsValid());
+    RA4_REQUIRE(World.GetBuilding(Sw) != nullptr);
+    RA4_EXPECT_EQ(0, World.GetBuilding(Sw)->SuperweaponChargeTicks);
+
+    const CommandResult R = World.ApplyCommand(MakeSuperweaponCommand(Sw, TileCoord(40, 40)));
+    RA4_EXPECT(!R.IsAccepted());
+    RA4_EXPECT(R.Reason == CommandReject::SuperweaponNotReady);
+}
+
+RA4_TEST(Superweapon, ChargesWithPowerSurplusThenFlattensTheTarget)
+{
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(778));
+
+    const EntityDef* Def = Content.FindEntity(MakeContentId("building.sov.iron_barrage"));
+    RA4_REQUIRE(Def != nullptr);
+    const EntityId Sw = SpawnPoweredSuperweapon(World);
+    const EntityId Victim = World.SpawnBuilding(MakeContentId("building.all.construction_yard"),
+                                                1, TileCoord(40, 40), true);
+    RA4_REQUIRE(Victim.IsValid());
+
+    for (int32_t I = 0; I < Def->Building.SuperweaponRechargeTicks + 5; ++I)
+    {
+        World.Tick(nullptr);
+    }
+    // Charge saturates at the recharge time rather than running away.
+    RA4_EXPECT_EQ(Def->Building.SuperweaponRechargeTicks,
+                  World.GetBuilding(Sw)->SuperweaponChargeTicks);
+
+    const HealthComp* Before = World.GetHealth(Victim);
+    RA4_REQUIRE(Before != nullptr);
+    const int32_t HpBefore = Before->Current;
+
+    const CommandResult R = World.ApplyCommand(MakeSuperweaponCommand(Sw, TileCoord(40, 40)));
+    RA4_EXPECT(R.IsAccepted());
+
+    const HealthComp* After = World.GetHealth(Victim);
+    RA4_REQUIRE(After != nullptr);
+    RA4_EXPECT(After->Current < HpBefore);
+
+    // Firing spends the charge, so it cannot be fired twice in a row.
+    RA4_EXPECT_EQ(0, World.GetBuilding(Sw)->SuperweaponChargeTicks);
+    const CommandResult Second = World.ApplyCommand(MakeSuperweaponCommand(Sw, TileCoord(40, 40)));
+    RA4_EXPECT(!Second.IsAccepted());
+    RA4_EXPECT(Second.Reason == CommandReject::SuperweaponNotReady);
+}
+
+RA4_TEST(Superweapon, DoesNotChargeDuringABrownout)
+{
+    // Cutting an opponent's power must stall their superweapon. Without the
+    // reactors the building's own 200 draw guarantees a deficit.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(779));
+
+    const EntityId Sw = World.SpawnBuilding(MakeContentId("building.sov.iron_barrage"),
+                                            0, TileCoord(10, 10), true);
+    RA4_REQUIRE(Sw.IsValid());
+
+    for (int32_t I = 0; I < 200; ++I)
+    {
+        World.Tick(nullptr);
+    }
+    const PlayerState& P = World.GetPlayer(0);
+    RA4_EXPECT(P.PowerConsumed > P.PowerProduced);
+    RA4_EXPECT_EQ(0, World.GetBuilding(Sw)->SuperweaponChargeTicks);
+}
+
+RA4_TEST(Superweapon, RejectsForeignAndOffMapUse)
+{
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(780));
+
+    const EntityDef* Def = Content.FindEntity(MakeContentId("building.sov.iron_barrage"));
+    RA4_REQUIRE(Def != nullptr);
+    const EntityId Sw = SpawnPoweredSuperweapon(World);
+    // Player 1 needs a building of its own, otherwise it is eliminated during the
+    // charge loop, the match ends, and every command is refused as MatchOver --
+    // which would make this test pass without ever reaching the checks it names.
+    World.SpawnBuilding(MakeContentId("building.all.construction_yard"), 1,
+                        TileCoord(40, 40), true);
+
+    for (int32_t I = 0; I < Def->Building.SuperweaponRechargeTicks + 5; ++I)
+    {
+        World.Tick(nullptr);
+    }
+    RA4_REQUIRE(World.GetPhase() == MatchPhase::Running);
+    RA4_EXPECT_EQ(Def->Building.SuperweaponRechargeTicks,
+                  World.GetBuilding(Sw)->SuperweaponChargeTicks);
+
+    // An off-map impact is refused rather than clamped silently.
+    const CommandResult OffMap =
+        World.ApplyCommand(MakeSuperweaponCommand(Sw, TileCoord(-5, 99999)));
+    RA4_EXPECT(!OffMap.IsAccepted());
+    RA4_EXPECT(OffMap.Reason == CommandReject::TargetInvalid);
+
+    // Someone else's superweapon is not yours to fire.
+    Command Foreign = MakeSuperweaponCommand(Sw, TileCoord(40, 40));
+    Foreign.Issuer = 1;
+    const CommandResult FR = World.ApplyCommand(Foreign);
+    RA4_EXPECT(!FR.IsAccepted());
+    RA4_EXPECT(FR.Reason == CommandReject::NotOwner);
+
+    // Neither rejection may have spent the charge.
+    RA4_EXPECT_EQ(Def->Building.SuperweaponRechargeTicks,
+                  World.GetBuilding(Sw)->SuperweaponChargeTicks);
+}
+
+RA4_TEST(Superweapon, OrdinaryBuildingsAreNotSuperweapons)
+{
+    // Guards the "SuperweaponRechargeTicks > 0 means superweapon" rule: a normal
+    // structure must be refused rather than firing for free.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(781));
+
+    const EntityId Yard = World.SpawnBuilding(MakeContentId("building.sov.construction_yard"),
+                                              0, TileCoord(10, 10), true);
+    RA4_REQUIRE(Yard.IsValid());
+    const CommandResult R = World.ApplyCommand(MakeSuperweaponCommand(Yard, TileCoord(20, 20)));
+    RA4_EXPECT(!R.IsAccepted());
+    RA4_EXPECT(R.Reason == CommandReject::UnknownContent);
+}
