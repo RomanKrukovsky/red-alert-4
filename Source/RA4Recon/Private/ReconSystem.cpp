@@ -14,7 +14,7 @@ namespace Recon
 
 namespace
 {
-constexpr uint32_t kReconSystemVersion = 3; // v3: category/anonymous in observations (M2); v2: association tables (M1)
+constexpr uint32_t kReconSystemVersion = 4; // v4: report NodeId, chain latency (M3); v3: category/anonymous (M2); v2: association tables (M1)
 } // namespace
 
 const char* PhaseName(Phase P)
@@ -166,6 +166,7 @@ void ReconSystem::PhaseObservation(TickIndex CurrentTick, const ObservationInput
         for (const ObservedEntity& Seen : Input.VisibleToPlayer[P])
         {
             Observation Obs;
+            Obs.ObserverNodeId = Seen.ObserverNodeId; // M3: who is reporting this
             Obs.Subject = Seen.Id;
             Obs.ObservedClass = Seen.Class;
             Obs.ObservedPosition = Seen.Position;
@@ -287,25 +288,111 @@ void ReconSystem::PhaseDistortion(TickIndex)
 
 void ReconSystem::PhaseReportEmission(TickIndex CurrentTick)
 {
-    // M1: one report per player per tick, arriving instantly. M3 replaces the
-    // instant arrival with per-reporter intervals and chain-of-command delays,
-    // which is why reports already carry EmitTick/ArrivalTick/HopsRemaining.
+    // M3: observations are grouped BY REPORTING NODE, and each group becomes one
+    // report whose arrival is pushed into the future by the chain latency of that
+    // node. Grouping by node rather than per observation is what makes a report a
+    // report: a squad radios in what it saw, it does not send one telegram per
+    // enemy tank.
+    //
+    // Reports from a blacked-out node are never created -- that node has no
+    // working comms. Its existing tracks freeze, which PhaseTrackUpdate handles.
+    const ChainTuning& CT = Settings->Chain;
+    const CommsProfile* Comms = Settings->FindCommsProfile(Settings->ActiveCommsProfile);
+
     for (int32_t P = 0; P < kMaxPlayers; ++P)
     {
         if (Worlds[P] == nullptr || PendingObservations[P].empty())
         {
             continue;
         }
-        ReconReport Report;
-        Report.ReportId = NextReportId;
-        NextReportId += 1;
-        Report.OwnerPlayer = PlayerId(P);
-        Report.EmitTick = CurrentTick;
-        Report.ArrivalTick = CurrentTick; // zero delay in the truthful pipeline
-        Report.HopsRemaining = 0;
-        Report.Reliability = Fixed::FromInt(1);
-        Report.Payload = PendingObservations[P]; // copy; pooling lands with M3's queue
-        InFlightReports.push_back(std::move(Report));
+
+        // Node lookup for this player. Node ids are 1-based and assigned in
+        // ascending order by the input builder, so this is a direct index.
+        const std::vector<ChainNode>& Nodes = TickInput->ChainNodes[P];
+
+        // Distinct nodes present in this tick's observations, in first-seen order
+        // (deterministic: PendingObservations is built in entity-slot order).
+        NodeBatchIds.clear();
+        NodeBatchStart.clear();
+        for (const Observation& Obs : PendingObservations[P])
+        {
+            bool bKnown = false;
+            for (uint16_t Existing : NodeBatchIds)
+            {
+                if (Existing == Obs.ObserverNodeId) { bKnown = true; break; }
+            }
+            if (!bKnown)
+            {
+                NodeBatchIds.push_back(Obs.ObserverNodeId);
+            }
+        }
+
+        for (uint16_t NodeId : NodeBatchIds)
+        {
+            const ChainNode* Node = nullptr;
+            if (NodeId != kNoChainNode && size_t(NodeId - 1) < Nodes.size())
+            {
+                Node = &Nodes[NodeId - 1];
+            }
+
+            // A blacked-out node emits nothing at all: no comms, no report.
+            if (Node != nullptr && Node->bBlackout)
+            {
+                continue;
+            }
+
+            // Latency and hop count. An observer attached to the HQ itself is one
+            // hop from the staff map; attached to a subordinate node it is
+            // HopsFromNodeToHq; attached to nothing, or reporting to a player with
+            // no HQ standing, it takes the orphan delay.
+            int32_t Hops = 0;
+            int32_t DelayTicks = 0;
+            if (Node == nullptr || !TickInput->HasHqNode[P])
+            {
+                Hops = 1;
+                DelayTicks = CT.OrphanDelayTicks;
+            }
+            else
+            {
+                Hops = Node->bIsHq ? 1 : CT.HopsFromNodeToHq;
+                int32_t PerHop = 0;
+                if (Comms != nullptr && !Comms->HopDelayTicksByLevel.empty())
+                {
+                    const size_t Level = size_t(CT.CommsLevel) < Comms->HopDelayTicksByLevel.size()
+                                             ? size_t(CT.CommsLevel)
+                                             : Comms->HopDelayTicksByLevel.size() - 1;
+                    PerHop = Comms->HopDelayTicksByLevel[Level];
+                }
+                DelayTicks = PerHop * Hops;
+            }
+
+            // Reliability degrades per hop: each relay summarises, rounds and
+            // loses detail. Clamped at zero rather than going negative.
+            Fixed Reliability = Fixed::FromInt(1) -
+                                PerMilleToFixed(CT.ReliabilityLossPerHopPerMille * Hops);
+            Reliability = FxClamp(Reliability, Fixed::Zero(), Fixed::FromInt(1));
+
+            ReconReport Report;
+            Report.ReportId = NextReportId;
+            NextReportId += 1;
+            Report.OwnerPlayer = PlayerId(P);
+            Report.EmitTick = CurrentTick;
+            Report.ArrivalTick = CurrentTick + TickIndex(DelayTicks);
+            Report.HopsRemaining = uint8_t(Hops);
+            Report.Reliability = Reliability;
+            Report.NodeId = NodeId;
+            for (const Observation& Obs : PendingObservations[P])
+            {
+                if (Obs.ObserverNodeId == NodeId)
+                {
+                    Report.Payload.push_back(Obs);
+                }
+            }
+            if (!Report.Payload.empty())
+            {
+                InFlightReports.push_back(std::move(Report));
+            }
+        }
     }
 }
 
@@ -445,6 +532,7 @@ void ReconSystem::Serialize(ByteWriter& W) const
         W.WriteUInt32(Report.EmitTick);
         W.WriteUInt32(Report.ArrivalTick);
         W.WriteUInt8(Report.HopsRemaining);
+        W.WriteUInt32(Report.NodeId);
         W.WriteInt64(Report.Reliability.Raw);
         W.WriteUInt32(uint32_t(Report.Payload.size()));
         for (const Observation& Obs : Report.Payload)
@@ -525,6 +613,7 @@ bool ReconSystem::Deserialize(ByteReader& R)
         Report.EmitTick = R.ReadUInt32();
         Report.ArrivalTick = R.ReadUInt32();
         Report.HopsRemaining = R.ReadUInt8();
+        Report.NodeId = uint16_t(R.ReadUInt32());
         Report.Reliability = Fixed::FromRaw(R.ReadInt64());
         const uint32_t PayloadCount = R.ReadUInt32();
         Report.Payload.reserve(PayloadCount);
@@ -592,6 +681,16 @@ void ReconSystem::FeedChecksum(Hash64& H) const
     {
         H.FeedUInt32(Report.ReportId);
         H.FeedUInt32(Report.ArrivalTick);
+        // M3: the queue now holds reports for many ticks, so everything that
+        // decides what they will DO on arrival is future-influencing state and
+        // must be hashed -- otherwise two peers with differently-routed reports
+        // agree today and diverge when the reports land.
+        H.FeedUInt32(Report.EmitTick);
+        H.FeedUInt8(Report.HopsRemaining);
+        H.FeedUInt32(Report.NodeId);
+        H.FeedInt64(Report.Reliability.Raw);
+        H.FeedUInt8(Report.OwnerPlayer);
+        H.FeedUInt32(uint32_t(Report.Payload.size()));
     }
     for (int32_t P = 0; P < kMaxPlayers; ++P)
     {

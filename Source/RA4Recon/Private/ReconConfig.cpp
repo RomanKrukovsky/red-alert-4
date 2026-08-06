@@ -312,6 +312,30 @@ bool ValidateReconSettings(const ReconSettings& Settings, std::vector<std::strin
         OutErrors.push_back("morale_tuning: superiority_ratio_threshold below 1.0x");
     }
 
+    const ChainTuning& CT = Settings.Chain;
+    CheckPerMilleRange(CT.ReliabilityLossPerHopPerMille, "reliability_loss_per_hop", OutErrors);
+    CheckPerMilleRange(CT.BlackoutConfidenceDecayPerSecondPerMille, "blackout_confidence_decay_per_second",
+                       OutErrors);
+    if (CT.NodeAttachRadiusTiles < 0 || CT.OrphanDelayTicks < 0 || CT.HopsFromNodeToHq < 0)
+    {
+        OutErrors.push_back("chain_tuning: negative radius, delay or hop count");
+    }
+    if (CT.CommsLevel < 0)
+    {
+        OutErrors.push_back("chain_tuning: comms_level is negative");
+    }
+    else if (const CommsProfile* Active = Settings.FindCommsProfile(Settings.ActiveCommsProfile))
+    {
+        // A level outside the active profile's ladder would silently read as "no
+        // delay", turning a comms downgrade into a free upgrade.
+        if (size_t(CT.CommsLevel) >= Active->HopDelayTicksByLevel.size())
+        {
+            OutErrors.push_back("chain_tuning: comms_level " + std::to_string(CT.CommsLevel) +
+                                " is outside profile '" + Active->Name + "' ladder of " +
+                                std::to_string(Active->HopDelayTicksByLevel.size()) + " levels");
+        }
+    }
+
     const TrackTuning& T = Settings.Tracks;
     if (T.MaxTracksPerPlayer <= 0 || T.MaxTracksPerPlayer > 65536)
     {
@@ -403,6 +427,18 @@ bool LoadReconSettingsFromJson(const std::string& JsonText, ReconSettings& OutSe
         T.ScoutCompetencePerMille = ReadPerMille(*M, "scout_competence", T.ScoutCompetencePerMille);
     }
 
+    if (const Json::Value* C = Root.Find("chain_tuning"); C != nullptr && C->IsObject())
+    {
+        ChainTuning& T = OutSettings.Chain;
+        T.CommsLevel = ReadInt(*C, "comms_level", T.CommsLevel);
+        T.NodeAttachRadiusTiles = ReadInt(*C, "node_attach_radius_tiles", T.NodeAttachRadiusTiles);
+        T.OrphanDelayTicks = ReadInt(*C, "orphan_delay_ticks", T.OrphanDelayTicks);
+        T.HopsFromNodeToHq = ReadInt(*C, "hops_from_node_to_hq", T.HopsFromNodeToHq);
+        T.ReliabilityLossPerHopPerMille = ReadPerMille(*C, "reliability_loss_per_hop", T.ReliabilityLossPerHopPerMille);
+        T.BlackoutConfidenceDecayPerSecondPerMille =
+            ReadPerMille(*C, "blackout_confidence_decay_per_second", T.BlackoutConfidenceDecayPerSecondPerMille);
+    }
+
     if (const Json::Value* Tracks = Root.Find("track_tuning"); Tracks != nullptr && Tracks->IsObject())
     {
         TrackTuning& T = OutSettings.Tracks;
@@ -446,6 +482,13 @@ uint64_t ReconSettings::ComputeSettingsHash() const
     H.FeedUInt32(uint32_t(Tracks.AgreementConfidenceBonusPerMille));
     H.FeedUInt32(uint32_t(Tracks.MaxTracksPerPlayer));
     H.FeedUInt32(uint32_t(Tracks.TracksPerTickBudget));
+
+    H.FeedUInt32(uint32_t(Chain.CommsLevel));
+    H.FeedUInt32(uint32_t(Chain.NodeAttachRadiusTiles));
+    H.FeedUInt32(uint32_t(Chain.OrphanDelayTicks));
+    H.FeedUInt32(uint32_t(Chain.HopsFromNodeToHq));
+    H.FeedUInt32(uint32_t(Chain.ReliabilityLossPerHopPerMille));
+    H.FeedUInt32(uint32_t(Chain.BlackoutConfidenceDecayPerSecondPerMille));
 
     H.FeedUInt32(uint32_t(DistortionProfiles.size()));
     for (const DistortionProfile& P : DistortionProfiles)

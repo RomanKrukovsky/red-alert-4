@@ -100,6 +100,26 @@ Recon::ReconSettings MakeMinimalSettings(bool bEnabled)
     C.Name = "comms.default";
     C.HopDelayTicksByLevel = {160, 80, 30, 5};
     S.CommsProfiles.push_back(C);
+    // Distortion-and-belief tests want the M1 property "what fog sees arrives
+    // now", so the chain is configured for zero latency here. Chain LATENCY has
+    // its own tests (Recon.Chain*), which set these deliberately. Keeping the
+    // baseline instant means a failure in those tests points at the chain, not
+    // at every test that merely needs a track to exist.
+    S.Chain.OrphanDelayTicks = 0;
+    S.Chain.ReliabilityLossPerHopPerMille = 0;
+    S.CommsProfiles[0].HopDelayTicksByLevel = {0, 0, 0, 0};
+    return S;
+}
+
+// Settings for the chain-of-command tests: real latency, real reliability loss.
+Recon::ReconSettings MakeChainSettings(int32_t PerHopDelayTicks, int32_t OrphanDelayTicks)
+{
+    Recon::ReconSettings S = MakeMinimalSettings(true);
+    S.CommsProfiles[0].HopDelayTicksByLevel = {PerHopDelayTicks, PerHopDelayTicks,
+                                               PerHopDelayTicks, PerHopDelayTicks};
+    S.Chain.CommsLevel = 2;
+    S.Chain.OrphanDelayTicks = OrphanDelayTicks;
+    S.Chain.ReliabilityLossPerHopPerMille = 100;
     return S;
 }
 
@@ -558,6 +578,178 @@ const Recon::PerceivedTrack* FindSingleTrack(const SimWorld& World, PlayerId P)
 }
 
 } // namespace
+
+// --- M3: chain of command (§4.4) -------------------------------------------------
+
+RA4_TEST(Recon, ChainDelaysReportsByHopLatency)
+{
+    // The core M3 property: intel is no longer instant. An observer attached to
+    // the player's construction yard is one hop from the staff map, so its report
+    // must land exactly PerHop ticks after the observation -- not sooner (that
+    // would mean the delay is decorative) and not later (that would mean reports
+    // get stuck in the queue).
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    const int32_t PerHop = 10;
+    Recon::ReconSettings Settings = MakeChainSettings(PerHop, /*OrphanDelayTicks*/ 300);
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(31337), &Settings);
+    // An HQ next to the observer: the node the report enters the chain at.
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(30, 30), /*bInstantComplete*/ true);
+    SpawnScoutContact(World);
+
+    // Before the latency elapses the staff map must know nothing.
+    int32_t TicksUntilFirstTrack = -1;
+    for (int32_t I = 0; I < PerHop * 4; ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+        if (World.GetRecon().GetPerceivedWorld(0).GetAliveTrackCount() > 0)
+        {
+            TicksUntilFirstTrack = I + 1;
+            break;
+        }
+    }
+    RA4_REQUIRE(TicksUntilFirstTrack > 0);
+    // One hop from the HQ node: the first observation was made on tick 1, so the
+    // track appears on tick 1 + PerHop.
+    RA4_EXPECT(TicksUntilFirstTrack == PerHop + 1);
+}
+
+RA4_TEST(Recon, OrphanObserverWaitsLongerThanAnAttachedOne)
+{
+    // Being outside the command network must cost something measurable, or the
+    // whole "invest in communications" pillar is decoration. Same scene twice:
+    // once with an HQ beside the observer, once with no command building at all.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    const int32_t PerHop = 5;
+    const int32_t OrphanDelay = 60;
+    Recon::ReconSettings Settings = MakeChainSettings(PerHop, OrphanDelay);
+
+    const auto TicksToFirstTrack = [&Content, &Settings](bool bWithHq)
+    {
+        SimWorld World;
+        World.Initialize(&Content, MakeTestSetup(4711), &Settings);
+        if (bWithHq)
+        {
+            World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(30, 30), true);
+        }
+        SpawnScoutContact(World);
+        for (int32_t I = 0; I < 200; ++I)
+        {
+            World.Tick(nullptr);
+            World.ClearEvents();
+            if (World.GetRecon().GetPerceivedWorld(0).GetAliveTrackCount() > 0)
+            {
+                return I + 1;
+            }
+        }
+        return -1;
+    };
+
+    const int32_t Attached = TicksToFirstTrack(true);
+    const int32_t Orphan = TicksToFirstTrack(false);
+    RA4_REQUIRE(Attached > 0);
+    RA4_REQUIRE(Orphan > 0);
+    RA4_EXPECT(Attached == PerHop + 1);
+    RA4_EXPECT(Orphan == OrphanDelay + 1);
+    RA4_EXPECT(Orphan > Attached);
+}
+
+RA4_TEST(Recon, ReportsFromASubordinateNodeTakeMoreHopsThanFromTheHq)
+{
+    // A radar station reports through the chain (node -> HQ), an observer at the
+    // HQ reports directly. Two hops must cost twice one hop: this is the whole
+    // reason a player would want liaison officers later.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    const int32_t PerHop = 8;
+    Recon::ReconSettings Settings = MakeChainSettings(PerHop, /*OrphanDelayTicks*/ 400);
+
+    // Contact far from the HQ but close to a forward radar: the radar is the
+    // nearest node, so the report takes the two-hop path.
+    // No shipped def sets bIsRadar yet, so the test registers one, exactly how a
+    // designer would through content.
+    EntityDef RadarDef;
+    RadarDef.Name = "building.test.chain_radar";
+    RadarDef.Id = MakeContentId("building.test.chain_radar");
+    RadarDef.Kind = EntityKind::Building;
+    RadarDef.Faction = FactionId::Soviet;
+    RadarDef.MaxHealth = 500;
+    RadarDef.Building.FootprintX = 2;
+    RadarDef.Building.FootprintY = 2;
+    RadarDef.Building.bIsRadar = true;
+    Content.AddEntity(RadarDef);
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(9182), &Settings);
+    // Tiles are 200 world units, so the contact at (3400,3000) sits on tile
+    // (17,15). The HQ goes far away and the radar close, so the radar really is
+    // the nearest node -- getting this backwards would silently test the one-hop
+    // path instead of the two-hop one.
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(2, 2), true);   // ~19.8 tiles away
+    World.SpawnBuilding(RadarDef.Id, 0, TileCoord(20, 18), true);             // ~4.2 tiles away
+    SpawnScoutContact(World);
+
+    int32_t Ticks = -1;
+    for (int32_t I = 0; I < PerHop * 6; ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+        if (World.GetRecon().GetPerceivedWorld(0).GetAliveTrackCount() > 0)
+        {
+            Ticks = I + 1;
+            break;
+        }
+    }
+    RA4_REQUIRE(Ticks > 0);
+    // HopsFromNodeToHq defaults to 2, so the latency is 2 * PerHop.
+    RA4_EXPECT(Ticks == PerHop * 2 + 1);
+}
+
+RA4_TEST(Recon, RelayedReportsLoseReliability)
+{
+    // Reliability must fall with hop count: every relay summarises and rounds.
+    // Checked on the pure function of the tuning rather than through a track,
+    // because reliability is an input to distortion, not a track field.
+    Recon::ReconSettings Settings = MakeChainSettings(10, 100);
+    const Fixed OneHop = FxClamp(Fixed::FromInt(1) -
+                                     Recon::PerMilleToFixed(Settings.Chain.ReliabilityLossPerHopPerMille * 1),
+                                 Fixed::Zero(), Fixed::FromInt(1));
+    const Fixed TwoHops = FxClamp(Fixed::FromInt(1) -
+                                      Recon::PerMilleToFixed(Settings.Chain.ReliabilityLossPerHopPerMille * 2),
+                                  Fixed::Zero(), Fixed::FromInt(1));
+    RA4_EXPECT(OneHop > TwoHops);
+    RA4_EXPECT(TwoHops > Fixed::Zero());
+}
+
+RA4_TEST(Recon, ChainTuningIsPartOfTheSettingsHash)
+{
+    // Chain latency changes belief timing, so it changes the ruleset: an old
+    // replay recorded under different comms must be refused, not replayed under
+    // silently faster radios.
+    Recon::ReconSettings A = MakeChainSettings(10, 100);
+    Recon::ReconSettings B = A;
+    B.Chain.OrphanDelayTicks += 1;
+    RA4_EXPECT(A.ComputeSettingsHash() != B.ComputeSettingsHash());
+
+    Recon::ReconSettings C = A;
+    C.Chain.HopsFromNodeToHq += 1;
+    RA4_EXPECT(A.ComputeSettingsHash() != C.ComputeSettingsHash());
+}
+
+RA4_TEST(Recon, ValidatorRejectsCommsLevelOutsideTheLadder)
+{
+    // A comms level past the end of the ladder would read as "no delay", turning
+    // a downgrade into a free upgrade. That must fail to load.
+    Recon::ReconSettings S = MakeMinimalSettings(true);
+    S.Chain.CommsLevel = 99;
+    std::vector<std::string> Errors;
+    RA4_EXPECT(!Recon::ValidateReconSettings(S, Errors));
+    RA4_EXPECT(!Errors.empty());
+}
 
 RA4_TEST(Recon, TruthfulPipelineMirrorsVisibleEnemy)
 {

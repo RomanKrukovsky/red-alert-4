@@ -700,10 +700,7 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
                     PlayVoiceForContent(Event.Content, ERA4VoiceEvent::Death, true);
                 }
             }
-            // V-F: a death marker inside fog announces a kill the player has no
-            // way of knowing about -- including their own units dying to an
-            // unseen attacker, which reveals the attacker's reach.
-            if (UnrealWorld && SimWorld->IsLocationVisibleTo(LocalPlayer, Event.Location))
+            if (UnrealWorld)
             {
                 FVector ImpactPoint = RA4Coords::ToUnreal(Event.Location);
                 ImpactPoint.Z = SampleGroundHeight(ImpactPoint.X, ImpactPoint.Y) + 40.0f;
@@ -747,23 +744,15 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
             break;
 
         case RA4::SimEventType::WeaponFired:
-            // V-F: a tracer is a line between two positions, so BOTH ends leak.
-            // Drawing it when only the muzzle is visible would still betray the
-            // target's location, and vice versa -- so the shot is drawn only when
-            // the player can see the shooter, and the line only when the target
-            // is visible too. Partial visibility falls back to the muzzle flash.
-            if (UnrealWorld && SimWorld->IsLocationVisibleTo(LocalPlayer, Event.Location))
+            if (UnrealWorld)
             {
                 FVector Start = RA4Coords::ToUnreal(Event.Location);
                 Start.Z = SampleGroundHeight(Start.X, Start.Y) + 20.0f;
+                FVector End = Start;
                 const auto& Transforms = SimWorld->GetAllTransforms();
-                const bool bTargetVisible =
-                    Event.Other.IsValid() && SimWorld->IsAlive(Event.Other) &&
-                    Event.Other.Index < Transforms.size() &&
-                    SimWorld->IsEntityVisibleTo(LocalPlayer, Event.Other.Index);
-                if (bTargetVisible)
+                if (Event.Other.IsValid() && SimWorld->IsAlive(Event.Other) && Event.Other.Index < Transforms.size())
                 {
-                    FVector End = RA4Coords::ToUnreal(Transforms[Event.Other.Index].Position);
+                    End = RA4Coords::ToUnreal(Transforms[Event.Other.Index].Position);
                     End.Z = SampleGroundHeight(End.X, End.Y) + 20.0f;
                     DrawDebugLine(UnrealWorld, Start, End, FColor::Yellow, false, 0.15f, 0, 2.5f);
                 }
@@ -775,9 +764,7 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
             break;
 
         case RA4::SimEventType::ProjectileImpact:
-            // V-F: same reasoning as the tracer -- an impact splash inside fog
-            // marks where a fight is happening.
-            if (UnrealWorld && SimWorld->IsLocationVisibleTo(LocalPlayer, Event.Location))
+            if (UnrealWorld)
             {
                 FVector ImpactPoint = RA4Coords::ToUnreal(Event.Location);
                 ImpactPoint.Z = SampleGroundHeight(ImpactPoint.X, ImpactPoint.Y) + 30.0f;

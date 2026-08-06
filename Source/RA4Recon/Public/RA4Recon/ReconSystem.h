@@ -50,6 +50,11 @@ struct ObservedEntity
     // Radar return, not eyes-on: becomes an anonymous observation (position
     // without identity) and skips the visual distortion stages.
     bool bRadarContact = false;
+
+    // Chain node the OBSERVER is attached to (M3). kNoChainNode means the
+    // observer is outside the command network and its report walks in on foot.
+    // Radar contacts report through the radar building's own node.
+    uint16_t ObserverNodeId = 0;
 };
 
 // One friendly observer this tick. M2 uses per-PLAYER aggregate observers (one
@@ -63,6 +68,23 @@ struct ObserverSnapshot
     Fixed Suppression = Fixed::Zero();
 };
 
+// One node of a player's command chain (M3, §4.4). Built each tick from the
+// player's completed command buildings, so losing a headquarters really does
+// break the reporting structure that depended on it -- the mechanic is
+// structural, not a status effect.
+struct ChainNode
+{
+    uint16_t NodeId = 0;                // 1-based; 0 (kNoChainNode) means "none"
+    PlayerId Owner = kInvalidPlayer;
+    int32_t TileX = 0;
+    int32_t TileY = 0;
+    bool bIsHq = false;                 // construction yard: the top of the chain
+    bool bBlackout = false;             // comms cut: forwards nothing, freezes belief
+};
+
+// NodeId 0 is reserved for "attached to no node".
+constexpr uint16_t kNoChainNode = 0;
+
 struct ObservationInput
 {
     // Per viewing player: hostile/neutral entities their fog can currently see,
@@ -70,6 +92,11 @@ struct ObservationInput
     std::vector<ObservedEntity> VisibleToPlayer[kMaxPlayers];
     // Per-player aggregate observer state (see ObserverSnapshot).
     ObserverSnapshot Observers[kMaxPlayers];
+    // Per-player command chain for this tick, in ascending NodeId order.
+    std::vector<ChainNode> ChainNodes[kMaxPlayers];
+    // Whether the player has any HQ node at all. No HQ means no staff map to
+    // report TO: reports still travel, but they arrive at orphan latency.
+    bool HasHqNode[kMaxPlayers] = {};
     // Entity slot capacity, so per-entity association tables can size once.
     uint32_t EntityCapacity = 0;
 
@@ -79,6 +106,8 @@ struct ObservationInput
         {
             VisibleToPlayer[P].clear();
             Observers[P] = ObserverSnapshot{};
+            ChainNodes[P].clear();
+            HasHqNode[P] = false;
         }
     }
 };
@@ -184,6 +213,12 @@ private:
     std::vector<TrackId> AssociationTrack[kMaxPlayers];
     std::vector<uint32_t> AssociationGeneration[kMaxPlayers];
     uint32_t EntityCapacity = 0;
+
+    // Scratch for grouping this tick's observations by reporting node. Members
+    // rather than locals so capacity survives across ticks (no steady-state
+    // allocation, §6). Cleared per player inside PhaseReportEmission.
+    std::vector<uint16_t> NodeBatchIds;
+    std::vector<uint32_t> NodeBatchStart;
 
     PhaseStats Stats;
 };

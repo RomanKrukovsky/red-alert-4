@@ -74,6 +74,9 @@ struct MoraleComp
 // reports and tracks carry only believed data (see PerceivedTrack).
 struct Observation
 {
+    // Chain node of the observer that produced this (M3). Decides how long the
+    // report takes to reach the staff map; kNoChainNode = outside the network.
+    uint16_t ObserverNodeId = 0;
     EntityId Subject;                       // GT association, core-internal only
     ContentId ObservedClass;                // exact believed type; invalid when misidentified
     ObservedCategory Category = ObservedCategory::LightVehicle; // coarse believed category
@@ -97,6 +100,7 @@ struct ReconReport
     TickIndex EmitTick = 0;
     TickIndex ArrivalTick = 0;
     uint8_t HopsRemaining = 0;
+    uint16_t NodeId = 0;                    // chain node that filed it (M3)
     Fixed Reliability = Fixed::FromInt(1);  // product of author competence and chain bias
     std::vector<Observation> Payload;       // pooled/reused by the in-flight queue
 };

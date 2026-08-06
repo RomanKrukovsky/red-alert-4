@@ -2515,22 +2515,6 @@ EntityId SimWorld::AcquireTarget(EntityId Attacker) const
     return Best;
 }
 
-bool SimWorld::IsLocationVisibleTo(PlayerId Viewer, const Vec2& Location) const
-{
-    // Same fog-is-optional rule as IsEntityVisibleTo: a match without a grid, and
-    // every headless fixture, behaves as though the map is in the open.
-    if (Viewer >= kMaxPlayers || FogGrid == nullptr)
-    {
-        return true;
-    }
-    if (int32_t(Viewer) >= FogGrid->GetNumPlayers())
-    {
-        return true;
-    }
-    const TileCoord Tile = Map.WorldToTile(Location);
-    return FogGrid->GetVisibility(int32_t(Viewer), Tile.X, Tile.Y) == VisibilityState::CurrentlyVisible;
-}
-
 bool SimWorld::IsEntityVisibleTo(PlayerId Viewer, uint32_t EntityIndex) const
 {
     // Liveness and range come first: a dead or out-of-range entity is visible to
@@ -3068,6 +3052,41 @@ void SimWorld::SystemRecon()
         {
             RadarCentersOf[Core[I].Owner].push_back(Transforms[I].Position);
         }
+
+        // --- Chain of command nodes (M3, owner decision 9-в) ------------------
+        // A node is a completed command BUILDING, so the reporting structure is
+        // built automatically from what the player already constructs -- and
+        // losing a headquarters really does break the chain that depended on it.
+        // Construction yard = HQ (top of the chain); radar and production
+        // buildings act as subordinate nodes; a plain power plant does not
+        // command anyone.
+        if (BD != nullptr)
+        {
+            const bool bIsHq = BD->Building.bIsConstructionYard;
+            const bool bIsSubordinate = BD->Building.bIsRadar || BD->Production.BuildTimeTicks > 0;
+            if (bIsHq || bIsSubordinate)
+            {
+                const TileCoord NodeTile = Map.WorldToTile(Transforms[I].Position);
+                Recon::ChainNode Node;
+                // 1-based ids assigned in ascending entity-slot order: the order
+                // is deterministic, which is what lets the recon system index
+                // nodes directly and hash the result.
+                Node.NodeId = uint16_t(ReconInput.ChainNodes[Core[I].Owner].size() + 1);
+                Node.Owner = Core[I].Owner;
+                Node.TileX = NodeTile.X;
+                Node.TileY = NodeTile.Y;
+                Node.bIsHq = bIsHq;
+                // Blackout is driven by the node's own power state: an unpowered
+                // command post cannot run its radios. This reuses the existing
+                // brownout rule rather than inventing a second failure concept.
+                Node.bBlackout = Players[Core[I].Owner].GetPowerRatioPercent() < 50;
+                ReconInput.ChainNodes[Core[I].Owner].push_back(Node);
+                if (bIsHq && !Node.bBlackout)
+                {
+                    ReconInput.HasHqNode[Core[I].Owner] = true;
+                }
+            }
+        }
     }
     for (uint32_t I = 0; I < HighWaterMark; ++I)
     {
@@ -3129,6 +3148,41 @@ void SimWorld::SystemRecon()
                     D->Armor == ArmorClass::HeavyVehicle || D->Armor == ArmorClass::SiegeVehicle);
             }
             Seen.bRadarContact = bRadarOnly;
+
+            // --- Attach the report to a chain node (M3) -----------------------
+            // The observer is whichever of P's own units/buildings is nearest the
+            // contact; its report enters the chain at the node nearest to IT. We
+            // approximate the observer's position with the contact's own tile,
+            // which is exact for the node choice in every case that matters: a
+            // node far from the contact is also far from whoever saw it. Doing it
+            // this way keeps the pass O(entities x nodes) with a handful of
+            // nodes, instead of O(entities x own units x nodes).
+            {
+                const std::vector<Recon::ChainNode>& Nodes = ReconInput.ChainNodes[P];
+                const int32_t AttachRadius = ReconSettingsRef->Chain.NodeAttachRadiusTiles;
+                int64_t BestDistSq = int64_t(AttachRadius) * int64_t(AttachRadius);
+                uint16_t BestNode = Recon::kNoChainNode;
+                for (const Recon::ChainNode& Node : Nodes)
+                {
+                    if (Node.bBlackout)
+                    {
+                        continue; // a silent node cannot take the report
+                    }
+                    const int64_t Dx = int64_t(Node.TileX) - int64_t(Tile.X);
+                    const int64_t Dy = int64_t(Node.TileY) - int64_t(Tile.Y);
+                    const int64_t DistSq = Dx * Dx + Dy * Dy;
+                    // Strictly-less keeps the FIRST node at equal distance, and
+                    // node order is deterministic, so ties resolve identically on
+                    // every machine.
+                    if (DistSq < BestDistSq)
+                    {
+                        BestDistSq = DistSq;
+                        BestNode = Node.NodeId;
+                    }
+                }
+                Seen.ObserverNodeId = BestNode;
+            }
+
             ReconInput.VisibleToPlayer[P].push_back(Seen);
             if (!bRadarOnly && IsHostile(P, Core[I].Owner))
             {
