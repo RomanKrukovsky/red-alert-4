@@ -97,6 +97,32 @@ CENTRE = MAP_EXTENT * 0.5                    # 6400
 LANDSCAPE_LABEL = "RA4_Archipelago"
 TERRAIN_MATERIAL = "/Game/RA4/Generated/Terrain/M_RA4_Terrain"
 
+# The four-layer paintable material built by RA4LayeredTerrainSetupCommandlet, and
+# the layer info assets that make each surface paintable. Preferred over
+# TERRAIN_MATERIAL when present; the single-texture material remains the fallback so
+# a checkout without the generated assets still produces a usable map.
+LAYERED_MATERIAL = "/Game/RA4/Generated/Terrain/M_RA4_TerrainLayered"
+LAYER_INFO_ROOT = "/Game/RA4/Generated/Terrain/Layers"
+
+# Painted by height and slope, in application order: later entries paint over
+# earlier ones, so the base goes first and the steep-slope rock goes last.
+#
+# Thresholds are relative to SEA_LEVEL and were chosen against the heights this
+# script actually produces (seabed -500, island tops ~870-940):
+#   sand  clings to the waterline so beaches read as beaches
+#   grass covers the island interiors, which is most of the walkable surface
+#   rock  is slope-driven rather than height-driven, because a cliff is defined by
+#         steepness, not altitude
+LAYER_NAMES = ["Dirt", "Sand", "Grass", "Rock"]
+SAND_MAX_HEIGHT = 220.0      # above sea level: the beach band
+GRASS_MIN_HEIGHT = 180.0     # overlaps sand slightly so the join is not a hard line
+ROCK_MIN_SLOPE = 26.0        # degrees; below this a surface reads as ground, not cliff
+
+# Sampling step for the paint pass. 200 uu is one game tile, fine enough for a beach
+# band to look deliberate without making the pass take minutes.
+PAINT_STEP = 200.0
+PAINT_BRUSH = 170.0          # slightly under the step so brushes overlap
+
 # 505x505 verts at 25.6 uu/quad -> 12928 uu, covers MAP_EXTENT.
 LANDSCAPE_SCALE = 25.6
 QUADS_PER_SECTION = 63
@@ -573,6 +599,85 @@ def verify_player_starts():
     return len(problems)
 
 
+def setup_layers():
+    """Assign the layered material and register the four paint layers.
+
+    Falls back to the single-texture TERRAIN_MATERIAL when the generated layered
+    assets are absent, so a checkout that has not run
+    RA4LayeredTerrainSetupCommandlet still yields a textured map rather than a
+    default-grey one. Returns True when layered painting is available.
+    """
+    if unreal.EditorAssetLibrary.does_asset_exist(LAYERED_MATERIAL):
+        LS.set_landscape_material(LANDSCAPE_LABEL, LAYERED_MATERIAL)
+        print("Layered terrain material assigned")
+    else:
+        LS.set_landscape_material(LANDSCAPE_LABEL, TERRAIN_MATERIAL)
+        print("[warn] %s missing; fell back to the single-texture material"
+              % LAYERED_MATERIAL)
+        return False
+
+    added = 0
+    for name in LAYER_NAMES:
+        path = "%s/LI_%s" % (LAYER_INFO_ROOT, name)
+        if not unreal.EditorAssetLibrary.does_asset_exist(path):
+            print("  [warn] layer info missing: %s" % path)
+            continue
+        if LS.add_layer(LANDSCAPE_LABEL, path):
+            added += 1
+    print("Registered %d/%d paint layers" % (added, len(LAYER_NAMES)))
+    return added == len(LAYER_NAMES)
+
+
+def paint_layers():
+    """Paint sand at the waterline, grass inland and rock on steep slopes.
+
+    Height and slope are sampled from the real landscape rather than recomputed
+    from the island table, so the paint follows whatever the noise and erosion
+    passes actually produced instead of an idealised shape.
+    """
+    # Dirt underneath everything: it is what shows through where nothing else
+    # applies, and painting it explicitly avoids relying on PreviewWeight.
+    LS.paint_layer_in_world_rect(
+        LANDSCAPE_LABEL, "Dirt", 0.0, 0.0, MAP_EXTENT, MAP_EXTENT, 1.0
+    )
+
+    counts = {"Sand": 0, "Grass": 0, "Rock": 0}
+    steps = int(MAP_EXTENT / PAINT_STEP)
+    for iy in range(steps):
+        y = (iy + 0.5) * PAINT_STEP
+        for ix in range(steps):
+            x = (ix + 0.5) * PAINT_STEP
+            z = terrain_z(x, y)
+            if z <= SEA_LEVEL:
+                continue          # underwater: no beach, no grass, nothing to paint
+
+            slope = LS.get_slope_at_location(LANDSCAPE_LABEL, x, y)
+
+            # Order matters: grass first, then sand nearer the water, then rock last
+            # so a steep cliff stays rock even if its height says grass.
+            if z >= GRASS_MIN_HEIGHT:
+                LS.paint_layer_at_location(
+                    LANDSCAPE_LABEL, "Grass", x, y, PAINT_BRUSH, 1.0)
+                counts["Grass"] += 1
+            if z <= SAND_MAX_HEIGHT:
+                LS.paint_layer_at_location(
+                    LANDSCAPE_LABEL, "Sand", x, y, PAINT_BRUSH, 1.0)
+                counts["Sand"] += 1
+            if slope >= ROCK_MIN_SLOPE:
+                LS.paint_layer_at_location(
+                    LANDSCAPE_LABEL, "Rock", x, y, PAINT_BRUSH, 1.0)
+                counts["Rock"] += 1
+
+    print("Painted: sand=%d grass=%d rock=%d samples"
+          % (counts["Sand"], counts["Grass"], counts["Rock"]))
+    # A pass that painted nothing means the thresholds no longer match the sculpt.
+    if counts["Grass"] == 0 or counts["Sand"] == 0:
+        raise RuntimeError(
+            "layer painting produced no sand or grass; thresholds do not match "
+            "the sculpted heights"
+        )
+
+
 def save_and_verify():
     """Save the level and prove the bytes actually reached disk.
 
@@ -617,6 +722,10 @@ def main():
     create_landscape()
     sculpt_archipelago()
     assert_above_water()
+    # After sculpting, so the paint can follow the heights and slopes the noise and
+    # erosion passes actually produced rather than an idealised island shape.
+    if setup_layers():
+        paint_layers()
     add_water()
     add_roads()
     add_buildings()
