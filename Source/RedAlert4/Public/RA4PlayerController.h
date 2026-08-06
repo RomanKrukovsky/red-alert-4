@@ -96,6 +96,18 @@ public:
 
     bool IsCheatConsoleOpen() const { return bCheatConsoleOpen; }
 
+#if !UE_BUILD_SHIPPING
+    /**
+     * Debug-only match enders, used by the debug keys and by the cheat console. Public
+     * so the console can reach them: it must not poke SimWorld itself, because these go
+     * through SubmitOrders -> EnqueueCommand, which is the only path that knows a
+     * lockstep match has to route a command via the server instead of applying it here.
+     * Absent entirely from a shipping build.
+     */
+    void DebugForceVictory();
+    void DebugForceDefeat();
+#endif
+
 protected:
     void OnDirectControlTogglePressed();
     void UpdateDirectControl(float DeltaTime);
@@ -174,10 +186,6 @@ private:
      * necessarily predates the viewport having a size.
      */
     void SyncSidebarReservedWidth();
-#if !UE_BUILD_SHIPPING
-    void DebugForceVictory();
-    void DebugForceDefeat();
-#endif
 
     // Shared by both buttons: the scheme decides which one gets here.
     void HandleClick(bool bLeftButton, const FVector2D& EndScreen, bool bWasDrag);
