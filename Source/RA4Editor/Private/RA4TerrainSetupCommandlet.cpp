@@ -139,13 +139,20 @@ int32 URA4TerrainSetupCommandlet::Main(const FString& Params)
         }
 
         // One tiling coordinate drives all three samplers, so the maps stay in
-        // register. 64 repeats across a 12800-unit map is one tile per 200-unit
-        // game tile, which keeps texel density sane at the RTS camera height.
+        // One tiling coordinate drives all three samplers, so the maps stay in
+        // register.
+        //
+        // 10 repeats across a 12800-unit map is one tile per 1280 units, i.e. about
+        // 13 metres. This was 64 (one tile per 200 units, two metres), which sounds
+        // reasonable until you account for the camera: an RTS view sits 30-80 metres
+        // up, so a 2 m tile is under a centimetre on screen and the texture
+        // collapses into per-pixel noise that reads as grime instead of ground.
+        // A ~13 m tile is a legible surface feature at that distance.
         UMaterialExpressionTextureCoordinate* Coords =
             Cast<UMaterialExpressionTextureCoordinate>(UMaterialEditingLibrary::CreateMaterialExpression(
                 Material, UMaterialExpressionTextureCoordinate::StaticClass(), -700, 0));
-        Coords->UTiling = 64.0f;
-        Coords->VTiling = 64.0f;
+        Coords->UTiling = 10.0f;
+        Coords->VTiling = 10.0f;
 
         auto AddSampler = [&](UTexture2D* Texture, int32 PosY, bool bNormal) -> UMaterialExpressionTextureSample*
         {
