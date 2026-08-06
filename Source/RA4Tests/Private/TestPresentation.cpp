@@ -1677,3 +1677,76 @@ RA4_TEST(MinimapBackground, ALateConsumerCanAskForTheGridToBeResent)
     F.Step(1);
     RA4_EXPECT(F.Snapshot.Radar.Background.Terrain.empty());
 }
+
+
+// A radar must reveal contacts, not cartography. Radar coverage marked cells as Visible, and
+// the terrain sampler gated on the shroud, so building one revealed the coastline, every cliff
+// and every ore patch across 24 tiles of map nobody had scouted. Ore is the single most
+// valuable thing to find on a minimap, so this handed out the best scouting result in the game
+// for the price of one building.
+//
+// The earlier "not a maphack" test used the vision-only BackgroundFixture, which never builds a
+// radar, so it could not see this path at all. Found by an independent reviewer.
+RA4_TEST(MinimapBackground, RadarRevealsContactsButNotTerrain)
+{
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    MatchSetup Setup = MakeTestSetup(5150);
+    Setup.Map.Resize(64, 64, Tile_GroundPassable);
+    // A water column and an ore tile inside radar reach but far outside every building's sight.
+    for (int32_t Y = 0; Y < 64; ++Y) { Setup.Map.SetTileFlag(30, Y, Tile_Water, true); }
+    Setup.Map.SetTileFlag(28, 12, Tile_Resource, true);
+
+    SimWorld World;
+    World.Initialize(&Content, Setup);
+    World.SpawnBuilding(Ids::AllConYard, 1, TileCoord(58, 58), true);
+    World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    World.SpawnBuilding(Ids::SovPower, 0, TileCoord(14, 10), true);
+    const EntityId Radar = World.SpawnBuilding(Ids::SovRadar, 0, TileCoord(18, 10), true);
+    RA4_REQUIRE(Radar.IsValid());
+    // An enemy inside radar reach, so the sweep demonstrably works and this test is not just
+    // asserting that nothing happened.
+    World.SpawnUnit(Ids::AllRifleman, 1, Vec2::FromInts(34 * 200, 10 * 200));
+
+    HudSnapshotBuilder Builder;
+    Builder.Initialize(0);
+    Builder.SetMinimapRefreshIntervalTicks(1);
+    HudSnapshot Snapshot;
+    MinimapBackground Delivered;
+    for (int32_t I = 0; I < 20; ++I)
+    {
+        World.Tick(nullptr);
+        Builder.Build(World, {}, Snapshot);
+        if (Snapshot.Radar.bBackgroundChanged) { Delivered = Snapshot.Radar.Background; }
+        World.ClearEvents();
+    }
+
+    // The radar really is working: an enemy no eyes can see is on the panel.
+    int32_t EnemyMarkers = 0;
+    for (const RadarMarker& M : Snapshot.Radar.Markers)
+    {
+        if (M.Owner != 0 && M.Kind != EntityKind::ResourceNode) { ++EnemyMarkers; }
+    }
+    RA4_REQUIRE(EnemyMarkers > 0);
+
+    // And yet none of the ground it swept has been mapped.
+    int32_t Water = 0, Cliff = 0, Ore = 0;
+    for (uint8_t V : Delivered.Terrain)
+    {
+        if (MinimapTerrain(V) == MinimapTerrain::Water) { ++Water; }
+        if (MinimapTerrain(V) == MinimapTerrain::Cliff) { ++Cliff; }
+        if (MinimapTerrain(V) == MinimapTerrain::Ore)   { ++Ore; }
+    }
+    RA4_EXPECT_EQ(Water, 0);
+    RA4_EXPECT_EQ(Cliff, 0);
+    RA4_EXPECT_EQ(Ore, 0);
+
+    // The swept cells are still lit, because a live contact must not sit on a dimmed cell --
+    // the fix separates "how brightly is this lit" from "has anyone seen the ground here".
+    int32_t VisibleCells = 0;
+    for (uint8_t V : Delivered.Shroud)
+    {
+        if (MinimapShroud(V) == MinimapShroud::Visible) { ++VisibleCells; }
+    }
+    RA4_EXPECT(VisibleCells > 0);
+}

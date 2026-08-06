@@ -541,13 +541,12 @@ MinimapTerrain TerrainForTileFlags(uint8_t Flags)
     return MinimapTerrain::Ground;
 }
 
+// How brightly a cell is lit. A radar blip counts, so a live contact does not sit on a dimmed
+// cell -- the player is genuinely being told something is there right now.
 MinimapShroud ShroudForVisibility(VisibilityState Visibility)
 {
     switch (Visibility)
     {
-        // A radar blip tells the player something is moving there, not what the ground
-        // looks like, so it lights the cell exactly as eyes-on does. Treating it as merely
-        // remembered would leave a live contact sitting on a dimmed cell.
         case VisibilityState::CurrentlyVisible:
         case VisibilityState::RadarDetected:
             return MinimapShroud::Visible;
@@ -557,6 +556,22 @@ MinimapShroud ShroudForVisibility(VisibilityState Visibility)
             break;
     }
     return MinimapShroud::NeverSeen;
+}
+
+// Whether the player has learned what the *ground* looks like here. Deliberately not the same
+// question as the shroud: a radar blip says something is moving there, not that anyone has seen
+// the terrain under it.
+//
+// Answering with the shroud was a maphack. A radar swept 24 tiles of unexplored map and the
+// background dutifully reported every water tile, every cliff and -- worst -- every ore patch
+// inside it. Ore is the one thing on the minimap a player actively hunts for, so this handed
+// out the single most valuable piece of scouting information for the price of a radar. Found by
+// an independent reviewer; my own comment three lines up had already said a blip is not
+// knowledge of the ground, and the code did not honour it.
+bool HasLearnedTerrain(VisibilityState Visibility)
+{
+    return Visibility == VisibilityState::CurrentlyVisible ||
+           Visibility == VisibilityState::PreviouslySeen;
 }
 
 } // namespace
@@ -682,19 +697,20 @@ void HudSnapshotBuilder::BuildMinimapBackground(const SimWorld& World, RadarStat
                     // The brightest state any covered tile is in. A cell straddling the
                     // edge of vision reads as lit, which matches what the player sees on
                     // the terrain itself.
-                    const MinimapShroud Shroud = Fog != nullptr
-                        ? ShroudForVisibility(Fog->GetVisibility(int32_t(LocalPlayer), TileX, TileY))
-                        : MinimapShroud::Visible;   // no fog grid: nothing is hidden
+                    const VisibilityState Visibility = Fog != nullptr
+                        ? Fog->GetVisibility(int32_t(LocalPlayer), TileX, TileY)
+                        : VisibilityState::CurrentlyVisible;   // no fog grid: nothing is hidden
+                    const MinimapShroud Shroud = ShroudForVisibility(Visibility);
                     if (Shroud > BestShroud)
                     {
                         BestShroud = Shroud;
                     }
 
-                    // Terrain is only recorded for ground the player has at least explored.
-                    // Sampling it regardless would leak the shape of the coastline and
-                    // every ore patch on an unexplored map, which is exactly the maphack
+                    // Terrain is only recorded for ground somebody has actually looked at.
+                    // Gating on the shroud instead let a radar sweep reveal the coastline and
+                    // every ore patch across 24 tiles of unexplored map -- exactly the maphack
                     // the fog exists to prevent.
-                    if (Shroud == MinimapShroud::NeverSeen)
+                    if (!HasLearnedTerrain(Visibility))
                     {
                         continue;
                     }
