@@ -452,6 +452,14 @@ bool ContentDatabase::Validate(std::vector<std::string>& OutErrors) const
         {
             OutErrors.push_back(E.Name + ": negative cost");
         }
+        // ADR-0013: Tier decides whether a power deficit pauses this item outright, and
+        // TechTier::Count is a perfectly castable uint8_t. An out-of-range value
+        // satisfies `>= TechTier::T2` and silently pauses the item at Severe with no
+        // diagnostic anywhere, so it is caught here rather than in a match.
+        if (E.Production.Tier >= TechTier::Count)
+        {
+            OutErrors.push_back(E.Name + ": tech tier out of range");
+        }
         if (E.Weapon.IsValid() && FindWeapon(E.Weapon) == nullptr)
         {
             OutErrors.push_back(E.Name + ": references unknown weapon " + std::to_string(E.Weapon.Value));
@@ -462,9 +470,20 @@ bool ContentDatabase::Validate(std::vector<std::string>& OutErrors) const
         }
         for (const ContentId& Prereq : E.Production.Prerequisites)
         {
-            if (FindEntity(Prereq) == nullptr)
+            const EntityDef* PrereqDef = FindEntity(Prereq);
+            if (PrereqDef == nullptr)
             {
                 OutErrors.push_back(E.Name + ": unknown prerequisite " + std::to_string(Prereq.Value));
+                continue;
+            }
+            // ADR-0013: an item cannot sit at a lower tech tier than something it is
+            // gated behind. Such an item would be exempt from the high-tech power pause
+            // while only being reachable *through* high tech -- a contradiction that is
+            // invisible in play and shows up as a balance oddity nobody can trace.
+            if (E.Production.Tier < PrereqDef->Production.Tier)
+            {
+                OutErrors.push_back(E.Name + ": tech tier is below its prerequisite " +
+                                    PrereqDef->Name);
             }
         }
         for (const ContentId& Producer : E.Production.ProducedBy)

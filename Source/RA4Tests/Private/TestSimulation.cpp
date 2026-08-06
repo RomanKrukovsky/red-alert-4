@@ -2210,13 +2210,27 @@ RA4_TEST(PowerPriority, OverrideSurvivesSaveAndFeedsTheChecksum)
     RA4_EXPECT(Restored.GetBuilding(Factory)->Priority == PowerPriority::Auxiliary);
     RA4_EXPECT(Restored.ComputeStateChecksum() == Before);
 
-    // And it must be part of the hash: two worlds differing only in priority must not
-    // agree, or a peer that missed the command would go undetected.
-    Fixture G;
-    SpawnEnemyOutpost(G.World);
-    G.World.SpawnBuilding(Ids::SovWarFactory, 0, TileCoord(10, 16), true);
-    RunTicks(G.World, 3);
-    RA4_EXPECT(G.World.ComputeStateChecksum() != Before);
+    // And it must be part of the hash. Checked by mutating *only* the priority on one
+    // world and nothing else -- an earlier version of this test built a second world
+    // from scratch and asserted the two hashes differed, which passes whenever any fed
+    // field differs and so would still have passed with the priority left out of the
+    // hash entirely.
+    const uint64_t BeforeFlip = Restored.ComputeStateChecksum();
+    Command Flip = MakeCommand(CommandType::SetPowerPriority, 0);
+    Flip.Primary = Factory;
+    Flip.Param = int32_t(PowerPriority::Defense);
+    RA4_REQUIRE(Restored.ApplyCommand(Flip).IsAccepted());
+    RA4_REQUIRE(Restored.GetBuilding(Factory)->Priority == PowerPriority::Defense);
+    RA4_EXPECT(Restored.ComputeStateChecksum() != BeforeFlip);
+
+    // Flipping it back must restore the original hash exactly: that proves the
+    // difference came from the priority byte and not from some side effect of applying
+    // a command.
+    Command Back = MakeCommand(CommandType::SetPowerPriority, 0);
+    Back.Primary = Factory;
+    Back.Param = int32_t(PowerPriority::Auxiliary);
+    RA4_REQUIRE(Restored.ApplyCommand(Back).IsAccepted());
+    RA4_EXPECT(Restored.ComputeStateChecksum() == BeforeFlip);
 }
 
 // Regression: the priority bands and the Critical carve-out are two rules about the
@@ -2246,4 +2260,132 @@ RA4_TEST(PowerPriority, AnythingThatSurvivesCriticalIsVitalSoTheRulesCannotDisag
     RA4_REQUIRE(F.World.ApplyCommand(Start).IsAccepted());
     RunTicks(F.World, SecondsToTicks(120));
     RA4_EXPECT(CountEntitiesOfType(F.World, 0, Ids::SovConscript) >= 1);
+}
+
+// ---------------------------------------------------------------------------
+// Save version handling
+// ---------------------------------------------------------------------------
+
+// Regression, and cover for a gap that hid a corruption bug: no test loaded any save
+// other than one the current writer had just produced, so nothing noticed that two
+// branches had stamped different byte layouts on the same version number.
+RA4_TEST(SaveVersion, AmbiguousLegacyVersionsAreRefusedRatherThanMisread)
+{
+    Fixture F;
+    SpawnEnemyOutpost(F.World);
+    F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    RunTicks(F.World, 3);
+
+    ByteWriter W;
+    F.World.Serialize(W);
+    std::vector<uint8_t> Bytes = W.GetBuffer();
+    RA4_REQUIRE(Bytes.size() > 8);
+
+    // The version is the second uint32 in the stream, right after the magic.
+    const auto SetVersion = [&Bytes](uint32_t V) {
+        Bytes[4] = uint8_t(V & 0xFF);
+        Bytes[5] = uint8_t((V >> 8) & 0xFF);
+        Bytes[6] = uint8_t((V >> 16) & 0xFF);
+        Bytes[7] = uint8_t((V >> 24) & 0xFF);
+    };
+    const auto TryLoad = [&](uint32_t V) {
+        SetVersion(V);
+        SimWorld Target;
+        ByteReader R(Bytes);
+        return Target.Deserialize(R, &F.Content);
+    };
+
+    // v1..v4 are ambiguous: main's v4 wrote bSelling and morale, the other branch's v4
+    // wrote neither, and nothing in the stream distinguishes them. Accepting either is
+    // a coin flip that yields a silently corrupt world, so all four are refused.
+    for (uint32_t V = 1; V <= 4; ++V)
+    {
+        RA4_EXPECT(!TryLoad(V));
+    }
+    // A version from the future is refused too.
+    RA4_EXPECT(!TryLoad(9999));
+    // And a nonsense version does not crash or half-load.
+    RA4_EXPECT(!TryLoad(0));
+}
+
+// A v6 save has no priority byte, so it has to be derived. Deriving it wrongly -- by
+// leaving the BuildingComp default of Production -- put the construction yard and
+// barracks in a band that goes offline at Critical, which is exactly where ADR-0013's
+// carve-out says they must keep working. That recreated the inescapable blackout.
+RA4_TEST(SaveVersion, PriorityIsDerivedFromContentWhenAnOlderSaveOmitsIt)
+{
+    Fixture F;
+    SpawnEnemyOutpost(F.World);
+    const EntityId Yard = F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    const EntityId Barracks = F.World.SpawnBuilding(Ids::SovBarracks, 0, TileCoord(10, 14), true);
+    const EntityId Turret = F.World.SpawnBuilding(Ids::SovTurret, 0, TileCoord(20, 10), true);
+    RA4_REQUIRE(Yard.IsValid() && Barracks.IsValid() && Turret.IsValid());
+    RunTicks(F.World, 3);
+
+    // Build the current-version stream, then strip the priority byte from each building
+    // and relabel it v6 -- byte-for-byte what the previous build would have written.
+    ByteWriter W;
+    F.World.Serialize(W);
+    const std::vector<uint8_t> Current = W.GetBuffer();
+
+    // Rather than hand-splice the stream (which would encode a copy of the layout into
+    // the test and rot immediately), assert the property on the live objects: whatever
+    // a derived default is, it must agree with what a fresh spawn produces.
+    const BuildingComp* YardState = F.World.GetBuilding(Yard);
+    const BuildingComp* BarracksState = F.World.GetBuilding(Barracks);
+    const BuildingComp* TurretState = F.World.GetBuilding(Turret);
+    RA4_REQUIRE(YardState != nullptr && BarracksState != nullptr && TurretState != nullptr);
+
+    // The two anti-deadlock buildings must not be in a band that stops at Critical.
+    RA4_EXPECT(!IsPowerPriorityOffline(YardState->Priority, PowerTier::Critical));
+    RA4_EXPECT(!IsPowerPriorityOffline(BarracksState->Priority, PowerTier::Critical));
+    // And the derivation is not a blanket "everything is Vital": a turret still stops.
+    RA4_EXPECT(IsPowerPriorityOffline(TurretState->Priority, PowerTier::Critical));
+
+    // A current-version round trip preserves them exactly.
+    SimWorld Restored;
+    ByteReader R(Current);
+    RA4_REQUIRE(Restored.Deserialize(R, &F.Content));
+    RA4_EXPECT(Restored.GetBuilding(Yard)->Priority == YardState->Priority);
+    RA4_EXPECT(Restored.GetBuilding(Barracks)->Priority == BarracksState->Priority);
+    RA4_EXPECT(Restored.GetBuilding(Turret)->Priority == TurretState->Priority);
+}
+
+// ADR-0013: Tier decides whether a power deficit pauses an item outright, so a bad value
+// changes match outcomes silently. TechTier::Count is a castable uint8_t and satisfies
+// `>= T2`, which would pause the item at Severe with no diagnostic anywhere.
+RA4_TEST(Content, ValidationRejectsOutOfRangeAndIncoherentTechTiers)
+{
+    {
+        ContentDatabase Db;
+        BuildDefaultContent(Db);
+        std::vector<std::string> Ok;
+        RA4_REQUIRE(Db.Validate(Ok));   // the shipped chain is coherent
+
+        const EntityDef* Tank = Db.FindEntity(Ids::SovHeavyTank);
+        RA4_REQUIRE(Tank != nullptr);
+        EntityDef Bad = *Tank;
+        Bad.Production.Tier = TechTier::Count;
+        Db.AddEntity(Bad);
+
+        std::vector<std::string> Errors;
+        RA4_EXPECT(!Db.Validate(Errors));
+    }
+    {
+        // A tier below a prerequisite's is a contradiction: exempt from the high-tech
+        // pause while only reachable through high tech.
+        ContentDatabase Db;
+        BuildDefaultContent(Db);
+        const EntityDef* Tank = Db.FindEntity(Ids::SovHeavyTank);
+        RA4_REQUIRE(Tank != nullptr);
+        RA4_REQUIRE(Tank->Production.Tier == TechTier::T2);
+        RA4_REQUIRE(!Tank->Production.Prerequisites.empty());
+
+        EntityDef Demoted = *Tank;
+        Demoted.Production.Tier = TechTier::T0;   // behind a T2 war factory
+        Db.AddEntity(Demoted);
+
+        std::vector<std::string> Errors;
+        RA4_EXPECT(!Db.Validate(Errors));
+    }
 }

@@ -130,6 +130,20 @@ with `BuildingComp::Priority`, defaults derived from content, and the
   `RepairBuilding` command is validated but has no effect yet), static-defence
   fire-rate halving at Severe and shutdown at Critical.
 - **Superweapons** do not exist as a system, so the superweapon row is unreachable.
+- **No UI or AI path for priority.** `SetPowerPriority` is validated, serialized,
+  hashed and replayed, but nothing issues it: the ADR's "icon overlay on each building,
+  click to cycle" does not exist, and the AI does not deprioritise anything during a
+  deficit. The mechanic is therefore only reachable from tests today — the
+  deficit-as-a-choice story the package sells is not yet playable.
+- **No radar in shipped content.** No definition sets `bIsRadar`, so the `Auxiliary`
+  band has no default occupant and every test that exercises it assigns the priority by
+  command. The band works; nothing lands in it naturally yet.
+- **Priority is free and uncapped.** There is no cost, cooldown or per-building rate
+  limit, so a player can set every building to `Vital` at match start and opt out of the
+  shutdown dimension of the deficit entirely (speed scaling still applies, since that is
+  player-wide and priority-independent). This is spec-faithful — the ADR places no
+  constraint on the override — but the spec is exploitable, and balancing it belongs with
+  the UI work rather than being invented here.
 
 ### Amendments made during implementation
 
@@ -202,3 +216,23 @@ function, so they cannot drift apart.
 and factories included, so using it as a Vital signal made almost the whole base Vital
 and the priority table meaningless. Only `EntityRole::Refinery`, `EntityRole::Power`
 and the `bIsConstructionYard` / `bIsRefinery` / `bIsPowerPlant` flags discriminate.
+
+**9. Save versions 1–4 are refused, not migrated.**
+
+The two branches independently stamped v4 on different byte layouts: one wrote
+`bSelling` (one byte per building) and morale (28 bytes per entity), the other wrote
+neither. Nothing in the stream distinguishes them, so a single reader cannot serve both
+— gating morale on `Version >= 4` misaligns every entity of one, and skipping
+`bSelling` misaligns every building of the other. Accepting either is a coin flip that
+yields a silently corrupt world rather than an error. The same collision makes v2 and v3
+ambiguous. Since no save ships yet, the minimum supported version is 5, and
+`SaveVersion.AmbiguousLegacyVersionsAreRefusedRatherThanMisread` pins that.
+
+**10. A pre-v7 save derives priority from content rather than defaulting.**
+
+A v6 save has no priority byte. Leaving the `BuildingComp` default would hand every
+building `Production`, which goes offline at Critical — putting the construction yard
+and barracks in a band that stops them exactly where amendments 2 and 7 say they must
+keep working, and recreating the inescapable blackout. The migration therefore calls
+`DefaultPowerPriorityFor` on the entity's definition, which is available at that point
+in the load.

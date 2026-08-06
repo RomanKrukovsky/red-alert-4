@@ -130,6 +130,12 @@ void SimWorld::Reset()
     Projectiles.reserve(kMaxEntities);
     Orders.reserve(kMaxEntities);
     DirectControls.reserve(kMaxEntities);
+    // Morales was missed when it was added, even though AllocateEntity pushes to it
+    // alongside the others. SystemCombat holds a Morales[I] reference across
+    // MoraleApplyAllyDeath, so a growth reallocation there is a use-after-free -- and
+    // because allocators differ between platforms the resulting garbage differs per
+    // peer, making it a desync rather than a clean crash.
+    Morales.reserve(kMaxEntities);
 
     HighWaterMark = 0;
     CurrentTick = 0;
@@ -511,6 +517,13 @@ PowerPriority SimWorld::DefaultPowerPriorityFor(const EntityDef& Def) const
     // contradict each other: a Production-priority barracks would be forced offline by
     // its band at exactly the tier the carve-out says it should still work. Asking the
     // same function both rules use keeps them from drifting apart.
+    //
+    // The constraint this places on content: a building becomes Vital the moment it can
+    // produce anything of Infantry category. Giving a war factory an infantry-class
+    // product -- battle armour, a cyborg -- would silently promote it out of the
+    // Critical shutdown. That is a content decision, not a code one, and
+    // PowerPriority.DefaultsComeFromWhatABuildingIsNotFromItsName pins the shipped
+    // answer so such an edit fails a test rather than passing unnoticed.
     if (ProducerRunsAtCriticalPower(Def))
     {
         return PowerPriority::Vital;
@@ -3869,9 +3882,7 @@ uint64_t SimWorld::ComputeStateChecksum() const
 
 constexpr uint32_t kSimSaveMagic = 0x52413453u; // "RA4S"
 // The two branches kept claiming the same version numbers for different format
-// changes, so each merge has to allocate a fresh one for the union. Two saves both
-// stamped "4" but written by different branches are not interchangeable, and a version
-// number cannot express that.
+// changes, so each merge has to allocate a fresh one for the union.
 //
 //   v2: DirectControlComp (main) and ProductionItem flow-payment fields (ADR-0012)
 //   v3: recon/intel layer, IntelRng + IntelSystem (main); BuildingComp::bSelling
@@ -3879,24 +3890,34 @@ constexpr uint32_t kSimSaveMagic = 0x52413453u; // "RA4S"
 //       taken between the sell command and the death sweep reloaded a building flagged
 //       selling forever and then silently forfeited its destruction refund; the intent
 //       now lives in the non-serialized PendingSales list)
-//   v4: MoraleComp (main, M2); separately the union of the two v2/v3 lines above
+//   v4: MoraleComp (main, M2) -- AND, on the other branch, the union of the v2/v3 lines
 //   v5: PlayerState::LastPowerTier (ADR-0013 edge-triggered deficit warning)
 //   v6: the union of all of the above
 //   v7: BuildingComp::Priority (ADR-0013 per-building power priority override)
 //
-// Older saves are still readable; missing fields are reconstructed on load and
-// retired fields are read and discarded to keep the byte stream aligned.
+// v1 through v4 are NOT loadable, and that is deliberate rather than laziness. The two
+// branches independently stamped "4" on genuinely different byte layouts: main's v4
+// wrote bSelling (1 byte per building) and morale (28 bytes per entity), while this
+// branch's v4 wrote neither. A single reader cannot serve both -- gating morale on
+// `Version >= 4` misaligns every entity of a branch-v4 save, and skipping bSelling
+// misaligns every building of a main-v4 save. There is no discriminator in the stream
+// to tell them apart, so accepting either is a coin flip that produces a silently
+// corrupt world rather than an error. The same collision makes v2 and v3 ambiguous
+// (bSelling and the payment fields were both claimed there), and v1 predates all of it.
+//
+// Nothing ships a save yet -- no .ra4save exists in the repo and every test round-trips
+// through the current writer -- so refusing the ambiguous range costs nothing real and
+// buys an honest failure. v5+ is unambiguous: those versions only ever existed on one
+// branch, and from v6 the history is linear again.
+//
+// From v5 onward, missing fields are reconstructed on load and retired fields are read
+// and discarded to keep the byte stream aligned.
 constexpr uint32_t kSimSaveVersion = 7;
-constexpr uint32_t kSimSaveVersionFlowPayment = 4;
-constexpr uint32_t kSimSaveVersionNoSellingFlag = 4;
 constexpr uint32_t kSimSaveVersionPowerTier = 5;
 constexpr uint32_t kSimSaveVersionPowerPriority = 7;
-// Both landed on main before this merge, so their gates are minimums rather than
-// equalities: named so the read sites do not carry a bare number that nobody can tie
-// back to a format change.
-constexpr uint32_t kSimSaveVersionIntel = 3;
-constexpr uint32_t kSimSaveVersionMorale = 4;
-constexpr uint32_t kSimSaveVersionMinSupported = 1;
+// The oldest version whose byte layout is unambiguous. See the note above: v4 and below
+// were stamped on two incompatible formats by two branches.
+constexpr uint32_t kSimSaveVersionMinSupported = 5;
 
 void SimWorld::Serialize(ByteWriter& W) const
 {
@@ -4072,11 +4093,10 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
         return false;
     }
     const uint32_t Version = R.ReadUInt32();
-    // A range rather than an equality list: every version from the minimum supported
-    // up to the current one is loadable, with each field-level change gated on its own
-    // named constant below. Pre-intel saves simply carry no belief payload; loading one
-    // into a session with intel enabled is refused further down, because a mid-match
-    // belief state cannot be invented from nothing.
+    // A range, with each remaining field-level change gated on its own named constant
+    // below. The lower bound is not 1: v4 and older were stamped by two branches on
+    // incompatible byte layouts, and no reader can serve both, so they are refused
+    // rather than loaded into a silently corrupt world. See the note by the constants.
     if (Version < kSimSaveVersionMinSupported || Version > kSimSaveVersion)
     {
         return false;
@@ -4091,12 +4111,11 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
     const uint64_t RState = R.ReadUInt64();
     const uint64_t RInc = R.ReadUInt64();
     Rng.SetState(RState, RInc);
-    if (Version >= kSimSaveVersionIntel)
-    {
-        const uint64_t ReconState = R.ReadUInt64();
-        const uint64_t ReconInc = R.ReadUInt64();
-        ReconRng.SetState(ReconState, ReconInc);
-    }
+    // Present in every loadable version (the recon layer landed in v3 and the minimum
+    // supported is v5), so no gate is needed.
+    const uint64_t ReconState = R.ReadUInt64();
+    const uint64_t ReconInc = R.ReadUInt64();
+    ReconRng.SetState(ReconState, ReconInc);
 
     Map.Name = R.ReadString();
     Map.Width = R.ReadInt32();
@@ -4206,21 +4225,24 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
         B.RallyPoint.X.Raw = R.ReadInt64();
         B.RallyPoint.Y.Raw = R.ReadInt64();
         B.bHasRallyPoint = R.ReadBool();
-        if (Version < kSimSaveVersionNoSellingFlag)
-        {
-            // Older saves carry the retired bSelling flag. Read it to keep the byte
-            // stream aligned and discard it: a persisted "selling" flag is exactly
-            // the corruption v3 exists to remove.
-            (void)R.ReadBool();
-        }
         if (Version >= kSimSaveVersionPowerPriority)
         {
             B.Priority = static_cast<PowerPriority>(R.ReadUInt8());
         }
-        // Older saves have no priority byte. Reset() default-constructed the component
-        // and the entity's definition is not yet known here, so the default from
-        // BuildingComp stands -- Production, the middle band, which is the safest guess
-        // for a building whose original intent was never recorded.
+        else
+        {
+            // Older saves have no priority byte, so it has to be derived -- and it must
+            // be derived from the definition, not left at the BuildingComp default.
+            // That default is Production, which goes offline at Critical: a v6 save
+            // would have loaded with its construction yard and barracks in a band that
+            // stops them exactly where ADR-0013's carve-out says they must keep
+            // working, recreating the inescapable blackout this package exists to fix.
+            // Core[I].Def was read earlier in this same loop, so the definition is
+            // available here.
+            const EntityDef* Def = Content ? Content->FindEntity(Core[I].Def) : nullptr;
+            B.Priority = Def != nullptr ? DefaultPowerPriorityFor(*Def)
+                                        : PowerPriority::Production;
+        }
         const uint32_t QueueCount = R.ReadUInt32();
         B.Queue.resize(QueueCount);
         for (uint32_t Q = 0; Q < QueueCount; ++Q)
@@ -4231,29 +4253,9 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
             Item.TotalTicks = R.ReadInt32();
             Item.PaidCredits = R.ReadInt32();
             Item.bPaused = R.ReadBool();
-            if (Version >= kSimSaveVersionFlowPayment)
-            {
-                Item.State = static_cast<FlowPaymentState>(R.ReadUInt8());
-                Item.TotalCost = R.ReadInt32();
-                Item.Priority = R.ReadInt32();
-            }
-            else
-            {
-                // v1 migration. Under the old model an item was charged in full at
-                // queue time, so whatever it had paid was its whole cost -- and it
-                // was therefore already past funding. Mapping it to Paying (or
-                // ManuallyPaused) preserves the player's investment; reading the
-                // price out of content instead would silently re-bill an item the
-                // player already owns.
-                Item.TotalCost = Item.PaidCredits;
-                Item.Priority = 0;
-                Item.State = Item.bPaused ? FlowPaymentState::ManuallyPaused
-                                          : FlowPaymentState::Paying;
-                if (Item.TotalTicks > 0 && Item.ProgressTicks >= Item.TotalTicks * kProgressScale)
-                {
-                    Item.State = FlowPaymentState::Completed;
-                }
-            }
+            Item.State = static_cast<FlowPaymentState>(R.ReadUInt8());
+            Item.TotalCost = R.ReadInt32();
+            Item.Priority = R.ReadInt32();
         }
 
         HarvesterComp& Hv = Harvesters[I];
@@ -4290,20 +4292,11 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
         Dc.CooldownTicksSecondary = R.ReadInt32();
         Dc.bOpticsZoomed = (R.ReadUInt8() != 0);
         Recon::MoraleComp& Mo = Morales[I];
-        if (Version >= kSimSaveVersionMorale)
         {
             Mo.Morale = Fixed::FromRaw(R.ReadInt64());
             Mo.Fatigue = Fixed::FromRaw(R.ReadInt64());
             Mo.Suppression = Fixed::FromRaw(R.ReadInt64());
             Mo.TicksUnderFire = R.ReadInt32();
-        }
-        else
-        {
-            // Morale arrived in v4. An older save has no such bytes, and reading them
-            // anyway would consume 28 bytes of the *next* entity and misalign the whole
-            // remaining stream. Reset() already default-constructed it, which is the
-            // right starting state for a unit that never had morale recorded.
-            Mo = Recon::MoraleComp();
         }
     }
 
@@ -4324,18 +4317,13 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
     // was initialized with before reading the belief payload. Enabled-ness must
     // match the save or ReconSystem::Deserialize refuses (see its comment).
     ReconLayer.Initialize(ReconSettingsRef, Map.Width, Map.Height);
-    if (Version >= kSimSaveVersionIntel)
     {
+        // Present in every loadable version, so no gate and no pre-recon fallback:
+        // a save old enough to lack a belief payload is already refused up front.
         if (!ReconLayer.Deserialize(R))
         {
             return false;
         }
-    }
-    else if (ReconLayer.IsEnabled())
-    {
-        // A pre-intel save has no belief state to restore; refusing beats
-        // silently starting the HQ map empty mid-match.
-        return false;
     }
 
     return !R.HasError();
