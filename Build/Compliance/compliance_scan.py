@@ -56,10 +56,24 @@ FIRST_PARTY_PREFIXES = (
 )
 
 
+# Directories that are copies of the repository or build output, not content to
+# audit. Without this the scan walks .claude/worktrees/ and reports the same pack
+# once per worktree -- three worktrees turned two real findings into nine lines.
+# Duplicate noise is how a scanner gets ignored, so it is filtered at the source
+# rather than deduplicated afterwards: the point is not to look at copies at all.
+SKIP_DIR_NAMES = {
+    ".git", ".claude", "node_modules", "__pycache__",
+    "Intermediate", "Binaries", "DerivedDataCache", "Saved",
+}
+
+
 def find_third_party_roots(root):
     """Every immediate subdirectory of a ThirdParty/ folder is a pack to account for."""
     packs = []
     for dirpath, dirnames, _filenames in os.walk(root):
+        # Prune before descending, so a worktree's whole tree is skipped rather
+        # than walked and discarded.
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIR_NAMES]
         if os.path.basename(dirpath) != "ThirdParty":
             continue
         for name in sorted(dirnames):
@@ -70,7 +84,8 @@ def find_third_party_roots(root):
 
 
 def pack_has_assets(root, pack_rel):
-    for dirpath, _dirnames, filenames in os.walk(os.path.join(root, pack_rel)):
+    for dirpath, dirnames, filenames in os.walk(os.path.join(root, pack_rel)):
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIR_NAMES]
         for f in filenames:
             if os.path.splitext(f)[1].lower() in ASSET_EXTENSIONS:
                 return True
@@ -78,7 +93,16 @@ def pack_has_assets(root, pack_rel):
 
 
 def scan_provenance(root):
-    """Third-party packs containing assets must be named in the legal inventory."""
+    """Third-party packs containing assets must be named in the legal inventory.
+
+    Blind spot worth stating: this walks the FILESYSTEM, so it only sees packs that
+    are actually present. CityPark (4.1 GB) is gitignored, so a CI checkout has no
+    copy of it and this scan cannot report it -- yet it is one of the packs with no
+    recorded provenance, and RA4_Skirmish_Production depends on its art. Packs
+    outside version control therefore need the manual audit in
+    Docs/Production/THIRD_PARTY_PACK_AUDIT.md; this check cannot substitute for it
+    (RISK-20 and RISK-21 together).
+    """
     violations = []
     legal_path = os.path.join(root, LEGAL_DOC)
     if not os.path.isfile(legal_path):
