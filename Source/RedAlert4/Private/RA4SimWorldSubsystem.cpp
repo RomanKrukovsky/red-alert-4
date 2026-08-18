@@ -12,7 +12,6 @@
 #include "RA4Content/ContentDatabase.h"
 #include "CampaignDatabase.h"
 #include "MissionRuntime.h"
-#include "RA4Presentation/FogVisibilityTexture.h"
 #include "RA4Presentation/HudSnapshot.h"
 #include "RA4Core/Command.h"
 #include "RA4Core/SimConfig.h"
@@ -20,13 +19,7 @@
 #include "RA4AudioSubsystem.h"
 #include "RA4SimCoords.h"
 #include "RA4UIDataProviderSubsystem.h"
-#include "Engine/Texture2D.h"
 #include "Engine/World.h"
-#include "Camera/CameraComponent.h"
-#include "Materials/MaterialInstanceDynamic.h"
-#include "RA4CameraPawn.h"
-#include "UObject/ConstructorHelpers.h"
-#include "RenderUtils.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "EngineUtils.h"
@@ -442,12 +435,6 @@ void URA4SimWorldSubsystem::Tick(float DeltaTime)
 
     // Sync presentation once per render frame
     SyncPresentation();
-
-    // Fog rendering (ADR-0028). After SyncPresentation deliberately: actor
-    // visibility gating (V-A) and the fog texture describe the same grid, and
-    // updating the picture after the actors keeps them from disagreeing by one
-    // frame at a fog boundary.
-    UpdateFogVisibilityTexture();
 }
 
 TStatId URA4SimWorldSubsystem::GetStatId() const
@@ -846,288 +833,6 @@ float URA4SimWorldSubsystem::SampleGroundHeight(double WorldX, double WorldY)
     return Height.IsSet() ? Height.GetValue() : float(RA4Coords::GroundZ);
 }
 
-
-// --- Fog of war rendering (ADR-0028) ----------------------------------------
-
-void URA4SimWorldSubsystem::UpdateFogVisibilityTexture()
-{
-    if (SimWorld == nullptr)
-    {
-        return;
-    }
-    const RA4::FFogOfWarGrid* Fog = SimWorld->GetFogGrid();
-    if (Fog == nullptr)
-    {
-        // A match configured without fog draws no fog. Not an error -- the same
-        // rule the gameplay gates use (IsEntityVisibleTo returns true with no
-        // grid), kept consistent so the picture never contradicts the rules.
-        return;
-    }
-
-    const int32 Width = Fog->GetWidth();
-    const int32 Height = Fog->GetHeight();
-    if (Width <= 0 || Height <= 0)
-    {
-        return;
-    }
-
-    // (Re)create on first use or if the map size changed under us.
-    if (FogVisibilityTexture == nullptr || FogTextureWidth != Width || FogTextureHeight != Height)
-    {
-        // G8 is one byte per tile: a 64x64 map is 4 KB. Per-tile, not per-world-unit,
-        // is what keeps this negligible -- see ADR-0028 section 2.
-        FogVisibilityTexture = UTexture2D::CreateTransient(Width, Height, PF_G8);
-        if (FogVisibilityTexture == nullptr)
-        {
-            return;
-        }
-        // Bilinear is load-bearing, not cosmetic: hardware interpolation between
-        // texels is what turns a grid of squares into a soft fog boundary, so the
-        // material treats the sample as a continuous ramp (ADR-0028 section 2).
-        FogVisibilityTexture->Filter = TF_Bilinear;
-        // Clamp, so sampling just outside the map does not wrap the far edge's
-        // vision onto the near edge.
-        FogVisibilityTexture->AddressX = TA_Clamp;
-        FogVisibilityTexture->AddressY = TA_Clamp;
-        FogVisibilityTexture->SRGB = false;   // this is data, not colour
-        FogVisibilityTexture->CompressionSettings = TC_Grayscale;
-        FogVisibilityTexture->NeverStream = true;
-        FogVisibilityTexture->UpdateResource();
-
-        FogTextureWidth = Width;
-        FogTextureHeight = Height;
-        FogTexelScratch.clear();
-        // Rebinding is required: the material instance holds the old texture.
-        bFogMaterialBound = false;
-    }
-
-    // Local seat. Hardcoded 0 like every other seat reference in this subsystem;
-    // the debt is recorded on inventory row V-A and must be fixed in one pass,
-    // not one caller at a time.
-    constexpr RA4::PlayerId LocalPlayer = 0;
-
-    const bool bNeedsFullBuild = FogTexelScratch.size() != size_t(Width) * size_t(Height);
-    if (bNeedsFullBuild)
-    {
-        if (!RA4::BuildFogTexelBuffer(*Fog, LocalPlayer, FogTexelScratch))
-        {
-            return;
-        }
-    }
-    else
-    {
-        // Dirty regions are an optimisation over the full rebuild; the two are
-        // pinned to agree by FogOfWar.DirtyRegionUploadAgreesWithFullRebuild.
-        // An empty list after the first frame means nothing changed, so there is
-        // nothing to upload either.
-        const std::vector<FIntRect>& Dirty = Fog->GetDirtyRegions(LocalPlayer);
-        if (Dirty.empty())
-        {
-            PublishFogParametersToTerrain();
-            PublishFogParametersToCamera();
-            return;
-        }
-        for (const FIntRect& R : Dirty)
-        {
-            RA4::BlitFogTexelRegion(*Fog, LocalPlayer, R.Min.X, R.Min.Y, R.Max.X, R.Max.Y,
-                                    FogTexelScratch);
-        }
-    }
-
-    // Upload. Mip 0 only; the texture is tiny and NeverStream.
-    if (FTexturePlatformData* PlatformData = FogVisibilityTexture->GetPlatformData())
-    {
-        if (PlatformData->Mips.Num() > 0)
-        {
-            FTexture2DMipMap& Mip = PlatformData->Mips[0];
-            if (void* Dest = Mip.BulkData.Lock(LOCK_READ_WRITE))
-            {
-                FMemory::Memcpy(Dest, FogTexelScratch.data(), FogTexelScratch.size());
-            }
-            Mip.BulkData.Unlock();
-            FogVisibilityTexture->UpdateResource();
-        }
-    }
-
-    PublishFogParametersToTerrain();
-    PublishFogParametersToCamera();
-}
-
-
-namespace
-{
-// Floor from ADR-0028 section 4: fog strength may be reduced for readability but
-// never to where unexplored and currently-visible ground are indistinguishable.
-// 0.35 still leaves an unmistakable difference; below that the signal stops
-// carrying the rule.
-constexpr float kMinFogStrength = 0.35f;
-constexpr const TCHAR* kFogPostProcessPath =
-    TEXT("/Game/RA4/Generated/Terrain/M_RA4_FogPostProcess.M_RA4_FogPostProcess");
-}
-
-void URA4SimWorldSubsystem::SetFogStrength(float Strength)
-{
-    // Clamped, not validated-and-rejected: a caller passing 0 wants "as little as
-    // allowed", and refusing the call outright would leave fog at whatever it was
-    // with no feedback. The clamp is the contract.
-    FogStrength = FMath::Clamp(Strength, kMinFogStrength, 1.0f);
-    if (TerrainFogMaterial != nullptr)
-    {
-        TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogStrength"), FogStrength);
-    }
-    if (CameraFogMaterial != nullptr)
-    {
-        CameraFogMaterial->SetScalarParameterValue(TEXT("RA4FogStrength"), FogStrength);
-    }
-}
-
-void URA4SimWorldSubsystem::SetHighContrastFog(bool bEnabled)
-{
-    bHighContrastFog = bEnabled;
-    const float Value = bEnabled ? 1.0f : 0.0f;
-    if (TerrainFogMaterial != nullptr)
-    {
-        TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogHighContrast"), Value);
-    }
-    if (CameraFogMaterial != nullptr)
-    {
-        CameraFogMaterial->SetScalarParameterValue(TEXT("RA4FogHighContrast"), Value);
-    }
-}
-
-void URA4SimWorldSubsystem::PublishFogParametersToCamera()
-{
-    if (FogVisibilityTexture == nullptr)
-    {
-        return;
-    }
-
-    UWorld* World = GetWorld();
-    if (World == nullptr)
-    {
-        return;
-    }
-
-    // The camera pawn is spawned by the game mode, so on the first frames of a
-    // match there may not be one yet. Returning without setting bCameraFogBound
-    // means this retries next frame rather than giving up for the match.
-    // First camera pawn only: a level has one. Written as an if rather than a
-    // for-with-break because the compiler rightly rejects a loop that never
-    // increments (-Wunreachable-code-loop-increment, warnings are errors here).
-    TActorIterator<ARA4CameraPawn> CameraIt(World);
-    ARA4CameraPawn* CameraPawn = CameraIt ? *CameraIt : nullptr;
-    if (CameraPawn == nullptr)
-    {
-        return;
-    }
-    UCameraComponent* CameraComp = CameraPawn->FindComponentByClass<UCameraComponent>();
-    if (CameraComp == nullptr)
-    {
-        return;
-    }
-
-    if (CameraFogMaterial == nullptr)
-    {
-        UMaterialInterface* Base =
-            LoadObject<UMaterialInterface>(nullptr, kFogPostProcessPath);
-        if (Base == nullptr)
-        {
-            // The generated asset is missing: the commandlet has not been run in
-            // this branch yet. Log once and leave the landscape-only fog in place
-            // rather than crashing -- a missing generated asset must not break a
-            // match (the "missing decorative asset" invariant), but it IS a real
-            // gap, so it is an error and not a silent return.
-            if (!bReportedPresentationState)
-            {
-                UE_LOG(LogTemp, Error,
-                       TEXT("RA4 fog: %s not found -- props and water will not be fogged. ")
-                       TEXT("Run the RA4LayeredTerrainSetup commandlet to generate it."),
-                       kFogPostProcessPath);
-            }
-            bCameraFogBound = true;   // do not spam the log every frame
-            return;
-        }
-        CameraFogMaterial = UMaterialInstanceDynamic::Create(Base, this);
-        if (CameraFogMaterial == nullptr)
-        {
-            return;
-        }
-        // Weight 1: the fog is not an optional grade, it is the rule made visible.
-        CameraComp->PostProcessSettings.WeightedBlendables.Array.Empty();
-        CameraComp->PostProcessSettings.AddBlendable(CameraFogMaterial, 1.0f);
-        CameraComp->PostProcessBlendWeight = 1.0f;
-    }
-
-    if (bCameraFogBound)
-    {
-        return;
-    }
-
-    CameraFogMaterial->SetTextureParameterValue(TEXT("RA4FogVisibility"), FogVisibilityTexture);
-    const double MapWidthUU = double(FogTextureWidth) * double(RA4::kTileSizeUnits);
-    const double MapHeightUU = double(FogTextureHeight) * double(RA4::kTileSizeUnits);
-    CameraFogMaterial->SetScalarParameterValue(TEXT("RA4FogWorldWidth"), float(MapWidthUU));
-    CameraFogMaterial->SetScalarParameterValue(TEXT("RA4FogWorldHeight"), float(MapHeightUU));
-    CameraFogMaterial->SetScalarParameterValue(TEXT("RA4FogStrength"), FogStrength);
-    CameraFogMaterial->SetScalarParameterValue(TEXT("RA4FogHighContrast"),
-                                               bHighContrastFog ? 1.0f : 0.0f);
-    bCameraFogBound = true;
-}
-
-void URA4SimWorldSubsystem::PublishFogParametersToTerrain()
-{
-    if (bFogMaterialBound || FogVisibilityTexture == nullptr)
-    {
-        return;
-    }
-
-    // Reuse the same cached landscape SampleGroundHeight found; do not start a
-    // second search with its own staleness rules.
-    SampleGroundHeight(0.0, 0.0);
-    ALandscapeProxy* Landscape = CachedLandscape.Get();
-    if (Landscape == nullptr)
-    {
-        // No landscape in this level (art lab, UI showcase): nothing to tint.
-        // Leave unbound so a level that gains one later still binds.
-        return;
-    }
-
-    if (TerrainFogMaterial == nullptr)
-    {
-        UMaterialInterface* Base = Landscape->GetLandscapeMaterial();
-        if (Base == nullptr)
-        {
-            return;
-        }
-        TerrainFogMaterial = UMaterialInstanceDynamic::Create(Base, this);
-        if (TerrainFogMaterial == nullptr)
-        {
-            return;
-        }
-        Landscape->LandscapeMaterial = TerrainFogMaterial;
-    }
-
-    // Parameter names are the contract with the generated terrain material
-    // (RA4LayeredTerrainSetupCommandlet). If the material lacks them the sets are
-    // silently ignored by Unreal, which is why the commandlet must add the nodes
-    // -- hand-wiring them in the editor would be reverted by its next run.
-    TerrainFogMaterial->SetTextureParameterValue(TEXT("RA4FogVisibility"), FogVisibilityTexture);
-    // World extent in Unreal units, so the material can map a world position to a
-    // fog UV without knowing the tile size. RA4Coords::ToUnreal is 1:1 between sim
-    // units and Unreal units (it passes the fixed value straight through), so tile
-    // count times tile size IS the Unreal extent -- no scale factor, and none
-    // invented: there is no SimToUnrealScale constant to apply.
-    const double MapWidthUU = double(FogTextureWidth) * double(RA4::kTileSizeUnits);
-    const double MapHeightUU = double(FogTextureHeight) * double(RA4::kTileSizeUnits);
-    TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogWorldWidth"), float(MapWidthUU));
-    TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogWorldHeight"), float(MapHeightUU));
-    TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogStrength"), FogStrength);
-    TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogHighContrast"),
-                                                bHighContrastFog ? 1.0f : 0.0f);
-
-    bFogMaterialBound = true;
-}
-
 void URA4SimWorldSubsystem::SyncPresentation()
 {
     if (!SimWorld) return;
@@ -1292,49 +997,6 @@ void URA4SimWorldSubsystem::SyncPresentation()
                         FLinearColor(0.75f, 0.70f, 0.20f)};  // neutral / resources
                     const uint8 Owner = Cores[Index].Owner;
                     Actor->SetTeamColor(PlayerColours[Owner < 2 ? Owner : 2]);
-
-                    // Ground-hug or fly, decided from content data (MovementLayer)
-                    // rather than guessed from the mesh or the entity kind: a
-                    // hovercraft and a helicopter are both "vehicles" and belong at
-                    // different heights. Altitude is presentation-only -- the
-                    // simulation is 2D and must stay that way.
-                    bool bAirborne = false;
-                    if (Content != nullptr)
-                    {
-                        if (const RA4::EntityDef* Def = Content->FindEntity(Cores[Index].Def))
-                        {
-                            bAirborne = Def->Kind == RA4::EntityKind::Unit &&
-                                        Def->Unit.Layer == RA4::MovementLayer::Air;
-                        }
-                    }
-                    // 600 uu ~ 6 m: high enough to read as flying over the tallest
-                    // blockout, low enough that the unit stays legible at RTS zoom.
-                    Actor->SetAirborne(bAirborne, bAirborne ? 600.0f : 0.0f);
-
-                    // Turret setup. A unit "has a turret" when the simulation
-                    // traverses one for it (TurretTurnRatePerSecond > 0, the same
-                    // criterion the combat code uses -- one source of truth, so the
-                    // visual cannot claim a turret the sim does not simulate).
-                    if (Content != nullptr)
-                    {
-                        if (const RA4::EntityDef* Def = Content->FindEntity(Cores[Index].Def))
-                        {
-                            // The turret MESH is assigned by the actor's own art
-                            // resolution (ApplyUnitArt), which already owns mesh
-                            // loading. Here we only record whether the SIMULATION
-                            // traverses a turret for this unit -- same criterion the
-                            // combat code uses (TurretTurnRatePerSecond > 0), so the
-                            // visual can never claim a turret the sim does not have.
-                            const bool bSimHasTurret = Def->Kind == RA4::EntityKind::Unit &&
-                                                       Def->Unit.TurretTurnRatePerSecond > 0;
-                            // With no separate turret mesh -- true of every current
-                            // blockout -- the hull rotates to the gun angle. A model
-                            // pointing one way while the shot leaves another is a lie
-                            // about game state; this is the honest fallback until art
-                            // ships split hull/turret meshes.
-                            Actor->SetAimsWithHull(bSimHasTurret && !Actor->HasTurret());
-                        }
-                    }
                 }
                 else
                 {
@@ -1370,20 +1032,6 @@ void URA4SimWorldSubsystem::SyncPresentation()
                 // 255 here rotated every unit by roughly a factor of sixteen.
                 const float UnrealRotZ = static_cast<float>(RA4Coords::FacingToYawDegrees(SimTransform.Facing));
                 Actor->UpdateFromSimulation(UnrealPos, UnrealRotZ, bNewActor);
-
-                // Turret aim, straight from the simulation. TurretFacing has been
-                // maintained by SimWorld all along -- traversing toward the target
-                // at the unit's own turn rate -- and nothing ever rendered it.
-                Actor->SetTurretYaw(
-                    static_cast<float>(RA4Coords::FacingToYawDegrees(SimTransform.TurretFacing)),
-                    bNewActor);
-
-                // Construction progress every sync, not just at spawn: the building
-                // rises continuously as it is built, and the progress bar needs the
-                // live value. Asks the simulation rather than recomputing, so the
-                // internal progress scale stays in one place.
-                Actor->SetConstructionProgress(
-                    SimWorld->GetConstructionProgressPerMille(SimWorld->MakeId(Index)));
 
                 // One-off dump of the first few actors. "The match runs but the
                 // screen is empty" is only answerable with the actual mesh, scale

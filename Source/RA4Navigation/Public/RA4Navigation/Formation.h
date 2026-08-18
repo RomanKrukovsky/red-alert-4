@@ -52,4 +52,43 @@ struct FormationAssignment
 // and by the formation tests.
 RA4NAVIGATION_API Vec2 RotateOffset(const Vec2& Offset, int32_t Facing);
 
+// Stable content keys for the seven built-in shapes. Spelled as strings and hashed
+// through MakeContentId like every other content handle, so a mod inserting its own
+// formation cannot renumber these and invalidate a stored replay.
+constexpr ContentId kFormationColumn = MakeContentId("formation.column");
+constexpr ContentId kFormationLine = MakeContentId("formation.line");
+constexpr ContentId kFormationWedge = MakeContentId("formation.wedge");
+constexpr ContentId kFormationSpread = MakeContentId("formation.spread");
+constexpr ContentId kFormationShieldScreen = MakeContentId("formation.shield_screen");
+constexpr ContentId kFormationCircular = MakeContentId("formation.circular");
+constexpr ContentId kFormationTransport = MakeContentId("formation.transport");
+
+// Maps an EFormationShape onto the content key above. The enum is the authoring-side
+// spelling; the ContentId is what the simulation stores and checksums.
+RA4NAVIGATION_API ContentId FormationShapeToContentId(EFormationShape Shape);
+
+// Looks up a built-in formation. Returns nullptr for an unknown id rather than a
+// default shape: silently substituting Line would hide the content error and still
+// pile every member onto one point, which is exactly the failure being designed out.
+//
+// The returned pointer is to immutable static storage with permanent lifetime, so
+// callers may cache it across ticks. Offsets are in leader-facing space: +X is the
+// leader's forward axis and +Y is 90 degrees clockwise of it (this sim's Y-down
+// convention), matching Vec2::FromAngle. Feed each offset through RotateOffset with
+// the leader's facing to get a world delta.
+//
+// Slot 0 is the LEADER's own slot and is always the zero offset -- the leader is a
+// member of its own formation, so Members[0] is the leader and slot indices line up
+// with FormationAssignment::Members without an off-by-one at the call site.
+//
+// Every offset within a shape is distinct (see the static_asserts in Formation.cpp).
+// Two slots resolving to one point would order two units to the identical
+// Destination, so they would shove each other forever and neither would arrive.
+RA4NAVIGATION_API const FormationDef* FindFormationDef(ContentId Id);
+
+// Number of slots a shape provides, i.e. the largest group it can seat including the
+// leader. 0 for an unknown id, so a caller can distinguish "no such formation" from
+// "formation with no slots" without a second lookup.
+RA4NAVIGATION_API int32_t FormationSlotCount(ContentId Id);
+
 } // namespace RA4

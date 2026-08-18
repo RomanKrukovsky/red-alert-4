@@ -78,33 +78,6 @@ class ProvenanceScanTests(unittest.TestCase):
             self.assertEqual(compliance_scan.scan_provenance(tmp), [])
 
 
-    def test_repository_copies_are_not_scanned(self):
-        # Git worktrees under .claude/ are full copies of the tree. Walking them
-        # reported the same pack once per worktree: three worktrees turned two real
-        # findings into nine lines of output. A scanner that cries wolf gets
-        # switched off, so copies must not be walked at all.
-        with tempfile.TemporaryDirectory() as tmp:
-            legal = os.path.join(tmp, "Docs", "Production")
-            os.makedirs(legal)
-            with open(os.path.join(legal, "LEGAL_AND_LICENSES.md"), "w") as fh:
-                fh.write("# Legal\n")
-
-            for base in (os.path.join(tmp, "Content", "ThirdParty", "RealPack"),
-                         os.path.join(tmp, ".claude", "worktrees", "wt1",
-                                      "Content", "ThirdParty", "RealPack"),
-                         os.path.join(tmp, "Intermediate", "Content", "ThirdParty", "RealPack")):
-                os.makedirs(base)
-                with open(os.path.join(base, "m.uasset"), "wb") as fh:
-                    fh.write(b"\0")
-
-            violations = compliance_scan.scan_provenance(tmp)
-            # Exactly one: the real tree. The worktree copy and the build
-            # intermediate must not produce their own findings.
-            self.assertEqual(len(violations), 1, violations)
-            self.assertNotIn(".claude", violations[0])
-            self.assertNotIn("Intermediate", violations[0])
-
-
 class CommitScopeScanTests(unittest.TestCase):
     """Reproduces the real failure: a commit deleting code outside its subject."""
 

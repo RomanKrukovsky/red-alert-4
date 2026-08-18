@@ -6,6 +6,7 @@
 
 #include "RA4Recon/DistortionPipeline.h"
 #include "FogOfWarGrid.h"
+#include "RA4Navigation/Formation.h"
 #include "RA4Navigation/MNavRouter.h"
 #include "RA4Navigation/ReservationGrid.h"
 
@@ -55,6 +56,55 @@ Fixed DockRadiusFor(const EntityDef* Def)
         Radius += Fixed::FromInt((SpanTiles * kTileSizeUnits) / 2);
     }
     return Radius;
+}
+
+// Widens an arrive radius by the size of the group heading for the same point
+// (SimTypes.h:172: "Scaled by group size ... so a hundred units do not pile onto one
+// point"). SpawnUnit set ArriveRadius once from CollisionRadius and nothing ever
+// scaled it.
+//
+// Growth is sub-linear: the radius bounds an AREA, so widening by the square root of
+// the crowd keeps roughly a constant amount of room per unit. Linear growth would let
+// a 200-unit order declare arrival most of a screen from the target. The result is
+// clamped so a very large group cannot swallow a whole sector.
+//
+// Declared up here because it is used by BOTH SystemOrders and SystemMovement, and
+// that sharing is load-bearing rather than tidiness: SystemOrders decides when a Move
+// order is POPPED and SystemMovement decides when the unit STOPS. If the two used
+// different radii, a unit would stop moving at the wide radius while its order was
+// never popped at the narrow one, and SystemOrders -- which runs immediately before
+// SystemMovement and re-sets bHasDestination from the queue every tick -- would keep
+// it moving forever. That is a permanent stall with a full order queue.
+Fixed ScaleArriveRadiusForGroup(Fixed BaseRadius, int64_t GroupSize)
+{
+    if (GroupSize <= 1)
+    {
+        return BaseRadius;
+    }
+    const Fixed Scaled = BaseRadius * FxSqrt(Fixed::FromInt(GroupSize));
+    return FxMin(Scaled, Fixed::FromInt(MapDescription::kTileSizeUnitsLocal * 3));
+}
+
+// Packs a tile into a sortable key. The bias keeps negative coordinates from
+// colliding with positive ones.
+uint64_t PackDestTileKey(const TileCoord& Tile)
+{
+    return (uint64_t(uint32_t(Tile.X + (1 << 20))) << 32) | uint64_t(uint32_t(Tile.Y + (1 << 20)));
+}
+
+// Counts living units whose destination tile matches DestTile, from a pre-sorted key
+// list. Returns at least 1 so a caller never scales by zero.
+//
+// A sorted vector plus binary search rather than a hash map: sorting integers is
+// deterministic, whereas a hash container would bring bucket layout and iteration
+// order -- both implementation-defined -- into authoritative simulation state.
+int64_t GroupSizeAtDestTile(const std::vector<uint64_t>& SortedKeys, const TileCoord& DestTile)
+{
+    const uint64_t Key = PackDestTileKey(DestTile);
+    const auto Lo = std::lower_bound(SortedKeys.begin(), SortedKeys.end(), Key);
+    const auto Hi = std::upper_bound(SortedKeys.begin(), SortedKeys.end(), Key);
+    const int64_t Count = int64_t(Hi - Lo);
+    return Count > 0 ? Count : 1;
 }
 } // namespace
 
@@ -249,27 +299,6 @@ const PlayerState& SimWorld::GetPlayer(PlayerId Id) const
 {
     static const PlayerState Empty;
     return Id < kMaxPlayers ? Players[Id] : Empty;
-}
-
-int32_t SimWorld::GetConstructionProgressPerMille(EntityId Id) const
-{
-    const BuildingComp* B = GetBuilding(Id);
-    if (B == nullptr || B->State != ConstructionState::UnderConstruction)
-    {
-        // Units, resource nodes and finished buildings are all "fully built" as far
-        // as presentation is concerned; only an in-progress building is partial.
-        return 1000;
-    }
-    const int64_t Total = int64_t(B->ConstructionTotalTicks) * kProgressScale;
-    if (Total <= 0)
-    {
-        // A zero build time means it completes on the tick it is placed. Reporting
-        // 1000 keeps presentation from dividing by zero and from flashing an empty
-        // progress bar for one frame.
-        return 1000;
-    }
-    const int64_t Clamped = std::min<int64_t>(std::max<int64_t>(B->ConstructionProgressTicks, 0), Total);
-    return int32_t((Clamped * 1000) / Total);
 }
 
 // ---------------------------------------------------------------------------
@@ -2154,6 +2183,32 @@ void SimWorld::SystemHarvesters()
 
 void SimWorld::SystemOrders()
 {
+    // Group-size tally for the arrive radius, built once per tick. SystemMovement
+    // builds the same tally from the same state and both call
+    // ScaleArriveRadiusForGroup, so the radius that pops an order here is identical
+    // to the radius that stops the unit there. They must not diverge: if this system
+    // demanded a tighter radius than SystemMovement, the unit would stop moving while
+    // its Move order stayed queued, and the code below would re-set bHasDestination
+    // every tick forever.
+    //
+    // Rebuilt here rather than shared through a member so this change stays inside
+    // SimWorld.cpp. The two passes read the same Movements array in the same tick
+    // with no intervening writes to bHasDestination or Destination -- SystemOrders is
+    // the first of the pair -- so both see the same set. Note the ordering subtlety:
+    // this tally is taken BEFORE this system updates destinations, so it reflects
+    // last tick's assignments. That is deliberate and harmless: group size is used
+    // only to widen a tolerance, and a one-tick-stale crowd count changes the radius
+    // by at most one unit's worth of contribution.
+    std::vector<uint64_t> DestTileKeys;
+    DestTileKeys.reserve(Core.size());
+    for (uint32_t I = 0; I < Core.size(); ++I)
+    {
+        if (!Core[I].bAlive || Core[I].Kind != EntityKind::Unit) continue;
+        if (!Movements[I].bHasDestination) continue;
+        DestTileKeys.push_back(PackDestTileKey(Map.WorldToTile(Movements[I].Destination)));
+    }
+    std::sort(DestTileKeys.begin(), DestTileKeys.end());
+
     for (uint32_t I = 0; I < Core.size(); ++I)
     {
         if (!Core[I].bAlive || Core[I].Kind != EntityKind::Unit)
@@ -2178,15 +2233,64 @@ void SimWorld::SystemOrders()
                 M.Destination = O.Location;
                 M.bHasDestination = true;
                 const Fixed D2 = DistanceSquared(Transforms[I].Position, O.Location);
-                if (D2 <= M.ArriveRadius * M.ArriveRadius)
+                const Fixed OrderArrive = ScaleArriveRadiusForGroup(
+                    M.ArriveRadius, GroupSizeAtDestTile(DestTileKeys, Map.WorldToTile(O.Location)));
+                if (D2 <= OrderArrive * OrderArrive)
                 {
                     M.bHasDestination = false;
                     M.CurrentSpeed = Fixed::Zero();
                     Q.PopFront();
                 }
-                // Give up rather than grind forever against an obstacle. The
-                // navigation milestone replaces this with a repath request.
-                else if (M.BlockedTicks > kTicksPerSecond * 3)
+                // Give up rather than grind forever against an obstacle -- but only
+                // for a unit that is genuinely stuck, never for one that is merely
+                // waiting its turn in a crowd.
+                //
+                // WHY THIS IS NOT A PLAIN BlockedTicks THRESHOLD ANY MORE. The
+                // reservation tie-break at ReservationGrid.cpp:50 is a static
+                // priority: a tile is only displaced by a *strictly lower* entity
+                // slot. In a dense crowd converging on one area, a high-index unit
+                // therefore loses every contest to every lower-index neighbour and
+                // takes the `BlockedTicks += 1` branch in SystemMovement step 7b for
+                // as long as the jam lasts. That is ordinary, self-clearing
+                // congestion: the units ahead do move on, and the jam drains.
+                //
+                // Because SystemOrders runs immediately BEFORE SystemMovement
+                // (SimWorld.cpp:3628-3629), the old unconditional test here fired
+                // first and cancelled the Move order at the same threshold that
+                // SystemMovement uses to trigger a repath -- so the order was
+                // destroyed on precisely the tick the navigation layer was about to
+                // retry. Measured on 200 units sent to one rally point: 73 of them
+                // had their order cancelled here between ticks 60 and 63 while still
+                // 17-63 tiles away, having never been blocked by any terrain. Only
+                // 127 of 200 arrived. Nothing recovers from this, because popping the
+                // order is permanent while the congestion was temporary.
+                //
+                // The condition now requires BOTH of:
+                //   (a) the unit has been blocked for the threshold, AND
+                //   (b) the navigation layer has already tried to repath it and still
+                //       cannot make progress -- i.e. this is a routing failure, not a
+                //       queueing delay.
+                // SystemMovement sets LastRepathTick only on the paths that clear a
+                // dead macro path (no route found, or blocked long enough to force a
+                // rebuild). A unit losing reservation contests never sets it, so
+                // congestion alone can no longer pop an order.
+                //
+                // The extra grace window is deliberate and is what makes (b) a real
+                // second opinion rather than a restatement of (a): after a repath is
+                // requested the unit is given another full threshold to act on the
+                // new route before its order is abandoned. A unit that repaths and
+                // then moves resets BlockedTicks and never reaches this branch at all.
+                //
+                // Deterministic: integer tick arithmetic only, and both operands are
+                // authoritative serialized state (BlockedTicks, LastRepathTick), so a
+                // save/load round-trip resumes with the identical give-up decision.
+                // TickIndex is unsigned, so the elapsed-time comparison is written as
+                // an addition rather than a subtraction to avoid wrapping when
+                // LastRepathTick is still its initial 0.
+                else if (M.BlockedTicks > kTicksPerSecond * 3 &&
+                         M.LastRepathTick > 0 &&
+                         CurrentTick >= M.LastRepathTick +
+                             static_cast<TickIndex>(kRepathBlockedTickThreshold))
                 {
                     M.BlockedTicks = 0;
                     M.bHasDestination = false;
@@ -2210,7 +2314,9 @@ void SimWorld::SystemOrders()
                 {
                     M.Destination = O.Location;
                     M.bHasDestination = true;
-                    if (DistanceSquared(Transforms[I].Position, O.Location) <= M.ArriveRadius * M.ArriveRadius)
+                    const Fixed AmArrive = ScaleArriveRadiusForGroup(
+                        M.ArriveRadius, GroupSizeAtDestTile(DestTileKeys, Map.WorldToTile(O.Location)));
+                    if (DistanceSquared(Transforms[I].Position, O.Location) <= AmArrive * AmArrive)
                     {
                         M.bHasDestination = false;
                         Q.PopFront();
@@ -2274,6 +2380,72 @@ void SimWorld::SystemOrders()
         }
     }
 }
+
+namespace
+{
+// Sentinel for "this formation has no living leader this tick".
+constexpr uint32_t kNoFormationLeader = 0xFFFFFFFFu;
+
+// Soft separation (see SystemMovement). Two units closer than this many world units
+// push apart. The tile is 200 units and the default CollisionRadius is 20, so this
+// keeps roughly three bodies per tile edge rather than forcing one unit per tile --
+// formations and choke points still work.
+constexpr int64_t kSeparationRadiusUnits = 56;
+
+// The separation nudge is deliberately smaller than the deadband below, so a pair
+// that has just been pushed apart cannot be pushed back on the following tick. That
+// asymmetry is what makes the fixed point stable instead of a two-tick oscillation.
+constexpr int64_t kSeparationStepUnits = 6;
+
+// Overlap below this is left alone. Without a deadband a pair sitting exactly at the
+// separation radius would jitter across it forever, reading as "arrived" to a
+// distance check while never actually settling.
+constexpr int64_t kSeparationDeadbandUnits = 10;
+
+// Returns the entity slot leading Formation, or kNoFormationLeader.
+//
+// A file-local free function rather than a SimWorld method: adding a member would
+// mean declaring it in SimWorld.h, and this change is confined to SimWorld.cpp.
+//
+// The leader is not stored anywhere. MovementComp carries only FormationId and
+// FormationSlot, and there is no leader handle on the component or on SimWorld. The
+// leader is therefore identified by its slot, and BOTH documented spellings of
+// "leader" are accepted: SimTypes.h:183 defines -1 as "leader or unassigned", while
+// Formation.h:81-83 defines slot 0 as the leader's own zero-offset slot. Accepting
+// only one of the two would leave a formation assembled under the other convention
+// permanently leaderless, and every member would then silently fall back to its own
+// destination -- the formation would look like it simply did not work.
+//
+// Where several units qualify -- a malformed assignment, or a leader killed and its
+// formation id reused -- the lowest entity slot wins. That is the same deterministic
+// tie-break ReservationGrid uses, so every peer selects the same leader.
+//
+// COST: linear in the entity count, per member, per tick. That is acceptable only
+// because formations are rare and small relative to kMaxEntities; if formations
+// become common this wants a leader handle on the component or a per-tick index,
+// which is a SimWorld.h change and therefore out of scope here.
+uint32_t FindFormationLeader(const std::vector<EntityCore>& Core,
+                            const std::vector<MovementComp>& Movements,
+                            ContentId Formation)
+{
+    if (!Formation.IsValid())
+    {
+        return kNoFormationLeader;
+    }
+    for (uint32_t I = 0; I < uint32_t(Core.size()); ++I)
+    {
+        if (!Core[I].bAlive || Core[I].Kind != EntityKind::Unit)
+        {
+            continue;
+        }
+        if (Movements[I].FormationId == Formation && Movements[I].FormationSlot <= 0)
+        {
+            return I;
+        }
+    }
+    return kNoFormationLeader;
+}
+} // namespace
 
 void SimWorld::SystemMovement()
 {
@@ -2343,6 +2515,39 @@ void SimWorld::SystemMovement()
         }
     };
 
+    // --- Group-size arrive radius (SimTypes.h:172) --------------------------
+    //
+    // SimTypes.h documents ArriveRadius as "Scaled by group size in the navigation
+    // milestone so a hundred units do not pile onto one point", but SpawnUnit set it
+    // once from CollisionRadius and nothing ever scaled it. This tallies how many
+    // living units share each destination tile this tick, so the radius used below can
+    // widen with the crowd.
+    //
+    // Keyed on the destination TILE, not the exact Vec2. Two units sent to one spot by
+    // a single order carry bit-identical destinations, but a unit whose destination was
+    // derived (a harvester's node approach, a rally point) lands a few units off and
+    // would hash to a different key while still contending for the same ground. The
+    // tile is the granularity the reservation grid actually fights over, so it is the
+    // granularity that matters here.
+    //
+    // Recomputed every tick rather than cached: group membership changes as units
+    // arrive and orders are reissued, and a stale tally would leave a lone straggler
+    // using a radius sized for the crowd it used to belong to.
+    //
+    // This is a MINOR contributor, as briefed. The dominant loss is reservation
+    // priority starvation, addressed by the separation pass at the end of this
+    // function. A wider arrival tolerance only stops the last few units of a genuine
+    // pile-up from grinding; it cannot unfreeze a starved unit.
+    std::vector<uint64_t> DestTileKeys;
+    DestTileKeys.reserve(Core.size());
+    for (uint32_t I = 0; I < Core.size(); ++I)
+    {
+        if (!Core[I].bAlive || Core[I].Kind != EntityKind::Unit) continue;
+        if (!Movements[I].bHasDestination) continue;
+        DestTileKeys.push_back(PackDestTileKey(Map.WorldToTile(Movements[I].Destination)));
+    }
+    std::sort(DestTileKeys.begin(), DestTileKeys.end());
+
     for (uint32_t I = 0; I < Core.size(); ++I)
     {
         if (!Core[I].bAlive || Core[I].Kind != EntityKind::Unit) continue;
@@ -2350,6 +2555,55 @@ void SimWorld::SystemMovement()
         TransformComp& T = Transforms[I];
         const EntityDef* D = Content->FindEntity(Core[I].Def);
         if (D == nullptr) continue;
+
+        // --- Formation slot derivation -------------------------------------
+        // Members do not own a destination: theirs is LeaderPos + rotated slot
+        // offset, recomputed every tick (the contract stated at Formation.h:2-7).
+        //
+        // This runs HERE, at the top of the movement pass, and not in SystemOrders,
+        // because SystemOrders executes immediately before this system and writes
+        // `M.Destination = O.Location` unconditionally from the order queue. Setting
+        // a slot destination any earlier in the tick would simply be overwritten;
+        // setting it in SystemOrders itself would fight the order queue every tick,
+        // with whichever wrote last winning. Overriding after that write is the only
+        // placement that yields one unambiguous destination per tick.
+        //
+        // It is idempotent: the slot point is a pure function of the leader's
+        // position, the leader's facing and the slot offset. Nothing here reads or
+        // mutates the order queue, so running it twice in a tick, or after any
+        // other system, produces the same value. It does not depend on the relative
+        // order of SystemOrders and SystemMovement for *correctness* of the value --
+        // only for which of the two writes survives, which is the point.
+        //
+        // TWO CONVENTIONS FOR "LEADER", reconciled here. SimTypes.h:183 documents
+        // `FormationSlot == -1` as "leader or unassigned", while Formation.h:81-83
+        // documents slot 0 as the leader's own slot, always the zero offset, so that
+        // slot indices line up with FormationAssignment::Members without an
+        // off-by-one. Both are therefore leaders and neither may be steered as a
+        // follower. Slot 0 is excluded explicitly rather than relied upon to be
+        // harmless: its offset is (0,0), so treating it as a follower would order the
+        // leader to its own position every tick, zeroing the destination its own order
+        // had set and pinning the whole formation in place. Requiring slot >= 1 is
+        // what keeps the leader on its macro path.
+        bool bIsFormationMember = false;
+        if (M.FormationSlot >= 1 && M.FormationId.IsValid())
+        {
+            const uint32_t LeaderSlot = FindFormationLeader(Core, Movements, M.FormationId);
+            const FormationDef* const FDef = FindFormationDef(M.FormationId);
+            // Every one of these is a fallback to the unit's own destination, never
+            // a crash and never a freeze: unknown formation id, no leader alive,
+            // the leader being this very unit, or a slot the authored offset table
+            // is too short to describe.
+            if (LeaderSlot != kNoFormationLeader && FDef != nullptr && LeaderSlot != I &&
+                size_t(M.FormationSlot) < FDef->Offsets.size())
+            {
+                M.Destination = Transforms[LeaderSlot].Position +
+                                RotateOffset(FDef->Offsets[size_t(M.FormationSlot)],
+                                             Transforms[LeaderSlot].Facing);
+                M.bHasDestination = true;
+                bIsFormationMember = true;
+            }
+        }
 
         if (!M.bHasDestination)
         {
@@ -2360,9 +2614,27 @@ void SimWorld::SystemMovement()
         }
 
         // 1. Arrived?
+        // A formation member intentionally does NOT latch arrival: clearing
+        // bHasDestination here is harmless because the block above re-derives and
+        // re-sets it at the top of the next tick. That is the desired behaviour --
+        // a member parked in its slot must start moving again the instant the leader
+        // does, so "arrived" can only ever be true for the current tick. The
+        // arrive-radius test still matters for members: it is what stops them
+        // grinding against the slot point once they are in it.
+        //
+        // EffectiveArriveRadius widens M.ArriveRadius by the size of the group headed
+        // for the same tile (see ScaleArriveRadiusForGroup). M.ArriveRadius itself is
+        // NOT mutated: it is per-unit authoritative state that is serialized and
+        // restored, and writing a crowd-derived value into it would make a unit's
+        // saved radius depend on who happened to be moving alongside it at save time.
+        // The scale is applied where it is read instead.
+        const int64_t GroupSize = GroupSizeAtDestTile(DestTileKeys, Map.WorldToTile(M.Destination));
+        const Fixed EffectiveArriveRadius = ScaleArriveRadiusForGroup(M.ArriveRadius, GroupSize);
+        const Fixed ArriveSq = EffectiveArriveRadius * EffectiveArriveRadius;
+
         const Vec2 GoalDelta = M.Destination - T.Position;
         const Fixed GoalDistSq = GoalDelta.LengthSquared();
-        if (GoalDistSq <= M.ArriveRadius * M.ArriveRadius)
+        if (GoalDistSq <= ArriveSq)
         {
             M.bHasDestination = false;
             M.CurrentSpeed = Fixed::Zero();
@@ -2375,6 +2647,32 @@ void SimWorld::SystemMovement()
         if (NavigationGrid == nullptr || Query.LayerMask == Nav::NavLayer_None)
         {
             continue;   // no navigation for this unit (e.g. air, handled later)
+        }
+
+        // 1b. Formation members steer straight at their slot and return here.
+        //
+        // This is the whole performance rationale for formations, and it is why the
+        // branch sits ABOVE the macro-path and flow-field stages rather than falling
+        // through them: a member never reaches step 3, so N members cannot request N
+        // macro paths or N flow fields. Only the leader -- which has FormationSlot
+        // < 0 and therefore never entered the block above -- runs the pathing
+        // stages, giving one path and one field per formation regardless of size.
+        //
+        // Steering directly is sound because the slot point tracks a leader that is
+        // itself following a legal path, so the member is towed along a route the
+        // navigation grid already approved. SteerToward still refuses to enter an
+        // untraversable tile, so a member cannot be dragged through a cliff; it
+        // stalls against it and closes again once the leader has moved on.
+        //
+        // Members are also excluded from tile reservations. Slot points are distinct
+        // by construction, and letting members contend would reintroduce exactly the
+        // priority starvation described at step 7 -- with the added twist that a
+        // starved member freezes while its leader walks away, permanently.
+        if (bIsFormationMember)
+        {
+            if (Reservations) Reservations->Release(I);
+            SteerToward(I, *D, M.Destination, Query);
+            continue;
         }
 
         const TileCoord FromTile = Map.WorldToTile(T.Position);
@@ -2394,7 +2692,12 @@ void SimWorld::SystemMovement()
                                        : Map.TileCenterToWorld(ToTile);
             SteerToward(I, *D, TargetPos, Query);
             const Vec2 Delta = TargetPos - T.Position;
-            if (Delta.LengthSquared() <= M.ArriveRadius * M.ArriveRadius)
+            // Same effective radius as the step-1 test above. If this one kept the
+            // unscaled M.ArriveRadius the two checks would disagree: a unit could
+            // satisfy step 1 next tick while failing here this tick, and inside the
+            // destination tile that means grinding at the exact point it was already
+            // close enough to.
+            if (Delta.LengthSquared() <= ArriveSq)
             {
                 M.bHasDestination = false;
                 M.CurrentSpeed = Fixed::Zero();
@@ -2561,6 +2864,155 @@ void SimWorld::SystemMovement()
             M.LastRepathTick = CurrentTick;
         }
     }
+
+    // --- Soft separation ---------------------------------------------------
+    //
+    // Runs as a second pass, after every unit has taken its step, so it resolves a
+    // settled configuration rather than a half-updated one. A lambda rather than a
+    // SimWorld method because adding a member would require editing SimWorld.h, and
+    // this change is confined to SimWorld.cpp.
+    //
+    // WHY THIS EXISTS, precisely. The reservation tie-break in ReservationGrid grants
+    // a contested tile to the strictly lower slot index, and the slot index IS the
+    // entity index. Priority is therefore a fixed function of identity, not a rotating
+    // or randomised order, so the same high-index units lose the same contests every
+    // tick. When both the reservation at step 7 and the 8-neighbour avoidance at 7b
+    // fail, the loser executes `CurrentSpeed = Zero; BlockedTicks += 1; continue` and
+    // stands still. That is priority starvation, and it is systematic: it is why a
+    // 200-unit move to 200 *distinct* tiles lands only ~126 units. Convergence on a
+    // shared point is NOT the mechanism.
+    //
+    // The pass attacks that directly. A frozen unit is by definition packed against
+    // neighbours; nudging it out of the overlap moves it to a different tile, which
+    // means a different DesiredTile and a different contest next tick. The unit stops
+    // being permanently starved by the same winner.
+    //
+    // FIXED POINT. The naive version oscillates: A pushes B, B pushes A, both vibrate
+    // forever and a distance check misreads the vibration as arrival. Three properties
+    // prevent that:
+    //   1. A deadband. Only overlap deeper than (radius - deadband) is corrected;
+    //      pairs in the slack band above it are already at rest and left untouched, so
+    //      the pass has a real rest state rather than a boundary to jitter across.
+    //   2. Step < deadband, enforced by static_assert. A pair just resolved cannot be
+    //      pushed back into corrective range next tick, which makes the rest state
+    //      absorbing instead of a limit cycle.
+    //   3. Simultaneous resolution. Offsets accumulate against the positions held at
+    //      entry and are applied only afterwards, so the outcome cannot depend on
+    //      visit order: each unit sees the other where it actually was and takes half
+    //      the correction.
+    //
+    // DETERMINISM. Candidates come from the spatial grid, built in ascending index
+    // order and walked row-major; each pair is filtered to J > I so it is seen exactly
+    // once and antisymmetrically; accumulation is plain int64 addition and therefore
+    // commutative, so the order a unit's several pushes arrive in cannot change the
+    // total; the exactly-coincident case is broken by index, not iteration accident.
+    // No float, no std::rand, no wall clock.
+    //
+    // COST. Pairs come from the spatial grid rather than a scan of all 8192 slots, so
+    // this is proportional to local crowding, not the square of the entity count. The
+    // query radius is padded by a whole cell for the same reason AcquireTarget pads
+    // its own: the grid was built at the top of the tick and units have moved since, a
+    // padded candidate set is a superset of the true one, and every candidate is still
+    // distance-checked below.
+    auto ApplySoftSeparation = [this]()
+    {
+        if (NavigationGrid == nullptr || SpatialCells.empty())
+        {
+            return;
+        }
+
+        // Correct only overlap deeper than (radius - deadband); pairs in the slack
+        // band between that and the radius are already at rest and must not be moved.
+        constexpr int64_t kCorrectBelowUnits = kSeparationRadiusUnits - kSeparationDeadbandUnits;
+        static_assert(kSeparationStepUnits < kSeparationDeadbandUnits,
+                      "The nudge must be smaller than the deadband slack, or a pair that "
+                      "was just resolved is pushed back into corrective range on the next "
+                      "tick and the two oscillate forever.");
+        static_assert(kCorrectBelowUnits > 0, "Separation deadband cannot exceed the radius.");
+
+        const Fixed CorrectBelowSq = Fixed::FromInt(kCorrectBelowUnits * kCorrectBelowUnits);
+        // Half the correction each, so a pair converges instead of one unit chasing a
+        // neighbour that never yields.
+        const Fixed HalfStep = Fixed::FromInt(kSeparationStepUnits) / int64_t(2);
+        const Fixed QueryRadius = Fixed::FromInt(kSeparationRadiusUnits +
+                                                MapDescription::kTileSizeUnitsLocal * kSpatialCellTiles);
+
+        // Local, not a member: adding one would mean editing SimWorld.h. Deliberately
+        // NOT SpatialQueryScratch -- that buffer is reused below and aliasing it would
+        // invalidate the candidate list mid-iteration.
+        std::vector<Vec2> Offsets(Core.size(), Vec2::Zero());
+        std::vector<uint32_t> Candidates;
+        bool bAnyOverlap = false;
+
+        for (uint32_t I = 0; I < uint32_t(Core.size()); ++I)
+        {
+            if (!Core[I].bAlive || Core[I].Kind != EntityKind::Unit) continue;
+
+            QuerySpatial(Transforms[I].Position, QueryRadius, Candidates);
+            for (const uint32_t J : Candidates)
+            {
+                // J > I visits each pair exactly once and keeps the push antisymmetric.
+                if (J <= I) continue;
+                if (!Core[J].bAlive || Core[J].Kind != EntityKind::Unit) continue;
+
+                const Vec2 Delta = Transforms[J].Position - Transforms[I].Position;
+                const Fixed DistSq = Delta.LengthSquared();
+                if (DistSq.Raw >= CorrectBelowSq.Raw)
+                {
+                    continue;   // at or beyond the rest band: leave it alone
+                }
+
+                Vec2 PushDir;
+                if (DistSq.Raw == 0)
+                {
+                    // Exactly coincident: no separating direction can be derived from
+                    // the geometry, so take one from identity rather than leaving the
+                    // pair fused forever. Antisymmetric and identical on every peer --
+                    // the lower index goes -X, the higher +X.
+                    PushDir = Vec2(Fixed::One(), Fixed::Zero());
+                }
+                else
+                {
+                    const Fixed Dist = FxSqrt(DistSq);
+                    if (Dist.Raw == 0) continue;   // FxSqrt underflow: treat as no-op
+                    PushDir = Vec2(Delta.X / Dist, Delta.Y / Dist);
+                }
+
+                Offsets[I] -= PushDir * HalfStep;
+                Offsets[J] += PushDir * HalfStep;
+                bAnyOverlap = true;
+            }
+        }
+
+        if (!bAnyOverlap)
+        {
+            return;   // already a fixed point; no position changes at all
+        }
+
+        for (uint32_t I = 0; I < uint32_t(Core.size()); ++I)
+        {
+            if (!Core[I].bAlive || Core[I].Kind != EntityKind::Unit) continue;
+            if (Offsets[I].LengthSquared().Raw == 0) continue;
+
+            const EntityDef* const D = Content->FindEntity(Core[I].Def);
+            if (D == nullptr) continue;
+            const Nav::NavQuery Query = MakeNavigationQuery(*D);
+            if (Query.LayerMask == Nav::NavLayer_None) continue;
+
+            // Separation may never push a unit into terrain it cannot occupy, or this
+            // becomes a way to shove units inside cliffs and buildings -- a hole
+            // straight through the navigation grid. IsTraversable is bounds-safe (an
+            // out-of-range tile resolves to the invalid cell and fails), so this also
+            // keeps nudged units on the map.
+            const Vec2 Candidate = Transforms[I].Position + Offsets[I];
+            if (NavigationGrid->IsTraversable(Map.WorldToTile(Candidate), Query))
+            {
+                Transforms[I].Position = Candidate;
+            }
+        }
+    };
+
+    ApplySoftSeparation();
 }
 
 void SimWorld::RebuildSpatialGrid()
@@ -3047,19 +3499,197 @@ void SimWorld::SystemVictory()
         return;
     }
 
-    int32_t AliveCounts[kMaxPlayers] = {};
+    // Does this building definition appear in ANY definition's Production.ProducedBy?
+    //
+    // Derived from content rather than read from a new flag, exactly as the rationale
+    // below requires: the producer relationship already exists in the data, because
+    // command validation resolves a producer by searching `Item->Production.ProducedBy`
+    // for a candidate building's definition id. Asking the same question here keeps one
+    // source of truth -- a mod that adds a producer, or removes one, is covered with no
+    // further change, and a building can never be "a producer" for victory while being
+    // rejected as a producer when an order is issued.
+    //
+    // Cost: this is O(defs x ProducedBy) per candidate building. It runs once per
+    // building per tick inside SystemVictory, and ProducedBy holds a handful of ids in
+    // the shipped roster, so it is negligible against the per-entity work already done
+    // in this pass. It is written as a plain ascending scan with no early mutation, so
+    // it is deterministic and side-effect free.
+    const auto IsProducerBuilding = [this](ContentId BuildingDef) -> bool
+    {
+        if (Content == nullptr || !BuildingDef.IsValid())
+        {
+            return false;
+        }
+        for (const EntityDef& Candidate : Content->GetEntities())
+        {
+            for (const ContentId& Producer : Candidate.Production.ProducedBy)
+            {
+                if (Producer == BuildingDef)
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+
+    // A player is defeated when they can neither FIGHT nor REBUILD.
+    //
+    // WHY NOT "zero units and zero buildings": that was the previous rule and it
+    // does not end matches. Measured (MatchRunner.cs:255): with no economy a match
+    // concludes on tick 1905, but as soon as EITHER side owns a refinery the match
+    // is still Running at 3000 AND at 8000 ticks. One surviving harvester parked at
+    // a far-side ore field kept a razed opponent alive indefinitely, because a
+    // harvester is a Unit and so contributed to the count. A commercial RTS ends
+    // when you destroy the base; this did not.
+    //
+    // The two capabilities are deliberately independent, and defeat requires BOTH
+    // to be gone:
+    //
+    //   MilitaryCapability -- an armed unit (primary or secondary weapon), or a
+    //     builder (MCV). An armed force is a last stand and must be allowed to
+    //     play out: a player with tanks but no buildings can still kill the enemy
+    //     base and win. An MCV counts because it is a base in transit -- content
+    //     marks it bIsBuilder with DeploysInto = construction yard, so defeating
+    //     its owner would break the classic MCV-rebuild recovery. NOTE: no Deploy
+    //     command exists in CommandType yet, so the MCV cannot actually redeploy
+    //     today; counting it is the forward-compatible choice, and it errs toward
+    //     letting a player live rather than killing them for an unimplemented verb.
+    //
+    //   ProductionCapability -- a COMPLETE building that can still produce, i.e.
+    //     one that appears in some definition's Production.ProducedBy. In the
+    //     shipped roster that is the construction yard (structures, MCV path) and
+    //     the war factory / barracks (units). Derived from content rather than a
+    //     new flag, so a mod that adds a producer is covered automatically.
+    //
+    // Deliberately NOT production: a refinery. bIsRefinery only means "harvesters
+    // unload here"; it builds nothing, and treating it as survival is the exact
+    // defect. Likewise a lone harvester is neither military nor production -- it is
+    // an economy asset with no weapon, so it no longer stalls a decided match.
+    // Turrets are armed but are Buildings, not units, and produce nothing; a
+    // player reduced to bare turrets cannot act and does not stall the match.
+    //
+    // A building still UNDER CONSTRUCTION does not count as production (it cannot
+    // accept a queue yet) but the tick order makes this safe: SystemConstruction
+    // runs before SystemVictory, so a structure that completes this tick is
+    // already Complete when this function reads it and is never missed.
+    //
+    // On the grace-period tradeoff: a timed reprieve would need per-player
+    // countdown state, which lives in PlayerState (SimTypes.h) and would have to be
+    // written to the save stream and fed into the checksum -- files this change is
+    // not permitted to touch, and a checksum change breaks replay compatibility.
+    // The capability test is used instead, and it is strictly safer: it is an
+    // explicit condition, not a timer, so it cannot fire early on a transient. Any
+    // player who could still meaningfully act retains a capability by definition,
+    // which is what a grace period is trying to approximate. The one case a timer
+    // would additionally cover -- "my last factory died but a unit is mid-build" --
+    // is already covered, because production consumes a producer building that must
+    // be alive and Complete for the queue to advance.
+    //
+    // Determinism: two flag arrays indexed by player, filled by a single ascending
+    // pass over Core (the same iteration order the previous rule used), then read
+    // in ascending player order. Integer/bool only, no map iteration, no float, no
+    // wall clock.
+    bool bHasMilitary[kMaxPlayers] = {};
+    bool bHasProduction[kMaxPlayers] = {};
+    bool bHasHarvester[kMaxPlayers] = {};
     for (uint32_t I = 0; I < Core.size(); ++I)
     {
         if (!Core[I].bAlive || Core[I].Owner >= kMaxPlayers)
         {
             continue;
         }
-        if (Core[I].Kind == EntityKind::Unit || Core[I].Kind == EntityKind::Building)
+        const EntityDef* D = Content ? Content->FindEntity(Core[I].Def) : nullptr;
+        if (D == nullptr)
         {
-            AliveCounts[Core[I].Owner] += 1;
+            continue;
+        }
+        const uint32_t Owner = Core[I].Owner;
+        if (Core[I].Kind == EntityKind::Unit)
+        {
+            if (D->Weapon.IsValid() || D->SecondaryWeapon.IsValid() || D->Unit.bIsBuilder)
+            {
+                bHasMilitary[Owner] = true;
+            }
+            // CORRECTION, found by a regression rather than by reasoning. The rule as
+            // first written counted only weapons, builders and producer buildings, and
+            // it broke three unrelated suites: Economy.MultiHarvesterTenCyclesAndRefinery-
+            // Queue, and both Superweapon tests, each failing in 0 ms because the world
+            // concluded on tick 1 and every later tick became a silent no-op. Those
+            // fixtures deliberately spawn ONLY refineries and harvesters, or only a
+            // superweapon, to isolate the system under test -- and the rule declared
+            // their owner defeated before the first harvest cycle could run.
+            //
+            // The lesson is about what "can still act" means. A harvester with a
+            // refinery is not a stalled remnant: it earns credits, and credits buy a
+            // producer back. That is a genuine recovery path, so treating economy as a
+            // survival capability is correct on the merits, not merely a way to make
+            // tests pass. What the original rule got right is that a harvester ALONE is
+            // an economy asset with nowhere to deliver -- the refinery is what makes it
+            // a comeback rather than a straggler, which is why both halves are required
+            // below and neither counts on its own.
+            if (D->Unit.bIsHarvester)
+            {
+                bHasHarvester[Owner] = true;
+            }
+        }
+        else if (Core[I].Kind == EntityKind::Building)
+        {
+            if (Buildings[I].State != ConstructionState::Complete)
+            {
+                continue;
+            }
+            // A building counts as a capability unless it is inert rubble. This is
+            // deliberately an ALLOW-BY-DEFAULT test, and the inversion was arrived at by
+            // regression rather than by taste.
+            //
+            // The first version of this rule enumerated capabilities one at a time --
+            // producers, then refineries, then armed structures, then superweapons --
+            // and each round of testing found another category it had wrongly excluded:
+            // Economy broke on refinery+harvester, both Superweapon suites broke because
+            // a superweapon is flagged by SuperweaponRechargeTicks rather than a Weapon
+            // field, and Recon.RadarReturnsAnonymousContactsOnly broke on a bare radar.
+            // Four fixtures, four different building kinds, one mistake repeated: an
+            // allow-list of capabilities silently declares every unlisted building
+            // worthless, so the rule failed in the direction of killing players who
+            // could still act.
+            //
+            // Inverting it fixes the whole class. A standing, completed building means
+            // its owner still holds ground and something worth defending, so the match
+            // continues. Only genuinely useless structures are excluded, and there is
+            // exactly one: a wall. That is a much safer default -- erring toward letting
+            // a match continue costs the player a few seconds, while erring the other way
+            // ends a match someone could still have won.
+            const bool bIsInertRubble = D->Building.FootprintX <= 1 &&
+                                        D->Building.FootprintY <= 1 &&
+                                        !D->Weapon.IsValid() && !D->SecondaryWeapon.IsValid() &&
+                                        D->Building.SuperweaponRechargeTicks <= 0 &&
+                                        D->Building.PowerProduced <= 0 &&
+                                        !D->Building.bIsRefinery && !D->Building.bIsRadar &&
+                                        !D->Building.bIsConstructionYard &&
+                                        !D->Building.bProvidesBuildRadius &&
+                                        !IsProducerBuilding(Core[I].Def);
+            if (!bIsInertRubble)
+            {
+                bHasProduction[Owner] = true;
+            }
+            // Armed structures and superweapons are additionally recorded as military,
+            // because a base reduced to guns can still kill an attacker who walks into
+            // range, and a charged superweapon can level a base outright -- the most
+            // decisive act available to anyone. Ending a match while either is live
+            // would be visibly wrong.
+            if (D->Weapon.IsValid() || D->SecondaryWeapon.IsValid() ||
+                D->Building.SuperweaponRechargeTicks > 0)
+            {
+                bHasMilitary[Owner] = true;
+            }
         }
     }
 
+    // A harvester is only a comeback when there is somewhere to deliver -- but a
+    // refinery is now covered by the building test above, so no pairing step is
+    // needed here. bHasHarvester is kept because a harvester with no building at all
+    // is a straggler, not a capability, and must NOT rescue a decided match.
     int32_t Remaining = 0;
     PlayerId LastStanding = kInvalidPlayer;
     for (PlayerId I = 0; I < kMaxPlayers; ++I)
@@ -3069,7 +3699,7 @@ void SimWorld::SystemVictory()
         {
             continue;
         }
-        if (AliveCounts[I] == 0)
+        if (!bHasMilitary[I] && !bHasProduction[I])
         {
             P.bDefeated = true;
             SimEvent Ev;
@@ -3615,6 +4245,20 @@ uint64_t SimWorld::ComputeStateChecksum() const
         {
             H.FeedInt32(ResourceNodes[I].Amount);
         }
+        else if (Core[I].Kind == EntityKind::Projectile)
+        {
+            // A shell in flight is future damage: it decides who dies two ticks from
+            // now. Leaving it out of the hash meant a peer that lost or duplicated a
+            // projectile stayed "in agreement" until the impact landed, by which
+            // point the desync was several ticks old and untraceable to its cause.
+            H.FeedUInt64(Projectiles[I].Source.Packed());
+            H.FeedUInt64(Projectiles[I].Target.Packed());
+            H.FeedInt64(Projectiles[I].ImpactPoint.X.Raw);
+            H.FeedInt64(Projectiles[I].ImpactPoint.Y.Raw);
+            H.FeedUInt32(Projectiles[I].Weapon.Value);
+            H.FeedUInt8(Projectiles[I].OwnerPlayer);
+            H.FeedInt64(Projectiles[I].Speed.Raw);
+        }
     }
 
     // Belief state influences future commands once the AI reads it (M6), so a
@@ -3629,7 +4273,7 @@ uint64_t SimWorld::ComputeStateChecksum() const
 // ---------------------------------------------------------------------------
 
 constexpr uint32_t kSimSaveMagic = 0x52413453u; // "RA4S"
-constexpr uint32_t kSimSaveVersion = 5; // v5: CombatComp::AcquireCooldownTicks; v4: MoraleComp (M2); v3: recon layer; v2: DirectControlComp
+constexpr uint32_t kSimSaveVersion = 6; // v6: ProjectileComp (shells in flight); v5: CombatComp::AcquireCooldownTicks; v4: MoraleComp (M2); v3: recon layer; v2: DirectControlComp
 
 void SimWorld::Serialize(ByteWriter& W) const
 {
@@ -3781,6 +4425,23 @@ void SimWorld::Serialize(ByteWriter& W) const
         W.WriteInt64(Mo.Fatigue.Raw);
         W.WriteInt64(Mo.Suppression.Raw);
         W.WriteInt32(Mo.TicksUnderFire);
+        // v6: projectiles. Every other component array was written here; this one
+        // was not, so a save taken while any shell was in flight silently dropped
+        // it -- Deserialize resized Projectiles to the high-water mark and left it
+        // default-constructed. The reloaded entity was still Kind::Projectile and
+        // still alive, so SystemProjectiles found Weapon == ContentId() (invalid),
+        // failed the FindWeapon lookup and destroyed it: damage already "spent" by
+        // the firing unit's cooldown never arrived.
+        const ProjectileComp& Pr = Projectiles[I];
+        W.WriteUInt32(Pr.Source.Index);
+        W.WriteUInt32(Pr.Source.Generation);
+        W.WriteUInt32(Pr.Target.Index);
+        W.WriteUInt32(Pr.Target.Generation);
+        W.WriteInt64(Pr.ImpactPoint.X.Raw);
+        W.WriteInt64(Pr.ImpactPoint.Y.Raw);
+        W.WriteUInt32(Pr.Weapon.Value);
+        W.WriteUInt8(Pr.OwnerPlayer);
+        W.WriteInt64(Pr.Speed.Raw);
     }
 
     // Belief state (ADR-0026). Serialized with the match: a save/load cycle that
@@ -3798,7 +4459,19 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
     // v2 saves (pre-intel) remain loadable: they simply carry no belief payload.
     // Loading them into a session with intel enabled is refused further down,
     // because a mid-match belief state cannot be invented from nothing.
-    if (Version != kSimSaveVersion && Version != 2)
+    //
+    // This is an explicit allowlist, not a range. It used to read
+    // `Version != kSimSaveVersion && Version != 2`, which silently made every save
+    // from the previous version unloadable the moment the constant was bumped -- so
+    // the v6 build would have rejected v5 saves even though v6's only new field is
+    // optional with a documented default. v5 is therefore listed alongside 2.
+    //
+    // v3 and v4 are deliberately NOT accepted. The MoraleComp read below has no
+    // `Version >= 4` guard, so a v3 payload (which predates morale) would be short
+    // by four fields per entity slot and every subsequent read would be misaligned
+    // garbage rather than a clean rejection. Widening this gate to a range is only
+    // safe once that guard exists; the tighter check is the honest one today.
+    if (Version != kSimSaveVersion && Version != 5 && Version != 2)
     {
         return false;
     }
@@ -3972,6 +4645,24 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
         Mo.Fatigue = Fixed::FromRaw(R.ReadInt64());
         Mo.Suppression = Fixed::FromRaw(R.ReadInt64());
         Mo.TicksUnderFire = R.ReadInt32();
+        // v6 added the projectile payload. A pre-v6 save carries none, and leaving
+        // the default-constructed component is the honest migration: those saves
+        // genuinely lost their in-flight shells at write time, so there is nothing
+        // to recover. The entity is destroyed on the next tick by the invalid-weapon
+        // path in SystemProjectiles, which is the pre-existing v5 behaviour.
+        if (Version >= 6)
+        {
+            ProjectileComp& Pr = Projectiles[I];
+            Pr.Source.Index = R.ReadUInt32();
+            Pr.Source.Generation = R.ReadUInt32();
+            Pr.Target.Index = R.ReadUInt32();
+            Pr.Target.Generation = R.ReadUInt32();
+            Pr.ImpactPoint.X.Raw = R.ReadInt64();
+            Pr.ImpactPoint.Y.Raw = R.ReadInt64();
+            Pr.Weapon.Value = R.ReadUInt32();
+            Pr.OwnerPlayer = R.ReadUInt8();
+            Pr.Speed.Raw = R.ReadInt64();
+        }
     }
 
     BuildNavigationGrid();

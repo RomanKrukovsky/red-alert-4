@@ -1,0 +1,2 @@
+/usr/bin/ar qc libRA4Simulation.a "CMakeFiles/RA4Simulation.dir/Users/romanmolodyko/Documents/red-alert-4/Source/RA4Simulation/Private/SimWorld.cpp.o" "CMakeFiles/RA4Simulation.dir/Users/romanmolodyko/Documents/red-alert-4/Source/RA4Simulation/Private/CommandBus.cpp.o" "CMakeFiles/RA4Simulation.dir/Users/romanmolodyko/Documents/red-alert-4/Source/RA4Simulation/Private/LockstepSession.cpp.o"
+/usr/bin/ranlib libRA4Simulation.a
