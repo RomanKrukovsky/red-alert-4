@@ -95,7 +95,8 @@ MAP_EXTENT = MAP_TILES * TILE_UNITS          # 12800
 CENTRE = MAP_EXTENT * 0.5                    # 6400
 
 LANDSCAPE_LABEL = "RA4_Archipelago"
-TERRAIN_MATERIAL = "/Game/RA4/Generated/Terrain/M_RA4_Terrain"
+TERRAIN_MATERIAL = "/Game/ThirdParty/CityPark/Materials/Ground/MI_Ground01"
+CITYPARK_LANDSCAPE_MATERIAL = "/Game/ThirdParty/CityPark/Materials/Ground/MI_Landscape"
 
 # The four-layer paintable material built by RA4LayeredTerrainSetupCommandlet, and
 # the layer info assets that make each surface paintable. Preferred over
@@ -167,10 +168,14 @@ TREE_MESHES = [
     "/Game/ThirdParty/CityPark/Meshes/Flora/Trees/SM_Maple01",
 ]
 GRASS_MESHES = [
-    "/Game/ThirdParty/CityPark/Meshes/Flora/Grass/SM_Grass02",
-    "/Game/ThirdParty/CityPark/Meshes/Flora/Grass/SM_Grass03",
-    "/Game/ThirdParty/CityPark/Meshes/Flora/Grass/SM_Grass04",
-    "/Game/ThirdParty/CityPark/Meshes/Flora/Grass/SM_Grass05",
+    "/Game/ThirdParty/CityPark/Meshes/Flora/Grass/SM_grass02",
+    "/Game/ThirdParty/CityPark/Meshes/Flora/Grass/SM_grass03",
+    "/Game/ThirdParty/CityPark/Meshes/Flora/Grass/SM_grass04",
+    "/Game/ThirdParty/CityPark/Meshes/Flora/Grass/SM_grass05",
+    "/Game/ThirdParty/CityPark/Meshes/Flora/Grass/SM_Grass10_1",
+    "/Game/ThirdParty/CityPark/Meshes/Flora/Grass/SM_Grass11_1",
+    "/Game/ThirdParty/CityPark/Meshes/Flora/Grass/SM_Grass12_1",
+    "/Game/ThirdParty/CityPark/Meshes/Flora/Grass/SM_Lawn01_1",
 ]
 ROCK_MESHES = [
     "/Game/ThirdParty/CityPark/Meshes/Ground/SM_Rock01",
@@ -796,10 +801,12 @@ def setup_layers():
     if unreal.EditorAssetLibrary.does_asset_exist(LAYERED_MATERIAL):
         LS.set_landscape_material(LANDSCAPE_LABEL, LAYERED_MATERIAL)
         print("Layered terrain material assigned")
+    elif unreal.EditorAssetLibrary.does_asset_exist(CITYPARK_LANDSCAPE_MATERIAL):
+        LS.set_landscape_material(LANDSCAPE_LABEL, CITYPARK_LANDSCAPE_MATERIAL)
+        print("CityPark UE Store landscape material assigned")
     else:
         LS.set_landscape_material(LANDSCAPE_LABEL, TERRAIN_MATERIAL)
-        print("[warn] %s missing; fell back to the single-texture material"
-              % LAYERED_MATERIAL)
+        print("Defaulting to UE Store terrain material: %s" % TERRAIN_MATERIAL)
         return False
 
     added = 0

@@ -68,6 +68,15 @@ TRANSLATIONS = {
     "ПОВТОРИТЬ": "RETRY",
     "ВЫЙТИ В МЕНЮ": "QUIT TO MENU",
     "ПАУЗА": "PAUSED",
+    "ПАУЗА // ТАКТИЧЕСКОЕ МЕНЮ": "PAUSE // TACTICAL MENU",
+    "СИМУЛЯЦИЯ ПРИОСТАНОВЛЕНА": "SIMULATION SUSPENDED",
+    "► ПРОДОЛЖИТЬ ИГРУ": "► RESUME GAME",
+    "↻ ПЕРЕЗАПУСТИТЬ МАТЧ": "↻ RESTART MATCH",
+    "⚙ НАСТРОЙКИ": "⚙ SETTINGS",
+    "⎋ ВЫЙТИ В ГЛАВНОЕ МЕНЮ": "⎋ QUIT TO MAIN MENU",
+    "✕ ВЫЙТИ НА РАБОЧИЙ СТОЛ": "✕ QUIT TO DESKTOP",
+    "ПРЯМОЕ УПРАВЛЕНИЕ": "DIRECT CONTROL",
+    "[F] ВЫЙТИ ИЗ РЕЖИМА УПРАВЛЕНИЯ": "[F] EXIT DIRECT CONTROL",
 
     # --- titles / headings --------------------------------------------------
     "ТОВАРИЩ КОМАНДИР": "COMRADE COMMANDER",

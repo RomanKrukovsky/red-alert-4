@@ -43,7 +43,11 @@ def build():
     world.get_world_settings().set_editor_property("force_no_precomputed_lighting", True)
 
     # Load existing materials or fallback basic material
-    mat_ground = unreal.load_asset("/Game/RA4/Materials/M_RA4Ground_Lit.M_RA4Ground_Lit")
+    mat_ground = unreal.load_asset("/Game/ThirdParty/CityPark/Materials/Ground/MI_Landscape.MI_Landscape")
+    if mat_ground is None:
+        mat_ground = unreal.load_asset("/Game/ThirdParty/CityPark/Materials/Ground/MI_Ground01.MI_Ground01")
+    if mat_ground is None:
+        mat_ground = unreal.load_asset("/Game/RA4/Materials/M_RA4Ground_Lit.M_RA4Ground_Lit")
     if mat_ground is None:
         mat_ground = unreal.load_asset("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial")
 
