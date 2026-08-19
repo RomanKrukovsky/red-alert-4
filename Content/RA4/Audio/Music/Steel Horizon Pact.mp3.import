@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://d4i05vsr0v7pg"
+path="res://.godot/imported/Steel Horizon Pact.mp3-6960b8e96b4f367931ea5c6a39795d69.mp3str"
+
+[deps]
+
+source_file="res://assets/audio/music/Steel Horizon Pact.mp3"
+dest_files=["res://.godot/imported/Steel Horizon Pact.mp3-6960b8e96b4f367931ea5c6a39795d69.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

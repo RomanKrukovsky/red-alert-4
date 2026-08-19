@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://ytjhg2ffsb6a"
+path="res://.godot/imported/Tesla Overdrive.mp3-63f1461d6d6862f1c87609d785ca2c65.mp3str"
+
+[deps]
+
+source_file="res://assets/audio/music/Tesla Overdrive.mp3"
+dest_files=["res://.godot/imported/Tesla Overdrive.mp3-63f1461d6d6862f1c87609d785ca2c65.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4
