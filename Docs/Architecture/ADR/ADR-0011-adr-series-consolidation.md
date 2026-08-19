@@ -11,10 +11,19 @@
 >   Temporal Debt.
 > - **Erratum to the Context section**: the directory counts are stale. `Docs/Architecture/ADR/` now
 >   holds 27 files, not 10.
-> - **Numbering collision**: this file and `ADR-0011-DirectControl.md` share the number ADR-0011 in the
->   canonical directory — the exact defect this ADR set out to prevent. Neither is renamed here, because
->   both are already cited by number elsewhere; the collision is recorded in NEXT_ACTIONS P-3 and must be
->   resolved by renumbering the DirectControl ADR to a free number (0027+) with a redirect stub.
+> - **Numbering collision — RESOLVED 2026-08-20**: this file and `ADR-0011-DirectControl.md` shared the
+>   number ADR-0011 in the canonical directory — the exact defect this ADR set out to prevent. The
+>   DirectControl ADR is now **ADR-0029** (`ADR-0029-direct-control.md`), with a redirect stub left at the
+>   old path. P-3 and this erratum both prescribed ADR-0028, but ADR-0028 was taken by the telemetry ADRs
+>   before the rename was carried out — a reminder that a reserved-but-unclaimed number is not reserved.
+>   Inbound citations were updated in `RA4DirectControlSubsystem.h`, `RA4DirectControlProfile.h`,
+>   `Command.h` (which pointed at `ADR-DirectControl.md`, a path that never existed), ADR-0022 and
+>   ADR-0026. **ADR-0011 now means only this document.** The next free canonical number is **ADR-0030**.
+> - **Second collision, still open**: `ADR-0028-unified-event-telemetry-architecture.md` and
+>   `ADR-0028-telemetry-implementation-plan.md` both carry 0028. These are not competing decisions — the
+>   second is the implementation plan for the first and says so in its title — so this is a filename
+>   problem, not a split authority. Left as found; renaming the plan would break its inbound citations
+>   for no decision-level gain.
 > - **Executed now**: decision 5 — `Docs/integration/templates/ADR_INDEX.md` carries a warning banner.
 >   It was not merely stale: it reserved ADR numbers 0012–0021 for unwritten template decisions, and
 >   every one of those numbers is already occupied in the canonical series. Any agent following it would

@@ -84,7 +84,7 @@ Units without a live order link execute their **standing doctrine** — a small,
     the whole queue, matching what players expect from re-issuing commands.
   - Bound: in-flight order storage is therefore ≤ (players × alive groups), which fixes the memory
     budget in PERFORMANCE_BUDGETS §4.2 without a separate cap.
-- Interaction with DirectControl (ADR-0011-DirectControl): **resolved — a possessed unit bypasses the
+- Interaction with DirectControl (ADR-0029): **resolved — a possessed unit bypasses the
   graph entirely.** The commander is physically present in that vehicle, so there is no radio link to
   model, and adding delay to a first-person control scheme would be indefensible as a control feel.
   Consequences: possession becomes a deliberate counter to being jammed, at the cost of controlling

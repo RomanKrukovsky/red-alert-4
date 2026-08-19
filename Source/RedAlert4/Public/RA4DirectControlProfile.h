@@ -7,7 +7,7 @@
 // mix -- is presentation and lives here so a designer can tune it without a
 // recompile.
 //
-// See ADR-0011 for the simulation/presentation split.
+// See ADR-0029 for the simulation/presentation split.
 #pragma once
 
 #include "CoreMinimal.h"

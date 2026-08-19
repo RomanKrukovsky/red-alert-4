@@ -43,7 +43,7 @@ enum class CommandType : uint8_t
 
     // Direct vehicle control (authoritative, serialized, quantized). The
     // simulation -- never the client -- owns movement, turret aiming, firing
-    // and exit. See Docs/Architecture/ADR/ADR-DirectControl.md.
+    // and exit. See Docs/Architecture/ADR/ADR-0029-direct-control.md.
     DirectControlEnter = 50,
     DirectControlExit  = 51,
     DirectControlDrive = 52,   // hull throttle/steering + turret yaw/pitch + flags

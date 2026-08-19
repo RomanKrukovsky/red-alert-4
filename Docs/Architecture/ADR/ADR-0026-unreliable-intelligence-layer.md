@@ -4,7 +4,7 @@
 must be fixed before M1.** See "Independent review findings" at the end of this document.
 **Date**: 2026-08-05
 **Depends on**: ADR-0001 (20 Hz lockstep), ADR-0002 (pure C++ sim), ADR-0003 (data-oriented ECM), ADR-0004 (state hashing), ADR-0005 (replay/checkpoints), ADR-0009 (JSON content)
-**Relates to**: ADR-0021 (Knowledge Map — this ADR is its concrete implementation decision record; ADR-0021 stays as the design-direction document), ADR-0011 (DirectControl), ADR-0008 (AI commander)
+**Relates to**: ADR-0021 (Knowledge Map — this ADR is its concrete implementation decision record; ADR-0021 stays as the design-direction document), ADR-0029 (DirectControl), ADR-0008 (AI commander)
 
 ## Context
 
@@ -82,7 +82,7 @@ A save records its enabled-ness; loading across a mismatch is refused.
 ### 7. Scope of unreliability (M0–M5)
 
 Unreliable intel covers *enemy and neutral* entities. Own units remain selectable
-and commandable by true position — DirectControl (ADR-0011) and the existing input
+and commandable by true position — DirectControl (ADR-0029) and the existing input
 path stay intact. Self-report bias (M4) affects only informational summaries about
 own forces, not selection. Moving own-unit interaction onto belief state is a
 separate future ADR if playtests warrant it.

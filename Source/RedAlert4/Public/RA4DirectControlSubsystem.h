@@ -6,7 +6,7 @@
 // what camera to use, what HUD to show, and whether to send Drive/Fire
 // commands this frame.
 //
-// See ADR-0011 for the simulation/presentation split and the command schema.
+// See ADR-0029 for the simulation/presentation split and the command schema.
 #pragma once
 
 #include "CoreMinimal.h"

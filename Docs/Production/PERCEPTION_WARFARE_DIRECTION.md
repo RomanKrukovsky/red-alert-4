@@ -108,7 +108,7 @@ Discovered and fixed while completing the above, not part of the original plan:
 | 9 | Tick-derived figures in ADR-0021/0022 were computed at 60Hz | **FIXED** — recalculated at 20 Hz |
 | 10 | ADR-0026 was untracked in a shared working copy and at risk of loss through stash churn | **FIXED** — preserved on this branch |
 | 11 | ADR-0001 still claims 60Hz; other docs may too | **OUTSTANDING** — tracked as NEXT_ACTIONS P-4 |
-| 12 | Duplicate ADR numbering across `Docs/ADRs/` and `Docs/Architecture/ADR/`, with `ADR-0011` used twice | **OUTSTANDING** — tracked as NEXT_ACTIONS P-3 |
+| 12 | Duplicate ADR numbering across `Docs/ADRs/` and `Docs/Architecture/ADR/`, with `ADR-0011` used twice | **RESOLVED 2026-08-20** — DirectControl renumbered to ADR-0029 with a redirect stub; legacy directories carry SUPERSEDED banners |
 
 ## 6. What Was NOT Done
 
