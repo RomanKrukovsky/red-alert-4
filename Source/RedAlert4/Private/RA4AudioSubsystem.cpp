@@ -65,22 +65,66 @@ void URA4AudioSubsystem::Deinitialize()
 
 USoundBase* URA4AudioSubsystem::FindVoiceClip(const FString& VoiceId, ERA4VoiceEvent Event)
 {
-    // e.g. .../Voice/Soviet/SU_RubezhRifleman/VO_RU_SU_RubezhRifleman_Selected_01
-    const FString AssetName =
-        FString::Printf(TEXT("VO_RU_%s_%s_01"), *VoiceId, ToEventName(Event));
-    const FString ObjectPath =
-        FString::Printf(TEXT("%s/%s/%s.%s"), kVoiceRoot, *VoiceId, *AssetName, *AssetName);
-
-    if (TObjectPtr<USoundBase>* Cached = ClipCache.Find(ObjectPath))
+    const TCHAR* FactionFolder = TEXT("Soviet");
+    if (VoiceId.StartsWith(TEXT("AL_")))
     {
-        return Cached->Get();
+        FactionFolder = TEXT("Alliance");
+    }
+    else if (VoiceId.StartsWith(TEXT("CO_")))
+    {
+        FactionFolder = TEXT("Coalition");
+    }
+    else if (VoiceId.StartsWith(TEXT("CH_")))
+    {
+        FactionFolder = TEXT("Chrono");
     }
 
-    // A null result is cached too: most units have no recorded pack yet, and retrying
-    // a failing synchronous load on every order would be the expensive path.
-    USoundBase* Clip = LoadObject<USoundBase>(nullptr, *ObjectPath);
-    ClipCache.Add(ObjectPath, Clip);
-    return Clip;
+    const int32 VariationIndex = FMath::RandRange(1, 4);
+    const TCHAR* EventName = ToEventName(Event);
+
+    // List candidate asset paths to try in priority order
+    TArray<FString, TInlineAllocator<8>> CandidatePaths;
+    
+    // 1. Faction folder with randomized variation
+    CandidatePaths.Add(FString::Printf(TEXT("/Game/RA4/Audio/Generated/Voice/%s/%s/VO_RU_%s_%s_%02d.VO_RU_%s_%s_%02d"),
+        FactionFolder, *VoiceId, *VoiceId, EventName, VariationIndex, *VoiceId, EventName, VariationIndex));
+    // 2. Faction folder with base variation _01
+    CandidatePaths.Add(FString::Printf(TEXT("/Game/RA4/Audio/Generated/Voice/%s/%s/VO_RU_%s_%s_01.VO_RU_%s_%s_01"),
+        FactionFolder, *VoiceId, *VoiceId, EventName, *VoiceId, EventName));
+    // 3. Mastered folder with variation
+    CandidatePaths.Add(FString::Printf(TEXT("/Game/RA4/Audio/Generated/Voice/Mastered/%s/VO_RU_%s_%s_%02d.VO_RU_%s_%s_%02d"),
+        *VoiceId, *VoiceId, EventName, VariationIndex, *VoiceId, EventName, VariationIndex));
+    // 4. Mastered folder with base variation _01
+    CandidatePaths.Add(FString::Printf(TEXT("/Game/RA4/Audio/Generated/Voice/Mastered/%s/VO_RU_%s_%s_01.VO_RU_%s_%s_01"),
+        *VoiceId, *VoiceId, EventName, *VoiceId, EventName));
+    // 5. English / non-RU fallback
+    CandidatePaths.Add(FString::Printf(TEXT("/Game/RA4/Audio/Generated/Voice/%s/%s/VO_EN_%s_%s_01.VO_EN_%s_%s_01"),
+        FactionFolder, *VoiceId, *VoiceId, EventName, *VoiceId, EventName));
+    // 6. Generic variation
+    CandidatePaths.Add(FString::Printf(TEXT("/Game/RA4/Audio/Generated/Voice/%s/%s/VO_%s_%s_01.VO_%s_%s_01"),
+        FactionFolder, *VoiceId, *VoiceId, EventName, *VoiceId, EventName));
+
+    for (const FString& ObjectPath : CandidatePaths)
+    {
+        if (TObjectPtr<USoundBase>* Cached = ClipCache.Find(ObjectPath))
+        {
+            if (Cached->Get() != nullptr)
+            {
+                return Cached->Get();
+            }
+            continue;
+        }
+
+        USoundBase* Clip = LoadObject<USoundBase>(nullptr, *ObjectPath);
+        if (Clip != nullptr)
+        {
+            ClipCache.Add(ObjectPath, Clip);
+            return Clip;
+        }
+        ClipCache.Add(ObjectPath, nullptr);
+    }
+
+    return nullptr;
 }
 
 void URA4AudioSubsystem::PlayUnitVoice(const FString& VoiceId, ERA4VoiceEvent Event, bool bBypassCooldown)

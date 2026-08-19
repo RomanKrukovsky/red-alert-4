@@ -24,6 +24,10 @@ struct FAudioSourceTree
 
 const FAudioSourceTree GAudioTrees[] = {
     {TEXT("Audio/Voice/RU/Soviet/Runtime"), TEXT("/Game/RA4/Audio/Generated/Voice/Soviet")},
+    {TEXT("Audio/Voice/RU/Alliance/Runtime"), TEXT("/Game/RA4/Audio/Generated/Voice/Alliance")},
+    {TEXT("Audio/Voice/RU/Coalition/Runtime"), TEXT("/Game/RA4/Audio/Generated/Voice/Coalition")},
+    {TEXT("Audio/Voice/RU/Chrono/Runtime"), TEXT("/Game/RA4/Audio/Generated/Voice/Chrono")},
+    {TEXT("Audio/Voice/Mastered"), TEXT("/Game/RA4/Audio/Generated/Voice/Mastered")},
     {TEXT("Content/RA4/Audio/EVA/Processed"), TEXT("/Game/RA4/Audio/Generated/EVA")},
     {TEXT("Content/RA4/Audio/Music"), TEXT("/Game/RA4/Audio/Generated/Music")},
 };

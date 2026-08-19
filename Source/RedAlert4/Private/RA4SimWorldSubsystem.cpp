@@ -632,6 +632,90 @@ URA4NetworkManager* URA4SimWorldSubsystem::GetActiveNetwork() const
     return nullptr;
 }
 
+static void DrawTeslaArc(UWorld* World, const FVector& Start, const FVector& End)
+{
+    if (World == nullptr) return;
+    const FVector Diff = End - Start;
+    const float Dist = Diff.Size();
+    if (Dist < 10.0f) return;
+
+    const int32 Segments = FMath::Clamp(int32(Dist / 100.0f), 4, 10);
+    const FVector Dir = Diff / Dist;
+    FVector Right, Up;
+    Dir.FindBestAxisVectors(Right, Up);
+
+    FVector Prev = Start;
+    for (int32 i = 1; i <= Segments; ++i)
+    {
+        const float Frac = float(i) / float(Segments);
+        FVector Next = Start + Diff * Frac;
+        if (i < Segments)
+        {
+            const float OffsetMag = FMath::FRandRange(15.0f, 35.0f);
+            const float Angle = FMath::FRandRange(0.0f, 6.28318f);
+            Next += (Right * FMath::Cos(Angle) + Up * FMath::Sin(Angle)) * OffsetMag;
+        }
+
+        // Cyan electric outer arc
+        DrawDebugLine(World, Prev, Next, FColor(0, 180, 255), false, 0.22f, 0, 4.0f);
+        // White core
+        DrawDebugLine(World, Prev, Next, FColor(240, 250, 255), false, 0.22f, 0, 1.8f);
+
+        // Branching sparks
+        if (i % 2 == 0 && i < Segments)
+        {
+            const FVector BranchEnd = Next + (Right * FMath::FRandRange(-40.0f, 40.0f) + Up * FMath::FRandRange(-30.0f, 30.0f));
+            DrawDebugLine(World, Next, BranchEnd, FColor(30, 220, 255), false, 0.18f, 0, 2.0f);
+        }
+
+        Prev = Next;
+    }
+
+    // Impact & source sparks
+    DrawDebugPoint(World, Start, 20.0f, FColor(120, 240, 255), false, 0.20f);
+    DrawDebugPoint(World, End, 28.0f, FColor(200, 250, 255), false, 0.25f);
+}
+
+static void DrawLaserBeam(UWorld* World, const FVector& Start, const FVector& End, const FColor& Color)
+{
+    if (World == nullptr) return;
+    // Outer intense glow
+    DrawDebugLine(World, Start, End, Color, false, 0.20f, 0, 5.0f);
+    // Inner white hot core
+    DrawDebugLine(World, Start, End, FColor(255, 250, 220), false, 0.20f, 0, 2.0f);
+    // Source and impact focal points
+    DrawDebugPoint(World, Start, 22.0f, Color, false, 0.20f);
+    DrawDebugPoint(World, End, 30.0f, Color, false, 0.25f);
+}
+
+static void DrawTankCannonTracer(UWorld* World, const FVector& Start, const FVector& End)
+{
+    if (World == nullptr) return;
+    // Muzzle blast flash
+    DrawDebugSphere(World, Start, 25.0f, 10, FColor(255, 160, 30), false, 0.15f, 0, 2.0f);
+    // High velocity tracer
+    DrawDebugLine(World, Start, End, FColor(255, 200, 50), false, 0.18f, 0, 3.5f);
+    DrawDebugLine(World, Start, End, FColor(255, 255, 240), false, 0.18f, 0, 1.5f);
+}
+
+static void DrawExplosionEffect(UWorld* World, const FVector& Center, float Radius)
+{
+    if (World == nullptr) return;
+    // Fiery blast sphere
+    DrawDebugSphere(World, Center + FVector(0, 0, 15), Radius, 12, FColor(255, 90, 15), false, 0.35f, 0, 2.5f);
+    // Inner bright core
+    DrawDebugSphere(World, Center + FVector(0, 0, 20), Radius * 0.55f, 8, FColor(255, 220, 80), false, 0.22f, 0, 2.0f);
+    // Shockwave ring on ground
+    DrawDebugCircle(World, Center + FVector(0, 0, 5), Radius * 1.4f, 20, FColor(255, 140, 40), false, 0.30f, 0, 3.0f, FVector(1, 0, 0), FVector(0, 1, 0), false);
+    // Flying shrapnel / sparks
+    for (int32 i = 0; i < 6; ++i)
+    {
+        const float Angle = float(i) * 1.047f;
+        const FVector SparkEnd = Center + FVector(FMath::Cos(Angle) * Radius * 1.8f, FMath::Sin(Angle) * Radius * 1.8f, FMath::FRandRange(10.0f, Radius));
+        DrawDebugLine(World, Center, SparkEnd, FColor(255, 180, 30), false, 0.28f, 0, 1.8f);
+    }
+}
+
 void URA4SimWorldSubsystem::ProcessPresentationEvents()
 {
     UWorld* UnrealWorld = GetWorld();
@@ -714,8 +798,8 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
             if (UnrealWorld && SimWorld->IsLocationVisibleTo(LocalPlayer, Event.Location))
             {
                 FVector ImpactPoint = RA4Coords::ToUnreal(Event.Location);
-                ImpactPoint.Z = SampleGroundHeight(ImpactPoint.X, ImpactPoint.Y) + 40.0f;
-                DrawDebugPoint(UnrealWorld, ImpactPoint, 35.0f, FColor::Red, false, 0.4f);
+                ImpactPoint.Z = SampleGroundHeight(ImpactPoint.X, ImpactPoint.Y) + 25.0f;
+                DrawExplosionEffect(UnrealWorld, ImpactPoint, 65.0f);
             }
             break;
 
@@ -755,15 +839,10 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
             break;
 
         case RA4::SimEventType::WeaponFired:
-            // V-F: a tracer is a line between two positions, so BOTH ends leak.
-            // Drawing it when only the muzzle is visible would still betray the
-            // target's location, and vice versa -- so the shot is drawn only when
-            // the player can see the shooter, and the line only when the target
-            // is visible too. Partial visibility falls back to the muzzle flash.
             if (UnrealWorld && SimWorld->IsLocationVisibleTo(LocalPlayer, Event.Location))
             {
                 FVector Start = RA4Coords::ToUnreal(Event.Location);
-                Start.Z = SampleGroundHeight(Start.X, Start.Y) + 20.0f;
+                Start.Z = SampleGroundHeight(Start.X, Start.Y) + 30.0f;
                 FVector End = Start;
                 const auto& Transforms = SimWorld->GetAllTransforms();
                 const bool bTargetVisible =
@@ -773,24 +852,60 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
                 if (bTargetVisible)
                 {
                     End = RA4Coords::ToUnreal(Transforms[Event.Other.Index].Position);
-                    End.Z = SampleGroundHeight(End.X, End.Y) + 20.0f;
-                    DrawDebugLine(UnrealWorld, Start, End, FColor::Yellow, false, 0.15f, 0, 2.5f);
+                    End.Z = SampleGroundHeight(End.X, End.Y) + 30.0f;
                 }
                 else
                 {
-                    DrawDebugPoint(UnrealWorld, Start, 15.0f, FColor::Yellow, false, 0.15f);
+                    End = Start + FVector(400.0f, 0.0f, 0.0f);
+                }
+
+                // Check weapon warhead type
+                const RA4::WeaponDef* Weapon = nullptr;
+                if (Event.Content.IsValid())
+                {
+                    Weapon = Content->FindWeapon(Event.Content);
+                }
+                if (Weapon == nullptr && Event.Entity.IsValid() && SimWorld->IsAlive(Event.Entity))
+                {
+                    const RA4::EntityCore* Core = SimWorld->GetCore(Event.Entity);
+                    if (Core != nullptr && Core->Def.IsValid())
+                    {
+                        const RA4::EntityDef* Def = Content->FindEntity(Core->Def);
+                        if (Def != nullptr && Def->Weapon.IsValid())
+                        {
+                            Weapon = Content->FindWeapon(Def->Weapon);
+                        }
+                    }
+                }
+
+                if (Weapon != nullptr)
+                {
+                    if (Weapon->Warhead == RA4::WarheadClass::Electric)
+                    {
+                        DrawTeslaArc(UnrealWorld, Start, End);
+                    }
+                    else if (Weapon->Warhead == RA4::WarheadClass::Beam || Weapon->Warhead == RA4::WarheadClass::Plasma)
+                    {
+                        DrawLaserBeam(UnrealWorld, Start, End, FColor(255, 35, 60));
+                    }
+                    else
+                    {
+                        DrawTankCannonTracer(UnrealWorld, Start, End);
+                    }
+                }
+                else
+                {
+                    DrawTankCannonTracer(UnrealWorld, Start, End);
                 }
             }
             break;
 
         case RA4::SimEventType::ProjectileImpact:
-            // V-F: same reasoning as the tracer -- an impact splash inside fog
-            // marks where a fight is happening.
             if (UnrealWorld && SimWorld->IsLocationVisibleTo(LocalPlayer, Event.Location))
             {
                 FVector ImpactPoint = RA4Coords::ToUnreal(Event.Location);
-                ImpactPoint.Z = SampleGroundHeight(ImpactPoint.X, ImpactPoint.Y) + 30.0f;
-                DrawDebugPoint(UnrealWorld, ImpactPoint, 25.0f, FColor::Orange, false, 0.25f);
+                ImpactPoint.Z = SampleGroundHeight(ImpactPoint.X, ImpactPoint.Y) + 15.0f;
+                DrawExplosionEffect(UnrealWorld, ImpactPoint, 45.0f);
             }
             break;
 
@@ -824,13 +939,23 @@ float URA4SimWorldSubsystem::SampleGroundHeight(double WorldX, double WorldY)
     }
 
     ALandscapeProxy* Landscape = CachedLandscape.Get();
-    if (Landscape == nullptr)
+    if (Landscape != nullptr)
     {
-        return float(RA4Coords::GroundZ);
+        const TOptional<float> Height = Landscape->GetHeightAtLocation(FVector(WorldX, WorldY, 0.0));
+        if (Height.IsSet())
+        {
+            return Height.GetValue();
+        }
     }
 
-    const TOptional<float> Height = Landscape->GetHeightAtLocation(FVector(WorldX, WorldY, 0.0));
-    return Height.IsSet() ? Height.GetValue() : float(RA4Coords::GroundZ);
+    // Deterministic mathematical terrain height matching RA4LandscapeCommandlet rolling hills
+    constexpr double SeedPhase = 20260730 % 1000 * 0.01;
+    const double V = FMath::Sin(WorldX * 0.00028 + SeedPhase) * FMath::Cos(WorldY * 0.00024 + SeedPhase * 1.7)
+                   + 0.5 * FMath::Sin(WorldX * 0.0006 - SeedPhase * 0.5) * FMath::Cos(WorldY * 0.0005 + SeedPhase)
+                   + 0.25 * FMath::Sin((WorldX + WorldY) * 0.0009 + SeedPhase * 2.0);
+    const double HeightNorm = V / 1.75;
+    constexpr double AmplitudeUnits = 220.0;
+    return float(HeightNorm * AmplitudeUnits);
 }
 
 void URA4SimWorldSubsystem::SyncPresentation()

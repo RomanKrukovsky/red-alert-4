@@ -70,6 +70,9 @@ public:
     UFUNCTION(BlueprintPure, Category = "DirectControl")
     class UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
 
+    UFUNCTION(BlueprintCallable, Category = "DirectControl")
+    void SetupDirectControlView(bool bEnable, float InFov = 90.0f);
+
 protected:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
@@ -79,6 +82,9 @@ protected:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     TObjectPtr<USkeletalMeshComponent> SkeletalMeshComponent;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    TObjectPtr<class USpringArmComponent> DirectControlSpringArm;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     TObjectPtr<class UCameraComponent> FirstPersonCameraComponent;

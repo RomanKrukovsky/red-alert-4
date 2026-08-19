@@ -240,6 +240,12 @@ private:
     void HandleMatchEnded(bool bLocalPlayerWon, int32 WinningPlayer);
     void HandleRetryRequested();
     void HandleExitRequested();
+
+    void HandlePauseMenuResume();
+    void HandlePauseMenuRestart();
+    void HandlePauseMenuSettings();
+    void HandlePauseMenuQuitToMenu();
+    void HandlePauseMenuQuitToDesktop();
     bool HasMainMenuMap() const;
 
     // --- state ---------------------------------------------------------------
@@ -304,6 +310,10 @@ private:
     RA4::EntityId HoveredEntity;
     double HoverStartedSeconds = 0.0;
     bool bTooltipVisible = false;
+
+    UPROPERTY(Transient)
+    TObjectPtr<class ARA4EntityActor> GhostPlacementActor;
+    void UpdateGhostPlacement();
 
     FDelegateHandle MatchEndedHandle;
 };

@@ -88,6 +88,7 @@ public:
     // the caller decides when a rotate gesture is active.
     void AddYawDegrees(float Delta);
     void AddPitchDegrees(float Delta);
+    void ResetRotation();
     float GetPitchDegrees() const { return PitchDegrees; }
 
     void BeginMiddleDrag(float PixelX, float PixelY);

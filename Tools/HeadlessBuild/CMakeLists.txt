@@ -144,6 +144,7 @@ target_link_libraries(RA4Replay PUBLIC RA4Simulation)
 add_library(RA4Campaign STATIC
     ${RA4_SOURCE_ROOT}/RA4Campaign/Private/CampaignDatabase.cpp
     ${RA4_SOURCE_ROOT}/RA4Campaign/Private/MissionRuntime.cpp
+    ${RA4_SOURCE_ROOT}/RA4Campaign/Private/CampaignProfile.cpp
 )
 target_include_directories(RA4Campaign PUBLIC ${RA4_SOURCE_ROOT}/RA4Campaign/Public)
 # MissionRuntime evaluates objectives against SimWorld, so the campaign layer now

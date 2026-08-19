@@ -4696,6 +4696,10 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
         return false;
     }
 
+    // Prime fog of war visibility for the current state so systems running on the
+    // next tick (such as SystemCombat/AcquireTarget) see the correct visibility state.
+    SystemFogOfWar();
+
     return !R.HasError();
 }
 

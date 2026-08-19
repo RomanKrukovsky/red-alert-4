@@ -124,8 +124,10 @@ void ARA4SkirmishGameMode::ApplySceneDressing()
         if (UDirectionalLightComponent* Light = Cast<UDirectionalLightComponent>(It->GetLightComponent()))
         {
             Light->SetMobility(EComponentMobility::Movable);
-            Light->SetIntensity(4.5f);
-            Light->SetLightColor(FLinearColor(1.0f, 0.96f, 0.88f));
+            Light->SetIntensity(85000.0f);
+            Light->SetLightColor(FLinearColor(1.0f, 0.98f, 0.94f));
+            Light->bAtmosphereSunLight = true;
+            Light->DynamicShadowDistanceMovableLight = 30000.0f;
         }
     }
     if (!bFoundSun && GetWorld() != nullptr)
@@ -134,8 +136,8 @@ void ARA4SkirmishGameMode::ApplySceneDressing()
         if (SunActor && SunActor->GetLightComponent())
         {
             SunActor->GetLightComponent()->SetMobility(EComponentMobility::Movable);
-            SunActor->GetLightComponent()->SetIntensity(4.5f);
-            SunActor->GetLightComponent()->SetLightColor(FLinearColor(1.0f, 0.96f, 0.88f));
+            SunActor->GetLightComponent()->SetIntensity(85000.0f);
+            SunActor->GetLightComponent()->SetLightColor(FLinearColor(1.0f, 0.98f, 0.94f));
         }
     }
 
@@ -147,8 +149,11 @@ void ARA4SkirmishGameMode::ApplySceneDressing()
         if (USkyLightComponent* Sky = It->GetLightComponent())
         {
             Sky->SetMobility(EComponentMobility::Movable);
-            Sky->SetIntensity(2.0f);
-            Sky->SetLightColor(FLinearColor(0.65f, 0.82f, 1.0f));
+            Sky->SetIntensity(3.5f);
+            Sky->SetLightColor(FLinearColor(0.85f, 0.93f, 1.0f));
+            Sky->bLowerHemisphereIsBlack = false;
+            Sky->LowerHemisphereColor = FLinearColor(0.25f, 0.32f, 0.18f);
+            Sky->bRealTimeCapture = true;
         }
     }
     if (!bFoundSky && GetWorld() != nullptr)
@@ -157,8 +162,11 @@ void ARA4SkirmishGameMode::ApplySceneDressing()
         if (SkyActor && SkyActor->GetLightComponent())
         {
             SkyActor->GetLightComponent()->SetMobility(EComponentMobility::Movable);
-            SkyActor->GetLightComponent()->SetIntensity(2.0f);
-            SkyActor->GetLightComponent()->SetLightColor(FLinearColor(0.65f, 0.82f, 1.0f));
+            SkyActor->GetLightComponent()->SetIntensity(3.5f);
+            SkyActor->GetLightComponent()->SetLightColor(FLinearColor(0.85f, 0.93f, 1.0f));
+            SkyActor->GetLightComponent()->bLowerHemisphereIsBlack = false;
+            SkyActor->GetLightComponent()->LowerHemisphereColor = FLinearColor(0.25f, 0.32f, 0.18f);
+            SkyActor->GetLightComponent()->bRealTimeCapture = true;
         }
     }
 
@@ -183,7 +191,7 @@ void ARA4SkirmishGameMode::ApplySceneDressing()
         }
     }
 
-    // Load PBR Ground039 dirt/gravel material for terrain floor
+    // Load PBR Ground material for terrain floor
     UMaterialInterface* GroundMaterial = LoadObject<UMaterialInterface>(
         nullptr,
         TEXT("/Game/RA4/Presentation/Materials/Environment/Ground039.Ground039"));
@@ -192,6 +200,18 @@ void ARA4SkirmishGameMode::ApplySceneDressing()
         GroundMaterial = LoadObject<UMaterialInterface>(
             nullptr,
             TEXT("/Game/RA4/Presentation/Materials/Blockout/M_RA4_BlockoutGround.M_RA4_BlockoutGround"));
+    }
+    if (GroundMaterial == nullptr)
+    {
+        GroundMaterial = LoadObject<UMaterialInterface>(
+            nullptr,
+            TEXT("/Game/ThirdParty/CityPark/Materials/Ground/MI_Landscape.MI_Landscape"));
+    }
+    if (GroundMaterial == nullptr)
+    {
+        GroundMaterial = LoadObject<UMaterialInterface>(
+            nullptr,
+            TEXT("/Game/ThirdParty/CityPark/Materials/Ground/MI_Ground01.MI_Ground01"));
     }
 
     for (TActorIterator<AStaticMeshActor> It(GetWorld()); It; ++It)

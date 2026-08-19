@@ -233,7 +233,7 @@ void ARA4RtsHud::DrawPlacementFootprint(const ARA4PlayerController* Controller)
     UWorld* World = GetWorld();
     const URA4SimWorldSubsystem* Subsystem = World != nullptr ? World->GetSubsystem<URA4SimWorldSubsystem>() : nullptr;
     const RA4::SimWorld* Sim = Subsystem != nullptr ? Subsystem->GetSimWorld() : nullptr;
-    if (Sim == nullptr || Controller == nullptr)
+    if (Sim == nullptr || Controller == nullptr || World == nullptr)
     {
         return;
     }
@@ -258,11 +258,15 @@ void ARA4RtsHud::DrawPlacementFootprint(const ARA4PlayerController* Controller)
 
     // Footprint is centered on CursorGround
     const RA4::TileCoord OriginTile = Sim->GetMap().WorldToTile(CursorGround);
-    
     const RA4::PlayerId LocalPlayer = Controller->GetSelection().GetLocalPlayer();
-    const bool bValid = Sim->IsPlacementValid(ContentId, LocalPlayer, OriginTile);
+    const bool bOverallValid = Sim->IsPlacementValid(ContentId, LocalPlayer, OriginTile);
 
-    const FLinearColor Color = bValid ? PlacementValidColor : PlacementInvalidColor;
+    const double HalfSize = double(RA4::kTileSizeUnits) * 0.5;
+
+    // Draw base build area / power radius preview circle
+    const RA4::Vec2 OriginCenter = Sim->GetMap().TileCenterToWorld(OriginTile);
+    const FVector OriginUnreal = RA4Coords::ToUnreal(OriginCenter, RA4Coords::GroundZ + 5.0);
+    DrawDebugCircle(World, OriginUnreal, 900.0f, 36, FColor(40, 180, 255, 120), false, 0.04f, 0, 2.0f, FVector(1, 0, 0), FVector(0, 1, 0), false);
 
     // The grid occupies OriginTile to OriginTile + (FootprintX, FootprintY)
     for (int32_t Y = 0; Y < Def->Building.FootprintY; ++Y)
@@ -273,55 +277,41 @@ void ARA4RtsHud::DrawPlacementFootprint(const ARA4PlayerController* Controller)
             Tile.X += X;
             Tile.Y += Y;
             
-            // Draw a rect for each tile
+            const bool bCellInBounds = Sim->GetMap().IsInBounds(Tile.X, Tile.Y);
+            const bool bCellClear = bCellInBounds && ((Sim->GetMap().GetTile(Tile.X, Tile.Y) & RA4::Tile_GroundPassable) != 0);
+            const bool bCellValid = bOverallValid && bCellClear;
+
+            const FLinearColor CellColor = bCellValid
+                ? FLinearColor(0.1f, 1.0f, 0.35f, 0.55f)
+                : FLinearColor(1.0f, 0.15f, 0.15f, 0.55f);
+
             const RA4::Vec2 TileWorldCenter = Sim->GetMap().TileCenterToWorld(Tile);
-            const FVector CenterUnreal = RA4Coords::ToUnreal(TileWorldCenter);
-            
-            // Tile half-size
-            const double HalfSize = double(RA4::kTileSizeUnits) * 0.5;
-            const FVector Offsets[4] = {
-                FVector(-HalfSize, -HalfSize, 0.0), FVector(HalfSize, -HalfSize, 0.0),
-                FVector(HalfSize, HalfSize, 0.0), FVector(-HalfSize, HalfSize, 0.0)
-            };
+            const FVector CenterUnreal = RA4Coords::ToUnreal(TileWorldCenter, RA4Coords::GroundZ + 4.0);
 
-            double MinX = 0.0;
-            double MaxX = 0.0;
-            double MinY = 0.0;
-            double MaxY = 0.0;
-            bool bHaveBox = false;
+            // 3D terrain grid lines
+            const FVector P0 = CenterUnreal + FVector(-HalfSize, -HalfSize, 0.0);
+            const FVector P1 = CenterUnreal + FVector(HalfSize, -HalfSize, 0.0);
+            const FVector P2 = CenterUnreal + FVector(HalfSize, HalfSize, 0.0);
+            const FVector P3 = CenterUnreal + FVector(-HalfSize, HalfSize, 0.0);
 
-            for (const FVector& Offset : Offsets)
+            const FColor DebugColor = CellColor.ToFColor(true);
+            DrawDebugLine(World, P0, P1, DebugColor, false, 0.04f, 0, 2.5f);
+            DrawDebugLine(World, P1, P2, DebugColor, false, 0.04f, 0, 2.5f);
+            DrawDebugLine(World, P2, P3, DebugColor, false, 0.04f, 0, 2.5f);
+            DrawDebugLine(World, P3, P0, DebugColor, false, 0.04f, 0, 2.5f);
+
+            // Screen space filled quad
+            FVector2D S0, S1, S2, S3;
+            if (Controller->ProjectWorldLocationToScreen(P0, S0) &&
+                Controller->ProjectWorldLocationToScreen(P1, S1) &&
+                Controller->ProjectWorldLocationToScreen(P2, S2) &&
+                Controller->ProjectWorldLocationToScreen(P3, S3))
             {
-                FVector2D Screen;
-                if (!Controller->ProjectWorldLocationToScreen(CenterUnreal + Offset, Screen))
-                {
-                    continue;
-                }
-                if (!bHaveBox)
-                {
-                    MinX = MaxX = Screen.X;
-                    MinY = MaxY = Screen.Y;
-                    bHaveBox = true;
-                    continue;
-                }
-                MinX = FMath::Min(MinX, Screen.X);
-                MaxX = FMath::Max(MaxX, Screen.X);
-                MinY = FMath::Min(MinY, Screen.Y);
-                MaxY = FMath::Max(MaxY, Screen.Y);
-            }
-
-            if (bHaveBox)
-            {
-                // Draw tile fill
-                DrawRect(Color, float(MinX), float(MinY), float(MaxX - MinX), float(MaxY - MinY));
-                
-                // Draw tile border (slightly darker)
-                FLinearColor BorderColor = Color;
-                BorderColor.A = 1.0f;
-                DrawLine(float(MinX), float(MinY), float(MaxX), float(MinY), BorderColor, 1.0f);
-                DrawLine(float(MaxX), float(MinY), float(MaxX), float(MaxY), BorderColor, 1.0f);
-                DrawLine(float(MaxX), float(MaxY), float(MinX), float(MaxY), BorderColor, 1.0f);
-                DrawLine(float(MinX), float(MaxY), float(MinX), float(MinY), BorderColor, 1.0f);
+                const float MinX = FMath::Min(FMath::Min(S0.X, S1.X), FMath::Min(S2.X, S3.X));
+                const float MaxX = FMath::Max(FMath::Max(S0.X, S1.X), FMath::Max(S2.X, S3.X));
+                const float MinY = FMath::Min(FMath::Min(S0.Y, S1.Y), FMath::Min(S2.Y, S3.Y));
+                const float MaxY = FMath::Max(FMath::Max(S0.Y, S1.Y), FMath::Max(S2.Y, S3.Y));
+                DrawRect(CellColor, MinX, MinY, MaxX - MinX, MaxY - MinY);
             }
         }
     }

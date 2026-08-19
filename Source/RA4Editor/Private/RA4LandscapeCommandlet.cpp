@@ -67,14 +67,23 @@ URA4LandscapeCommandlet::URA4LandscapeCommandlet()
 int32 URA4LandscapeCommandlet::Main(const FString& Params)
 {
     const TArray<FString> MapPackagesToBuild = {
-        TEXT("/Game/Maps/RA4_Skirmish_Production"),
-        TEXT("/Game/Maps/RA4_Skirmish"),
-        TEXT("/Game/Maps/RA4_Skirmish_Hills"),
-        TEXT("/Game/Maps/RA4_Skirmish_Canyon")
+        TEXT("/Game/Maps/RA4_Skirmish_Production")
     };
 
     UMaterialInterface* GroundMaterial =
-        LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/RA4/Presentation/Materials/Environment/Ground039.Ground039"));
+        LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/ThirdParty/CityPark/Materials/Ground/MI_Ground01.MI_Ground01"));
+    if (GroundMaterial == nullptr)
+    {
+        GroundMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/ThirdParty/CityPark/Materials/Ground/MI_Ground02.MI_Ground02"));
+    }
+    if (GroundMaterial == nullptr)
+    {
+        GroundMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/ThirdParty/CityPark/Materials/Ground/MI_Landscape.MI_Landscape"));
+    }
+    if (GroundMaterial == nullptr)
+    {
+        GroundMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/RA4/Presentation/Materials/Environment/Ground039.Ground039"));
+    }
     if (GroundMaterial == nullptr)
     {
         GroundMaterial = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/RA4/Materials/M_RA4Ground_Lit.M_RA4Ground_Lit"));
@@ -149,19 +158,23 @@ int32 URA4LandscapeCommandlet::Main(const FString& Params)
         const FVector Origin =
             Centre - FVector(double(SizeX - 1) * ScaleXY * 0.5, double(SizeY - 1) * ScaleXY * 0.5, 0.0);
 
-        ALandscape* Landscape = nullptr;
-        TActorIterator<ALandscape> LandscapeIt(World);
-        if (LandscapeIt)
+        // Destroy existing landscape if present so Import creates fresh components
+        TArray<ALandscape*> ExistingLandscapes;
+        for (TActorIterator<ALandscape> LandscapeIt(World); LandscapeIt; ++LandscapeIt)
         {
-            Landscape = *LandscapeIt;
+            ExistingLandscapes.Add(*LandscapeIt);
+        }
+        for (ALandscape* Existing : ExistingLandscapes)
+        {
+            if (Existing != nullptr)
+            {
+                Existing->Destroy();
+            }
         }
 
-        if (Landscape == nullptr)
-        {
-            FActorSpawnParameters ActorSpawnParams;
-            ActorSpawnParams.Name = FName(*FString::Printf(TEXT("RA4_Landscape_%d"), MapIndex));
-            Landscape = World->SpawnActor<ALandscape>(Origin, FRotator::ZeroRotator, ActorSpawnParams);
-        }
+        FActorSpawnParameters ActorSpawnParams;
+        ActorSpawnParams.Name = FName(*FString::Printf(TEXT("RA4_Landscape_%d"), MapIndex));
+        ALandscape* Landscape = World->SpawnActor<ALandscape>(Origin, FRotator::ZeroRotator, ActorSpawnParams);
 
         if (Landscape == nullptr)
         {

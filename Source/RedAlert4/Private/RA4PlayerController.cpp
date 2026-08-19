@@ -9,6 +9,7 @@
 #include "RA4SimWorldSubsystem.h"
 #include "RA4HUDWidget.h"
 #include "RA4MatchResultOverlayWidget.h"
+#include "RA4PauseMenuWidget.h"
 #include "RA4AudioSubsystem.h"
 #include "RA4HoverTooltipWidget.h"
 #include "RA4SidebarWidget.h"
@@ -21,6 +22,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "Layout/WidgetPath.h"
 #include "Misc/PackageName.h"
 #include "UnrealClient.h"
@@ -561,6 +563,7 @@ void ARA4PlayerController::PlayerTick(float DeltaTime)
         ApplyCursorShape();
 
         UpdateHoverTooltip(*World);
+        UpdateGhostPlacement();
     }
 }
 
@@ -736,10 +739,13 @@ void ARA4PlayerController::UpdateCameraInput(float DeltaTime)
     }
     CameraController& Camera = CameraPawn->GetCameraController();
 
-    // A is not read here: it arms attack-move. Left is panned with the arrow key,
-    // the screen edge or the middle-mouse drag.
+    // WASD + Arrow keys:
+    // W = Forward on screen (+Up)
+    // S = Backward on screen (-Up)
+    // A = Left on screen (-Right)
+    // D = Right on screen (+Right)
     const float Right = (IsInputKeyDown(EKeys::D) || IsInputKeyDown(EKeys::Right) ? 1.0f : 0.0f) -
-                        (IsInputKeyDown(EKeys::Left) ? 1.0f : 0.0f);
+                        (IsInputKeyDown(EKeys::A) || IsInputKeyDown(EKeys::Left) ? 1.0f : 0.0f);
     const float Up = (IsInputKeyDown(EKeys::W) || IsInputKeyDown(EKeys::Up) ? 1.0f : 0.0f) -
                      (IsInputKeyDown(EKeys::S) || IsInputKeyDown(EKeys::Down) ? 1.0f : 0.0f);
 
@@ -768,27 +774,63 @@ void ARA4PlayerController::UpdateCameraInput(float DeltaTime)
         Camera.UpdateMiddleDrag(MouseX, MouseY);
     }
 
-    // Space + drag (RMB or LMB): horizontal mouse travel spins the view. Edge scrolling is
-    // suppressed meanwhile, or dragging toward a border would slide the map as well
-    // as turn it.
+    // Keyboard rotation controls:
+    // Insert / Delete, Comma / Period, Alt + A / D or Alt + Left / Right
+    float KeyYawDelta = 0.0f;
+    float KeyPitchDelta = 0.0f;
+    const bool bAltHeld = IsInputKeyDown(EKeys::LeftAlt) || IsInputKeyDown(EKeys::RightAlt);
+    const bool bCtrlHeld = IsInputKeyDown(EKeys::LeftControl) || IsInputKeyDown(EKeys::RightControl);
+    const float DtVal = DeltaTime > 0.0f ? DeltaTime : 0.016f;
+
+    if (IsInputKeyDown(EKeys::Insert) || IsInputKeyDown(EKeys::Comma) || (bAltHeld && (IsInputKeyDown(EKeys::A) || IsInputKeyDown(EKeys::Left))))
+    {
+        KeyYawDelta -= 120.0f * DtVal;
+    }
+    if (IsInputKeyDown(EKeys::Delete) || IsInputKeyDown(EKeys::Period) || (bAltHeld && (IsInputKeyDown(EKeys::D) || IsInputKeyDown(EKeys::Right))))
+    {
+        KeyYawDelta += 120.0f * DtVal;
+    }
+    if (IsInputKeyDown(EKeys::PageUp) || (bAltHeld && (IsInputKeyDown(EKeys::W) || IsInputKeyDown(EKeys::Up))))
+    {
+        KeyPitchDelta += 60.0f * DtVal;
+    }
+    if (IsInputKeyDown(EKeys::PageDown) || (bAltHeld && (IsInputKeyDown(EKeys::S) || IsInputKeyDown(EKeys::Down))))
+    {
+        KeyPitchDelta -= 60.0f * DtVal;
+    }
+    if (IsInputKeyDown(EKeys::Home) || IsInputKeyDown(EKeys::BackSpace))
+    {
+        Camera.ResetRotation();
+    }
+
+    if (KeyYawDelta != 0.0f)
+    {
+        Camera.AddYawDegrees(KeyYawDelta);
+    }
+    if (KeyPitchDelta != 0.0f)
+    {
+        Camera.AddPitchDegrees(KeyPitchDelta);
+    }
+
+    // Mouse orbit / rotation gestures:
+    // - Space + mouse movement
+    // - Alt + RMB / LMB / MMB drag
+    // - Ctrl + MMB drag
     const bool bRightMouseDown = IsInputKeyDown(EKeys::RightMouseButton);
     const bool bLeftMouseDown = IsInputKeyDown(EKeys::LeftMouseButton);
+    const bool bMiddleMouseDown = IsInputKeyDown(EKeys::MiddleMouseButton);
     const bool bSpaceDown = IsInputKeyDown(EKeys::SpaceBar);
-    const bool bAnyMouseDown = bRightMouseDown || bLeftMouseDown || IsInputKeyDown(EKeys::MiddleMouseButton);
 
-    // On macOS trackpads, clicking and dragging is cumbersome. 
-    // Allow rotating the camera by just holding Space and moving the cursor.
-    if (bSpaceDown || bRotatingCamera)
+    const bool bRotateGestureActive = bSpaceDown ||
+                                      (bAltHeld && (bRightMouseDown || bLeftMouseDown || bMiddleMouseDown)) ||
+                                      (bCtrlHeld && bMiddleMouseDown);
+
+    if (bRotateGestureActive)
     {
         if (!bRotatingCamera)
         {
             bRotatingCamera = true;
             RotateAnchorScreen = FVector2D(MouseX, MouseY);
-        }
-
-        if (!bSpaceDown && !bAnyMouseDown)
-        {
-            bRotatingCamera = false;
         }
         else if (bHasCursor)
         {
@@ -799,8 +841,11 @@ void ARA4PlayerController::UpdateCameraInput(float DeltaTime)
             Camera.AddPitchDegrees(-DeltaY * 0.3f);
             Camera.SetCursorPosition(MouseX, MouseY, /*bWindowFocused*/ false);
         }
-        // The player is turning the camera, not driving it with the keyboard.
         Camera.SetKeyboardPan(0.0f, 0.0f);
+    }
+    else
+    {
+        bRotatingCamera = false;
     }
 
 
@@ -1498,6 +1543,70 @@ void ARA4PlayerController::BeginPlacement(int64 ContentIdValue)
     bAttackMoveArmed = false;
 }
 
+void ARA4PlayerController::UpdateGhostPlacement()
+{
+    if (!bPlacementArmed || !PlacementContent.IsValid())
+    {
+        if (GhostPlacementActor != nullptr)
+        {
+            GhostPlacementActor->Destroy();
+            GhostPlacementActor = nullptr;
+        }
+        return;
+    }
+
+    const URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
+    const SimWorld* World = Subsystem != nullptr ? Subsystem->GetSimWorld() : nullptr;
+    if (World == nullptr || World->GetContent() == nullptr)
+    {
+        return;
+    }
+
+    const EntityDef* Def = World->GetContent()->FindEntity(PlacementContent);
+    if (Def == nullptr || Def->Kind != EntityKind::Building)
+    {
+        return;
+    }
+
+    Vec2 Ground;
+    if (!GetCursorGroundPosition(Ground))
+    {
+        return;
+    }
+
+    const TileCoord OriginTile = World->GetMap().WorldToTile(Ground);
+    const PlayerId LocalPlayer = Selection.GetLocalPlayer();
+    const bool bValid = World->IsPlacementValid(PlacementContent, LocalPlayer, OriginTile);
+
+    const Vec2 TileCenter = World->GetMap().TileCenterToWorld(OriginTile);
+    const int64 HalfFootprintXUnits = int64((Def->Building.FootprintX - 1) * int32(kTileSizeUnits) / 2);
+    const int64 HalfFootprintYUnits = int64((Def->Building.FootprintY - 1) * int32(kTileSizeUnits) / 2);
+
+    FVector GhostLoc = RA4Coords::ToUnreal(Vec2(TileCenter.X + Fixed::FromInt(HalfFootprintXUnits),
+                                                TileCenter.Y + Fixed::FromInt(HalfFootprintYUnits)));
+    GhostLoc.Z = RA4Coords::GroundZ + 5.0f;
+
+    UWorld* CurrentWorld = GetWorld();
+    if (GhostPlacementActor == nullptr && CurrentWorld != nullptr)
+    {
+        FActorSpawnParameters SpawnParams;
+        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+        GhostPlacementActor = CurrentWorld->SpawnActor<ARA4EntityActor>(ARA4EntityActor::StaticClass(), GhostLoc, FRotator::ZeroRotator, SpawnParams);
+        if (GhostPlacementActor != nullptr)
+        {
+            GhostPlacementActor->SetEntityId(UTF8_TO_TCHAR(Def->Name.c_str()));
+            const float ScaleVal = FMath::Max(float(Def->Building.FootprintX), float(Def->Building.FootprintY)) * 0.95f;
+            GhostPlacementActor->SetVisualScale(FVector(ScaleVal, ScaleVal, ScaleVal));
+        }
+    }
+
+    if (GhostPlacementActor != nullptr)
+    {
+        GhostPlacementActor->SetActorLocation(GhostLoc);
+        GhostPlacementActor->SetTeamColor(bValid ? FLinearColor(0.1f, 1.0f, 0.35f, 0.65f) : FLinearColor(1.0f, 0.15f, 0.15f, 0.65f));
+    }
+}
+
 void ARA4PlayerController::HandleBuildCardClicked(int64 ContentIdValue)
 {
     const URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
@@ -1598,14 +1707,17 @@ void ARA4PlayerController::TogglePauseMenu()
     {
         if (PauseMenuOverlay == nullptr)
         {
-            if (URA4MatchResultOverlayWidget* MenuWidget = CreateWidget<URA4MatchResultOverlayWidget>(
-                this, URA4MatchResultOverlayWidget::StaticClass()))
+            if (URA4PauseMenuWidget* MenuWidget = CreateWidget<URA4PauseMenuWidget>(
+                this, URA4PauseMenuWidget::StaticClass()))
             {
-                MenuWidget->OnRetryRequested.AddUObject(this, &ARA4PlayerController::TogglePauseMenu);
-                MenuWidget->OnExitRequested.AddUObject(this, &ARA4PlayerController::HandleExitRequested);
+                MenuWidget->OnResumeRequested.AddUObject(this, &ARA4PlayerController::HandlePauseMenuResume);
+                MenuWidget->OnRestartRequested.AddUObject(this, &ARA4PlayerController::HandlePauseMenuRestart);
+                MenuWidget->OnSettingsRequested.AddUObject(this, &ARA4PlayerController::HandlePauseMenuSettings);
+                MenuWidget->OnQuitToMenuRequested.AddUObject(this, &ARA4PlayerController::HandlePauseMenuQuitToMenu);
+                MenuWidget->OnQuitToDesktopRequested.AddUObject(this, &ARA4PlayerController::HandlePauseMenuQuitToDesktop);
 
                 PauseMenuOverlay = MenuWidget;
-                PauseMenuOverlay->AddToViewport(90);
+                PauseMenuOverlay->AddToViewport(100);
             }
         }
         if (PauseMenuOverlay != nullptr)
@@ -1619,6 +1731,34 @@ void ARA4PlayerController::TogglePauseMenu()
             UGameplayStatics::SetGamePaused(this, true);
         }
     }
+}
+
+void ARA4PlayerController::HandlePauseMenuResume()
+{
+    TogglePauseMenu();
+}
+
+void ARA4PlayerController::HandlePauseMenuRestart()
+{
+    UGameplayStatics::SetGamePaused(this, false);
+    const FString CurrentLevel = GetWorld()->GetMapName();
+    UGameplayStatics::OpenLevel(this, FName(*CurrentLevel));
+}
+
+void ARA4PlayerController::HandlePauseMenuSettings()
+{
+    UE_LOG(LogTemp, Display, TEXT("RA4 Pause Menu: Settings clicked"));
+}
+
+void ARA4PlayerController::HandlePauseMenuQuitToMenu()
+{
+    UGameplayStatics::SetGamePaused(this, false);
+    UGameplayStatics::OpenLevel(this, TEXT("Entry"));
+}
+
+void ARA4PlayerController::HandlePauseMenuQuitToDesktop()
+{
+    UKismetSystemLibrary::QuitGame(this, this, EQuitPreference::Quit, false);
 }
 
 void ARA4PlayerController::HandleRadarClicked(FVector2D WorldPosition)

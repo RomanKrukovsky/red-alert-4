@@ -144,6 +144,8 @@ bool URA4DirectControlSubsystem::RequestEnter(APlayerController* PC, RA4::Entity
     ARA4EntityActor* EntityActor = SimSubsystem->GetEntityActor(Vehicle);
     if (EntityActor != nullptr)
     {
+        const float Fov = (ActiveProfile != nullptr && ActiveProfile->Camera.WideFOV > 0.0f) ? ActiveProfile->Camera.WideFOV : 90.0f;
+        EntityActor->SetupDirectControlView(true, Fov);
         PC->SetViewTargetWithBlend(EntityActor, ActiveProfile != nullptr ? ActiveProfile->EnterBlendTime : 0.35f);
         PC->bShowMouseCursor = false;
         PC->SetInputMode(FInputModeGameOnly());
@@ -168,6 +170,12 @@ bool URA4DirectControlSubsystem::RequestExit(APlayerController* PC)
     Cmd.Primary = ControlledVehicle;
     SubmitCommand(Cmd);
     SetClientPhase(ERA4DirectControlClientPhase::Exiting);
+
+    ARA4EntityActor* EntityActor = SimSubsystem->GetEntityActor(ControlledVehicle);
+    if (EntityActor != nullptr)
+    {
+        EntityActor->SetupDirectControlView(false);
+    }
 
     // Restore the RTS camera pawn as the view target. The blend time matches
     // the profile's exit transition so the camera glides back out.

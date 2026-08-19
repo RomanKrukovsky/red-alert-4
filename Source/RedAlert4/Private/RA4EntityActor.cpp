@@ -4,6 +4,7 @@
 #include "RA4Presentation/RA4ArtMapping.h"
 
 #include "Camera/CameraComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "Components/DecalComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/MeshComponent.h"
@@ -21,9 +22,23 @@ ARA4EntityActor::ARA4EntityActor()
     SetRootComponent(MeshComponent);
     MeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision); // Collision is handled by simulation core
 
+    DirectControlSpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("DirectControlSpringArm"));
+    DirectControlSpringArm->SetupAttachment(MeshComponent);
+    DirectControlSpringArm->TargetArmLength = 360.0f;
+    DirectControlSpringArm->SetRelativeLocation(FVector(0.0f, 0.0f, 80.0f));
+    DirectControlSpringArm->SetRelativeRotation(FRotator(-10.0f, 0.0f, 0.0f));
+    DirectControlSpringArm->bDoCollisionTest = false;
+    DirectControlSpringArm->bEnableCameraLag = false;
+    DirectControlSpringArm->bEnableCameraRotationLag = false;
+    DirectControlSpringArm->bInheritPitch = true;
+    DirectControlSpringArm->bInheritYaw = true;
+    DirectControlSpringArm->bInheritRoll = false;
+    // Over-the-shoulder offset: +Y is right in UE -> shifts camera to the right and puts object on LEFT of screen
+    DirectControlSpringArm->SocketOffset = FVector(0.0f, 90.0f, 45.0f);
+    DirectControlSpringArm->TargetOffset = FVector(0.0f, 0.0f, 35.0f);
+
     FirstPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCameraComponent"));
-    FirstPersonCameraComponent->SetupAttachment(MeshComponent);
-    FirstPersonCameraComponent->SetRelativeLocation(FVector(0.0f, 0.0f, 80.0f));
+    FirstPersonCameraComponent->SetupAttachment(DirectControlSpringArm, USpringArmComponent::SocketName);
     FirstPersonCameraComponent->bUsePawnControlRotation = false;
 
     SkeletalMeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalMeshComponent"));
@@ -79,7 +94,7 @@ FVector ARA4EntityActor::GetPossessionCameraLocation() const
     {
         return FirstPersonCameraComponent->GetComponentLocation();
     }
-    return GetActorLocation() + FVector(0.0f, 0.0f, 80.0f);
+    return GetActorLocation() + FVector(-250.0f, 90.0f, 150.0f);
 }
 
 FRotator ARA4EntityActor::GetPossessionCameraRotation() const
@@ -89,6 +104,20 @@ FRotator ARA4EntityActor::GetPossessionCameraRotation() const
         return FirstPersonCameraComponent->GetComponentRotation();
     }
     return GetActorRotation();
+}
+
+void ARA4EntityActor::SetupDirectControlView(bool bEnable, float InFov)
+{
+    if (FirstPersonCameraComponent != nullptr)
+    {
+        FirstPersonCameraComponent->SetFieldOfView(InFov > 0.0f ? InFov : 90.0f);
+    }
+    if (DirectControlSpringArm != nullptr)
+    {
+        const float ScaleMult = FMath::Clamp(float(RequestedVisualScale.GetMax()), 0.8f, 3.0f);
+        DirectControlSpringArm->TargetArmLength = 340.0f * ScaleMult;
+        DirectControlSpringArm->SocketOffset = FVector(0.0f, 90.0f * ScaleMult, 45.0f * ScaleMult);
+    }
 }
 
 void ARA4EntityActor::SetEntityMesh(UStaticMesh* InMesh)
@@ -129,36 +158,41 @@ void ARA4EntityActor::SetTeamColor(const FLinearColor& TeamColor)
         return;
     }
 
-    // Production meshes already carry faction PBR instances per authored slot
-    // (paint, rubber, glass, concrete and emissive). Replacing every slot with
-    // the old blockout material destroys that work and makes the four factions
-    // visually identical. Player ownership remains readable through selection
-    // decals/UI until a dedicated mask channel is authored.
+    // Authored production meshes carry their own multi-slot PBR materials.
+    // Do not overwrite them with prototype blockout textures.
     if (const UStaticMesh* StaticMesh = MeshComponent->GetStaticMesh())
     {
         const FString MeshPath = StaticMesh->GetPathName();
         if (MeshPath.Contains(TEXT("/RA4/Art/Units/")) ||
-            MeshPath.Contains(TEXT("/RA4/Art/Buildings/")))
+            MeshPath.Contains(TEXT("/RA4/Art/Buildings/")) ||
+            MeshPath.Contains(TEXT("/ThirdParty/")))
         {
             return;
         }
     }
 
-    // Select the faction's textured metal material. Imported FBX blockouts commonly
-    // have several material slots; changing only slot zero left most of every model
-    // on its original white material even though the log reported the correct MID.
+    // Clean, high-grade military painted metal PBR (No rust, no grunge)
     UMaterialInterface* FactionMat = nullptr;
     if (TeamColor.R > 0.5f && TeamColor.B < 0.2f)
     {
-        FactionMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/RA4/Presentation/Materials/Blockout/MI_RA4_Blockout_SU.MI_RA4_Blockout_SU"));
+        FactionMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/RA4/Art/Materials/MI_RA4_Surface_Soviet.MI_RA4_Surface_Soviet"));
     }
     else if (TeamColor.B > 0.5f && TeamColor.R < 0.2f)
     {
-        FactionMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/RA4/Presentation/Materials/Blockout/MI_RA4_Blockout_AL.MI_RA4_Blockout_AL"));
+        FactionMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/RA4/Art/Materials/MI_RA4_Surface_Alliance.MI_RA4_Surface_Alliance"));
+    }
+    else if (TeamColor.G > 0.5f && TeamColor.R < 0.4f)
+    {
+        FactionMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/RA4/Art/Materials/MI_RA4_Surface_Coalition.MI_RA4_Surface_Coalition"));
     }
     else
     {
-        FactionMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/RA4/Presentation/Materials/Blockout/MI_RA4_Blockout_Neutral.MI_RA4_Blockout_Neutral"));
+        FactionMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/RA4/Art/Materials/MI_RA4_Surface_Dark.MI_RA4_Surface_Dark"));
+    }
+
+    if (FactionMat == nullptr)
+    {
+        FactionMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
     }
 
     const auto ApplyFactionMaterial = [FactionMat, &TeamColor](UMeshComponent* Component)
@@ -177,9 +211,12 @@ void ARA4EntityActor::SetTeamColor(const FLinearColor& TeamColor)
             {
                 DynamicMaterial->SetVectorParameterValue(TEXT("TeamColor"), TeamColor);
                 DynamicMaterial->SetVectorParameterValue(TEXT("Color"), TeamColor);
-                DynamicMaterial->SetScalarParameterValue(TEXT("Metallic"), 0.85f);
-                DynamicMaterial->SetScalarParameterValue(TEXT("Roughness"), 0.35f);
-                DynamicMaterial->SetScalarParameterValue(TEXT("Specular"), 0.6f);
+                DynamicMaterial->SetVectorParameterValue(TEXT("BaseColor"), TeamColor);
+                DynamicMaterial->SetScalarParameterValue(TEXT("Metallic"), 0.15f);
+                DynamicMaterial->SetScalarParameterValue(TEXT("Roughness"), 0.40f);
+                DynamicMaterial->SetScalarParameterValue(TEXT("Specular"), 0.50f);
+                DynamicMaterial->SetScalarParameterValue(TEXT("RustAmount"), 0.0f);
+                DynamicMaterial->SetScalarParameterValue(TEXT("Grunge"), 0.0f);
             }
         }
     };
@@ -198,10 +235,6 @@ void ARA4EntityActor::SetVisualScale(const FVector& Scale)
     RequestedVisualScale = Scale;
     bHasRequestedVisualScale = true;
 
-    // Scale expresses the wanted world footprint in units of the 100 cm engine
-    // placeholder cube. Authored blockout meshes do not share that source size:
-    // several are tens of thousands of units wide. Multiplying those by the
-    // placeholder scale made a single building engulf the entire camera.
     const UStaticMesh* Mesh = MeshComponent->GetStaticMesh();
     const FVector SourceSize = Mesh != nullptr
                                    ? Mesh->GetBounds().BoxExtent * 2.0
@@ -213,9 +246,22 @@ void ARA4EntityActor::SetVisualScale(const FVector& Scale)
         SourceSize.Z > UE_SMALL_NUMBER ? DesiredSize.Z / SourceSize.Z : 1.0);
     MeshComponent->SetWorldScale3D(NormalizedScale);
 
-    // The visual rests on the ground even when the imported source dimensions
-    // differ from the engine cube.
-    VisualZOffset = DesiredSize.Z * 0.5f;
+    // Units stand directly on the ground. Only center-pivoted engine placeholder cubes need half-height offset.
+    if (Mesh != nullptr && Mesh->GetName().Contains(TEXT("Cube")))
+    {
+        VisualZOffset = DesiredSize.Z * 0.5f;
+    }
+    else
+    {
+        VisualZOffset = 0.0f;
+    }
+
+    // Dynamically place first-person camera above the vehicle turret/hull to prevent mesh clipping
+    if (FirstPersonCameraComponent != nullptr)
+    {
+        FirstPersonCameraComponent->SetRelativeLocation(
+            FVector(DesiredSize.X * 0.2f, 0.0f, DesiredSize.Z * 0.85f + 15.0f));
+    }
 }
 
 void ARA4EntityActor::BeginPlay()
@@ -246,7 +292,7 @@ void ARA4EntityActor::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
     
-    // Simple interpolation for smooth presentation (lerp rate ~ 10.0f to smooth 20Hz tick)
+    // Simple interpolation for smooth presentation (lerp rate ~ 15.0f to smooth 20Hz tick)
     FVector CurrentLocation = GetActorLocation();
     FVector InterpolatedLocation = FMath::VInterpTo(CurrentLocation, TargetPosition, DeltaTime, 15.0f);
     
@@ -254,7 +300,7 @@ void ARA4EntityActor::Tick(float DeltaTime)
     FRotator TargetRotator(0.0f, TargetRotationZ, 0.0f);
     FRotator InterpolatedRotation = FMath::RInterpTo(CurrentRotation, TargetRotator, DeltaTime, 15.0f);
 
-    // AAA RTS Vehicle Dynamics: pitch dip on acceleration/brake, roll lean on turn, engine vibration
+    // Vehicle Dynamics: pitch dip on acceleration/brake, roll lean on turn
     const FVector Velocity = (InterpolatedLocation - CurrentLocation) / FMath::Max(DeltaTime, 0.001f);
     const float Speed = Velocity.Size();
 
@@ -266,18 +312,14 @@ void ARA4EntityActor::Tick(float DeltaTime)
         const float ForwardSpeed = FVector::DotProduct(Velocity, Forward);
         const float LateralSpeed = FVector::DotProduct(Velocity, Right);
 
-        const float PitchTilt = FMath::Clamp(ForwardSpeed * 0.004f, -6.0f, 6.0f);
-        const float RollTilt = FMath::Clamp(LateralSpeed * 0.006f, -5.0f, 5.0f);
-        const float EngineVibration = FMath::Sin(GetWorld()->GetTimeSeconds() * 22.0f) * 0.8f;
+        const float PitchTilt = FMath::Clamp(ForwardSpeed * 0.004f, -5.0f, 5.0f);
+        const float RollTilt = FMath::Clamp(LateralSpeed * 0.005f, -4.0f, 4.0f);
 
         FRotator DynamicRotator = InterpolatedRotation;
         DynamicRotator.Pitch += PitchTilt;
         DynamicRotator.Roll += RollTilt;
 
-        FVector DynamicLocation = InterpolatedLocation;
-        DynamicLocation.Z += EngineVibration;
-
-        SetActorLocationAndRotation(DynamicLocation, DynamicRotator);
+        SetActorLocationAndRotation(InterpolatedLocation, DynamicRotator);
     }
     else
     {
@@ -557,32 +599,30 @@ void ARA4EntityActor::ApplyPrimitiveComposition(const FString& InEntityId)
                             return;
                         }
 
-                        // The DataAsset was authored against older Bible keys, not the
-                        // current content names. Map them explicitly so the lookup works
-                        // without renaming every row in the DA.
+                        // Explicit Bible ID alias mappings for clean-room asset registry resolution.
                         static const TMap<FString, FString> KnownAliases = {
-                            { TEXT("unit.sov.conscript"),       TEXT("SU_Conscript") },
-                            { TEXT("unit.sov.ore_harvester"),   TEXT("SU_Harvester") },
-                            { TEXT("unit.sov.heavy_tank"),      TEXT("SU_HammerTank") },
-                            { TEXT("unit.sov.rocket_trooper"),  TEXT("SU_ShockTrooper") },
-                            { TEXT("unit.sov.mcv"),             TEXT("SU_MCV") },
-                            { TEXT("unit.all.rifleman"),        TEXT("AL_Peacekeeper") },
-                            { TEXT("unit.all.ore_harvester"),   TEXT("AL_Prospector") },
-                            { TEXT("unit.all.light_tank"),      TEXT("AL_GuardianTank") },
-                            { TEXT("unit.all.missile_infantry"), TEXT("AL_Javelin") },
-                            { TEXT("unit.all.mcv"),             TEXT("AL_MCV") },
+                            { TEXT("unit.sov.conscript"),             TEXT("SU_RubezhRifleman") },
+                            { TEXT("unit.sov.ore_harvester"),         TEXT("SU_BogatyrOreCarrier") },
+                            { TEXT("unit.sov.heavy_tank"),            TEXT("SU_GranitMBT") },
+                            { TEXT("unit.sov.rocket_trooper"),        TEXT("SU_GrozaRocketeer") },
+                            { TEXT("unit.sov.mcv"),                   TEXT("SU_MCV") },
+                            { TEXT("unit.all.rifleman"),              TEXT("AL_VanguardRifleman") },
+                            { TEXT("unit.all.ore_harvester"),         TEXT("AL_MinerCarrier") },
+                            { TEXT("unit.all.light_tank"),            TEXT("AL_PaladinTank") },
+                            { TEXT("unit.all.missile_infantry"),      TEXT("AL_StrikerInfantry") },
+                            { TEXT("unit.all.mcv"),                   TEXT("AL_MCV") },
                             { TEXT("building.sov.construction_yard"), TEXT("SU_ConYard") },
                             { TEXT("building.sov.tesla_reactor"),     TEXT("SU_PowerPlant") },
                             { TEXT("building.sov.ore_refinery"),      TEXT("SU_Refinery") },
                             { TEXT("building.sov.barracks"),          TEXT("SU_Barracks") },
-                            { TEXT("building.sov.war_factory"),       TEXT("SU_WarFactory") },
-                            { TEXT("building.sov.gun_turret"),        TEXT("SU_SentryTurret") },
+                            { TEXT("building.sov.war_factory"),       TEXT("SU_HeavyFactory") },
+                            { TEXT("building.sov.gun_turret"),        TEXT("SU_Pillbox") },
                             { TEXT("building.all.construction_yard"), TEXT("AL_ConYard") },
                             { TEXT("building.all.power_plant"),       TEXT("AL_PowerPlant") },
                             { TEXT("building.all.ore_refinery"),      TEXT("AL_Refinery") },
                             { TEXT("building.all.barracks"),          TEXT("AL_Barracks") },
                             { TEXT("building.all.war_factory"),       TEXT("AL_WarFactory") },
-                            { TEXT("building.all.pillbox"),           TEXT("AL_MultigunTurret") },
+                            { TEXT("building.all.pillbox"),           TEXT("AL_Pillbox") },
                         };
                         if (const FString* Alias = KnownAliases.Find(EntityId))
                         {

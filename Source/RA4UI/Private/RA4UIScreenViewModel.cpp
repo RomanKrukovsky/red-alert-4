@@ -5,24 +5,19 @@
 #define LOCTEXT_NAMESPACE "RA4UIScreenViewModel"
 
 URA4UIScreenViewModel::URA4UIScreenViewModel()
-    : ModalTitle(LOCTEXT("DefaultModalTitle", "SYSTEM MESSAGE"))
-    , ModalBody(LOCTEXT("DefaultModalBody", "Awaiting commander orders."))
+    : ModalTitle(LOCTEXT("DefaultModalTitle", "СИСТЕМНОЕ СООБЩЕНИЕ"))
+    , ModalBody(LOCTEXT("DefaultModalBody", "Ожидание приказа командующего."))
 {
-    // Showcase filler, but it ships: RA4UI is in RedAlert4.Target.cs's ExtraModuleNames,
-    // so these strings are in the Game build and get harvested into the shipped
-    // localization catalogs. They therefore use the project's own unit names -- the same
-    // ones RA4UIDataProviderSubsystem maps content ids to -- rather than trademarked
-    // Red Alert 2 names, which the project is not licensed to use.
     ProductionQueue = {
-        {LOCTEXT("QueueGranitMBT", "Tank «Granit»"), 1400, 0.62f, 1},
-        {LOCTEXT("QueueRubezhRifleman", "Strelok «Rubezh»"), 100, 0.0f, 5},
+        {LOCTEXT("QueueGranitMBT", "Танк «Гранит»"), 1400, 0.62f, 1},
+        {LOCTEXT("QueueRubezhRifleman", "Стрелок «Рубеж»"), 100, 0.0f, 5},
     };
 
     LobbySlots = {
-        {LOCTEXT("LobbyCommander", "COMMANDER"), ERA4FactionTheme::USSR, true},
-        {LOCTEXT("LobbyWard", "ADMIRAL WARD"), ERA4FactionTheme::Allies, true},
-        {LOCTEXT("LobbyGao", "GENERAL GAO"), ERA4FactionTheme::EasternCoalition, false},
-        {LOCTEXT("LobbyChronos", "CHRONOS-07"), ERA4FactionTheme::Chronolegion, false},
+        {LOCTEXT("LobbyCommander", "КОМАНДУЮЩИЙ"), ERA4FactionTheme::USSR, true},
+        {LOCTEXT("LobbyWard", "АДМИРАЛ ВАРД"), ERA4FactionTheme::Allies, true},
+        {LOCTEXT("LobbyGao", "ГЕНЕРАЛ ГАО"), ERA4FactionTheme::EasternCoalition, false},
+        {LOCTEXT("LobbyChronos", "ХРОНОС-07"), ERA4FactionTheme::Chronolegion, false},
     };
 }
 

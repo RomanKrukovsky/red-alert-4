@@ -478,8 +478,8 @@ void URA4ShowcaseWidget::SetScreen(const int32 InScreen)
     UE_LOG(LogTemp, Display, TEXT("RA4 UI showcase selected screen %d."), ActiveScreen);
 
     FLinearColor Accent = SovietRed;
-    FText Heading = LOCTEXT("MainHeading", "GLAVNOE KOMANDOVANIE");
-    FText Body = LOCTEXT("MainBody", "Vyberite napravlenie operatsii. Kampaniya, setevoy boy i sistemnye parametry dostupny iz zashchishchyonnogo komandnogo tsentra.");
+    FText Heading = LOCTEXT("MainHeading", "ГЛАВНОЕ КОМАНДОВАНИЕ");
+    FText Body = LOCTEXT("MainBody", "Выберите направление операции. Кампания, сетевой бой и системные параметры доступны из защищённого командного центра.");
     FText Status = LOCTEXT("MainStatus", "КОМАНДУЮЩИЙ\nГотов к операции\n\nСОСТОЯНИЕ СЕТИ\nСтабильное\n\nТЕАТР ВОЙНЫ\nЕвропа // 2049");
     float Progress = 1.0f;
 
@@ -487,7 +487,7 @@ void URA4ShowcaseWidget::SetScreen(const int32 InScreen)
     {
     case 1:
         Accent = EasternGold;
-        Heading = LOCTEXT("CampaignHeading", "VYBOR KAMPANII");
+        Heading = LOCTEXT("CampaignHeading", "ВЫБОР КАМПАНИИ");
         Body = LOCTEXT("CampaignBody", "СССР — красно-чёрная доктрина подавления. Альянс — сине-стальная мобильность. Восточная коалиция — нефрит и золото. Хронолегион — технологии вне времени.");
         Status = LOCTEXT("CampaignStatus", "ОПЕРАЦИЯ 01\nПепел столицы\n\nСЛОЖНОСТЬ\nВетеран\n\nВЫБРАНА ФРАКЦИЯ\nСССР");
         Progress = 0.18f;
@@ -496,19 +496,19 @@ void URA4ShowcaseWidget::SetScreen(const int32 InScreen)
         Accent = SovietRed;
         Heading = LOCTEXT("HudHeading", "ОПЕРАЦИЯ: ПЕПЕЛ СТОЛИЦЫ");
         Body = LOCTEXT("HudBody", "БОЕВОЙ HUD СССР\n\nКРЕДИТЫ 12 450     ЭНЕРГИЯ 780 / 920\n\nОЧЕРЕДЬ ПРОИЗВОДСТВА\nТанк «Гранит» — 72%\nСтрелок «Рубеж» ×5\n\nЗАДАЧА: удержать плацдарм и уничтожить командный узел противника.");
-        Status = LOCTEXT("HudStatus", "MINI-MAP\nSektor: M-14\n\nVYDELENO\n3 × Tank «Granit»\n12 × Strelok «Rubezh»\n\nTREVOGA\nNizkaya");
+        Status = LOCTEXT("HudStatus", "МИНИ-КАРТА\nСектор: M-14\n\nВЫДЕЛЕНО\n3 × Танк «Гранит»\n12 × Стрелок «Рубеж»\n\nТРЕВОГА\nНизкая");
         Progress = 0.72f;
         break;
     case 3:
         Accent = AlliesBlue;
-        Heading = LOCTEXT("LobbyHeading", "SETEVOE LOBBI");
+        Heading = LOCTEXT("LobbyHeading", "СЕТЕВОЕ ЛОББИ");
         Body = LOCTEXT("LobbyBody", "КАРТА: КРАСНЫЙ ПЕРЕВАЛ\nРЕЖИМ: СТАНДАРТНЫЙ БОЙ\n\nКОМАНДУЮЩИЙ — СССР — ГОТОВ\nАДМИРАЛ ВАРД — АЛЬЯНС — ГОТОВ\nГЕНЕРАЛ ГАО — ВОСТОЧНАЯ КОАЛИЦИЯ — ОЖИДАНИЕ\nХРОНОС-07 — ХРОНОЛЕГИОН — ОЖИДАНИЕ");
         Status = LOCTEXT("LobbyStatus", "ЧАТ КОМАНДОВАНИЯ\n[20:49] Вард: Готов.\n[20:49] Гао: Проверяю связь.\n\nПИНГ\n34 мс");
         Progress = 0.50f;
         break;
     case 4:
         Accent = SovietRed;
-        Heading = LOCTEXT("SettingsHeading", "NASTROYKI SISTEMY");
+        Heading = LOCTEXT("SettingsHeading", "НАСТРОЙКИ СИСТЕМЫ");
         Body = LOCTEXT("SettingsBody", "ИЗОБРАЖЕНИЕ\nРазрешение: 1920×1080\nМасштаб интерфейса: автоматически\n\nЗВУК\nМузыка: 80%\nЭффекты: 90%\n\nУПРАВЛЕНИЕ\nEnhanced Input: активно");
         Status = LOCTEXT("SettingsStatus", "ПРОФИЛЬ\nКомандующий\n\nЛОКАЛИЗАЦИЯ\nРусский\n\nВЕРСИЯ\n0.1.0");
         Progress = 0.86f;
@@ -517,7 +517,7 @@ void URA4ShowcaseWidget::SetScreen(const int32 InScreen)
         Accent = SovietRed;
         Heading = LOCTEXT("SplashHeading", "RED ALERT 4");
         Body = LOCTEXT("SplashBody", "СИСТЕМА КОМАНДОВАНИЯ И СВЯЗИ\n\nНажмите любую клавишу, чтобы войти в защищённую сеть.");
-        Status = LOCTEXT("SplashStatus", "STATUS SISTEM\nVse kontury gotovy\n\nSEANS\nZashifrovan");
+        Status = LOCTEXT("SplashStatus", "СТАТУС СИСТЕМ\nВсе контуры готовы\n\nСЕАНС\nЗашифрован");
         Progress = 0.08f;
         break;
     case 6:
@@ -530,21 +530,21 @@ void URA4ShowcaseWidget::SetScreen(const int32 InScreen)
     case 7:
         Accent = AlliesBlue;
         Heading = LOCTEXT("AlliesCampaignHeading", "КАМПАНИЯ АЛЬЯНСА");
-        Body = LOCTEXT("AlliesCampaignBody", "Operatsiya «Severnyy shchit». Sderzhite nastuplenie Soviet, vernite kontrol nad portami i otkroyte marshrut dlya navala.");
+        Body = LOCTEXT("AlliesCampaignBody", "Операция «Северный щит». Сдержите наступление СССР, верните контроль над портами и откройте маршрут для флота.");
         Status = LOCTEXT("AlliesCampaignStatus", "КОМАНДУЮЩИЙ\nАдмирал Вард\n\nТЕАТР\nСеверная Атлантика\n\nМИССИЯ\n01 / 09");
         Progress = 0.12f;
         break;
     case 8:
         Accent = EasternGold;
         Heading = LOCTEXT("EasternCampaignHeading", "КАМПАНИЯ ВОСТОЧНОЙ КОАЛИЦИИ");
-        Body = LOCTEXT("EasternCampaignBody", "Operatsiya «Zolotoy rassvet». Zakhvatite energeticheskie uzly i prevratite vrazheskiy platsdarm v opornuyu bazu koalitsii.");
+        Body = LOCTEXT("EasternCampaignBody", "Операция «Золотой рассвет». Захватите энергетические узлы и превратите плацдарм в опорную базу коалиции.");
         Status = LOCTEXT("EasternCampaignStatus", "КОМАНДУЮЩИЙ\nГенерал Гао\n\nТЕАТР\nТихоокеанский пояс\n\nМИССИЯ\n01 / 08");
         Progress = 0.16f;
         break;
     case 9:
         Accent = ChronoViolet;
         Heading = LOCTEXT("ChronoCampaignHeading", "КАМПАНИЯ ХРОНОЛЕГИОНА");
-        Body = LOCTEXT("ChronoCampaignBody", "Operatsiya «Paradoks». Vosstanovite vremennoy koridor do togo, kak Enemy zakrepitsya v klyuchevykh tochkakh khronolinii.");
+        Body = LOCTEXT("ChronoCampaignBody", "Операция «Парадокс». Восстановите временной коридор до того, как враг закрепится в ключевых точках хронолинии.");
         Status = LOCTEXT("ChronoCampaignStatus", "КООРДИНАТОР\nХронос-07\n\nВРЕМЕННОЙ СЛОЙ\nНестабилен\n\nМИССИЯ\n01 / 07");
         Progress = 0.09f;
         break;
@@ -558,21 +558,21 @@ void URA4ShowcaseWidget::SetScreen(const int32 InScreen)
     case 11:
         Accent = SovietRed;
         Heading = LOCTEXT("BriefingHeading", "БРИФИНГ: ПЕПЕЛ СТОЛИЦЫ");
-        Body = LOCTEXT("BriefingBody", "Voyska Alliancea uderzhivayut gorodskoy komandnyy uzel. Razvernite bazu na vostochnom beregu, obespechte energosnabzhenie i unichtozhte uzel do pribytiya podkrepleniya.");
+        Body = LOCTEXT("BriefingBody", "Войска Альянса удерживают городской командный узел. Разверните базу на восточном берегу, обеспечьте энергоснабжение и уничтожьте узел до прибытия подкрепления.");
         Status = LOCTEXT("BriefingStatus", "ОСНОВНАЯ ЦЕЛЬ\nУничтожить командный узел\n\nДОПОЛНИТЕЛЬНАЯ\nСохранить мост\n\nВРЕМЯ\n06:30");
         Progress = 0.44f;
         break;
     case 12:
         Accent = AlliesBlue;
         Heading = LOCTEXT("VideoHeading", "ЗАЩИЩЁННЫЙ ВИДЕОКАНАЛ");
-        Body = LOCTEXT("VideoBody", "ADMIRAL WARD:\n«Komanduyushchiy, skanery fiksiruyut dvizhenie bronekolonn. Ne davayte im zakrepitsya u mosta. Vozdushnyy koridor budet otkryt na tri minuty.»");
+        Body = LOCTEXT("VideoBody", "АДМИРАЛ ВАРД:\n«Командующий, сканеры фиксируют движение бронеколонн. Не давайте им закрепиться у моста. Воздушный коридор будет открыт на три минуты.»");
         Status = LOCTEXT("VideoStatus", "КАНАЛ\nВаршава-01\n\nШИФРОВАНИЕ\nАктивно\n\nЗАДЕРЖКА\n18 мс");
         Progress = 0.61f;
         break;
     case 13:
         Accent = SovietRed;
         Heading = LOCTEXT("LoadingHeading", "ПОДГОТОВКА ОПЕРАЦИИ");
-        Body = LOCTEXT("LoadingBody", "Zagruzka teatra boevykh deystviy. Synchronization dannykh komandovaniya, marshrutov snabzheniya i takticheskoy razvedki.");
+        Body = LOCTEXT("LoadingBody", "Загрузка театра боевых действий. Синхронизация данных командования, маршрутов снабжения и тактической разведки.");
         Status = LOCTEXT("LoadingStatus", "КАРТА\nПепел столицы\n\nФРАКЦИЯ\nСССР\n\nСОСТОЯНИЕ\nСинхронизация");
         Progress = 0.72f;
         break;
@@ -580,7 +580,7 @@ void URA4ShowcaseWidget::SetScreen(const int32 InScreen)
         Accent = AlliesBlue;
         Heading = LOCTEXT("AlliesHudHeading", "ОПЕРАЦИЯ: СЕВЕРНЫЙ ЩИТ");
         Body = LOCTEXT("AlliesHudBody", "БОЕВОЙ HUD АЛЬЯНСА\n\nКРЕДИТЫ 10 280     ЭНЕРГИЯ 640 / 760\n\nОЧЕРЕДЬ ПРОИЗВОДСТВА\nСтраж — 54%\nАвиакрыло «Копьё» ×2\n\nЗАДАЧА: удержать гавань и защитить конвой.");
-        Status = LOCTEXT("AlliesHudStatus", "MINI-MAP\nSektor: N-07\n\nVYDELENO\n2 × Strazh\n4 × Raketchik\n\nNAVAL\nGotov");
+        Status = LOCTEXT("AlliesHudStatus", "МИНИ-КАРТА\nСектор: N-07\n\nВЫДЕЛЕНО\n2 × Страж\n4 × Ракетчик\n\nФЛОТ\nГотов");
         Progress = 0.54f;
         break;
     case 15:
@@ -599,15 +599,15 @@ void URA4ShowcaseWidget::SetScreen(const int32 InScreen)
         break;
     case 17:
         Accent = SovietRed;
-        Heading = LOCTEXT("PauseHeading", "PAUSED");
-        Body = LOCTEXT("PauseBody", "Operatsiya priostanovlena. Prodolzhite boy, otkroyte nastroyki, sokhranite progress ili vernites v komandnyy tsentr.");
+        Heading = LOCTEXT("PauseHeading", "ПАУЗА");
+        Body = LOCTEXT("PauseBody", "Операция приостановлена. Продолжите бой, откройте настройки или вернитесь в командный центр.");
         Status = LOCTEXT("PauseStatus", "ОПЕРАЦИЯ\nПепел столицы\n\nВРЕМЯ БОЯ\n18:42\n\nСОХРАНЕНИЕ\nАвтоматическое");
         Progress = 0.50f;
         break;
     case 18:
         Accent = SovietRed;
-        Heading = LOCTEXT("VictoryHeading", "VICTORY");
-        Body = LOCTEXT("VictoryBody", "Komandnyy uzel Enemya unichtozhen. Most i platsdarm uderzhany. Teatr operatsiy otkryt dlya sleduyushchey fazy nastupleniya.");
+        Heading = LOCTEXT("VictoryHeading", "ПОБЕДА");
+        Body = LOCTEXT("VictoryBody", "Командный узел противника уничтожен. Мост и плацдарм удержаны. Театр операций открыт для следующей фазы наступления.");
         Status = LOCTEXT("VictoryStatus", "РЕЗУЛЬТАТ\nПобеда СССР\n\nВРЕМЯ\n24:18\n\nПОТЕРИ\nПриемлемые");
         Progress = 1.0f;
         break;
@@ -635,13 +635,13 @@ void URA4ShowcaseWidget::SetScreen(const int32 InScreen)
     case 22:
         Accent = EasternGold;
         Heading = LOCTEXT("EasternDetailHeading", "ВОСТОЧНАЯ КОАЛИЦИЯ: ГЕНЕРАЛ ГАО");
-        Body = LOCTEXT("EasternDetailBody", "Gao stroit voynu na distsipline, tempe proizvodstva i kontrole uzlov snabzheniya. Ego hq vedyot nastuplenie ot tikhookeanskogo poberezhya k promyshlennomu serdtsu Evropy.");
+        Body = LOCTEXT("EasternDetailBody", "Гао строит войну на дисциплине, темпе производства и контроле узлов снабжения. Его штаб ведёт наступление к промышленному центру Европы.");
         Status = LOCTEXT("EasternDetailStatus", "ДОКТРИНА\nНефритовый молот\n\nБОНУС\nУскоренное производство\n\nКАМПАНИЯ\n01 / 08");
         Progress = 0.20f;
         break;
     case 23:
         Accent = SovietRed;
-        Heading = LOCTEXT("BattleHudHeading", "TREVOGA: BRONEKOLONNA");
+        Heading = LOCTEXT("BattleHudHeading", "ТРЕВОГА: БРОНЕКОЛОННА");
         Body = LOCTEXT("BattleHudBody", "КРЕДИТЫ 18 300     ЭНЕРГИЯ 1020 / 1180\n\nПРОИЗВОДСТВО\nАпокалипсис — 89%\nМиГ «Кузнец» — 31%\n\nТАКТИЧЕСКОЕ СОБЫТИЕ\nВраг атакует южный мост. Активируйте заградительный огонь.");
         Status = LOCTEXT("BattleHudStatus", "МИНИ-КАРТА\nЮг: красный контакт\n\nВЫДЕЛЕНО\n4 × Тесла-танк\n\nУГРОЗА\nВысокая");
         Progress = 0.89f;
@@ -649,8 +649,8 @@ void URA4ShowcaseWidget::SetScreen(const int32 InScreen)
     case 24:
         Accent = SovietRed;
         Heading = LOCTEXT("AlertHudHeading", "ПРЕДУПРЕЖДЕНИЕ: АВИАНАЛЁТ");
-        Body = LOCTEXT("AlertHudBody", "Obnaruzheny samolyoty Alliancea. Razvernite Anti-Air, peremestite mobilnye generatory i zashchitite energolaboratoriyu.");
-        Status = LOCTEXT("AlertHudStatus", "KONTAKTOV\n12\n\nDO PODLYoTA\n00:32\n\nAnti-Air\n4 batarei");
+        Body = LOCTEXT("AlertHudBody", "Обнаружены самолёты противника. Разверните ПВО, переместите мобильные генераторы и защитите энерголабораторию.");
+        Status = LOCTEXT("AlertHudStatus", "КОНТАКТОВ\n12\n\nДО ПОДЛЁТА\n00:32\n\nПВО\n4 батареи");
         Progress = 0.32f;
         break;
     case 25:

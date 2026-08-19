@@ -118,7 +118,7 @@ void URA4SkirmishSetupWidget::BuildLayout()
     LeftBox->AddChildToVerticalBox(MapLabel)->SetPadding(FMargin(0.0f, 10.0f, 0.0f, 4.0f));
 
     MapCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("MapCombo"));
-    MapCombo->AddOption(TEXT("RA4_Skirmish — Ravnina Kolymy (2 igroka)"));
+    MapCombo->AddOption(TEXT("RA4_Skirmish_Production — Архипелаг (Холмы и Вода, 2 игрока)"));
     MapCombo->SetSelectedIndex(0);
     MapCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
     LeftBox->AddChildToVerticalBox(MapCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 16.0f));
@@ -332,7 +332,7 @@ void URA4SkirmishSetupWidget::LaunchSkirmishMatch()
             TEXT("?PlayerFaction=%d?EnemyFaction=%d?PlayerSpot=%d?AISpot=%d?Difficulty=%d?Credits=%d"),
             PlayerFactionIndex, AIFactionIndex, PlayerSpotIndex, AISpotIndex, DifficultyIndex, CreditsIndex);
 
-        UGameplayStatics::OpenLevel(World, TEXT("/Game/Maps/RA4_Skirmish"), true, Options);
+        UGameplayStatics::OpenLevel(World, TEXT("/Game/Maps/RA4_Skirmish_Production"), true, Options);
     }
 }
 

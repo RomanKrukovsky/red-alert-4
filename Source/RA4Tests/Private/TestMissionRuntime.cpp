@@ -263,12 +263,16 @@ RA4_TEST(MissionRuntime, SovietOpenerPlacesItsDeclaredForce)
     RA4_EXPECT_EQ(AsInt(Fix.Runtime.GetStatus()), AsInt(MissionStatus::InProgress));
 }
 
-RA4_TEST(MissionRuntime, EverySovietAndAllianceMissionPlacesEverySpawn)
+RA4_TEST(MissionRuntime, EveryMissionAcrossAllFourFactionsPlacesEverySpawn)
 {
-    // The Soviet and Alliance chapters are authored against DefaultContent, so a
-    // shortfall here is a broken content reference, not a missing faction.
+    // All four faction chapters are fully authored and playable against DefaultContent.
     CampaignDatabase Db;
-    const FactionId Playable[2] = {FactionId::Soviet, FactionId::Alliance};
+    const FactionId Playable[4] = {
+        FactionId::Soviet,
+        FactionId::Alliance,
+        FactionId::EasternCoalition,
+        FactionId::ChronoLegion
+    };
 
     for (FactionId Faction : Playable)
     {
@@ -279,64 +283,8 @@ RA4_TEST(MissionRuntime, EverySovietAndAllianceMissionPlacesEverySpawn)
             MissionFixture Fix;
             Fix.Open(Mission);
             RA4_EXPECT_EQ(Fix.Placed, int32_t(Mission.Setup.Spawns.size()));
-        }
-    }
-}
-
-RA4_TEST(MissionRuntime, CoalitionAndChronoPlayersHaveNoForceInDefaultContent)
-{
-    // Documenting a known gap rather than hiding it. The Eastern Coalition and Chrono
-    // Legion exist only in the bible export; DefaultContent.cpp says so in its own
-    // header. Their missions are authored -- objectives, failure clauses, a setup --
-    // and their Soviet and Allied opponents do place, because those factions exist.
-    // What does not place is the player's own side, which is what makes those 18
-    // missions data rather than something anyone can sit down and play.
-    //
-    // This test will start failing the moment EAC or Chrono content lands, which is
-    // the reminder to delete it.
-    ContentDatabase Content;
-    BuildDefaultContent(Content);
-
-    CampaignDatabase Db;
-    const FactionId Missing[2] = {FactionId::EasternCoalition, FactionId::ChronoLegion};
-
-    for (FactionId Faction : Missing)
-    {
-        const CampaignChapterDef* Chapter = Db.FindChapter(Faction);
-        RA4_REQUIRE(Chapter != nullptr);
-        for (const CampaignMissionDef& Mission : Chapter->Missions)
-        {
-            // The mission is still complete data.
-            RA4_EXPECT(!Mission.Objectives.empty());
-            RA4_EXPECT(!Mission.Setup.Spawns.empty());
-            RA4_EXPECT(!Mission.FailureConditions.empty());
-
-            int32_t PlayerSpawns = 0;
-            int32_t PlayerResolved = 0;
-            for (const MissionSpawn& Spawn : Mission.Setup.Spawns)
-            {
-                if (Spawn.Owner != 0 || Spawn.Kind == MissionSpawnKind::ResourceNode)
-                {
-                    continue;
-                }
-                ++PlayerSpawns;
-                if (Content.FindEntity(Spawn.Def) != nullptr)
-                {
-                    ++PlayerResolved;
-                }
-            }
-            RA4_EXPECT(PlayerSpawns > 0);
-            RA4_EXPECT_EQ(PlayerResolved, 0);
-
-            // And so the player starts the mission owning nothing at all.
-            MissionFixture Fix;
-            Fix.Open(Mission);
-            RA4_EXPECT_EQ(CountLive(Fix.World, 0), 0);
-
-            // The opponent does place, because it is Soviet or Allied -- except in the
-            // civil-war mission, where both sides are the faction that does not exist.
-            const bool bEnemyExists = Mission.Setup.Players[1].Faction != Faction;
-            RA4_EXPECT_EQ(CountLive(Fix.World, 1) > 0, bEnemyExists);
+            RA4_EXPECT(CountLive(Fix.World, 0) > 0);
+            RA4_EXPECT(CountLive(Fix.World, 1) > 0);
         }
     }
 }

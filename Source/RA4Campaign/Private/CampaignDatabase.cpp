@@ -77,34 +77,32 @@ const FactionKit AllianceKit{
 // Their unit ids are stable ASCII; their *building* ids in the export are the Russian
 // display names, because the buildings in ra4_content.normalized.json carry no `id`
 // field and BibleContentLoader falls back to `name`. That is fragile and is flagged
-// as such -- when those factions land in DefaultContent, these building ids are the
-// first thing to reconcile.
 const FactionKit CoalitionKit{
-    MakeContentId("Мобильный узел гармонии"),
-    MakeContentId("Рудный синтезатор"),
-    MakeContentId("Солнечный коллектор"),
-    MakeContentId("Командный дворец"),
-    MakeContentId("Командный дворец"),
-    MakeContentId("Командный дворец"),
-    MakeContentId("CO_HarmonyHarvester"),
-    MakeContentId("CO_QianweiRifleman"),
-    MakeContentId("CO_VajraLancer"),
-    MakeContentId("CO_QinglongMBT"),
-    MakeContentId("CO_HarmonyNode"),
+    MakeContentId("building.ec.construction_yard"),
+    MakeContentId("building.ec.ore_synthesizer"),
+    MakeContentId("building.ec.solar_collector"),
+    MakeContentId("building.ec.barracks"),
+    MakeContentId("building.ec.war_factory"),
+    MakeContentId("building.ec.defense_tower"),
+    MakeContentId("unit.ec.harmony_harvester"),
+    MakeContentId("unit.ec.qianwei_rifleman"),
+    MakeContentId("unit.ec.vajra_lancer"),
+    MakeContentId("unit.ec.qinglong_mbt"),
+    MakeContentId("unit.ec.mcv"),
 };
 
 const FactionKit ChronoKit{
-    MakeContentId("Мобильный хроноковчег"),
-    MakeContentId("Центр причинности"),
-    MakeContentId("Реактор замедленного распада"),
-    MakeContentId("Центр причинности"),
-    MakeContentId("Центр причинности"),
-    MakeContentId("Центр причинности"),
-    MakeContentId("CH_EchoHarvester"),
-    MakeContentId("CH_ResonanceRifleman"),
-    MakeContentId("CH_ParadoxLancer"),
-    MakeContentId("CH_TimelineTank"),
-    MakeContentId("CH_ChronoArk"),
+    MakeContentId("building.cl.construction_yard"),
+    MakeContentId("building.cl.causality_center"),
+    MakeContentId("building.cl.decay_reactor"),
+    MakeContentId("building.cl.barracks"),
+    MakeContentId("building.cl.war_factory"),
+    MakeContentId("building.cl.temporal_turret"),
+    MakeContentId("unit.cl.echo_harvester"),
+    MakeContentId("unit.cl.resonance_rifleman"),
+    MakeContentId("unit.cl.paradox_lancer"),
+    MakeContentId("unit.cl.timeline_tank"),
+    MakeContentId("unit.cl.mcv"),
 };
 
 const ContentId OreField = MakeContentId("resource.ore_field");

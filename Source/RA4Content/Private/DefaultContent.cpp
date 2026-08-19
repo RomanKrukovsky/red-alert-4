@@ -47,6 +47,24 @@ constexpr ContentId BldAllTurret = MakeContentId("building.all.pillbox");
 constexpr ContentId BldAllAaTurret = MakeContentId("building.all.patriot_battery");
 constexpr ContentId BldAllSuper = MakeContentId("building.all.aegis_lance");
 
+constexpr ContentId BldEcConYard = MakeContentId("building.ec.construction_yard");
+constexpr ContentId BldEcPower = MakeContentId("building.ec.solar_collector");
+constexpr ContentId BldEcRefinery = MakeContentId("building.ec.ore_synthesizer");
+constexpr ContentId BldEcBarracks = MakeContentId("building.ec.barracks");
+constexpr ContentId BldEcWarFactory = MakeContentId("building.ec.war_factory");
+constexpr ContentId BldEcTurret = MakeContentId("building.ec.defense_tower");
+constexpr ContentId BldEcAaTurret = MakeContentId("building.ec.aa_tower");
+constexpr ContentId BldEcSuper = MakeContentId("building.ec.harmony_sanctuary");
+
+constexpr ContentId BldClConYard = MakeContentId("building.cl.construction_yard");
+constexpr ContentId BldClPower = MakeContentId("building.cl.decay_reactor");
+constexpr ContentId BldClRefinery = MakeContentId("building.cl.causality_center");
+constexpr ContentId BldClBarracks = MakeContentId("building.cl.barracks");
+constexpr ContentId BldClWarFactory = MakeContentId("building.cl.war_factory");
+constexpr ContentId BldClTurret = MakeContentId("building.cl.temporal_turret");
+constexpr ContentId BldClAaTurret = MakeContentId("building.cl.warp_flak");
+constexpr ContentId BldClSuper = MakeContentId("building.cl.chronosphere");
+
 // --- Unit ids -------------------------------------------------------------
 constexpr ContentId UnitSovMcv = MakeContentId("unit.sov.mcv");
 constexpr ContentId UnitSovHarvester = MakeContentId("unit.sov.ore_harvester");
@@ -63,6 +81,22 @@ constexpr ContentId UnitAllRocketeer = MakeContentId("unit.all.missile_infantry"
 constexpr ContentId UnitAllLightTank = MakeContentId("unit.all.light_tank");
 constexpr ContentId UnitAllArtillery = MakeContentId("unit.all.oracle_artillery");
 constexpr ContentId UnitAllAircraft = MakeContentId("unit.all.harrier_jet");
+
+constexpr ContentId UnitEcMcv = MakeContentId("unit.ec.mcv");
+constexpr ContentId UnitEcHarvester = MakeContentId("unit.ec.harmony_harvester");
+constexpr ContentId UnitEcRifleman = MakeContentId("unit.ec.qianwei_rifleman");
+constexpr ContentId UnitEcLancer = MakeContentId("unit.ec.vajra_lancer");
+constexpr ContentId UnitEcMainTank = MakeContentId("unit.ec.qinglong_mbt");
+constexpr ContentId UnitEcArtillery = MakeContentId("unit.ec.longbow_artillery");
+constexpr ContentId UnitEcAircraft = MakeContentId("unit.ec.phoenix_gunship");
+
+constexpr ContentId UnitClMcv = MakeContentId("unit.cl.mcv");
+constexpr ContentId UnitClHarvester = MakeContentId("unit.cl.echo_harvester");
+constexpr ContentId UnitClRifleman = MakeContentId("unit.cl.resonance_rifleman");
+constexpr ContentId UnitClLancer = MakeContentId("unit.cl.paradox_lancer");
+constexpr ContentId UnitClMainTank = MakeContentId("unit.cl.timeline_tank");
+constexpr ContentId UnitClArtillery = MakeContentId("unit.cl.entropy_mortar");
+constexpr ContentId UnitClAircraft = MakeContentId("unit.cl.phase_striker");
 
 constexpr ContentId ResOreField = MakeContentId("resource.ore_field");
 
@@ -748,6 +782,92 @@ void BuildDefaultContent(ContentDatabase& Db)
     Alliance.TurretWeapon = WpnTurretMachineGun;
     BuildFactionSet(Db, Alliance);
 
+    // Eastern Coalition doctrine: heavy energy shields, beam weaponry, solar arrays, balanced mobility.
+    FactionSetup Coalition{};
+    Coalition.Faction = FactionId::EasternCoalition;
+    Coalition.KeyPrefix = "faction.ec";
+    Coalition.ConYard = BldEcConYard;
+    Coalition.Power = BldEcPower;
+    Coalition.Refinery = BldEcRefinery;
+    Coalition.Barracks = BldEcBarracks;
+    Coalition.WarFactory = BldEcWarFactory;
+    Coalition.Turret = BldEcTurret;
+    Coalition.AaTurret = BldEcAaTurret;
+    Coalition.Airfield = MakeContentId("building.ec.helipad");
+    Coalition.Superweapon = BldEcSuper;
+    Coalition.Mcv = UnitEcMcv;
+    Coalition.Harvester = UnitEcHarvester;
+    Coalition.BasicInfantry = UnitEcRifleman;
+    Coalition.AntiArmorInfantry = UnitEcLancer;
+    Coalition.MainTank = UnitEcMainTank;
+    Coalition.Artillery = UnitEcArtillery;
+    Coalition.Aircraft = UnitEcAircraft;
+    Coalition.ConYardName = "building.ec.construction_yard";
+    Coalition.PowerName = "building.ec.solar_collector";
+    Coalition.RefineryName = "building.ec.ore_synthesizer";
+    Coalition.BarracksName = "building.ec.barracks";
+    Coalition.WarFactoryName = "building.ec.war_factory";
+    Coalition.TurretName = "building.ec.defense_tower";
+    Coalition.AaTurretName = "building.ec.aa_tower";
+    Coalition.SuperweaponName = "building.ec.harmony_sanctuary";
+    Coalition.McvName = "unit.ec.mcv";
+    Coalition.HarvesterName = "unit.ec.harmony_harvester";
+    Coalition.BasicInfantryName = "unit.ec.qianwei_rifleman";
+    Coalition.AntiArmorInfantryName = "unit.ec.vajra_lancer";
+    Coalition.MainTankName = "unit.ec.qinglong_mbt";
+    Coalition.ArtilleryName = "unit.ec.longbow_artillery";
+    Coalition.AircraftName = "unit.ec.phoenix_gunship";
+    Coalition.PowerOutput = 120;
+    Coalition.TankHealth = 460;
+    Coalition.TankWeapon = WpnTankCannonHeavy;
+    Coalition.TankSpeed = Metres(6);
+    Coalition.TankCost = 850;
+    Coalition.TurretWeapon = WpnPrismBeam;
+    BuildFactionSet(Db, Coalition);
+
+    // Chrono Legion doctrine: temporal teleportation, rapid harassment, high tech cost, phase defense.
+    FactionSetup Chrono{};
+    Chrono.Faction = FactionId::ChronoLegion;
+    Chrono.KeyPrefix = "faction.cl";
+    Chrono.ConYard = BldClConYard;
+    Chrono.Power = BldClPower;
+    Chrono.Refinery = BldClRefinery;
+    Chrono.Barracks = BldClBarracks;
+    Chrono.WarFactory = BldClWarFactory;
+    Chrono.Turret = BldClTurret;
+    Chrono.AaTurret = BldClAaTurret;
+    Chrono.Airfield = MakeContentId("building.cl.rift_pad");
+    Chrono.Superweapon = BldClSuper;
+    Chrono.Mcv = UnitClMcv;
+    Chrono.Harvester = UnitClHarvester;
+    Chrono.BasicInfantry = UnitClRifleman;
+    Chrono.AntiArmorInfantry = UnitClLancer;
+    Chrono.MainTank = UnitClMainTank;
+    Chrono.Artillery = UnitClArtillery;
+    Chrono.Aircraft = UnitClAircraft;
+    Chrono.ConYardName = "building.cl.construction_yard";
+    Chrono.PowerName = "building.cl.decay_reactor";
+    Chrono.RefineryName = "building.cl.causality_center";
+    Chrono.BarracksName = "building.cl.barracks";
+    Chrono.WarFactoryName = "building.cl.war_factory";
+    Chrono.TurretName = "building.cl.temporal_turret";
+    Chrono.AaTurretName = "building.cl.warp_flak";
+    Chrono.SuperweaponName = "building.cl.chronosphere";
+    Chrono.McvName = "unit.cl.mcv";
+    Chrono.HarvesterName = "unit.cl.echo_harvester";
+    Chrono.BasicInfantryName = "unit.cl.resonance_rifleman";
+    Chrono.AntiArmorInfantryName = "unit.cl.paradox_lancer";
+    Chrono.MainTankName = "unit.cl.timeline_tank";
+    Chrono.ArtilleryName = "unit.cl.entropy_mortar";
+    Chrono.AircraftName = "unit.cl.phase_striker";
+    Chrono.PowerOutput = 110;
+    Chrono.TankHealth = 400;
+    Chrono.TankWeapon = WpnPrismBeam;
+    Chrono.TankSpeed = Metres(7);
+    Chrono.TankCost = 800;
+    Chrono.TurretWeapon = WpnPrismBeam;
+    BuildFactionSet(Db, Chrono);
+
     {
         ResourceNodeDef R;
         R.Id = ResOreField;
@@ -777,6 +897,24 @@ void BuildDefaultContent(ContentDatabase& Db)
         F.StartingCredits = 10000;
         Db.AddFaction(F);
     }
+    {
+        FactionDef F;
+        F.Id = FactionId::EasternCoalition;
+        F.Name = "faction.ec";
+        F.DisplayNameKey = "faction.ec.name";
+        F.StartingUnit = UnitEcMcv;
+        F.StartingCredits = 10000;
+        Db.AddFaction(F);
+    }
+    {
+        FactionDef F;
+        F.Id = FactionId::ChronoLegion;
+        F.Name = "faction.cl";
+        F.DisplayNameKey = "faction.cl.name";
+        F.StartingUnit = UnitClMcv;
+        F.StartingCredits = 10000;
+        Db.AddFaction(F);
+    }
 
     // Veterancy from bible: Recruit(0), Veteran(1x, +10% dmg, +8% HP),
     // Elite(2x, +10% more, +10% HP), Heroic(5x, unique passive)
@@ -798,8 +936,58 @@ void BuildDefaultContent(ContentDatabase& Db)
         Dm.SetMultiplier(WarheadClass::Electric, ArmorClass::Air, 750);
         Dm.SetMultiplier(WarheadClass::AntiAir, ArmorClass::Air, 2000);
         Db.SetDamageMatrix(Dm);
-
     }
+
+    auto AddUnitVoice = [&Db](ContentId UnitId, const std::string& VoiceId) {
+        VoiceSetDef Vs;
+        Vs.UnitId = UnitId;
+        Vs.VoiceId = VoiceId;
+        Vs.Lines.push_back({"Voice.Selected", "Selected", "", 10});
+        Vs.Lines.push_back({"Voice.Move", "Move", "", 10});
+        Vs.Lines.push_back({"Voice.Attack", "Attack", "", 10});
+        Vs.Lines.push_back({"Voice.Ability", "Ability", "", 10});
+        Vs.Lines.push_back({"Voice.Damaged", "Damaged", "", 10});
+        Vs.Lines.push_back({"Voice.Elite", "Elite", "", 10});
+        Vs.Lines.push_back({"Voice.Idle", "Idle", "", 10});
+        Vs.Lines.push_back({"Voice.Death", "Death", "", 10});
+        Db.AddVoiceSet(Vs);
+    };
+
+    // Soviet Units
+    AddUnitVoice(UnitSovMcv, "SU_MasterEngineer");
+    AddUnitVoice(UnitSovHarvester, "SU_BogatyrOreCarrier");
+    AddUnitVoice(UnitSovConscript, "SU_RubezhRifleman");
+    AddUnitVoice(UnitSovRocketeer, "SU_ZaslonAATeam");
+    AddUnitVoice(UnitSovHeavyTank, "SU_GranitMBT");
+    AddUnitVoice(UnitSovArtillery, "SU_ZarevoMLRS");
+    AddUnitVoice(UnitSovAircraft, "SU_KrechetInterceptor");
+
+    // Alliance Units
+    AddUnitVoice(UnitAllMcv, "AL_FieldEngineer");
+    AddUnitVoice(UnitAllHarvester, "AL_PioneerHarvester");
+    AddUnitVoice(UnitAllRifleman, "AL_SentinelRifleman");
+    AddUnitVoice(UnitAllRocketeer, "AL_LancerTeam");
+    AddUnitVoice(UnitAllLightTank, "AL_BulwarkMBT");
+    AddUnitVoice(UnitAllArtillery, "AL_OracleArtillery");
+    AddUnitVoice(UnitAllAircraft, "AL_ShrikeInterceptor");
+
+    // Eastern Coalition Units
+    AddUnitVoice(UnitEcMcv, "CO_JieTechnician");
+    AddUnitVoice(UnitEcHarvester, "CO_YuanCollector");
+    AddUnitVoice(UnitEcRifleman, "CO_QianweiRifleman");
+    AddUnitVoice(UnitEcLancer, "CO_VajraLancer");
+    AddUnitVoice(UnitEcMainTank, "CO_QinglongMBT");
+    AddUnitVoice(UnitEcArtillery, "CO_MonsoonArtillery");
+    AddUnitVoice(UnitEcAircraft, "CO_LeiheGunship");
+
+    // Chrono Legion Units
+    AddUnitVoice(UnitClMcv, "CH_CausalityEngineer");
+    AddUnitVoice(UnitClHarvester, "CH_ProbabilistHarvester");
+    AddUnitVoice(UnitClRifleman, "CH_ResonanceRifleman");
+    AddUnitVoice(UnitClLancer, "CH_PunctureLancer");
+    AddUnitVoice(UnitClMainTank, "CH_TimelineTank");
+    AddUnitVoice(UnitClArtillery, "CH_DeltaDelayArtillery");
+    AddUnitVoice(UnitClAircraft, "CH_GapInterceptor");
 }
 
 

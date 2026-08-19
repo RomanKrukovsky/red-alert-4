@@ -71,6 +71,12 @@ void CameraController::AddPitchDegrees(float Delta)
     PitchDegrees = Clamp(PitchDegrees + Delta, -85.0f, -20.0f);
 }
 
+void CameraController::ResetRotation()
+{
+    YawDegrees = 0.0f;
+    PitchDegrees = -55.0f;
+}
+
 void CameraController::BeginMiddleDrag(float PixelX, float PixelY)
 {
     bMiddleDragging = true;
@@ -89,7 +95,17 @@ void CameraController::UpdateMiddleDrag(float PixelX, float PixelY)
     // Drag moves the world with the cursor, so the camera goes the other way.
     // Scaled by zoom so the grabbed point tracks the pointer at any altitude.
     const float Scale = Config.MiddleDragUnitsPerPixel * (Height / Config.MaxHeight);
-    TargetFocus = ClampToBounds(Vec2f(TargetFocus.X - Delta.X * Scale, TargetFocus.Y + Delta.Y * Scale));
+    const float Radians = YawDegrees * 3.14159265358979323846f / 180.0f;
+    const float SinYaw = std::sin(Radians);
+    const float CosYaw = std::cos(Radians);
+
+    const float PanX = Delta.X * Scale;
+    const float PanY = -Delta.Y * Scale;
+
+    const Vec2f WorldDrag(PanX * CosYaw + PanY * SinYaw,
+                         -PanY * CosYaw + PanX * SinYaw);
+
+    TargetFocus = ClampToBounds(Vec2f(TargetFocus.X - WorldDrag.X, TargetFocus.Y - WorldDrag.Y));
 }
 
 void CameraController::FocusOn(const Vec2f& WorldPosition, bool bInstant)
@@ -207,20 +223,18 @@ void CameraController::Update(float DeltaSeconds)
     if (Pan.X != 0.0f || Pan.Y != 0.0f)
     {
         // Pan input is screen-relative: "W" means up-screen whatever way the camera
-        // is facing. Rotating the view without rotating this vector is precisely what
-        // makes WASD feel swapped, so the input is turned into world space by the
-        // camera's own yaw before it moves the focus.
+        // is facing. The camera's SpringArm has base rotation (Pitch, 90 + Yaw, 0).
+        // At Yaw 0, camera faces +Y (Forward = +Y, Right = -X).
+        // For arbitrary Yaw:
+        // Forward in XY = (-sin(Yaw), cos(Yaw))
+        // Right in XY   = (-cos(Yaw), -sin(Yaw))
+        // WorldPan = Forward * Pan.Y + Right * Pan.X
         const float Radians = YawDegrees * 3.14159265358979323846f / 180.0f;
         const float SinYaw = std::sin(Radians);
         const float CosYaw = std::cos(Radians);
-        // At yaw 0 the camera (ARA4CameraPawn's SpringArm, base yaw 90) looks down
-        // +Y, so screen-up is +Y here -- but screen-RIGHT is world -X, not +X: a yaw
-        // of 90 gives the arm a Right vector of (-sin90, cos90, 0) = (-1, 0, 0). A
-        // previous fix assumed +X and had D pan the view left, A right; Pan.X is
-        // negated below to correct that before the same rotation is applied for
-        // further camera yaw.
-        const Vec2f WorldPan(-Pan.X * CosYaw + Pan.Y * SinYaw,
-                             Pan.Y * CosYaw + Pan.X * SinYaw);
+
+        const Vec2f WorldPan(-Pan.X * CosYaw - Pan.Y * SinYaw,
+                              Pan.Y * CosYaw - Pan.X * SinYaw);
 
         const float Speed = CurrentPanSpeed();
         TargetFocus = ClampToBounds(Vec2f(TargetFocus.X + WorldPan.X * Speed * Dt,
