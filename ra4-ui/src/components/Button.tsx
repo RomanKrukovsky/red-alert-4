@@ -1,5 +1,4 @@
 import React from 'react';
-import { useUIStore } from '../store.js';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'metallic' | 'holographic' | 'ghost';
@@ -15,7 +14,6 @@ export const Button: React.FC<ButtonProps> = ({
   className = '', 
   ...props 
 }) => {
-  const { theme } = useUIStore();
   
   // Base classes that apply layout, typography and effects via tokens
   const baseClasses = `ra4-button ra4-button-${variant} ra4-button-${size} ${active ? 'active' : ''} ${className}`;

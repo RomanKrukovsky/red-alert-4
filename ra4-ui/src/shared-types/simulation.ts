@@ -1,4 +1,4 @@
-import { ArmorType, FactionId, PassabilityType, TechTier, UnitCategory, BuildingCategory, VeterancyRank } from './enums.js';
+import { ArmorType, FactionId, TechTier, UnitCategory, BuildingCategory, VeterancyRank } from './enums.js';
 
 export interface ScaledVector2 {
   x: number; // scaled int (e.g. 1 unit = 1000)

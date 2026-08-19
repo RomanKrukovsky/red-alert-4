@@ -1,5 +1,4 @@
 import React from 'react';
-import { useUIStore } from '../store.js';
 
 export interface FrameProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: 'panel' | 'beveled' | 'modal' | 'minimap';
@@ -13,7 +12,6 @@ export const Frame: React.FC<FrameProps> = ({
   className = '',
   ...props
 }) => {
-  const { theme } = useUIStore();
 
   const baseClasses = `ra4-frame ra4-frame-${variant} ${withGlow ? 'ra4-frame-glow' : ''} ${className}`;
 

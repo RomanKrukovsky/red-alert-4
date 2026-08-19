@@ -52,7 +52,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ onExecuteCommand, on
           output: res.output,
           status: res.status
         } : log));
-      } catch (err) {
+      } catch {
         setLogHistory(prev => prev.map(log => log.id === loadingId ? {
           ...log,
           output: 'Ошибка выполнения команды',

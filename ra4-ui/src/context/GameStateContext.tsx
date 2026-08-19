@@ -35,4 +35,5 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components, react/only-export-components
 export const useGameState = () => useContext(GameStateContext);

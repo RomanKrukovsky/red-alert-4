@@ -6,7 +6,6 @@ export const Taskbar: React.FC = () => {
   const windows = useWindowStore((s) => s.windows);
   const setMinimized = useWindowStore((s) => s.setMinimized);
   const bringToFront = useWindowStore((s) => s.bringToFront);
-  const setClosed = useWindowStore((s) => s.setClosed);
   const theme = useUIStore((s) => s.theme);
 
   const windowList = Object.values(windows);

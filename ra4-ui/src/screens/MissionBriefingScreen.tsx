@@ -1,174 +1,350 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-export interface MissionBriefingScreenProps {
-  onContinue: () => void;
-  onBack: () => void;
-}
+export const MissionBriefingScreen: React.FC = () => {
+  const navigate = useNavigate();
+  const [checkedObjectives, setCheckedObjectives] = useState([true, false, false, false]);
 
-export const MissionBriefingScreen: React.FC<MissionBriefingScreenProps> = ({ onContinue, onBack }) => {
+  const toggleObjective = (index: number) => {
+    const next = [...checkedObjectives];
+    next[index] = !next[index];
+    setCheckedObjectives(next);
+  };
+
+  const handleLaunch = () => {
+    navigate('/loading');
+  };
+
   return (
-    <div style={containerStyle}>
-      <div style={headerStyle}>
-        <button style={backBtnStyle} onClick={onBack}>◄ НАЗАДК КАРТЕ</button>
-        <h2 style={{ color: '#ff4d4d', margin: 0, fontFamily: 'Orbitron, sans-serif' }}>ТАКТИЧЕСКИЙ БРИФИНГ И ВИДЕОСВЯЗЬ</h2>
-        <div style={{ width: '120px' }} />
+    <div
+      style={{
+        width: '100vw',
+        height: '100vh',
+        position: 'relative',
+        background: `url('/screenshots/9.png') no-repeat center center`,
+        backgroundSize: 'cover',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        padding: '16px 36px',
+        boxSizing: 'border-box',
+        overflow: 'hidden',
+        fontFamily: "'Oswald', sans-serif"
+      }}
+    >
+      {/* Top Header */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        borderBottom: '1px solid rgba(255,50,50,0.3)',
+        paddingBottom: '10px',
+        zIndex: 10
+      }}>
+        <div>
+          <div style={{ color: '#888', fontSize: '10px', letterSpacing: '3px' }}>COMMAND & CONQUER™</div>
+          <div style={{ color: '#ff2222', fontSize: '22px', fontWeight: 800, letterSpacing: '2px', lineHeight: 1 }}>
+            RED ALERT 4
+          </div>
+        </div>
+
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ color: '#ffffff', fontSize: '18px', fontWeight: 800, letterSpacing: '4px' }}>
+            БРИФИНГ ОПЕРАЦИИ
+          </div>
+          <div style={{ color: '#ff2222', fontSize: '14px' }}>★</div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{
+            width: '28px',
+            height: '28px',
+            borderRadius: '50%',
+            background: '#3a0808',
+            border: '1px solid #ff3333',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#ff2222',
+            fontSize: '14px'
+          }}>
+            ★
+          </div>
+          <div>
+            <div style={{ color: '#fff', fontSize: '12px', fontWeight: 700 }}>ТОВАРИЩ КОМАНДИР</div>
+            <div style={{ color: '#ff4444', fontSize: '10px' }}>УРОВЕНЬ 45 ★</div>
+          </div>
+        </div>
       </div>
 
-      <div style={bodyStyle}>
-        {/* Comms Video Feed (SC-10) */}
-        <div style={videoBoxStyle}>
-          <div style={videoHeaderStyle}>🔴 ПРЯМОЙ ЭФИР — КАНАЛ СВЯЗИ ШТАБА</div>
-          <div style={screenPlaceholderStyle}>
-            <div style={{ fontSize: '48px' }}>🎖️</div>
-            <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#fff', marginTop: '10px' }}>ГЕНЕРАЛ-МАЙОР ВОЛКОВ</div>
-            <div style={{ fontSize: '12px', color: '#ff4d4d' }}>ВЧ-83921 КОМАНДНЫЙ ПУНКТ</div>
+      {/* Main 3-Column Briefing Room */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '400px 1fr 340px',
+        gap: '24px',
+        flex: 1,
+        alignItems: 'stretch',
+        zIndex: 5,
+        margin: '12px 0'
+      }}>
+        {/* Left Intel & Objectives Column */}
+        <div className="ra4-panel clip-bevel-md" style={{
+          padding: '18px',
+          border: '1px solid #ff3333',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          background: 'rgba(12, 6, 8, 0.92)'
+        }}>
+          <div>
+            <div style={{ color: '#ff4444', fontSize: '11px', letterSpacing: '2px', fontWeight: 700 }}>
+              ОПЕРАЦИЯ
+            </div>
+            <h2 style={{ color: '#ff2222', fontSize: '26px', fontWeight: 800, margin: '2px 0 8px 0', letterSpacing: '1px' }}>
+              КРАСНЫЙ РАССВЕТ
+            </h2>
+            <p style={{ color: '#ccc', fontSize: '12px', lineHeight: 1.5, fontFamily: "'Inter', sans-serif", marginBottom: '14px' }}>
+              Альянс стягивает войска к нашим границам, маскируя подготовку к полномасштабному вторжению. Нанесите упреждающий удар и сломайте волю врага, пока он не укрепился.
+            </p>
+
+            {/* Objectives */}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
+              <div style={{ color: '#ff3333', fontSize: '12px', fontWeight: 700, letterSpacing: '1.5px', marginBottom: '8px' }}>
+                ЦЕЛИ ОПЕРАЦИИ:
+              </div>
+              {[
+                'Уничтожить командный центр Альянса',
+                'Вывести из строя спутниковую связь врага',
+                'Обеспечить контроль над стратегическим мостом',
+                'Эвакуировать наши войска в зону сбора'
+              ].map((obj, i) => (
+                <div
+                  key={i}
+                  onClick={() => toggleObjective(i)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '12px',
+                    color: checkedObjectives[i] ? '#ffffff' : '#aaa',
+                    marginBottom: '6px',
+                    cursor: 'pointer',
+                    fontFamily: "'Inter', sans-serif"
+                  }}
+                >
+                  <span style={{ color: checkedObjectives[i] ? '#ff2222' : '#555', fontSize: '14px' }}>
+                    ★
+                  </span>
+                  <span>{obj}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Reconnaissance Data */}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px', marginTop: '10px' }}>
+              <div style={{ color: '#ff3333', fontSize: '12px', fontWeight: 700, letterSpacing: '1.5px', marginBottom: '6px' }}>
+                ДАННЫЕ РАЗВЕДКИ:
+              </div>
+              <ul style={{ color: '#aaa', fontSize: '11px', lineHeight: 1.5, paddingLeft: '14px', fontFamily: "'Inter', sans-serif" }}>
+                <li>Альянс сосредоточил силы у переправы через реку.</li>
+                <li>Замечена активность тяжёлой техники и авиации.</li>
+                <li>Спутниковая связь обеспечивает координацию действий.</li>
+                <li>Местность благоприятна для скрытного наступления.</li>
+              </ul>
+            </div>
           </div>
-          <div style={subtitlesStyle}>
-            «Товарищ командир, противник развернул авангард бронетехники у рудных полей. Ваша задача — возвести Тяжёлый завод и нанести встречный удар!»
+
+          {/* Bottom Thumbnails & Risk Forecast */}
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
+            <div style={{ color: '#888', fontSize: '10px', letterSpacing: '1.5px', marginBottom: '6px' }}>
+              СВОДКА РАЙОНА БОЕВЫХ ДЕЙСТВИЙ:
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '10px' }}>
+              {['МОСТ', 'БАЗА', 'ПЕРЕВАЛ'].map((label, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    height: '48px',
+                    background: 'rgba(30,10,10,0.8)',
+                    border: '1px solid rgba(255,50,50,0.3)',
+                    borderRadius: '2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#888',
+                    fontSize: '9px'
+                  }}
+                >
+                  {label}
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+              <span>СЛОЖНОСТЬ: <strong style={{ color: '#ff2222' }}>ВЕТЕРАН</strong></span>
+              <span>ПРОГНОЗ: <strong style={{ color: '#ff4444' }}>ПОТЕРИ ВЫСОКИЕ</strong></span>
+            </div>
           </div>
         </div>
 
-        {/* Objectives & Map Intel (SC-09) */}
-        <div style={intelBoxStyle}>
-          <div style={panelTitleStyle}>ЦЕЛИ ОПЕРАЦИИ «КРАСНЫЙ РУБЕЖ»</div>
-          <div style={objItemStyle}>
-            <span style={{ color: '#ff4d4d', fontWeight: 'bold' }}>[ОСНОВНАЯ]</span> Построить Рудный комбинат и Тяжёлый завод.
+        {/* Center Marshal Viktor Sokolov Space */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+          paddingBottom: '20px'
+        }}>
+          {/* Commander Nameplate */}
+          <div className="clip-bevel-sm" style={{
+            background: 'linear-gradient(180deg, rgba(30,5,5,0.95) 0%, rgba(10,2,2,0.98) 100%)',
+            border: '1px solid #ff2222',
+            padding: '8px 28px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            boxShadow: '0 0 20px rgba(255,0,0,0.6)'
+          }}>
+            <span style={{ color: '#ff2222', fontSize: '20px' }}>★</span>
+            <div>
+              <div style={{ color: '#ff3333', fontSize: '11px', letterSpacing: '2px' }}>МАРШАЛ</div>
+              <div style={{ color: '#ffffff', fontSize: '18px', fontWeight: 800, letterSpacing: '1px' }}>
+                ВИКТОР СОКОЛОВ
+              </div>
+            </div>
           </div>
-          <div style={objItemStyle}>
-            <span style={{ color: '#ff4d4d', fontWeight: 'bold' }}>[ОСНОВНАЯ]</span> Уничтожить главную базу ИИ-соперника.
+        </div>
+
+        {/* Right Tactical Signal & Code Word Column */}
+        <div className="ra4-panel clip-bevel-md" style={{
+          padding: '18px',
+          border: '1px solid #ff3333',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          background: 'rgba(12, 6, 8, 0.92)'
+        }}>
+          <div>
+            <div style={{ color: '#ff4444', fontSize: '11px', letterSpacing: '2px', fontWeight: 700 }}>
+              РАССТАНОВКА СИЛ ПРОТИВНИКА
+            </div>
+            <div style={{
+              height: '110px',
+              background: 'rgba(20,10,12,0.8)',
+              border: '1px solid rgba(255,50,50,0.3)',
+              borderRadius: '4px',
+              marginTop: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#ff3333',
+              fontSize: '11px'
+            }}>
+              [ТАКТИЧЕСКИЙ РАДАР СЕКТОРА]
+            </div>
+
+            {/* Intercepted Radio Signals */}
+            <div style={{ marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
+              <div style={{ color: '#ff4444', fontSize: '11px', letterSpacing: '2px', fontWeight: 700, marginBottom: '6px' }}>
+                ПЕРЕХВАЧЕННЫЕ ПЕРЕГОВОРЫ
+              </div>
+
+              {/* Audio waveform */}
+              <div style={{ display: 'flex', gap: '3px', alignItems: 'center', height: '24px', margin: '8px 0' }}>
+                {[4, 12, 22, 16, 8, 20, 24, 10, 18, 24, 14, 6, 18, 22, 10, 15, 20, 8].map((h, i) => (
+                  <div
+                    key={i}
+                    className="audio-bar"
+                    style={{
+                      width: '4px',
+                      height: `${h}px`,
+                      background: '#ff2222',
+                      borderRadius: '1px',
+                      animationDelay: `${i * 0.05}s`
+                    }}
+                  />
+                ))}
+              </div>
+
+              <div style={{
+                color: '#bbb',
+                fontSize: '11px',
+                fontStyle: 'italic',
+                lineHeight: 1.4,
+                fontFamily: "'Inter', sans-serif",
+                background: 'rgba(0,0,0,0.5)',
+                padding: '8px',
+                borderRadius: '3px',
+                borderLeft: '2px solid #ff2222'
+              }}>
+                «...полный ввод сил по сигналу. Кодовое слово: „Свобода“... ожидаем подтверждения...»
+              </div>
+            </div>
           </div>
-          <div style={objItemStyle}>
-            <span style={{ color: '#ffd700', fontWeight: 'bold' }}>[ДОПОЛНИТЕЛЬНАЯ]</span> Сохранить начальный комбайн ГРМ-8 «Богатырь».
+
+          {/* Operation Code Word */}
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '12px' }}>
+            <div style={{ color: '#888', fontSize: '10px', letterSpacing: '2px' }}>
+              КОДОВОЕ СЛОВО ОПЕРАЦИИ:
+            </div>
+            <div style={{
+              color: '#ff2222',
+              fontSize: '36px',
+              fontWeight: 900,
+              letterSpacing: '8px',
+              textShadow: '0 0 20px rgba(255,0,0,0.8)',
+              marginTop: '4px'
+            }}>
+              ГРОМ
+            </div>
           </div>
         </div>
       </div>
 
-      <div style={footerStyle}>
-        <button style={continueBtnStyle} onClick={onContinue}>
-          ► НАЧАТЬ ВЫПОЛНЕНИЕ МИССИИ
+      {/* Bottom Action Strip */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        borderTop: '1px solid rgba(255,255,255,0.1)',
+        paddingTop: '8px',
+        zIndex: 10
+      }}>
+        <button
+          onClick={() => navigate('/strategic-map')}
+          className="ra4-btn-ussr clip-bevel-sm"
+          style={{ padding: '8px 24px', fontSize: '14px' }}
+        >
+          ‹ НАЗАД
         </button>
+
+        <button
+          onClick={handleLaunch}
+          className="clip-bevel-sm"
+          style={{
+            background: 'linear-gradient(180deg, #ff2222 0%, #7a0b0b 100%)',
+            border: '1px solid #ff4444',
+            color: '#ffffff',
+            padding: '12px 60px',
+            fontSize: '18px',
+            fontWeight: 800,
+            letterSpacing: '3px',
+            cursor: 'pointer',
+            boxShadow: '0 0 25px rgba(255,0,0,0.8)'
+          }}
+        >
+          ★ ПРОДОЛЖИТЬ
+        </button>
+
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button onClick={() => navigate('/video-comms')} className="ra4-btn-ussr clip-bevel-sm" style={{ padding: '6px 16px', fontSize: '12px' }}>
+            ⚙ НАСТРОЙКИ
+          </button>
+          <span style={{ color: '#ff4444', fontSize: '12px', letterSpacing: '1px' }}>
+            БОЕВАЯ ГОТОВНОСТЬ: <strong>ВЫСОКАЯ</strong>
+          </span>
+        </div>
       </div>
     </div>
   );
-};
-
-const containerStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  width: '100%',
-  height: '100%',
-  backgroundColor: '#070b12',
-  display: 'flex',
-  flexDirection: 'column',
-  padding: '30px 40px',
-  boxSizing: 'border-box',
-  zIndex: 3800,
-  fontFamily: 'Inter, system-ui, sans-serif'
-};
-
-const headerStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginBottom: '20px'
-};
-
-const backBtnStyle: React.CSSProperties = {
-  background: 'transparent',
-  border: '1px solid rgba(255, 255, 255, 0.2)',
-  color: '#ccc',
-  padding: '10px 18px',
-  borderRadius: '4px',
-  cursor: 'pointer',
-  fontWeight: 'bold'
-};
-
-const bodyStyle: React.CSSProperties = {
-  flex: 1,
-  display: 'grid',
-  gridTemplateColumns: '1fr 400px',
-  gap: '24px'
-};
-
-const videoBoxStyle: React.CSSProperties = {
-  backgroundColor: 'rgba(12, 18, 28, 0.9)',
-  border: '1px solid rgba(255, 42, 75, 0.4)',
-  borderRadius: '8px',
-  padding: '20px',
-  display: 'flex',
-  flexDirection: 'column'
-};
-
-const videoHeaderStyle: React.CSSProperties = {
-  fontSize: '12px',
-  fontWeight: 'bold',
-  color: '#ff4d4d',
-  marginBottom: '15px'
-};
-
-const screenPlaceholderStyle: React.CSSProperties = {
-  flex: 1,
-  backgroundColor: 'rgba(0, 0, 0, 0.6)',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
-  borderRadius: '6px',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center'
-};
-
-const subtitlesStyle: React.CSSProperties = {
-  marginTop: '15px',
-  padding: '14px',
-  backgroundColor: 'rgba(0, 0, 0, 0.4)',
-  borderLeft: '4px solid #ff4d4d',
-  fontSize: '13px',
-  color: '#fff',
-  fontStyle: 'italic'
-};
-
-const intelBoxStyle: React.CSSProperties = {
-  backgroundColor: 'rgba(12, 18, 28, 0.9)',
-  border: '1px solid rgba(255, 255, 255, 0.15)',
-  borderRadius: '8px',
-  padding: '20px',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '12px'
-};
-
-const panelTitleStyle: React.CSSProperties = {
-  fontSize: '12px',
-  fontWeight: 'bold',
-  letterSpacing: '2px',
-  color: '#888',
-  marginBottom: '10px'
-};
-
-const objItemStyle: React.CSSProperties = {
-  padding: '12px',
-  backgroundColor: 'rgba(255, 255, 255, 0.03)',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
-  borderRadius: '4px',
-  fontSize: '13px',
-  color: '#fff'
-};
-
-const footerStyle: React.CSSProperties = {
-  marginTop: '20px',
-  display: 'flex',
-  justifyContent: 'flex-end'
-};
-
-const continueBtnStyle: React.CSSProperties = {
-  backgroundColor: '#ff4d4d',
-  color: '#fff',
-  border: 'none',
-  borderRadius: '4px',
-  padding: '16px 36px',
-  fontSize: '18px',
-  fontWeight: 'bold',
-  cursor: 'pointer',
-  fontFamily: 'Orbitron, sans-serif'
 };

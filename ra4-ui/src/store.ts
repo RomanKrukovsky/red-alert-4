@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { WorldSnapshot, FactionId, CommandType } from '@ra4/shared-types';
+import { WorldSnapshot, FactionId } from '@ra4/shared-types';
 
 export interface UIState {
   snapshot: WorldSnapshot | null;

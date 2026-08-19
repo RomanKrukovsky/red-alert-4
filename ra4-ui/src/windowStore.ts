@@ -23,7 +23,7 @@ interface WindowStore {
   toggleMinimized: (id: string) => void;
 }
 
-export const useWindowStore = create<WindowStore>((set, get) => ({
+export const useWindowStore = create<WindowStore>((set) => ({
   windows: {},
   highestZIndex: 100,
 

@@ -1,6 +1,5 @@
 import React from 'react';
 import { useUIStore } from '../store.js';
-import { MatchState } from '@ra4/shared-types';
 
 export interface SkirmishMenuProps {
   onStartMatch: () => void;

@@ -4,7 +4,7 @@ export interface AssetGalleryProps {
   onClose: () => void;
 }
 
-export const ASSET_CATALOG = [
+const ASSET_CATALOG = [
   { id: 'SU_GranitMBT', name: 'ОБТ-92 «Гранит»', category: 'unit', tris: 5800, matCount: 3, sockets: ['TurretYaw', 'GunPitch', 'Muzzle', 'SelectionAnchor'] },
   { id: 'SU_BogatyrOreCarrier', name: 'ГРМ-8 «Богатырь»', category: 'unit', tris: 4500, matCount: 3, sockets: ['HarvesterContainer', 'SelectionAnchor'] },
   { id: 'SU_RubezhRifleman', name: 'МС-12 «Рубеж»', category: 'unit', tris: 5900, matCount: 3, sockets: ['AssaultRifle', 'Muzzle', 'SelectionAnchor'] },

@@ -1,20 +1,19 @@
 import React from 'react';
 import { useUIStore } from '../store.js';
 import { OFFICIAL_BUILDINGS, OFFICIAL_UNITS } from '@ra4/content-runtime';
-import { FactionId, CommandType } from '@ra4/shared-types';
+import { FactionId } from '@ra4/shared-types';
 import { Frame } from './Frame.js';
 
 interface ProductionPanelProps {
   onIssueCommand?: (cmd: any) => void;
 }
 
-export const ProductionPanel: React.FC<ProductionPanelProps> = ({ onIssueCommand }) => {
+export const ProductionPanel: React.FC<ProductionPanelProps> = ({ onIssueCommand: _onIssueCommand }) => {
   const activeTab = useUIStore((s) => s.activeCategoryTab);
   const setActiveTab = useUIStore((s) => s.setActiveCategoryTab);
   const snapshot = useUIStore((s) => s.snapshot);
   const playerIdx = useUIStore((s) => s.activePlayerIndex);
 
-  const playerState = snapshot?.players[playerIdx];
   const playerFaction = snapshot?.entities.find(e => e.playerIndex === playerIdx)?.factionId ?? FactionId.USSR;
 
   const buildings = OFFICIAL_BUILDINGS.filter(b => b.factionId === playerFaction);
