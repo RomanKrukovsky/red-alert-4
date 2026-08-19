@@ -1,2 +1,0 @@
-/usr/bin/ar qc libRA4Replay.a "CMakeFiles/RA4Replay.dir/Users/romanmolodyko/Documents/red-alert-4/Source/RA4Replay/Private/Replay.cpp.o"
-/usr/bin/ranlib libRA4Replay.a

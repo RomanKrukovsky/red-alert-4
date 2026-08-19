@@ -49,8 +49,12 @@ __pycache__/
 !Saved/Reports/
 !Saved/Reports/**
 
-# Headless CMake build artifacts
+# Headless CMake build artifacts. The wildcard matters: the existing rule only
+# caught "build/", so a "build-audit/" tree slipped past it and 705 .o/.o.d/.make
+# files were committed -- with paths still naming Documents/red-alert-4, the
+# directory this project had before it was renamed.
 /Tools/HeadlessBuild/build/
+/Tools/HeadlessBuild/build-*/
 
 # FactoryEnvironment: a 7 GB third-party environment pack that was never tracked
 # in git, is referenced by no map, no material and no source file, and was the

@@ -1,2 +1,0 @@
-/usr/bin/ar qc libRA4FogOfWar.a "CMakeFiles/RA4FogOfWar.dir/Users/romanmolodyko/Documents/red-alert-4/Source/RA4FogOfWar/Private/FogOfWarGrid.cpp.o"
-/usr/bin/ranlib libRA4FogOfWar.a
