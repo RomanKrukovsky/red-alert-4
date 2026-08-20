@@ -13,8 +13,33 @@ URA4ActivatableWidget::URA4ActivatableWidget(const FObjectInitializer& ObjectIni
 
 TOptional<FUIInputConfig> URA4ActivatableWidget::GetDesiredInputConfig() const
 {
-    // Default config for UI elements: Game and UI, Mouse visible
-    return FUIInputConfig(ECommonInputMode::Menu, EMouseCaptureMode::NoCapture);
+    switch (GetScreenContract().InputMode)
+    {
+    case ERA4UIInputMode::GameOnly:
+        return FUIInputConfig(
+            ECommonInputMode::Game,
+            EMouseCaptureMode::CapturePermanently_IncludingInitialMouseDown);
+    case ERA4UIInputMode::UIOnly:
+        return FUIInputConfig(ECommonInputMode::Menu, EMouseCaptureMode::NoCapture);
+    case ERA4UIInputMode::GameAndUI:
+        return FUIInputConfig(ECommonInputMode::All, EMouseCaptureMode::NoCapture);
+    default:
+        checkNoEntry();
+        return FUIInputConfig(ECommonInputMode::Menu, EMouseCaptureMode::NoCapture);
+    }
+}
+
+void URA4ActivatableWidget::SetScreenIdentity(
+    const ERA4UIScreenId InScreenId,
+    const ERA4UIScreenVariant InVariant)
+{
+    ScreenId = InScreenId;
+    ScreenVariant = InVariant;
+}
+
+FRA4UIScreenContract URA4ActivatableWidget::GetScreenContract() const
+{
+    return ResolveScreenContract(ScreenId, ScreenVariant);
 }
 
 URA4UIScreenViewModel* URA4ActivatableWidget::GetScreenViewModel() const

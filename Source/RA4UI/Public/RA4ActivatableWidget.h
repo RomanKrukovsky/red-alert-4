@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "CommonActivatableWidget.h"
+#include "RA4UIScreenContract.h"
 #include "RA4UIScreenViewModel.h"
 #include "RA4ActivatableWidget.generated.h"
 
@@ -22,6 +23,14 @@ public:
     // Determines if this widget consumes input entirely or allows pass-through
     virtual TOptional<FUIInputConfig> GetDesiredInputConfig() const override;
 
+    UFUNCTION(BlueprintCallable, Category = "RA4 UI|State")
+    void SetScreenIdentity(
+        ERA4UIScreenId InScreenId,
+        ERA4UIScreenVariant InVariant = ERA4UIScreenVariant::Default);
+
+    UFUNCTION(BlueprintPure, Category = "RA4 UI|State")
+    FRA4UIScreenContract GetScreenContract() const;
+
     UFUNCTION(BlueprintPure, Category = "RA4 UI|State")
     URA4UIScreenViewModel* GetScreenViewModel() const;
 
@@ -33,4 +42,11 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "RA4 UI|Modal")
     void CloseActiveModal();
+
+protected:
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "RA4 UI|State")
+    ERA4UIScreenId ScreenId = ERA4UIScreenId::Splash;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "RA4 UI|State")
+    ERA4UIScreenVariant ScreenVariant = ERA4UIScreenVariant::Default;
 };
