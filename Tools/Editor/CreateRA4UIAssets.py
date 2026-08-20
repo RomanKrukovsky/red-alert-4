@@ -13,6 +13,7 @@ VIDEO_COMMS_CLASS = unreal.load_class(None, "/Script/RA4UI.RA4VideoCommsScreenWi
 LOADING_CLASS = unreal.load_class(None, "/Script/RA4UI.RA4LoadingScreenWidget")
 LOBBY_CLASS = unreal.load_class(None, "/Script/RA4UI.RA4LobbyScreenWidget")
 LOBBY_ROW_CLASS = unreal.load_class(None, "/Script/RA4UI.RA4LobbyPlayerRowWidget")
+FACTION_HUD_CLASS = unreal.load_class(None, "/Script/RA4UI.RA4FactionHUDWidget")
 
 
 def create_widget_blueprint(asset_name, parent_class, screen_index=None, default_values=None):
@@ -63,27 +64,19 @@ def main():
         LOADING_CLASS,
         LOBBY_CLASS,
         LOBBY_ROW_CLASS,
+        FACTION_HUD_CLASS,
     ]
     if not all(required_classes):
         raise RuntimeError("Required RA4 UI classes were not loaded; compile the RA4UI module first.")
 
     screens = [
         ("WBP_RA4_Showcase", 0),
-        ("WBP_RA4_HUD_USSR", 2),
-        ("WBP_RA4_HUD_Allies", 14),
-        ("WBP_RA4_HUD_Eastern", 15),
-        ("WBP_RA4_HUD_Chrono", 16),
         ("WBP_RA4_Pause", 17),
         ("WBP_RA4_Victory", 18),
         ("WBP_RA4_Encyclopedia", 19),
         ("WBP_RA4_TechTree", 20),
         ("WBP_RA4_Mods", 21),
         ("WBP_RA4_Settings", 4),
-        ("WBP_RA4_HUD_USSR_Battle", 23),
-        ("WBP_RA4_HUD_USSR_Alert", 24),
-        ("WBP_RA4_HUD_Allies_Naval", 25),
-        ("WBP_RA4_HUD_Allies_Air", 26),
-        ("WBP_RA4_HUD_Chrono_Superweapon", 27),
     ]
 
     created = [
@@ -137,6 +130,25 @@ def main():
     created.extend(
         create_widget_blueprint(name, SHOWCASE_CLASS, screen_index)
         for name, screen_index in screens
+    )
+    hud_screens = (
+        ("WBP_RA4_HUD_USSR", 13),
+        ("WBP_RA4_HUD_Allies", 14),
+        ("WBP_RA4_HUD_Eastern", 15),
+        ("WBP_RA4_HUD_Chrono", 16),
+        ("WBP_RA4_HUD_USSR_Battle", 20),
+        ("WBP_RA4_HUD_USSR_Alert", 21),
+        ("WBP_RA4_HUD_Allies_Naval", 22),
+        ("WBP_RA4_HUD_Allies_Air", 23),
+        ("WBP_RA4_HUD_Chrono_Superweapon", 24),
+    )
+    created.extend(
+        create_widget_blueprint(
+            name,
+            FACTION_HUD_CLASS,
+            default_values={"initial_reference_number": reference_number},
+        )
+        for name, reference_number in hud_screens
     )
     unreal.EditorAssetLibrary.save_directory(ASSET_PATH, only_if_is_dirty=True, recursive=True)
     unreal.log(f"RA4 UI assets ready: {len(created)}")

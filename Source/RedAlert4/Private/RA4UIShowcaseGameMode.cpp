@@ -4,7 +4,7 @@
 
 #include "RA4CampaignSelectWidget.h"
 #include "RA4CampaignScreenWidget.h"
-#include "RA4HUDWidget.h"
+#include "RA4FactionHUDWidget.h"
 #include "RA4MainMenuScreenWidget.h"
 #include "RA4LobbyScreenWidget.h"
 #include "RA4MissionFlowWidgets.h"
@@ -127,10 +127,15 @@ void ARA4UIShowcaseGameMode::ShowInterface(APlayerController* PlayerController)
         RootWidget = CreateWidget<URA4LobbyScreenWidget>(
             PlayerController, URA4LobbyScreenWidget::StaticClass());
     }
-    else if (RequestedScreen == 13)
+    else if ((RequestedScreen >= 13 && RequestedScreen <= 16) ||
+             (RequestedScreen >= 20 && RequestedScreen <= 24))
     {
-        RootWidget = CreateWidget<URA4HUDWidget>(
-            PlayerController, URA4HUDWidget::StaticClass());
+        if (URA4FactionHUDWidget* HUD = CreateWidget<URA4FactionHUDWidget>(
+            PlayerController, URA4FactionHUDWidget::StaticClass()))
+        {
+            HUD->ConfigureReference(RequestedScreen);
+            RootWidget = HUD;
+        }
     }
     else
     {

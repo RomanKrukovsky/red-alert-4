@@ -28,6 +28,21 @@ public:
     URA4HUDWidget(const FObjectInitializer& ObjectInitializer);
 
     UFUNCTION(BlueprintCallable, Category = "RA4|HUD")
+    void ConfigureHUD(
+        ERA4FactionTheme InFactionTheme,
+        ERA4UIScreenVariant InVariant = ERA4UIScreenVariant::Default,
+        int32 InActiveProductionTab = 0);
+
+    UFUNCTION(BlueprintPure, Category = "RA4|HUD")
+    ERA4FactionTheme GetFactionTheme() const { return FactionTheme; }
+
+    UFUNCTION(BlueprintPure, Category = "RA4|HUD")
+    ERA4UIScreenVariant GetHUDVariant() const { return HUDVariant; }
+
+    UFUNCTION(BlueprintPure, Category = "RA4|HUD")
+    int32 GetActiveProductionTab() const { return ActiveProductionTab; }
+
+    UFUNCTION(BlueprintCallable, Category = "RA4|HUD")
     void SetHUDViewModel(URA4HUDViewModel* InViewModel);
 
     UFUNCTION(BlueprintPure, Category = "RA4|HUD")
@@ -91,6 +106,8 @@ private:
     TObjectPtr<UUniformGridPanel> BuildGrid;
 
     TArray<FBox2D> InteractiveRegions;
+    ERA4FactionTheme FactionTheme = ERA4FactionTheme::USSR;
+    ERA4UIScreenVariant HUDVariant = ERA4UIScreenVariant::Default;
     int32 ActiveProductionTab = 0;
 };
 

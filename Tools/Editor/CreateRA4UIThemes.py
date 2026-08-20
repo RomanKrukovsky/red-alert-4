@@ -36,7 +36,7 @@ def main():
     themes = [
         ("DA_RA4_Theme_USSR", unreal.RA4FactionTheme.USSR, (0.90, 0.07, 0.08, 1.0), (0.30, 0.02, 0.02, 1.0), (0.012, 0.016, 0.023, 0.96), "/Game/RA4UI/Art/T_RA4_USSR_CommandCenter", 1.35),
         ("DA_RA4_Theme_Allies", unreal.RA4FactionTheme.ALLIES, (0.10, 0.48, 0.95, 1.0), (0.02, 0.14, 0.30, 1.0), (0.012, 0.016, 0.023, 0.96), "/Game/RA4UI/Art/T_RA4_Allies_ArcticFleet", 1.15),
-        ("DA_RA4_Theme_Eastern", unreal.RA4FactionTheme.EASTERN_COALITION, (0.92, 0.64, 0.13, 1.0), (0.18, 0.16, 0.03, 1.0), (0.012, 0.016, 0.023, 0.96), "/Game/RA4UI/Art/T_RA4_Eastern_CommandFortress", 1.10),
+        ("DA_RA4_Theme_Eastern", unreal.RA4FactionTheme.EASTERN_COALITION, (0.26, 0.92, 0.24, 1.0), (0.20, 0.15, 0.03, 1.0), (0.006, 0.030, 0.012, 0.96), "/Game/RA4UI/Art/T_RA4_Eastern_CommandFortress", 1.10),
         ("DA_RA4_Theme_Chrono", unreal.RA4FactionTheme.CHRONOLEGION, (0.61, 0.25, 0.94, 1.0), (0.15, 0.03, 0.28, 1.0), (0.012, 0.016, 0.023, 0.96), "/Game/RA4UI/Art/T_RA4_Chrono_TemporalCitadel", 1.45),
     ]
 

@@ -5,6 +5,7 @@
 #include "RA4AngularPanelWidget.h"
 #include "RA4CampaignScreenWidget.h"
 #include "RA4CampaignViewModel.h"
+#include "RA4FactionHUDWidget.h"
 #include "RA4HUDViewModel.h"
 #include "RA4HUDWidget.h"
 #include "RA4MainMenuScreenWidget.h"
@@ -491,6 +492,56 @@ bool FRA4WorldMarkerLayerStateTest::RunTest(const FString& Parameters)
         SRA4WorldMarkerLayer::ResolveGlyph(HiddenEnemy), ERA4MarkerGlyph::Hidden);
     TestEqual(TEXT("Healthy marker is green"),
         SRA4WorldMarkerLayer::ResolveHealthBand(Friendly.HealthRatio), ERA4HealthBand::Healthy);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FRA4FactionHUDVariantContractTest,
+    "RA4.UI.HUD.Factions.AllCombatReferencesResolveDistinctData",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRA4FactionHUDVariantContractTest::RunTest(const FString& Parameters)
+{
+    const int32 References[] = {13, 14, 15, 16, 20, 21, 22, 23, 24};
+    const FName Specializations[] = {
+        TEXT("SovietProduction"), TEXT("AlliesCombinedArms"), TEXT("EasternProduction"),
+        TEXT("ChronoAbilities"), TEXT("SovietArmorBattle"), TEXT("SovietBaseAlert"),
+        TEXT("AlliesNaval"), TEXT("AlliesAir"), TEXT("ChronoSuperweapon")
+    };
+
+    for (int32 Index = 0; Index < UE_ARRAY_COUNT(References); ++Index)
+    {
+        URA4FactionHUDWidget* HUD = NewObject<URA4FactionHUDWidget>();
+        TestTrue(TEXT("Known combat reference configures"), HUD->ConfigureReference(References[Index]));
+        TestEqual(TEXT("Reference is preserved"), HUD->GetReferenceNumber(), References[Index]);
+        TestEqual(TEXT("Specialization is distinct"), HUD->GetSpecializedPanelId(), Specializations[Index]);
+        TestTrue(TEXT("Each HUD has faction tabs"), HUD->GetProductionTabs().Num() >= 4);
+    }
+
+    URA4FactionHUDWidget* Unknown = NewObject<URA4FactionHUDWidget>();
+    TestFalse(TEXT("Non-HUD reference rejected"), Unknown->ConfigureReference(17));
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FRA4FactionHUDCompositionTest,
+    "RA4.UI.HUD.Factions.SharedShellChangesThemeAndSpecializedPanel",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRA4FactionHUDCompositionTest::RunTest(const FString& Parameters)
+{
+    URA4FactionHUDWidget* AlliesAir = NewObject<URA4FactionHUDWidget>();
+    TestTrue(TEXT("Allies air configures"), AlliesAir->ConfigureReference(23));
+    TestTrue(TEXT("Allies air initializes"), AlliesAir->Initialize());
+    AlliesAir->TakeWidget();
+    TestEqual(TEXT("Allies theme"), AlliesAir->GetFactionTheme(), ERA4FactionTheme::Allies);
+    TestEqual(TEXT("Allies air variant"), AlliesAir->GetHUDVariant(), ERA4UIScreenVariant::AlliesAir);
+    TestEqual(TEXT("Air tab active"), AlliesAir->GetActiveProductionTab(), 3);
+
+    URA4FactionHUDWidget* ChronoWeapon = NewObject<URA4FactionHUDWidget>();
+    TestTrue(TEXT("Chrono weapon configures"), ChronoWeapon->ConfigureReference(24));
+    TestEqual(TEXT("Chrono theme"), ChronoWeapon->GetFactionTheme(), ERA4FactionTheme::Chronolegion);
+    TestTrue(TEXT("Superweapon panel visible"), ChronoWeapon->ShouldShowSuperweaponPanel());
     return true;
 }
 
