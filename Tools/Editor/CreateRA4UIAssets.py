@@ -5,9 +5,15 @@ ASSET_PATH = "/Game/RA4UI/Widgets"
 SHOWCASE_CLASS = unreal.load_class(None, "/Script/RA4UI.RA4ShowcaseWidget")
 SPLASH_CLASS = unreal.load_class(None, "/Script/RA4UI.RA4SplashScreenWidget")
 MAIN_MENU_CLASS = unreal.load_class(None, "/Script/RA4UI.RA4MainMenuScreenWidget")
+CAMPAIGN_SELECT_CLASS = unreal.load_class(None, "/Script/RA4UI.RA4CampaignSelectWidget")
+CAMPAIGN_CLASS = unreal.load_class(None, "/Script/RA4UI.RA4CampaignScreenWidget")
+MISSION_MAP_CLASS = unreal.load_class(None, "/Script/RA4UI.RA4MissionMapScreenWidget")
+BRIEFING_CLASS = unreal.load_class(None, "/Script/RA4UI.RA4BriefingScreenWidget")
+VIDEO_COMMS_CLASS = unreal.load_class(None, "/Script/RA4UI.RA4VideoCommsScreenWidget")
+LOADING_CLASS = unreal.load_class(None, "/Script/RA4UI.RA4LoadingScreenWidget")
 
 
-def create_widget_blueprint(asset_name, parent_class, screen_index=None):
+def create_widget_blueprint(asset_name, parent_class, screen_index=None, default_values=None):
     asset_path = f"{ASSET_PATH}/{asset_name}"
     changed = False
     if unreal.EditorAssetLibrary.does_asset_exist(asset_path):
@@ -25,30 +31,40 @@ def create_widget_blueprint(asset_name, parent_class, screen_index=None):
 
     if changed:
         unreal.BlueprintEditorLibrary.compile_blueprint(asset)
+
+    if screen_index is not None or default_values:
+        generated_class = unreal.EditorAssetLibrary.load_blueprint_class(asset_path)
+        default_widget = unreal.get_default_object(generated_class)
+        values = dict(default_values or {})
         if screen_index is not None:
-            generated_class = unreal.EditorAssetLibrary.load_blueprint_class(asset_path)
-            default_widget = unreal.get_default_object(generated_class)
-            default_widget.set_editor_property("initial_screen_index", screen_index)
+            values["initial_screen_index"] = screen_index
+        for property_name, value in values.items():
+            if default_widget.get_editor_property(property_name) != value:
+                default_widget.set_editor_property(property_name, value)
+                changed = True
+
+    if changed:
         unreal.EditorAssetLibrary.save_loaded_asset(asset)
     return asset
 
 
 def main():
-    required_classes = [SHOWCASE_CLASS, SPLASH_CLASS, MAIN_MENU_CLASS]
+    required_classes = [
+        SHOWCASE_CLASS,
+        SPLASH_CLASS,
+        MAIN_MENU_CLASS,
+        CAMPAIGN_SELECT_CLASS,
+        CAMPAIGN_CLASS,
+        MISSION_MAP_CLASS,
+        BRIEFING_CLASS,
+        VIDEO_COMMS_CLASS,
+        LOADING_CLASS,
+    ]
     if not all(required_classes):
         raise RuntimeError("Required RA4 UI classes were not loaded; compile the RA4UI module first.")
 
     screens = [
         ("WBP_RA4_Showcase", 0),
-        ("WBP_RA4_FactionSelect", 6),
-        ("WBP_RA4_Campaign_USSR", 1),
-        ("WBP_RA4_Campaign_Allies", 7),
-        ("WBP_RA4_Campaign_Eastern", 8),
-        ("WBP_RA4_Campaign_Chrono", 9),
-        ("WBP_RA4_MissionMap_USSR", 10),
-        ("WBP_RA4_Briefing_USSR", 11),
-        ("WBP_RA4_VideoComms", 12),
-        ("WBP_RA4_Loading_USSR", 13),
         ("WBP_RA4_HUD_USSR", 2),
         ("WBP_RA4_HUD_Allies", 14),
         ("WBP_RA4_HUD_Eastern", 15),
@@ -60,7 +76,6 @@ def main():
         ("WBP_RA4_TechTree", 20),
         ("WBP_RA4_Mods", 21),
         ("WBP_RA4_Settings", 4),
-        ("WBP_RA4_Campaign_EasternDetail", 22),
         ("WBP_RA4_HUD_USSR_Battle", 23),
         ("WBP_RA4_HUD_USSR_Alert", 24),
         ("WBP_RA4_HUD_Allies_Naval", 25),
@@ -71,6 +86,48 @@ def main():
     created = [
         create_widget_blueprint("WBP_RA4_Splash", SPLASH_CLASS),
         create_widget_blueprint("WBP_RA4_MainMenu", MAIN_MENU_CLASS),
+        create_widget_blueprint("WBP_RA4_FactionSelect", CAMPAIGN_SELECT_CLASS),
+        create_widget_blueprint("WBP_RA4_Campaign_USSR", CAMPAIGN_CLASS),
+        create_widget_blueprint(
+            "WBP_RA4_Campaign_Allies",
+            CAMPAIGN_CLASS,
+            default_values={"faction_theme": unreal.RA4FactionTheme.ALLIES},
+        ),
+        create_widget_blueprint(
+            "WBP_RA4_Campaign_AlliesAlternate",
+            CAMPAIGN_CLASS,
+            default_values={
+                "faction_theme": unreal.RA4FactionTheme.ALLIES,
+                "campaign_variant": unreal.RA4UIScreenVariant.ALLIES_ALTERNATE,
+            },
+        ),
+        create_widget_blueprint(
+            "WBP_RA4_Campaign_Eastern",
+            CAMPAIGN_CLASS,
+            default_values={"faction_theme": unreal.RA4FactionTheme.EASTERN_COALITION},
+        ),
+        create_widget_blueprint(
+            "WBP_RA4_Campaign_EasternDetail",
+            CAMPAIGN_CLASS,
+            default_values={
+                "faction_theme": unreal.RA4FactionTheme.EASTERN_COALITION,
+                "campaign_variant": unreal.RA4UIScreenVariant.EASTERN_DETAIL,
+            },
+        ),
+        create_widget_blueprint(
+            "WBP_RA4_Campaign_Chrono",
+            CAMPAIGN_CLASS,
+            default_values={"faction_theme": unreal.RA4FactionTheme.CHRONOLEGION},
+        ),
+        create_widget_blueprint("WBP_RA4_MissionMap_USSR", MISSION_MAP_CLASS),
+        create_widget_blueprint("WBP_RA4_Briefing_USSR", BRIEFING_CLASS),
+        create_widget_blueprint("WBP_RA4_VideoComms", VIDEO_COMMS_CLASS),
+        create_widget_blueprint("WBP_RA4_Loading_USSR", LOADING_CLASS),
+        create_widget_blueprint(
+            "WBP_RA4_Loading_USSR_Briefing",
+            LOADING_CLASS,
+            default_values={"loading_variant": unreal.RA4UIScreenVariant.LOADING_BRIEFING},
+        ),
     ]
     created.extend(
         create_widget_blueprint(name, SHOWCASE_CLASS, screen_index)

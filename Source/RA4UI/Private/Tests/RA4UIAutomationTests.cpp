@@ -3,8 +3,11 @@
 #include "Components/Image.h"
 #include "Misc/AutomationTest.h"
 #include "RA4AngularPanelWidget.h"
+#include "RA4CampaignScreenWidget.h"
+#include "RA4CampaignViewModel.h"
 #include "RA4MainMenuScreenWidget.h"
 #include "RA4MainMenuViewModel.h"
+#include "RA4MissionFlowWidgets.h"
 #include "RA4ScreenRootWidget.h"
 #include "RA4SplashScreenWidget.h"
 #include "RA4UIScreenContract.h"
@@ -169,6 +172,110 @@ bool FRA4MainMenuCompositionTest::RunTest(const FString& Parameters)
         TEXT("Logo ignores hit tests"),
         MainMenu->GetLogoImage()->GetVisibility(),
         ESlateVisibility::HitTestInvisible);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FRA4CampaignViewModelContentTest,
+    "RA4.UI.Screens.Campaign.ViewModelProvidesPlayableContent",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRA4CampaignViewModelContentTest::RunTest(const FString& Parameters)
+{
+    URA4CampaignViewModel* ViewModel = NewObject<URA4CampaignViewModel>();
+
+    TestEqual(TEXT("Faction count"), ViewModel->GetFactionCards().Num(), 4);
+    TestEqual(TEXT("Initial faction"), ViewModel->GetSelectedFaction(), ERA4FactionTheme::USSR);
+    TestTrue(TEXT("USSR has missions"), ViewModel->GetMissionNodes().Num() >= 8);
+    TestTrue(TEXT("Known mission can be selected"), ViewModel->SelectMission(TEXT("ussr_operation_molot")));
+    TestEqual(TEXT("Selected mission"), ViewModel->GetSelectedMissionId(), FName(TEXT("ussr_operation_molot")));
+    TestFalse(TEXT("Unknown mission is rejected"), ViewModel->SelectMission(TEXT("missing_content")));
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FRA4CampaignViewModelProgressTest,
+    "RA4.UI.Screens.Campaign.ProgressAndLocksAreValidated",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRA4CampaignViewModelProgressTest::RunTest(const FString& Parameters)
+{
+    URA4CampaignViewModel* ViewModel = NewObject<URA4CampaignViewModel>();
+
+    TestTrue(TEXT("Known faction progress updates"), ViewModel->SetCampaignProgress(
+        ERA4FactionTheme::USSR, 99, 18));
+    TestEqual(TEXT("Completed missions clamp"), ViewModel->GetFactionCards()[0].CompletedMissions, 18);
+    TestEqual(TEXT("Progress clamps"), ViewModel->GetFactionCards()[0].Progress, 1.0f);
+    TestFalse(TEXT("Locked mission cannot be selected"), ViewModel->SelectMission(TEXT("ussr_final_protocol")));
+    TestTrue(TEXT("Unlocked faction can be selected"), ViewModel->SelectFaction(ERA4FactionTheme::Allies));
+    TestEqual(TEXT("Allies selected"), ViewModel->GetSelectedFaction(), ERA4FactionTheme::Allies);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FRA4CampaignReferenceVariantsTest,
+    "RA4.UI.Screens.Campaign.DuplicateReferencesKeepDistinctVariants",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRA4CampaignReferenceVariantsTest::RunTest(const FString& Parameters)
+{
+    const FRA4UIScreenContract AlliesDefault = ResolveScreenContract(ERA4UIScreenId::AlliesCampaign);
+    const FRA4UIScreenContract AlliesAlternate = ResolveScreenContract(
+        ERA4UIScreenId::AlliesCampaign, ERA4UIScreenVariant::AlliesAlternate);
+    const FRA4UIScreenContract LoadingDefault = ResolveScreenContract(ERA4UIScreenId::Loading);
+    const FRA4UIScreenContract LoadingBriefing = ResolveScreenContract(
+        ERA4UIScreenId::Loading, ERA4UIScreenVariant::LoadingBriefing);
+
+    TestEqual(TEXT("Allies default reference"), AlliesDefault.ReferenceNumber, 5);
+    TestEqual(TEXT("Allies alternate reference"), AlliesAlternate.ReferenceNumber, 11);
+    TestEqual(TEXT("Loading default reference"), LoadingDefault.ReferenceNumber, 12);
+    TestEqual(TEXT("Loading briefing reference"), LoadingBriefing.ReferenceNumber, 19);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FRA4CampaignScreenCompositionTest,
+    "RA4.UI.Screens.Campaign.FactionScreenUsesSharedInteractiveComposition",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRA4CampaignScreenCompositionTest::RunTest(const FString& Parameters)
+{
+    URA4CampaignScreenWidget* Screen = NewObject<URA4CampaignScreenWidget>();
+    Screen->ConfigureCampaign(ERA4FactionTheme::EasternCoalition, ERA4UIScreenVariant::EasternDetail);
+    TestTrue(TEXT("Campaign screen initializes"), Screen->Initialize());
+    Screen->TakeWidget();
+
+    TestEqual(TEXT("Configured faction"), Screen->GetFactionTheme(), ERA4FactionTheme::EasternCoalition);
+    TestEqual(TEXT("Configured variant"), Screen->GetScreenVariant(), ERA4UIScreenVariant::EasternDetail);
+    TestEqual(TEXT("Primary campaign actions"), Screen->GetActionButtons().Num(), 3);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FRA4MissionFlowCompositionTest,
+    "RA4.UI.Screens.Campaign.MissionFlowUsesRealWidgets",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRA4MissionFlowCompositionTest::RunTest(const FString& Parameters)
+{
+    URA4MissionMapScreenWidget* MissionMap = NewObject<URA4MissionMapScreenWidget>();
+    TestTrue(TEXT("Mission map initializes"), MissionMap->Initialize());
+    MissionMap->TakeWidget();
+    TestTrue(TEXT("Mission nodes are buttons"), MissionMap->GetMissionButtons().Num() >= 8);
+
+    URA4BriefingScreenWidget* Briefing = NewObject<URA4BriefingScreenWidget>();
+    TestTrue(TEXT("Briefing initializes"), Briefing->Initialize());
+    Briefing->TakeWidget();
+    TestNotNull(TEXT("Briefing continue action"), Briefing->GetContinueButton());
+
+    URA4VideoCommsScreenWidget* Comms = NewObject<URA4VideoCommsScreenWidget>();
+    TestTrue(TEXT("Video comms initializes"), Comms->Initialize());
+    Comms->TakeWidget();
+    TestNotNull(TEXT("Comms end session action"), Comms->GetEndSessionButton());
+
+    URA4LoadingScreenWidget* Loading = NewObject<URA4LoadingScreenWidget>();
+    Loading->SetLoadingProgress(2.0f);
+    TestEqual(TEXT("Loading progress clamps"), Loading->GetLoadingProgress(), 1.0f);
     return true;
 }
 

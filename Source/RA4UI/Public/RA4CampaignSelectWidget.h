@@ -11,6 +11,7 @@ class UButton;
 class UCanvasPanel;
 class UTextBlock;
 class UVerticalBox;
+class URA4CampaignViewModel;
 
 /** Reference-driven campaign selection screen with four real interactive faction cards. */
 UCLASS(Blueprintable)
@@ -58,6 +59,9 @@ private:
     void SelectFaction(int32 FactionIndex);
     void NavigateToScreen(int32 ScreenIndex);
     void AnimateEntrance();
+
+    UPROPERTY(Transient)
+    TObjectPtr<URA4CampaignViewModel> CampaignViewModel;
 
     UPROPERTY(Transient)
     TObjectPtr<UCanvasPanel> MainCanvas;

@@ -3,6 +3,8 @@
 #include "RA4CampaignSelectWidget.h"
 
 #include "RA4CommandCentreMenuWidget.h"
+#include "RA4CampaignScreenWidget.h"
+#include "RA4CampaignViewModel.h"
 #include "RA4ShowcaseWidget.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
@@ -133,6 +135,10 @@ TSharedRef<SWidget> URA4CampaignSelectWidget::RebuildWidget()
 void URA4CampaignSelectWidget::NativeConstruct()
 {
     Super::NativeConstruct();
+    if (!CampaignViewModel)
+    {
+        CampaignViewModel = NewObject<URA4CampaignViewModel>(this);
+    }
     EntranceElapsed = 0.0f;
     if (MainCanvas)
     {
@@ -258,7 +264,7 @@ void URA4CampaignSelectWidget::BuildLayout()
         ->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::OpenChallenges);
     AddNav(LOCTEXT("BarracksNav", "BARRACKS"), TEXT("BarracksNavButton"), false)
         ->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::OpenBarracks);
-    AddNav(LOCTEXT("SettingsNav", "NASTROYKI"), TEXT("SettingsNavButton"), false)
+    AddNav(LOCTEXT("SettingsNav", "НАСТРОЙКИ"), TEXT("SettingsNavButton"), false)
         ->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::OpenSettings);
     Place(
         MainCanvas,
@@ -282,7 +288,7 @@ void URA4CampaignSelectWidget::BuildLayout()
         FVector2D(1480.0f, 16.0f), FVector2D(410.0f, 82.0f), 5);
 
     UTextBlock* Title = MakeText(
-        WidgetTree, LOCTEXT("CampaignTitle", "VYBOR KAMPANII"), 52, TextPrimary, TEXT("CampaignTitle"));
+        WidgetTree, LOCTEXT("CampaignTitle", "ВЫБОР КАМПАНИИ"), 52, TextPrimary, TEXT("CampaignTitle"));
     Title->SetJustification(ETextJustify::Center);
     Place(MainCanvas, Title, FVector2D(505.0f, 118.0f), FVector2D(910.0f, 72.0f), 5);
     UBorder* TitleRule = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("CampaignTitleRule"));
@@ -304,7 +310,7 @@ void URA4CampaignSelectWidget::BuildLayout()
         FVector2D(1295.0f / 1672.0f, 706.0f / 941.0f)
     };
     const FText FactionLabels[] = {
-        LOCTEXT("USSRCard", "Soviet"),
+        LOCTEXT("USSRCard", "СССР"),
         LOCTEXT("AllianceCard", "АЛЬЯНС"),
         LOCTEXT("EasternCard", "ВОСТОЧНАЯ\nКОАЛИЦИЯ"),
         LOCTEXT("ChronoCard", "ХРОНОЛЕГИОН")
@@ -396,7 +402,7 @@ void URA4CampaignSelectWidget::BuildLayout()
     DescriptionSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
     DescriptionSlot->SetPadding(FMargin(22.0f, 8.0f, 22.0f, 18.0f));
     UTextBlock* ProgressHeader = MakeText(
-        WidgetTree, LOCTEXT("ProgressHeader", "PROGRESS KAMPANII"), 16,
+        WidgetTree, LOCTEXT("ProgressHeader", "ПРОГРЕСС КАМПАНИИ"), 16,
         SovietRed, TEXT("ProgressHeader"));
     Information->AddChildToVerticalBox(ProgressHeader)->SetPadding(FMargin(22.0f, 8.0f, 22.0f, 10.0f));
     CampaignProgressText = MakeText(
@@ -428,7 +434,7 @@ void URA4CampaignSelectWidget::BuildLayout()
     UButton* BackButton = WidgetTree->ConstructWidget<UButton>(
         UButton::StaticClass(), TEXT("CampaignBackButton"));
     BackButton->AddChild(MakeText(
-        WidgetTree, LOCTEXT("BackButton", "<  BACK"), 17, TextPrimary, TEXT("CampaignBackLabel")));
+        WidgetTree, LOCTEXT("BackButton", "‹  НАЗАД"), 17, TextPrimary, TEXT("CampaignBackLabel")));
     BackButton->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::OpenMainMenu);
     Footer->AddChildToHorizontalBox(BackButton)->SetPadding(FMargin(8.0f));
     UButton* TrainingButton = WidgetTree->ConstructWidget<UButton>(
@@ -453,6 +459,11 @@ void URA4CampaignSelectWidget::BuildLayout()
 void URA4CampaignSelectWidget::SelectFaction(const int32 FactionIndex)
 {
     SelectedFactionIndex = FMath::Clamp(FactionIndex, 0, 3);
+    if (!CampaignViewModel)
+    {
+        CampaignViewModel = NewObject<URA4CampaignViewModel>(this);
+    }
+    CampaignViewModel->SelectFaction(static_cast<ERA4FactionTheme>(SelectedFactionIndex));
     const FLinearColor Accents[] = {
         SovietRed, AllianceBlue, EasternGold, ChronoViolet
     };
@@ -469,7 +480,7 @@ void URA4CampaignSelectWidget::SelectFaction(const int32 FactionIndex)
     }
 
     const FText Names[] = {
-        LOCTEXT("USSRName", "Soviet"),
+        LOCTEXT("USSRName", "СССР"),
         LOCTEXT("AllianceName", "АЛЬЯНС"),
         LOCTEXT("EasternName", "ВОСТОЧНАЯ КОАЛИЦИЯ"),
         LOCTEXT("ChronoName", "ХРОНОЛЕГИОН")
@@ -477,14 +488,14 @@ void URA4CampaignSelectWidget::SelectFaction(const int32 FactionIndex)
     const FText Mottos[] = {
         LOCTEXT("USSRMotto", "СЛАВА РОДИНЕ. БУДУЩЕЕ ЗА НАМИ."),
         LOCTEXT("AllianceMotto", "СВОБОДА. ТОЧНОСТЬ. ПРЕВОСХОДСТВО."),
-        LOCTEXT("EasternMotto", "EDINSTVO SOZDAYoT POBEDU."),
+        LOCTEXT("EasternMotto", "ЕДИНСТВО СОЗДАЁТ ПОБЕДУ."),
         LOCTEXT("ChronoMotto", "ВРЕМЯ — НАШЕ ОРУЖИЕ.")
     };
     const FText Descriptions[] = {
-        LOCTEXT("USSRDescription", "Vozglavte vozrozhdyonnyy Sovetskiy Soyuz v borbe za mirovoe gospodstvo. Tyazhyolaya bronya, distsiplina i nesokrushimaya volya sokrushat vragov revolyutsii."),
-        LOCTEXT("AllianceDescription", "Soberite koalitsiyu demokraticheskikh derzhav. Ispolzuyte aviatsiyu, vysokotochnoe oruzhie i mobilnye sily dlya zashchity svobodnogo mira."),
-        LOCTEXT("EasternDescription", "Obedinite promyshlennuyu moshch Vostoka. Razvivayte proizvodstvo, boevye mekhanizmy i kontrol energeticheskikh uzlov."),
-        LOCTEXT("ChronoDescription", "Komanduyte armiey vne vremeni. Iskazhayte pole boya, peremeshchayte voyska cherez khronokoridory i perepisyvayte iskhod voyny.")
+        LOCTEXT("USSRDescription", "Возглавьте возрождённый Советский Союз. Тяжёлая броня, дисциплина и несокрушимая воля сокрушат врагов революции."),
+        LOCTEXT("AllianceDescription", "Соберите коалицию демократических держав. Используйте авиацию, высокоточное оружие и мобильные силы для защиты свободного мира."),
+        LOCTEXT("EasternDescription", "Объедините промышленную мощь Востока. Развивайте производство, боевые механизмы и контроль энергетических узлов."),
+        LOCTEXT("ChronoDescription", "Командуйте армией вне времени. Искажайте поле боя, перемещайте войска через хронокоридоры и переписывайте исход войны.")
     };
     const FText Progress[] = {
         LOCTEXT("USSRProgress", "МИССИИ ПРОЙДЕНО          06 / 18\nДОП. ЗАДАНИЯ             09 / 36\nСЛОЖНОСТЬ                ВЕТЕРАН"),
@@ -524,8 +535,16 @@ void URA4CampaignSelectWidget::SelectChronolegion() { SelectFaction(3); }
 
 void URA4CampaignSelectWidget::ContinueCampaign()
 {
-    const int32 TargetScreens[] = { 10, 7, 8, 9 };
-    NavigateToScreen(TargetScreens[SelectedFactionIndex]);
+    if (APlayerController* PlayerController = GetOwningPlayer())
+    {
+        if (URA4CampaignScreenWidget* Campaign = CreateWidget<URA4CampaignScreenWidget>(
+            PlayerController, URA4CampaignScreenWidget::StaticClass()))
+        {
+            Campaign->ConfigureCampaign(static_cast<ERA4FactionTheme>(SelectedFactionIndex));
+            Campaign->AddToViewport(0);
+            RemoveFromParent();
+        }
+    }
 }
 
 void URA4CampaignSelectWidget::NavigateToScreen(const int32 ScreenIndex)
