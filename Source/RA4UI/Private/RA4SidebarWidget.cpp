@@ -559,7 +559,6 @@ UBorder* MakeStyledPanel(UWidgetTree* Tree, const FName Name, const FLinearColor
     Frame->SetPadding(FMargin(8.0f, 6.0f));
     return Frame;
 }
-}
 
 void StyleButton(UButton* Button, const FLinearColor& Base)
 {
@@ -1047,16 +1046,16 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
         Frame->SetPadding(FMargin(4.0f));
 
         // Queue header
-        UTextBlock* QueueHeader = MakeLabel(WidgetTree, TEXT("QueueHeader"), kTextDim, 9, true);
+        QueueHeader = MakeLabel(WidgetTree, TEXT("QueueHeader"), kTextDim, 9, true);
         QueueHeader->SetText(NSLOCTEXT("RA4", "Sidebar_QueueHeader", "PRODUCTION QUEUE"));
         Frame->AddChild(QueueHeader);
 
         UVerticalBox* Stack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(),
                                                                         TEXT("QueueStack"));
 
-        QueueHeader = MakeLabel(WidgetTree, TEXT("QueueHeader"), kTextFaint, 9, true);
-        QueueHeader->SetText(NSLOCTEXT("RA4", "Sidebar_QueueHeader", "PRODUCTION"));
-        if (UVerticalBoxSlot* Slot = Stack->AddChildToVerticalBox(QueueHeader))
+        UTextBlock* QueueSubHeader = MakeLabel(WidgetTree, TEXT("QueueSubHeader"), kTextFaint, 9, true);
+        QueueSubHeader->SetText(NSLOCTEXT("RA4", "Sidebar_QueueHeader", "PRODUCTION"));
+        if (UVerticalBoxSlot* Slot = Stack->AddChildToVerticalBox(QueueSubHeader))
         {
             Slot->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 3.0f));
         }
@@ -1112,39 +1111,6 @@ void URA4SidebarWidget::NativeConstruct()
         RefreshResources();
         RefreshCards();
         RefreshSelection();
-    }
-}
-
-void URA4SidebarWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
-{
-    Super::NativeTick(MyGeometry, InDeltaTime);
-
-    // Smoothly scale hovered build cards. A render-transform tween is cheap (no
-    // relayout, no Slate invalidation cascade) and gives the grid the same tactile
-    // feedback the menu buttons already have via URA4ButtonBase.
-    constexpr float kHoverScale = 1.05f;
-    constexpr float kAnimSpeed = 10.0f;
-
-    CardHoverProgress.SetNum(CardButtons.Num());
-    for (int32 Index = 0; Index < CardButtons.Num(); ++Index)
-    {
-        URA4IndexedButton* Button = CardButtons[Index];
-        if (Button == nullptr)
-        {
-            continue;
-        }
-
-        const float Target = Button->IsHovered() ? 1.0f : 0.0f;
-        float& Progress = CardHoverProgress[Index];
-        if (FMath::IsNearlyEqual(Progress, Target, 0.001f))
-        {
-            continue;
-        }
-
-        Progress = FMath::FInterpTo(Progress, Target, InDeltaTime, kAnimSpeed);
-        const float Scale = FMath::Lerp(1.0f, kHoverScale, Progress);
-        Button->SetRenderTransformPivot(FVector2D(0.5f, 0.5f));
-        Button->SetRenderScale(FVector2D(Scale, Scale));
     }
 }
 

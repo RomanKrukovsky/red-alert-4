@@ -389,13 +389,6 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
         Out.TotalCost = Entry.TotalCost;
         Out.SlotIndex = Entry.SlotIndex;
         ProductionQueue.Add(Out);
-
-        FRA4ProductionQueueItem VMItem;
-        VMItem.DisplayName = Out.DisplayName;
-        VMItem.Cost = Entry.TotalCost;
-        VMItem.Progress = FMath::Clamp(float(Entry.ProgressPercent) / 100.0f, 0.0f, 1.0f);
-        VMItem.Quantity = 1;
-        VMProductionQueue.Add(VMItem);
     }
 
     // --- build sidebar --------------------------------------------------------

@@ -2242,3 +2242,11 @@ bool ARA4PlayerController::IsDirectControlActive() const
     }
     return false;
 }
+
+void ARA4PlayerController::CaptureHudForQA()
+{
+    const FString ScreenshotPath = FPaths::Combine(
+        FPaths::ProjectSavedDir(), TEXT("Screenshots/MacEditor/RA4_UI_QA_MatchHUD.png"));
+    FScreenshotRequest::RequestScreenshot(ScreenshotPath, true, false);
+    UE_LOG(LogTemp, Display, TEXT("RA4 HUD QA screenshot requested: %s"), *ScreenshotPath);
+}

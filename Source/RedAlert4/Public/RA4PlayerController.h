@@ -253,6 +253,14 @@ private:
     // the widget's own computed width each tick; see SyncSidebarReservedWidth.
     float AppliedSidebarReservedWidth = 0.0f;
 
+    UPROPERTY(Transient)
+    TObjectPtr<class URA4NotificationFeedWidget> NotificationFeed;
+
+    // QA: -RA4CaptureUI on the command line schedules a one-shot in-match HUD
+    // screenshot, mirroring the showcase GameMode's capture flow.
+    void CaptureHudForQA();
+    FTimerHandle HudCaptureTimer;
+
     void HandleBuildCardClicked(int64 ContentIdValue);
     void HandleRadarClicked(FVector2D WorldPosition);
     /** Right-click on the minimap: orders the current selection to that world position. */

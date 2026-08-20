@@ -61,7 +61,6 @@ void ARA4UIShowcaseGameMode::ShowInterface(APlayerController* PlayerController)
         RootWidget = CreateWidget<URA4CampaignSelectWidget>(
             PlayerController, URA4CampaignSelectWidget::StaticClass());
     }
-<<<<<<< HEAD
     else if (RequestedScreen >= 4 && RequestedScreen <= 7)
     {
         if (URA4CampaignScreenWidget* Campaign = CreateWidget<URA4CampaignScreenWidget>(
