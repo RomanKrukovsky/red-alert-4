@@ -19,11 +19,15 @@ Tools/HeadlessBuild/build/
 match.json
 *.rep
 
-!Build/
-Build/*
-!Build/Compliance/
-!Build/Compliance/**
-Build/Compliance/**/__pycache__/
+# The compliance scanner and its policy live under build/Compliance and MUST be
+# tracked: CI runs them, and ADR-011 makes them a release gate. The negations are
+# spelled with the lowercase path because that is what git actually holds -- the
+# earlier capital-B version could never match on a case-insensitive filesystem, so
+# the scanner was silently untracked and CI failed on every push for its whole
+# history without anyone seeing why.
+!build/Compliance/
+!build/Compliance/**
+build/Compliance/**/__pycache__/
 
 # Python leftovers from an unrelated project in this directory
 .venv/

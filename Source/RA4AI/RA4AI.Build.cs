@@ -21,6 +21,7 @@ public class RA4AI : ModuleRules
 			"RA4Core",
 			"RA4Content",
 			"RA4Simulation",
+			"RA4Recon",
 			"RA4FogOfWar"
 		});
 

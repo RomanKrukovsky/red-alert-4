@@ -69,7 +69,7 @@ Executed UBT compilation (`RedAlert4Editor Mac Development`):
 
 ## 3. Branch & Git Integrity
 - **Branch**: `agents/skirmish-ui`
-- **Repository**: `/Users/romanmolodyko/Documents/red-alert-4-ui`
+- **Repository**: `<home>/Documents/red-alert-4-ui`
 - **Constraint Compliance**:
   - Only modified files within `Source/RedAlert4`, `Source/RA4UI`, `Source/RA4Presentation`, `Source/RA4Input`, and `Source/RA4Tests`.
   - No edits made to `SimWorld`, `CommandBus`, `AICommander`, combat/economy formulas, main map, Landscape, models, or audio assets.

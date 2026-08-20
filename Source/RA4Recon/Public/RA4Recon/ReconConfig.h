@@ -68,10 +68,14 @@ struct DistortionProfile
     bool bFabricationEnabled = true;
     int32_t FabricationChanceMaxPerMille = 20; // per report at zero morale
     int32_t MaxPhantomLifetimeTicks = 1200;    // 60 s: guaranteed refutation window
+    // Ticks under fire at which the dread term saturates. Not a cliff: at half
+    // this value the duration factor contributes half.
+    int32_t FabricationFearSaturationTicks = 200;   // 10 s at 20 Hz
 
     // Stage 7: self-report bias.
     bool bSelfReportBiasEnabled = true;
     int32_t SelfReportLossUnderstatementMaxPerMille = 500; // hides up to 50% of losses
+    int32_t SelfReportStrengthOverstatementMaxPerMille = 300; // claims up to +30% strength
 };
 
 // --- Confusion matrix (§4.3 stage 3) ------------------------------------------

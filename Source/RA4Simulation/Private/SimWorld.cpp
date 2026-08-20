@@ -4688,6 +4688,8 @@ void SimWorld::SystemRecon()
     ReconInput.EntityCapacity = uint32_t(Core.size());
     int32_t VisibleEnemiesOf[kMaxPlayers] = {};
     int32_t LiveUnitsOf[kMaxPlayers] = {};
+    bool AnyUnderFireOf[kMaxPlayers] = {};
+    Fixed WorstFatigueOf[kMaxPlayers] = {};
 
     // Completed radar buildings per player (owner decision D6: radar produces
     // anonymous contacts). Gathered once per tick; the per-entity check below
@@ -4909,13 +4911,72 @@ void SimWorld::SystemRecon()
                 SumMorale += Morales[I].Morale;
                 SumFatigue += Morales[I].Fatigue;
                 SumSuppression += Morales[I].Suppression;
+                // Dread is set by the WORST-off unit rather than the mean: an army
+                // of which one company has been shelled for a minute does have
+                // someone jumping at shadows, and averaging that away would make
+                // fabrication effectively unreachable in any large force.
+                if (Morales[I].TicksUnderFire >= 0)
+                {
+                    AnyUnderFireOf[P] = true;
+                }
+                // A phantom appears near the most worn-down unit: the one whose
+                // nerves the stage is modelling. Ties keep the lowest slot, which
+                // is deterministic.
+                if (!ReconInput.ObserverAnchorValid[P] || Morales[I].Fatigue > WorstFatigueOf[P])
+                {
+                    WorstFatigueOf[P] = Morales[I].Fatigue;
+                    ReconInput.ObserverAnchor[P] = Transforms[I].Position;
+                    ReconInput.ObserverAnchorValid[P] = true;
+                }
             }
         }
         Recon::ObserverSnapshot& Obs = ReconInput.Observers[P];
         Obs.Morale = SumMorale / int64_t(LiveUnitsOf[P]);
+        // In contact if ANY unit is: MoraleComp uses TicksUnderFire >= 0 for
+        // "in or just out of contact" and negative for recovery mode.
+        Obs.bAnyUnitUnderFire = AnyUnderFireOf[P];
         Obs.Fatigue = SumFatigue / int64_t(LiveUnitsOf[P]);
         Obs.Suppression = SumSuppression / int64_t(LiveUnitsOf[P]);
         Obs.Competence = Recon::PerMilleToFixed(MT.DefaultCompetencePerMille);
+    }
+
+    // --- Visible tiles for phantom refutation (§4.5) ---------------------------
+    // Built from the belief this tick STARTS with, which is what the refutation
+    // query inside the tick will ask about. Ordering matters: computing it after
+    // ReconLayer.Tick would answer questions from one tick in the past and the
+    // scouting path would lag by a tick (or never fire, for a ghost planted this
+    // tick).
+    // Only the tiles NEAR EXISTING BELIEF are collected, not the whole fog grid: a
+    // 256x256 map is 65k tiles per player per tick, and the refutation query only
+    // ever asks about places where a phantom is plotted. Bounded work, and it keeps
+    // the input list small enough to scan linearly.
+    for (PlayerId P = 0; P < kMaxPlayers; ++P)
+    {
+        if (!Players[P].bActive || FogGrid == nullptr)
+        {
+            continue;
+        }
+        const Recon::PerceivedWorld& Belief = ReconLayer.GetPerceivedWorld(P);
+        if (Belief.GetAliveTrackCount() == 0)
+        {
+            continue;
+        }
+        ReconTrackScratch.clear();
+        Belief.GetTracksInRegion(0, 0, Map.Width - 1, Map.Height - 1, ReconTrackScratch);
+        for (const Recon::PerceivedTrack* T : ReconTrackScratch)
+        {
+            const TileCoord Tile = Map.WorldToTile(T->BelievedPosition);
+            if (Tile.X < 0 || Tile.Y < 0 || Tile.X >= Map.Width || Tile.Y >= Map.Height)
+            {
+                continue;
+            }
+            if (FogGrid->GetVisibility(int32_t(P), Tile.X, Tile.Y) != VisibilityState::CurrentlyVisible)
+            {
+                continue;
+            }
+            const uint32_t Packed = (uint32_t(Tile.X) << 16) | (uint32_t(Tile.Y) & 0xFFFFu);
+            ReconInput.VisibleTilesPacked[P].push_back(Packed);
+        }
     }
 
     ReconLayer.Tick(CurrentTick, ReconInput, ReconRng);

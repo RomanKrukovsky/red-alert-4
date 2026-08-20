@@ -333,6 +333,9 @@ private:
     // observer; only SystemRecon writes it). Sized with the other component
     // vectors; meaningful only for units.
     std::vector<Recon::MoraleComp> Morales;
+    // Scratch for the recon visible-tile pass; a member so its capacity survives
+    // across ticks (no steady-state allocation in the tick).
+    mutable std::vector<const Recon::PerceivedTrack*> ReconTrackScratch;
 
     std::vector<uint32_t> FreeSlots;
     uint32_t HighWaterMark = 0;

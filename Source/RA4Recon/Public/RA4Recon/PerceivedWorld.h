@@ -74,6 +74,12 @@ private:
     void ReleaseTrack(TrackId Id);
     PerceivedTrack* GetTrackMutable(TrackId Id);
     void SetLastObservedTick(int32_t TileX, int32_t TileY, TickIndex Tick);
+
+    // The ONLY sanctioned way to move a track. Writing BelievedPosition directly
+    // would silently desynchronise the spatial index, and the failure mode is
+    // horrible: the track simply stops being found by region queries, so it
+    // vanishes from the HUD while still existing. Callers use this instead.
+    void SetTrackPosition(TrackId Id, const Vec2& NewPosition);
     bool Deserialize(ByteReader& R);
 
     // Ground-truth phantom bookkeeping. Lives OUTSIDE PerceivedTrack on purpose:
@@ -106,6 +112,37 @@ private:
     std::vector<TickIndex> LastObserved;     // per-tile negative knowledge
     int32_t MapWidth = 0;
     int32_t MapHeight = 0;
+
+    // --- Spatial index (M3-perf) ----------------------------------------------
+    // A coarse uniform grid over the map: cell -> slots whose believed position
+    // falls in it. Repays the debt the linear GetTracksInRegion left behind, and it
+    // is what the M3 review (finding M2) required before the perf milestone.
+    //
+    // Deliberately coarse: at kSpatialCellTiles the whole 256x256 map is a few
+    // hundred cells, so the index is cheap to rebuild and cheap to hash. Cells hold
+    // slot indices, not pointers, so nothing dangles when a slot is recycled.
+    //
+    // NOT serialized and NOT hashed: it is a pure function of the track positions
+    // that already are. Rebuilt on load in Deserialize, so two peers agree by
+    // construction rather than by agreement -- an index in the checksum would be a
+    // second source of truth for the same data.
+    static constexpr int32_t kSpatialCellTiles = 8;
+    std::vector<std::vector<uint32_t>> SpatialCells;
+    int32_t SpatialCellsX = 0;
+    int32_t SpatialCellsY = 0;
+
+    // Scratch for region queries; mutable because the query is logically const.
+    // A member so repeated HUD queries allocate nothing.
+    mutable std::vector<uint32_t> RegionScratch;
+
+    void RebuildSpatialIndex();
+    void SpatialInsert(uint32_t Slot);
+    void SpatialRemove(uint32_t Slot);
+    int32_t SpatialCellIndexOf(const Vec2& Position) const;
+
+    // --- Reverse index: TrackId slot -> entity slots associated with it ---------
+    // Lives in ReconSystem (it owns the association tables); declared here only as
+    // a reminder that PerceivedWorld deliberately does NOT own it.
 };
 
 } // namespace Recon

@@ -12,6 +12,7 @@
 #include "RA4Recon/ReconConfig.h"
 #include "RA4Recon/DistortionPipeline.h"
 #include "RA4Recon/MoraleModel.h"
+#include "RA4AI/AIWorldView.h"
 #include "RA4Recon/ReconSystem.h"
 #include "RA4Recon/PerceivedWorld.h"
 #include "RA4Replay/Replay.h"
@@ -338,6 +339,10 @@ RA4_TEST(Recon, PhantomTruthLivesOutsideTheReadSurface)
         TickIndex LastDecayTick;
         // M3 review M3: the last claim, for contest comparison. Our own reporting.
         int32_t LastClaimedCount;
+        // M4: when a fabricated contact was born, for the refutation deadline.
+        // Reviewed as safe: a timestamp of OUR bookkeeping. Note the phantom flag
+        // itself stays in the private side table -- that is the ground truth.
+        TickIndex PhantomBornTick;
         bool bStale;
         bool bContested;
         uint32_t ProvenanceReportIds[Recon::kTrackProvenanceSize];
@@ -1463,6 +1468,815 @@ RA4_TEST(Recon, BlackoutThresholdIsADesignerSettingInTheRuleset)
     Bad.Chain.BlackoutPowerRatioPercent = 250;
     std::vector<std::string> Errors;
     RA4_EXPECT(!Recon::ValidateReconSettings(Bad, Errors));
+}
+
+// --- M4: fabrication and self-report bias (§4.3 stages 6-7, §4.5) -----------------
+
+RA4_TEST(Recon, CalmObserversNeverFabricate)
+{
+    // The floor of the mechanic: a unit that is not shaken and not under fire must
+    // never invent a contact. Without this, phantoms are noise rather than a signal
+    // about the reporting unit's condition.
+    Recon::DistortionProfile P;
+    P.bFabricationEnabled = true;
+    P.FabricationChanceMaxPerMille = 1000; // maximum, to prove morale is the gate
+    Recon::ObserverState Calm;
+    Calm.Morale = Fixed::FromInt(1);
+    Calm.Fatigue = Fixed::Zero();
+    Calm.bIsUnderFire = false;
+
+    Random Rng(4242);
+    for (int32_t I = 0; I < 2000; ++I)
+    {
+        if (Recon::StageFabrication(Calm, P, Rng))
+        {
+            RA4Test::ReportFailure("a calm observer fabricated a contact", __FILE__, __LINE__);
+            return;
+        }
+    }
+}
+
+RA4_TEST(Recon, FabricationNeedsBrokenMoraleExhaustionAndContact)
+{
+    // Product, not sum, plus a contact gate: a merely frightened fresh unit invents
+    // nothing, an exhausted unit with intact morale invents nothing, and a unit
+    // resting behind the lines invents nothing however wrecked it is. Phantoms
+    // belong to troops that are shaken, worn out AND still being shot at -- that
+    // conjunction is what makes a phantom informative rather than noise.
+    Recon::DistortionProfile P;
+    P.bFabricationEnabled = true;
+    P.FabricationChanceMaxPerMille = 1000;
+
+    const auto CountFabrications = [&P](Fixed Morale, Fixed Fatigue, bool bUnderFire)
+    {
+        Recon::ObserverState O;
+        O.Morale = Morale;
+        O.Fatigue = Fatigue;
+        O.bIsUnderFire = bUnderFire;
+        Random Rng(99);
+        int32_t Count = 0;
+        for (int32_t I = 0; I < 2000; ++I)
+        {
+            if (Recon::StageFabrication(O, P, Rng)) { Count += 1; }
+        }
+        return Count;
+    };
+
+    const Fixed Spent = Fixed::FromInt(1);
+    const Fixed Fresh = Fixed::Zero();
+    const Fixed Half = Fixed::FromRatio(1, 2);
+
+    RA4_EXPECT(CountFabrications(Fixed::Zero(), Spent, true) > 0);   // broken, spent, in contact
+    RA4_EXPECT(CountFabrications(Fixed::Zero(), Fresh, true) == 0);  // frightened but fresh
+    RA4_EXPECT(CountFabrications(Fixed::FromInt(1), Spent, true) == 0); // spent but steady
+    RA4_EXPECT(CountFabrications(Fixed::Zero(), Spent, false) == 0); // wrecked but out of contact
+
+    // Monotone in exhaustion: more worn down must not be LESS likely.
+    RA4_EXPECT(CountFabrications(Fixed::Zero(), Spent, true) >=
+               CountFabrications(Fixed::Zero(), Half, true));
+}
+
+RA4_TEST(Recon, FabricationDisableFlagIsAbsolute)
+{
+    // §4.3.6 requires that the most dangerous stage die from one switch, because a
+    // playtest must be able to remove phantoms without losing the rest of the model.
+    Recon::DistortionProfile P;
+    P.bFabricationEnabled = false;
+    P.FabricationChanceMaxPerMille = 1000; // maxed, and must still never fire
+    Recon::ObserverState Broken;
+    Broken.Morale = Fixed::Zero();
+    Broken.Fatigue = Fixed::FromInt(1);
+    Broken.bIsUnderFire = true;
+
+    Random Rng(7);
+    for (int32_t I = 0; I < 2000; ++I)
+    {
+        if (Recon::StageFabrication(Broken, P, Rng))
+        {
+            RA4Test::ReportFailure("fabrication fired with its flag off", __FILE__, __LINE__);
+            return;
+        }
+    }
+}
+
+RA4_TEST(Recon, PhantomIsAlwaysRefutedByTheDeadline)
+{
+    // §4.5's hard promise, and the reason the feature is playable: a phantom ALWAYS
+    // has a path to being disproved. This is the unconditional path -- even in a
+    // corner of the map nobody can reach, the ghost dies at the deadline.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Recon::DistortionProfile& Profile = Settings.DistortionProfiles[0];
+    Profile.bFabricationEnabled = true;
+    Profile.FabricationChanceMaxPerMille = 1000;  // certainty, so the test is not flaky
+    Profile.FabricationFearSaturationTicks = 20;
+    Profile.MaxPhantomLifetimeTicks = 40;
+    // Ghosts land far from our own troops, so the "someone looked and saw nothing"
+    // path cannot fire and the DEADLINE is what this test measures. Verified by
+    // mutation: with the deadline disabled this test fails.
+    Profile.PositionErrorMaxTiles = 30;
+    // Every OTHER removal mechanism is switched off, so the deadline is the only
+    // thing that can clear this ghost. Confidence decay was quietly doing the job at
+    // tick 11 of 40, which meant the test passed with the deadline deleted.
+    Settings.Tracks.DropBelowConfidencePerMille = 0;   // no GC
+    Settings.Tracks.ConfidenceDecayPerSecondPerMille = 0; // no decay to trigger it
+    Settings.Chain.BlackoutConfidenceDecayPerSecondPerMille = 0;
+    Settings.Tracks.StaleAfterTicks = 100000;          // no stale marking
+    Settings.Morale.DamageMoralePenaltyPerMille = 5000;
+    Settings.Morale.MoraleRegenPerTickPerMille = 0;
+    // Fabrication needs morale down AND fatigue up. The shipped fatigue rate is
+    // 0.4%/tick, which would need ~250 ticks of shelling: fine in a match, far too
+    // slow for a unit test that must also keep the victim alive. Cranked so the
+    // scene reaches "shaken and spent" in a handful of ticks. The RATES are what is
+    // being made convenient here, never the rule under test.
+    Settings.Morale.FatiguePerTickUnderFirePerMille = 400;
+    Settings.Morale.FatigueRegenPerTickPerMille = 0;
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(31415), &Settings);
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    // Morale is driven by the DamageApplied EVENT, and SimWorld::DebugDamage
+    // deliberately does not emit one (it edits health directly). So the observer is
+    // rattled by a real firefight: a tough conscript in contact with an enemy
+    // rifleman, which produces genuine damage events tick after tick.
+    const EntityId Victim =
+        World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::AllRifleman, 1, Vec2(Fixed::FromInt(3300), Fixed::FromInt(3000)));
+
+    // Let the fight run until the conscript is shaken and spent but still alive.
+    for (int32_t I = 0; I < 30 && World.IsAlive(Victim); ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+    }
+    RA4_REQUIRE(World.IsAlive(Victim));
+    RA4_REQUIRE(World.GetRecon().GetLastObserverForTest(0).bAnyUnitUnderFire);
+    RA4_REQUIRE(World.GetRecon().GetLastObserverForTest(0).Morale < Fixed::FromInt(1));
+
+    // A phantom must have appeared: player 0 has no real enemy anywhere.
+    // Count PHANTOM tracks specifically: a real enemy is present and legitimately
+    // tracked, so "zero tracks" would be the wrong question.
+    const auto CountPhantoms = [&World]()
+    {
+        const Recon::PerceivedWorld& Belief = World.GetRecon().GetPerceivedWorld(0);
+        std::vector<const Recon::PerceivedTrack*> Found;
+        Belief.GetTracksInRegion(0, 0, 63, 63, Found);
+        int32_t Count = 0;
+        for (const Recon::PerceivedTrack* T : Found)
+        {
+            if (PerceivedWorldTestAccess::IsPhantom(Belief, T->Id))
+            {
+                Count += 1;
+            }
+        }
+        return Count;
+    };
+
+    int32_t FirstPhantomTick = -1;
+    for (int32_t I = 0; I < 200 && FirstPhantomTick < 0 && World.IsAlive(Victim); ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+        if (CountPhantoms() > 0)
+        {
+            FirstPhantomTick = int32_t(World.GetTick());
+        }
+    }
+    RA4_REQUIRE(FirstPhantomTick > 0); // otherwise the rest of the test proves nothing
+
+    // The guarantee is PER PHANTOM: this specific ghost must be gone by the
+    // deadline. It is not "the map eventually holds no phantoms" -- a unit still
+    // being shelled keeps inventing new ones, and that is correct behaviour, so
+    // waiting for an empty map would hang on a working feature.
+    std::vector<const Recon::PerceivedTrack*> Snapshot;
+    World.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, Snapshot);
+    Recon::TrackId Watched;
+    for (const Recon::PerceivedTrack* T : Snapshot)
+    {
+        if (PerceivedWorldTestAccess::IsPhantom(World.GetRecon().GetPerceivedWorld(0), T->Id))
+        {
+            Watched = T->Id;
+            break;
+        }
+    }
+    RA4_REQUIRE(Watched.IsValid());
+
+    bool bCleared = false;
+    const int32_t Deadline = Profile.MaxPhantomLifetimeTicks;
+    for (int32_t I = 0; I < Deadline * 4 && !bCleared; ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+        // Gone means the generational handle no longer resolves: the slot may have
+        // been recycled for a different contact, which must NOT read as survival.
+        bCleared = !World.GetRecon().GetPerceivedWorld(0).IsTrackAlive(Watched);
+    }
+    RA4_EXPECT(bCleared);
+}
+
+RA4_TEST(Recon, ScoutingRefutesAPhantomBeforeTheDeadline)
+{
+    // The player-driven half of §4.5, and the half that makes scouting feel like it
+    // pays: a friendly unit standing where a phantom is plotted, seeing nothing,
+    // clears it WITHOUT waiting for the deadline.
+    //
+    // This path was broken when first written: the query asked LastObservedTick,
+    // which only records tiles where something WAS seen, so a scout in an empty
+    // clearing could never disprove anything. It now asks the fog grid.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Recon::DistortionProfile& Profile = Settings.DistortionProfiles[0];
+    Profile.bFabricationEnabled = true;
+    Profile.FabricationChanceMaxPerMille = 1000;
+    // Ghosts land close by, so our own shaken unit is standing on them.
+    Profile.PositionErrorMaxTiles = 1;
+    // A deadline far beyond the run: if the ghost dies, someone LOOKED.
+    Profile.MaxPhantomLifetimeTicks = 100000;
+    Settings.Tracks.DropBelowConfidencePerMille = 0;
+    Settings.Tracks.ConfidenceDecayPerSecondPerMille = 0;
+    Settings.Tracks.StaleAfterTicks = 100000;
+    Settings.Morale.DamageMoralePenaltyPerMille = 5000;
+    Settings.Morale.MoraleRegenPerTickPerMille = 0;
+    Settings.Morale.FatiguePerTickUnderFirePerMille = 400;
+    Settings.Morale.FatigueRegenPerTickPerMille = 0;
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(60606), &Settings);
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    const EntityId Victim =
+        World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::AllRifleman, 1, Vec2(Fixed::FromInt(3300), Fixed::FromInt(3000)));
+
+    const auto FindPhantom = [&World]()
+    {
+        const Recon::PerceivedWorld& Belief = World.GetRecon().GetPerceivedWorld(0);
+        std::vector<const Recon::PerceivedTrack*> Found;
+        Belief.GetTracksInRegion(0, 0, 63, 63, Found);
+        for (const Recon::PerceivedTrack* T : Found)
+        {
+            if (PerceivedWorldTestAccess::IsPhantom(Belief, T->Id))
+            {
+                return T->Id;
+            }
+        }
+        return Recon::TrackId{};
+    };
+
+    // Let the firefight rattle the conscript until it invents something.
+    Recon::TrackId Ghost;
+    for (int32_t I = 0; I < 200 && !Ghost.IsValid() && World.IsAlive(Victim); ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+        Ghost = FindPhantom();
+    }
+    RA4_REQUIRE(Ghost.IsValid());
+    const TickIndex BornAt = World.GetTick();
+
+    // The ghost sits within a tile of our own troops, who can see that ground and
+    // see nothing there, so the staff must strike it off -- vastly sooner than the
+    // 100000-tick deadline could explain.
+    bool bCleared = false;
+    for (int32_t I = 0; I < 400 && !bCleared; ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+        bCleared = !World.GetRecon().GetPerceivedWorld(0).IsTrackAlive(Ghost);
+    }
+    RA4_EXPECT(bCleared);
+    RA4_EXPECT(int32_t(World.GetTick() - BornAt) < Profile.MaxPhantomLifetimeTicks);
+}
+
+RA4_TEST(Recon, SelfReportOverstatesStrengthAndHidesLossesOnlyWhenUndisciplined)
+{
+    // Stage 7, asymmetric in opposite directions: a unit never accidentally reports
+    // being weaker than it is, and never reports losses it did not take. A
+    // disciplined unit reports the truth.
+    Recon::DistortionProfile P;
+    P.bSelfReportBiasEnabled = true;
+    P.SelfReportStrengthOverstatementMaxPerMille = 500;
+    P.SelfReportLossUnderstatementMaxPerMille = 500;
+
+    Random Rng(1234);
+    // Perfect discipline: truth, bit for bit.
+    for (int32_t I = 0; I < 200; ++I)
+    {
+        RA4_EXPECT(Recon::StageSelfReportStrength(10, Fixed::FromInt(1), P, Rng) == 10);
+        RA4_EXPECT(Recon::StageSelfReportLosses(4, Fixed::FromInt(1), P, Rng) == 4);
+    }
+
+    // No discipline: strength never below truth, losses never above it.
+    bool bSawInflation = false;
+    bool bSawHiding = false;
+    for (int32_t I = 0; I < 500; ++I)
+    {
+        const int32_t Strength = Recon::StageSelfReportStrength(10, Fixed::Zero(), P, Rng);
+        const int32_t Losses = Recon::StageSelfReportLosses(10, Fixed::Zero(), P, Rng);
+        if (Strength < 10 || Losses > 10)
+        {
+            RA4Test::ReportFailure("self-report bias reversed direction", __FILE__, __LINE__);
+            return;
+        }
+        bSawInflation = bSawInflation || Strength > 10;
+        bSawHiding = bSawHiding || Losses < 10;
+    }
+    RA4_EXPECT(bSawInflation);
+    RA4_EXPECT(bSawHiding);
+
+    // And the flag kills it.
+    Recon::DistortionProfile Off = P;
+    Off.bSelfReportBiasEnabled = false;
+    RA4_EXPECT(Recon::StageSelfReportStrength(10, Fixed::Zero(), Off, Rng) == 10);
+    RA4_EXPECT(Recon::StageSelfReportLosses(10, Fixed::Zero(), Off, Rng) == 10);
+}
+
+RA4_TEST(Recon, PhantomTruthNeverReachesTheReadSurface)
+{
+    // INVARIANT 10 for the M4 addition: the UI must not be able to tell a phantom
+    // from a real contact. If it could, the player would simply filter the ghosts
+    // out and the mechanic would be free to ignore.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Recon::PerceivedWorld Belief;
+    PerceivedWorldTestAccess::Initialize(Belief, 64, 64, 8);
+    const Recon::TrackId Id = PerceivedWorldTestAccess::AllocateTrack(Belief);
+    PerceivedWorldTestAccess::SetPhantom(Belief, Id, true);
+
+    // Core knows...
+    RA4_EXPECT(PerceivedWorldTestAccess::IsPhantom(Belief, Id));
+    // ...and the read surface does not carry it. Enforced structurally by the
+    // static_assert layout mirror in Recon.PhantomTruthLivesOutsideTheReadSurface;
+    // here we assert the observable consequence: a phantom track looks like any
+    // other track to a reader.
+    std::vector<const Recon::PerceivedTrack*> Found;
+    Belief.GetTracksInRegion(0, 0, 63, 63, Found);
+    RA4_REQUIRE(Found.size() == 1);
+    RA4_EXPECT(Found[0]->Id == Id);
+    (void)Settings;
+}
+
+// --- M3-perf: derived indices must agree with the data they index -----------------
+
+RA4_TEST(Recon, SpatialIndexAgreesWithALinearScan)
+{
+    // The spatial index is derived state, and the dangerous failure mode is silent:
+    // a track that stops being FOUND by region queries while still existing simply
+    // vanishes from the HUD. So the accelerated query is compared against the
+    // obvious brute-force answer, over a match that allocates, moves and collects
+    // tracks -- exactly the operations that can desynchronise an index.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Settings.Tracks.bGroupTracksEnabled = true;
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(24601), &Settings);
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    // Several enemies spread out, and one ordered to move so tracks change cells.
+    const EntityId Mover =
+        World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::AllRifleman, 1, Vec2(Fixed::FromInt(6000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::AllRifleman, 1, Vec2(Fixed::FromInt(3000), Fixed::FromInt(6000)));
+
+    Command Move = RA4Test::MakeCommand(CommandType::Move, 1);
+    Move.Primary = Mover;
+    Move.Location = Vec2(Fixed::FromInt(9000), Fixed::FromInt(9000));
+    CommandFrame Frame;
+    Frame.Commands.push_back(Move);
+    World.Tick(&Frame);
+    World.ClearEvents();
+
+    for (int32_t Step = 0; Step < 60; ++Step)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+
+        const Recon::PerceivedWorld& Belief = World.GetRecon().GetPerceivedWorld(0);
+
+        // Whole map: the accelerated query must return exactly the alive tracks.
+        std::vector<const Recon::PerceivedTrack*> Indexed;
+        Belief.GetTracksInRegion(0, 0, 63, 63, Indexed);
+        RA4_EXPECT(uint32_t(Indexed.size()) == Belief.GetAliveTrackCount());
+
+        // Output order must stay ascending by slot: callers and the determinism
+        // tests depend on it, and cell traversal order must not leak through.
+        for (size_t I = 1; I < Indexed.size(); ++I)
+        {
+            if (Indexed[I - 1]->Id.Index >= Indexed[I]->Id.Index)
+            {
+                RA4Test::ReportFailure("region query returned tracks out of slot order",
+                                       __FILE__, __LINE__);
+                return;
+            }
+        }
+
+        // Sub-rectangles: every track the index reports must genuinely be inside,
+        // and every alive track inside must be reported. This is the property a
+        // stale index breaks.
+        const int32_t Rects[4][4] = {{0, 0, 20, 20}, {10, 10, 40, 40}, {30, 0, 63, 30}, {0, 30, 30, 63}};
+        for (const auto& R : Rects)
+        {
+            std::vector<const Recon::PerceivedTrack*> Sub;
+            Belief.GetTracksInRegion(R[0], R[1], R[2], R[3], Sub);
+
+            int32_t ExpectedCount = 0;
+            std::vector<const Recon::PerceivedTrack*> All;
+            Belief.GetTracksInRegion(0, 0, 63, 63, All);
+            for (const Recon::PerceivedTrack* T : All)
+            {
+                const int64_t TileX = T->BelievedPosition.X.ToIntFloor() / 200;
+                const int64_t TileY = T->BelievedPosition.Y.ToIntFloor() / 200;
+                if (TileX >= R[0] && TileX <= R[2] && TileY >= R[1] && TileY <= R[3])
+                {
+                    ExpectedCount += 1;
+                }
+            }
+            if (int32_t(Sub.size()) != ExpectedCount)
+            {
+                RA4Test::ReportFailure("spatial index disagrees with a linear scan on a sub-region",
+                                       __FILE__, __LINE__);
+                return;
+            }
+        }
+    }
+}
+
+RA4_TEST(Recon, IndicesSurviveSaveLoadAndKeepQueriesCorrect)
+{
+    // Both derived indices (spatial grid, association reverse index) are rebuilt on
+    // load rather than serialized. If a rebuild were forgotten, the restored world
+    // would answer queries wrongly while its checksum still matched -- the worst
+    // possible combination, so it gets its own test.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    // Tracks must be COLLECTED during the post-load run, because that is the only
+    // path where the association reverse index matters: a stale index fails to sever
+    // associations, the next report writes through a dangling handle, and the two
+    // worlds diverge. Without collection the test cannot tell a rebuilt index from a
+    // missing one -- verified by mutation.
+    Settings.Tracks.ConfidenceDecayPerSecondPerMille = 400;
+    Settings.Tracks.DropBelowConfidencePerMille = 300;
+    Settings.Tracks.StaleAfterTicks = 5;
+
+    SimWorld Live;
+    Live.Initialize(&Content, MakeTestSetup(48000), &Settings);
+    Live.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    Live.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    Live.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+    for (int32_t I = 0; I < 10; ++I)
+    {
+        Live.Tick(nullptr);
+        Live.ClearEvents();
+    }
+    std::vector<const Recon::PerceivedTrack*> Before;
+    Live.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, Before);
+    RA4_REQUIRE(!Before.empty());
+
+    ByteWriter W;
+    Live.Serialize(W);
+    SimWorld Restored;
+    Restored.Initialize(&Content, MakeTestSetup(1), &Settings);
+    ByteReader R(W.GetBuffer().data(), W.GetBuffer().size());
+    RA4_REQUIRE(Restored.Deserialize(R, &Content));
+
+    // Belief must be COLLECTED during the run below, because that is the only path
+    // where the association reverse index matters. Decay does that on its own here
+    // (aggressive decay plus a high GC floor were configured above); nothing is
+    // killed by hand, because DebugDamage is an out-of-band edit and applying it to
+    // two worlds is one more thing that can differ between them rather than a
+    // guarantee that they match.
+
+    // The rebuilt spatial index must find the same tracks...
+    std::vector<const Recon::PerceivedTrack*> After;
+    Restored.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, After);
+    RA4_EXPECT(After.size() == Before.size());
+
+    // Direct check on the reverse index itself: after a load, every forward
+    // association must have a matching back-link. A missing rebuild shows up here
+    // immediately, rather than only as an eventual divergence.
+    RA4_EXPECT(Restored.GetRecon().ReverseIndexMatchesForwardTableForTest(0));
+
+    // ...and the rebuilt association index must keep the two worlds in lockstep as
+    // they run on, which is where a broken reverse index would show up: a released
+    // track leaving a dangling association diverges the next update.
+    for (int32_t I = 0; I < 60; ++I)
+    {
+        Live.Tick(nullptr);
+        Live.ClearEvents();
+        Restored.Tick(nullptr);
+        Restored.ClearEvents();
+        if (Live.ComputeStateChecksum() != Restored.ComputeStateChecksum())
+        {
+            RA4Test::ReportFailure("live and restored diverged " + std::to_string(I + 1) +
+                                       " ticks after load: a derived index was not rebuilt",
+                                   __FILE__, __LINE__);
+            return;
+        }
+    }
+}
+
+// --- M5: post-hoc explainability (§4.6) -------------------------------------------
+
+RA4_TEST(Recon, AuditLogIsAnOutputAndCannotAffectDeterminism)
+{
+    // The audit log carries ground truth, so if it were simulation state it would be
+    // both a desync risk and an INVARIANT 10 violation. It must therefore be an
+    // output, like SimWorld's event list: excluded from the checksum and from saves.
+    //
+    // Proved by divergence rather than by inspection: two worlds are run on identical
+    // input, one of them having its log cleared repeatedly. If the log influenced
+    // anything, the checksums would part company.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeChainSettings(4, 20);
+
+    SimWorld A;
+    SimWorld B;
+    A.Initialize(&Content, MakeTestSetup(70707), &Settings);
+    B.Initialize(&Content, MakeTestSetup(70707), &Settings);
+    for (SimWorld* W : {&A, &B})
+    {
+        W->SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+        W->SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+        W->SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+    }
+
+    for (int32_t I = 0; I < 80; ++I)
+    {
+        A.Tick(nullptr);
+        A.ClearEvents();
+        B.Tick(nullptr);
+        B.ClearEvents();
+        // B forgets its explanations as it goes; A keeps everything.
+        const_cast<Recon::ReconSystem&>(B.GetRecon()).ClearReportAudits();
+        if (A.ComputeStateChecksum() != B.ComputeStateChecksum())
+        {
+            RA4Test::ReportFailure("clearing the audit log changed simulation state at tick " +
+                                       std::to_string(I + 1),
+                                   __FILE__, __LINE__);
+            return;
+        }
+    }
+    // And the fixture must have actually logged something, or this proves nothing.
+    RA4_EXPECT(!A.GetRecon().GetReportAudits().empty());
+    RA4_EXPECT(B.GetRecon().GetReportAudits().empty());
+}
+
+RA4_TEST(Recon, AuditLogIsBoundedOverALongMatch)
+{
+    // An unbounded explanation log is a memory leak with a 40-minute fuse. The ring
+    // must cap, and the cap must hold under a long run with continuous reporting.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(80808), &Settings);
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+
+    for (int32_t I = 0; I < 3000; ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+    }
+    // 3000 ticks is 150 seconds of continuous reporting; the log must be capped well
+    // below that, not merely "smaller than the tick count".
+    RA4_EXPECT(World.GetRecon().GetReportAudits().size() <= 4096);
+    RA4_EXPECT(!World.GetRecon().GetReportAudits().empty());
+}
+
+RA4_TEST(Recon, ExplanationNamesTheActualCauseOfTheError)
+{
+    // The §4.6 obligation, and the whole point of M5: if a player cannot see WHY
+    // they were wrong, the layer reads as unfairness rather than depth. So an
+    // explanation must name the specific failure -- overcount, misidentification or
+    // fabrication -- and not merely restate what was believed.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+    Recon::DistortionProfile& Profile = Settings.DistortionProfiles[0];
+    // Fear-driven overcounting, hard enough to be certain within the window.
+    Profile.bCountDistortionEnabled = true;
+    Profile.FearCountBiasMaxPerMille = 3000;
+    Profile.CompetenceNoiseMaxPerMille = 0;
+    Settings.Morale.DamageMoralePenaltyPerMille = 5000;
+    Settings.Morale.MoraleRegenPerTickPerMille = 0;
+    Settings.Morale.FatiguePerTickUnderFirePerMille = 400;
+    Settings.Morale.FatigueRegenPerTickPerMille = 0;
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(90909), &Settings);
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    const EntityId Observer =
+        World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::AllRifleman, 1, Vec2(Fixed::FromInt(3300), Fixed::FromInt(3000)));
+
+    // Let a real firefight rattle the observer so its reports start inflating.
+    std::string Explanation;
+    for (int32_t I = 0; I < 120 && World.IsAlive(Observer); ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+        std::vector<const Recon::PerceivedTrack*> Found;
+        World.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, Found);
+        for (const Recon::PerceivedTrack* T : Found)
+        {
+            const std::string Text = World.GetRecon().ExplainTrack(0, *T);
+            if (Text.find("OVERCOUNTED") != std::string::npos ||
+                Text.find("MISIDENTIFIED") != std::string::npos ||
+                Text.find("invented this contact") != std::string::npos)
+            {
+                Explanation = Text;
+                break;
+            }
+        }
+        if (!Explanation.empty())
+        {
+            break;
+        }
+    }
+    RA4_REQUIRE(!Explanation.empty());
+
+    // The explanation must be usable, not just non-empty: it has to attribute the
+    // report to a post, state the delay, and quote the observer's condition -- that
+    // is what turns "the game lied to me" into "my scouts were terrified".
+    RA4_EXPECT(Explanation.find("Report #") != std::string::npos);
+    RA4_EXPECT(Explanation.find("arrived +") != std::string::npos);
+    RA4_EXPECT(Explanation.find("morale") != std::string::npos);
+    RA4_EXPECT(Explanation.find("truth") != std::string::npos);
+}
+
+RA4_TEST(Recon, ExplanationDegradesHonestlyWhenReportsAgedOut)
+{
+    // A track older than the audit log must say so rather than fabricate an
+    // explanation. Silently inventing a plausible history would be worse than
+    // admitting the log has rolled over, because the player would trust it.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(11111), &Settings);
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(15, 40), true);
+    World.SpawnUnit(RA4Test::Ids::SovConscript, 0, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::AllLightTank, 1, Vec2(Fixed::FromInt(3400), Fixed::FromInt(3000)));
+    World.Tick(nullptr);
+    World.ClearEvents();
+
+    std::vector<const Recon::PerceivedTrack*> Found;
+    World.GetRecon().GetPerceivedWorld(0).GetTracksInRegion(0, 0, 63, 63, Found);
+    RA4_REQUIRE(!Found.empty());
+
+    // Wipe the log, keeping the track: exactly the state a long match reaches.
+    const_cast<Recon::ReconSystem&>(World.GetRecon()).ClearReportAudits();
+    const std::string Text = World.GetRecon().ExplainTrack(0, *Found[0]);
+    RA4_EXPECT(Text.find("older than the audit log") != std::string::npos);
+    // ...and it still describes the belief itself, so the panel is not blank.
+    RA4_EXPECT(Text.find("Contact:") != std::string::npos);
+}
+
+// --- M6: the AI plays from belief, not truth --------------------------------------
+
+RA4_TEST(Recon, AICannotSeeWhatTheStaffMapDoesNotBelieve)
+{
+    // The milestone's structural claim: with recon on, the AI's only enemy
+    // information is the same staff map a human reads. Zero-cheat stops being a
+    // promise kept by review and becomes a property of the code.
+    //
+    // Scene: an enemy tank hidden in fog with nothing of ours nearby. The staff map
+    // holds no track, so the AI must know nothing -- previously it scanned entities
+    // and would have found it.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(21000), &Settings);
+    // The AI player (1) has a base far from the enemy contact.
+    World.SpawnBuilding(RA4Test::Ids::AllConYard, 1, TileCoord(50, 50), true);
+    // Player 0's tank sits in the far corner, unseen by anything player 1 owns.
+    World.SpawnUnit(RA4Test::Ids::SovHeavyTank, 0, Vec2(Fixed::FromInt(1000), Fixed::FromInt(1000)));
+
+    for (int32_t I = 0; I < 20; ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+    }
+
+    AI::SimWorldView View(World, 1);
+    View.UpdateMemory(600);
+    RA4_EXPECT(View.GetKnownEnemies().empty());
+    // ...and belief agrees, so the test is asserting the wiring rather than an
+    // accident of the scene.
+    RA4_EXPECT(World.GetRecon().GetPerceivedWorld(1).GetAliveTrackCount() == 0);
+}
+
+RA4_TEST(Recon, AISeesExactlyWhatTheStaffMapBelieves)
+{
+    // The other half: what the staff map DOES hold must reach the AI, or the
+    // commander would be blind rather than merely fallible.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(21001), &Settings);
+    World.SpawnBuilding(RA4Test::Ids::AllConYard, 1, TileCoord(15, 40), true);
+    // An observer of player 1 with an enemy right in front of it.
+    World.SpawnUnit(RA4Test::Ids::AllRifleman, 1, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::SovHeavyTank, 0, Vec2(Fixed::FromInt(3300), Fixed::FromInt(3000)));
+
+    for (int32_t I = 0; I < 10; ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+    }
+
+    const uint32_t Believed = World.GetRecon().GetPerceivedWorld(1).GetAliveTrackCount();
+    RA4_REQUIRE(Believed > 0);
+
+    AI::SimWorldView View(World, 1);
+    View.UpdateMemory(600);
+    // One memory per track: the AI's picture is the staff map, entry for entry.
+    RA4_EXPECT(uint32_t(View.GetKnownEnemies().size()) == Believed);
+}
+
+RA4_TEST(Recon, AIIsFooledByAPhantomExactlyAsAPlayerWouldBe)
+{
+    // The consequence that makes the layer honest rather than merely fair: a
+    // fabricated contact must fool the AI too. If the commander could tell ghosts
+    // from real contacts, it would be cheating in the one way the layer is meant to
+    // prevent -- and phantoms would only ever punish the human.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Settings = MakeMinimalSettings(true);
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(21002), &Settings);
+    World.SpawnBuilding(RA4Test::Ids::AllConYard, 1, TileCoord(50, 50), true);
+    World.Tick(nullptr);
+    World.ClearEvents();
+
+    // Plant a phantom on player 1's staff map. There is NO real enemy anywhere in
+    // this scene, so anything the AI reports knowing came from belief alone.
+    const Recon::PerceivedWorld& Belief = World.GetRecon().GetPerceivedWorld(1);
+    Recon::PerceivedWorld& Writable = const_cast<Recon::PerceivedWorld&>(Belief);
+    const Recon::TrackId Ghost = PerceivedWorldTestAccess::AllocateTrack(Writable);
+    RA4_REQUIRE(Ghost.IsValid());
+    Recon::PerceivedTrack* T = PerceivedWorldTestAccess::GetTrackMutable(Writable, Ghost);
+    RA4_REQUIRE(T != nullptr);
+    T->BelievedPosition = Vec2(Fixed::FromInt(4000), Fixed::FromInt(4000));
+    T->BelievedCategory = Recon::ObservedCategory::HeavyVehicle;
+    T->BelievedCountMin = 3;
+    T->BelievedCountMax = 5;
+    T->Confidence = Fixed::FromRatio(3, 4);
+    T->LastUpdateTick = World.GetTick();
+    PerceivedWorldTestAccess::SetPhantom(Writable, Ghost, true);
+
+    AI::SimWorldView View(World, 1);
+    View.UpdateMemory(600);
+
+    // The AI believes in the imaginary force...
+    RA4_REQUIRE(View.GetKnownEnemies().size() == 1);
+    const AI::EnemyMemory& Mem = View.GetKnownEnemies()[0];
+    RA4_EXPECT(Mem.Position.X == 20 && Mem.Position.Y == 20); // 4000 / 200 tile units
+    // ...and carries no handle it could use to check, because a track has none.
+    RA4_EXPECT(!Mem.Entity.IsValid());
+}
+
+RA4_TEST(Recon, DisablingReconRestoresTheClassicAIScanPath)
+{
+    // The kill switch must work for the AI as well, or turning the feature off would
+    // silently leave the commander blind -- and every other system's debugging would
+    // be done against a broken opponent.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    Recon::ReconSettings Disabled = MakeMinimalSettings(false);
+
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(21003), &Disabled);
+    World.SpawnBuilding(RA4Test::Ids::AllConYard, 1, TileCoord(15, 40), true);
+    World.SpawnUnit(RA4Test::Ids::AllRifleman, 1, Vec2(Fixed::FromInt(3000), Fixed::FromInt(3000)));
+    World.SpawnUnit(RA4Test::Ids::SovHeavyTank, 0, Vec2(Fixed::FromInt(3300), Fixed::FromInt(3000)));
+    for (int32_t I = 0; I < 10; ++I)
+    {
+        World.Tick(nullptr);
+        World.ClearEvents();
+    }
+
+    AI::SimWorldView View(World, 1);
+    View.UpdateMemory(600);
+    // Classic behaviour: the visible enemy is known, and it carries a real handle
+    // (the entity scan path fills one) -- the belief path deliberately does not.
+    RA4_REQUIRE(!View.GetKnownEnemies().empty());
+    RA4_EXPECT(View.GetKnownEnemies()[0].Entity.IsValid());
 }
 
 RA4_TEST(Recon, TruthfulPipelineMirrorsVisibleEnemy)

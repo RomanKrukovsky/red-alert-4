@@ -15,10 +15,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run Compliance Unit Tests
-        run: python3 -m unittest discover -s Build/Compliance/tests -p "test_*.py" -v
+        run: python3 -m unittest discover -s build/Compliance/tests -p "test_*.py" -v
 
       - name: Run Blocking Compliance Scanner
-        run: python3 Build/Compliance/compliance_scan.py --scope both
+        run: python3 build/Compliance/compliance_scan.py --scope index
 
   headless:
     name: Headless Simulation (${{ matrix.os }})

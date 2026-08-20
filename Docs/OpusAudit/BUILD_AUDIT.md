@@ -13,7 +13,7 @@
 | OS | macOS (Darwin 25.3.0, arm64) |
 | CMake | 4.1.1 |
 | Compiler | Apple Clang 21.0.0 (clang-2100.0.123.102) |
-| UE install | `/Users/Shared/Epic Games/UE_5.6` and `UE_5.8` |
+| UE install | `<home>/Epic Games/UE_5.6` and `UE_5.8` |
 
 ---
 

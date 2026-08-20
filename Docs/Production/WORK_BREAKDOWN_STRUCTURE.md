@@ -19,13 +19,13 @@ Each task in the WBS backlog must adhere to strict agent execution constraints:
 
 ### Task M1-T1: Relative Data Path Resolution in `BibleContentLoader.cpp`
 - **Goal**: Add fallback relative path checking (`../..` directory traversal) when executed from `build/hb/`.
-- **Affected Files**: [`Source/RA4Content/Private/BibleContentLoader.cpp`](file:///Users/romanmolodyko/Documents/red-alert-4/Source/RA4Content/Private/BibleContentLoader.cpp)
+- **Affected Files**: [`Source/RA4Content/Private/BibleContentLoader.cpp`](file://Source/RA4Content/Private/BibleContentLoader.cpp)
 - **Completion Criteria**: `./RA4Tests` passes 100% whether executed from project root OR inside `build/hb/`.
 - **Tests**: `RA4Tests` (`BibleImport.*`).
 
 ### Task M1-T2: Header Preprocessor Guards for Noesis ViewModels
 - **Goal**: Guard `RA4NoesisHUDViewModel.h/cpp` with `#if WITH_NOESIS` to prevent compilation errors when Noesis plugin is absent.
-- **Affected Files**: [`Source/RA4UI/Public/RA4NoesisHUDViewModel.h`](file:///Users/romanmolodyko/Documents/red-alert-4/Source/RA4UI/Public/RA4NoesisHUDViewModel.h)
+- **Affected Files**: [`Source/RA4UI/Public/RA4NoesisHUDViewModel.h`](file://Source/RA4UI/Public/RA4NoesisHUDViewModel.h)
 - **Completion Criteria**: `RA4UI` module compiles cleanly under standard UBT without Noesis plugin.
 - **Tests**: `RA4PresentationTests`.
 
@@ -40,6 +40,6 @@ Each task in the WBS backlog must adhere to strict agent execution constraints:
 
 ### Task M2-T1: Presentation Delta Entity Queue
 - **Goal**: Replace linear `SimWorld` polling in `URA4PresentationSubsystem` with a delta-changed entity event queue.
-- **Affected Files**: [`Source/RA4Presentation/Private/RA4PresentationSubsystem.cpp`](file:///Users/romanmolodyko/Documents/red-alert-4/Source/RA4Presentation/Private/RA4PresentationSubsystem.cpp)
+- **Affected Files**: [`Source/RA4Presentation/Private/RA4PresentationSubsystem.cpp`](file://Source/RA4Presentation/Private/RA4PresentationSubsystem.cpp)
 - **Completion Criteria**: Game thread presentation overhead reduced to <= 1.5ms for 1,000 entities.
 - **Tests**: `RA4PresentationTests`.

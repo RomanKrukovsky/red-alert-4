@@ -12,6 +12,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "RA4Core/Ids.h"
@@ -66,6 +67,9 @@ struct ObserverSnapshot
     Fixed Morale = Fixed::FromInt(1);
     Fixed Fatigue = Fixed::Zero();
     Fixed Suppression = Fixed::Zero();
+    // Whether any of this player's units is currently in contact, feeding the
+    // fabrication gate (M4).
+    bool bAnyUnitUnderFire = false;
 };
 
 // One node of a player's command chain (M3, §4.4). Built each tick from the
@@ -92,6 +96,19 @@ struct ObservationInput
     std::vector<ObservedEntity> VisibleToPlayer[kMaxPlayers];
     // Per-player aggregate observer state (see ObserverSnapshot).
     ObserverSnapshot Observers[kMaxPlayers];
+    // Where a fabricated contact can plausibly appear when the player currently
+    // sees nothing: the position of one of its own front-line units. Without an
+    // anchor a phantom would need a map-wide random position, which reads as a bug
+    // rather than as fear (M4).
+    Vec2 ObserverAnchor[kMaxPlayers];
+    bool ObserverAnchorValid[kMaxPlayers] = {};
+    // Tiles the player's fog shows RIGHT NOW, per player, in ascending order. This
+    // is a different question from VisibleToPlayer, which lists what was SEEN:
+    // phantom refutation (§4.5) needs "someone is looking there and there is
+    // nothing", so it must know about empty-but-watched tiles too. Filled by
+    // SimWorld from the fog grid, bounded to tiles near existing belief so the
+    // list stays small.
+    std::vector<uint32_t> VisibleTilesPacked[kMaxPlayers];
     // Per-player command chain for this tick, in ascending NodeId order.
     std::vector<ChainNode> ChainNodes[kMaxPlayers];
     // Whether the player has any HQ node at all. No HQ means no staff map to
@@ -108,6 +125,8 @@ struct ObservationInput
             Observers[P] = ObserverSnapshot{};
             ChainNodes[P].clear();
             HasHqNode[P] = false;
+            ObserverAnchorValid[P] = false;
+            VisibleTilesPacked[P].clear();
         }
     }
 };
@@ -166,6 +185,37 @@ public:
 
     const PhaseStats& GetStats() const { return Stats; }
 
+    // --- Post-match explainability (§4.6, M5) ---------------------------------
+    // The report log behind every belief. An OUTPUT, like SimWorld's event list:
+    // excluded from the checksum and from saves, so it can safely carry ground
+    // truth for the side-by-side and cannot desync a replaying peer.
+    //
+    // Bounded: the ring holds the most recent kReportAuditCapacity reports and
+    // overwrites the oldest, because an unbounded log is a memory leak with a
+    // 40-minute fuse.
+    const std::vector<ReportAudit>& GetReportAudits() const { return ReportAudits; }
+
+    // Reports that shaped one track, oldest first, resolved from its provenance
+    // ring. Empty if the track is gone or its reports have aged out of the log.
+    void GetAuditsForTrack(PlayerId P, const PerceivedTrack& Track,
+                           std::vector<const ReportAudit*>& Out) const;
+
+    // Human-readable explanation of one track: what was claimed, by whom, how late,
+    // and how it differed from the truth. This is the string a post-match screen or
+    // `recon.LogChain` prints, kept here so UI and console cannot drift apart.
+    std::string ExplainTrack(PlayerId P, const PerceivedTrack& Track) const;
+
+    void ClearReportAudits() { ReportAudits.clear(); AuditWriteCursor = 0; }
+
+    // Test-only window on the last observer snapshot the layer consumed. Read-only,
+    // and it exposes only the player's OWN aggregate state -- no enemy data.
+    const ObserverSnapshot& GetLastObserverForTest(PlayerId P) const { return LastObserver[P]; }
+
+    // Test-only audit of a DERIVED index against the data it indexes. Derived state
+    // that silently disagrees with its source is the worst failure mode in this
+    // layer: queries answer wrongly while checksums still match.
+    bool ReverseIndexMatchesForwardTableForTest(PlayerId P) const;
+
 private:
     // Phase bodies. Filled milestone by milestone; a milestone MUST NOT touch
     // phases it does not own (small reviewable packages, CLAUDE.md rule 10).
@@ -183,6 +233,14 @@ private:
     // independent node either corroborates (confidence up) or contests it.
     void ApplyGroupedReport(PerceivedWorld& World, PlayerId P, const ReconReport& Report,
                             TickIndex CurrentTick);
+
+    // Releases a track and clears every association pointing at it. One place, so
+    // GC and phantom refutation cannot drift apart.
+    void ReleaseTrackAndAssociations(PlayerId P, PerceivedWorld& World, TrackId Id);
+
+    // Whether a friendly observer is looking at this position RIGHT NOW and sees
+    // nothing real there -- the player-driven half of phantom refutation (§4.5).
+    bool IsTileObservedAndEmpty(PlayerId P, const Vec2& Position, TickIndex CurrentTick) const;
 
     // Grows the per-player association tables to cover EntityCapacity slots.
     void EnsureAssociationCapacity(uint32_t NewEntityCapacity);
@@ -218,6 +276,19 @@ private:
     // freezes as last-known-position -- the HQ has no idea the old unit is gone.
     std::vector<TrackId> AssociationTrack[kMaxPlayers];
     std::vector<uint32_t> AssociationGeneration[kMaxPlayers];
+
+    // Reverse index: track SLOT -> the entity slots currently associated with it
+    // (M3-perf, review finding M1/M2). Without it, releasing a track meant scanning
+    // every entity slot to find the associations pointing at it, and a decay
+    // avalanche -- which blackout causes by design, since it raises decay for every
+    // track at once -- turned that into tens of millions of comparisons in one tick.
+    //
+    // Derived state: rebuilt from the association tables on load, never serialized,
+    // so there is exactly one source of truth.
+    std::vector<std::vector<uint32_t>> AssociationsByTrackSlot[kMaxPlayers];
+    void AssociationLink(PlayerId P, uint32_t EntitySlot, TrackId Id);
+    void AssociationUnlink(PlayerId P, uint32_t EntitySlot);
+    void RebuildAssociationReverseIndex();
     uint32_t EntityCapacity = 0;
 
     // Scratch for grouping this tick's observations by reporting node. Members
@@ -240,8 +311,20 @@ private:
         uint32_t RepresentativeSlot = 0;
         uint32_t RepresentativeGeneration = 0;
         ContentId ObservedClass;    // invalid once the group is mixed
+        bool bPhantom = false;      // every member was fabricated (M4)
     };
     std::vector<ObservationGroup> GroupScratch;
+
+    // Last observer snapshot per player, kept for diagnostics and tests.
+    ObserverSnapshot LastObserver[kMaxPlayers];
+
+    // Report audit ring (see GetReportAudits). 4096 reports is minutes of history at
+    // a realistic reporting cadence and about 200 KB -- enough for a post-match
+    // screen, bounded enough that a long match cannot grow it without limit.
+    static constexpr size_t kReportAuditCapacity = 4096;
+    std::vector<ReportAudit> ReportAudits;
+    size_t AuditWriteCursor = 0;
+    void RecordReportAudit(const ReportAudit& Entry);
 
     PhaseStats Stats;
 };

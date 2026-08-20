@@ -37,7 +37,7 @@ inconsistently after a rollback.
 
 ```bash
 rm -rf Binaries Intermediate
-"/Users/Shared/Epic Games/UE_5.6/Engine/Build/BatchFiles/Mac/Build.sh" \
+"<home>/Epic Games/UE_5.6/Engine/Build/BatchFiles/Mac/Build.sh" \
   RedAlert4Editor Mac Development -project="$PWD/RedAlert4.uproject"
 ```
 

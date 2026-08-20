@@ -59,5 +59,5 @@ Zero merge conflicts occurred during the merge sequence due to clear component b
 
 ## 5. Safety Backups & Inventory
 
-- **Inventory File**: `/Users/romanmolodyko/Documents/red-alert-4-integration-inventory.txt`
-- **Git Backup Bundle**: `/Users/romanmolodyko/Documents/red-alert-4-before-agent-integration.bundle` (2.0 GB)
+- **Inventory File**: `<home>/Documents/red-alert-4-integration-inventory.txt`
+- **Git Backup Bundle**: `<home>/Documents/red-alert-4-before-agent-integration.bundle` (2.0 GB)

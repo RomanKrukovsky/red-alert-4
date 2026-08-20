@@ -123,10 +123,14 @@ void ParseDistortionProfile(const Json::Value& V, DistortionProfile& Out)
     Out.bFabricationEnabled = ReadBool(V, "fabrication_enabled", Out.bFabricationEnabled);
     Out.FabricationChanceMaxPerMille = ReadPerMille(V, "fabrication_chance_max", Out.FabricationChanceMaxPerMille);
     Out.MaxPhantomLifetimeTicks = ReadInt(V, "max_phantom_lifetime_ticks", Out.MaxPhantomLifetimeTicks);
+    Out.FabricationFearSaturationTicks =
+        ReadInt(V, "fabrication_fear_saturation_ticks", Out.FabricationFearSaturationTicks);
 
     Out.bSelfReportBiasEnabled = ReadBool(V, "self_report_bias_enabled", Out.bSelfReportBiasEnabled);
     Out.SelfReportLossUnderstatementMaxPerMille =
         ReadPerMille(V, "self_report_loss_understatement_max", Out.SelfReportLossUnderstatementMaxPerMille);
+    Out.SelfReportStrengthOverstatementMaxPerMille =
+        ReadPerMille(V, "self_report_strength_overstatement_max", Out.SelfReportStrengthOverstatementMaxPerMille);
 }
 
 void ParseCommsProfile(const Json::Value& V, CommsProfile& Out)
@@ -232,6 +236,15 @@ bool ValidateReconSettings(const ReconSettings& Settings, std::vector<std::strin
         CheckPerMilleRange(P.OmissionChanceMaxPerMille, "omission_chance_max", OutErrors);
         CheckPerMilleRange(P.FabricationChanceMaxPerMille, "fabrication_chance_max", OutErrors);
         CheckPerMilleRange(P.SelfReportLossUnderstatementMaxPerMille, "self_report_loss_understatement_max", OutErrors);
+        CheckPerMilleRange(P.SelfReportStrengthOverstatementMaxPerMille,
+                           "self_report_strength_overstatement_max", OutErrors);
+        if (P.FabricationFearSaturationTicks <= 0)
+        {
+            // Zero would make the dread term saturate instantly, so a unit that took
+            // one hit would fabricate as readily as one shelled for a minute -- the
+            // distinction the stage exists to draw.
+            OutErrors.push_back(P.Name + ": fabrication_fear_saturation_ticks must be positive");
+        }
         if (P.PositionErrorMaxTiles < 0)
         {
             OutErrors.push_back(P.Name + ": position_error_max_tiles is negative");
@@ -520,8 +533,10 @@ uint64_t ReconSettings::ComputeSettingsHash() const
         H.FeedBool(P.bFabricationEnabled);
         H.FeedUInt32(uint32_t(P.FabricationChanceMaxPerMille));
         H.FeedUInt32(uint32_t(P.MaxPhantomLifetimeTicks));
+        H.FeedUInt32(uint32_t(P.FabricationFearSaturationTicks));
         H.FeedBool(P.bSelfReportBiasEnabled);
         H.FeedUInt32(uint32_t(P.SelfReportLossUnderstatementMaxPerMille));
+        H.FeedUInt32(uint32_t(P.SelfReportStrengthOverstatementMaxPerMille));
     }
 
     H.FeedUInt32(uint32_t(CommsProfiles.size()));

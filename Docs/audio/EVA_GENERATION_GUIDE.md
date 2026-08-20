@@ -32,7 +32,7 @@ The **EVA Voiceover Generation Pipeline** synthesizes high-quality Russian voice
 ### Software Environment
 Ensure virtual environment activation and dependencies:
 ```bash
-cd /Users/romanmolodyko/Documents/red-alert-4
+cd <home>/Documents/red-alert-4
 source .venv/bin/activate
 
 # Verify VoxCPM installation

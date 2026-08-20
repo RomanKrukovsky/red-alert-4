@@ -1,0 +1,285 @@
+{
+  "version": "1.1.0",
+  "suppressions": [
+    {
+      "id": "SUP-2026-001-01",
+      "rule_id": "electronic_arts_identifier",
+      "path_glob": "Docs/Audit/ASSET_AND_LICENSE_AUDIT.md",
+      "comment": "Legal audits, ADR-011 (Clean-Room Compliance), the IP migration plan and the risk register must be able to name the franchise they are steering clear of; a compliance document forbidden from naming the risk cannot describe it. Scoped to NAMED FILES, not Docs/** -- a blanket glob silenced the rule everywhere including the scanner's own corpus test, which caught it. Anything new in Docs/ is guarded again, and the shipping Config/DefaultGame.ini description was rewritten rather than suppressed because it travels inside the packaged build.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-001-02",
+      "rule_id": "electronic_arts_identifier",
+      "path_glob": "Docs/Audit/GAP_ANALYSIS.md",
+      "comment": "Legal audits, ADR-011 (Clean-Room Compliance), the IP migration plan and the risk register must be able to name the franchise they are steering clear of; a compliance document forbidden from naming the risk cannot describe it. Scoped to NAMED FILES, not Docs/** -- a blanket glob silenced the rule everywhere including the scanner's own corpus test, which caught it. Anything new in Docs/ is guarded again, and the shipping Config/DefaultGame.ini description was rewritten rather than suppressed because it travels inside the packaged build.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-001-03",
+      "rule_id": "electronic_arts_identifier",
+      "path_glob": "Docs/OpusAudit/LICENSE_AUDIT.md",
+      "comment": "Legal audits, ADR-011 (Clean-Room Compliance), the IP migration plan and the risk register must be able to name the franchise they are steering clear of; a compliance document forbidden from naming the risk cannot describe it. Scoped to NAMED FILES, not Docs/** -- a blanket glob silenced the rule everywhere including the scanner's own corpus test, which caught it. Anything new in Docs/ is guarded again, and the shipping Config/DefaultGame.ini description was rewritten rather than suppressed because it travels inside the packaged build.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-001-04",
+      "rule_id": "electronic_arts_identifier",
+      "path_glob": "Docs/OpusAudit/EXECUTIVE_VERDICT.md",
+      "comment": "Legal audits, ADR-011 (Clean-Room Compliance), the IP migration plan and the risk register must be able to name the franchise they are steering clear of; a compliance document forbidden from naming the risk cannot describe it. Scoped to NAMED FILES, not Docs/** -- a blanket glob silenced the rule everywhere including the scanner's own corpus test, which caught it. Anything new in Docs/ is guarded again, and the shipping Config/DefaultGame.ini description was rewritten rather than suppressed because it travels inside the packaged build.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-001-05",
+      "rule_id": "electronic_arts_identifier",
+      "path_glob": "Docs/Milestones/FINAL_LEGAL_AND_SECURITY_AUDIT.md",
+      "comment": "Legal audits, ADR-011 (Clean-Room Compliance), the IP migration plan and the risk register must be able to name the franchise they are steering clear of; a compliance document forbidden from naming the risk cannot describe it. Scoped to NAMED FILES, not Docs/** -- a blanket glob silenced the rule everywhere including the scanner's own corpus test, which caught it. Anything new in Docs/ is guarded again, and the shipping Config/DefaultGame.ini description was rewritten rather than suppressed because it travels inside the packaged build.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-001-06",
+      "rule_id": "electronic_arts_identifier",
+      "path_glob": "Docs/Production/ORIGINAL_IP_MIGRATION.md",
+      "comment": "Legal audits, ADR-011 (Clean-Room Compliance), the IP migration plan and the risk register must be able to name the franchise they are steering clear of; a compliance document forbidden from naming the risk cannot describe it. Scoped to NAMED FILES, not Docs/** -- a blanket glob silenced the rule everywhere including the scanner's own corpus test, which caught it. Anything new in Docs/ is guarded again, and the shipping Config/DefaultGame.ini description was rewritten rather than suppressed because it travels inside the packaged build.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-001-07",
+      "rule_id": "electronic_arts_identifier",
+      "path_glob": "Docs/Production/RISK_REGISTER.md",
+      "comment": "Legal audits, ADR-011 (Clean-Room Compliance), the IP migration plan and the risk register must be able to name the franchise they are steering clear of; a compliance document forbidden from naming the risk cannot describe it. Scoped to NAMED FILES, not Docs/** -- a blanket glob silenced the rule everywhere including the scanner's own corpus test, which caught it. Anything new in Docs/ is guarded again, and the shipping Config/DefaultGame.ini description was rewritten rather than suppressed because it travels inside the packaged build.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-001-08",
+      "rule_id": "electronic_arts_identifier",
+      "path_glob": "Docs/ADRs/ADR-011-Clean-Room-Compliance.md",
+      "comment": "Legal audits, ADR-011 (Clean-Room Compliance), the IP migration plan and the risk register must be able to name the franchise they are steering clear of; a compliance document forbidden from naming the risk cannot describe it. Scoped to NAMED FILES, not Docs/** -- a blanket glob silenced the rule everywhere including the scanner's own corpus test, which caught it. Anything new in Docs/ is guarded again, and the shipping Config/DefaultGame.ini description was rewritten rather than suppressed because it travels inside the packaged build.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-002-01",
+      "rule_id": "command_and_conquer_identifier",
+      "path_glob": "Docs/Audit/ASSET_AND_LICENSE_AUDIT.md",
+      "comment": "Same rationale as SUP-2026-001: audit and migration prose only.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-002-02",
+      "rule_id": "command_and_conquer_identifier",
+      "path_glob": "Docs/OpusAudit/LICENSE_AUDIT.md",
+      "comment": "Same rationale as SUP-2026-001: audit and migration prose only.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-002-03",
+      "rule_id": "command_and_conquer_identifier",
+      "path_glob": "Docs/Milestones/FINAL_LEGAL_AND_SECURITY_AUDIT.md",
+      "comment": "Same rationale as SUP-2026-001: audit and migration prose only.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-002-04",
+      "rule_id": "command_and_conquer_identifier",
+      "path_glob": "Docs/Production/ORIGINAL_IP_MIGRATION.md",
+      "comment": "Same rationale as SUP-2026-001: audit and migration prose only.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-002-05",
+      "rule_id": "command_and_conquer_identifier",
+      "path_glob": "Docs/Production/RISK_REGISTER.md",
+      "comment": "Same rationale as SUP-2026-001: audit and migration prose only.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-002-06",
+      "rule_id": "command_and_conquer_identifier",
+      "path_glob": "Docs/ADRs/ADR-011-Clean-Room-Compliance.md",
+      "comment": "Same rationale as SUP-2026-001: audit and migration prose only.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-002-07",
+      "rule_id": "command_and_conquer_identifier",
+      "path_glob": "Docs/ADRs/ADR-001-Simulation-State-Ownership.md",
+      "comment": "Same rationale as SUP-2026-001: audit and migration prose only.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-002-08",
+      "rule_id": "command_and_conquer_identifier",
+      "path_glob": "Docs/ADR/0004-content-lives-in-data-not-code.md",
+      "comment": "Same rationale as SUP-2026-001: audit and migration prose only.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-002-09",
+      "rule_id": "command_and_conquer_identifier",
+      "path_glob": "Docs/research/cnc-red-alert/14_AI_ARCHITECTURE.md",
+      "comment": "Same rationale as SUP-2026-001: audit and migration prose only.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-003-01",
+      "rule_id": "red_alert_3_identifier",
+      "path_glob": "Docs/Implementation/RA3_SAGE_IMPLEMENTATION_CHECKLIST.md",
+      "comment": "Same rationale as SUP-2026-001. The RA3_SAGE_IMPLEMENTATION_* documents are gap analyses of what this project does NOT copy; they are historical records and rewriting them would erase the reasoning.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-003-02",
+      "rule_id": "red_alert_3_identifier",
+      "path_glob": "Docs/Implementation/RA3_SAGE_IMPLEMENTATION_GAP.md",
+      "comment": "Same rationale as SUP-2026-001. The RA3_SAGE_IMPLEMENTATION_* documents are gap analyses of what this project does NOT copy; they are historical records and rewriting them would erase the reasoning.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-003-03",
+      "rule_id": "red_alert_3_identifier",
+      "path_glob": "Docs/ADRs/ADR-011-Clean-Room-Compliance.md",
+      "comment": "Same rationale as SUP-2026-001. The RA3_SAGE_IMPLEMENTATION_* documents are gap analyses of what this project does NOT copy; they are historical records and rewriting them would erase the reasoning.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-003-04",
+      "rule_id": "red_alert_3_identifier",
+      "path_glob": "Docs/ADRs/ADR-001-Simulation-State-Ownership.md",
+      "comment": "Same rationale as SUP-2026-001. The RA3_SAGE_IMPLEMENTATION_* documents are gap analyses of what this project does NOT copy; they are historical records and rewriting them would erase the reasoning.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-003-05",
+      "rule_id": "red_alert_3_identifier",
+      "path_glob": "Docs/ui-reconstruction/SCREENSHOT_INVENTORY.md",
+      "comment": "Same rationale as SUP-2026-001. The RA3_SAGE_IMPLEMENTATION_* documents are gap analyses of what this project does NOT copy; they are historical records and rewriting them would erase the reasoning.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-003-06",
+      "rule_id": "red_alert_3_identifier",
+      "path_glob": "Docs/audio/EVA_CASTING_REPORT.md",
+      "comment": "Same rationale as SUP-2026-001. The RA3_SAGE_IMPLEMENTATION_* documents are gap analyses of what this project does NOT copy; they are historical records and rewriting them would erase the reasoning.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-003-07",
+      "rule_id": "red_alert_3_identifier",
+      "path_glob": "Docs/superpowers/specs/2026-07-28-voice-pipeline-design.md",
+      "comment": "Same rationale as SUP-2026-001. The RA3_SAGE_IMPLEMENTATION_* documents are gap analyses of what this project does NOT copy; they are historical records and rewriting them would erase the reasoning.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-003-08",
+      "rule_id": "red_alert_3_identifier",
+      "path_glob": "Docs/research/cnc-red-alert/14_AI_ARCHITECTURE.md",
+      "comment": "Same rationale as SUP-2026-001. The RA3_SAGE_IMPLEMENTATION_* documents are gap analyses of what this project does NOT copy; they are historical records and rewriting them would erase the reasoning.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-004",
+      "rule_id": "ea_copyright",
+      "path_glob": "Docs/Production/ORIGINAL_IP_MIGRATION.md",
+      "comment": "This document quotes the copyright notice it is planning migration AWAY from. Quoting it is the point; the alternative is a migration plan that cannot say what it is migrating from.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-005",
+      "rule_id": "red_alert_3_identifier",
+      "path_glob": "Tools/ContentImport/content_bible_parser.py",
+      "comment": "The module header records that the SAGE XML ingestion path and EA's schemas were deleted on 2026-08-06. Naming what was removed is how the next reader learns not to re-add it.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-006",
+      "rule_id": "missing_provenance",
+      "path_glob": "**/.gitkeep",
+      "comment": "Zero-byte directory placeholders. They carry no content to have provenance for; the directories they hold open are themselves recorded in the asset registry as pending third-party namespaces.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-007-01",
+      "rule_id": "electronic_arts_identifier",
+      "path_glob": "Docs/ui-reconstruction/SCREENSHOT_INVENTORY.md",
+      "comment": "A screenshot inventory recording which reference images were examined during UI reconstruction and what was deliberately NOT copied from them. Naming the source is what makes the record auditable.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-007-02",
+      "rule_id": "command_and_conquer_identifier",
+      "path_glob": "Docs/ui-reconstruction/SCREENSHOT_INVENTORY.md",
+      "comment": "A screenshot inventory recording which reference images were examined during UI reconstruction and what was deliberately NOT copied from them. Naming the source is what makes the record auditable.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-008-01",
+      "rule_id": "electronic_arts_identifier",
+      "path_glob": "Docs/ADR/0004-content-lives-in-data-not-code.md",
+      "comment": "Design/production prose that names the genre reference it was written against. Kept because removing the reference would make the document's reasoning unverifiable; scoped to this one file, and it expires.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-008-02",
+      "rule_id": "command_and_conquer_identifier",
+      "path_glob": "Docs/Audit/GAP_ANALYSIS.md",
+      "comment": "Design/production prose that names the genre reference it was written against. Kept because removing the reference would make the document's reasoning unverifiable; scoped to this one file, and it expires.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-008-03",
+      "rule_id": "command_and_conquer_identifier",
+      "path_glob": "Docs/OpusAudit/EXECUTIVE_VERDICT.md",
+      "comment": "Design/production prose that names the genre reference it was written against. Kept because removing the reference would make the document's reasoning unverifiable; scoped to this one file, and it expires.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-008-04",
+      "rule_id": "command_and_conquer_identifier",
+      "path_glob": "Docs/audio/EVA_CASTING_REPORT.md",
+      "comment": "Design/production prose that names the genre reference it was written against. Kept because removing the reference would make the document's reasoning unverifiable; scoped to this one file, and it expires.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    },
+    {
+      "id": "SUP-2026-008-05",
+      "rule_id": "command_and_conquer_identifier",
+      "path_glob": "Docs/superpowers/specs/2026-07-28-voice-pipeline-design.md",
+      "comment": "Design/production prose that names the genre reference it was written against. Kept because removing the reference would make the document's reasoning unverifiable; scoped to this one file, and it expires.",
+      "reviewer": "compliance reconciliation 2026-08-06",
+      "expires_on": "2027-02-06"
+    }
+  ]
+}

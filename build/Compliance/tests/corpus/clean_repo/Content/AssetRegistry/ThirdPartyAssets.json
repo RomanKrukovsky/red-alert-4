@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "1.0.0",
+  "records": [
+    {
+      "asset_id": "ASSET-001",
+      "path": "Assets/Game/logo.uasset",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "artifact_kind": "binary",
+      "creator": "Compliance Test",
+      "creation_date": "2026-07-30",
+      "source_type": "original",
+      "source_uri_or_contract": "internal://compliance-tests/asset-001",
+      "license": "Proprietary",
+      "commercial_use_allowed": true,
+      "contains_third_party_ip": false,
+      "similarity_review_status": "reviewed",
+      "reviewer": "Compliance QA",
+      "comment": "Original in-repo fixture asset.",
+      "release_allowed": true
+    }
+  ]
+}

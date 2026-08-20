@@ -1,6 +1,6 @@
 # Command & Conquer: Red Alert - AI Architecture Documentation
 
-**Source Code Path:** `/Users/romanmolodyko/cnc-red-alert-original/CODE/`
+**Source Code Path:** `<home>/cnc-red-alert-original/CODE/`
 **Analysis Date:** 2025
 
 ---

@@ -35,6 +35,22 @@ bool SimWorldView::IsPlacementValid(ContentId Structure, TileCoord Tile) const
 
 void SimWorldView::UpdateMemory(TickIndex MemoryRetentionTicks)
 {
+    // --- I-M6: when the recon layer is on, the AI reads BELIEF, not truth ---------
+    //
+    // This is the whole point of the milestone. The AI's zero-cheat property stops
+    // being a promise enforced by review and becomes a consequence of the code: the
+    // commander cannot see through fog or past distortion because the only enemy
+    // information reaching it is the same staff map the human player looks at.
+    //
+    // A phantom therefore fools the AI exactly as it fools a person, and an
+    // over-count makes it over-prepare. That is not a side effect to be tolerated --
+    // it is the behaviour the layer exists to produce.
+    if (World.GetRecon().IsEnabled())
+    {
+        UpdateMemoryFromBelief(MemoryRetentionTicks);
+        return;
+    }
+
     const std::vector<EntityCore>& Cores = World.GetAllCores();
     const TickIndex CurrentTick = World.GetTick();
     const FFogOfWarGrid* Fog = World.GetFogGrid();
@@ -99,6 +115,43 @@ void SimWorldView::UpdateMemory(TickIndex MemoryRetentionTicks)
     }
 
     DecayMemories(MemoryRetentionTicks);
+}
+
+void SimWorldView::UpdateMemoryFromBelief(TickIndex MemoryRetentionTicks)
+{
+    const Recon::PerceivedWorld& Belief = World.GetRecon().GetPerceivedWorld(Player);
+
+    BeliefScratch.clear();
+    Belief.GetTracksInRegion(0, 0, World.GetMap().Width - 1, World.GetMap().Height - 1, BeliefScratch);
+
+    // Belief is authoritative for the AI here, so the memory list is REPLACED rather
+    // than merged. Keeping stale entries alongside would quietly re-introduce
+    // knowledge the staff map no longer holds -- including contacts the player's own
+    // scouts have already disproved.
+    KnownEnemies.clear();
+    for (const Recon::PerceivedTrack* Track : BeliefScratch)
+    {
+        EnemyMemory Mem;
+        // No EntityId: a track has none, by design (INVARIANT 10). Downstream AI code
+        // uses Entity only to re-look-up truth, which is exactly what must stop, so
+        // leaving it invalid makes any such attempt fail loudly instead of silently
+        // working.
+        Mem.Entity = EntityId{};
+        Mem.Position = World.GetMap().WorldToTile(Track->BelievedPosition);
+        Mem.LastSeenTick = Track->LastUpdateTick;
+        // A believed CATEGORY is not a content id, and inventing one would hand the
+        // AI an identification the staff map never made. Invalid means "unidentified";
+        // consumers already treat an invalid def as an unknown contact.
+        Mem.DefId = Track->BelievedClass;
+        Mem.Kind = Track->BelievedCategory == Recon::ObservedCategory::Structure ? EntityKind::Building
+                                                                                : EntityKind::Unit;
+        // Confidence comes from the staff map rather than from a decay clock the AI
+        // runs itself: the layer already models how sure the HQ is, and a second
+        // opinion would drift from the one the player sees.
+        Mem.Confidence = Track->Confidence;
+        KnownEnemies.push_back(Mem);
+    }
+    (void)MemoryRetentionTicks; // belief lifetime is the recon layer's business
 }
 
 void SimWorldView::DecayMemories(TickIndex MemoryRetentionTicks)

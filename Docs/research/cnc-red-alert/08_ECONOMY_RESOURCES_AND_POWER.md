@@ -1,6 +1,6 @@
 # Red Alert Economy, Resources, and Power Systems
 
-*Research based on original EA C&C Red Alert source code at `/Users/romanmolodyko/cnc-red-alert-original/CODE/`*
+*Research based on original EA C&C Red Alert source code at `<home>/cnc-red-alert-original/CODE/`*
 
 ---
 
