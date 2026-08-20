@@ -2,9 +2,111 @@
 
 #include "RA4HUDViewModel.h"
 
+namespace
+{
+bool SelectionGroupsEqual(const TArray<FRA4SelectionGroup>& A, const TArray<FRA4SelectionGroup>& B)
+{
+    if (A.Num() != B.Num())
+    {
+        return false;
+    }
+    for (int32 Index = 0; Index < A.Num(); ++Index)
+    {
+        if (A[Index].ContentId != B[Index].ContentId || A[Index].Count != B[Index].Count ||
+            !FMath::IsNearlyEqual(A[Index].HealthRatio, B[Index].HealthRatio) ||
+            !A[Index].DisplayName.EqualTo(B[Index].DisplayName))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool ProductionEntriesEqual(const TArray<FRA4ProductionEntry>& A, const TArray<FRA4ProductionEntry>& B)
+{
+    if (A.Num() != B.Num())
+    {
+        return false;
+    }
+    for (int32 Index = 0; Index < A.Num(); ++Index)
+    {
+        const FRA4ProductionEntry& Left = A[Index];
+        const FRA4ProductionEntry& Right = B[Index];
+        if (Left.ContentId != Right.ContentId || Left.ProgressPercent != Right.ProgressPercent ||
+            Left.bPaused != Right.bPaused || Left.bAwaitingPlacement != Right.bAwaitingPlacement ||
+            Left.SlotIndex != Right.SlotIndex || !Left.DisplayName.EqualTo(Right.DisplayName))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool BuildOptionsEqual(const TArray<FRA4BuildOption>& A, const TArray<FRA4BuildOption>& B)
+{
+    if (A.Num() != B.Num())
+    {
+        return false;
+    }
+    for (int32 Index = 0; Index < A.Num(); ++Index)
+    {
+        const FRA4BuildOption& Left = A[Index];
+        const FRA4BuildOption& Right = B[Index];
+        if (Left.ContentId != Right.ContentId || Left.Cost != Right.Cost ||
+            Left.Category != Right.Category || Left.bAvailable != Right.bAvailable ||
+            Left.BlockReason != Right.BlockReason || !Left.DisplayName.EqualTo(Right.DisplayName))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool ObjectivesEqual(const TArray<FRA4HUDObjective>& A, const TArray<FRA4HUDObjective>& B)
+{
+    if (A.Num() != B.Num())
+    {
+        return false;
+    }
+    for (int32 Index = 0; Index < A.Num(); ++Index)
+    {
+        const FRA4HUDObjective& Left = A[Index];
+        const FRA4HUDObjective& Right = B[Index];
+        if (!Left.Label.EqualTo(Right.Label) || Left.bCompleted != Right.bCompleted ||
+            Left.bOptional != Right.bOptional || Left.Current != Right.Current || Left.Target != Right.Target)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool AlertsEqual(const TArray<FRA4Alert>& A, const TArray<FRA4Alert>& B)
+{
+    if (A.Num() != B.Num())
+    {
+        return false;
+    }
+    for (int32 Index = 0; Index < A.Num(); ++Index)
+    {
+        const FRA4Alert& Left = A[Index];
+        const FRA4Alert& Right = B[Index];
+        if (!Left.Message.EqualTo(Right.Message) || Left.Severity != Right.Severity ||
+            Left.RepeatCount != Right.RepeatCount || Left.bHasLocation != Right.bHasLocation ||
+            Left.WorldLocation != Right.WorldLocation)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+} // namespace
+
 URA4HUDViewModel::URA4HUDViewModel()
 {
     Credits = 0;
+    CreditsDelta = 0;
+    MatchElapsedSeconds = 0;
     PowerProduced = 0;
     PowerConsumed = 0;
     PowerRatio = 1.0f;
@@ -15,6 +117,113 @@ URA4HUDViewModel::URA4HUDViewModel()
     SelectionHealthRatio = 0.0f;
     bPrimaryOwned = false;
     SelectionKind = ERA4SelectionKind::Empty;
+    HarvesterCargo = 0;
+    HarvesterCapacity = 0;
+}
+
+ERA4HUDChangeFlags URA4HUDViewModel::ApplySnapshot(const FRA4HUDSnapshotView& Snapshot)
+{
+    ERA4HUDChangeFlags Changes = ERA4HUDChangeFlags::None;
+
+    if (Credits != Snapshot.Credits || CreditsDelta != Snapshot.CreditsDelta ||
+        PowerProduced != Snapshot.PowerProduced || PowerConsumed != Snapshot.PowerConsumed ||
+        bPowerShortage != Snapshot.bPowerShortage || CommandLimitUsed != Snapshot.SupplyUsed ||
+        CommandLimitMax != Snapshot.SupplyCap || MatchElapsedSeconds != Snapshot.MatchElapsedSeconds)
+    {
+        Changes |= ERA4HUDChangeFlags::Resources;
+    }
+
+    if (SelectionKind != Snapshot.SelectionKind || SelectionCount != Snapshot.SelectionCount ||
+        !FMath::IsNearlyEqual(SelectionHealthRatio, Snapshot.SelectionHealthRatio) ||
+        PrimaryEntityName != Snapshot.PrimaryEntityName || bPrimaryOwned != Snapshot.bPrimaryOwned ||
+        HarvesterCargo != Snapshot.HarvesterCargo || HarvesterCapacity != Snapshot.HarvesterCapacity ||
+        !SelectionGroupsEqual(SelectionGroups, Snapshot.SelectionGroups))
+    {
+        Changes |= ERA4HUDChangeFlags::Selection;
+    }
+
+    if (!ProductionEntriesEqual(DetailedProductionQueue, Snapshot.ProductionQueue) ||
+        !BuildOptionsEqual(BuildOptions, Snapshot.BuildOptions))
+    {
+        Changes |= ERA4HUDChangeFlags::Production;
+    }
+    if (!ObjectivesEqual(Objectives, Snapshot.Objectives))
+    {
+        Changes |= ERA4HUDChangeFlags::Objectives;
+    }
+    if (!AlertsEqual(Alerts, Snapshot.Alerts))
+    {
+        Changes |= ERA4HUDChangeFlags::Alerts;
+    }
+
+    if (EnumHasAnyFlags(Changes, ERA4HUDChangeFlags::Resources))
+    {
+        SetCredits(Snapshot.Credits);
+        if (CreditsDelta != Snapshot.CreditsDelta)
+        {
+            CreditsDelta = Snapshot.CreditsDelta;
+            UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(CreditsDelta);
+        }
+        SetPower(Snapshot.PowerProduced, Snapshot.PowerConsumed);
+        SetPowerShortage(Snapshot.bPowerShortage);
+        SetCommandLimit(Snapshot.SupplyUsed, Snapshot.SupplyCap);
+        if (MatchElapsedSeconds != Snapshot.MatchElapsedSeconds)
+        {
+            MatchElapsedSeconds = Snapshot.MatchElapsedSeconds;
+            UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(MatchElapsedSeconds);
+        }
+    }
+
+    if (EnumHasAnyFlags(Changes, ERA4HUDChangeFlags::Selection))
+    {
+        SetSelectionKind(Snapshot.SelectionKind);
+        SetSelectionState(
+            Snapshot.SelectionCount, Snapshot.SelectionHealthRatio,
+            Snapshot.PrimaryEntityName, Snapshot.bPrimaryOwned);
+        if (HarvesterCargo != Snapshot.HarvesterCargo)
+        {
+            HarvesterCargo = Snapshot.HarvesterCargo;
+            UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(HarvesterCargo);
+        }
+        if (HarvesterCapacity != Snapshot.HarvesterCapacity)
+        {
+            HarvesterCapacity = Snapshot.HarvesterCapacity;
+            UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(HarvesterCapacity);
+        }
+        SelectionGroups = Snapshot.SelectionGroups;
+    }
+
+    if (EnumHasAnyFlags(Changes, ERA4HUDChangeFlags::Production))
+    {
+        DetailedProductionQueue = Snapshot.ProductionQueue;
+        BuildOptions = Snapshot.BuildOptions;
+        TArray<FRA4ProductionQueueItem> CompactQueue;
+        CompactQueue.Reserve(DetailedProductionQueue.Num());
+        for (const FRA4ProductionEntry& Entry : DetailedProductionQueue)
+        {
+            FRA4ProductionQueueItem Item;
+            Item.DisplayName = Entry.DisplayName;
+            Item.Progress = FMath::Clamp(float(Entry.ProgressPercent) / 100.0f, 0.0f, 1.0f);
+            Item.Quantity = 1;
+            CompactQueue.Add(Item);
+        }
+        SetProductionQueue(CompactQueue);
+    }
+
+    if (EnumHasAnyFlags(Changes, ERA4HUDChangeFlags::Objectives))
+    {
+        Objectives = Snapshot.Objectives;
+    }
+    if (EnumHasAnyFlags(Changes, ERA4HUDChangeFlags::Alerts))
+    {
+        Alerts = Snapshot.Alerts;
+    }
+
+    if (Changes != ERA4HUDChangeFlags::None)
+    {
+        OnHUDChanged.Broadcast(Changes);
+    }
+    return Changes;
 }
 
 void URA4HUDViewModel::SetCredits(int32 InCredits)
@@ -145,7 +354,25 @@ void URA4HUDViewModel::SetSelectionKind(ERA4SelectionKind InKind)
 
 void URA4HUDViewModel::SetProductionQueue(const TArray<FRA4ProductionQueueItem>& InQueue)
 {
+    if (ProductionQueue.Num() == InQueue.Num())
+    {
+        bool bEqual = true;
+        for (int32 Index = 0; Index < InQueue.Num(); ++Index)
+        {
+            if (!ProductionQueue[Index].DisplayName.EqualTo(InQueue[Index].DisplayName) ||
+                ProductionQueue[Index].Cost != InQueue[Index].Cost ||
+                !FMath::IsNearlyEqual(ProductionQueue[Index].Progress, InQueue[Index].Progress) ||
+                ProductionQueue[Index].Quantity != InQueue[Index].Quantity)
+            {
+                bEqual = false;
+                break;
+            }
+        }
+        if (bEqual)
+        {
+            return;
+        }
+    }
     ProductionQueue = InQueue;
     UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(ProductionQueue);
 }
-

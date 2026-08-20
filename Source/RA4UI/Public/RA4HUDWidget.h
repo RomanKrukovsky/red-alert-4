@@ -3,18 +3,95 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "RA4ActivatableWidget.h"
+#include "RA4HUDTypes.h"
+#include "RA4ScreenRootWidget.h"
 #include "RA4HUDWidget.generated.h"
+
+class UButton;
+class UCanvasPanel;
+class UTextBlock;
+class UUniformGridPanel;
+class UVerticalBox;
+class URA4HUDViewModel;
 
 // ---------------------------------------------------------
 // In-Game HUD Screens (C++ logic bindings for Widget Blueprints)
 // ---------------------------------------------------------
 
-/** Base class for the main in-game HUD covering the whole screen. */
-UCLASS(Abstract)
-class RA4UI_API URA4HUDWidget : public URA4ActivatableWidget
+/** Event-driven RTS HUD shell shared by all faction variants. */
+UCLASS(BlueprintType, Blueprintable)
+class RA4UI_API URA4HUDWidget : public URA4ScreenRootWidget
 {
     GENERATED_BODY()
+
+public:
+    URA4HUDWidget(const FObjectInitializer& ObjectInitializer);
+
+    UFUNCTION(BlueprintCallable, Category = "RA4|HUD")
+    void SetHUDViewModel(URA4HUDViewModel* InViewModel);
+
+    UFUNCTION(BlueprintPure, Category = "RA4|HUD")
+    URA4HUDViewModel* GetHUDViewModel() const { return HUDViewModel; }
+
+    UFUNCTION(BlueprintPure, Category = "RA4|HUD|Input")
+    bool IsWorldInputBlockedAtReferencePoint(FVector2D Point) const;
+
+    UFUNCTION(BlueprintPure, Category = "RA4|HUD|Input")
+    int32 GetInteractiveRegionCount() const { return InteractiveRegions.Num(); }
+
+protected:
+    virtual TSharedRef<SWidget> RebuildWidget() override;
+    virtual void NativeConstruct() override;
+    virtual void NativeDestruct() override;
+
+private:
+    void ApplyShowcaseSnapshot();
+    void HandleHUDChanged(ERA4HUDChangeFlags Changes);
+    void RefreshResources();
+    void RefreshSelection();
+    void RefreshProduction();
+    void RefreshObjectives();
+    void RefreshAlerts();
+    void AddInteractiveRegion(FVector2D Position, FVector2D Size);
+
+    UFUNCTION()
+    void CycleProductionTab();
+
+    UFUNCTION()
+    void QueueSelectedProduction();
+
+    UFUNCTION()
+    void IssuePrimaryCommand();
+
+    UPROPERTY(Transient)
+    TObjectPtr<URA4HUDViewModel> HUDViewModel;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UTextBlock> ResourceText;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UTextBlock> SelectionTitleText;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UTextBlock> SelectionDetailText;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UTextBlock> AlertText;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UTextBlock> CommandStatusText;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UVerticalBox> ObjectivesList;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UVerticalBox> ProductionQueueList;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UUniformGridPanel> BuildGrid;
+
+    TArray<FBox2D> InteractiveRegions;
+    int32 ActiveProductionTab = 0;
 };
 
 UCLASS(Abstract)

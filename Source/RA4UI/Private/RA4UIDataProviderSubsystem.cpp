@@ -273,22 +273,11 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
         OnResourcesChanged.Broadcast();
     }
 
-    HUDViewModel->SetCredits(Snapshot.Resources.Credits);
-    HUDViewModel->SetPower(Snapshot.Resources.PowerProduced, Snapshot.Resources.PowerConsumed);
-    HUDViewModel->SetPowerShortage(Snapshot.Resources.bPowerShortage);
-    HUDViewModel->SetCommandLimit(Snapshot.Resources.SupplyUsed, Snapshot.Resources.SupplyCap);
-
     const float PrimaryHealthRatio =
         Snapshot.Selection.PrimaryHealthMax > 0
             ? float(Snapshot.Selection.PrimaryHealthCurrent) / float(Snapshot.Selection.PrimaryHealthMax)
             : 0.0f;
-    HUDViewModel->SetSelectionState(
-        Snapshot.Selection.TotalCount, PrimaryHealthRatio,
-        KeyToText(Snapshot.Selection.PrimaryDisplayNameKey).ToString(),
-        Snapshot.Selection.bPrimaryIsOwned);
-
     SelectionKind = ToBlueprint(Snapshot.Selection.Kind);
-    HUDViewModel->SetSelectionKind(SelectionKind);
 
     // What a selection widget actually displays. Compared before broadcasting, because
     // the delegate is what rebuilds the group rows: a widget that clears and reconstructs
@@ -357,9 +346,6 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
     const TArray<FRA4ProductionEntry> PreviousQueue = ProductionQueue;
     const TArray<FRA4BuildOption> PreviousOptions = BuildOptions;
 
-    TArray<FRA4ProductionQueueItem> VMProductionQueue;
-    VMProductionQueue.Reserve(int32(Snapshot.Production.Queue.size()));
-
     ProductionQueue.Reset(int32(Snapshot.Production.Queue.size()));
     for (const RP::QueueEntry& Entry : Snapshot.Production.Queue)
     {
@@ -373,15 +359,7 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
         Out.SlotIndex = Entry.SlotIndex;
         ProductionQueue.Add(Out);
 
-        FRA4ProductionQueueItem VMItem;
-        VMItem.DisplayName = Out.DisplayName;
-        VMItem.Cost = 0;
-        VMItem.Progress = FMath::Clamp(float(Entry.ProgressPercent) / 100.0f, 0.0f, 1.0f);
-        VMItem.Quantity = 1;
-        VMProductionQueue.Add(VMItem);
     }
-
-    HUDViewModel->SetProductionQueue(VMProductionQueue);
 
     // --- build sidebar --------------------------------------------------------
     BuildOptions.Reset(int32(Snapshot.Production.Options.size()));
@@ -469,6 +447,26 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
     MatchPhase = ToBlueprint(Snapshot.Match.Phase);
     WinningPlayer = Snapshot.Match.Winner == RA4::kInvalidPlayer ? -1 : int32(Snapshot.Match.Winner);
     bLocalPlayerDefeated = Snapshot.Match.bLocalPlayerDefeated;
+
+    FRA4HUDSnapshotView ViewSnapshot;
+    ViewSnapshot.Credits = Snapshot.Resources.Credits;
+    ViewSnapshot.CreditsDelta = Snapshot.Resources.CreditsDelta;
+    ViewSnapshot.PowerProduced = Snapshot.Resources.PowerProduced;
+    ViewSnapshot.PowerConsumed = Snapshot.Resources.PowerConsumed;
+    ViewSnapshot.bPowerShortage = Snapshot.Resources.bPowerShortage;
+    ViewSnapshot.SupplyUsed = Snapshot.Resources.SupplyUsed;
+    ViewSnapshot.SupplyCap = Snapshot.Resources.SupplyCap;
+    ViewSnapshot.MatchElapsedSeconds = Snapshot.Match.ElapsedSeconds;
+    ViewSnapshot.SelectionKind = SelectionKind;
+    ViewSnapshot.SelectionCount = Snapshot.Selection.TotalCount;
+    ViewSnapshot.SelectionHealthRatio = PrimaryHealthRatio;
+    ViewSnapshot.PrimaryEntityName = KeyToText(Snapshot.Selection.PrimaryDisplayNameKey).ToString();
+    ViewSnapshot.bPrimaryOwned = Snapshot.Selection.bPrimaryIsOwned;
+    ViewSnapshot.SelectionGroups = SelectionGroups;
+    ViewSnapshot.ProductionQueue = ProductionQueue;
+    ViewSnapshot.BuildOptions = BuildOptions;
+    ViewSnapshot.Alerts = Alerts;
+    HUDViewModel->ApplySnapshot(ViewSnapshot);
 
     // Fired exactly once: the victory screen must not be pushed every tick after
     // the match ends.

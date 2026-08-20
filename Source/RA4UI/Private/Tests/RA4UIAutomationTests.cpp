@@ -5,6 +5,8 @@
 #include "RA4AngularPanelWidget.h"
 #include "RA4CampaignScreenWidget.h"
 #include "RA4CampaignViewModel.h"
+#include "RA4HUDViewModel.h"
+#include "RA4HUDWidget.h"
 #include "RA4MainMenuScreenWidget.h"
 #include "RA4MainMenuViewModel.h"
 #include "RA4LobbyScreenWidget.h"
@@ -333,6 +335,84 @@ bool FRA4LobbyScreenCompositionTest::RunTest(const FString& Parameters)
     TestNotNull(TEXT("Player list"), Lobby->GetPlayerList());
     TestEqual(TEXT("Player list item count"), Lobby->GetPlayerList()->GetNumItems(), 8);
     TestNotNull(TEXT("Start button"), Lobby->GetStartButton());
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FRA4HUDViewModelProjectionTest,
+    "RA4.UI.HUD.ViewModel.AppliesSnapshotsOnlyWhenSectionsChange",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRA4HUDViewModelProjectionTest::RunTest(const FString& Parameters)
+{
+    URA4HUDViewModel* ViewModel = NewObject<URA4HUDViewModel>();
+    FRA4HUDSnapshotView Snapshot;
+    Snapshot.Credits = 23450;
+    Snapshot.CreditsDelta = 850;
+    Snapshot.PowerProduced = 17820;
+    Snapshot.PowerConsumed = 9680;
+    Snapshot.MatchElapsedSeconds = 754;
+    Snapshot.SelectionKind = ERA4SelectionKind::SingleUnit;
+    Snapshot.SelectionCount = 1;
+    Snapshot.PrimaryEntityName = TEXT("Рудный комбайн «Богатырь»");
+    Snapshot.SelectionHealthRatio = 0.72f;
+    Snapshot.HarvesterCargo = 820;
+    Snapshot.HarvesterCapacity = 1400;
+
+    FRA4ProductionEntry QueueEntry;
+    QueueEntry.ContentId = 44;
+    QueueEntry.DisplayName = FText::FromString(TEXT("Танк Т-34"));
+    QueueEntry.ProgressPercent = 42;
+    Snapshot.ProductionQueue.Add(QueueEntry);
+
+    FRA4BuildOption BlockedOption;
+    BlockedOption.ContentId = 91;
+    BlockedOption.DisplayName = FText::FromString(TEXT("Ракетная шахта"));
+    BlockedOption.BlockReason = ERA4BuildBlockReason::MissingPrerequisite;
+    Snapshot.BuildOptions.Add(BlockedOption);
+
+    FRA4HUDObjective Objective;
+    Objective.Label = FText::FromString(TEXT("Уничтожить базу противника"));
+    Snapshot.Objectives.Add(Objective);
+
+    FRA4Alert Alert;
+    Alert.Message = FText::FromString(TEXT("Наша база атакована"));
+    Alert.Severity = ERA4AlertSeverity::Critical;
+    Snapshot.Alerts.Add(Alert);
+
+    const ERA4HUDChangeFlags FirstChanges = ViewModel->ApplySnapshot(Snapshot);
+    TestTrue(TEXT("First snapshot updates resources"), EnumHasAnyFlags(FirstChanges, ERA4HUDChangeFlags::Resources));
+    TestTrue(TEXT("First snapshot updates selection"), EnumHasAnyFlags(FirstChanges, ERA4HUDChangeFlags::Selection));
+    TestTrue(TEXT("First snapshot updates production"), EnumHasAnyFlags(FirstChanges, ERA4HUDChangeFlags::Production));
+    TestTrue(TEXT("First snapshot updates objectives"), EnumHasAnyFlags(FirstChanges, ERA4HUDChangeFlags::Objectives));
+    TestTrue(TEXT("First snapshot updates alerts"), EnumHasAnyFlags(FirstChanges, ERA4HUDChangeFlags::Alerts));
+    TestEqual(TEXT("Cargo projected"), ViewModel->GetHarvesterCargo(), 820);
+    TestEqual(TEXT("Blocked reason projected"), ViewModel->GetBuildOptions()[0].BlockReason, ERA4BuildBlockReason::MissingPrerequisite);
+
+    TestEqual(TEXT("Identical snapshot is silent"), ViewModel->ApplySnapshot(Snapshot), ERA4HUDChangeFlags::None);
+    Snapshot.Credits += 100;
+    TestEqual(TEXT("Credit-only change stays local"), ViewModel->ApplySnapshot(Snapshot), ERA4HUDChangeFlags::Resources);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FRA4HUDShellInputRegionsTest,
+    "RA4.UI.HUD.ViewModel.InteractivePanelsBlockWorldInput",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRA4HUDShellInputRegionsTest::RunTest(const FString& Parameters)
+{
+    URA4HUDWidget* HUD = NewObject<URA4HUDWidget>();
+    TestTrue(TEXT("HUD initializes"), HUD->Initialize());
+    HUD->TakeWidget();
+
+    TestTrue(TEXT("Objectives panel blocks input"), HUD->IsWorldInputBlockedAtReferencePoint(FVector2D(120.0f, 150.0f)));
+    TestTrue(TEXT("Minimap blocks input"), HUD->IsWorldInputBlockedAtReferencePoint(FVector2D(1720.0f, 220.0f)));
+    TestTrue(TEXT("Production blocks input"), HUD->IsWorldInputBlockedAtReferencePoint(FVector2D(1760.0f, 650.0f)));
+    TestTrue(TEXT("Selection panel blocks input"), HUD->IsWorldInputBlockedAtReferencePoint(FVector2D(180.0f, 950.0f)));
+    TestTrue(TEXT("Command grid blocks input"), HUD->IsWorldInputBlockedAtReferencePoint(FVector2D(1510.0f, 960.0f)));
+    TestFalse(TEXT("World viewport passes input"), HUD->IsWorldInputBlockedAtReferencePoint(FVector2D(900.0f, 420.0f)));
+    TestEqual(TEXT("All HUD regions exist"), HUD->GetInteractiveRegionCount(), 6);
     return true;
 }
 

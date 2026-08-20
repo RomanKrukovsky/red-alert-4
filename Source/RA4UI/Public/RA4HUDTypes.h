@@ -179,3 +179,103 @@ struct FRA4Alert
     UPROPERTY(BlueprintReadOnly, Category = "RA4|Alerts")
     bool bHasLocation = false;
 };
+
+USTRUCT(BlueprintType)
+struct FRA4HUDObjective
+{
+    GENERATED_BODY()
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|Objectives")
+    FText Label;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|Objectives")
+    bool bCompleted = false;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|Objectives")
+    bool bOptional = false;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|Objectives")
+    int32 Current = 0;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|Objectives")
+    int32 Target = 0;
+};
+
+UENUM(BlueprintType, meta = (Bitflags))
+enum class ERA4HUDChangeFlags : uint8
+{
+    None = 0,
+    Resources = 1 << 0,
+    Selection = 1 << 1,
+    Production = 1 << 2,
+    Objectives = 1 << 3,
+    Alerts = 1 << 4,
+};
+ENUM_CLASS_FLAGS(ERA4HUDChangeFlags)
+
+/** Immutable, Blueprint-safe HUD projection consumed by the view model. */
+USTRUCT(BlueprintType)
+struct FRA4HUDSnapshotView
+{
+    GENERATED_BODY()
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|HUD")
+    int32 Credits = 0;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|HUD")
+    int32 CreditsDelta = 0;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|HUD")
+    int32 PowerProduced = 0;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|HUD")
+    int32 PowerConsumed = 0;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|HUD")
+    bool bPowerShortage = false;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|HUD")
+    int32 SupplyUsed = 0;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|HUD")
+    int32 SupplyCap = 0;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|HUD")
+    int32 MatchElapsedSeconds = 0;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|HUD")
+    ERA4SelectionKind SelectionKind = ERA4SelectionKind::Empty;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|HUD")
+    int32 SelectionCount = 0;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|HUD")
+    float SelectionHealthRatio = 0.0f;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|HUD")
+    FString PrimaryEntityName;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|HUD")
+    bool bPrimaryOwned = false;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|HUD")
+    int32 HarvesterCargo = 0;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|HUD")
+    int32 HarvesterCapacity = 0;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|HUD")
+    TArray<FRA4SelectionGroup> SelectionGroups;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|HUD")
+    TArray<FRA4ProductionEntry> ProductionQueue;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|HUD")
+    TArray<FRA4BuildOption> BuildOptions;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|HUD")
+    TArray<FRA4HUDObjective> Objectives;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|HUD")
+    TArray<FRA4Alert> Alerts;
+};

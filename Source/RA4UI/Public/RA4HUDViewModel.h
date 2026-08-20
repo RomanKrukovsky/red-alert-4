@@ -16,12 +16,25 @@ class RA4UI_API URA4HUDViewModel : public URA4ViewModelBase
 public:
     URA4HUDViewModel();
 
+    /** Applies an immutable presentation snapshot and returns only changed sections. */
+    UFUNCTION(BlueprintCallable, Category = "ViewModel|HUD")
+    ERA4HUDChangeFlags ApplySnapshot(const FRA4HUDSnapshotView& Snapshot);
+
+    DECLARE_MULTICAST_DELEGATE_OneParam(FOnHUDChanged, ERA4HUDChangeFlags);
+    FOnHUDChanged OnHUDChanged;
+
     // --- Economy & Power ---
     UFUNCTION(BlueprintCallable, Category = "ViewModel|Economy")
     void SetCredits(int32 InCredits);
     
     UFUNCTION(BlueprintPure, Category = "ViewModel|Economy")
     int32 GetCredits() const;
+
+    UFUNCTION(BlueprintPure, Category = "ViewModel|Economy")
+    int32 GetCreditsDelta() const { return CreditsDelta; }
+
+    UFUNCTION(BlueprintPure, Category = "ViewModel|Economy")
+    int32 GetMatchElapsedSeconds() const { return MatchElapsedSeconds; }
 
     UFUNCTION(BlueprintCallable, Category = "ViewModel|Economy")
     void SetPower(int32 InPowerProvided, int32 InPowerDrained);
@@ -85,6 +98,15 @@ public:
     UFUNCTION(BlueprintPure, Category = "ViewModel|Selection")
     ERA4SelectionKind GetSelectionKind() const { return SelectionKind; }
 
+    UFUNCTION(BlueprintPure, Category = "ViewModel|Selection")
+    int32 GetHarvesterCargo() const { return HarvesterCargo; }
+
+    UFUNCTION(BlueprintPure, Category = "ViewModel|Selection")
+    int32 GetHarvesterCapacity() const { return HarvesterCapacity; }
+
+    UFUNCTION(BlueprintPure, Category = "ViewModel|Selection")
+    const TArray<FRA4SelectionGroup>& GetSelectionGroups() const { return SelectionGroups; }
+
     // --- Production Queue ---
     UFUNCTION(BlueprintCallable, Category = "ViewModel|Production")
     void SetProductionQueue(const TArray<FRA4ProductionQueueItem>& InQueue);
@@ -92,9 +114,27 @@ public:
     UFUNCTION(BlueprintPure, Category = "ViewModel|Production")
     const TArray<FRA4ProductionQueueItem>& GetProductionQueue() const { return ProductionQueue; }
 
+    UFUNCTION(BlueprintPure, Category = "ViewModel|Production")
+    const TArray<FRA4ProductionEntry>& GetDetailedProductionQueue() const { return DetailedProductionQueue; }
+
+    UFUNCTION(BlueprintPure, Category = "ViewModel|Production")
+    const TArray<FRA4BuildOption>& GetBuildOptions() const { return BuildOptions; }
+
+    UFUNCTION(BlueprintPure, Category = "ViewModel|Objectives")
+    const TArray<FRA4HUDObjective>& GetObjectives() const { return Objectives; }
+
+    UFUNCTION(BlueprintPure, Category = "ViewModel|Alerts")
+    const TArray<FRA4Alert>& GetAlerts() const { return Alerts; }
+
 private:
     UPROPERTY(FieldNotify, Setter, Getter)
     int32 Credits;
+
+    UPROPERTY(FieldNotify, Getter = GetCreditsDelta)
+    int32 CreditsDelta;
+
+    UPROPERTY(FieldNotify, Getter = GetMatchElapsedSeconds)
+    int32 MatchElapsedSeconds;
 
     UPROPERTY(FieldNotify, Setter = SetPowerProduced, Getter = GetPowerProduced)
     int32 PowerProduced;
@@ -129,6 +169,27 @@ private:
     UPROPERTY(FieldNotify, Setter = SetSelectionKind, Getter = GetSelectionKind)
     ERA4SelectionKind SelectionKind;
 
+    UPROPERTY(FieldNotify, Getter = GetHarvesterCargo)
+    int32 HarvesterCargo;
+
+    UPROPERTY(FieldNotify, Getter = GetHarvesterCapacity)
+    int32 HarvesterCapacity;
+
+    UPROPERTY()
+    TArray<FRA4SelectionGroup> SelectionGroups;
+
     UPROPERTY(FieldNotify, Setter = SetProductionQueue, Getter = GetProductionQueue)
     TArray<FRA4ProductionQueueItem> ProductionQueue;
+
+    UPROPERTY()
+    TArray<FRA4ProductionEntry> DetailedProductionQueue;
+
+    UPROPERTY()
+    TArray<FRA4BuildOption> BuildOptions;
+
+    UPROPERTY()
+    TArray<FRA4HUDObjective> Objectives;
+
+    UPROPERTY()
+    TArray<FRA4Alert> Alerts;
 };
