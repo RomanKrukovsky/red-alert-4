@@ -675,8 +675,12 @@ void ARA4PlayerController::UpdateHoverTooltip(const SimWorld& World)
     }
 
     HoverTooltip->SetContent(Title, Subtitle);
-    // Offset so the card sits clear of the pointer instead of under it.
-    HoverTooltip->SetPositionInViewport(FVector2D(MouseX + 18.0f, MouseY + 18.0f), /*bRemoveDPIScale*/ false);
+    const FVector2D NewPos(MouseX + 18.0f, MouseY + 18.0f);
+    if (!bTooltipVisible || !HoverTooltipPosition.Equals(NewPos, 0.5f))
+    {
+        HoverTooltipPosition = NewPos;
+        HoverTooltip->SetPositionInViewport(NewPos, /*bRemoveDPIScale*/ false);
+    }
     if (!bTooltipVisible)
     {
         HoverTooltip->SetVisibility(ESlateVisibility::HitTestInvisible);

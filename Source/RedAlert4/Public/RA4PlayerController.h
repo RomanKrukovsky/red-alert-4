@@ -346,6 +346,7 @@ private:
     RA4::EntityId HoveredEntity;
     double HoverStartedSeconds = 0.0;
     bool bTooltipVisible = false;
+    FVector2D HoverTooltipPosition = FVector2D(-1.0f, -1.0f);
 
     UPROPERTY(Transient)
     TObjectPtr<class ARA4EntityActor> GhostPlacementActor;
