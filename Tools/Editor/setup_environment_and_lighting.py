@@ -143,6 +143,36 @@ def run():
     pp_actor.set_actor_label("RA4_PostProcessVolume")
     safe_set_prop(pp_actor, "unbound", True)
     safe_set_prop(pp_actor, "priority", 1.0)
+
+    # Exposure, pinned. The sun above is 75,000 lux -- a physical daylight value,
+    # correct for a SkyAtmosphere sun. Without an exposure setting to match it the
+    # frame is pure white: everything clamps at the top of the range and the map
+    # is invisible. That is not a subtle grading problem, it is the whole screen.
+    #
+    # Fixed rather than automatic, and that is a gameplay decision, not a taste
+    # one. Fog of war darkens large parts of the frame on purpose (ADR-0030), and
+    # auto-exposure exists precisely to cancel that out -- it would brighten the
+    # unexplored ground back up as the camera panned over it, handing the player a
+    # readable picture of terrain the rules say they cannot see. Min == max means
+    # the exposure never moves, so fog stays as dark as the fog decides.
+    #
+    # EV100 14 is the standard outdoor-daylight stop for this sun intensity.
+    try:
+        pp = pp_actor.get_editor_property("settings")
+        pp.set_editor_property("auto_exposure_method", unreal.AutoExposureMethod.AEM_MANUAL)
+        pp.set_editor_property("auto_exposure_bias", 14.0)
+        pp.set_editor_property("auto_exposure_min_brightness", 14.0)
+        pp.set_editor_property("auto_exposure_max_brightness", 14.0)
+        for flag in ("override_auto_exposure_method",
+                     "override_auto_exposure_bias",
+                     "override_auto_exposure_min_brightness",
+                     "override_auto_exposure_max_brightness"):
+            pp.set_editor_property(flag, True)
+        pp_actor.set_editor_property("settings", pp)
+        log("Pinned exposure: manual, EV100 14, min == max so fog cannot be exposed away")
+    except Exception as exc:
+        log(f"EXPOSURE NOT SET -- the level will render white: {exc}")
+
     log("Created RA4_PostProcessVolume")
 
     # 9. Verify Landscape Material
