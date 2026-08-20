@@ -7,6 +7,8 @@
 #include "RA4CampaignViewModel.h"
 #include "RA4MainMenuScreenWidget.h"
 #include "RA4MainMenuViewModel.h"
+#include "RA4LobbyScreenWidget.h"
+#include "RA4LobbyViewModel.h"
 #include "RA4MissionFlowWidgets.h"
 #include "RA4ScreenRootWidget.h"
 #include "RA4SplashScreenWidget.h"
@@ -276,6 +278,61 @@ bool FRA4MissionFlowCompositionTest::RunTest(const FString& Parameters)
     URA4LoadingScreenWidget* Loading = NewObject<URA4LoadingScreenWidget>();
     Loading->SetLoadingProgress(2.0f);
     TestEqual(TEXT("Loading progress clamps"), Loading->GetLoadingProgress(), 1.0f);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FRA4LobbyViewModelValidationTest,
+    "RA4.UI.Screens.Lobby.ValidatesPlayersAndHostStart",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRA4LobbyViewModelValidationTest::RunTest(const FString& Parameters)
+{
+    URA4LobbyViewModel* ViewModel = NewObject<URA4LobbyViewModel>();
+
+    TestEqual(TEXT("Eight lobby slots"), ViewModel->GetPlayers().Num(), 8);
+    TestTrue(TEXT("Host can start ready lobby"), ViewModel->CanStartMatch());
+    TestFalse(TEXT("Duplicate color is rejected"), ViewModel->ChangeColor(TEXT("allied_command"), 0));
+    TestFalse(TEXT("Invalid team is rejected"), ViewModel->ChangeTeam(TEXT("allied_command"), 0));
+    TestTrue(TEXT("Player can become not ready"), ViewModel->SetReady(TEXT("allied_command"), false));
+    TestFalse(TEXT("Not-ready player blocks start"), ViewModel->CanStartMatch());
+    ViewModel->SetLocalHost(false);
+    TestFalse(TEXT("Non-host cannot start"), ViewModel->StartMatch());
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FRA4LobbyViewModelChatTest,
+    "RA4.UI.Screens.Lobby.ChatAndDisconnectState",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRA4LobbyViewModelChatTest::RunTest(const FString& Parameters)
+{
+    URA4LobbyViewModel* ViewModel = NewObject<URA4LobbyViewModel>();
+
+    TestFalse(TEXT("Empty chat rejected"), ViewModel->SendChat(TEXT("   ")));
+    TestTrue(TEXT("Chat accepted"), ViewModel->SendChat(TEXT("Готов к бою")));
+    TestEqual(TEXT("Chat appended"), ViewModel->GetChatMessages().Num(), 8);
+    ViewModel->HandleDisconnected();
+    TestFalse(TEXT("Disconnected lobby cannot start"), ViewModel->CanStartMatch());
+    TestTrue(TEXT("Disconnect is exposed"), ViewModel->IsDisconnected());
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FRA4LobbyScreenCompositionTest,
+    "RA4.UI.Screens.Lobby.UsesVirtualizedPlayerList",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRA4LobbyScreenCompositionTest::RunTest(const FString& Parameters)
+{
+    URA4LobbyScreenWidget* Lobby = NewObject<URA4LobbyScreenWidget>();
+    TestTrue(TEXT("Lobby initializes"), Lobby->Initialize());
+    Lobby->TakeWidget();
+
+    TestNotNull(TEXT("Player list"), Lobby->GetPlayerList());
+    TestEqual(TEXT("Player list item count"), Lobby->GetPlayerList()->GetNumItems(), 8);
+    TestNotNull(TEXT("Start button"), Lobby->GetStartButton());
     return true;
 }
 

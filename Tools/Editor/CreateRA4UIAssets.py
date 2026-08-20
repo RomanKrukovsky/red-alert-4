@@ -11,6 +11,8 @@ MISSION_MAP_CLASS = unreal.load_class(None, "/Script/RA4UI.RA4MissionMapScreenWi
 BRIEFING_CLASS = unreal.load_class(None, "/Script/RA4UI.RA4BriefingScreenWidget")
 VIDEO_COMMS_CLASS = unreal.load_class(None, "/Script/RA4UI.RA4VideoCommsScreenWidget")
 LOADING_CLASS = unreal.load_class(None, "/Script/RA4UI.RA4LoadingScreenWidget")
+LOBBY_CLASS = unreal.load_class(None, "/Script/RA4UI.RA4LobbyScreenWidget")
+LOBBY_ROW_CLASS = unreal.load_class(None, "/Script/RA4UI.RA4LobbyPlayerRowWidget")
 
 
 def create_widget_blueprint(asset_name, parent_class, screen_index=None, default_values=None):
@@ -59,6 +61,8 @@ def main():
         BRIEFING_CLASS,
         VIDEO_COMMS_CLASS,
         LOADING_CLASS,
+        LOBBY_CLASS,
+        LOBBY_ROW_CLASS,
     ]
     if not all(required_classes):
         raise RuntimeError("Required RA4 UI classes were not loaded; compile the RA4UI module first.")
@@ -69,7 +73,6 @@ def main():
         ("WBP_RA4_HUD_Allies", 14),
         ("WBP_RA4_HUD_Eastern", 15),
         ("WBP_RA4_HUD_Chrono", 16),
-        ("WBP_RA4_MultiplayerLobby", 3),
         ("WBP_RA4_Pause", 17),
         ("WBP_RA4_Victory", 18),
         ("WBP_RA4_Encyclopedia", 19),
@@ -128,6 +131,8 @@ def main():
             LOADING_CLASS,
             default_values={"loading_variant": unreal.RA4UIScreenVariant.LOADING_BRIEFING},
         ),
+        create_widget_blueprint("WBP_RA4_MultiplayerLobby", LOBBY_CLASS),
+        create_widget_blueprint("WBP_RA4_LobbyPlayerRow", LOBBY_ROW_CLASS),
     ]
     created.extend(
         create_widget_blueprint(name, SHOWCASE_CLASS, screen_index)

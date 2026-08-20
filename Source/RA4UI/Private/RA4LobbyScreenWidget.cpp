@@ -1,0 +1,469 @@
+// Copyright (c) Red Alert 4 project.
+
+#include "RA4LobbyScreenWidget.h"
+
+#include "Blueprint/WidgetTree.h"
+#include "Brushes/SlateColorBrush.h"
+#include "Components/Border.h"
+#include "Components/Button.h"
+#include "Components/CanvasPanel.h"
+#include "Components/CanvasPanelSlot.h"
+#include "Components/EditableTextBox.h"
+#include "Components/HorizontalBox.h"
+#include "Components/HorizontalBoxSlot.h"
+#include "Components/Image.h"
+#include "Components/Overlay.h"
+#include "Components/OverlaySlot.h"
+#include "Components/ScrollBox.h"
+#include "Components/ScrollBoxSlot.h"
+#include "Components/SizeBox.h"
+#include "Components/TextBlock.h"
+#include "Components/VerticalBox.h"
+#include "Components/VerticalBoxSlot.h"
+#include "Engine/Texture2D.h"
+#include "RA4AngularPanelWidget.h"
+#include "RA4MainMenuScreenWidget.h"
+
+#define LOCTEXT_NAMESPACE "RA4LobbyScreenWidget"
+
+namespace
+{
+constexpr FLinearColor LobbyRed(0.92f, 0.035f, 0.04f, 1.0f);
+constexpr FLinearColor LobbyText(0.86f, 0.82f, 0.78f, 1.0f);
+constexpr FLinearColor LobbyMuted(0.54f, 0.52f, 0.50f, 1.0f);
+constexpr FLinearColor LobbyPanel(0.008f, 0.008f, 0.011f, 0.95f);
+constexpr FLinearColor LobbyGreen(0.38f, 0.92f, 0.25f, 1.0f);
+
+void PlaceLobbyWidget(
+    UCanvasPanel* Canvas,
+    UWidget* Widget,
+    const FVector2D Position,
+    const FVector2D Size,
+    const int32 ZOrder = 0)
+{
+    UCanvasPanelSlot* Slot = Canvas->AddChildToCanvas(Widget);
+    Slot->SetPosition(Position);
+    Slot->SetSize(Size);
+    Slot->SetZOrder(ZOrder);
+}
+
+UTextBlock* MakeLobbyText(
+    UWidgetTree* Tree,
+    const FText& Text,
+    const int32 Size,
+    const FLinearColor& Color,
+    const FName Name,
+    const bool bBold = true)
+{
+    UTextBlock* Label = Tree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), Name);
+    Label->SetText(Text);
+    Label->SetColorAndOpacity(FSlateColor(Color));
+    Label->SetAutoWrapText(true);
+    const TCHAR* FontPath = bBold
+        ? TEXT("/Game/RA4UI/Fonts/RA4_RobotoCondensedSemiBold_Font.RA4_RobotoCondensedSemiBold_Font")
+        : TEXT("/Game/RA4UI/Fonts/RA4_RobotoCondensedRegular_Font.RA4_RobotoCondensedRegular_Font");
+    if (UObject* Font = LoadObject<UObject>(nullptr, FontPath))
+    {
+        FSlateFontInfo FontInfo(Font, Size);
+        FontInfo.LetterSpacing = bBold ? 34 : 10;
+        Label->SetFont(FontInfo);
+    }
+    return Label;
+}
+
+URA4AngularPanelWidget* MakeLobbyPanel(
+    UWidgetTree* Tree,
+    UWidget* Content,
+    const FName Name,
+    const ERA4PanelRole Role = ERA4PanelRole::Standard)
+{
+    URA4AngularPanelWidget* Panel = Tree->ConstructWidget<URA4AngularPanelWidget>(
+        URA4AngularPanelWidget::StaticClass(), Name);
+    Panel->SetPanelRole(Role);
+    Panel->SetBrushColor(LobbyPanel);
+    Panel->SetContent(Content);
+    return Panel;
+}
+
+FButtonStyle MakeLobbyButtonStyle(const bool bPrimary = false)
+{
+    FButtonStyle Style;
+    Style.SetNormal(FSlateColorBrush(bPrimary
+        ? FLinearColor(0.28f, 0.012f, 0.018f, 0.98f)
+        : FLinearColor(0.025f, 0.022f, 0.024f, 0.96f)));
+    Style.SetHovered(FSlateColorBrush(FLinearColor(0.48f, 0.018f, 0.026f, 1.0f)));
+    Style.SetPressed(FSlateColorBrush(LobbyRed));
+    Style.SetDisabled(FSlateColorBrush(FLinearColor(0.02f, 0.02f, 0.022f, 0.45f)));
+    return Style;
+}
+
+FText GetFactionName(const ERA4FactionTheme Faction)
+{
+    switch (Faction)
+    {
+    case ERA4FactionTheme::USSR:
+        return LOCTEXT("FactionUSSR", "★  СССР");
+    case ERA4FactionTheme::Allies:
+        return LOCTEXT("FactionAllies", "◆  АЛЬЯНС");
+    case ERA4FactionTheme::EasternCoalition:
+        return LOCTEXT("FactionEastern", "◈  ВОСТОЧНАЯ КОАЛИЦИЯ");
+    case ERA4FactionTheme::Chronolegion:
+        return LOCTEXT("FactionChrono", "△  ХРОНОЛЕГИОН");
+    default:
+        checkNoEntry();
+        return FText::GetEmpty();
+    }
+}
+
+FLinearColor GetPlayerColor(const int32 ColorIndex)
+{
+    const FLinearColor Colors[] = {
+        FLinearColor(0.90f, 0.08f, 0.08f, 1.0f),
+        FLinearColor(0.12f, 0.35f, 0.86f, 1.0f),
+        FLinearColor(0.30f, 0.68f, 0.16f, 1.0f),
+        FLinearColor(0.56f, 0.16f, 0.78f, 1.0f),
+        FLinearColor(0.84f, 0.20f, 0.08f, 1.0f),
+        FLinearColor(0.24f, 0.64f, 0.78f, 1.0f),
+        FLinearColor(0.86f, 0.66f, 0.10f, 1.0f),
+        FLinearColor(0.80f, 0.20f, 0.52f, 1.0f)
+    };
+    return Colors[FMath::Clamp(ColorIndex, 0, UE_ARRAY_COUNT(Colors) - 1)];
+}
+} // namespace
+
+TSharedRef<SWidget> URA4LobbyPlayerRowWidget::RebuildWidget()
+{
+    if (WidgetTree)
+    {
+        UBorder* Background = WidgetTree->ConstructWidget<UBorder>(
+            UBorder::StaticClass(), TEXT("LobbyPlayerRowBackground"));
+        Background->SetBrushColor(FLinearColor(0.018f, 0.016f, 0.018f, 0.96f));
+        Background->SetPadding(FMargin(8.0f, 6.0f));
+        WidgetTree->RootWidget = Background;
+
+        UHorizontalBox* Row = WidgetTree->ConstructWidget<UHorizontalBox>(
+            UHorizontalBox::StaticClass(), TEXT("LobbyPlayerRow"));
+        Background->SetContent(Row);
+
+        const auto AddColumn = [this, Row](
+            TObjectPtr<UTextBlock>& Target,
+            const float Fill,
+            const FName Name)
+        {
+            Target = MakeLobbyText(WidgetTree, FText::GetEmpty(), 15, LobbyText, Name, false);
+            UHorizontalBoxSlot* Slot = Row->AddChildToHorizontalBox(Target.Get());
+            Slot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            Slot->SetPadding(FMargin(4.0f));
+            Slot->SetHorizontalAlignment(HAlign_Left);
+            Target->SetMinDesiredWidth(Fill);
+        };
+
+        AddColumn(IndexText, 34.0f, TEXT("PlayerIndex"));
+        AddColumn(PlayerText, 190.0f, TEXT("PlayerName"));
+        AddColumn(FactionText, 250.0f, TEXT("PlayerFaction"));
+        AddColumn(ColorText, 70.0f, TEXT("PlayerColor"));
+        AddColumn(TeamText, 75.0f, TEXT("PlayerTeam"));
+        AddColumn(ReadyText, 110.0f, TEXT("PlayerReady"));
+    }
+    return Super::RebuildWidget();
+}
+
+void URA4LobbyPlayerRowWidget::NativeOnListItemObjectSet(UObject* ListItemObject)
+{
+    IUserObjectListEntry::NativeOnListItemObjectSet(ListItemObject);
+    const URA4LobbyPlayerListItem* Item = Cast<URA4LobbyPlayerListItem>(ListItemObject);
+    if (!Item)
+    {
+        return;
+    }
+    const FRA4LobbyPlayerView& Player = Item->GetData();
+    if (IndexText)
+    {
+        IndexText->SetText(FText::AsNumber(Player.ColorIndex + 1));
+        IndexText->SetColorAndOpacity(FSlateColor(GetPlayerColor(Player.ColorIndex)));
+    }
+    if (PlayerText)
+    {
+        PlayerText->SetText(Player.PlayerName);
+    }
+    if (FactionText)
+    {
+        FactionText->SetText(GetFactionName(Player.Faction));
+    }
+    if (ColorText)
+    {
+        ColorText->SetText(LOCTEXT("ColorSquare", "■"));
+        ColorText->SetColorAndOpacity(FSlateColor(GetPlayerColor(Player.ColorIndex)));
+    }
+    if (TeamText)
+    {
+        TeamText->SetText(FText::AsNumber(Player.Team));
+    }
+    if (ReadyText)
+    {
+        ReadyText->SetText(Player.bReady
+            ? LOCTEXT("Ready", "✓  ГОТОВ")
+            : LOCTEXT("NotReady", "○  НЕ ГОТОВ"));
+        ReadyText->SetColorAndOpacity(FSlateColor(Player.bReady ? LobbyGreen : LobbyRed));
+    }
+}
+
+URA4LobbyScreenWidget::URA4LobbyScreenWidget(const FObjectInitializer& ObjectInitializer)
+    : Super(ObjectInitializer)
+{
+    SetScreenIdentity(ERA4UIScreenId::MultiplayerLobby);
+}
+
+TSharedRef<SWidget> URA4LobbyScreenWidget::RebuildWidget()
+{
+    SetScreenIdentity(ERA4UIScreenId::MultiplayerLobby);
+    const TSharedRef<SWidget> RootWidget = Super::RebuildWidget();
+    if (!WidgetTree || !GetContentLayer())
+    {
+        return RootWidget;
+    }
+
+    LobbyViewModel = NewObject<URA4LobbyViewModel>(this);
+    if (UTexture2D* Background = LoadObject<UTexture2D>(
+        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_USSR_MainMenuBackground.T_RA4_USSR_MainMenuBackground")))
+    {
+        GetBackgroundLayer()->SetBrushFromTexture(Background, false);
+        GetBackgroundLayer()->SetColorAndOpacity(FLinearColor(0.23f, 0.20f, 0.20f, 1.0f));
+    }
+
+    UCanvasPanel* Canvas = WidgetTree->ConstructWidget<UCanvasPanel>(
+        UCanvasPanel::StaticClass(), TEXT("LobbyCanvas"));
+    UOverlaySlot* CanvasSlot = GetContentLayer()->AddChildToOverlay(Canvas);
+    CanvasSlot->SetHorizontalAlignment(HAlign_Fill);
+    CanvasSlot->SetVerticalAlignment(VAlign_Fill);
+
+    UImage* Logo = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("LobbyLogo"));
+    if (UTexture2D* LogoTexture = LoadObject<UTexture2D>(
+        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_Logo.T_RA4_Logo")))
+    {
+        Logo->SetBrushFromTexture(LogoTexture, false);
+    }
+    Logo->SetVisibility(ESlateVisibility::HitTestInvisible);
+    PlaceLobbyWidget(Canvas, Logo, FVector2D(690.0f, 0.0f), FVector2D(540.0f, 150.0f), 3);
+
+    UVerticalBox* LobbyInfo = WidgetTree->ConstructWidget<UVerticalBox>(
+        UVerticalBox::StaticClass(), TEXT("LobbyInfo"));
+    LobbyInfo->AddChildToVerticalBox(MakeLobbyText(
+        WidgetTree, LOCTEXT("LobbyTitle", "ЛОББИ СЕТЕВОГО МАТЧА"), 26,
+        LobbyText, TEXT("LobbyTitle")));
+    ReadyStatusText = MakeLobbyText(
+        WidgetTree, LobbyViewModel->GetValidationMessage(), 16,
+        LobbyGreen, TEXT("LobbyReadyStatus"), false);
+    LobbyInfo->AddChildToVerticalBox(ReadyStatusText)->SetPadding(FMargin(0.0f, 12.0f));
+
+    USizeBox* EmblemFrame = WidgetTree->ConstructWidget<USizeBox>(
+        USizeBox::StaticClass(), TEXT("LobbyEmblemFrame"));
+    EmblemFrame->SetHeightOverride(210.0f);
+    UImage* Emblem = WidgetTree->ConstructWidget<UImage>(
+        UImage::StaticClass(), TEXT("LobbyEmblem"));
+    if (UTexture2D* EmblemTexture = LoadObject<UTexture2D>(
+        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_USSR_CommandCenter.T_RA4_USSR_CommandCenter")))
+    {
+        Emblem->SetBrushFromTexture(EmblemTexture, false);
+    }
+    EmblemFrame->AddChild(Emblem);
+    LobbyInfo->AddChildToVerticalBox(EmblemFrame)->SetPadding(FMargin(0.0f, 12.0f));
+    LobbyInfo->AddChildToVerticalBox(MakeLobbyText(
+        WidgetTree, LOCTEXT("GameMode", "РЕЖИМ ИГРЫ\nСХВАТКА\n\nПОБЕДНЫЕ УСЛОВИЯ\nУНИЧТОЖИТЬ ВСЕХ ПРОТИВНИКОВ\n\nНАСТРОЙКИ ЛОББИ\nДРУЖЕСКИЙ ОГОНЬ       ВЫКЛ.\nОГРАНИЧЕНИЕ ВРЕМЕНИ   60 МИН.\nНАБЛЮДАТЕЛИ            ВКЛ."),
+        15, LobbyMuted, TEXT("LobbyRules"), false))->SetPadding(FMargin(0.0f, 12.0f));
+    PlaceLobbyWidget(Canvas, MakeLobbyPanel(
+        WidgetTree, LobbyInfo, TEXT("LobbyInfoPanel"), ERA4PanelRole::Standard),
+        FVector2D(18.0f, 28.0f), FVector2D(330.0f, 820.0f), 5);
+
+    UHorizontalBox* ListHeader = WidgetTree->ConstructWidget<UHorizontalBox>(
+        UHorizontalBox::StaticClass(), TEXT("PlayerListHeader"));
+    const FText Headers[] = {
+        LOCTEXT("HeaderSlot", "№"), LOCTEXT("HeaderPlayer", "ИГРОК"),
+        LOCTEXT("HeaderFaction", "ФРАКЦИЯ"), LOCTEXT("HeaderColor", "ЦВЕТ"),
+        LOCTEXT("HeaderTeam", "КОМАНДА"), LOCTEXT("HeaderReady", "ГОТОВНОСТЬ")
+    };
+    const float Widths[] = {34.0f, 190.0f, 250.0f, 70.0f, 75.0f, 110.0f};
+    for (int32 Index = 0; Index < UE_ARRAY_COUNT(Headers); ++Index)
+    {
+        UTextBlock* Header = MakeLobbyText(
+            WidgetTree, Headers[Index], 14, LobbyMuted,
+            FName(*FString::Printf(TEXT("PlayerHeader_%d"), Index)), false);
+        Header->SetMinDesiredWidth(Widths[Index]);
+        ListHeader->AddChildToHorizontalBox(Header)->SetPadding(FMargin(4.0f));
+    }
+    PlaceLobbyWidget(Canvas, ListHeader, FVector2D(380.0f, 130.0f), FVector2D(960.0f, 42.0f), 6);
+
+    PlayerList = WidgetTree->ConstructWidget<URA4LobbyPlayerListView>(
+        URA4LobbyPlayerListView::StaticClass(), TEXT("LobbyPlayerList"));
+    TSubclassOf<UUserWidget> PlayerRowClass = LoadClass<UUserWidget>(
+        nullptr,
+        TEXT("/Game/RA4UI/Widgets/WBP_RA4_LobbyPlayerRow.WBP_RA4_LobbyPlayerRow_C"));
+    if (PlayerRowClass)
+    {
+        PlayerList->ConfigureEntryWidgetClass(PlayerRowClass);
+    }
+    else
+    {
+        PlayerList->ConfigureEntryWidgetClass(URA4LobbyPlayerRowWidget::StaticClass());
+    }
+    PlayerList->SetSelectionMode(ESelectionMode::Single);
+    PlayerList->SetScrollbarVisibility(ESlateVisibility::Collapsed);
+    PlaceLobbyWidget(Canvas, MakeLobbyPanel(
+        WidgetTree, PlayerList, TEXT("LobbyPlayerListPanel"), ERA4PanelRole::Compact),
+        FVector2D(365.0f, 175.0f), FVector2D(980.0f, 470.0f), 6);
+    PopulatePlayerList();
+
+    UVerticalBox* Chat = WidgetTree->ConstructWidget<UVerticalBox>(
+        UVerticalBox::StaticClass(), TEXT("LobbyChat"));
+    UScrollBox* ChatHistory = WidgetTree->ConstructWidget<UScrollBox>(
+        UScrollBox::StaticClass(), TEXT("LobbyChatHistory"));
+    for (int32 Index = 0; Index < LobbyViewModel->GetChatMessages().Num(); ++Index)
+    {
+        const FRA4LobbyChatMessageView& Message = LobbyViewModel->GetChatMessages()[Index];
+        UTextBlock* ChatLine = MakeLobbyText(
+            WidgetTree,
+            FText::Format(LOCTEXT("ChatLine", "{0}: {1}"), Message.Author, Message.Message),
+            14, Message.AuthorColor,
+            FName(*FString::Printf(TEXT("ChatLine_%d"), Index)), false);
+        ChatHistory->AddChild(ChatLine);
+    }
+    UVerticalBoxSlot* HistorySlot = Chat->AddChildToVerticalBox(ChatHistory);
+    HistorySlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+
+    UHorizontalBox* ChatComposer = WidgetTree->ConstructWidget<UHorizontalBox>(
+        UHorizontalBox::StaticClass(), TEXT("ChatComposer"));
+    ChatInput = WidgetTree->ConstructWidget<UEditableTextBox>(
+        UEditableTextBox::StaticClass(), TEXT("ChatInput"));
+    ChatInput->SetHintText(LOCTEXT("ChatHint", "НАПИСАТЬ СООБЩЕНИЕ…"));
+    UHorizontalBoxSlot* ChatInputSlot = ChatComposer->AddChildToHorizontalBox(ChatInput);
+    ChatInputSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+    UButton* SendButton = WidgetTree->ConstructWidget<UButton>(
+        UButton::StaticClass(), TEXT("SendChatButton"));
+    SendButton->SetStyle(MakeLobbyButtonStyle());
+    SendButton->AddChild(MakeLobbyText(
+        WidgetTree, LOCTEXT("Send", "ОТПРАВИТЬ"), 15,
+        LobbyText, TEXT("SendChatLabel")));
+    SendButton->OnClicked.AddDynamic(this, &URA4LobbyScreenWidget::SendChat);
+    ChatComposer->AddChildToHorizontalBox(SendButton)->SetPadding(FMargin(8.0f, 0.0f, 0.0f, 0.0f));
+    Chat->AddChildToVerticalBox(ChatComposer)->SetPadding(FMargin(0.0f, 8.0f, 0.0f, 0.0f));
+    PlaceLobbyWidget(Canvas, MakeLobbyPanel(
+        WidgetTree, Chat, TEXT("LobbyChatPanel"), ERA4PanelRole::Compact),
+        FVector2D(365.0f, 660.0f), FVector2D(980.0f, 250.0f), 6);
+
+    UVerticalBox* MapAndSettings = WidgetTree->ConstructWidget<UVerticalBox>(
+        UVerticalBox::StaticClass(), TEXT("LobbyMapAndSettings"));
+    MapAndSettings->AddChildToVerticalBox(MakeLobbyText(
+        WidgetTree, LOCTEXT("MapHeading", "КАРТА\nАЛЯСКА — ХОЛОДНАЯ ВЕРШИНА"), 18,
+        LobbyText, TEXT("MapHeading")));
+    UImage* MapPreview = WidgetTree->ConstructWidget<UImage>(
+        UImage::StaticClass(), TEXT("LobbyMapPreview"));
+    if (UTexture2D* MapTexture = LoadObject<UTexture2D>(
+        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_Allies_ArcticFleet.T_RA4_Allies_ArcticFleet")))
+    {
+        MapPreview->SetBrushFromTexture(MapTexture, false);
+    }
+    USizeBox* MapPreviewFrame = WidgetTree->ConstructWidget<USizeBox>(
+        USizeBox::StaticClass(), TEXT("LobbyMapPreviewFrame"));
+    MapPreviewFrame->SetHeightOverride(250.0f);
+    MapPreviewFrame->AddChild(MapPreview);
+    MapAndSettings->AddChildToVerticalBox(MapPreviewFrame)->SetPadding(FMargin(0.0f, 12.0f));
+    MapAndSettings->AddChildToVerticalBox(MakeLobbyText(
+        WidgetTree, LOCTEXT("MapMeta", "РАЗМЕР КАРТЫ                 БОЛЬШАЯ (8 ИГРОКОВ)\nТИП ЛАНДШАФТА               ЗИМНИЙ"),
+        14, LobbyMuted, TEXT("MapMeta"), false));
+    MapAndSettings->AddChildToVerticalBox(MakeLobbyText(
+        WidgetTree, LOCTEXT("MatchSettings", "\nНАСТРОЙКИ МАТЧА\n\nНАЧАЛЬНЫЕ РЕСУРСЫ       СРЕДНИЕ\nДОХОД                    СРЕДНИЙ\nСКОРОСТЬ ИГРЫ            НОРМАЛЬНО\nТЕХНОЛОГИИ               ВСЕ ВКЛ.\nСУПЕРОРУЖИЕ              ВКЛ.\nРЕЖИМ ИГРЫ               СХВАТКА\n\nНАБЛЮДАТЕЛИ (1)\n●  Observer_01          ПИНГ: 48"),
+        15, LobbyText, TEXT("MatchSettings"), false));
+    PlaceLobbyWidget(Canvas, MakeLobbyPanel(
+        WidgetTree, MapAndSettings, TEXT("LobbyMapPanel"), ERA4PanelRole::Standard),
+        FVector2D(1370.0f, 55.0f), FVector2D(520.0f, 795.0f), 6);
+
+    UButton* LeaveButton = WidgetTree->ConstructWidget<UButton>(
+        UButton::StaticClass(), TEXT("LeaveLobbyButton"));
+    LeaveButton->SetStyle(MakeLobbyButtonStyle());
+    UTextBlock* LeaveLabel = MakeLobbyText(
+        WidgetTree, LOCTEXT("LeaveLobby", "ПОКИНУТЬ ЛОББИ"), 17,
+        LobbyText, TEXT("LeaveLobbyLabel"));
+    LeaveLabel->SetJustification(ETextJustify::Center);
+    LeaveButton->AddChild(LeaveLabel);
+    LeaveButton->OnClicked.AddDynamic(this, &URA4LobbyScreenWidget::LeaveLobby);
+    PlaceLobbyWidget(Canvas, LeaveButton, FVector2D(25.0f, 885.0f), FVector2D(310.0f, 78.0f), 8);
+
+    StartButton = WidgetTree->ConstructWidget<UButton>(
+        UButton::StaticClass(), TEXT("StartBattleButton"));
+    StartButton->SetStyle(MakeLobbyButtonStyle(true));
+    UTextBlock* StartLabel = MakeLobbyText(
+        WidgetTree, LOCTEXT("StartBattle", "НАЧАТЬ БИТВУ"), 30,
+        FLinearColor::White, TEXT("StartBattleLabel"));
+    StartLabel->SetJustification(ETextJustify::Center);
+    StartButton->AddChild(StartLabel);
+    StartButton->OnClicked.AddDynamic(this, &URA4LobbyScreenWidget::StartMatch);
+    PlaceLobbyWidget(Canvas, StartButton, FVector2D(720.0f, 935.0f), FVector2D(480.0f, 90.0f), 9);
+    RefreshStartState();
+    return RootWidget;
+}
+
+void URA4LobbyScreenWidget::PopulatePlayerList()
+{
+    if (!PlayerList || !LobbyViewModel)
+    {
+        return;
+    }
+    PlayerItems.Reset();
+    PlayerList->ClearListItems();
+    for (const FRA4LobbyPlayerView& Player : LobbyViewModel->GetPlayers())
+    {
+        URA4LobbyPlayerListItem* Item = NewObject<URA4LobbyPlayerListItem>(this);
+        Item->SetData(Player);
+        PlayerItems.Add(Item);
+        PlayerList->AddItem(Item);
+    }
+}
+
+void URA4LobbyScreenWidget::SendChat()
+{
+    if (LobbyViewModel && ChatInput && LobbyViewModel->SendChat(ChatInput->GetText().ToString()))
+    {
+        ChatInput->SetText(FText::GetEmpty());
+    }
+}
+
+void URA4LobbyScreenWidget::StartMatch()
+{
+    if (LobbyViewModel && LobbyViewModel->StartMatch() && ReadyStatusText)
+    {
+        ReadyStatusText->SetText(LOCTEXT("Launching", "МАТЧ ЗАПУСКАЕТСЯ…"));
+    }
+}
+
+void URA4LobbyScreenWidget::LeaveLobby()
+{
+    if (LobbyViewModel)
+    {
+        LobbyViewModel->LeaveLobby();
+    }
+    if (APlayerController* PlayerController = GetOwningPlayer())
+    {
+        if (URA4MainMenuScreenWidget* MainMenu = CreateWidget<URA4MainMenuScreenWidget>(
+            PlayerController, URA4MainMenuScreenWidget::StaticClass()))
+        {
+            MainMenu->AddToViewport(0);
+            RemoveFromParent();
+        }
+    }
+}
+
+void URA4LobbyScreenWidget::RefreshStartState()
+{
+    if (ReadyStatusText && LobbyViewModel)
+    {
+        ReadyStatusText->SetText(LobbyViewModel->GetValidationMessage());
+        ReadyStatusText->SetColorAndOpacity(FSlateColor(
+            LobbyViewModel->CanStartMatch() ? LobbyGreen : LobbyRed));
+    }
+    if (StartButton && LobbyViewModel)
+    {
+        StartButton->SetIsEnabled(LobbyViewModel->CanStartMatch());
+    }
+}
+
+#undef LOCTEXT_NAMESPACE

@@ -5,6 +5,7 @@
 #include "RA4CampaignSelectWidget.h"
 #include "RA4CampaignScreenWidget.h"
 #include "RA4MainMenuScreenWidget.h"
+#include "RA4LobbyScreenWidget.h"
 #include "RA4MissionFlowWidgets.h"
 #include "RA4ShowcaseWidget.h"
 #include "RA4SplashScreenWidget.h"
@@ -119,6 +120,11 @@ void ARA4UIShowcaseGameMode::ShowInterface(APlayerController* PlayerController)
                 ERA4FactionTheme::EasternCoalition, ERA4UIScreenVariant::EasternDetail);
             RootWidget = Campaign;
         }
+    }
+    else if (RequestedScreen == 17)
+    {
+        RootWidget = CreateWidget<URA4LobbyScreenWidget>(
+            PlayerController, URA4LobbyScreenWidget::StaticClass());
     }
     else
     {
