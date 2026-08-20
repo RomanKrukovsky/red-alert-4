@@ -56,6 +56,7 @@ constexpr ContentId BldEcBarracks = MakeContentId("building.ec.barracks");
 constexpr ContentId BldEcWarFactory = MakeContentId("building.ec.war_factory");
 constexpr ContentId BldEcTurret = MakeContentId("building.ec.defense_tower");
 constexpr ContentId BldEcAaTurret = MakeContentId("building.ec.aa_tower");
+constexpr ContentId BldEcRadar = MakeContentId("building.ec.radar_array");
 constexpr ContentId BldEcSuper = MakeContentId("building.ec.harmony_sanctuary");
 
 constexpr ContentId BldClConYard = MakeContentId("building.cl.construction_yard");
@@ -65,6 +66,7 @@ constexpr ContentId BldClBarracks = MakeContentId("building.cl.barracks");
 constexpr ContentId BldClWarFactory = MakeContentId("building.cl.war_factory");
 constexpr ContentId BldClTurret = MakeContentId("building.cl.temporal_turret");
 constexpr ContentId BldClAaTurret = MakeContentId("building.cl.warp_flak");
+constexpr ContentId BldClRadar = MakeContentId("building.cl.chronoscan_array");
 constexpr ContentId BldClSuper = MakeContentId("building.cl.chronosphere");
 
 // --- Unit ids -------------------------------------------------------------
@@ -444,6 +446,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
     // Priority is left to DefaultPowerPriorityFor, which sees bIsRadar first and assigns
     // Auxiliary: the radar is the thing a deficit is *supposed* to take, and hardcoding it
     // here would let the two disagree.
+    if (S.Radar.IsValid() && S.RadarName != nullptr)
     {
         EntityDef E;
         E.Id = S.Radar;
@@ -869,6 +872,8 @@ void BuildDefaultContent(ContentDatabase& Db)
     Coalition.WarFactoryName = "building.ec.war_factory";
     Coalition.TurretName = "building.ec.defense_tower";
     Coalition.AaTurretName = "building.ec.aa_tower";
+    Coalition.Radar = BldEcRadar;
+    Coalition.RadarName = "building.ec.radar_array";
     Coalition.SuperweaponName = "building.ec.harmony_sanctuary";
     Coalition.McvName = "unit.ec.mcv";
     Coalition.HarvesterName = "unit.ec.harmony_harvester";
@@ -897,6 +902,7 @@ void BuildDefaultContent(ContentDatabase& Db)
     Chrono.Turret = BldClTurret;
     Chrono.AaTurret = BldClAaTurret;
     Chrono.Airfield = MakeContentId("building.cl.rift_pad");
+    Chrono.Radar = BldClRadar;
     Chrono.Superweapon = BldClSuper;
     Chrono.Mcv = UnitClMcv;
     Chrono.Harvester = UnitClHarvester;
@@ -912,6 +918,7 @@ void BuildDefaultContent(ContentDatabase& Db)
     Chrono.WarFactoryName = "building.cl.war_factory";
     Chrono.TurretName = "building.cl.temporal_turret";
     Chrono.AaTurretName = "building.cl.warp_flak";
+    Chrono.RadarName = "building.cl.chronoscan_array";
     Chrono.SuperweaponName = "building.cl.chronosphere";
     Chrono.McvName = "unit.cl.mcv";
     Chrono.HarvesterName = "unit.cl.echo_harvester";

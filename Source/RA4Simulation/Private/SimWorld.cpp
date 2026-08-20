@@ -131,7 +131,6 @@ int32_t FlowPaymentCancelRefund(const ProductionItem& Item, EntityKind Kind)
     }
     return int32_t((int64_t(Item.PaidCredits) * Percent) / 100);
 }
-}
 } // namespace
 
 // ---------------------------------------------------------------------------
@@ -346,6 +345,22 @@ const PlayerState& SimWorld::GetPlayer(PlayerId Id) const
 {
     static const PlayerState Empty;
     return Id < kMaxPlayers ? Players[Id] : Empty;
+}
+
+int32_t SimWorld::GetConstructionProgressPerMille(EntityId Id) const
+{
+    const BuildingComp* B = GetBuilding(Id);
+    if (B == nullptr || B->State != ConstructionState::UnderConstruction)
+    {
+        return 1000;
+    }
+    const int64_t Total = int64_t(B->ConstructionTotalTicks) * kProgressScale;
+    if (Total <= 0)
+    {
+        return 1000;
+    }
+    const int64_t Clamped = std::min<int64_t>(std::max<int64_t>(B->ConstructionProgressTicks, 0), Total);
+    return int32_t((Clamped * 1000) / Total);
 }
 
 // ---------------------------------------------------------------------------
@@ -5267,6 +5282,7 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
     {
         return false;
     }
+    const uint32_t Version = R.ReadUInt32();
     // A range, with each remaining field-level change gated on its own named constant
     // below. The lower bound is not 1: v4 and older were stamped by two branches on
     // incompatible byte layouts, and no reader can serve both, so they are refused
@@ -5494,7 +5510,6 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
             Pr.Weapon.Value = R.ReadUInt32();
             Pr.OwnerPlayer = R.ReadUInt8();
             Pr.Speed.Raw = R.ReadInt64();
-        }
         }
     }
 

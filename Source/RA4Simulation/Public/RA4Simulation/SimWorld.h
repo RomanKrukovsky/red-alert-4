@@ -101,6 +101,7 @@ public:
     const CombatComp* GetCombat(EntityId Id) const;
     const OrderQueue* GetOrders(EntityId Id) const;
     const DirectControlComp* GetDirectControl(EntityId Id) const;
+    int32_t GetConstructionProgressPerMille(EntityId Id) const;
 
     // Raw slot iteration for systems and for presentation sync. Callers must check
     // Core[i].bAlive; dead slots keep their component data until reused so that a
