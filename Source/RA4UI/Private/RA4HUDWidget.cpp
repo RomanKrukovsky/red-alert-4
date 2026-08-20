@@ -4,6 +4,7 @@
 
 #include "Blueprint/WidgetTree.h"
 #include "Brushes/SlateColorBrush.h"
+#include "Brushes/SlateRoundedBoxBrush.h"
 #include "Components/Button.h"
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
@@ -12,6 +13,7 @@
 #include "Components/Image.h"
 #include "Components/Overlay.h"
 #include "Components/OverlaySlot.h"
+#include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
 #include "Components/UniformGridPanel.h"
 #include "Components/UniformGridSlot.h"
@@ -117,12 +119,13 @@ URA4AngularPanelWidget* MakeHUDPanel(
     UWidgetTree* WidgetTree,
     UWidget* Content,
     const FName Name,
-    const FLinearColor& PanelColor)
+    const FLinearColor& PanelColor,
+    const FLinearColor& Accent)
 {
     URA4AngularPanelWidget* Panel = WidgetTree->ConstructWidget<URA4AngularPanelWidget>(
         URA4AngularPanelWidget::StaticClass(), Name);
     Panel->SetPanelRole(ERA4PanelRole::DenseHUD);
-    Panel->SetBrushColor(PanelColor);
+    Panel->SetBrush(FSlateRoundedBoxBrush(PanelColor, 0.0f, Accent, 1.35f));
     Panel->SetContent(Content);
     return Panel;
 }
@@ -158,6 +161,79 @@ UButton* MakeHUDButton(
         FName(*FString::Printf(TEXT("%s_Label"), *Name.ToString())), bSelected);
     Text->SetJustification(ETextJustify::Center);
     Button->AddChild(Text);
+    return Button;
+}
+
+const TCHAR* ResolveProductionIconPath(const ERA4FactionTheme Theme, const int32 Index)
+{
+    static const TCHAR* SovietIcons[] = {
+        TEXT("/Game/RA4UI/Art/T_RA4_SU_Conscript.T_RA4_SU_Conscript"),
+        TEXT("/Game/RA4UI/Art/T_RA4_SU_FlakTrooper.T_RA4_SU_FlakTrooper"),
+        TEXT("/Game/RA4UI/Art/T_RA4_SU_HammerTank.T_RA4_SU_HammerTank"),
+        TEXT("/Game/RA4UI/Art/T_RA4_SU_SickleScout.T_RA4_SU_SickleScout"),
+        TEXT("/Game/RA4UI/Art/T_RA4_SU_MiG41.T_RA4_SU_MiG41"),
+        TEXT("/Game/RA4UI/Art/T_RA4_SU_TyphoonSub.T_RA4_SU_TyphoonSub")
+    };
+    static const TCHAR* AlliedIcons[] = {
+        TEXT("/Game/RA4UI/Art/T_RA4_AL_Peacekeeper.T_RA4_AL_Peacekeeper"),
+        TEXT("/Game/RA4UI/Art/T_RA4_AL_Javelin.T_RA4_AL_Javelin"),
+        TEXT("/Game/RA4UI/Art/T_RA4_AL_Guardian.T_RA4_AL_Guardian"),
+        TEXT("/Game/RA4UI/Art/T_RA4_AL_Mirage.T_RA4_AL_Mirage"),
+        TEXT("/Game/RA4UI/Art/T_RA4_AL_Harrier.T_RA4_AL_Harrier"),
+        TEXT("/Game/RA4UI/Art/T_RA4_AL_Poseidon.T_RA4_AL_Poseidon")
+    };
+
+    switch (Theme)
+    {
+    case ERA4FactionTheme::USSR:
+        return SovietIcons[Index % UE_ARRAY_COUNT(SovietIcons)];
+    case ERA4FactionTheme::Allies:
+        return AlliedIcons[Index % UE_ARRAY_COUNT(AlliedIcons)];
+    case ERA4FactionTheme::EasternCoalition:
+    case ERA4FactionTheme::Chronolegion:
+        return nullptr;
+    default:
+        checkNoEntry();
+        return nullptr;
+    }
+}
+
+UButton* MakeHUDProductionCard(
+    UWidgetTree* WidgetTree,
+    const FText& Label,
+    const FName Name,
+    const FLinearColor& Accent,
+    const ERA4FactionTheme Theme,
+    const int32 Index)
+{
+    const TCHAR* IconPath = ResolveProductionIconPath(Theme, Index);
+    if (!IconPath)
+    {
+        return MakeHUDButton(WidgetTree, Label, Name, Accent);
+    }
+
+    UButton* Button = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), Name);
+    Button->SetStyle(MakeHUDButtonStyle(Accent));
+    UVerticalBox* Content = WidgetTree->ConstructWidget<UVerticalBox>(
+        UVerticalBox::StaticClass(), FName(Name.ToString() + TEXT("_Content")));
+    USizeBox* IconBox = WidgetTree->ConstructWidget<USizeBox>(
+        USizeBox::StaticClass(), FName(Name.ToString() + TEXT("_IconBox")));
+    IconBox->SetHeightOverride(82.0f);
+    UImage* Icon = WidgetTree->ConstructWidget<UImage>(
+        UImage::StaticClass(), FName(Name.ToString() + TEXT("_Icon")));
+    if (UTexture2D* IconTexture = LoadObject<UTexture2D>(nullptr, IconPath))
+    {
+        Icon->SetBrushFromTexture(IconTexture, false);
+    }
+    Icon->SetVisibility(ESlateVisibility::HitTestInvisible);
+    IconBox->SetContent(Icon);
+    Content->AddChildToVerticalBox(IconBox);
+    UTextBlock* Text = MakeHUDText(
+        WidgetTree, Label, 11, HUDText,
+        FName(Name.ToString() + TEXT("_Label")), true);
+    Text->SetJustification(ETextJustify::Center);
+    Content->AddChildToVerticalBox(Text)->SetPadding(FMargin(2.0f, 1.0f, 2.0f, 3.0f));
+    Button->AddChild(Content);
     return Button;
 }
 
@@ -410,14 +486,14 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
     const FVector2D ObjectivesPosition(16.0f, 18.0f);
     const FVector2D ObjectivesSize(370.0f, 205.0f);
     PlaceHUDWidget(Canvas, MakeHUDPanel(
-        WidgetTree, Objectives, TEXT("ObjectivesPanel"), ThemeStyle.Panel), ObjectivesPosition, ObjectivesSize, 10);
+        WidgetTree, Objectives, TEXT("ObjectivesPanel"), ThemeStyle.Panel, ThemeStyle.Accent), ObjectivesPosition, ObjectivesSize, 10);
     AddInteractiveRegion(ObjectivesPosition, ObjectivesSize);
 
     ResourceText = MakeHUDText(
         WidgetTree, FText::GetEmpty(), 17, ThemeStyle.Text, TEXT("ResourceText"), true);
     ResourceText->SetJustification(ETextJustify::Center);
     PlaceHUDWidget(Canvas, MakeHUDPanel(
-        WidgetTree, ResourceText, TEXT("ResourceBarPanel"), ThemeStyle.Panel),
+        WidgetTree, ResourceText, TEXT("ResourceBarPanel"), ThemeStyle.Panel, ThemeStyle.Accent),
         FVector2D(1110.0f, 12.0f), FVector2D(790.0f, 55.0f), 10);
 
     URA4MinimapWidget* Minimap = WidgetTree->ConstructWidget<URA4MinimapWidget>(
@@ -427,7 +503,7 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
     const FVector2D MinimapPosition(1590.0f, 80.0f);
     const FVector2D MinimapSize(310.0f, 285.0f);
     PlaceHUDWidget(Canvas, MakeHUDPanel(
-        WidgetTree, Minimap, TEXT("MinimapPanel"), ThemeStyle.Panel), MinimapPosition, MinimapSize, 10);
+        WidgetTree, Minimap, TEXT("MinimapPanel"), ThemeStyle.Panel, ThemeStyle.Accent), MinimapPosition, MinimapSize, 10);
     AddInteractiveRegion(MinimapPosition, MinimapSize);
 
     UVerticalBox* Sidebar = WidgetTree->ConstructWidget<UVerticalBox>(
@@ -458,7 +534,7 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
     const FVector2D SidebarPosition(1450.0f, 380.0f);
     const FVector2D SidebarSize(450.0f, 500.0f);
     PlaceHUDWidget(Canvas, MakeHUDPanel(
-        WidgetTree, Sidebar, TEXT("ProductionPanel"), ThemeStyle.Panel), SidebarPosition, SidebarSize, 10);
+        WidgetTree, Sidebar, TEXT("ProductionPanel"), ThemeStyle.Panel, ThemeStyle.Accent), SidebarPosition, SidebarSize, 10);
     AddInteractiveRegion(SidebarPosition, SidebarSize);
 
     UVerticalBox* Selection = WidgetTree->ConstructWidget<UVerticalBox>(
@@ -472,7 +548,7 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
     const FVector2D SelectionPosition(16.0f, 820.0f);
     const FVector2D SelectionSize(420.0f, 240.0f);
     PlaceHUDWidget(Canvas, MakeHUDPanel(
-        WidgetTree, Selection, TEXT("SelectionPanel"), ThemeStyle.Panel), SelectionPosition, SelectionSize, 10);
+        WidgetTree, Selection, TEXT("SelectionPanel"), ThemeStyle.Panel, ThemeStyle.Accent), SelectionPosition, SelectionSize, 10);
     AddInteractiveRegion(SelectionPosition, SelectionSize);
 
     UVerticalBox* Queue = WidgetTree->ConstructWidget<UVerticalBox>(
@@ -491,7 +567,7 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
     const FVector2D QueuePosition(455.0f, 875.0f);
     const FVector2D QueueSize(560.0f, 185.0f);
     PlaceHUDWidget(Canvas, MakeHUDPanel(
-        WidgetTree, Queue, TEXT("ProductionQueuePanel"), ThemeStyle.Panel), QueuePosition, QueueSize, 10);
+        WidgetTree, Queue, TEXT("ProductionQueuePanel"), ThemeStyle.Panel, ThemeStyle.Accent), QueuePosition, QueueSize, 10);
     AddInteractiveRegion(QueuePosition, QueueSize);
 
     UVerticalBox* Commands = WidgetTree->ConstructWidget<UVerticalBox>(
@@ -527,7 +603,7 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
     const FVector2D CommandPosition(1450.0f, 900.0f);
     const FVector2D CommandSize(450.0f, 160.0f);
     PlaceHUDWidget(Canvas, MakeHUDPanel(
-        WidgetTree, Commands, TEXT("CommandGridPanel"), ThemeStyle.Panel), CommandPosition, CommandSize, 10);
+        WidgetTree, Commands, TEXT("CommandGridPanel"), ThemeStyle.Panel, ThemeStyle.Accent), CommandPosition, CommandSize, 10);
     AddInteractiveRegion(CommandPosition, CommandSize);
 
     const bool bProminentAlert = HUDVariant == ERA4UIScreenVariant::SovietAlert ||
@@ -543,7 +619,7 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
         ThemeStyle.Accent, TEXT("AlertText"), true);
     AlertText->SetJustification(ETextJustify::Center);
     PlaceHUDWidget(Canvas, MakeHUDPanel(
-        WidgetTree, AlertText, TEXT("AlertPanel"), ThemeStyle.Panel),
+        WidgetTree, AlertText, TEXT("AlertPanel"), ThemeStyle.Panel, ThemeStyle.Accent),
         AlertPosition, AlertSize, 20);
 
     ApplyShowcaseSnapshot();
@@ -705,10 +781,12 @@ void URA4HUDWidget::RefreshProduction()
         }
         const FText CardLabel = FText::Format(
             LOCTEXT("BuildCard", "{0}\n{1}"), Option.DisplayName, FText::AsNumber(Option.Cost));
-        UButton* Card = MakeHUDButton(
+        UButton* Card = MakeHUDProductionCard(
             WidgetTree, CardLabel,
             FName(*FString::Printf(TEXT("BuildOption_%d"), VisibleIndex)),
-            ResolveHUDVisualStyle(FactionTheme).Accent);
+            ResolveHUDVisualStyle(FactionTheme).Accent,
+            FactionTheme,
+            VisibleIndex);
         Card->SetIsEnabled(Option.bAvailable);
         Card->OnClicked.AddDynamic(this, &URA4HUDWidget::QueueSelectedProduction);
         UUniformGridSlot* CardSlot = BuildGrid->AddChildToUniformGrid(

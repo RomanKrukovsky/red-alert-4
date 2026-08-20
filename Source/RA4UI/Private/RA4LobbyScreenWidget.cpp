@@ -4,6 +4,7 @@
 
 #include "Blueprint/WidgetTree.h"
 #include "Brushes/SlateColorBrush.h"
+#include "Brushes/SlateRoundedBoxBrush.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
 #include "Components/CanvasPanel.h"
@@ -80,7 +81,7 @@ URA4AngularPanelWidget* MakeLobbyPanel(
     URA4AngularPanelWidget* Panel = Tree->ConstructWidget<URA4AngularPanelWidget>(
         URA4AngularPanelWidget::StaticClass(), Name);
     Panel->SetPanelRole(Role);
-    Panel->SetBrushColor(LobbyPanel);
+    Panel->SetBrush(FSlateRoundedBoxBrush(LobbyPanel, 0.0f, LobbyRed, 1.35f));
     Panel->SetContent(Content);
     return Panel;
 }

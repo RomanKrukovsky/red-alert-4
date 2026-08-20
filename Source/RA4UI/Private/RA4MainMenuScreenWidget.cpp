@@ -4,6 +4,7 @@
 
 #include "Blueprint/WidgetTree.h"
 #include "Brushes/SlateColorBrush.h"
+#include "Brushes/SlateRoundedBoxBrush.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
 #include "Components/CanvasPanel.h"
@@ -147,6 +148,16 @@ TSharedRef<SWidget> URA4MainMenuScreenWidget::RebuildWidget()
     CanvasSlot->SetHorizontalAlignment(HAlign_Fill);
     CanvasSlot->SetVerticalAlignment(VAlign_Fill);
 
+    UImage* MechanicalChrome = WidgetTree->ConstructWidget<UImage>(
+        UImage::StaticClass(), TEXT("MainMenuMechanicalChrome"));
+    if (UTexture2D* ChromeTexture = LoadObject<UTexture2D>(
+        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_USSR_MainMenuChrome.T_RA4_USSR_MainMenuChrome")))
+    {
+        MechanicalChrome->SetBrushFromTexture(ChromeTexture, false);
+    }
+    MechanicalChrome->SetVisibility(ESlateVisibility::HitTestInvisible);
+    PlaceMenuWidget(Canvas, MechanicalChrome, FVector2D::ZeroVector, FVector2D(1920.0f, 1080.0f), 3);
+
     LogoImage = WidgetTree->ConstructWidget<UImage>(
         UImage::StaticClass(), TEXT("MainMenuLogo"));
     if (UTexture2D* LogoTexture = LoadObject<UTexture2D>(
@@ -155,7 +166,7 @@ TSharedRef<SWidget> URA4MainMenuScreenWidget::RebuildWidget()
         LogoImage->SetBrushFromTexture(LogoTexture, false);
     }
     LogoImage->SetVisibility(ESlateVisibility::HitTestInvisible);
-    PlaceMenuWidget(Canvas, LogoImage, FVector2D(570.0f, 8.0f), FVector2D(840.0f, 280.0f), 2);
+    PlaceMenuWidget(Canvas, LogoImage, FVector2D(570.0f, 8.0f), FVector2D(840.0f, 280.0f), 4);
 
     UVerticalBox* MenuList = WidgetTree->ConstructWidget<UVerticalBox>(
         UVerticalBox::StaticClass(), TEXT("MainMenuEntries"));
@@ -168,7 +179,8 @@ TSharedRef<SWidget> URA4MainMenuScreenWidget::RebuildWidget()
     URA4AngularPanelWidget* MenuPanel = WidgetTree->ConstructWidget<URA4AngularPanelWidget>(
         URA4AngularPanelWidget::StaticClass(), TEXT("MainMenuPanel"));
     MenuPanel->SetPanelRole(ERA4PanelRole::Compact);
-    MenuPanel->SetBrushColor(FLinearColor(0.005f, 0.005f, 0.008f, 0.88f));
+    MenuPanel->SetBrush(FSlateRoundedBoxBrush(
+        FLinearColor(0.005f, 0.005f, 0.008f, 0.88f), 0.0f, MenuRed, 1.5f));
     MenuPanel->SetContent(MenuList);
     PlaceMenuWidget(Canvas, MenuPanel, FVector2D(18.0f, 74.0f), FVector2D(454.0f, 716.0f), 4);
 
@@ -223,7 +235,8 @@ TSharedRef<SWidget> URA4MainMenuScreenWidget::RebuildWidget()
     URA4AngularPanelWidget* FooterPanel = WidgetTree->ConstructWidget<URA4AngularPanelWidget>(
         URA4AngularPanelWidget::StaticClass(), TEXT("FooterPanel"));
     FooterPanel->SetPanelRole(ERA4PanelRole::Compact);
-    FooterPanel->SetBrushColor(FLinearColor(0.005f, 0.005f, 0.007f, 0.94f));
+    FooterPanel->SetBrush(FSlateRoundedBoxBrush(
+        FLinearColor(0.005f, 0.005f, 0.007f, 0.94f), 0.0f, MenuRed, 1.25f));
     FooterPanel->SetContent(Footer);
     PlaceMenuWidget(Canvas, FooterPanel, FVector2D(18.0f, 1012.0f), FVector2D(1884.0f, 52.0f), 6);
     return RootWidget;
@@ -331,7 +344,8 @@ void URA4MainMenuScreenWidget::BuildInformationCard(
     URA4AngularPanelWidget* Panel = WidgetTree->ConstructWidget<URA4AngularPanelWidget>(
         URA4AngularPanelWidget::StaticClass(), Name);
     Panel->SetPanelRole(ERA4PanelRole::Compact);
-    Panel->SetBrushColor(FLinearColor(0.006f, 0.006f, 0.009f, 0.92f));
+    Panel->SetBrush(FSlateRoundedBoxBrush(
+        FLinearColor(0.006f, 0.006f, 0.009f, 0.92f), 0.0f, MenuRed, 1.25f));
     Panel->SetContent(Content);
     PlaceMenuWidget(Canvas, Panel, Position, Size, 5);
 }

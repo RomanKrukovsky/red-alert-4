@@ -1,13 +1,8 @@
 # UI/UX Bible (`UI_UX_BIBLE.md`)
 
-**Document Version**: 1.0
+**Document Version**: 2.0
 **Created**: 2026-08-05
-**Provenance note**: this document is mandated by CLAUDE.md and did not exist until now. It is
-created with the section the project needs first — the uncertainty language required by
-NEXT_ACTIONS P-5 before any intel UI may be built (RISK-11, RISK-19). Conventional chapters
-(HUD layout, sidebar, menus, hotkey philosophy) are stubs to be filled by the UI/UX stream; the
-stubs state their owner and are NOT placeholders shipping to release (project rule: no TODO in
-release branches — this file must be complete before the UI milestone gate).
+**Updated**: 2026-08-20
 
 ---
 
@@ -109,7 +104,49 @@ To keep propagation latency from reading as input lag (RISK-13):
    deceived player's UI must be internally consistent (the spectator view is where truth is
    marked, per ADR-0023).
 
-## 2. HUD Layout & Sidebar — STUB (owner: UI/UX Engineer stream)
-## 3. Menus, Lobby, Settings — STUB (owner: UI/UX Engineer stream)
-## 4. Hotkey Philosophy — STUB (owner: UI/UX Engineer stream; must align with Docs/Production/GAME_DESIGN_DOCUMENT.md §5)
-## 5. Localization & Text Rules — STUB (owner: UI/UX Engineer stream; RU/EN parity per CLAUDE.md localization requirement)
+## 2. HUD Layout & Sidebar
+
+The HUD uses a fixed 1920×1080 design space inside an aspect-preserving safe frame. The world
+remains visible and clickable in the centre. Only the actual objectives, minimap, selection,
+production, queue and command rectangles block world input.
+
+- Top: resources, power, command limit and match clock.
+- Top-left: commander and objectives; critical alerts move to the centre only while active.
+- Top-right: one batched Slate minimap. Unit contacts are draw elements, never child widgets.
+- Right: faction production categories and build cards.
+- Bottom: selected unit/building, queue and command grid.
+- Faction changes are data and theme changes on one shared HUD shell. Duplicated faction HUD
+  logic is forbidden.
+- Simulation data reaches the HUD through event-driven snapshots. Per-frame polling is forbidden.
+
+## 3. Menus, Lobby, Settings
+
+All full-screen flows use CommonUI routing and the same focus/back contract. Layout is native UMG
+and Slate; YAML may contain content but never defines widget geometry or interaction logic.
+
+- Every menu has one obvious primary action and a persistent back route.
+- Keyboard and gamepad focus must enter at the primary or last-used action.
+- The lobby supports eight player rows, faction/team/colour, ready state, host-only launch,
+  observers and chat. Rows are virtualized.
+- Background art is presentation only. Buttons, text, progress, selection and validation remain
+  real interactive widgets.
+- The 24 canonical screen references are the visual acceptance set. Their mapping is validated by
+  `Tools/Editor/ValidateRA4UI.py`.
+
+## 4. Hotkey Philosophy
+
+- A command has one canonical key and may expose a remappable alternative.
+- Escape always closes the top modal, then navigates back, then opens pause in gameplay.
+- HUD hotkeys operate gameplay even when the pointer is over the world; text input and open modals
+  take priority.
+- Tooltips show the current binding, never a hard-coded key name.
+- Every mouse-only action needs a keyboard/gamepad path.
+
+## 5. Localization & Text Rules
+
+- Player-facing strings use `FText` and localization keys. Runtime UI must not assemble sentences
+  from translated fragments.
+- Russian is the visual-reference language; English parity is required before release.
+- Labels may wrap to two lines. Critical numbers, costs, timers and hotkeys must never be clipped.
+- Uppercase is reserved for headings, alerts and compact RTS controls, not long body copy.
+- Minimum text contrast is 4.5:1; faction colour never replaces readable neutral text.

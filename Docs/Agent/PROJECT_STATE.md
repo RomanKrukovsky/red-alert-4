@@ -1,15 +1,24 @@
 # Project State Master Reference (`PROJECT_STATE.md`)
 
-**Last Updated**: August 4, 2026  
-**Current Phase**: Phase 1 Complete (Full Project Audit & Baseline Verification)  
-**Main Branch**: `main`  
-**Latest Commit Hash**: `d0b7813`  
+**Last Updated**: August 20, 2026
+**Current Phase**: Pre-alpha; native RTS UI reference set implemented and verified
+**Main Branch**: `codex/rts-ui-rebuild`
 
 ---
 
 ## 1. Project Overview & Quick Reference
 
 Red Alert 4 (RA4) is a deterministic real-time strategy (RTS) game engine built on a pure C++ simulation kernel with an Unreal Engine 5 presentation layer.
+
+### UI verification added 2026-08-20
+
+- All 24 canonical screens from `screenshots/` were opened and captured in Unreal at 1672×941.
+- HUD references 13–16 and 20–24 were additionally exercised at 3440×1440.
+- Native stack: CommonUI routing, UMG layout, Slate minimap/world markers, C++ event snapshots.
+- Validator result: 24 reference contracts, 24 Widget Blueprints and 4 faction themes passed.
+- Minimap first-paint measurement: 58.08 µs at 1,000 contacts and 224.66 µs at 5,000;
+  zero per-contact widgets.
+- This verifies the UI slice, not a packaged or commercially ready game build.
 
 ### Primary Metrics
 - **C++ Headless Test Suite**: **378 passed, 0 failed** (5.616s runtime).

@@ -4,6 +4,7 @@
 
 #include "Blueprint/WidgetTree.h"
 #include "Brushes/SlateColorBrush.h"
+#include "Brushes/SlateRoundedBoxBrush.h"
 #include "Components/Border.h"
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
@@ -79,7 +80,13 @@ URA4AngularPanelWidget* MakeMissionPanel(
     URA4AngularPanelWidget* Panel = Tree->ConstructWidget<URA4AngularPanelWidget>(
         URA4AngularPanelWidget::StaticClass(), Name);
     Panel->SetPanelRole(Role);
-    Panel->SetBrushColor(Color);
+    FLinearColor Outline = (Color * 4.0f).GetClamped();
+    if (FMath::Max3(Outline.R, Outline.G, Outline.B) < 0.20f)
+    {
+        Outline = MissionRed * 0.72f;
+    }
+    Outline.A = 1.0f;
+    Panel->SetBrush(FSlateRoundedBoxBrush(Color, 0.0f, Outline, 1.4f));
     Panel->SetContent(Content);
     return Panel;
 }
@@ -167,8 +174,8 @@ TSharedRef<SWidget> URA4MissionMapScreenWidget::RebuildWidget()
     MissionButtons.Reset();
     SetRootBackground(
         this,
-        TEXT("/Game/RA4UI/Art/T_RA4_USSR_MainMenuBackground.T_RA4_USSR_MainMenuBackground"),
-        FLinearColor(0.30f, 0.22f, 0.22f, 1.0f));
+        TEXT("/Game/RA4UI/Art/T_RA4_USSR_MissionMap.T_RA4_USSR_MissionMap"),
+        FLinearColor(0.82f, 0.82f, 0.82f, 1.0f));
 
     UCanvasPanel* Canvas = AddCanvas(this, WidgetTree, TEXT("MissionMapCanvas"));
 
@@ -188,7 +195,7 @@ TSharedRef<SWidget> URA4MissionMapScreenWidget::RebuildWidget()
 
     UBorder* TacticalMap = WidgetTree->ConstructWidget<UBorder>(
         UBorder::StaticClass(), TEXT("TacticalMapSurface"));
-    TacticalMap->SetBrushColor(FLinearColor(0.04f, 0.002f, 0.004f, 0.78f));
+    TacticalMap->SetBrushColor(FLinearColor(0.04f, 0.002f, 0.004f, 0.16f));
     PlaceMissionWidget(Canvas, TacticalMap, FVector2D(24.0f, 220.0f), FVector2D(1325.0f, 690.0f), 2);
 
     const FVector2D NodePositions[] = {
@@ -211,7 +218,7 @@ TSharedRef<SWidget> URA4MissionMapScreenWidget::RebuildWidget()
         Button->SetIsEnabled(!Mission.bLocked);
         UTextBlock* Label = MakeMissionText(
             WidgetTree,
-            FText::Format(LOCTEXT("MissionNodeFormat", "★  {0:02}  {1}"), Mission.MissionNumber, Mission.Location),
+            FText::FromString(FString::Printf(TEXT("★  %02d  %s"), Mission.MissionNumber, *Mission.Location.ToString())),
             bSelected ? 17 : 14,
             bSelected ? FLinearColor::White : MissionText,
             FName(*FString::Printf(TEXT("MissionNodeLabel_%d"), Index)));
@@ -310,8 +317,8 @@ void URA4MissionMapScreenWidget::RefreshMissionDetails()
     }
     if (MissionTitleText)
     {
-        MissionTitleText->SetText(FText::Format(
-            LOCTEXT("MissionTitleFormat", "{0:02}. {1}"), Mission->MissionNumber, Mission->DisplayName));
+        MissionTitleText->SetText(FText::FromString(
+            FString::Printf(TEXT("%02d. %s"), Mission->MissionNumber, *Mission->DisplayName.ToString())));
     }
     if (MissionObjectiveText)
     {
@@ -366,8 +373,8 @@ TSharedRef<SWidget> URA4BriefingScreenWidget::RebuildWidget()
     }
     SetRootBackground(
         this,
-        TEXT("/Game/RA4UI/Art/T_RA4_USSR_CommandCenter.T_RA4_USSR_CommandCenter"),
-        FLinearColor(0.42f, 0.30f, 0.30f, 1.0f));
+        TEXT("/Game/RA4UI/Art/T_RA4_USSR_CampaignCommander.T_RA4_USSR_CampaignCommander"),
+        FLinearColor(0.64f, 0.56f, 0.56f, 1.0f));
     UCanvasPanel* Canvas = AddCanvas(this, WidgetTree, TEXT("BriefingCanvas"));
 
     UImage* Logo = MakeImage(
@@ -415,7 +422,7 @@ TSharedRef<SWidget> URA4BriefingScreenWidget::RebuildWidget()
         MissionRed, TEXT("SovietUnion")));
     UImage* CommanderImage = MakeImage(
         WidgetTree,
-        TEXT("/Game/RA4UI/Art/T_RA4_USSR_CommandCenter.T_RA4_USSR_CommandCenter"),
+        TEXT("/Game/RA4UI/Art/T_RA4_USSR_CampaignCommander.T_RA4_USSR_CampaignCommander"),
         TEXT("BriefingCommanderImage"));
     UVerticalBoxSlot* CommanderImageSlot = Commander->AddChildToVerticalBox(CommanderImage);
     CommanderImageSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
@@ -525,7 +532,7 @@ TSharedRef<SWidget> URA4VideoCommsScreenWidget::RebuildWidget()
         19, MissionRed, TEXT("MarshalChannel")));
     UImage* SovietImage = MakeImage(
         WidgetTree,
-        TEXT("/Game/RA4UI/Art/T_RA4_USSR_CommandCenter.T_RA4_USSR_CommandCenter"),
+        TEXT("/Game/RA4UI/Art/T_RA4_USSR_CampaignCommander.T_RA4_USSR_CampaignCommander"),
         TEXT("SovietChannelImage"));
     UVerticalBoxSlot* SovietImageSlot = SovietChannel->AddChildToVerticalBox(SovietImage);
     SovietImageSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
@@ -547,7 +554,7 @@ TSharedRef<SWidget> URA4VideoCommsScreenWidget::RebuildWidget()
     AlliesChannel->AddChildToVerticalBox(AlliesHeading);
     UImage* AlliesImage = MakeImage(
         WidgetTree,
-        TEXT("/Game/RA4UI/Art/T_RA4_Allies_ArcticFleet.T_RA4_Allies_ArcticFleet"),
+        TEXT("/Game/RA4UI/Art/T_RA4_Allies_CampaignCommander.T_RA4_Allies_CampaignCommander"),
         TEXT("AlliesChannelImage"));
     UVerticalBoxSlot* AlliesImageSlot = AlliesChannel->AddChildToVerticalBox(AlliesImage);
     AlliesImageSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
@@ -627,10 +634,8 @@ TSharedRef<SWidget> URA4LoadingScreenWidget::RebuildWidget()
 
     SetRootBackground(
         this,
-        LoadingVariant == ERA4UIScreenVariant::LoadingBriefing
-            ? TEXT("/Game/RA4UI/Art/T_RA4_USSR_CommandCenter.T_RA4_USSR_CommandCenter")
-            : TEXT("/Game/RA4UI/Art/T_RA4_USSR_MainMenuBackground.T_RA4_USSR_MainMenuBackground"),
-        FLinearColor(0.48f, 0.34f, 0.34f, 1.0f));
+        TEXT("/Game/RA4UI/Art/T_RA4_USSR_LoadingKyiv.T_RA4_USSR_LoadingKyiv"),
+        FLinearColor(0.82f, 0.72f, 0.72f, 1.0f));
     UCanvasPanel* Canvas = AddCanvas(this, WidgetTree, TEXT("LoadingCanvas"));
 
     UImage* Logo = MakeImage(
@@ -692,19 +697,6 @@ TSharedRef<SWidget> URA4LoadingScreenWidget::RebuildWidget()
             WidgetTree, Summary, TEXT("LoadingBriefingPanel"), MissionPanel, ERA4PanelRole::Hero),
             FVector2D(38.0f, 190.0f), FVector2D(430.0f, 665.0f), 6);
     }
-
-    UTextBlock* Emblem = MakeMissionText(
-        WidgetTree, LOCTEXT("LoadingEmblem", "★"), 260,
-        MissionRed, TEXT("LoadingEmblem"));
-    Emblem->SetJustification(ETextJustify::Center);
-    PlaceMissionWidget(
-        Canvas, Emblem,
-        LoadingVariant == ERA4UIScreenVariant::LoadingBriefing
-            ? FVector2D(620.0f, 190.0f)
-            : FVector2D(610.0f, 300.0f),
-        LoadingVariant == ERA4UIScreenVariant::LoadingBriefing
-            ? FVector2D(1100.0f, 600.0f)
-            : FVector2D(700.0f, 480.0f), 4);
 
     LoadingProgressBar = WidgetTree->ConstructWidget<UProgressBar>(
         UProgressBar::StaticClass(), TEXT("LoadingProgressBar"));

@@ -93,6 +93,14 @@ core.
 
 ## Next actions
 
+### UI stream verified 2026-08-20
+
+The 24-screen native Unreal UI set is implemented and visually checked. The remaining UI work is
+content polish, not missing architecture: replace provisional portrait/icon symbols when approved
+licensed art exists, repeat performance capture on target Windows hardware, and connect the HUD
+snapshot provider to every remaining live gameplay event as those systems land. Evidence is in
+`Docs/QA/UI_VISUAL_ACCEPTANCE.md` and `Docs/QA/UI_PERFORMANCE_REPORT.md`.
+
 | Task ID | Task | Acceptance criteria |
 | :--- | :--- | :--- |
 | **V-1** | Produce a packaged build that launches | A binary that starts, loads `RA4_Skirmish_Production`, and reaches a playable state without a crash. Record the exact command and its output. |

@@ -4,6 +4,7 @@
 
 #include "Blueprint/WidgetTree.h"
 #include "Brushes/SlateColorBrush.h"
+#include "Brushes/SlateRoundedBoxBrush.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
 #include "Components/CanvasPanel.h"
@@ -46,7 +47,7 @@ FFactionVisual ResolveFactionVisual(const ERA4FactionTheme Faction)
             ERA4UIScreenId::SovietCampaign,
             FLinearColor(0.92f, 0.035f, 0.04f, 1.0f),
             FLinearColor(0.20f, 0.008f, 0.012f, 0.96f),
-            TEXT("/Game/RA4UI/Art/T_RA4_USSR_CommandCenter.T_RA4_USSR_CommandCenter"),
+            TEXT("/Game/RA4UI/Art/T_RA4_USSR_CampaignCommander.T_RA4_USSR_CampaignCommander"),
             LOCTEXT("USSRHeading", "КАМПАНИЯ  СССР"),
             LOCTEXT("USSRChapter", "ГЛАВА 3: КРАСНЫЙ ШТОРМ"),
             LOCTEXT("USSREvent", "ФРОНТОВАЯ СВОДКА: УДАРНАЯ ГРУППА ГОТОВА К ВЫДВИЖЕНИЮ.")
@@ -56,7 +57,7 @@ FFactionVisual ResolveFactionVisual(const ERA4FactionTheme Faction)
             ERA4UIScreenId::AlliesCampaign,
             FLinearColor(0.16f, 0.56f, 1.0f, 1.0f),
             FLinearColor(0.015f, 0.08f, 0.17f, 0.96f),
-            TEXT("/Game/RA4UI/Art/T_RA4_Allies_ArcticFleet.T_RA4_Allies_ArcticFleet"),
+            TEXT("/Game/RA4UI/Art/T_RA4_Allies_CampaignCommander.T_RA4_Allies_CampaignCommander"),
             LOCTEXT("AlliesHeading", "КАМПАНИЯ  АЛЬЯНСА"),
             LOCTEXT("AlliesChapter", "ГЛАВА 3: ЛЕДЯНОЙ РАССВЕТ"),
             LOCTEXT("AlliesEvent", "СРОЧНОЕ СООБЩЕНИЕ: ЗАМЕЧЕНО ПЕРЕДВИЖЕНИЕ ПРОТИВНИКА В АРКТИКЕ.")
@@ -66,7 +67,7 @@ FFactionVisual ResolveFactionVisual(const ERA4FactionTheme Faction)
             ERA4UIScreenId::EasternCampaign,
             FLinearColor(0.78f, 0.64f, 0.16f, 1.0f),
             FLinearColor(0.03f, 0.12f, 0.05f, 0.96f),
-            TEXT("/Game/RA4UI/Art/T_RA4_Eastern_CommandFortress.T_RA4_Eastern_CommandFortress"),
+            TEXT("/Game/RA4UI/Art/T_RA4_Eastern_CampaignCommander.T_RA4_Eastern_CampaignCommander"),
             LOCTEXT("EasternHeading", "КАМПАНИЯ  ВОСТОЧНОЙ КОАЛИЦИИ"),
             LOCTEXT("EasternChapter", "ГЛАВА 3: ВОСХОД ДРАКОНА"),
             LOCTEXT("EasternEvent", "НОВОСТИ КОАЛИЦИИ: ИСПЫТАНИЯ ЭНЕРГЕТИЧЕСКОГО ЩИТА ЗАВЕРШЕНЫ.")
@@ -76,7 +77,7 @@ FFactionVisual ResolveFactionVisual(const ERA4FactionTheme Faction)
             ERA4UIScreenId::ChronoCampaign,
             FLinearColor(0.70f, 0.30f, 1.0f, 1.0f),
             FLinearColor(0.10f, 0.025f, 0.16f, 0.96f),
-            TEXT("/Game/RA4UI/Art/T_RA4_Chrono_TemporalCitadel.T_RA4_Chrono_TemporalCitadel"),
+            TEXT("/Game/RA4UI/Art/T_RA4_Chrono_CampaignCommander.T_RA4_Chrono_CampaignCommander"),
             LOCTEXT("ChronoHeading", "КАМПАНИЯ  ХРОНОЛЕГИОНА"),
             LOCTEXT("ChronoChapter", "ГЛАВА 1: РАЗЛОМ ВРЕМЕНИ"),
             LOCTEXT("ChronoEvent", "ХРОНОПРОТОКОЛ АКТИВЕН: ВРЕМЕННЫЕ АНОМАЛИИ ЗАФИКСИРОВАНЫ.")
@@ -136,7 +137,11 @@ URA4AngularPanelWidget* MakeCampaignPanel(
     URA4AngularPanelWidget* Panel = Tree->ConstructWidget<URA4AngularPanelWidget>(
         URA4AngularPanelWidget::StaticClass(), Name);
     Panel->SetPanelRole(Role);
-    Panel->SetBrushColor(DarkAccent);
+    FLinearColor Outline = (DarkAccent * 4.0f).GetClamped();
+    Outline.A = 1.0f;
+    FLinearColor Fill = DarkAccent * 0.18f;
+    Fill.A = 0.92f;
+    Panel->SetBrush(FSlateRoundedBoxBrush(Fill, 0.0f, Outline, 1.5f));
     Panel->SetContent(Content);
     return Panel;
 }
@@ -204,22 +209,22 @@ TSharedRef<SWidget> URA4CampaignScreenWidget::RebuildWidget()
     CanvasSlot->SetHorizontalAlignment(HAlign_Fill);
     CanvasSlot->SetVerticalAlignment(VAlign_Fill);
 
-    UImage* Logo = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("CampaignLogo"));
-    if (UTexture2D* LogoTexture = LoadObject<UTexture2D>(
-        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_Logo.T_RA4_Logo")))
-    {
-        Logo->SetBrushFromTexture(LogoTexture, false);
-    }
-    Logo->SetVisibility(ESlateVisibility::HitTestInvisible);
-    PlaceCampaignWidget(Canvas, Logo, FVector2D(650.0f, 8.0f), FVector2D(620.0f, 190.0f), 3);
+    UTextBlock* ScreenHeader = MakeCampaignText(
+        WidgetTree, Visual.Heading, 36,
+        FLinearColor(0.91f, 0.86f, 0.77f, 1.0f), TEXT("CampaignScreenHeader"));
+    ScreenHeader->SetJustification(ETextJustify::Center);
+    PlaceCampaignWidget(Canvas, MakeCampaignPanel(
+        WidgetTree, ScreenHeader, TEXT("CampaignScreenHeaderPanel"), Visual.DarkAccent,
+        ERA4PanelRole::Compact),
+        FVector2D(405.0f, 18.0f), FVector2D(1080.0f, 82.0f), 3);
 
     UVerticalBox* Profile = WidgetTree->ConstructWidget<UVerticalBox>(
         UVerticalBox::StaticClass(), TEXT("CampaignProfile"));
     Profile->AddChildToVerticalBox(MakeCampaignText(
-        WidgetTree, LOCTEXT("Commander", "ТОВАРИЩ КОМАНДИР"), 18,
+        WidgetTree, LOCTEXT("Commander", "КАМПАНИЯ"), 17,
         FLinearColor(0.88f, 0.84f, 0.78f, 1.0f), TEXT("CommanderName")));
     Profile->AddChildToVerticalBox(MakeCampaignText(
-        WidgetTree, LOCTEXT("CommanderLevel", "УРОВЕНЬ 45   ★"), 14,
+        WidgetTree, Visual.Chapter, 14,
         Visual.Accent, TEXT("CommanderLevel"), false));
     PlaceCampaignWidget(Canvas, MakeCampaignPanel(
         WidgetTree, Profile, TEXT("CampaignProfilePanel"), Visual.DarkAccent, ERA4PanelRole::Compact),
@@ -245,53 +250,35 @@ TSharedRef<SWidget> URA4CampaignScreenWidget::RebuildWidget()
         WidgetTree, SystemButtons, TEXT("CampaignSystemPanel"), Visual.DarkAccent, ERA4PanelRole::Compact),
         FVector2D(1515.0f, 18.0f), FVector2D(387.0f, 78.0f), 4);
 
+    const FRA4FactionCardView* Faction = CampaignViewModel->FindFaction(FactionTheme);
+    check(Faction != nullptr);
+
     UVerticalBox* LeftRail = WidgetTree->ConstructWidget<UVerticalBox>(
         UVerticalBox::StaticClass(), TEXT("CampaignFactionRail"));
     LeftRail->AddChildToVerticalBox(MakeCampaignText(
-        WidgetTree, LOCTEXT("CampaignRailTitle", "КАМПАНИЯ"), 18,
-        Visual.Accent, TEXT("CampaignRailTitle")))->SetPadding(FMargin(10.0f, 8.0f));
-    const FText FactionLabels[] = {
-        LOCTEXT("USSRRail", "★   СССР"),
-        LOCTEXT("AlliesRail", "◆   АЛЬЯНС"),
-        LOCTEXT("EasternRail", "◈   ВОСТОЧНАЯ КОАЛИЦИЯ"),
-        LOCTEXT("ChronoRail", "△   ХРОНОЛЕГИОН")
-    };
-    for (int32 Index = 0; Index < 4; ++Index)
-    {
-        const bool bSelected = Index == static_cast<int32>(FactionTheme);
-        UButton* FactionButton = WidgetTree->ConstructWidget<UButton>(
-            UButton::StaticClass(), FName(*FString::Printf(TEXT("FactionRailButton_%d"), Index)));
-        FactionButton->SetStyle(MakeCampaignButtonStyle(
-            bSelected ? Visual.Accent : FLinearColor(0.22f, 0.24f, 0.27f, 1.0f),
-            bSelected ? Visual.DarkAccent : FLinearColor(0.006f, 0.009f, 0.013f, 0.92f)));
-        UTextBlock* FactionLabel = MakeCampaignText(
-            WidgetTree, FactionLabels[Index], 18,
-            bSelected ? Visual.Accent : FLinearColor(0.62f, 0.62f, 0.61f, 1.0f),
-            FName(*FString::Printf(TEXT("FactionRailLabel_%d"), Index)));
-        FactionButton->AddChild(FactionLabel);
-        LeftRail->AddChildToVerticalBox(FactionButton)->SetPadding(FMargin(0.0f, 4.0f));
-    }
-    const FText UtilityLabels[] = {
-        LOCTEXT("SkirmishRail", "⚔   СХВАТКА"),
-        LOCTEXT("NetworkRail", "●   СЕТЕВАЯ ИГРА"),
-        LOCTEXT("ChallengesRail", "◇   ИСПЫТАНИЯ"),
-        LOCTEXT("WorkshopRail", "⌁   МАСТЕРСКАЯ"),
-        LOCTEXT("SettingsRail", "⚙   НАСТРОЙКИ")
-    };
-    for (int32 Index = 0; Index < UE_ARRAY_COUNT(UtilityLabels); ++Index)
-    {
-        UTextBlock* Label = MakeCampaignText(
-            WidgetTree, UtilityLabels[Index], 16,
-            FLinearColor(0.62f, 0.62f, 0.61f, 1.0f),
-            FName(*FString::Printf(TEXT("UtilityRailLabel_%d"), Index)), false);
-        LeftRail->AddChildToVerticalBox(Label)->SetPadding(FMargin(12.0f, 12.0f));
-    }
+        WidgetTree, Visual.Heading, 28,
+        FLinearColor(0.91f, 0.86f, 0.77f, 1.0f), TEXT("CampaignRailTitle")))
+        ->SetPadding(FMargin(12.0f, 10.0f, 12.0f, 4.0f));
+    LeftRail->AddChildToVerticalBox(MakeCampaignText(
+        WidgetTree, Faction->Motto, 16, Visual.Accent, TEXT("CampaignRailMotto")))
+        ->SetPadding(FMargin(12.0f, 0.0f, 12.0f, 18.0f));
+    LeftRail->AddChildToVerticalBox(MakeCampaignText(
+        WidgetTree, Faction->Description, 16,
+        FLinearColor(0.76f, 0.74f, 0.70f, 1.0f), TEXT("CampaignRailDescription"), false))
+        ->SetPadding(FMargin(12.0f, 0.0f, 12.0f, 22.0f));
+    LeftRail->AddChildToVerticalBox(MakeCampaignText(
+        WidgetTree, LOCTEXT("FactionFeatures", "ОСОБЕННОСТИ ФРАКЦИИ"), 17,
+        Visual.Accent, TEXT("FactionFeatures")))
+        ->SetPadding(FMargin(12.0f, 0.0f, 12.0f, 10.0f));
+    LeftRail->AddChildToVerticalBox(MakeCampaignText(
+        WidgetTree,
+        LOCTEXT("FactionFeatureList", "◆  ГАРМОНИЯ РЕСУРСОВ\n\n◆  УНИКАЛЬНЫЕ БОЕВЫЕ ЕДИНИЦЫ\n\n◆  ПРОДВИНУТЫЕ ТЕХНОЛОГИИ\n\n◆  ОСОБАЯ ДОКТРИНА КОМАНДОВАНИЯ"),
+        15, FLinearColor(0.82f, 0.80f, 0.75f, 1.0f), TEXT("FactionFeatureList"), false))
+        ->SetPadding(FMargin(12.0f));
     PlaceCampaignWidget(Canvas, MakeCampaignPanel(
         WidgetTree, LeftRail, TEXT("CampaignLeftRailPanel"), Visual.DarkAccent, ERA4PanelRole::Compact),
-        FVector2D(18.0f, 138.0f), FVector2D(300.0f, 670.0f), 5);
+        FVector2D(24.0f, 132.0f), FVector2D(430.0f, 650.0f), 5);
 
-    const FRA4FactionCardView* Faction = CampaignViewModel->FindFaction(FactionTheme);
-    check(Faction != nullptr);
     const bool bEasternDetail = CampaignVariant == ERA4UIScreenVariant::EasternDetail;
 
     UVerticalBox* Details = WidgetTree->ConstructWidget<UVerticalBox>(
@@ -364,8 +351,8 @@ TSharedRef<SWidget> URA4CampaignScreenWidget::RebuildWidget()
 
     PlaceCampaignWidget(Canvas, MakeCampaignPanel(
         WidgetTree, Details, TEXT("CampaignDetailsPanel"), Visual.DarkAccent, ERA4PanelRole::Hero),
-        FVector2D(bEasternDetail ? 1110.0f : 1035.0f, 180.0f),
-        FVector2D(bEasternDetail ? 770.0f : 845.0f, 610.0f), 6);
+        FVector2D(1190.0f, 150.0f),
+        FVector2D(690.0f, 640.0f), 6);
 
     UTextBlock* Commander = MakeCampaignText(
         WidgetTree, Faction->CommanderName, 23,
@@ -373,14 +360,14 @@ TSharedRef<SWidget> URA4CampaignScreenWidget::RebuildWidget()
     Commander->SetJustification(ETextJustify::Center);
     PlaceCampaignWidget(Canvas, MakeCampaignPanel(
         WidgetTree, Commander, TEXT("CampaignCommanderPanel"), Visual.DarkAccent, ERA4PanelRole::Compact),
-        FVector2D(415.0f, 735.0f), FVector2D(560.0f, 74.0f), 6);
+        FVector2D(495.0f, 720.0f), FVector2D(620.0f, 62.0f), 6);
 
     UHorizontalBox* Actions = WidgetTree->ConstructWidget<UHorizontalBox>(
         UHorizontalBox::StaticClass(), TEXT("CampaignActions"));
     const FText ActionLabels[] = {
-        LOCTEXT("NewCampaign", "НОВАЯ ИГРА"),
+        LOCTEXT("NewCampaign", "НАЧАТЬ КАМПАНИЮ"),
         LOCTEXT("ContinueCampaign", "ПРОДОЛЖИТЬ"),
-        LOCTEXT("ChapterSelect", "ГЛАВА")
+        LOCTEXT("ChapterSelect", "ВЫБРАТЬ ГЛАВУ")
     };
     for (int32 Index = 0; Index < 3; ++Index)
     {
@@ -403,7 +390,7 @@ TSharedRef<SWidget> URA4CampaignScreenWidget::RebuildWidget()
     ActionButtons[2]->OnClicked.AddDynamic(this, &URA4CampaignScreenWidget::OpenChapterMap);
     PlaceCampaignWidget(Canvas, MakeCampaignPanel(
         WidgetTree, Actions, TEXT("CampaignActionsPanel"), Visual.DarkAccent, ERA4PanelRole::Compact),
-        FVector2D(420.0f, 820.0f), FVector2D(1460.0f, 104.0f), 8);
+        FVector2D(24.0f, 806.0f), FVector2D(1090.0f, 104.0f), 8);
 
     UButton* BackButton = WidgetTree->ConstructWidget<UButton>(
         UButton::StaticClass(), TEXT("CampaignBackButton"));

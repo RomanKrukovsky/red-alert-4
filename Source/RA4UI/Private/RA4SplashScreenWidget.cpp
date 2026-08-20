@@ -49,15 +49,15 @@ TSharedRef<SWidget> URA4SplashScreenWidget::RebuildWidget()
 
     if (UTexture2D* BackgroundTexture = LoadObject<UTexture2D>(
         nullptr,
-        TEXT("/Game/RA4UI/Art/T_RA4_USSR_MainMenuBackground.T_RA4_USSR_MainMenuBackground")))
+        TEXT("/Game/RA4UI/Art/T_RA4_USSR_LoadingKyiv.T_RA4_USSR_LoadingKyiv")))
     {
         GetBackgroundLayer()->SetBrushFromTexture(BackgroundTexture, false);
-        GetBackgroundLayer()->SetColorAndOpacity(FLinearColor(0.58f, 0.64f, 0.78f, 1.0f));
+        GetBackgroundLayer()->SetColorAndOpacity(FLinearColor(0.62f, 0.54f, 0.54f, 1.0f));
     }
 
     UBorder* Vignette = WidgetTree->ConstructWidget<UBorder>(
         UBorder::StaticClass(), TEXT("SplashVignette"));
-    Vignette->SetBrushColor(FLinearColor(0.0f, 0.01f, 0.04f, 0.34f));
+    Vignette->SetBrushColor(FLinearColor(0.0f, 0.0f, 0.0f, 0.28f));
     Vignette->SetVisibility(ESlateVisibility::HitTestInvisible);
     UOverlaySlot* VignetteSlot = GetContentLayer()->AddChildToOverlay(Vignette);
     VignetteSlot->SetHorizontalAlignment(HAlign_Fill);
@@ -78,11 +78,11 @@ TSharedRef<SWidget> URA4SplashScreenWidget::RebuildWidget()
         LogoImage->SetBrushFromTexture(LogoTexture, false);
     }
     LogoImage->SetVisibility(ESlateVisibility::HitTestInvisible);
-    PlaceSplashWidget(Canvas, LogoImage, FVector2D(430.0f, 180.0f), FVector2D(1060.0f, 354.0f), 2);
+    PlaceSplashWidget(Canvas, LogoImage, FVector2D(390.0f, 210.0f), FVector2D(1140.0f, 380.0f), 2);
 
     UBorder* PromptFrame = WidgetTree->ConstructWidget<UBorder>(
         UBorder::StaticClass(), TEXT("ContinuePromptFrame"));
-    PromptFrame->SetBrushColor(FLinearColor(0.01f, 0.012f, 0.022f, 0.72f));
+    PromptFrame->SetBrushColor(FLinearColor(0.0f, 0.0f, 0.0f, 0.22f));
     PromptFrame->SetPadding(FMargin(42.0f, 14.0f));
     PromptFrame->SetVisibility(ESlateVisibility::HitTestInvisible);
 
@@ -95,10 +95,10 @@ TSharedRef<SWidget> URA4SplashScreenWidget::RebuildWidget()
         nullptr,
         TEXT("/Game/RA4UI/Fonts/RA4_RobotoCondensedRegular_Font.RA4_RobotoCondensedRegular_Font")))
     {
-        ContinuePrompt->SetFont(FSlateFontInfo(Font, 30));
+        ContinuePrompt->SetFont(FSlateFontInfo(Font, 24));
     }
     PromptFrame->SetContent(ContinuePrompt);
-    PlaceSplashWidget(Canvas, PromptFrame, FVector2D(645.0f, 920.0f), FVector2D(630.0f, 74.0f), 3);
+    PlaceSplashWidget(Canvas, PromptFrame, FVector2D(645.0f, 938.0f), FVector2D(630.0f, 64.0f), 3);
     return RootWidget;
 }
 
