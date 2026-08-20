@@ -92,10 +92,6 @@ echo "Target platform: $PLATFORM_NAME"
 if [[ "$SERVER_ONLY" == "true" ]]; then
     echo ""
     echo "Building headless dedicated server (Shipping)..."
-<<<<<<< HEAD
-    set +e
-=======
->>>>>>> feat/ui-skirmish-adaptive-layout
     "$UAT" BuildCookRun \
         -project="$UPROJECT" \
         -noP4 \
@@ -113,7 +109,6 @@ if [[ "$SERVER_ONLY" == "true" ]]; then
         -pak \
         -prereqs \
         -compressed \
-<<<<<<< HEAD
         -nodebuginfo \
         -nozenstore
     EXIT_CODE=$?
@@ -122,12 +117,6 @@ else
     echo ""
     echo "Building game client (Shipping)..."
     set +e
-=======
-        -nodebuginfo
-else
-    echo ""
-    echo "Building game client (Shipping)..."
->>>>>>> feat/ui-skirmish-adaptive-layout
     "$UAT" BuildCookRun \
         -project="$UPROJECT" \
         -noP4 \
@@ -143,7 +132,6 @@ else
         -prereqs \
         -compressed \
         -nodebuginfo \
-<<<<<<< HEAD
         -utf8output \
         -nozenstore \
         -unversionedcookedcontent
@@ -207,30 +195,14 @@ if [[ $EXIT_CODE -eq 0 ]]; then
 
     echo ""
     echo "=== Build succeeded and payload verified ==="
-=======
-        -utf8output
-fi
-
-EXIT_CODE=$?
-
-echo ""
-if [[ $EXIT_CODE -eq 0 ]]; then
-    echo "=== Build succeeded ==="
->>>>>>> feat/ui-skirmish-adaptive-layout
     echo "Output: $STAGING"
     du -sh "$STAGING"
     echo ""
     echo "To run:"
     if [[ "$SERVER_ONLY" == "true" ]]; then
-<<<<<<< HEAD
         echo "  $FOUND_BIN"
     else
         echo "  open \"$FOUND_APP\""
-=======
-        echo "  $STAGING/Server/$(ls "$STAGING/Server/" | head -1)/Binaries/$PLATFORM_NAME/"
-    else
-        echo "  open $STAGING/Client/$(ls "$STAGING/Client/" | head -1)/Mac/$(ls "$STAGING/Client/$(ls "$STAGING/Client/" | head -1)/Mac/" 2>/dev/null | head -1).app"
->>>>>>> feat/ui-skirmish-adaptive-layout
     fi
 else
     echo "=== Build FAILED (exit code $EXIT_CODE) ==="
