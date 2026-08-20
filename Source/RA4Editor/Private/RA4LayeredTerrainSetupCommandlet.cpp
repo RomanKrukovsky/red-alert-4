@@ -51,6 +51,8 @@
 #include "Materials/MaterialExpressionTextureObjectParameter.h"
 #include "Materials/MaterialExpressionTextureSampleParameter2D.h"
 #include "Materials/MaterialExpressionWorldPosition.h"
+#include "Materials/MaterialExpressionComponentMask.h"
+#include "Materials/MaterialExpressionTruncateLWC.h"
 // Post-process fog (ADR-0030 / V-7): needed so props, water and buildings are
 // fogged too. The landscape material only tints the ground, which leaves lit
 // objects floating over unexplored black -- worse than no fog, because it points
@@ -210,6 +212,67 @@ bool SavePackageFor(UObject* Object)
     Args.TopLevelFlags = RF_Public | RF_Standalone;
     Args.SaveFlags = SAVE_NoError;
     return UPackage::SavePackage(Package, nullptr, *FileName, Args);
+}
+
+// The default texture for the two fog sampler parameters.
+//
+// Unreal validates a TextureSampleParameter2D's sampler type against the texture
+// sitting on the node, not against whatever the game binds at runtime. Both fog
+// samplers declare SAMPLERTYPE_LinearGrayscale, which is right for the G8
+// visibility texture, but neither had a texture assigned -- so the node fell back
+// to /Engine/EngineResources/DefaultTexture, which is sRGB colour. The mismatch
+// failed the whole material:
+//
+//   M_RA4_FogPostProcess: Failed to compile Material for platform SF_METAL_SM6,
+//   Default Material will be used in game.
+//   (Node TextureSampleParameter2D) Sampler type is Linear Grayscale, should be
+//   Color for /Engine/EngineResources/DefaultTexture
+//
+// It is logged as a warning, the game starts anyway, and the fog is simply
+// absent. Only running it shows that.
+//
+// White (255 = CurrentlyVisible) rather than black: this value is what the editor
+// previews and what the material shows before the subsystem has uploaded
+// anything. Black would render every level pitch dark in the editor. It cannot
+// leak vision -- the texture is never asked whether something is visible, that
+// always goes to SimWorld (ADR-0030).
+UTexture2D* CreateOrLoadFogDefaultTexture()
+{
+    const FString AssetName = TEXT("T_RA4_FogDefault");
+    const FString PackageName = FString(kGeneratedRoot) + TEXT("/") + AssetName;
+    if (UTexture2D* Existing =
+            LoadObject<UTexture2D>(nullptr, *(PackageName + TEXT(".") + AssetName)))
+    {
+        return Existing;
+    }
+
+    UPackage* Package = CreatePackage(*PackageName);
+    Package->FullyLoad();
+
+    constexpr int32 Size = 4;
+    UTexture2D* Texture = NewObject<UTexture2D>(Package, *AssetName, RF_Public | RF_Standalone);
+    if (Texture == nullptr)
+    {
+        return nullptr;
+    }
+
+    Texture->Source.Init(Size, Size, 1, 1, TSF_G8);
+    if (uint8* Data = Texture->Source.LockMip(0))
+    {
+        FMemory::Memset(Data, 255, Size * Size);
+        Texture->Source.UnlockMip(0);
+    }
+    // Must match the runtime texture created in UpdateFogVisibilityTexture, or the
+    // sampler validation moves from one mismatch to another.
+    Texture->SRGB = false;
+    Texture->CompressionSettings = TC_Grayscale;
+    Texture->Filter = TF_Bilinear;
+    Texture->NeverStream = true;
+    Texture->UpdateResource();
+    Texture->MarkPackageDirty();
+    FAssetRegistryModule::AssetCreated(Texture);
+    SavePackageFor(Texture);
+    return Texture;
 }
 
 }  // namespace
@@ -486,6 +549,10 @@ int32 URA4LayeredTerrainSetupCommandlet::Main(const FString& Params)
     {
         FogSample->ParameterName = TEXT("RA4FogVisibility");
         FogSample->SamplerType = SAMPLERTYPE_LinearGrayscale;   // data, not sRGB colour
+        // Required, not cosmetic: the sampler type is validated against this
+        // texture, and with none assigned the node takes the engine's sRGB
+        // DefaultTexture and the whole material fails to compile.
+        FogSample->Texture = CreateOrLoadFogDefaultTexture();
 
         FogHeight->ParameterName = TEXT("RA4FogWorldHeight");
         FogHeight->DefaultValue = 12800.0f;
@@ -612,6 +679,31 @@ int32 URA4LayeredTerrainSetupCommandlet::Main(const FString& Params)
                 Cast<UMaterialExpressionLinearInterpolate>(UMaterialEditingLibrary::CreateMaterialExpression(
                     FogPP, UMaterialExpressionLinearInterpolate::StaticClass(), -500, 600));
 
+            // WorldPosition is a large-world-coordinate value. Dividing it by the
+            // two-component map extent is not a defined operation, and in the
+            // post-process domain the translator says so and fails the material:
+            //
+            //   (Node Divide) Arithmetic between types LWCVector3 and float2 are
+            //   undefined
+            //
+            // which costs the whole pass -- Unreal substitutes the default
+            // post-process material, and that paints over the frame. TruncateLWC
+            // brings the position back to ordinary floats, then the mask takes the
+            // two axes the fog grid actually has.
+            UMaterialExpressionTruncateLWC* PPWorldPosFloat =
+                Cast<UMaterialExpressionTruncateLWC>(UMaterialEditingLibrary::CreateMaterialExpression(
+                    FogPP, UMaterialExpressionTruncateLWC::StaticClass(), -1300, 250));
+            UMaterialExpressionComponentMask* PPWorldPosXY =
+                Cast<UMaterialExpressionComponentMask>(UMaterialEditingLibrary::CreateMaterialExpression(
+                    FogPP, UMaterialExpressionComponentMask::StaticClass(), -1225, 250));
+            if (PPWorldPosXY != nullptr)
+            {
+                PPWorldPosXY->R = true;
+                PPWorldPosXY->G = true;
+                PPWorldPosXY->B = false;
+                PPWorldPosXY->A = false;
+            }
+
             UMaterialExpressionDivide* PPFogUV =
                 Cast<UMaterialExpressionDivide>(UMaterialEditingLibrary::CreateMaterialExpression(
                     FogPP, UMaterialExpressionDivide::StaticClass(), -1150, 250));
@@ -638,6 +730,7 @@ int32 URA4LayeredTerrainSetupCommandlet::Main(const FString& Params)
                     FogPP, UMaterialExpressionMultiply::StaticClass(), -150, 200));
 
             const bool bPPCreated = SceneColour != nullptr && PPWorldPos != nullptr &&
+                                    PPWorldPosFloat != nullptr && PPWorldPosXY != nullptr &&
                                     PPFogWidth != nullptr && PPFogUV != nullptr &&
                                     PPFogSample != nullptr && PPFloor != nullptr &&
                                     PPFull != nullptr && PPBrightness != nullptr &&
@@ -656,6 +749,10 @@ int32 URA4LayeredTerrainSetupCommandlet::Main(const FString& Params)
                 PPFogWidth->DefaultValue = 12800.0f;
                 PPFogSample->ParameterName = TEXT("RA4FogVisibility");
                 PPFogSample->SamplerType = SAMPLERTYPE_LinearGrayscale;
+                // Same reason as the terrain sampler above: without a grayscale
+                // default this node validates against the engine's sRGB
+                // DefaultTexture and takes the post-process material down with it.
+                PPFogSample->Texture = CreateOrLoadFogDefaultTexture();
                 // Same floor as the terrain: if the two differed, the boundary
                 // would be visible as a step between ground and props.
                 PPFloor->R = 0.08f;
@@ -671,7 +768,9 @@ int32 URA4LayeredTerrainSetupCommandlet::Main(const FString& Params)
 
                 UMaterialEditingLibrary::ConnectMaterialExpressions(PPFogWidth, TEXT(""), PPExtent, TEXT("A"));
                 UMaterialEditingLibrary::ConnectMaterialExpressions(PPFogHeight, TEXT(""), PPExtent, TEXT("B"));
-                UMaterialEditingLibrary::ConnectMaterialExpressions(PPWorldPos, TEXT(""), PPFogUV, TEXT("A"));
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPWorldPos, TEXT(""), PPWorldPosFloat, TEXT(""));
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPWorldPosFloat, TEXT(""), PPWorldPosXY, TEXT(""));
+                UMaterialEditingLibrary::ConnectMaterialExpressions(PPWorldPosXY, TEXT(""), PPFogUV, TEXT("A"));
                 UMaterialEditingLibrary::ConnectMaterialExpressions(PPExtent, TEXT(""), PPFogUV, TEXT("B"));
                 UMaterialEditingLibrary::ConnectMaterialExpressions(PPFogUV, TEXT(""), PPFogSample, TEXT("UVs"));
 

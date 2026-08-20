@@ -223,6 +223,8 @@ private:
     // rebuild whenever the gap is anything else.
     uint32_t LastFogUploadTick = 0;
     bool bFogScratchValid = false;
+    bool bFogContentsLogged = false;
+    int32 FogUploadsSeen = 0;
     bool bFogMaterialBound = false;
     bool bCameraFogBound = false;
 

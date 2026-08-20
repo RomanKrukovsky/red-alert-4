@@ -23,6 +23,13 @@
 #include "Engine/World.h"
 #include "Engine/Texture2D.h"
 #include "Materials/MaterialInstanceDynamic.h"
+// The fog camera path needs these two by name. They were reaching this file
+// through the unity blob, so it compiled while nothing here had changed and
+// stopped compiling the moment it did: UBT picks the adaptive non-unity working
+// set from `git status`, which means an edit -- any edit -- moves the file out of
+// the blob and exposes what it was borrowing.
+#include "RA4CameraPawn.h"
+#include "Camera/CameraComponent.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 #include "EngineUtils.h"
@@ -1086,6 +1093,45 @@ void URA4SimWorldSubsystem::UpdateFogVisibilityTexture()
 
     PublishFogParametersToTerrain();
     PublishFogParametersToCamera();
+
+    // Fog is the one feature whose failure mode is silence. A material that will
+    // not compile is a warning the engine shrugs off; an upload that never runs
+    // looks exactly like a map with nothing hidden; a material instance that never
+    // binds looks like both. None of it reaches a headless test, and the first
+    // frame is useless to look at because nothing has been revealed yet and the
+    // landscape has not been found.
+    //
+    // So this reports once, when there is something to report: the first upload
+    // where a unit has actually revealed ground. If that never happens the second
+    // branch says so after ~15 seconds rather than leaving silence to be read as
+    // success.
+    if (!bFogContentsLogged)
+    {
+        int32 Counts[4] = {0, 0, 0, 0};
+        for (const uint8 Texel : FogTexelScratch)
+        {
+            switch (Texel)
+            {
+            case RA4::kFogTexelNeverSeen:        ++Counts[0]; break;
+            case RA4::kFogTexelPreviouslySeen:   ++Counts[1]; break;
+            case RA4::kFogTexelRadarDetected:    ++Counts[2]; break;
+            case RA4::kFogTexelCurrentlyVisible: ++Counts[3]; break;
+            default: break;
+            }
+        }
+        const bool bAnythingRevealed = Counts[1] > 0 || Counts[2] > 0 || Counts[3] > 0;
+        ++FogUploadsSeen;
+        if (bAnythingRevealed || FogUploadsSeen > 300)
+        {
+            bFogContentsLogged = true;
+            UE_LOG(LogTemp, Display,
+                   TEXT("RA4Fog: %dx%d tiles after %d uploads -- never seen %d, remembered %d, radar %d, visible %d"),
+                   Width, Height, FogUploadsSeen, Counts[0], Counts[1], Counts[2], Counts[3]);
+            UE_LOG(LogTemp, Display, TEXT("RA4Fog: terrain material %s, camera material %s"),
+                   TerrainFogMaterial != nullptr ? TEXT("bound") : TEXT("NOT BOUND"),
+                   CameraFogMaterial != nullptr ? TEXT("bound") : TEXT("NOT BOUND"));
+        }
+    }
 }
 
 
