@@ -210,6 +210,7 @@ private:
     TickIndex LastScoutOrderTick = 0;
     bool bHasScoutOrder = false;
 
+private:
     std::vector<AIDecision> DecisionLog;
     size_t DecisionLogLimit = 64;
 

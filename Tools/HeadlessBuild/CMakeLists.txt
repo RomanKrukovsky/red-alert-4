@@ -122,6 +122,9 @@ add_library(RA4AI STATIC
     ${RA4_SOURCE_ROOT}/RA4AI/Private/AICommander.cpp
     ${RA4_SOURCE_ROOT}/RA4AI/Private/AIWorldView.cpp
     ${RA4_SOURCE_ROOT}/RA4AI/Private/TacticalOperation.cpp
+    ${RA4_SOURCE_ROOT}/RA4AI/Private/AIBeliefGrid.cpp
+    ${RA4_SOURCE_ROOT}/RA4AI/Private/StrategicDirectors.cpp
+    ${RA4_SOURCE_ROOT}/RA4AI/Private/ForwardCombatSim.cpp
     ${RA4_SOURCE_ROOT}/RA4AI/Private/ArmyGroup.cpp
     ${RA4_SOURCE_ROOT}/RA4AI/Private/AIDirectors.cpp
     ${RA4_SOURCE_ROOT}/RA4AI/Private/AIDoctrine.cpp
