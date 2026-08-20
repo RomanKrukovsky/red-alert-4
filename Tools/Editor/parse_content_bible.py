@@ -223,18 +223,27 @@ def write_voice_manifest(voice_events):
         writer.writerow(["Faction", "UnitId", "VoiceId", "EventTag", "Variant", "TextRu", "SoundWave", "Priority", "CooldownSeconds", "Weight", "Status", "SourceLine"])
         for idx, ve in enumerate(voice_events):
             tag_name = f"Voice.{ve['event']}"
+            unit_id = ve['unit_id']
+            event = ve['event']
+            wav_path = os.path.join("Audio/Voice/Mastered", unit_id, f"VO_RU_{unit_id}_{event}_01.wav")
+            if os.path.exists(wav_path):
+                sound_ref = f"SoundWave'/Game/RA4/Audio/Generated/Voice/Mastered/{unit_id}/VO_RU_{unit_id}_{event}_01.VO_RU_{unit_id}_{event}_01'"
+                status = "ValidSoundWave"
+            else:
+                sound_ref = f"SoundWave'/Game/Audio/VO/{ve['faction']}/{unit_id}/{event}_01.{event}_01'"
+                status = "MissingSoundWave"
             writer.writerow([
                 ve['faction'],
-                ve['unit_id'],
-                f"V_{ve['unit_id']}_{ve['event']}",
+                unit_id,
+                f"V_{unit_id}_{event}",
                 tag_name,
                 "01",
                 ve['text_ru'],
-                f"SoundWave'/Game/Audio/VO/{ve['faction']}/{ve['unit_id']}/{ve['event']}_01.{ve['event']}_01'",
+                sound_ref,
                 "Normal",
                 "2.0",
                 "1.0",
-                "MissingSoundWave",
+                status,
                 ve['source_line']
             ])
 

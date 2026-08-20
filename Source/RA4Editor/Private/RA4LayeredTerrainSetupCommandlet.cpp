@@ -475,6 +475,32 @@ int32 URA4LayeredTerrainSetupCommandlet::Main(const FString& Params)
         Cast<UMaterialExpressionAppendVector>(UMaterialEditingLibrary::CreateMaterialExpression(
             Material, UMaterialExpressionAppendVector::StaticClass(), -1450, 1300));
 
+    // WorldPosition is a large-world-coordinate value, and dividing one by the
+    // two-component map extent is not a defined operation. The material simply
+    // refused to compile:
+    //
+    //   (Node Divide) Arithmetic between types LWCVector3 and float2 are undefined
+    //
+    // Unreal logs that as a warning, substitutes the default material and carries
+    // on -- so the ground rendered as the grey no-texture checker and, with the
+    // fog pass over it, as black. Every regeneration of this material since the
+    // fog nodes were added has produced a terrain that does not compile, which is
+    // the real reason the map has had no ground texture. The same defect was
+    // fixed in the post-process below and missed here.
+    UMaterialExpressionTruncateLWC* WorldPosFloat =
+        Cast<UMaterialExpressionTruncateLWC>(UMaterialEditingLibrary::CreateMaterialExpression(
+            Material, UMaterialExpressionTruncateLWC::StaticClass(), -1500, 1100));
+    UMaterialExpressionComponentMask* WorldPosXY =
+        Cast<UMaterialExpressionComponentMask>(UMaterialEditingLibrary::CreateMaterialExpression(
+            Material, UMaterialExpressionComponentMask::StaticClass(), -1450, 1100));
+    if (WorldPosXY != nullptr)
+    {
+        WorldPosXY->R = true;
+        WorldPosXY->G = true;
+        WorldPosXY->B = false;
+        WorldPosXY->A = false;
+    }
+
     UMaterialExpressionDivide* FogUV =
         Cast<UMaterialExpressionDivide>(UMaterialEditingLibrary::CreateMaterialExpression(
             Material, UMaterialExpressionDivide::StaticClass(), -1350, 1150));
@@ -544,6 +570,7 @@ int32 URA4LayeredTerrainSetupCommandlet::Main(const FString& Params)
             Material, UMaterialExpressionMultiply::StaticClass(), -350, 1000));
 
     const bool bFogNodesCreated = WorldPos != nullptr && FogWidth != nullptr && FogUV != nullptr &&
+                                  WorldPosFloat != nullptr && WorldPosXY != nullptr &&
                                   FogSample != nullptr && FogFloor != nullptr &&
                                   FogBrightness != nullptr && FullBright != nullptr &&
                                   FogInverse != nullptr && FogDesat != nullptr && FogTint != nullptr &&
@@ -572,7 +599,9 @@ int32 URA4LayeredTerrainSetupCommandlet::Main(const FString& Params)
         // UV = worldXY / (width, height)
         UMaterialEditingLibrary::ConnectMaterialExpressions(FogWidth, TEXT(""), FogExtent, TEXT("A"));
         UMaterialEditingLibrary::ConnectMaterialExpressions(FogHeight, TEXT(""), FogExtent, TEXT("B"));
-        UMaterialEditingLibrary::ConnectMaterialExpressions(WorldPos, TEXT(""), FogUV, TEXT("A"));
+        UMaterialEditingLibrary::ConnectMaterialExpressions(WorldPos, TEXT(""), WorldPosFloat, TEXT(""));
+        UMaterialEditingLibrary::ConnectMaterialExpressions(WorldPosFloat, TEXT(""), WorldPosXY, TEXT(""));
+        UMaterialEditingLibrary::ConnectMaterialExpressions(WorldPosXY, TEXT(""), FogUV, TEXT("A"));
         UMaterialEditingLibrary::ConnectMaterialExpressions(FogExtent, TEXT(""), FogUV, TEXT("B"));
         UMaterialEditingLibrary::ConnectMaterialExpressions(FogUV, TEXT(""), FogSample, TEXT("UVs"));
 
@@ -600,8 +629,24 @@ int32 URA4LayeredTerrainSetupCommandlet::Main(const FString& Params)
         UMaterialEditingLibrary::ConnectMaterialExpressions(FogDesat, TEXT(""), FogTint, TEXT("A"));
         UMaterialEditingLibrary::ConnectMaterialExpressions(StrengthMix, TEXT(""), FogTint, TEXT("B"));
 
-        UMaterialEditingLibrary::ConnectMaterialProperty(FogTint, TEXT(""), MP_BaseColor);
-        UE_LOG(LogTemp, Display, TEXT("RA4LayeredTerrain: fog-of-war nodes wired into BaseColor"));
+        // Fog is NOT wired into BaseColor, and that is the point.
+        //
+        // ADR-0030 fogs the ground here and everything else in a post-process
+        // pass. Both passes hit the ground: 0.35 in this material times 0.35 in
+        // the post-process is 0.12, and unexplored terrain came out at an eighth
+        // of its brightness instead of a third. Measured in game, it read as a
+        // black rectangle rather than as shrouded ground.
+        //
+        // The post-process reconstructs world position from depth, so it fogs the
+        // landscape just as correctly as it fogs a building standing on it. One
+        // pass, one place to tune, and no surface that gets fogged twice. The
+        // nodes stay wired up to their parameters so the material still declares
+        // RA4FogVisibility and friends -- the subsystem sets those on both
+        // materials and a missing parameter is a silent no-op in Unreal.
+        UMaterialEditingLibrary::ConnectMaterialProperty(ColourBlend, TEXT(""), MP_BaseColor);
+        UE_LOG(LogTemp, Display,
+               TEXT("RA4LayeredTerrain: fog nodes built; BaseColor left unfogged, the "
+                    "post-process pass owns fog for every surface"));
     }
     else
     {
