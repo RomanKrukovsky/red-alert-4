@@ -178,6 +178,7 @@ add_executable(RA4Tests
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestUI.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestFormationMovement.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestCrowdSeparation.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestTankGunnery.cpp
 )
 
 target_link_libraries(RA4Tests PRIVATE RA4Replay RA4Campaign RA4Input RA4Presentation RA4AI RA4FogOfWar)
