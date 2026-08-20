@@ -1,90 +1,183 @@
-# Unreal Engine Integration & Build System Audit (`UNREAL_INTEGRATION_AUDIT.md`)
+# RA4 — Unreal Integration Audit
 
-**Audit Date**: August 4, 2026  
-**Unreal Target**: UE 5.8  
-**Build Harness**: Dual UBT / CMake Headless System  
+**Audit date:** 2026-08-04
+**Pinned commit:** `d915757`
+**Engine:** UE 5.8.1 (`++UE5+Release-5.8`, CL 56057345), macOS arm64
 
----
+Supersedes the previous version, whose central finding (NoesisGUI blocks the UBT build) is
+false at this commit, and which described a CI file (`ci.yml`) and a default map
+(`M_Skirmish_Desert`) that do not exist.
 
-## 1. Project Configuration & `.uproject` Analysis
+## 1. The editor target builds — verified, not assumed
 
-File: `RedAlert4.uproject`
-
-```json
-{
-	"FileVersion": 3,
-	"EngineAssociation": "5.8",
-	"Category": "Strategy",
-	"Description": "Red Alert 4 - real-time strategy on a deterministic C++ core."
-}
+```
+$ "/Users/Shared/Epic Games/UE_5.8/Engine/Build/BatchFiles/Mac/Build.sh" \
+    RedAlert4Editor Mac Development -Project=".../RedAlert4.uproject"
+...
+[23/23] Link [Apple] libUnrealEditor-RedAlert4.dylib
+Result: Succeeded
+Total execution time: 14.66 seconds
 ```
 
-### Configured Plugins Analysis
-- `GameplayAbilities` (Enabled)
-- `CommonUI` (Enabled)
-- `ModelViewViewModel` (Enabled)
-- `EnhancedInput` (Enabled)
-- `FunctionalTestingEditor` (Enabled)
-- `PythonScriptPlugin` (Enabled)
-- `EditorScriptingUtilities` (Enabled)
-- `ModelContextProtocol` (Enabled)
-- `AllToolsets` (Enabled)
-- `ToolsetRegistry` (Enabled)
+All 15 module dylibs are produced in `Binaries/Mac/`, including
+`libUnrealEditor-RA4UI.dylib` (1.5 MB). The previous `BLOCKED_PLUGIN_MISSING` verdict for
+`RA4UI` is stale. `RA4NoesisHUDViewModel.h/.cpp` do still exist, but they include only
+`CoreMinimal.h` and `RA4HUDViewModel.h` — no Noesis headers whatsoever. The class is a
+plain `URA4HUDViewModel` subclass with a default constructor, so nothing links against a
+Noesis runtime and the build cannot be blocked by the missing plugin. See UI_AUDIT.md §2.
 
-**Critical Finding**: `NoesisGUI` plugin is **NOT listed** in `.uproject` plugins array, and the project root lacks a `Plugins/` folder. However, `Source/RA4UI` contains `RA4NoesisHUDViewModel.h/cpp` which were authored for Noesis XAML binding.
+## 2. Engine version — resolve the ambiguity
 
----
+| Source | Version |
+| --- | --- |
+| `RedAlert4.uproject` `EngineAssociation` | **5.8** |
+| Installed and used for this build | **5.8.1** |
+| CLAUDE.md project brief | **5.6** |
+| `/Users/Shared/Epic Games/UE_5.6` | present but **broken** — no `Engine/Build/Build.version`, no `Engine/Binaries/Mac`, only `Binaries/`, `Intermediate/`, `Plugins/`, `docs` |
 
-## 2. C++ Target Files (`Source/*.Target.cs`)
+The project is really on 5.8 and 5.8 works. CLAUDE.md's "5.6" is out of date and should be
+corrected, or the decision to move to 5.8 recorded in an ADR. The half-installed 5.6 tree
+should be removed to prevent accidental use.
 
-1. **`RedAlert4.Target.cs`**: Standard Desktop Game target. Defines build rules for standalone game client.
-2. **`RedAlert4Editor.Target.cs`**: Editor target. Configures Unreal Editor extensions (`RA4Editor` module).
-3. **`RedAlert4Server.Target.cs`**: Dedicated Server target. Configured for headless server builds without visual rendering pipeline.
+## 3. Plugins — all resolve, three need provenance
 
----
+Every plugin in `RedAlert4.uproject` resolves inside `UE_5.8/Engine/Plugins`:
 
-## 3. Headless Build Harness (`Tools/HeadlessBuild/`)
+| Plugin | Status |
+| --- | --- |
+| `GameplayAbilities`, `CommonUI`, `ModelViewViewModel`, `EnhancedInput`, `FunctionalTestingEditor`, `PythonScriptPlugin`, `EditorScriptingUtilities` | stock Epic — **OK** |
+| `ModelContextProtocol`, `AllToolsets`, `ToolsetRegistry` | resolve **on this machine**, but are not stock UE 5.8 plugin names |
 
-The project features a **pure C++ CMake build system** in `Tools/HeadlessBuild/` that stubs out Unreal Engine headers (`UnrealStub/`), allowing full C++ simulation engine compilation and unit testing without launching Unreal Engine or requiring an installed UE5 engine binary.
+The last three are the risk. They were found under the engine installation, not under a
+project-local `Plugins/` folder (which does not exist). If they are not part of a clean Epic
+5.8 distribution, then this project silently requires a modified engine and will fail to
+open on any other machine and in CI. This must be resolved before onboarding anyone or
+enabling CI. See ASSET_AND_LICENSE_AUDIT §6.
 
-### CMake Build Pipeline (`Tools/HeadlessBuild/CMakeLists.txt`)
-- Compiles 13 C++ static libraries: `libRA4Core.a`, `libRA4Content.a`, `libRA4Simulation.a`, `libRA4Combat.a`, `libRA4Navigation.a`, `libRA4Input.a`, `libRA4Presentation.a`, `libRA4FogOfWar.a`, `libRA4AI.a`, `libRA4Network.a`, `libRA4Campaign.a`, `libRA4Replay.a`.
-- Builds 4 test executables: `RA4Tests`, `RA4AITests`, `RA4InputTests`, `RA4PresentationTests`.
-- **Execution Proof**: Builds cleanly in `build/hb/` and executes 378 unit tests in under 6 seconds on macOS ARM64 / Linux x86_64.
+## 4. Targets
 
----
+Three targets, all present and correctly typed:
 
-## 4. Config Directory Audit (`Config/`)
+| File | `TargetType` |
+| --- | --- |
+| `RedAlert4Editor.Target.cs` | `Editor` |
+| `RedAlert4.Target.cs` | `Game` |
+| `RedAlert4Server.Target.cs` | `Server` |
 
-- `DefaultEngine.ini`: Configures asset manager scanning rules (`GameFeatureData`), viewport settings, game user settings, and MCP plugin settings.
-- `DefaultGame.ini`: Project metadata, game instance class (`URA4GameInstance`), default map (`/Game/Maps/M_Skirmish_Desert`).
-- `DefaultInput.ini`: Enhanced Input action mappings for WASD camera controls, selection hotkeys, control groups (0-9), and cheat console (`~` key).
-- `DefaultUserInterface.ini`: Default font configuration and cursor visual mapping.
+Only the Editor target was built in this audit. Game and Server targets are **unverified**.
 
----
+## 5. Module registration — one module is missing
 
-## 5. CI / Automation Scripts Audit
+`RedAlert4.uproject` declares 15 modules with sensible loading phases (`RA4Core` at
+`EarliestPossible`; `RA4Content`/`RA4Simulation`/`RA4Replay` at `PreDefault`; the rest at
+`Default`; `RA4Editor` as `Editor`).
 
-- **`.github/workflows/`**:
-  - `ci.yml`: Automation pipeline that runs headless CMake compilation and unit tests on GitHub runners.
-  - Verification: Clean pass on headless C++ suite.
-- **Automation Tools (`Tools/`)**:
-  - `Tools/HeadlessBuild`: Standalone CMake harness.
-  - `Tools/ContentImport`: Python scripts for batch converting JSON bible definitions to Unreal Primary DataAssets.
-  - `Tools/Art`: FBX blockout generation scripts and ArtMapping registry tools.
-  - `Tools/Editor`: Unreal Editor Python automation scripts for map layout validation and screenshot capture.
+`RA4Tests` is **not** among them and has no `RA4Tests.Build.cs`:
 
----
+```
+$ grep -c "RA4Tests" RedAlert4.uproject
+0
+$ ls Source/RA4Tests/*.Build.cs
+(no such file)
+```
 
-## 6. Packaged Build Readiness Assessment
+7 436 lines of tests are therefore invisible to UBT and can only run through CMake. Nothing
+in Unreal — actors, UMG, rendering, asset loading — is covered by any automated test. This
+is the highest-leverage fix available in the project.
 
-| Requirement | Status | Details / Blocker |
-| :--- | :--- | :--- |
-| **Headless Server Executable** | **READY** | Builds via CMake or `RedAlert4Server.Target.cs`. |
-| **Pure C++ Sim Compilation** | **READY** | 0 compiler warnings, 100% test pass. |
-| **Unreal Engine Desktop Client** | **BLOCKED** | Missing NoesisGUI plugin creates compilation error during standard UBT packaging if Noesis headers are referenced in `RA4UI`. |
-| **Asset Registry & DataAssets** | **READY** | Normalized JSON and asset registry present in `Content/RA4/Data/`. |
+## 6. Configuration
 
-### Remediation Strategy for Packaging
-1. Download/install NoesisGUI Unreal Engine plugin into `Plugins/NoesisGUI` OR
-2. Wrap NoesisGUI ViewModels in `#if WITH_NOESIS` preprocessor directives so standard UMG/Slate frontend builds without plugin dependency.
+`Config/` contains `DefaultEngine.ini`, `DefaultGame.ini`, `DefaultInput.ini`,
+`DefaultUserInterface.ini`, plus `Config/Audio/` and `Config/Localization/`.
+
+Verified settings:
+
+```ini
+; DefaultEngine.ini
+EditorStartupMap=/Game/Maps/RA4_Skirmish_Production
+GameDefaultMap=/Game/Maps/RA4_Skirmish_Production
+GlobalDefaultGameMode=/Script/RedAlert4.RA4SkirmishGameMode
+
+; DefaultGame.ini
+ProjectName=Red Alert 4
+ProjectVersion=0.1.0
+Description=Internal working title. No Electronic Arts licence; no Command & Conquer content.
+Culture=ru
+BuildConfiguration=PPBC_Shipping
+UsePakFile=True
++DirectoriesToAlwaysStageAsUFS=(Path="RA4UI/Fonts")
+```
+
+Two observations:
+
+- `RA4_Skirmish_Production.umap` exists, so the default map is valid. The previously
+  documented `M_Skirmish_Desert` does not exist anywhere and was fabricated.
+- `ProjectVersion=0.1.0` is the only honest version number in the repository. It directly
+  contradicts `Docs/Milestones/GOLD_MASTER_MANIFEST.md`, which declares
+  `v1.0.0-gold-master`. Trust the ini.
+
+## 7. Simulation ↔ Unreal bridge
+
+`URA4SimWorldSubsystem` (`Source/RedAlert4/Private/RA4SimWorldSubsystem.cpp`, 1 240 lines) is
+the integration seam and is well constructed:
+
+- **Fixed timestep, frame-rate independent.** `Tick()` accumulates `TimeSinceLastSimTick`
+  and runs `while (TimeSinceLastSimTick >= SimTickDelta) { … TickSimulation(); … }`
+  (`:347-380`). This satisfies the invariant that render rate must not change simulation
+  outcome.
+- **Network-gated advance.** `if (!Network->CanAdvanceToTick(...)) break;` (`:369`) — the
+  sim stalls rather than diverging when a lockstep frame has not landed.
+- **Presentation is a projection, not a source of truth.** `SyncPresentation()` (`:765`)
+  diffs sim entities against an `EntityActors` map, spawning `ARA4EntityActor` (`:829`) and
+  removing dead entries (`:796`, `:972`). No write-back into sim state was observed.
+- **Commands flow one way.** `Network->SendCommandToServer(Command, tick)` (`:396`).
+
+This is the correct shape and matches ADR-0002 / ADR-0009.
+
+## 8. Content and maps
+
+8 project maps (`RA4_Skirmish{,_Production,_Hills,_Canyon,_VisualIntegration}`, `RA4_ArtLab`,
+2 art showcases) plus 11 third-party demo maps under `Content/ThirdParty/`. The third-party
+demo maps (`Overview`, `Showcase`, `Demonstration`, `TechArt`) are vendor sample levels and
+should be excluded from packaging — they are pure bloat in a shipped build and part of the
+14.2 GB problem described in ASSET_AND_LICENSE_AUDIT §2.
+
+`.gitignore` ignores `*.uasset` and `*.umap`, yet many are tracked (they were force-added
+before the rule, so the rule does not apply to them). The result is a confusing state where
+some binary content is versioned and new content silently is not. This needs a deliberate
+decision — likely Git LFS — before more art lands.
+
+## 9. Automation scripts
+
+`Tools/` holds ~30 Python scripts across `Art/`, `Audio/`, `Editor/`, `ContentImport/`,
+`VoiceGeneration/`, `MatchViewer/`, `RuntimeFixes/`. They are genuine working tooling
+(model generation/import/validation, EVA voice generation, map construction, screenshot
+capture). Two concerns:
+
+- `Tools/ContentImport/fetch_ra3_xmls.py` and `fetch_all_ea_xmls.py` download EA GPLv3
+  material — see ASSET_AND_LICENSE_AUDIT §1.
+- None of the Editor Python scripts are invoked by CI, so their continued correctness is
+  unmonitored.
+
+## 10. Packaged build
+
+Never produced. No `.app`, `.exe`, `.pak` or staged directory exists anywhere in the
+repository or in `Saved/`. `BuildCookRun` is not scripted. Packaging settings are present
+and plausible (`UsePakFile=True`, `PPBC_Shipping`, fonts staged as UFS) but untested.
+
+Any document asserting packaged-build readiness — including
+`Docs/Audit/INDEPENDENT_RELEASE_REVIEW.md` item 7 and `GOLD_MASTER_MANIFEST.md` — is
+asserting something that has never been attempted.
+
+## 11. Summary
+
+| Item | Status |
+| --- | --- |
+| Editor target builds | **VERIFIED** |
+| Game / Server targets | **UNVERIFIED** |
+| Plugins resolve | **VERIFIED** (3 need provenance) |
+| Sim↔Unreal bridge correctness | **VERIFIED by inspection** |
+| Fixed-timestep invariant | **VERIFIED by inspection** |
+| Engine-side automated tests | **IMPOSSIBLE — `RA4Tests` not a UBT module** |
+| Packaged build | **NEVER ATTEMPTED** |
+| Editor runtime behaviour | **UNVERIFIED — never launched** |
