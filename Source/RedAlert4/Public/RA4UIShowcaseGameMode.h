@@ -27,4 +27,5 @@ private:
 
     FTimerHandle CaptureTimer;
     bool bCaptureScheduled = false;
+    int32 ActiveReference = 0;
 };

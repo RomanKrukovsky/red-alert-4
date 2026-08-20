@@ -3,8 +3,9 @@
 #include "RA4UIShowcaseGameMode.h"
 
 #include "RA4CampaignSelectWidget.h"
-#include "RA4CommandCentreMenuWidget.h"
+#include "RA4MainMenuScreenWidget.h"
 #include "RA4ShowcaseWidget.h"
+#include "RA4SplashScreenWidget.h"
 #include "Blueprint/UserWidget.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
@@ -37,14 +38,20 @@ void ARA4UIShowcaseGameMode::ShowInterface(APlayerController* PlayerController)
 
     int32 RequestedScreen = 0;
     FParse::Value(FCommandLine::Get(), TEXT("RA4Screen="), RequestedScreen);
+    ActiveReference = RequestedScreen;
 
     UUserWidget* RootWidget = nullptr;
-    if (RequestedScreen == 0)
+    if (RequestedScreen == 1)
     {
-        RootWidget = CreateWidget<URA4CommandCentreMenuWidget>(
-            PlayerController, URA4CommandCentreMenuWidget::StaticClass());
+        RootWidget = CreateWidget<URA4SplashScreenWidget>(
+            PlayerController, URA4SplashScreenWidget::StaticClass());
     }
-    else if (RequestedScreen == 6)
+    else if (RequestedScreen == 0 || RequestedScreen == 2)
+    {
+        RootWidget = CreateWidget<URA4MainMenuScreenWidget>(
+            PlayerController, URA4MainMenuScreenWidget::StaticClass());
+    }
+    else if (RequestedScreen == 3)
     {
         RootWidget = CreateWidget<URA4CampaignSelectWidget>(
             PlayerController, URA4CampaignSelectWidget::StaticClass());
@@ -83,7 +90,9 @@ void ARA4UIShowcaseGameMode::ShowInterface(APlayerController* PlayerController)
 void ARA4UIShowcaseGameMode::CaptureInterfaceForQA()
 {
     const FString ScreenshotPath = FPaths::Combine(
-        FPaths::ProjectSavedDir(), TEXT("Screenshots/MacEditor/RA4_UI_QA.png"));
+        FPaths::ProjectSavedDir(),
+        TEXT("Screenshots/MacEditor"),
+        FString::Printf(TEXT("RA4_UI_Reference_%02d.png"), ActiveReference));
     FScreenshotRequest::RequestScreenshot(ScreenshotPath, true, false);
     UE_LOG(LogTemp, Display, TEXT("RA4 UI QA screenshot requested: %s"), *ScreenshotPath);
 }

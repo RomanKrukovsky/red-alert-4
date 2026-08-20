@@ -1,8 +1,12 @@
 // Copyright (c) Red Alert 4 project.
 
+#include "Components/Image.h"
 #include "Misc/AutomationTest.h"
 #include "RA4AngularPanelWidget.h"
+#include "RA4MainMenuScreenWidget.h"
+#include "RA4MainMenuViewModel.h"
 #include "RA4ScreenRootWidget.h"
+#include "RA4SplashScreenWidget.h"
 #include "RA4UIScreenContract.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -111,6 +115,60 @@ bool FRA4ActivatableInputContractTest::RunTest(const FString& Parameters)
         TEXT("HUD input"),
         ScreenRoot->GetDesiredInputConfig().GetValue().GetInputMode(),
         ECommonInputMode::All);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FRA4MainMenuEntriesTest,
+    "RA4.UI.Screens.MainMenu.ViewModelProvidesEightOrderedEntries",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRA4MainMenuEntriesTest::RunTest(const FString& Parameters)
+{
+    const URA4MainMenuViewModel* ViewModel = NewObject<URA4MainMenuViewModel>();
+    const TArray<FRA4MainMenuEntry>& Entries = ViewModel->GetMenuEntries();
+
+    TestEqual(TEXT("Menu entry count"), Entries.Num(), 8);
+    TestEqual(TEXT("First label"), Entries[0].Label.ToString(), FString(TEXT("КАМПАНИЯ")));
+    TestEqual(TEXT("First route"), Entries[0].TargetScreen, ERA4UIScreenId::CampaignSelect);
+    TestTrue(TEXT("First entry selected"), Entries[0].bSelected);
+    TestEqual(TEXT("Last label"), Entries[7].Label.ToString(), FString(TEXT("ВЫХОД")));
+    TestEqual(TEXT("Last action"), Entries[7].Action, ERA4MainMenuAction::Exit);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FRA4SplashContinueOnceTest,
+    "RA4.UI.Screens.MainMenu.SplashContinuesOnlyOnce",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRA4SplashContinueOnceTest::RunTest(const FString& Parameters)
+{
+    URA4SplashScreenWidget* Splash = NewObject<URA4SplashScreenWidget>();
+
+    TestTrue(TEXT("First continue is accepted"), Splash->ContinueToMainMenu());
+    TestFalse(TEXT("Second continue is ignored"), Splash->ContinueToMainMenu());
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FRA4MainMenuCompositionTest,
+    "RA4.UI.Screens.MainMenu.CompositionUsesInteractiveWidgets",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRA4MainMenuCompositionTest::RunTest(const FString& Parameters)
+{
+    URA4MainMenuScreenWidget* MainMenu = NewObject<URA4MainMenuScreenWidget>();
+    TestTrue(TEXT("Main menu initializes"), MainMenu->Initialize());
+    MainMenu->TakeWidget();
+
+    TestEqual(TEXT("Interactive buttons"), MainMenu->GetMenuButtons().Num(), 8);
+    TestEqual(TEXT("Selected entry"), MainMenu->GetSelectedMenuIndex(), 0);
+    TestNotNull(TEXT("Separate logo widget"), MainMenu->GetLogoImage());
+    TestEqual(
+        TEXT("Logo ignores hit tests"),
+        MainMenu->GetLogoImage()->GetVisibility(),
+        ESlateVisibility::HitTestInvisible);
     return true;
 }
 

@@ -3,35 +3,43 @@ import unreal
 
 ASSET_PATH = "/Game/RA4UI/Widgets"
 SHOWCASE_CLASS = unreal.load_class(None, "/Script/RA4UI.RA4ShowcaseWidget")
+SPLASH_CLASS = unreal.load_class(None, "/Script/RA4UI.RA4SplashScreenWidget")
+MAIN_MENU_CLASS = unreal.load_class(None, "/Script/RA4UI.RA4MainMenuScreenWidget")
 
 
-def create_widget_blueprint(asset_name, screen_index):
+def create_widget_blueprint(asset_name, parent_class, screen_index=None):
     asset_path = f"{ASSET_PATH}/{asset_name}"
+    changed = False
     if unreal.EditorAssetLibrary.does_asset_exist(asset_path):
         asset = unreal.EditorAssetLibrary.load_asset(asset_path)
+        if asset.get_blueprint_parent_class() != parent_class:
+            unreal.BlueprintEditorLibrary.reparent_blueprint(asset, parent_class)
+            changed = True
     else:
         factory = unreal.WidgetBlueprintFactory()
-        factory.set_editor_property("parent_class", SHOWCASE_CLASS)
+        factory.set_editor_property("parent_class", parent_class)
         asset = unreal.AssetToolsHelpers.get_asset_tools().create_asset(
             asset_name, ASSET_PATH, unreal.WidgetBlueprint, factory
         )
+        changed = True
 
-    unreal.BlueprintEditorLibrary.compile_blueprint(asset)
-    generated_class = unreal.EditorAssetLibrary.load_blueprint_class(asset_path)
-    default_widget = unreal.get_default_object(generated_class)
-    default_widget.set_editor_property("initial_screen_index", screen_index)
-    unreal.EditorAssetLibrary.save_loaded_asset(asset)
+    if changed:
+        unreal.BlueprintEditorLibrary.compile_blueprint(asset)
+        if screen_index is not None:
+            generated_class = unreal.EditorAssetLibrary.load_blueprint_class(asset_path)
+            default_widget = unreal.get_default_object(generated_class)
+            default_widget.set_editor_property("initial_screen_index", screen_index)
+        unreal.EditorAssetLibrary.save_loaded_asset(asset)
     return asset
 
 
 def main():
-    if not SHOWCASE_CLASS:
-        raise RuntimeError("URA4ShowcaseWidget was not loaded; compile the RA4UI module first.")
+    required_classes = [SHOWCASE_CLASS, SPLASH_CLASS, MAIN_MENU_CLASS]
+    if not all(required_classes):
+        raise RuntimeError("Required RA4 UI classes were not loaded; compile the RA4UI module first.")
 
     screens = [
         ("WBP_RA4_Showcase", 0),
-        ("WBP_RA4_Splash", 5),
-        ("WBP_RA4_MainMenu", 0),
         ("WBP_RA4_FactionSelect", 6),
         ("WBP_RA4_Campaign_USSR", 1),
         ("WBP_RA4_Campaign_Allies", 7),
@@ -60,8 +68,15 @@ def main():
         ("WBP_RA4_HUD_Chrono_Superweapon", 27),
     ]
 
-    created = [create_widget_blueprint(name, screen_index) for name, screen_index in screens]
-    unreal.EditorAssetLibrary.save_directory(ASSET_PATH, only_if_is_dirty=False, recursive=True)
+    created = [
+        create_widget_blueprint("WBP_RA4_Splash", SPLASH_CLASS),
+        create_widget_blueprint("WBP_RA4_MainMenu", MAIN_MENU_CLASS),
+    ]
+    created.extend(
+        create_widget_blueprint(name, SHOWCASE_CLASS, screen_index)
+        for name, screen_index in screens
+    )
+    unreal.EditorAssetLibrary.save_directory(ASSET_PATH, only_if_is_dirty=True, recursive=True)
     unreal.log(f"RA4 UI assets ready: {len(created)}")
 
 
