@@ -313,8 +313,12 @@ ContentId AICommander::FindCombatUnit(const SimWorld& World) const
         {
             continue;
         }
+        // ADR-0012: production is paid a slice per tick, so the AI only needs the
+        // first slice on hand to start -- gating on the whole price would leave it
+        // strictly more cautious than the rules require, and strictly more cautious
+        // than a human player, who can now queue anything and let it fund off income.
         if (State.Credits <
-            Def.Production.Cost +
+            FlowPaymentCostPerTick(Def.Production.Cost, Def.Production.BuildTimeTicks) +
                 RequiredCreditReserve(ActiveStrategy, Config))
         {
             continue;
@@ -949,8 +953,12 @@ bool AICommander::QueueProduction(const SimWorld& World, ContentId Content, cons
     }
     const int32_t RequiredReserve =
         RequiredCreditReserve(ActiveStrategy, Config);
+    // ADR-0012: only the first per-tick slice has to be affordable up front. The
+    // CountQueued guard below is what stops the AI queuing six of everything now
+    // that the price is no longer an implicit throttle.
     if (World.GetPlayer(Player).Credits <
-        Def->Production.Cost + RequiredReserve)
+        FlowPaymentCostPerTick(Def->Production.Cost, Def->Production.BuildTimeTicks) +
+            RequiredReserve)
     {
         return false;
     }

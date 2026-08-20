@@ -117,8 +117,14 @@ RA4_TEST(CommandBus, DispatchTickAppliesAProductionFrameExactlyOnce)
     RA4_REQUIRE(YardState != nullptr);
 
     RA4_EXPECT_EQ(Accepted, 1);
-    RA4_EXPECT_EQ(F.World.GetPlayer(0).Credits, BeforeCredits - 800);
+    // The frame was applied once, so exactly one item is queued at the full price.
+    // DispatchTick runs a whole simulation tick, so ADR-0012 draws exactly one
+    // funding slice -- ceil(800/160) = 5 -- and no more. A second application would
+    // show up as a doubled slice.
     RA4_EXPECT_EQ(int32_t(YardState->Queue.size()), 1);
+    RA4_EXPECT_EQ(YardState->Queue.front().TotalCost, 800);
+    RA4_EXPECT_EQ(YardState->Queue.front().PaidCredits, 5);
+    RA4_EXPECT_EQ(F.World.GetPlayer(0).Credits, BeforeCredits - 5);
 }
 
 RA4_TEST(CommandBus, DispatchTickReturnsZeroForRejectedCommands)
@@ -206,7 +212,12 @@ RA4_TEST(CommandBus, DispatchTickConsumesItsBufferedFrame)
 
     RA4_EXPECT_EQ(FirstAccepted, 1);
     RA4_EXPECT_EQ(SecondAccepted, 0);
-    RA4_EXPECT_EQ(CreditsAfterFirst, BeforeCredits - 800);
+    // The first dispatch runs one tick, so exactly one ADR-0012 funding slice is
+    // drawn: ceil(800/160) = 5.
+    RA4_EXPECT_EQ(CreditsAfterFirst, BeforeCredits - 5);
+    // The second dispatch finds the frame already consumed and returns without
+    // ticking, so credits must not move again. This is the real double-application
+    // check: a re-applied frame would draw another slice or queue a second item.
     RA4_EXPECT_EQ(F.World.GetPlayer(0).Credits, CreditsAfterFirst);
     RA4_EXPECT_EQ(int32_t(YardAfterFirst->Queue.size()), 1);
     RA4_EXPECT_EQ(int32_t(YardAfterSecond->Queue.size()), 1);

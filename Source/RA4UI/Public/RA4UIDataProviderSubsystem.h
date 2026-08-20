@@ -59,8 +59,41 @@ public:
     UFUNCTION(BlueprintPure, Category = "RA4|UI")
     FVector2D GetRadarMapSize() const { return RadarMapSize; }
 
+    /** False when a power deficit has taken the player's radar, so the panel draws dark. */
+    UFUNCTION(BlueprintPure, Category = "RA4|Radar")
+    bool IsRadarOnline() const { return bRadarOnline; }
+
     UFUNCTION(BlueprintPure, Category = "RA4|UI")
     int32 GetRadarLocalPlayer() const { return RadarLocalPlayer; }
+
+    /**
+     * The minimap terrain/shroud background, as a row-major grid of at most
+     * kMinimapMaxCellsPerAxis cells per axis. Terrain values are ERA4MinimapTerrain and
+     * shroud values are ERA4MinimapShroud, stored as bytes so a painter can index them
+     * directly without a per-cell conversion.
+     *
+     * Copied only when it changed, so an explored map costs nothing per tick.
+     */
+    const TArray<uint8>& GetMinimapTerrain() const { return MinimapTerrain; }
+    const TArray<uint8>& GetMinimapShroud() const { return MinimapShroud; }
+
+    UFUNCTION(BlueprintPure, Category = "RA4|Radar")
+    FIntPoint GetMinimapCellCounts() const { return MinimapCellCounts; }
+
+    /** Bumped whenever the background changes, so a cached texture knows to re-upload. */
+    UFUNCTION(BlueprintPure, Category = "RA4|Radar")
+    int32 GetMinimapBackgroundRevision() const { return MinimapBackgroundRevision; }
+
+    /**
+     * True while this provider has never been handed a minimap grid. The snapshot only carries
+     * the grid on the ticks it changed, so a provider created after the map was already
+     * explored has nothing to draw; the owner answers this by requesting a resend.
+     */
+    bool NeedsMinimapBackground() const { return MinimapCellCounts.X <= 0 || MinimapCellCounts.Y <= 0; }
+
+    /** Transient alert markers, brightest first. Empty when nothing has just happened. */
+    UFUNCTION(BlueprintPure, Category = "RA4|Radar")
+    const TArray<FRA4RadarPing>& GetRadarPings() const { return RadarPings; }
 
     /** Resolves the stable simulation display key through the HUD localization map. */
     UFUNCTION(BlueprintPure, Category = "RA4|UI")
@@ -72,6 +105,30 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "RA4|UI")
     ERA4SelectionKind GetSelectionKind() const { return SelectionKind; }
+
+    // --- ADR-0013 building controls -----------------------------------------
+    // The simulation has carried power priority and repair state for a while, but
+    // neither reached Blueprints, so the mechanics existed and no player could see or
+    // use them. These expose the selected building's state; the actual changes go out
+    // as ordinary validated commands, never by mutating the simulation from here.
+
+    /** True when the selection's primary is a building, so the card can show its controls. */
+    UFUNCTION(BlueprintPure, Category = "RA4|UI")
+    bool IsSelectionABuilding() const { return bSelectionIsBuilding; }
+
+    UFUNCTION(BlueprintPure, Category = "RA4|UI")
+    ERA4PowerPriority GetSelectionPowerPriority() const { return SelectionPowerPriority; }
+
+    /** True when this building's priority band is offline at the current power tier. */
+    UFUNCTION(BlueprintPure, Category = "RA4|UI")
+    bool IsSelectionPowerOffline() const { return bSelectionPowerOffline; }
+
+    UFUNCTION(BlueprintPure, Category = "RA4|UI")
+    bool IsSelectionRepairing() const { return bSelectionRepairing; }
+
+    /** True only for an owned, finished, damaged building -- the one case repair applies. */
+    UFUNCTION(BlueprintPure, Category = "RA4|UI")
+    bool CanSelectionBeRepaired() const { return bSelectionCanRepair; }
 
     UFUNCTION(BlueprintPure, Category = "RA4|UI")
     ERA4MatchPhase GetMatchPhase() const { return MatchPhase; }
@@ -159,7 +216,14 @@ private:
     TArray<FRA4RadarMarker> RadarMarkers;
 
     FVector2D RadarMapSize = FVector2D::ZeroVector;
+    bool bRadarOnline = true;
     int32 RadarLocalPlayer = 0;
+
+    TArray<uint8> MinimapTerrain;
+    TArray<uint8> MinimapShroud;
+    FIntPoint MinimapCellCounts = FIntPoint::ZeroValue;
+    int32 MinimapBackgroundRevision = 0;
+    TArray<FRA4RadarPing> RadarPings;
 
     int32 Credits = 0;
     int32 PowerProduced = 0;
@@ -170,7 +234,6 @@ private:
     bool bSupplyModelled = false;
 
     ERA4SelectionKind SelectionKind = ERA4SelectionKind::Empty;
-
     // Previous selection, so OnSelectionChanged fires on change rather than every tick.
     // The delegate rebuilds the group rows, so broadcasting unconditionally meant clearing
     // and reconstructing widgets 20 times a second at rest. Initialised to values a real
@@ -180,6 +243,13 @@ private:
     uint64 PreviousPrimaryEntity = 0;
     int32 PreviousPrimaryHealth = -1;
     int32 PreviousSelectionGroupCount = -1;
+
+    // ADR-0013 building controls, refreshed from the snapshot each frame.
+    bool bSelectionIsBuilding = false;
+    ERA4PowerPriority SelectionPowerPriority = ERA4PowerPriority::Production;
+    bool bSelectionPowerOffline = false;
+    bool bSelectionRepairing = false;
+    bool bSelectionCanRepair = false;
     ERA4MatchPhase MatchPhase = ERA4MatchPhase::NotStarted;
     int32 MatchElapsedSeconds = 0;
     int32 WinningPlayer = -1;

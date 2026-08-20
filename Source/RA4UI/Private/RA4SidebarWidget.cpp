@@ -26,10 +26,29 @@
 #include "RA4HUDViewModel.h"
 #include "RA4UIDataProviderSubsystem.h"
 
+#include "RA4Presentation/HudSnapshot.h"
+
 namespace
 {
 constexpr float kRadarDesiredSize = 208.0f;
 }
+
+// The Blueprint-facing minimap enums are a hand-written copy of the presentation ones, so
+// the byte the sampler wrote must mean the same thing to the painter. Checked here because
+// this is the one translation unit that sees both definitions; if either list is reordered
+// or extended, this fails to compile instead of quietly painting water as ore.
+static_assert(uint8(ERA4MinimapTerrain::Unknown) == uint8(RA4::Presentation::MinimapTerrain::Unknown), "minimap terrain drift");
+static_assert(uint8(ERA4MinimapTerrain::Ground) == uint8(RA4::Presentation::MinimapTerrain::Ground), "minimap terrain drift");
+static_assert(uint8(ERA4MinimapTerrain::Water) == uint8(RA4::Presentation::MinimapTerrain::Water), "minimap terrain drift");
+static_assert(uint8(ERA4MinimapTerrain::Cliff) == uint8(RA4::Presentation::MinimapTerrain::Cliff), "minimap terrain drift");
+static_assert(uint8(ERA4MinimapTerrain::Ore) == uint8(RA4::Presentation::MinimapTerrain::Ore), "minimap terrain drift");
+static_assert(uint8(ERA4MinimapTerrain::Structure) == uint8(RA4::Presentation::MinimapTerrain::Structure), "minimap terrain drift");
+static_assert(uint8(ERA4MinimapShroud::NeverSeen) == uint8(RA4::Presentation::MinimapShroud::NeverSeen), "minimap shroud drift");
+static_assert(uint8(ERA4MinimapShroud::Remembered) == uint8(RA4::Presentation::MinimapShroud::Remembered), "minimap shroud drift");
+static_assert(uint8(ERA4MinimapShroud::Visible) == uint8(RA4::Presentation::MinimapShroud::Visible), "minimap shroud drift");
+static_assert(uint8(ERA4RadarPingKind::Attack) == uint8(RA4::Presentation::RadarPingKind::Attack), "radar ping drift");
+static_assert(uint8(ERA4RadarPingKind::Loss) == uint8(RA4::Presentation::RadarPingKind::Loss), "radar ping drift");
+static_assert(uint8(ERA4RadarPingKind::Construction) == uint8(RA4::Presentation::RadarPingKind::Construction), "radar ping drift");
 
 class SRA4RadarSlate final : public SLeafWidget
 {
@@ -83,10 +102,95 @@ public:
             return LayerId + 1;
         }
 
+        // ADR-0013: a deficit that took the radar takes the whole overview with it. Drawn
+        // as a distinctly dead panel rather than an empty one, so "no contacts" and "no
+        // radar" do not look the same.
+        if (!RadarOwner->IsOnline())
+        {
+            FSlateDrawElement::MakeBox(
+                OutDrawElements, LayerId + 2,
+                AllottedGeometry.ToPaintGeometry(Size, FSlateLayoutTransform()),
+                WhiteBrush, ESlateDrawEffect::None, FLinearColor(0.05f, 0.02f, 0.02f, 0.85f));
+            return LayerId + 2;
+        }
+
         const FVector2D MapSize = RadarOwner->GetMapSize();
         if (MapSize.X <= 0.0f || MapSize.Y <= 0.0f)
         {
             return LayerId + 1;
+        }
+
+        // Letterbox so a non-square map keeps its shape. Shared with the click handler,
+        // so a click always lands where the marker under the cursor was drawn.
+        FVector2D MapOffset, MapExtent;
+        URA4RadarWidget::ComputeMapRect(Size, MapSize, MapOffset, MapExtent);
+
+        // Terrain and shroud, drawn underneath the markers. Without this the panel was a
+        // blank grid: a player could see where their units were but nothing about the
+        // ground they were standing on, and no record of what they had explored.
+        const FIntPoint Cells = RadarOwner->GetBackgroundCellCounts();
+        const TArray<uint8>& Terrain = RadarOwner->GetBackgroundTerrain();
+        const TArray<uint8>& Shroud = RadarOwner->GetBackgroundShroud();
+        if (Cells.X > 0 && Cells.Y > 0 &&
+            Terrain.Num() >= Cells.X * Cells.Y && Shroud.Num() >= Cells.X * Cells.Y)
+        {
+            // Cell size is rounded up so adjacent cells overlap by less than a pixel rather
+            // than leaving a seam of background between every pair of them.
+            const FVector2D CellSize(FMath::CeilToFloat(float(MapExtent.X) / float(Cells.X)),
+                                     FMath::CeilToFloat(float(MapExtent.Y) / float(Cells.Y)));
+            for (int32 CellY = 0; CellY < Cells.Y; ++CellY)
+            {
+                for (int32 CellX = 0; CellX < Cells.X; ++CellX)
+                {
+                    const int32 Index = CellY * Cells.X + CellX;
+                    const ERA4MinimapShroud CellShroud = ERA4MinimapShroud(Shroud[Index]);
+                    if (CellShroud == ERA4MinimapShroud::NeverSeen)
+                    {
+                        continue;   // unexplored: leave the panel's own dark background
+                    }
+
+                    FLinearColor Colour = RA4MinimapTerrainColour(ERA4MinimapTerrain(Terrain[Index]));
+                    if (CellShroud == ERA4MinimapShroud::Remembered)
+                    {
+                        // Dimmed, not greyed: the player must still recognise a river or an
+                        // ore patch they scouted earlier, just not mistake it for live.
+                        Colour *= 0.45f;
+                        Colour.A = 1.0f;
+                    }
+
+                    // The simulation's Y grows northward and the panel's grows downward.
+                    const FVector2D CellPos(
+                        MapOffset.X + float(CellX) * float(MapExtent.X) / float(Cells.X),
+                        MapOffset.Y + float(Cells.Y - 1 - CellY) * float(MapExtent.Y) / float(Cells.Y));
+                    FSlateDrawElement::MakeBox(
+                        OutDrawElements, LayerId + 2,
+                        AllottedGeometry.ToPaintGeometry(CellSize, FSlateLayoutTransform(CellPos)),
+                        WhiteBrush, ESlateDrawEffect::None, Colour);
+                }
+            }
+        }
+
+        // The camera's view rectangle, so the player can see where they are looking as well
+        // as where their forces are. Drawn under the markers: it is a reference frame, and a
+        // unit sitting on its edge must stay readable.
+        const FVector2D ViewCentre = RadarOwner->GetCameraViewCentre();
+        const FVector2D ViewExtent = RadarOwner->GetCameraViewExtent();
+        double FrameLeft = 0.0, FrameTop = 0.0, FrameRight = 0.0, FrameBottom = 0.0;
+        if (RA4::Presentation::ComputeMinimapCameraFrame(
+                MapOffset.X, MapOffset.Y, MapExtent.X, MapExtent.Y, MapSize.X, MapSize.Y,
+                ViewCentre.X, ViewCentre.Y, ViewExtent.X, ViewExtent.Y,
+                FrameLeft, FrameTop, FrameRight, FrameBottom))
+        {
+            TArray<FVector2D> Outline{
+                FVector2D(FrameLeft, FrameTop),
+                FVector2D(FrameRight, FrameTop),
+                FVector2D(FrameRight, FrameBottom),
+                FVector2D(FrameLeft, FrameBottom),
+                FVector2D(FrameLeft, FrameTop)};
+            FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 3,
+                                         AllottedGeometry.ToPaintGeometry(), Outline,
+                                         ESlateDrawEffect::None,
+                                         FLinearColor(0.90f, 0.90f, 0.95f, 0.75f), true, 1.0f);
         }
 
         const int32 LocalPlayer = RadarOwner->GetLocalPlayer();
@@ -94,7 +198,8 @@ public:
         {
             const float NormalizedX = FMath::Clamp(float(Marker.WorldPosition.X / MapSize.X), 0.0f, 1.0f);
             const float NormalizedY = FMath::Clamp(float(Marker.WorldPosition.Y / MapSize.Y), 0.0f, 1.0f);
-            const FVector2D Centre(NormalizedX * Size.X, (1.0f - NormalizedY) * Size.Y);
+            const FVector2D Centre(MapOffset.X + NormalizedX * MapExtent.X,
+                                   MapOffset.Y + (1.0f - NormalizedY) * MapExtent.Y);
 
             float MarkerExtent = 4.0f;
             FLinearColor Colour;
@@ -118,7 +223,7 @@ public:
             {
                 const FVector2D OutlineSize(MarkerExtent + 4.0f, MarkerExtent + 4.0f);
                 FSlateDrawElement::MakeBox(
-                    OutDrawElements, LayerId + 2,
+                    OutDrawElements, LayerId + 4,
                     AllottedGeometry.ToPaintGeometry(
                         OutlineSize, FSlateLayoutTransform(Centre - OutlineSize * 0.5f)),
                     WhiteBrush, ESlateDrawEffect::None, FLinearColor::White);
@@ -126,39 +231,153 @@ public:
 
             const FVector2D MarkerSize(MarkerExtent, MarkerExtent);
             FSlateDrawElement::MakeBox(
-                OutDrawElements, LayerId + 3,
+                OutDrawElements, LayerId + 5,
                 AllottedGeometry.ToPaintGeometry(
                     MarkerSize, FSlateLayoutTransform(Centre - MarkerSize * 0.5f)),
                 WhiteBrush, ESlateDrawEffect::None, Colour);
         }
 
-        return LayerId + 3;
+        // Pings last, above every marker: they are the "look here now" layer, and an event
+        // hidden behind a unit icon would defeat the point.
+        for (const FRA4RadarPing& Ping : RadarOwner->GetPings())
+        {
+            const float Intensity = FMath::Clamp(Ping.Intensity, 0.0f, 1.0f);
+            if (Intensity <= 0.0f)
+            {
+                continue;
+            }
+            const float NormalizedX = FMath::Clamp(float(Ping.WorldPosition.X / MapSize.X), 0.0f, 1.0f);
+            const float NormalizedY = FMath::Clamp(float(Ping.WorldPosition.Y / MapSize.Y), 0.0f, 1.0f);
+            const FVector2D Centre(MapOffset.X + NormalizedX * MapExtent.X,
+                                   MapOffset.Y + (1.0f - NormalizedY) * MapExtent.Y);
+
+            // Shrinks as it fades, so a new event is unmistakable and an old one recedes
+            // instead of sitting there at full size competing with the live markers.
+            const float Extent = 6.0f + 10.0f * Intensity;
+            FLinearColor Colour = RA4RadarPingColour(Ping.Kind);
+            Colour.A = Intensity;
+
+            const FVector2D RingSize(Extent, Extent);
+            FSlateDrawElement::MakeBox(
+                OutDrawElements, LayerId + 6,
+                AllottedGeometry.ToPaintGeometry(
+                    RingSize, FSlateLayoutTransform(Centre - RingSize * 0.5f)),
+                WhiteBrush, ESlateDrawEffect::None, Colour);
+        }
+
+        return LayerId + 6;
     }
 
     virtual FReply OnMouseButtonDown(const FGeometry& MyGeometry,
                                      const FPointerEvent& MouseEvent) override
     {
-        if (MouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+        const FKey Button = MouseEvent.GetEffectingButton();
+        FVector2D Normalized;
+        if (!ResolveNormalized(MyGeometry, MouseEvent, Normalized))
         {
-            const FVector2D Size = MyGeometry.GetLocalSize();
-            if (Size.X > 0.0f && Size.Y > 0.0f)
-            {
-                const FVector2D Local = MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
-                if (URA4RadarWidget* RadarOwner = Owner.Get())
-                {
-                    RadarOwner->HandleSlateClick(FVector2D(
-                        FMath::Clamp(Local.X / Size.X, 0.0f, 1.0f),
-                        FMath::Clamp(Local.Y / Size.Y, 0.0f, 1.0f)));
-                }
-            }
+            // Inside a letterbox bar, or no map: the player pointed at nothing. Swallowed
+            // rather than clamped to the nearest edge, which would fling the camera into a
+            // corner the player did not click.
+            return FReply::Handled();
         }
 
-        // Both mouse buttons belong to the radar while the pointer is over it.
+        URA4RadarWidget* RadarOwner = Owner.Get();
+        if (RadarOwner == nullptr)
+        {
+            return FReply::Handled();
+        }
+
+        if (Button == EKeys::LeftMouseButton)
+        {
+            RadarOwner->HandleSlateClick(Normalized);
+            // Capture so the camera keeps following the pointer after it leaves the panel.
+            // Without this a drag that overshoots the edge stops dead, which feels like the
+            // widget lost the mouse -- and it had.
+            bDraggingCamera = true;
+            return FReply::Handled().CaptureMouse(SharedThis(this));
+        }
+        if (Button == EKeys::RightMouseButton)
+        {
+            RadarOwner->HandleSlateOrder(Normalized);
+            return FReply::Handled();
+        }
         return FReply::Handled();
     }
 
+    virtual FReply OnMouseMove(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override
+    {
+        if (!bDraggingCamera)
+        {
+            return FReply::Unhandled();
+        }
+        FVector2D Normalized;
+        URA4RadarWidget* RadarOwner = Owner.Get();
+        if (RadarOwner != nullptr && ResolveNormalized(MyGeometry, MouseEvent, Normalized))
+        {
+            // Every move while held, so the camera tracks the pointer continuously rather
+            // than only jumping on press and release.
+            RadarOwner->HandleSlateClick(Normalized);
+        }
+        return FReply::Handled();
+    }
+
+    virtual FReply OnMouseButtonUp(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override
+    {
+        if (MouseEvent.GetEffectingButton() == EKeys::LeftMouseButton && bDraggingCamera)
+        {
+            bDraggingCamera = false;
+            return FReply::Handled().ReleaseMouseCapture();
+        }
+        return FReply::Handled();
+    }
+
+    // Releasing capture without clearing the flag would leave the panel convinced a drag was
+    // still in progress, so the next stray move would yank the camera.
+    virtual void OnMouseCaptureLost(const FCaptureLostEvent& CaptureLostEvent) override
+    {
+        bDraggingCamera = false;
+        SLeafWidget::OnMouseCaptureLost(CaptureLostEvent);
+    }
+
 private:
+    // Panel-local pointer position as a 0..1 fraction of the letterboxed map rect. False if
+    // the pointer is outside that rect, which is not the same as outside the widget.
+    bool ResolveNormalized(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent,
+                           FVector2D& OutNormalized) const
+    {
+        const URA4RadarWidget* RadarOwner = Owner.Get();
+        if (RadarOwner == nullptr)
+        {
+            return false;
+        }
+        const FVector2D Size = MyGeometry.GetLocalSize();
+        if (Size.X <= 0.0f || Size.Y <= 0.0f)
+        {
+            return false;
+        }
+
+        // Normalize against the letterboxed map rect, not the whole panel, or a click is
+        // offset by the size of the bars -- the same mapping the painter uses, so a click
+        // lands on the marker that was drawn under the cursor.
+        FVector2D MapOffset, MapExtent;
+        URA4RadarWidget::ComputeMapRect(Size, RadarOwner->GetMapSize(), MapOffset, MapExtent);
+        if (MapExtent.X <= 0.0 || MapExtent.Y <= 0.0)
+        {
+            return false;
+        }
+
+        const FVector2D Inside =
+            MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition()) - MapOffset;
+        if (Inside.X < 0.0 || Inside.Y < 0.0 || Inside.X > MapExtent.X || Inside.Y > MapExtent.Y)
+        {
+            return false;
+        }
+        OutNormalized = FVector2D(Inside.X / MapExtent.X, Inside.Y / MapExtent.Y);
+        return true;
+    }
+
     TWeakObjectPtr<URA4RadarWidget> Owner;
+    bool bDraggingCamera = false;
 };
 
 namespace
@@ -375,10 +594,58 @@ FVector2D URA4RadarWidget::GetMapSize() const
     return Provider != nullptr ? Provider->GetRadarMapSize() : FVector2D::ZeroVector;
 }
 
+void URA4RadarWidget::ComputeMapRect(const FVector2D& PanelSize, const FVector2D& MapSize,
+                                     FVector2D& OutOffset, FVector2D& OutSize)
+{
+    // Delegates to the presentation layer so there is one implementation of the mapping
+    // rather than one here and one in a test. The geometry is pure and headless-testable;
+    // this wrapper exists only to speak FVector2D.
+    double OffX = 0.0, OffY = 0.0, W = 0.0, H = 0.0;
+    RA4::Presentation::ComputeMinimapRect(PanelSize.X, PanelSize.Y, MapSize.X, MapSize.Y,
+                                         OffX, OffY, W, H);
+    OutOffset = FVector2D(OffX, OffY);
+    OutSize = FVector2D(W, H);
+}
+
 int32 URA4RadarWidget::GetLocalPlayer() const
 {
     const URA4UIDataProviderSubsystem* Provider = GetProvider();
     return Provider != nullptr ? Provider->GetRadarLocalPlayer() : 0;
+}
+
+bool URA4RadarWidget::IsOnline() const
+{
+    const URA4UIDataProviderSubsystem* Provider = GetProvider();
+    // No provider means no match is running, so there is nothing to report as offline --
+    // an editor preview must not render itself as a blacked-out radar.
+    return Provider == nullptr || Provider->IsRadarOnline();
+}
+
+const TArray<uint8>& URA4RadarWidget::GetBackgroundTerrain() const
+{
+    static const TArray<uint8> Empty;
+    const URA4UIDataProviderSubsystem* Provider = GetProvider();
+    return Provider != nullptr ? Provider->GetMinimapTerrain() : Empty;
+}
+
+const TArray<uint8>& URA4RadarWidget::GetBackgroundShroud() const
+{
+    static const TArray<uint8> Empty;
+    const URA4UIDataProviderSubsystem* Provider = GetProvider();
+    return Provider != nullptr ? Provider->GetMinimapShroud() : Empty;
+}
+
+const TArray<FRA4RadarPing>& URA4RadarWidget::GetPings() const
+{
+    static const TArray<FRA4RadarPing> Empty;
+    const URA4UIDataProviderSubsystem* Provider = GetProvider();
+    return Provider != nullptr ? Provider->GetRadarPings() : Empty;
+}
+
+FIntPoint URA4RadarWidget::GetBackgroundCellCounts() const
+{
+    const URA4UIDataProviderSubsystem* Provider = GetProvider();
+    return Provider != nullptr ? Provider->GetMinimapCellCounts() : FIntPoint::ZeroValue;
 }
 
 void URA4RadarWidget::HandleSlateClick(const FVector2D& NormalizedPosition)
@@ -392,6 +659,35 @@ void URA4RadarWidget::HandleSlateClick(const FVector2D& NormalizedPosition)
     OnRadarClicked.Broadcast(FVector2D(
         NormalizedPosition.X * MapSize.X,
         (1.0f - NormalizedPosition.Y) * MapSize.Y));
+}
+
+void URA4RadarWidget::HandleSlateOrder(const FVector2D& NormalizedPosition)
+{
+    const FVector2D MapSize = GetMapSize();
+    if (MapSize.X <= 0.0f || MapSize.Y <= 0.0f)
+    {
+        return;
+    }
+
+    // Same mapping as the camera click; only the delegate differs, so an order cannot land
+    // somewhere other than where the camera would have gone for the same pixel.
+    OnRadarOrdered.Broadcast(FVector2D(
+        NormalizedPosition.X * MapSize.X,
+        (1.0f - NormalizedPosition.Y) * MapSize.Y));
+}
+
+void URA4RadarWidget::SetCameraView(const FVector2D& CentreWorld, const FVector2D& ExtentWorld)
+{
+    if (CameraViewCentre.Equals(CentreWorld) && CameraViewExtent.Equals(ExtentWorld))
+    {
+        return;   // no change: do not invalidate Slate for an identical frame
+    }
+    CameraViewCentre = CentreWorld;
+    CameraViewExtent = ExtentWorld;
+    if (RadarSlate.IsValid())
+    {
+        RadarSlate->Invalidate(EInvalidateWidgetReason::Paint);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -498,6 +794,7 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
         RadarWidget = WidgetTree->ConstructWidget<URA4RadarWidget>(
             URA4RadarWidget::StaticClass(), TEXT("Radar"));
         RadarWidget->OnRadarClicked.AddUObject(this, &URA4SidebarWidget::HandleRadarClicked);
+        RadarWidget->OnRadarOrdered.AddUObject(this, &URA4SidebarWidget::HandleRadarOrdered);
         Frame->AddChild(RadarWidget);
 
         USizeBox* Sizer = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("MinimapSizer"));
@@ -752,6 +1049,19 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
 void URA4SidebarWidget::HandleRadarClicked(FVector2D WorldPosition)
 {
     OnRadarClicked.Broadcast(WorldPosition);
+}
+
+void URA4SidebarWidget::HandleRadarOrdered(FVector2D WorldPosition)
+{
+    OnRadarOrdered.Broadcast(WorldPosition);
+}
+
+void URA4SidebarWidget::SetRadarCameraView(const FVector2D& CentreWorld, const FVector2D& ExtentWorld)
+{
+    if (RadarWidget != nullptr)
+    {
+        RadarWidget->SetCameraView(CentreWorld, ExtentWorld);
+    }
 }
 
 void URA4SidebarWidget::NativeConstruct()

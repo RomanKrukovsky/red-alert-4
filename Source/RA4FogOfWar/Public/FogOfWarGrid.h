@@ -48,6 +48,16 @@ public:
     // Updates visibility around a center point for a specific player
     void RevealCircularArea(int32_t PlayerIndex, int32_t CenterX, int32_t CenterY, int32_t Radius);
 
+    // Radar coverage: marks cells as RadarDetected, which reads as "something is there"
+    // without granting the detail that eyes-on vision does. Deliberately never downgrades
+    // a cell -- a tile that is CurrentlyVisible stays so, because real vision is strictly
+    // better information than a blip, and order of calls within a tick must not decide
+    // which one wins.
+    //
+    // VisibilityState::RadarDetected existed and was tested for in two places, but
+    // nothing ever set it, so radar contributed nothing to the minimap or the AI view.
+    void RevealRadarArea(int32_t PlayerIndex, int32_t CenterX, int32_t CenterY, int32_t Radius);
+
     // Resets current visibility (called at the start of a tick before applying unit visions)
     void ClearCurrentVisibility(int32_t PlayerIndex);
 

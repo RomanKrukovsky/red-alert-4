@@ -17,6 +17,7 @@ ARA4EntityActor::ARA4EntityActor()
 {
     PrimaryActorTick.bCanEverTick = true;
     PrimaryActorTick.bStartWithTickEnabled = true;
+    bFindCameraComponentWhenViewTarget = true;
     
     MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComponent"));
     SetRootComponent(MeshComponent);

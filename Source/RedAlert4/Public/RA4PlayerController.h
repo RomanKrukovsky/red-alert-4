@@ -74,6 +74,23 @@ public:
     UFUNCTION(BlueprintCallable, Category = "RA4|Input")
     void CancelPendingAction();
 
+    // --- ADR-0013 building controls -----------------------------------------
+    // Both go out as ordinary validated commands, so they are replayed and
+    // server-authoritative like any other decision. The UI never mutates the
+    // simulation directly.
+
+    /**
+     * Cycles the selected building's power priority to the next band, wrapping round.
+     * This is what makes a deficit a choice rather than a uniform slowdown -- the
+     * player decides the radar goes dark so the factory keeps running.
+     */
+    UFUNCTION(BlueprintCallable, Category = "RA4|Input")
+    void CycleSelectedPowerPriority();
+
+    /** Toggles repair on the selected building. Repair spends credits while it runs. */
+    UFUNCTION(BlueprintCallable, Category = "RA4|Input")
+    void ToggleSelectedRepair();
+
     UFUNCTION(BlueprintCallable, Category = "RA4|UI")
     void TogglePauseMenu();
 
@@ -236,6 +253,10 @@ private:
 
     void HandleBuildCardClicked(int64 ContentIdValue);
     void HandleRadarClicked(FVector2D WorldPosition);
+    /** Right-click on the minimap: orders the current selection to that world position. */
+    void HandleRadarOrdered(FVector2D WorldPosition);
+    /** Pushes the camera's ground footprint into the radar widget so it can outline it. */
+    void UpdateRadarCameraView();
     void BindMatchResultEvents();
     void HandleMatchEnded(bool bLocalPlayerWon, int32 WinningPlayer);
     void HandleRetryRequested();

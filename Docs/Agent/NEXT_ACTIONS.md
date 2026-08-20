@@ -185,6 +185,57 @@ These are code changes, not documentation. Both were re-verified in the headers,
 | **V-A** | ~~Hide fogged enemy actors in `RA4SimWorldSubsystem` actor sync~~ — **CODE DONE 2026-08-06; in-editor visual check STILL REQUIRED** | Actor sync now calls `SimWorld::IsEntityVisibleTo(local, index)` every sync and applies `SetActorHiddenInGame` (hide, not destroy — avoids actor churn at fog edges; no-op for own units and fogless matches). Helper moved from private to the public read section of SimWorld.h with a rationale comment. UE 5.8 editor target: `Result: Succeeded`. Headless: `FogOfWar.EntityVisibilityGateAnswersPerViewer` pins the per-viewer contract. **NOT claiming visual verification**: nobody has launched the editor and looked; per CLAUDE.md that check is still owed before this row reads fully done. Known debt: local player is the constant 0 throughout this subsystem — real multiplayer seats must replace it everywhere at once. |
 | **V-B** | ~~Gate cursor picking by visibility~~ — **DONE 2026-08-06** | `BuildPickCandidates` skips entities failing `IsEntityVisibleTo(Selection.GetLocalPlayer(), …)`: the cursor, hover tooltip and click-pick can no longer land on fogged enemies. UE editor target builds clean; suite 430/430. Same seat caveat as V-A does not apply here — picking already read the seat from `Selection.GetLocalPlayer()`. |
 
+### Minimap / radar panel (M1–M4, 2026-08-06)
+
+| Task ID | Task | Acceptance criteria |
+| :--- | :--- | :--- |
+| **M-1** | ~~Radar contributed nothing; non-square maps were distorted; the panel ignored a power blackout~~ — **CODE DONE 2026-08-06; in-editor visual check STILL REQUIRED** | `VisibilityState::RadarDetected` was read by both the minimap and the AI view but never written by anything, so a radar building revealed no contacts. `FFogOfWarGrid::RevealRadarArea` now paints it over a 24-tile sweep from `SystemFogOfWar` for a completed radar whose priority band is online, never downgrading real vision, and `ClearCurrentVisibility` decays it so blips do not persist after the radar dies. `ComputeMinimapRect` letterboxes the map so a 2:1 map is no longer stretched 2:1 vertically; painter and click handler share it, so a click lands where the marker was drawn. ADR-0013's "Radar / minimap" row is now honoured on both halves (`bOnline` / `bOfflineForPower`); a player who never built a radar keeps their minimap at every tier. 5 tests, each revert-verified. Commit `bf8425e`. |
+| **M-2** | ~~The panel drew markers onto an empty grid — no terrain, no record of what was explored~~ — **CODE DONE 2026-08-06; in-editor visual check STILL REQUIRED** | Terrain and shroud are two grids in `RadarState`, downsampled to ≤96 cells/axis, re-sampled every 10 ticks and copied only when the result differs. Terrain is sampled only for explored ground, so the coastline and every ore patch are not leaked on an unvisited map. Explored-then-unwatched ground becomes `Remembered` and keeps its terrain. Where a cell covers several tiles the most salient terrain wins, so a one-tile river survives downsampling. 9 tests; the salience test was re-based onto a 256×256 map after it was found to pass with the rule deleted (stride 1 never merges). Commit `69262e7`. |
+| **M-3** | ~~No drag-to-pan, right button swallowed, no camera frame~~ — **CODE DONE 2026-08-06; in-editor drag/order check STILL REQUIRED** | Left button pans continuously with mouse capture (released on button-up *and* `OnMouseCaptureLost`). Right button orders the selection through `MakeOrderContext` / `ResolveOrder` / `SubmitOrders` — the same resolver, queue, validation and replay path as a world right-click, with `HoveredEntity` cleared so a minimap click cannot become an attack on something off-screen. The camera footprint is deprojected from the real viewport corners (stopping at the sidebar strip) and outlined via `ComputeMinimapCameraFrame`, which lives in RA4Presentation so the Y flip and the per-edge clamp are headless-tested. 4 tests, each revert-verified. Commit `9510cf9`. |
+| **M-4** | ~~The alert feed named events but nothing showed *where*~~ — **CODE DONE 2026-08-06; in-editor visual check STILL REQUIRED** | Located alerts produce transient `RadarPing`s, derived from the alert list rather than a second event channel, so a ping cannot exist without a feed row. Conditions with no place on a map (low power, funds, depleted ore) do not ping. Intensity decays linearly from `LastTick`, so an ongoing barrage stays lit; integer-only, 3 s lifetime. Ordering (urgent kind, then freshest) is inherited from the alert feed's severity sort — a second sort was written, found to be dead code by reverting it, and removed. 7 tests; the ordering pair is revert-verified against the feed's comparators. Commit `b550dae`. |
+
+### Independent review of M1–M4 (2026-08-06)
+
+A reviewer who did not write the code found five defects. All five were reproduced with probes
+before being fixed, and each fix is revert-verified except where noted.
+
+| Defect | Severity | Fix |
+| :--- | :--- | :--- |
+| **Radar revealed terrain and ore across unexplored map** | **Critical (maphack)** | Radar coverage marked cells Visible and the terrain sampler gated on the shroud, so a 24-tile sweep mapped the coastline, cliffs and every ore patch on unscouted ground. Reproduced at 33 water cells + 1 ore cell. `HasLearnedTerrain` now answers "has anyone seen the ground" separately from "how brightly is this lit". The M2 test that claimed to cover this used a fixture with no radar. Commit `bed88e9`. |
+| **`DirtyRegions` grew without bound** | **Critical (leak)** | Producer/consumer list for texture uploads that nothing in the shipping path ever drained — 2400 rects after 600 ticks, ~144k per player per half-hour, for a list nobody reads. Pre-existing in `RevealCircularArea`; the radar sweep doubled the rate. Now cleared at the top of `SystemFogOfWar`. Commit `294785a`. |
+| **Background copied into every snapshot** | Medium | M2 claimed "zero background traffic per tick"; measured 14792 bytes on all 30 unchanged ticks (~296 KB/s at 20 Hz). Now attached only on change, or on an explicit `RequestBackgroundResend` for a consumer that starts mid-match. Commit `bc79eca`. |
+| **`ComputeMinimapCameraFrame` returned true for a zero-area rect** | Medium | Contract promises false when there is nothing to draw; a camera fully off the map returned `ok=1, w=0, h=0` and the widget drew a degenerate line at the map edge. Guarded after clamping. Commit `bc79eca`. |
+| **`int32` overflow in both reveal functions** | Low (UB) | `Radius * Radius` overflows above 46340 — undefined behaviour, not a wrong number. Now `int64`. Demonstrated with UBSan on the identical arithmetic; **the accompanying test cannot fail without the fix on arm64 -O2, and says so in its own comment** rather than reading as coverage it does not provide. Commit `294785a`. |
+
+Two of my own tests were found to be worthless by reverting the code they claimed to cover, and
+were rebuilt: the terrain-merge test ran on a 64×64 map where the stride is 1 and merging never
+happens, and a ping-ordering sort turned out to be dead code because the alert feed already
+established the order.
+
+**Also shipped**: both factions now have a buildable Radar Complex (`294785a`). Until then no
+entity definition set `Building.bIsRadar`, so the entire radar mechanic — sweep, ADR-0013
+minimap row, blackout behaviour — was reachable only from tests and a real match had no radar
+to construct.
+
+### Exposed by the merge with main (2026-08-06) — open
+
+| Task ID | Task | Acceptance criteria |
+| :--- | :--- | :--- |
+| **A-1** | **No AI ever builds anti-air, so aircraft are unanswerable** — **OPEN, diagnosed not fixed** | `AICommander::FindDefenceStructure` returns the *first* `ProductionCategory::Defense` building in the database, which is always the plain turret. Only two weapons in the whole content set set `bCanTargetAir`, both on anti-air buildings, so an enemy air force cannot be shot at by anything an AI will build. Symptom: `AI.FiveSkirmishScenariosFinishWithAWinner` scenario 5 stalemates — the loser is reduced to zero buildings but keeps three jets, and `SystemVictory` needs no buildings *and* no units. Probe: `AA p0=0 p1=0, JETS p0=3 p1=3`. This passed on main by coincidence (matches finished before aircraft accumulated), and merging ADR-0012/0013 shifted pacing enough to expose it. **The obvious one-line fix was tried and rejected**: preferring anti-air when enemy air is visible made three scenarios stalemate instead of one, because the commander then spent on the wrong gun against a ground attack. Needs a real threat-weighted defence mix, which is its own package. `AI.CommanderCanFindAnAntiAirBuilding` pins that the content half is sound, so the remaining gap is unambiguously the commander's choice; the skirmish test asserts the stalemate as a known state so any change in it fails loudly. |
+
+**Owed on all four rows**: Unreal was never launched. The editor target builds
+and links (`Result: Succeeded`), the geometry and the data rules are covered
+headlessly, but nobody has looked at the painted panel, performed a drag, issued
+a minimap order, or watched a ping fade. Per CLAUDE.md rule 6 these rows are not
+fully done until that happens.
+
+**Known gaps left open**: no shipped entity definition sets `Building.bIsRadar`,
+so the radar sweep is reachable only from tests until a faction authors one
+(content task); the minimap background is painted one `MakeBox` per cell rather
+than as a texture, which is bounded by the 96×96 cap but is not free; the local
+player is still the constant 0 throughout the HUD path, the same seat debt V-A
+records.
+
 Sequencing: P-1 and P-2 are **done**. I-B1 and I-B2 are the highest-priority
 items in this file — they are live invariant violations in shipped-but-disabled
 code, and both gate I-M1. I-B3/I-B4 gate I-M2 (distortion needs a decay model

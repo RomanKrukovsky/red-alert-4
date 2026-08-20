@@ -434,3 +434,79 @@ RA4_TEST(FogOfWar, DirtyRegionsDoNotAccumulateAcrossTicks)
     // other.
     RA4_EXPECT(Fog->GetWidth() > 0 && Fog->GetHeight() > 0);
 }
+
+// DirtyRegions is a producer/consumer list for texture uploads: every reveal appends a rect
+// and the consumer drains it. Nothing in the shipping path ever drained it, so the vectors
+// grew by one rect per revealing entity per tick and were never freed -- measured at 2400
+// rects after 600 ticks with three buildings, for a list nobody reads. Over a half-hour match
+// that is roughly 144k rects per player.
+//
+// Found by an independent reviewer's probe, not by the author of the radar work.
+RA4_TEST(FogOfWar, DirtyRegionsDoNotGrowWithoutBound)
+{
+    ContentDatabase Content;
+    RA4Test::BuildDefaultContent(Content);
+    SimWorld World;
+    World.Initialize(&Content, RA4Test::MakeTestSetup(777));
+    RA4Test::SpawnEnemyOutpost(World);
+    // Several revealing buildings, since the growth was per revealing entity per tick.
+    World.SpawnBuilding(RA4Test::Ids::SovConYard, 0, TileCoord(10, 10), true);
+    World.SpawnBuilding(RA4Test::Ids::SovPower, 0, TileCoord(14, 10), true);
+    World.SpawnBuilding(RA4Test::Ids::SovRadar, 0, TileCoord(18, 10), true);
+
+    RA4Test::RunTicks(World, 600);
+
+    const FFogOfWarGrid* Fog = World.GetFogGrid();
+    RA4_REQUIRE(Fog != nullptr);
+    // Bounded by what one tick can produce, not by how long the match has run. The exact
+    // count is a few rects; the assertion is deliberately loose so it tests boundedness
+    // rather than pinning an implementation detail.
+    RA4_EXPECT(Fog->GetDirtyRegions(0).size() < 64u);
+
+    // And it stays bounded: ten times as long must not be ten times as many.
+    const size_t After600 = Fog->GetDirtyRegions(0).size();
+    RA4Test::RunTicks(World, 600);
+    RA4_EXPECT(Fog->GetDirtyRegions(0).size() <= After600 + 8u);
+}
+
+// Radius * Radius and the per-cell distance were both computed in int32. Above a radius of
+// 46340 that overflows, and signed overflow is undefined behaviour rather than merely a wrong
+// answer. No shipping caller passes anything close today, but vision ranges come from content
+// and content is data -- data must not be able to make a function undefined.
+//
+// Honest scope of this test: it pins the *correct* behaviour at a huge radius, and it would
+// catch a wrap that produced a visibly wrong result. It does NOT prove the int64 change was
+// necessary on this platform -- with int32 restored, arm64 -O2 happens to compute the same
+// visible answer, so this test still passes. The overflow itself was demonstrated separately
+// with UBSan on the identical arithmetic:
+//
+//     int32: "runtime error: signed integer overflow: 50000 * 50000 cannot be represented
+//             in type 'int'", and the centre cell came out NeverSeen
+//     int64: no diagnostic, centre cell CurrentlyVisible
+//
+// That is why the fix stands even though this test cannot fail without it. Reproducing UBSan
+// inside the headless suite would mean a second sanitizer build configuration, which is worth
+// doing but is not this change.
+RA4_TEST(FogOfWar, HugeRevealRadiusBehavesCorrectly)
+{
+    FFogOfWarGrid Grid(64, 64, 2);
+
+    // Well past the int32 square-root boundary.
+    Grid.RevealCircularArea(0, 32, 32, 50000);
+    RA4_EXPECT(Grid.GetVisibility(0, 32, 32) == VisibilityState::CurrentlyVisible);
+    // A radius that large covers the whole map, including the far corner.
+    RA4_EXPECT(Grid.GetVisibility(0, 0, 0) == VisibilityState::CurrentlyVisible);
+    RA4_EXPECT(Grid.GetVisibility(0, 63, 63) == VisibilityState::CurrentlyVisible);
+
+    FFogOfWarGrid RadarGrid(64, 64, 2);
+    RadarGrid.RevealRadarArea(0, 32, 32, 50000);
+    RA4_EXPECT(RadarGrid.GetVisibility(0, 32, 32) == VisibilityState::RadarDetected);
+    RA4_EXPECT(RadarGrid.GetVisibility(0, 0, 0) == VisibilityState::RadarDetected);
+
+    // A negative radius reveals nothing rather than wrapping into a huge one.
+    FFogOfWarGrid NegGrid(64, 64, 2);
+    NegGrid.RevealCircularArea(0, 32, 32, -5);
+    RA4_EXPECT(NegGrid.GetVisibility(0, 32, 32) == VisibilityState::NeverSeen);
+    NegGrid.RevealRadarArea(0, 32, 32, -5);
+    RA4_EXPECT(NegGrid.GetVisibility(0, 32, 32) == VisibilityState::NeverSeen);
+}

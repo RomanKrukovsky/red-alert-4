@@ -598,6 +598,16 @@ void URA4SimWorldSubsystem::TickSimulation()
                     OwningWorld->GetSubsystem<URA4UIDataProviderSubsystem>())
             {
                 UIData->ApplySnapshot(*LatestSnapshot);
+
+                // The minimap grid is only attached to the snapshot on the ticks it changed,
+                // so a provider that came up after the map was already explored would have
+                // nothing to draw until the next scout moved -- which on a settled map could
+                // be the rest of the match. Asking here, rather than pushing the grid every
+                // tick, keeps the steady-state cost at zero.
+                if (UIData->NeedsMinimapBackground())
+                {
+                    SnapshotBuilder->RequestBackgroundResend();
+                }
             }
         }
     }
@@ -889,6 +899,17 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
         case RA4::SimEventType::CommandRejected:
             if (Event.Player == LocalPlayer &&
                 Event.Value == int32(RA4::CommandReject::InsufficientCredits))
+            {
+                PlayEVA(ERA4EVAEvent::InsufficientFunds);
+            }
+            break;
+
+        // ADR-0012: an unaffordable order is now accepted and funded gradually, so
+        // "you are broke" surfaces here rather than as a command rejection. The
+        // simulation emits this only on the transition into Starved, so it is already
+        // edge-triggered and does not need extra throttling.
+        case RA4::SimEventType::ProductionStarved:
+            if (Event.Player == LocalPlayer)
             {
                 PlayEVA(ERA4EVAEvent::InsufficientFunds);
             }

@@ -133,7 +133,7 @@ add_library(RA4AI STATIC
     ${RA4_SOURCE_ROOT}/RA4AI/Private/AILeague.cpp
 )
 target_include_directories(RA4AI PUBLIC ${RA4_SOURCE_ROOT}/RA4AI/Public)
-target_link_libraries(RA4AI PUBLIC RA4Simulation RA4FogOfWar)
+target_link_libraries(RA4AI PUBLIC RA4Simulation)
 
 add_library(RA4Replay STATIC
     ${RA4_SOURCE_ROOT}/RA4Replay/Private/Replay.cpp
@@ -181,7 +181,7 @@ add_executable(RA4Tests
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestTankGunnery.cpp
 )
 
-target_link_libraries(RA4Tests PRIVATE RA4Replay RA4Campaign RA4Input RA4Presentation RA4AI RA4FogOfWar)
+target_link_libraries(RA4Tests PRIVATE RA4Replay RA4Campaign RA4Input RA4Presentation RA4AI)
 target_include_directories(RA4Tests PRIVATE ${RA4_SOURCE_ROOT}/RA4UI/Public)
 
 enable_testing()

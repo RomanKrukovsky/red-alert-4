@@ -62,7 +62,14 @@ struct TileCoord
 
     constexpr bool operator==(const TileCoord& O) const { return X == O.X && Y == O.Y; }
     constexpr bool operator!=(const TileCoord& O) const { return !(*this == O); }
+
+    // Search helpers across the AI and navigation layers return TileCoord(-1, -1)
+    // to mean "no tile found". Naming that convention here stops each caller from
+    // open-coding the same negative-coordinate test and getting the bound wrong.
+    // This checks the sentinel only; whether a coordinate lies inside a particular
+    // grid is that grid's own IsInBounds question.
     constexpr bool IsValid() const { return X >= 0 && Y >= 0; }
+    static constexpr TileCoord Invalid() { return TileCoord(-1, -1); }
 };
 
 } // namespace RA4

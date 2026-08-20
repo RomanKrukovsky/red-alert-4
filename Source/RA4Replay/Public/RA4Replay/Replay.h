@@ -19,9 +19,18 @@ namespace RA4
 
 // Bump on any change to the tick order, the command layout or the checksum
 // contents. Old replays are then rejected up front instead of desyncing.
-// v2: header gains IntelEnabled + ReconSettingsHash (ADR-0022: the intel
-//     configuration is part of the match ruleset; I-B5 / INVARIANT 11).
-constexpr uint32_t kReplayFormatVersion = 2;
+//
+// Both branches independently claimed v2 for different changes, so the merged format
+// is v3 -- two recordings both stamped "2" but produced by different branches are not
+// interchangeable, and a version number cannot express that.
+//
+//   v2: header gains IntelEnabled + ReconSettingsHash (ADR-0022: the intel
+//       configuration is part of the match ruleset; I-B5 / INVARIANT 11), and
+//       separately SystemFlowPayment + SystemPower/SystemFlowPayment ordering with
+//       the payment and power-tier fields added to the state checksum (ADR-0012,
+//       ADR-0013) -- either alone makes an older recording replay to a different hash
+//   v3: the union of the above
+constexpr uint32_t kReplayFormatVersion = 3;
 constexpr uint32_t kReplayMagic = 0x34414952;   // 'RA4R'
 
 struct ReplayHeader

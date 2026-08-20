@@ -197,6 +197,20 @@ struct PrerequisiteGroup
     }
 };
 
+// --- Tech Tiers -----------------------------------------------------------
+
+// Declared before ProductionInfo because that struct carries a Tier field. "High
+// tech" in the ADR-0013 sense means T2 and above: those are the items a power deficit
+// pauses outright rather than merely slowing.
+enum class TechTier : uint8_t
+{
+    T0 = 0,   // starting buildings
+    T1,
+    T2,
+    T3,
+    Count
+};
+
 struct ProductionInfo
 {
     int32_t Cost = 0;
@@ -207,6 +221,10 @@ struct ProductionInfo
     std::vector<ContentId> Prerequisites;
     PrerequisiteGroup PrerequisitesGroup;
     int32_t CancelRefundPercent = 100;
+    // ADR-0013. T0/T1 keep building through a deficit at reduced speed; T2+ is paused
+    // at Severe and Critical. Defaulting to T0 means content that says nothing about
+    // tech behaves exactly as it did before this field existed.
+    TechTier Tier = TechTier::T0;
 };
 
 struct BuildingInfo
@@ -383,17 +401,6 @@ struct FactionResourceDef
     std::vector<std::string> AccrualRules;  // textual description from bible
     std::vector<std::string> SpendRules;
     std::vector<std::string> ThresholdBonuses;
-};
-
-// --- Tech Tiers -----------------------------------------------------------
-
-enum class TechTier : uint8_t
-{
-    T0 = 0,   // starting buildings
-    T1,
-    T2,
-    T3,
-    Count
 };
 
 // --- Voice ---------------------------------------------------------------

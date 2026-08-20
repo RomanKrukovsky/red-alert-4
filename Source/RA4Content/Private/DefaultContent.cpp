@@ -35,6 +35,7 @@ constexpr ContentId BldSovRefinery = MakeContentId("building.sov.ore_refinery");
 constexpr ContentId BldSovBarracks = MakeContentId("building.sov.barracks");
 constexpr ContentId BldSovWarFactory = MakeContentId("building.sov.war_factory");
 constexpr ContentId BldSovTurret = MakeContentId("building.sov.gun_turret");
+constexpr ContentId BldSovRadar = MakeContentId("building.sov.radar_complex");
 constexpr ContentId BldSovAaTurret = MakeContentId("building.sov.flak_turret");
 constexpr ContentId BldSovSuper = MakeContentId("building.sov.iron_barrage");
 
@@ -44,6 +45,7 @@ constexpr ContentId BldAllRefinery = MakeContentId("building.all.ore_refinery");
 constexpr ContentId BldAllBarracks = MakeContentId("building.all.barracks");
 constexpr ContentId BldAllWarFactory = MakeContentId("building.all.war_factory");
 constexpr ContentId BldAllTurret = MakeContentId("building.all.pillbox");
+constexpr ContentId BldAllRadar = MakeContentId("building.all.radar_complex");
 constexpr ContentId BldAllAaTurret = MakeContentId("building.all.patriot_battery");
 constexpr ContentId BldAllSuper = MakeContentId("building.all.aegis_lance");
 
@@ -252,7 +254,7 @@ struct FactionSetup
 {
     FactionId Faction;
     const char* KeyPrefix;
-    ContentId ConYard, Power, Refinery, Barracks, WarFactory, Turret, AaTurret, Airfield, Superweapon;
+    ContentId ConYard, Power, Refinery, Barracks, WarFactory, Turret, Radar, AaTurret, Airfield, Superweapon;
     ContentId Mcv, Harvester, BasicInfantry, AntiArmorInfantry, MainTank, Artillery, Aircraft;
     const char* ConYardName;
     const char* PowerName;
@@ -260,6 +262,7 @@ struct FactionSetup
     const char* BarracksName;
     const char* WarFactoryName;
     const char* TurretName;
+    const char* RadarName;
     const char* McvName;
     const char* HarvesterName;
     const char* BasicInfantryName;
@@ -302,6 +305,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = 2500;
         E.Production.BuildTimeTicks = SecondsToTicks(30);
         E.Production.Category = ProductionCategory::Structure;
+        E.Production.Tier = TechTier::T0;
         Db.AddEntity(E);
     }
 
@@ -325,6 +329,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = 800;
         E.Production.BuildTimeTicks = SecondsToTicks(8);
         E.Production.Category = ProductionCategory::Structure;
+        E.Production.Tier = TechTier::T0;
         E.Production.ProducedBy = {S.ConYard};
         E.Production.Prerequisites = {S.ConYard};
         Db.AddEntity(E);
@@ -351,6 +356,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = 2000;
         E.Production.BuildTimeTicks = SecondsToTicks(20);
         E.Production.Category = ProductionCategory::Structure;
+        E.Production.Tier = TechTier::T1;
         E.Production.ProducedBy = {S.ConYard};
         E.Production.Prerequisites = {S.Power};
         Db.AddEntity(E);
@@ -375,6 +381,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = 500;
         E.Production.BuildTimeTicks = SecondsToTicks(10);
         E.Production.Category = ProductionCategory::Structure;
+        E.Production.Tier = TechTier::T1;
         E.Production.ProducedBy = {S.ConYard};
         E.Production.Prerequisites = {S.Power};
         Db.AddEntity(E);
@@ -399,6 +406,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = 2000;
         E.Production.BuildTimeTicks = SecondsToTicks(20);
         E.Production.Category = ProductionCategory::Structure;
+        E.Production.Tier = TechTier::T2;
         E.Production.ProducedBy = {S.ConYard};
         E.Production.Prerequisites = {S.Refinery};
         Db.AddEntity(E);
@@ -422,8 +430,47 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = 600;
         E.Production.BuildTimeTicks = SecondsToTicks(8);
         E.Production.Category = ProductionCategory::Defense;
+        E.Production.Tier = TechTier::T1;
         E.Production.ProducedBy = {S.ConYard};
         E.Production.Prerequisites = {S.Barracks};
+        Db.AddEntity(E);
+    }
+
+    // --- Radar complex -----------------------------------------------------
+    // ADR-0013's "Radar / minimap" row and the RadarDetected sweep in SystemFogOfWar both
+    // key off Building.bIsRadar, and until now no shipped definition set it -- the whole
+    // radar mechanic was reachable only from tests. This is the building that makes it real.
+    //
+    // Priority is left to DefaultPowerPriorityFor, which sees bIsRadar first and assigns
+    // Auxiliary: the radar is the thing a deficit is *supposed* to take, and hardcoding it
+    // here would let the two disagree.
+    {
+        EntityDef E;
+        E.Id = S.Radar;
+        E.Name = S.RadarName;
+        E.DisplayNameKey = Prefix + ".building.radar";
+        E.Kind = EntityKind::Building;
+        E.Faction = S.Faction;
+        E.MaxHealth = 800;
+        E.Armor = ArmorClass::Building;
+        // Its own sight is ordinary; the 24-tile sweep it grants is radar coverage, which is
+        // a different and weaker thing -- contacts without terrain.
+        E.VisionRange = Metres(12);
+        E.Roles = EntityRole::BaseBuilding;
+        E.Building.FootprintX = 2;
+        E.Building.FootprintY = 2;
+        E.Building.bIsRadar = true;
+        // Deliberately expensive to run. The minimap going dark under load is the point of
+        // the ADR-0013 row, and a radar that draws almost nothing would never trigger it.
+        E.Building.PowerConsumed = 75;
+        E.Production.Cost = 1000;
+        E.Production.BuildTimeTicks = SecondsToTicks(15);
+        E.Production.Category = ProductionCategory::Structure;
+        // T1, not T2: at Severe and below, T2+ production is throttled, and a radar that
+        // could not be rebuilt during a blackout would make a power crisis unrecoverable.
+        E.Production.Tier = TechTier::T1;
+        E.Production.ProducedBy = {S.ConYard};
+        E.Production.Prerequisites = {S.Power};
         Db.AddEntity(E);
     }
 
@@ -449,6 +496,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = 2500;
         E.Production.BuildTimeTicks = SecondsToTicks(30);
         E.Production.Category = ProductionCategory::Vehicle;
+        E.Production.Tier = TechTier::T2;
         E.Production.ProducedBy = {S.WarFactory};
         E.Production.Prerequisites = {S.WarFactory};
         Db.AddEntity(E);
@@ -483,6 +531,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = 800;
         E.Production.BuildTimeTicks = SecondsToTicks(15);
         E.Production.Category = ProductionCategory::Vehicle;
+        E.Production.Tier = TechTier::T2;
         E.Production.ProducedBy = {S.WarFactory};
         E.Production.Prerequisites = {S.WarFactory};
         Db.AddEntity(E);
@@ -509,6 +558,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = 500;
         E.Production.BuildTimeTicks = SecondsToTicks(7);
         E.Production.Category = ProductionCategory::Defense;
+        E.Production.Tier = TechTier::T1;
         E.Production.ProducedBy = {S.ConYard};
         E.Production.Prerequisites = {S.Barracks};
         Db.AddEntity(E);
@@ -541,6 +591,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = 3500;
         E.Production.BuildTimeTicks = SecondsToTicks(60);
         E.Production.Category = ProductionCategory::Structure;
+        E.Production.Tier = TechTier::T2;
         E.Production.ProducedBy = {S.ConYard};
         E.Production.Prerequisites = {S.WarFactory};
         Db.AddEntity(E);
@@ -575,6 +626,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = S.TankCost + 300;
         E.Production.BuildTimeTicks = SecondsToTicks(18);
         E.Production.Category = ProductionCategory::Aircraft;
+        E.Production.Tier = TechTier::T2;
         E.Production.ProducedBy = {S.WarFactory};
         E.Production.Prerequisites = {S.WarFactory};
         Db.AddEntity(E);
@@ -604,6 +656,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = 1400;
         E.Production.BuildTimeTicks = SecondsToTicks(15);
         E.Production.Category = ProductionCategory::Vehicle;
+        E.Production.Tier = TechTier::T1;
         E.Production.ProducedBy = {S.WarFactory};
         E.Production.Prerequisites = {S.Refinery};
         Db.AddEntity(E);
@@ -630,6 +683,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = 100;
         E.Production.BuildTimeTicks = SecondsToTicks(3);
         E.Production.Category = ProductionCategory::Infantry;
+        E.Production.Tier = TechTier::T1;
         E.Production.ProducedBy = {S.Barracks};
         E.Production.Prerequisites = {S.Barracks};
         Db.AddEntity(E);
@@ -656,6 +710,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = 300;
         E.Production.BuildTimeTicks = SecondsToTicks(5);
         E.Production.Category = ProductionCategory::Infantry;
+        E.Production.Tier = TechTier::T1;
         E.Production.ProducedBy = {S.Barracks};
         E.Production.Prerequisites = {S.Barracks};
         Db.AddEntity(E);
@@ -683,6 +738,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Cost = S.TankCost;
         E.Production.BuildTimeTicks = SecondsToTicks(12);
         E.Production.Category = ProductionCategory::Vehicle;
+        E.Production.Tier = TechTier::T2;
         E.Production.ProducedBy = {S.WarFactory};
         E.Production.Prerequisites = {S.WarFactory};
         Db.AddEntity(E);
@@ -707,6 +763,7 @@ void BuildDefaultContent(ContentDatabase& Db)
     Soviet.Barracks = BldSovBarracks;
     Soviet.WarFactory = BldSovWarFactory;
     Soviet.Turret = BldSovTurret;
+    Soviet.Radar = BldSovRadar;
     Soviet.Mcv = UnitSovMcv;
     Soviet.Harvester = UnitSovHarvester;
     Soviet.BasicInfantry = UnitSovConscript;
@@ -718,6 +775,7 @@ void BuildDefaultContent(ContentDatabase& Db)
     Soviet.BarracksName = "building.sov.barracks";
     Soviet.WarFactoryName = "building.sov.war_factory";
     Soviet.TurretName = "building.sov.gun_turret";
+    Soviet.RadarName = "building.sov.radar_complex";
     Soviet.McvName = "unit.sov.mcv";
     Soviet.HarvesterName = "unit.sov.ore_harvester";
     Soviet.BasicInfantryName = "unit.sov.conscript";
@@ -750,6 +808,7 @@ void BuildDefaultContent(ContentDatabase& Db)
     Alliance.Barracks = BldAllBarracks;
     Alliance.WarFactory = BldAllWarFactory;
     Alliance.Turret = BldAllTurret;
+    Alliance.Radar = BldAllRadar;
     Alliance.Mcv = UnitAllMcv;
     Alliance.Harvester = UnitAllHarvester;
     Alliance.BasicInfantry = UnitAllRifleman;
@@ -765,6 +824,7 @@ void BuildDefaultContent(ContentDatabase& Db)
     Alliance.BarracksName = "building.all.barracks";
     Alliance.WarFactoryName = "building.all.war_factory";
     Alliance.TurretName = "building.all.pillbox";
+    Alliance.RadarName = "building.all.radar_complex";
     Alliance.McvName = "unit.all.mcv";
     Alliance.HarvesterName = "unit.all.ore_harvester";
     Alliance.BasicInfantryName = "unit.all.rifleman";

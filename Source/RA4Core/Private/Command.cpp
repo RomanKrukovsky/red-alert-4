@@ -22,6 +22,7 @@ const char* ToString(CommandType Type)
         case CommandType::PauseProduction: return "PauseProduction";
         case CommandType::SellBuilding: return "SellBuilding";
         case CommandType::RepairBuilding: return "RepairBuilding";
+        case CommandType::SetPowerPriority: return "SetPowerPriority";
         case CommandType::Surrender: return "Surrender";
         case CommandType::DirectControlEnter: return "DirectControlEnter";
         case CommandType::DirectControlExit: return "DirectControlExit";

@@ -173,4 +173,93 @@ AI queries `FlowPaymentState` to:
 
 ## Status
 
-**ACCEPTED**. Pending implementation. Will be validated by headless economy simulator before production integration.
+**ACCEPTED**, implemented in `SimWorld::SystemFlowPayment` and covered by the
+`FlowPayment.*` tests in `TestSimulation.cpp`.
+
+### Amendments made during implementation
+
+Two details in the sections above were wrong as written and were corrected in code.
+They are recorded here rather than silently edited, because both change observable
+behaviour.
+
+**1. Payment and progress run concurrently, not sequentially.**
+
+The transition table implies an item only advances once `PaidCredits >= TotalCost`
+("`ProgressTicks` advances only in Paying"). Implemented literally, that makes every
+build take twice as long: `TotalTicks` to pay, then `TotalTicks` to build. It also
+contradicts `CostPerTick = TotalCost / TotalTicks`, which only sums to the full price
+if payment is spread across the *build*, not across a separate funding phase.
+
+`SystemProduction` therefore advances items in **Funding as well as Paying**. Payment
+and construction finish on the same tick, and total build time is unchanged from the
+pre-ADR behaviour. `Starved`, `EnergyThrottled`, `ManuallyPaused` and `Queued` still
+do not advance, which preserves the property that actually matters: an item never
+gains progress on a tick it failed to pay for. A guard in `SystemProduction` holds an
+item one unit short of completion if rounding lets progress arrive before the final
+credit, so nothing is ever delivered unpaid.
+
+**2. `TickAccumulator` is not a separate field.**
+
+`ProgressTicks` is already scaled by `kProgressScale` (100), so it *is* the
+fractional-tick accumulator — the power ratio is added to it directly each tick. A
+second accumulator field would have been dead state that still had to be serialized
+and hashed. `ProductionItem` therefore carries `State`, `TotalCost`, `PaidCredits`,
+`ProgressTicks`, `TotalTicks` and `Priority`, and the serialization and hash lists
+above should be read with `TickAccumulator` folded into `ProgressTicks`.
+
+### Deferred to other ADRs
+
+- `EnergyThrottled` is defined and honoured by `SystemFlowPayment` but nothing sets
+  it yet. Ordinary production *scales* with the power ratio rather than freezing, per
+  the ADR-0013 effect matrix; the state is for the high-tech and superweapon
+  categories ADR-0013 pauses outright. Recovery (`EnergyThrottled → Funding` once the
+  ratio is back above `kMinPowerRatioPercent`) is already implemented here rather than
+  left to ADR-0013, so the state cannot become a permanent trap for whoever sets it
+  first. Note that `kMinPowerRatioPercent` in `SimWorld.cpp` is 20, not the 50 quoted
+  above, and it is a floor multiplier rather than a freeze threshold.
+- `PrerequisiteLost` is defined but unreachable: nothing currently re-checks
+  prerequisites for in-flight items, so its 80% refund is unimplemented.
+- `OwnershipChanged` is not yet used as a *state*, but its rule is enforced: a sale
+  pays no queue refund. The sale is recorded in the non-serialized `PendingSales` list
+  and passed to `DestroyEntity` as a parameter, deliberately *not* as a flag on
+  `BuildingComp`: the intent lasts exactly one tick, and an earlier persisted
+  `bSelling` flag could outlive the sale it described (a save taken between the
+  command and the death sweep reloaded a building flagged selling forever, which then
+  silently forfeited its destruction refund). `bSelling` was removed from
+  `BuildingComp` and from the save format in v3. Capture does not exist yet.
+- `Priority` is stored, serialized, hashed and honoured by the allocation order, but
+  no command sets it — every item is priority 0 and ties break on entity index. The
+  command to set it belongs with the UI work.
+
+`TotalCost` is serialized despite being derivable from `ContentId`, so that a save
+made before a balance change still loads at the price the player agreed to pay. It
+remains excluded from the state hash.
+
+### Consequences outside the simulation
+
+- `kReplayFormatVersion` is bumped to 2. `SystemFlowPayment` changed the tick order
+  and the state hash gained the payment fields, so a v1 replay would replay to a
+  different hash; without the bump it would be reported as a desync rather than as an
+  old file.
+- Affordability is no longer a HUD block reason. The simulation accepts an order the
+  player cannot yet pay for, so greying the card out would forbid a command the
+  simulation would take and make gradual payment unreachable through the UI.
+  `CommandReject::InsufficientCredits` is consequently no longer produced for
+  production; it is left in the enum because removing a public value is a separate
+  interface change.
+- Because that rejection is gone, the "insufficient funds" EVA cue lost its only
+  trigger. A new `SimEventType::ProductionStarved` replaces it, emitted once on the
+  transition into `Starved` (edge-triggered, or a broke player would produce one event
+  per tick per queue).
+- `QueueEntry` and the Blueprint-facing `FRA4ProductionEntry` both carry
+  `PaidCredits`, `TotalCost` and `bStarvedForCredits`, and the UI change-detection
+  compares `bStarvedForCredits` — a starving item's progress bar does not move, so
+  without that the widget would never refresh to show or clear the warning.
+- The AI's two production gates now require only the first per-tick slice plus its
+  credit reserve, not the whole price. Left as it was, the AI would have been strictly
+  more cautious than the rules allow and than a human player, and would have stopped
+  producing entirely on low-income maps.
+- `kEnergyThrottleRecoverPercent` (50) is separate from `kMinPowerRatioPercent` (20).
+  The latter is a speed floor for ordinary production; the former is the recovery
+  threshold for the categories ADR-0013 pauses outright. Reusing the floor would let a
+  throttled item resume at 20% power and undo the pause ADR-0013 had just applied.

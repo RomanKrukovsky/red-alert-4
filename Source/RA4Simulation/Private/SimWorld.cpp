@@ -38,10 +38,6 @@ constexpr int32_t kTurretAlignTolerance = 64;
 // How close a harvester must get to the *edge* of its target to dock.
 constexpr int64_t kDockDistanceUnits = 260;
 
-// Under-powered bases still make some progress; a full stall makes a lost power
-// plant unrecoverable, which is not the intent of the mechanic.
-constexpr int32_t kMinPowerRatioPercent = 20;
-
 // Docking is measured to the target's centre, but a building occupies tiles that no
 // unit can enter. A harvester pressed against the wall of a 3x2 refinery is already
 // ~400 units from its centre, so a flat 260-unit radius made docking geometrically
@@ -106,6 +102,36 @@ int64_t GroupSizeAtDestTile(const std::vector<uint64_t>& SortedKeys, const TileC
     const int64_t Count = int64_t(Hi - Lo);
     return Count > 0 ? Count : 1;
 }
+
+// ADR-0012 refund table. All percentages apply to PaidCredits, never to TotalCost,
+// so a player can never profit by queuing and cancelling: you get back a fraction
+// of what you actually spent. A building cancelled early is nearly free to back out
+// of; past a quarter paid the commitment starts to cost you.
+constexpr int32_t kRefundBuildingEarlyPercent = 90;   // <= 25% paid
+constexpr int32_t kRefundBuildingLatePercent = 60;    // >  25% paid
+constexpr int32_t kRefundUnitPercent = 80;
+constexpr int32_t kRefundBuildingEarlyThresholdPercent = 25;
+// The producer is gone through no fault of the queue; a partial refund softens the
+// double loss without making destroyed factories a cheap way to recover credits.
+constexpr int32_t kRefundProducerDestroyedPercent = 50;
+
+int32_t FlowPaymentCancelRefund(const ProductionItem& Item, EntityKind Kind)
+{
+    if (Item.PaidCredits <= 0)
+    {
+        return 0;
+    }
+    int32_t Percent = kRefundUnitPercent;
+    if (Kind == EntityKind::Building)
+    {
+        const bool bEarly = Item.TotalCost <= 0 ||
+                            (int64_t(Item.PaidCredits) * 100) <=
+                                (int64_t(Item.TotalCost) * kRefundBuildingEarlyThresholdPercent);
+        Percent = bEarly ? kRefundBuildingEarlyPercent : kRefundBuildingLatePercent;
+    }
+    return int32_t((int64_t(Item.PaidCredits) * Percent) / 100);
+}
+}
 } // namespace
 
 // ---------------------------------------------------------------------------
@@ -155,6 +181,12 @@ void SimWorld::Reset()
     Projectiles.reserve(kMaxEntities);
     Orders.reserve(kMaxEntities);
     DirectControls.reserve(kMaxEntities);
+    // Morales was missed when it was added, even though AllocateEntity pushes to it
+    // alongside the others. SystemCombat holds a Morales[I] reference across
+    // MoraleApplyAllyDeath, so a growth reallocation there is a use-after-free -- and
+    // because allocators differ between platforms the resulting garbage differs per
+    // peer, making it a desync rather than a clean crash.
+    Morales.reserve(kMaxEntities);
 
     HighWaterMark = 0;
     CurrentTick = 0;
@@ -287,9 +319,24 @@ bool SimWorld::IsAlive(EntityId Id) const
 const EntityCore* SimWorld::GetCore(EntityId Id) const { return IsAlive(Id) ? &Core[Id.Index] : nullptr; }
 const TransformComp* SimWorld::GetTransform(EntityId Id) const { return IsAlive(Id) ? &Transforms[Id.Index] : nullptr; }
 const HealthComp* SimWorld::GetHealth(EntityId Id) const { return IsAlive(Id) ? &Healths[Id.Index] : nullptr; }
-const BuildingComp* SimWorld::GetBuilding(EntityId Id) const { return IsAlive(Id) ? &Buildings[Id.Index] : nullptr; }
-const HarvesterComp* SimWorld::GetHarvester(EntityId Id) const { return IsAlive(Id) ? &Harvesters[Id.Index] : nullptr; }
-const ResourceNodeComp* SimWorld::GetResourceNode(EntityId Id) const { return IsAlive(Id) ? &ResourceNodes[Id.Index] : nullptr; }
+// The kind-specific accessors check Kind as well as liveness. Every entity owns a slot
+// in every component vector, so without that check these return a valid pointer to a
+// default-constructed component for the wrong kind -- and BuildingComp defaults to
+// ConstructionState::Complete, so a caller using `GetBuilding(Id) != nullptr` as a
+// "is this a building" test sees a live, finished building wherever a unit stands. The
+// HUD did exactly that and offered a repair button on a tank.
+const BuildingComp* SimWorld::GetBuilding(EntityId Id) const
+{
+    return (IsAlive(Id) && Core[Id.Index].Kind == EntityKind::Building) ? &Buildings[Id.Index] : nullptr;
+}
+const HarvesterComp* SimWorld::GetHarvester(EntityId Id) const
+{
+    return (IsAlive(Id) && Core[Id.Index].Kind == EntityKind::Unit) ? &Harvesters[Id.Index] : nullptr;
+}
+const ResourceNodeComp* SimWorld::GetResourceNode(EntityId Id) const
+{
+    return (IsAlive(Id) && Core[Id.Index].Kind == EntityKind::ResourceNode) ? &ResourceNodes[Id.Index] : nullptr;
+}
 const MovementComp* SimWorld::GetMovement(EntityId Id) const { return IsAlive(Id) ? &Movements[Id.Index] : nullptr; }
 const CombatComp* SimWorld::GetCombat(EntityId Id) const { return IsAlive(Id) ? &Combats[Id.Index] : nullptr; }
 const OrderQueue* SimWorld::GetOrders(EntityId Id) const { return IsAlive(Id) ? &Orders[Id.Index] : nullptr; }
@@ -379,6 +426,9 @@ EntityId SimWorld::SpawnBuilding(ContentId Def, PlayerId Owner, const TileCoord&
     B.State = bInstantComplete ? ConstructionState::Complete : ConstructionState::UnderConstruction;
     B.ConstructionTotalTicks = std::max(1, D->Production.BuildTimeTicks);
     B.ConstructionProgressTicks = bInstantComplete ? B.ConstructionTotalTicks * kProgressScale : 0;
+    // ADR-0013: seeded from the definition, then owned by the player. An override is a
+    // command, so it must not be recomputed from content on any later tick.
+    B.Priority = DefaultPowerPriorityFor(*D);
 
     // Position is the footprint centre so that range checks against a 3x3 factory
     // behave the same as against a 1x1 turret.
@@ -452,6 +502,183 @@ EntityId SimWorld::SpawnResourceNode(ContentId Def, const TileCoord& Tile, int32
     Map.SetTileFlag(Tile.X, Tile.Y, Tile_Resource, true);
 
     return Id;
+}
+
+// ADR-0013. The single place that turns a power ratio into a speed, so that the
+// construction and production systems cannot disagree about what "Moderate" costs.
+const char* ToString(PowerTier Tier)
+{
+    switch (Tier)
+    {
+        case PowerTier::Normal:   return "Normal";
+        case PowerTier::Mild:     return "Mild";
+        case PowerTier::Moderate: return "Moderate";
+        case PowerTier::Severe:   return "Severe";
+        case PowerTier::Critical: return "Critical";
+    }
+    return "Unknown";
+}
+
+// ADR-0013. The single place that turns a power ratio into a speed, so that the
+// construction and production systems cannot disagree about what "Moderate" costs.
+int32_t SimWorld::PowerSpeedPercent(PlayerId Owner) const
+{
+    if (Owner >= kMaxPlayers)
+    {
+        return 100;
+    }
+    const PlayerState& P = Players[Owner];
+    const int32_t Ratio = P.GetPowerRatioPercent();
+    return PowerSpeedPercentForTier(PowerTierForRatio(Ratio), Ratio);
+}
+
+// At Critical the base is effectively dark: only infantry production and harvesting
+// continue. Membership is decided from what the building can actually produce rather
+// than from its name, so a faction that calls its barracks something else, or a mod
+// that adds a second infantry building, needs no code change here.
+const char* ToString(PowerPriority Priority)
+{
+    switch (Priority)
+    {
+        case PowerPriority::Vital:      return "Vital";
+        case PowerPriority::Production: return "Production";
+        case PowerPriority::Defense:    return "Defense";
+        case PowerPriority::Auxiliary:  return "Auxiliary";
+    }
+    return "Unknown";
+}
+
+// ADR-0013 default power priority, read from what the building *is* rather than from a
+// per-faction name table -- a mod adding a second refinery should inherit Vital without
+// touching this code.
+PowerPriority SimWorld::DefaultPowerPriorityFor(const EntityDef& Def) const
+{
+    const BuildingInfo& B = Def.Building;
+
+    // Radar first: it is the one thing the player should lose earliest, and a radar
+    // that also happens to provide a build radius must not be captured by a later rule.
+    if (B.bIsRadar)
+    {
+        return PowerPriority::Auxiliary;
+    }
+
+    // Vital is everything a base needs to climb back out of a deficit: the yard that
+    // builds a reactor, the reactor itself, the refinery that funds both, and the
+    // infantry producer that ADR-0013's Critical rule keeps running. Letting these
+    // degrade would turn a shortage into a death spiral -- and for the yard and the
+    // barracks it would directly contradict the Critical carve-out, which exists so a
+    // blacked-out base can rebuild.
+    //
+    // Deliberately not keyed on EntityRole::BaseBuilding: the default content sets that
+    // on *every* building including turrets and factories, so using it here made almost
+    // the whole base Vital and the priority table meaningless. Only the specific roles
+    // discriminate.
+    if (B.bIsConstructionYard || B.bIsRefinery || B.bIsPowerPlant ||
+        HasRole(Def.Roles, EntityRole::Refinery) || HasRole(Def.Roles, EntityRole::Power))
+    {
+        return PowerPriority::Vital;
+    }
+
+    // Anything the Critical rule keeps running must be Vital, or the two rules
+    // contradict each other: a Production-priority barracks would be forced offline by
+    // its band at exactly the tier the carve-out says it should still work. Asking the
+    // same function both rules use keeps them from drifting apart.
+    //
+    // The constraint this places on content: a building becomes Vital the moment it can
+    // produce anything of Infantry category. Giving a war factory an infantry-class
+    // product -- battle armour, a cyborg -- would silently promote it out of the
+    // Critical shutdown. That is a content decision, not a code one, and
+    // PowerPriority.DefaultsComeFromWhatABuildingIsNotFromItsName pins the shipped
+    // answer so such an edit fails a test rather than passing unnoticed.
+    if (ProducerRunsAtCriticalPower(Def))
+    {
+        return PowerPriority::Vital;
+    }
+
+    if (Def.Production.Category == ProductionCategory::Defense ||
+        HasRole(Def.Roles, EntityRole::Defense))
+    {
+        return PowerPriority::Defense;
+    }
+    return PowerPriority::Production;
+}
+
+bool SimWorld::ProducerRunsAtCriticalPower(const EntityDef& Def) const
+{
+    if (Content == nullptr)
+    {
+        return false;
+    }
+    // A construction yard is included so a blacked-out base can still queue the power
+    // plant that ends the blackout. Excluding it would be a deadlock: no power means
+    // no yard output, and no yard output means no power.
+    if (Def.Building.bIsConstructionYard)
+    {
+        return true;
+    }
+    for (const EntityDef& Product : Content->GetEntities())
+    {
+        if (Product.Production.Category != ProductionCategory::Infantry)
+        {
+            continue;
+        }
+        if (std::find(Product.Production.ProducedBy.begin(), Product.Production.ProducedBy.end(),
+                      Def.Id) != Product.Production.ProducedBy.end())
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+// ADR-0013. Whether the power state has stopped this building's queue head, for any
+// of the reasons in the tier table. Deliberately one function: SystemFlowPayment and
+// SystemProduction previously each decided this for themselves, and they disagreed --
+// payment charged a slice every tick for a vehicle that production refused to advance
+// at Critical, so the item froze at zero progress while draining the treasury that
+// should have finished the power plant. The base then stayed dark forever, which is
+// exactly the deadlock the Critical carve-out was written to prevent.
+bool SimWorld::IsProductionPowerStalled(uint32_t BuildingIndex) const
+{
+    if (BuildingIndex >= Core.size() || Core[BuildingIndex].Owner >= kMaxPlayers)
+    {
+        return false;
+    }
+    const BuildingComp& B = Buildings[BuildingIndex];
+    if (B.Queue.empty())
+    {
+        return false;
+    }
+    const PowerTier Tier = Players[Core[BuildingIndex].Owner].GetPowerTier();
+
+    // ADR-0013 priority. A Vital building never goes offline whatever the tier, which
+    // is what keeps a deficit recoverable; everything else has a tier at which it does.
+    // This is checked before the tier shortcut below, because an Auxiliary building is
+    // offline from Moderate onward -- a band that otherwise only slows things down.
+    if (IsPowerPriorityOffline(B.Priority, Tier))
+    {
+        return true;
+    }
+    if (Tier < PowerTier::Severe)
+    {
+        return false;   // Normal, Mild and Moderate slow production; they never stop it
+    }
+
+    // Severe and Critical pause high tech outright rather than merely slowing it.
+    const EntityDef* HeadDef = Content ? Content->FindEntity(B.Queue.front().Content) : nullptr;
+    if (HeadDef != nullptr && HeadDef->Production.Tier >= TechTier::T2)
+    {
+        return true;
+    }
+
+    // At Critical, everything except infantry production and the construction yard
+    // stops regardless of tier.
+    if (Tier == PowerTier::Critical)
+    {
+        const EntityDef* ProducerDef = Content ? Content->FindEntity(Core[BuildingIndex].Def) : nullptr;
+        return ProducerDef == nullptr || !ProducerRunsAtCriticalPower(*ProducerDef);
+    }
+    return false;
 }
 
 void SimWorld::OccupyTiles(const BuildingComp& B, bool bOccupy)
@@ -992,18 +1219,20 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
             {
                 return Reject(CommandReject::CommandCapExceeded);
             }
-            if (Player.Credits < Item->Production.Cost)
-            {
-                return Reject(CommandReject::InsufficientCredits);
-            }
 
-            Player.Credits -= Item->Production.Cost;
-
+            // ADR-0012: no upfront charge. Credits are drawn tick by tick in
+            // SystemFlowPayment, so queuing something you cannot yet afford is a
+            // legitimate plan rather than an error -- it simply funds slowly, or
+            // waits in Starved until income arrives. Rejecting it here would make
+            // the whole flow-payment model unobservable.
             ProductionItem QueueItem;
             QueueItem.Content = Cmd.Content;
+            QueueItem.State = FlowPaymentState::Queued;
+            QueueItem.TotalCost = Item->Production.Cost;
+            QueueItem.PaidCredits = 0;
             QueueItem.TotalTicks = std::max(1, Item->Production.BuildTimeTicks);
             QueueItem.ProgressTicks = 0;
-            QueueItem.PaidCredits = Item->Production.Cost;
+            QueueItem.Priority = 0;
             Producer.Queue.push_back(QueueItem);
 
             SimEvent Ev;
@@ -1031,8 +1260,13 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
             }
             const ProductionItem& QueueItem = Producer.Queue[size_t(Slot)];
             const EntityDef* Item = Content->FindEntity(QueueItem.Content);
-            const int32_t RefundPercent = Item ? Item->Production.CancelRefundPercent : 100;
-            Player.Credits += (QueueItem.PaidCredits * RefundPercent) / 100;
+            // ADR-0012 supersedes ProductionInfo::CancelRefundPercent: the refund
+            // is a function of how far the payment got, not a flat per-content
+            // number, because under flow payment "cancelled" spans everything from
+            // untouched-in-queue to one tick short of done.
+            const int32_t Refund =
+                FlowPaymentCancelRefund(QueueItem, Item ? Item->Kind : EntityKind::Unit);
+            Player.Credits += Refund;
 
             SimEvent Ev;
             Ev.Type = SimEventType::ProductionCancelled;
@@ -1040,7 +1274,7 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
             Ev.Entity = Cmd.Primary;
             Ev.Player = Cmd.Issuer;
             Ev.Content = QueueItem.Content;
-            Ev.Value = (QueueItem.PaidCredits * RefundPercent) / 100;
+            Ev.Value = Refund;
             EmitEvent(Ev);
 
             Producer.Queue.erase(Producer.Queue.begin() + Slot);
@@ -1058,7 +1292,19 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
             if (Cmd.Slot < Producer.Queue.size())
             {
                 ProductionItem& QueueItem = Producer.Queue[Cmd.Slot];
-                QueueItem.bPaused = !QueueItem.bPaused;
+                // ADR-0012: unpausing returns the item to Queued rather than
+                // straight to Funding, so SystemFlowPayment re-decides against
+                // this tick's treasury and power instead of trusting a stale state.
+                if (QueueItem.State == FlowPaymentState::ManuallyPaused)
+                {
+                    QueueItem.State = FlowPaymentState::Queued;
+                    QueueItem.bPaused = false;
+                }
+                else
+                {
+                    QueueItem.State = FlowPaymentState::ManuallyPaused;
+                    QueueItem.bPaused = true;
+                }
             }
             break;
         }
@@ -1120,18 +1366,53 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
             {
                 Player.Credits += (D->Production.Cost * D->Building.SellRefundPercent) / 100;
             }
+            // ADR-0012 treats a sale as OwnershipChanged, which carries no queue
+            // refund: the sale price already compensates the player, and paying the
+            // destroyed-producer refund on top would make selling a loaded factory a
+            // money faucet. Recorded for this tick only -- a persisted flag would
+            // survive a save taken before the death sweep and permanently forfeit
+            // the refund on a later, genuine destruction.
+            PendingSales.push_back(Cmd.Primary);
             PendingDestroy.push_back(Cmd.Primary);
             break;
         }
 
         case CommandType::RepairBuilding:
         {
-            if (!IsAlive(Cmd.Primary) || Core[Cmd.Primary.Index].Owner != Cmd.Issuer)
+            if (!IsAlive(Cmd.Primary) || Core[Cmd.Primary.Index].Owner != Cmd.Issuer ||
+                Core[Cmd.Primary.Index].Kind != EntityKind::Building)
             {
                 return Reject(CommandReject::NoSuchEntity);
             }
-            // Repair over time lands with the economy milestone; the command is
-            // accepted and validated now so the protocol does not change later.
+            BuildingComp& Target = Buildings[Cmd.Primary.Index];
+            // A toggle rather than a one-shot: repair is a sustained paid activity, and
+            // the player needs to be able to call it off when the bill outgrows the
+            // building. SystemRepair also clears the flag once the structure is whole.
+            Target.bRepairing = !Target.bRepairing;
+            if (!Target.bRepairing)
+            {
+                // Drop the part-credit rather than bank it across a stop/start cycle,
+                // which would let a player repair for free by toggling.
+                Target.RepairCreditAccumulator = 0;
+            }
+            break;
+        }
+
+        case CommandType::SetPowerPriority:
+        {
+            if (!IsAlive(Cmd.Primary) || Core[Cmd.Primary.Index].Owner != Cmd.Issuer ||
+                Core[Cmd.Primary.Index].Kind != EntityKind::Building)
+            {
+                return Reject(CommandReject::NoSuchEntity);
+            }
+            // Param is a wire value, so it is range-checked rather than cast blindly:
+            // a malformed packet must not be able to plant an out-of-range enum that
+            // then falls through every switch on it.
+            if (Cmd.Param < 0 || Cmd.Param > int32_t(PowerPriority::Auxiliary))
+            {
+                return Reject(CommandReject::TargetInvalid);
+            }
+            Buildings[Cmd.Primary.Index].Priority = PowerPriority(Cmd.Param);
             break;
         }
 
@@ -1561,7 +1842,7 @@ void SimWorld::ApplySplashDamage(const Vec2& Center, Fixed Radius, int32_t BaseD
     }
 }
 
-void SimWorld::DestroyEntity(EntityId Id, EntityId Killer)
+void SimWorld::DestroyEntity(EntityId Id, EntityId Killer, bool bWasSold)
 {
     if (!IsAlive(Id))
     {
@@ -1574,6 +1855,35 @@ void SimWorld::DestroyEntity(EntityId Id, EntityId Killer)
     if (Kind == EntityKind::Building)
     {
         OccupyTiles(Buildings[Index], false);
+        // ADR-0012: the queue dies with its factory, but the credits already drawn
+        // for it are partially returned. Without this, losing a war factory mid-run
+        // silently confiscates everything paid so far -- a compounding punishment on
+        // top of losing the building, and one the player has no way to see.
+        //
+        // A voluntary sale is excluded: that is OwnershipChanged, and the sale price
+        // is already the compensation. Refunding here as well would make selling a
+        // loaded factory strictly better than keeping it.
+        if (Owner < kMaxPlayers && !bWasSold)
+        {
+            int32_t Refunded = 0;
+            for (const ProductionItem& Item : Buildings[Index].Queue)
+            {
+                Refunded += int32_t((int64_t(Item.PaidCredits) * kRefundProducerDestroyedPercent) / 100);
+            }
+            if (Refunded > 0)
+            {
+                Players[Owner].Credits += Refunded;
+
+                SimEvent Refund;
+                Refund.Type = SimEventType::ProductionCancelled;
+                Refund.Tick = CurrentTick;
+                Refund.Entity = Id;
+                Refund.Player = Owner;
+                Refund.Content = Core[Index].Def;
+                Refund.Value = Refunded;
+                EmitEvent(Refund);
+            }
+        }
         Buildings[Index].Queue.clear();
         Buildings[Index].DockedHarvester = EntityId::Invalid();
         Buildings[Index].UnloadingQueue.clear();
@@ -1652,10 +1962,20 @@ void SimWorld::CheatInstantBuild(PlayerId Owner)
             if (Index < Buildings.size())
             {
                 Buildings[Index].State = ConstructionState::Complete;
-                Buildings[Index].ConstructionProgressTicks = Buildings[Index].ConstructionTotalTicks;
+                Buildings[Index].ConstructionProgressTicks =
+                    Buildings[Index].ConstructionTotalTicks * kProgressScale;
                 if (!Buildings[Index].Queue.empty())
                 {
-                    Buildings[Index].Queue.front().ProgressTicks = Buildings[Index].Queue.front().TotalTicks;
+                    // Progress is measured in hundredths of a tick, so the target is
+                    // TotalTicks * kProgressScale; assigning TotalTicks alone left
+                    // the item at 1% and the cheat did nothing on long builds.
+                    ProductionItem& Head = Buildings[Index].Queue.front();
+                    Head.ProgressTicks = Head.TotalTicks * kProgressScale;
+                    // A cheat grants the item outright, so it must also be marked
+                    // paid: SystemProduction only advances funded items, and
+                    // SystemFlowPayment would otherwise bill for it retroactively.
+                    Head.PaidCredits = Head.TotalCost;
+                    Head.State = FlowPaymentState::Completed;
                 }
             }
         }
@@ -1773,7 +2093,213 @@ void SimWorld::SystemPower()
             B.SuperweaponChargeTicks += 1;
         }
     }
+
+    // ADR-0013: announce tier crossings. Edge-triggered, because a base parked at 45%
+    // power would otherwise emit an event every tick and bury the alert feed -- the
+    // same reason ProductionStarved is edge-triggered.
+    for (PlayerId Owner = 0; Owner < kMaxPlayers; ++Owner)
+    {
+        PlayerState& P = Players[Owner];
+        // bDefeated as well as bActive: defeat never clears bActive, and a defeated
+        // player's last building dying takes both power figures to zero, which
+        // GetPowerRatioPercent reports as a healthy 100%. Without this the game would
+        // tell a player who just lost their base that their power had been restored.
+        if (!P.bActive || P.bDefeated)
+        {
+            continue;
+        }
+        const PowerTier Tier = P.GetPowerTier();
+        if (Tier == P.LastPowerTier)
+        {
+            continue;
+        }
+
+        SimEvent Ev;
+        // "Started" reads as "the shortage got worse", so the direction is decided by
+        // which way the tier moved, not by whether a shortage exists at all.
+        Ev.Type = Tier > P.LastPowerTier ? SimEventType::PowerShortageStarted
+                                         : SimEventType::PowerShortageEnded;
+        Ev.Tick = CurrentTick;
+        Ev.Player = Owner;
+        Ev.Value = int32_t(Tier);
+        EmitEvent(Ev);
+
+        P.LastPowerTier = Tier;
+    }
 }
+
+// ADR-0012. Draws credits for queued production a slice at a time instead of
+// charging the whole price when the order is given.
+//
+// Two properties matter more than the mechanic itself:
+//
+//  * Progress never regresses. An item that runs out of money freezes and later
+//    continues from exactly where it stopped. Rewinding progress would make the
+//    final state depend on the *path* through funding states, which destroys the
+//    "same seed plus same commands equals same state" guarantee replays rest on.
+//
+//  * Allocation is globally ordered, not per building. When money is scarce the
+//    order in which factories get paid decides what a player ends up owning, so
+//    that order must be a deterministic function of state (priority, then entity
+//    index) and never of iteration or container layout.
+void SimWorld::SystemFlowPayment()
+{
+    // Only the head of each queue draws credits. Funding the whole queue in
+    // parallel would spread a thin treasury across everything and finish nothing,
+    // which is precisely the failure the flow-payment model exists to avoid.
+    //
+    // The candidate list is a member vector rather than a fixed array: a player may
+    // own any number of producing buildings, and an earlier fixed bound silently
+    // dropped every producer past the ninth -- those items never paid a credit and
+    // so never advanced, stalling forever with nothing shown to the player. Worse,
+    // the drop happened before the priority sort, so a high-priority item at a high
+    // entity index lost to low-priority ones. The storage is reused across ticks to
+    // keep this allocation-free in the steady state.
+    FundingCandidates.clear();
+
+    for (uint32_t I = 0; I < Core.size(); ++I)
+    {
+        if (!Core[I].bAlive || Core[I].Kind != EntityKind::Building || Core[I].Owner >= kMaxPlayers)
+        {
+            continue;
+        }
+        BuildingComp& B = Buildings[I];
+        // A half-built factory cannot yet spend the treasury on its own output.
+        if (B.State != ConstructionState::Complete || B.Queue.empty())
+        {
+            continue;
+        }
+        // A building sold or already doomed this tick must stop drawing credits:
+        // SystemDeaths has not run yet, so it is still alive here, and anything
+        // charged now is money taken for a queue that is about to be discarded
+        // without a refund.
+        if (std::find(PendingDestroy.begin(), PendingDestroy.end(), MakeId(I)) != PendingDestroy.end())
+        {
+            continue;
+        }
+
+        ProductionItem& Head = B.Queue.front();
+
+        // ADR-0013: anything the power state has stopped must also stop *paying*. This
+        // is the same rule the PendingDestroy skip above enforces for a different
+        // reason: charging for a queue that cannot advance is money taken for nothing,
+        // and here it was money taken from the power plant that would have ended the
+        // blackout. A player pause outranks the throttle, so that an item the player
+        // deliberately stopped does not silently change its reported reason to "power".
+        if (Head.State != FlowPaymentState::ManuallyPaused && IsProductionPowerStalled(I))
+        {
+            // Freeze in place. PaidCredits and ProgressTicks are untouched, so this is
+            // a pause and not a reset -- the same guarantee starvation gives, for the
+            // same determinism reason.
+            Head.State = FlowPaymentState::EnergyThrottled;
+            continue;
+        }
+
+        switch (Head.State)
+        {
+            case FlowPaymentState::Queued:
+            case FlowPaymentState::Starved:
+                // Both are "wants money, has none yet". Starved differs from Queued
+                // only in what the UI says, so they enter funding on equal terms.
+                break;
+            case FlowPaymentState::Funding:
+                break;
+            case FlowPaymentState::EnergyThrottled:
+                // Reaching this case at all means the throttle test above said no, so
+                // the deficit has lifted and the item rejoins funding. Recovery is
+                // therefore the exact inverse of the trigger by construction, rather
+                // than an independent threshold that could disagree with it: an
+                // earlier version used a separate 50% constant while the trigger fired
+                // below 40%, which trapped any item stalled in the 40-49% band -- both
+                // throttled and refused recovery, forever.
+                break;
+            case FlowPaymentState::Paying:
+            case FlowPaymentState::Completed:
+                // Already paid in full. SystemProduction advances these.
+                continue;
+            case FlowPaymentState::ManuallyPaused:
+                // A deliberate player decision; never override it.
+                continue;
+            default:
+                // Terminal states are removed by the code that sets them; if one is
+                // still in a queue, leave it alone rather than paying for it.
+                continue;
+        }
+
+        // A zero-cost item is funded the instant it is looked at, so it must not
+        // consume an allocation slot or it would stall behind a poor treasury. This
+        // also restores an already-paid item that was throttled and has now recovered:
+        // it needs no more credits, only its state back.
+        if (Head.IsFullyFunded())
+        {
+            Head.State = FlowPaymentState::Paying;
+            continue;
+        }
+
+        FundingCandidates.push_back(FundingCandidate{I, Head.Priority, Core[I].Owner});
+    }
+
+    // Higher priority first, entity index breaking ties. Both keys come from
+    // simulation state, so every peer produces the same order; the collection
+    // order is an implementation detail, so the tie-break is an explicit key
+    // rather than a reliance on sort stability.
+    std::sort(FundingCandidates.begin(), FundingCandidates.end(),
+              [](const FundingCandidate& A, const FundingCandidate& B)
+              {
+                  if (A.Owner != B.Owner) { return A.Owner < B.Owner; }
+                  if (A.Priority != B.Priority) { return A.Priority > B.Priority; }
+                  return A.BuildingIndex < B.BuildingIndex;
+              });
+
+    for (const FundingCandidate& Candidate : FundingCandidates)
+    {
+        PlayerState& Player = Players[Candidate.Owner];
+        ProductionItem& Head = Buildings[Candidate.BuildingIndex].Queue.front();
+
+        // Never charge past the remaining balance, and never overdraw the
+        // treasury: Credits must not go negative, or the AI budget checks and
+        // the HUD both start reporting nonsense.
+        const int32_t Wanted = std::min(Head.CostPerTick(), Head.CreditsRemaining());
+        const int32_t Charged = std::min(Wanted, std::max(0, Player.Credits));
+
+        if (Charged > 0)
+        {
+            Player.Credits -= Charged;
+            Head.PaidCredits += Charged;
+        }
+
+        if (Head.IsFullyFunded())
+        {
+            Head.State = FlowPaymentState::Paying;
+        }
+        else if (Charged < Wanted)
+        {
+            // Could not buy a full slice this tick. Partial payment is kept --
+            // this is the "pauses rather than resets" requirement.
+            //
+            // Edge-triggered: the event fires on the transition into Starved, not
+            // every tick it stays there, or a broke player would generate one event
+            // per tick per queue and drown the alert feed.
+            if (Head.State != FlowPaymentState::Starved)
+            {
+                SimEvent Ev;
+                Ev.Type = SimEventType::ProductionStarved;
+                Ev.Tick = CurrentTick;
+                Ev.Entity = MakeId(Candidate.BuildingIndex);
+                Ev.Player = Candidate.Owner;
+                Ev.Content = Head.Content;
+                Ev.Value = Head.CreditsRemaining();
+                EmitEvent(Ev);
+            }
+            Head.State = FlowPaymentState::Starved;
+        }
+        else
+        {
+            Head.State = FlowPaymentState::Funding;
+        }
+    }
+}
+
 
 void SimWorld::SystemConstruction()
 {
@@ -1790,15 +2316,17 @@ void SimWorld::SystemConstruction()
         }
 
         const PlayerId Owner = Core[I].Owner;
-        const int32_t Ratio = Owner < kMaxPlayers
-                                  ? std::max(kMinPowerRatioPercent, Players[Owner].GetPowerRatioPercent())
-                                  : 100;
-
         const EntityDef* D = Content->FindEntity(Core[I].Def);
         if (D == nullptr)
         {
             continue;
         }
+
+        // ADR-0013 tier table replaces the old flat floor. A building already under
+        // construction keeps making progress at every tier, including Critical --
+        // freezing it outright would strand a half-built power plant and make a
+        // blackout unrecoverable, which is the one outcome the tiers must not produce.
+        const int32_t Ratio = Owner < kMaxPlayers ? PowerSpeedPercent(Owner) : 100;
 
         const int64_t Total = std::max<int64_t>(1, int64_t(B.ConstructionTotalTicks) * kProgressScale);
         const int64_t PrevProgress = std::min<int64_t>(B.ConstructionProgressTicks, Total);
@@ -1836,6 +2364,108 @@ void SimWorld::SystemConstruction()
     }
 }
 
+// ADR-0013. Repairs damaged buildings the player has switched repair on for, charging
+// per hitpoint restored and slowing or stopping under a power deficit.
+//
+// Repair is a sustained paid activity rather than a one-shot order, which is why it needs
+// a system at all: the RepairBuilding command previously validated and then did nothing.
+void SimWorld::SystemRepair()
+{
+    for (uint32_t I = 0; I < Core.size(); ++I)
+    {
+        if (!Core[I].bAlive || Core[I].Kind != EntityKind::Building || Core[I].Owner >= kMaxPlayers)
+        {
+            continue;
+        }
+        BuildingComp& B = Buildings[I];
+        if (!B.bRepairing)
+        {
+            continue;
+        }
+        // A building sold or already doomed this tick must not be repaired: SystemDeaths
+        // has not run yet, so it is still bAlive here, and both the credits and the
+        // hitpoints would go into something that is deleted before the tick ends. Same
+        // check SystemFlowPayment makes, for the same reason -- selling a damaged
+        // building with repair armed charged for a repair nobody ever saw.
+        if (std::find(PendingDestroy.begin(), PendingDestroy.end(), MakeId(I)) != PendingDestroy.end())
+        {
+            continue;
+        }
+        // A half-built structure gains health from SystemConstruction; repairing it too
+        // would pay twice for the same hitpoints.
+        if (B.State != ConstructionState::Complete)
+        {
+            continue;
+        }
+
+        HealthComp& H = Healths[I];
+        if (H.Current >= H.Max)
+        {
+            // Switch itself off rather than sit armed: otherwise the next scratch would
+            // silently start spending again without the player asking.
+            B.bRepairing = false;
+            B.RepairCreditAccumulator = 0;
+            continue;
+        }
+
+        PlayerState& P = Players[Core[I].Owner];
+        const PowerTier Tier = P.GetPowerTier();
+        // Repair is Auxiliary work in ADR-0013's table: halved at Moderate, off from
+        // Severe. A building whose own priority band is offline cannot be repaired at
+        // all, which is the player's own choice expressing itself.
+        int32_t SpeedPercent = RepairSpeedPercentForTier(Tier);
+        if (IsPowerPriorityOffline(B.Priority, Tier))
+        {
+            SpeedPercent = 0;
+        }
+        if (SpeedPercent <= 0)
+        {
+            continue;   // paused, not cancelled: the flag stays on and resumes on recovery
+        }
+
+        const int32_t Missing = H.Max - H.Current;
+        int32_t Heal = std::max(1, (kRepairHealthPerTick * SpeedPercent) / 100);
+        Heal = std::min(Heal, Missing);
+
+        // Bill in hundredths and spend only whole credits, so a sub-credit-per-tick rate
+        // is neither rounded up into extortion nor down into free repair. A tick whose
+        // accumulated bill has not yet reached a whole credit still heals -- the charge
+        // is deferred, not waived, and over any run of ticks the totals balance exactly.
+        //
+        // The exception is a player who cannot pay. Deferring a bill they will never
+        // settle *is* free repair, so affordability is checked against the accumulated
+        // total rather than against this tick's whole-credit slice: at Moderate the slice
+        // is zero on every other tick, and billing only when it is non-zero handed out
+        // health for nothing on all the others.
+        const int32_t PendingCenti = B.RepairCreditAccumulator + Heal * kRepairCostPerHealthCenti;
+        const int32_t Affordable = std::max(0, P.Credits) * kRepairCostScale;
+        if (PendingCenti > Affordable)
+        {
+            // Heal only what the treasury actually covers, and take every credit of it.
+            const int32_t HealableCenti = std::max(0, Affordable - B.RepairCreditAccumulator);
+            Heal = HealableCenti / kRepairCostPerHealthCenti;
+            if (Heal <= 0)
+            {
+                continue;   // cannot afford even one hitpoint
+            }
+        }
+
+        B.RepairCreditAccumulator += Heal * kRepairCostPerHealthCenti;
+        const int32_t Due = B.RepairCreditAccumulator / kRepairCostScale;
+        if (Due > 0)
+        {
+            // Affordable by construction above, so this never partially pays.
+            P.Credits -= Due;
+            B.RepairCreditAccumulator -= Due * kRepairCostScale;
+        }
+
+        if (Heal > 0)
+        {
+            H.Current = std::min(H.Max, H.Current + Heal);
+        }
+    }
+}
+
 void SimWorld::SystemProduction()
 {
     for (uint32_t I = 0; I < Core.size(); ++I)
@@ -1851,22 +2481,52 @@ void SimWorld::SystemProduction()
         }
 
         const PlayerId Owner = Core[I].Owner;
-        const int32_t Ratio = Owner < kMaxPlayers
-                                  ? std::max(kMinPowerRatioPercent, Players[Owner].GetPowerRatioPercent())
-                                  : 100;
+        // ADR-0013: speed follows the tier table. Whether this producer is allowed to
+        // run at all at Critical is decided below -- it depends on what the building
+        // is, not just on the ratio.
+        const int32_t Ratio = Owner < kMaxPlayers ? PowerSpeedPercent(Owner) : 100;
+
+        // At Critical only infantry production and the construction yard keep going.
+        // The yard is deliberately included: without it a blacked-out base could not
+        // build the power plant that ends the blackout, which is a deadlock rather
+        // than a penalty.
+        //
+        // Same predicate SystemFlowPayment uses, so a stalled item is never charged
+        // for a tick it did not advance. The two deciding this separately is what
+        // produced a blackout the player could not escape.
+        if (IsProductionPowerStalled(I))
+        {
+            continue;
+        }
 
         // Only the head of the queue advances; parallel queues are per building,
         // matching the original games.
         ProductionItem& QueueItem = B.Queue.front();
-        if (QueueItem.bPaused)
+        // ADR-0012: progress is bought tick by tick, so it advances while the item is
+        // still Funding -- payment and construction run together, which is what makes
+        // CostPerTick = TotalCost / TotalTicks add up to the full price exactly as the
+        // last tick completes. Advancing only after full payment would silently double
+        // every build time.
+        //
+        // Starved, EnergyThrottled, ManuallyPaused and Queued do not advance: an item
+        // must not gain progress on a tick it failed to pay for, or a player could
+        // build an army on credit they never had.
+        if (QueueItem.State != FlowPaymentState::Funding &&
+            QueueItem.State != FlowPaymentState::Paying &&
+            QueueItem.State != FlowPaymentState::Completed)
         {
             continue;
         }
         const int32_t Complete = QueueItem.TotalTicks * kProgressScale;
         if (QueueItem.ProgressTicks >= Complete)
         {
+            if (!QueueItem.IsFullyFunded())
+            {
+                continue;   // finished building, still finishing paying
+            }
             // Structures wait here until the player picks a spot; everything else
             // pops out immediately.
+            QueueItem.State = FlowPaymentState::Completed;
             const EntityDef* Item = Content->FindEntity(QueueItem.Content);
             if (Item != nullptr && Item->Kind == EntityKind::Building)
             {
@@ -1880,11 +2540,39 @@ void SimWorld::SystemProduction()
             {
                 continue;
             }
+            // Belt and braces: nothing is ever handed over unpaid. Ceiling division
+            // means payment normally lands on or before the last progress tick, and
+            // Starved items are already excluded above, so this should be
+            // unreachable -- but the alternative to holding back is delivering a
+            // unit the player did not finish buying, so the check stays.
+            if (!QueueItem.IsFullyFunded())
+            {
+                QueueItem.ProgressTicks = Complete - 1;
+                continue;
+            }
+            QueueItem.State = FlowPaymentState::Completed;
         }
 
         const EntityDef* Item = Content->FindEntity(QueueItem.Content);
         if (Item == nullptr)
         {
+            // The content vanished under us (a hot-reload or a bad save). The player
+            // was charged for this a slice at a time and watched the money go, so
+            // refund it in full and say so, rather than deleting the entry and
+            // leaving an unexplained drain.
+            if (Owner < kMaxPlayers && QueueItem.PaidCredits > 0)
+            {
+                Players[Owner].Credits += QueueItem.PaidCredits;
+
+                SimEvent Lost;
+                Lost.Type = SimEventType::ProductionCancelled;
+                Lost.Tick = CurrentTick;
+                Lost.Entity = MakeId(I);
+                Lost.Player = Owner;
+                Lost.Content = QueueItem.Content;
+                Lost.Value = QueueItem.PaidCredits;
+                EmitEvent(Lost);
+            }
             B.Queue.erase(B.Queue.begin());
             continue;
         }
@@ -2062,7 +2750,18 @@ void SimWorld::SystemHarvesters()
                 }
                 ResourceNodeComp& Node = ResourceNodes[H.AssignedNode.Index];
                 const int32_t Space = D->Unit.CargoCapacity - H.Cargo;
-                const int32_t Take = std::min({D->Unit.HarvestPerTick, Space, Node.Amount});
+                // ADR-0013: harvesting is the last thing a deficit touches -- it runs
+                // at full rate until Critical, then at half. Slowing it earlier would
+                // make a blackout self-reinforcing, since income is what buys the
+                // power plant that ends it.
+                int32_t PerTick = D->Unit.HarvestPerTick;
+                if (Owner < kMaxPlayers && Players[Owner].GetPowerTier() == PowerTier::Critical)
+                {
+                    // Never round down to zero: a rate of nothing is a stall, not a
+                    // penalty, and it would deadlock the economy.
+                    PerTick = std::max(1, (PerTick * kPowerCriticalSpeedPercent) / 100);
+                }
+                const int32_t Take = std::min({PerTick, Space, Node.Amount});
                 Node.Amount -= Take;
                 H.Cargo += Take;
 
@@ -3251,7 +3950,16 @@ void SimWorld::FireWeapon(EntityId Attacker, EntityId TargetId, const WeaponDef&
     Ev.Location = From;
     EmitEvent(Ev);
 
-    Combats[A].CooldownTicks = Weapon.CooldownTicks;
+    // ADR-0013: a static defence under a Severe deficit reloads at half rate. Applied
+    // here rather than at the tick-down so the slowdown is visible in CooldownTicks --
+    // a UI reading that field sees the real remaining time, and a tier change mid-reload
+    // does not retroactively rewrite how long the shot took.
+    int32_t Cooldown = Weapon.CooldownTicks;
+    if (Core[A].Kind == EntityKind::Building && Core[A].Owner < kMaxPlayers)
+    {
+        Cooldown *= StaticDefenceCooldownMultiplierForTier(Players[Core[A].Owner].GetPowerTier());
+    }
+    Combats[A].CooldownTicks = Cooldown;
 
     if (Weapon.ProjectileSpeed <= Fixed::Zero())
     {
@@ -3339,6 +4047,17 @@ void SimWorld::SystemCombat()
         if (Kind == EntityKind::Building && Buildings[I].State != ConstructionState::Complete)
         {
             continue;   // a turret under construction does not shoot
+        }
+        // ADR-0013: static defence is offline at Critical, and offline whenever its own
+        // priority band is. Units are unaffected -- a tank carries its own power.
+        if (Kind == EntityKind::Building && Core[I].Owner < kMaxPlayers)
+        {
+            const PowerTier Tier = Players[Core[I].Owner].GetPowerTier();
+            if (!IsStaticDefenceOnlineAtTier(Tier) ||
+                IsPowerPriorityOffline(Buildings[I].Priority, Tier))
+            {
+                continue;
+            }
         }
         const WeaponDef* W = Content->FindWeapon(D->Weapon);
         if (W == nullptr)
@@ -3487,9 +4206,12 @@ void SimWorld::SystemDeaths()
     // generation no longer matches.
     for (const EntityId& Id : PendingDestroy)
     {
-        DestroyEntity(Id, EntityId::Invalid());
+        const bool bWasSold =
+            std::find(PendingSales.begin(), PendingSales.end(), Id) != PendingSales.end();
+        DestroyEntity(Id, EntityId::Invalid(), bWasSold);
     }
     PendingDestroy.clear();
+    PendingSales.clear();
 }
 
 void SimWorld::SystemVictory()
@@ -3735,6 +4457,17 @@ void SimWorld::SystemFogOfWar()
 
     for (int32_t P = 0; P < kMaxPlayers; ++P)
     {
+        // DirtyRegions is a producer/consumer list for texture uploads: every reveal appends
+        // a rect and the consumer is expected to drain it. Nothing in the shipping path ever
+        // called ClearDirtyRegions, so the vectors grew by one rect per revealing entity per
+        // tick and were never freed -- measured at 2400 rects after 600 ticks with three
+        // buildings, which is roughly 144k rects per player over a half-hour match, for a
+        // list nobody reads.
+        //
+        // Cleared here, at the top of the tick, rather than at the end: a presentation layer
+        // that starts consuming this later must see the rects produced by the tick that just
+        // ran, and clearing after producing them would hand it an empty list.
+        FogGrid->ClearDirtyRegions(P);
         FogGrid->ClearCurrentVisibility(P);
         // Dirty regions describe what changed during ONE tick. Nothing cleared
         // them before, so RevealCircularArea pushed one rectangle per unit per
@@ -3772,6 +4505,19 @@ void SimWorld::SystemFogOfWar()
 
         const TileCoord Tile = Map.WorldToTile(Transforms[I].Position);
         FogGrid->RevealCircularArea(int32_t(Owner), Tile.X, Tile.Y, VisionRadiusTiles);
+
+        // A working radar additionally paints RadarDetected over a much wider circle.
+        // That state existed and was tested for by the minimap and the AI view, but
+        // nothing ever set it, so radar contributed nothing to either -- the minimap's
+        // radar was decoration. Gated on the same priority band the recon layer uses, so
+        // a radar shut down by a power deficit or demoted by the player goes dark here too
+        // rather than the two disagreeing about whether it is working.
+        if (Core[I].Kind == EntityKind::Building && D->Building.bIsRadar &&
+            Buildings[I].State == ConstructionState::Complete &&
+            !IsPowerPriorityOffline(Buildings[I].Priority, Players[Owner].GetPowerTier()))
+        {
+            FogGrid->RevealRadarArea(int32_t(Owner), Tile.X, Tile.Y, kRadarSweepRadiusTiles);
+        }
     }
 }
 
@@ -3856,7 +4602,9 @@ void SimWorld::Tick(const CommandFrame* Frame)
     // the replay compatibility contract and is versioned in ReplayFormat.
     SystemApplyCommands(Frame);
     SystemPower();
+    SystemFlowPayment();
     SystemConstruction();
+    SystemRepair();
     SystemProduction();
     SystemHarvesters();
     SystemOrders();
@@ -3944,7 +4692,24 @@ void SimWorld::SystemRecon()
         const EntityDef* BD = Content ? Content->FindEntity(Core[I].Def) : nullptr;
         if (BD != nullptr && BD->Building.bIsRadar)
         {
-            RadarCentersOf[Core[I].Owner].push_back(Transforms[I].Position);
+            // ADR-0013: a radar goes dark once its priority band is offline. A radar
+            // defaults to Auxiliary, whose band stops at Moderate, so the default
+            // behaviour is exactly the effect matrix's "radar off from Moderate" -- but
+            // routing it through the band rather than testing the tier directly is what
+            // makes the player's override mean something. Promoting a radar to Vital
+            // keeps it lit through a deficit, which is the whole point of being allowed
+            // to choose; an earlier version ANDed the two tests together, so promotion
+            // bought nothing and the control was a decoration.
+            //
+            // A dark radar contributes no coverage, so the anonymous contacts the recon
+            // layer derives from it stop appearing and the minimap goes quiet. Its
+            // chain-of-command role below is deliberately left alone: relaying reports
+            // is a separate function with its own blackout rule.
+            const PowerTier Tier = Players[Core[I].Owner].GetPowerTier();
+            if (!IsPowerPriorityOffline(Buildings[I].Priority, Tier))
+            {
+                RadarCentersOf[Core[I].Owner].push_back(Transforms[I].Position);
+            }
         }
 
         // --- Chain of command nodes (M3, owner decision 9-в) ------------------
@@ -4189,6 +4954,10 @@ uint64_t SimWorld::ComputeStateChecksum() const
         H.FeedInt32(P.PowerProduced);
         H.FeedInt32(P.PowerConsumed);
         H.FeedInt32(P.TotalHarvested);
+        // ADR-0013: the remembered tier decides whether a warning fires, so a peer
+        // that disagrees about it has genuinely diverged. The current tier is derived
+        // from PowerProduced/PowerConsumed above and is deliberately not fed.
+        H.FeedUInt8(uint8_t(P.LastPowerTier));
         for (const ContentId& C : P.CompletedBuildingTypes)
         {
             H.FeedUInt32(C.Value);
@@ -4236,12 +5005,26 @@ uint64_t SimWorld::ComputeStateChecksum() const
         if (Core[I].Kind == EntityKind::Building)
         {
             H.FeedUInt8(uint8_t(Buildings[I].State));
+            // Priority gates whether this building is offline, so a peer that
+            // disagrees about it has genuinely diverged.
+            H.FeedUInt8(uint8_t(Buildings[I].Priority));
+            // Repair spends credits and adds health, so a peer disagreeing about it
+            // diverges on both.
+            H.FeedBool(Buildings[I].bRepairing);
+            H.FeedInt32(Buildings[I].RepairCreditAccumulator);
             H.FeedInt32(Buildings[I].ConstructionProgressTicks);
             H.FeedInt32(int32_t(Buildings[I].Queue.size()));
             for (const ProductionItem& QueueItem : Buildings[I].Queue)
             {
                 H.FeedUInt32(QueueItem.Content.Value);
                 H.FeedInt32(QueueItem.ProgressTicks);
+                // ADR-0012: payment state drives future behaviour, so a peer that
+                // disagrees about who is Starved has genuinely diverged and must be
+                // caught here. TotalCost and TotalTicks are derived from ContentId
+                // and deliberately excluded.
+                H.FeedUInt8(uint8_t(QueueItem.State));
+                H.FeedInt32(QueueItem.PaidCredits);
+                H.FeedInt32(QueueItem.Priority);
                 H.FeedBool(QueueItem.bPaused);
             }
         }
@@ -4282,7 +5065,12 @@ uint64_t SimWorld::ComputeStateChecksum() const
 // ---------------------------------------------------------------------------
 
 constexpr uint32_t kSimSaveMagic = 0x52413453u; // "RA4S"
-constexpr uint32_t kSimSaveVersion = 6; // v6: ProjectileComp (shells in flight); v5: CombatComp::AcquireCooldownTicks; v4: MoraleComp (M2); v3: recon layer; v2: DirectControlComp
+constexpr uint32_t kSimSaveVersion = 9;
+constexpr uint32_t kSimSaveVersionPowerTier = 5;
+constexpr uint32_t kSimSaveVersionPowerPriority = 7;
+constexpr uint32_t kSimSaveVersionRepair = 8;
+constexpr uint32_t kSimSaveVersionProjectiles = 9;
+constexpr uint32_t kSimSaveVersionMinSupported = 5;
 
 void SimWorld::Serialize(ByteWriter& W) const
 {
@@ -4321,6 +5109,9 @@ void SimWorld::Serialize(ByteWriter& W) const
         W.WriteInt32(S.UnitsLost);
         W.WriteInt32(S.BuildingsLost);
         W.WriteInt32(S.TotalHarvested);
+        // ADR-0013: the tier itself is derived, but the *remembered* tier is what makes
+        // the deficit warning edge-triggered, so it has to survive a reload.
+        W.WriteUInt8(static_cast<uint8_t>(S.LastPowerTier));
         W.WriteUInt32(static_cast<uint32_t>(S.CompletedBuildingTypes.size()));
         for (const ContentId& C : S.CompletedBuildingTypes)
         {
@@ -4383,7 +5174,13 @@ void SimWorld::Serialize(ByteWriter& W) const
         W.WriteInt64(B.RallyPoint.X.Raw);
         W.WriteInt64(B.RallyPoint.Y.Raw);
         W.WriteBool(B.bHasRallyPoint);
-        W.WriteBool(B.bSelling);
+        // ADR-0013: a player override, so it is authoritative state rather than
+        // something re-derivable from content on load.
+        W.WriteUInt8(static_cast<uint8_t>(B.Priority));
+        // ADR-0013 repair: a sustained activity the player switched on, so it and its
+        // part-paid credit both have to survive a reload.
+        W.WriteBool(B.bRepairing);
+        W.WriteInt32(B.RepairCreditAccumulator);
         W.WriteUInt32(static_cast<uint32_t>(B.Queue.size()));
         for (const ProductionItem& Item : B.Queue)
         {
@@ -4392,6 +5189,12 @@ void SimWorld::Serialize(ByteWriter& W) const
             W.WriteInt32(Item.TotalTicks);
             W.WriteInt32(Item.PaidCredits);
             W.WriteBool(Item.bPaused);
+            // Save format v2 (ADR-0012). TotalCost is written even though it is
+            // derivable, because a save must still load correctly after a content
+            // balance pass changes a price: the player is mid-build at the old cost.
+            W.WriteUInt8(static_cast<uint8_t>(Item.State));
+            W.WriteInt32(Item.TotalCost);
+            W.WriteInt32(Item.Priority);
         }
 
         const HarvesterComp& Hv = Harvesters[I];
@@ -4464,23 +5267,11 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
     {
         return false;
     }
-    const uint32_t Version = R.ReadUInt32();
-    // v2 saves (pre-intel) remain loadable: they simply carry no belief payload.
-    // Loading them into a session with intel enabled is refused further down,
-    // because a mid-match belief state cannot be invented from nothing.
-    //
-    // This is an explicit allowlist, not a range. It used to read
-    // `Version != kSimSaveVersion && Version != 2`, which silently made every save
-    // from the previous version unloadable the moment the constant was bumped -- so
-    // the v6 build would have rejected v5 saves even though v6's only new field is
-    // optional with a documented default. v5 is therefore listed alongside 2.
-    //
-    // v3 and v4 are deliberately NOT accepted. The MoraleComp read below has no
-    // `Version >= 4` guard, so a v3 payload (which predates morale) would be short
-    // by four fields per entity slot and every subsequent read would be misaligned
-    // garbage rather than a clean rejection. Widening this gate to a range is only
-    // safe once that guard exists; the tighter check is the honest one today.
-    if (Version != kSimSaveVersion && Version != 5 && Version != 2)
+    // A range, with each remaining field-level change gated on its own named constant
+    // below. The lower bound is not 1: v4 and older were stamped by two branches on
+    // incompatible byte layouts, and no reader can serve both, so they are refused
+    // rather than loaded into a silently corrupt world.
+    if (Version < kSimSaveVersionMinSupported || Version > kSimSaveVersion)
     {
         return false;
     }
@@ -4494,12 +5285,11 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
     const uint64_t RState = R.ReadUInt64();
     const uint64_t RInc = R.ReadUInt64();
     Rng.SetState(RState, RInc);
-    if (Version >= 3)
-    {
-        const uint64_t ReconState = R.ReadUInt64();
-        const uint64_t ReconInc = R.ReadUInt64();
-        ReconRng.SetState(ReconState, ReconInc);
-    }
+    // Present in every loadable version (the recon layer landed in v3 and the minimum
+    // supported is v5), so no gate is needed.
+    const uint64_t ReconState = R.ReadUInt64();
+    const uint64_t ReconInc = R.ReadUInt64();
+    ReconRng.SetState(ReconState, ReconInc);
 
     Map.Name = R.ReadString();
     Map.Width = R.ReadInt32();
@@ -4525,6 +5315,17 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
         S.UnitsLost = R.ReadInt32();
         S.BuildingsLost = R.ReadInt32();
         S.TotalHarvested = R.ReadInt32();
+        if (Version >= kSimSaveVersionPowerTier)
+        {
+            S.LastPowerTier = static_cast<PowerTier>(R.ReadUInt8());
+        }
+        else
+        {
+            // Older saves have no memory of the tier. Deriving it from the power
+            // figures just read is better than defaulting to Normal: that would
+            // re-announce an ongoing deficit the player already knows about.
+            S.LastPowerTier = S.GetPowerTier();
+        }
         const uint32_t TechCount = R.ReadUInt32();
         S.CompletedBuildingTypes.resize(TechCount);
         for (uint32_t T = 0; T < TechCount; ++T)
@@ -4603,7 +5404,31 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
         B.RallyPoint.X.Raw = R.ReadInt64();
         B.RallyPoint.Y.Raw = R.ReadInt64();
         B.bHasRallyPoint = R.ReadBool();
-        B.bSelling = R.ReadBool();
+        if (Version >= kSimSaveVersionPowerPriority)
+        {
+            B.Priority = static_cast<PowerPriority>(R.ReadUInt8());
+        }
+        else
+        {
+            // Older saves have no priority byte, so it has to be derived -- and it must
+            // be derived from the definition, not left at the BuildingComp default.
+            // That default is Production, which goes offline at Critical: a v6 save
+            // would have loaded with its construction yard and barracks in a band that
+            // stops them exactly where ADR-0013's carve-out says they must keep
+            // working, recreating the inescapable blackout this package exists to fix.
+            // Core[I].Def was read earlier in this same loop, so the definition is
+            // available here.
+            const EntityDef* Def = Content ? Content->FindEntity(Core[I].Def) : nullptr;
+            B.Priority = Def != nullptr ? DefaultPowerPriorityFor(*Def)
+                                        : PowerPriority::Production;
+        }
+        if (Version >= kSimSaveVersionRepair)
+        {
+            B.bRepairing = R.ReadBool();
+            B.RepairCreditAccumulator = R.ReadInt32();
+        }
+        // Older saves predate repair entirely, so the resize() default of "not
+        // repairing" is exactly right -- nothing to reconstruct.
         const uint32_t QueueCount = R.ReadUInt32();
         B.Queue.resize(QueueCount);
         for (uint32_t Q = 0; Q < QueueCount; ++Q)
@@ -4614,6 +5439,9 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
             Item.TotalTicks = R.ReadInt32();
             Item.PaidCredits = R.ReadInt32();
             Item.bPaused = R.ReadBool();
+            Item.State = static_cast<FlowPaymentState>(R.ReadUInt8());
+            Item.TotalCost = R.ReadInt32();
+            Item.Priority = R.ReadInt32();
         }
 
         HarvesterComp& Hv = Harvesters[I];
@@ -4654,12 +5482,7 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
         Mo.Fatigue = Fixed::FromRaw(R.ReadInt64());
         Mo.Suppression = Fixed::FromRaw(R.ReadInt64());
         Mo.TicksUnderFire = R.ReadInt32();
-        // v6 added the projectile payload. A pre-v6 save carries none, and leaving
-        // the default-constructed component is the honest migration: those saves
-        // genuinely lost their in-flight shells at write time, so there is nothing
-        // to recover. The entity is destroyed on the next tick by the invalid-weapon
-        // path in SystemProjectiles, which is the pre-existing v5 behaviour.
-        if (Version >= 6)
+        if (Version >= kSimSaveVersionProjectiles)
         {
             ProjectileComp& Pr = Projectiles[I];
             Pr.Source.Index = R.ReadUInt32();
@@ -4671,6 +5494,7 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
             Pr.Weapon.Value = R.ReadUInt32();
             Pr.OwnerPlayer = R.ReadUInt8();
             Pr.Speed.Raw = R.ReadInt64();
+        }
         }
     }
 
@@ -4691,18 +5515,13 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
     // was initialized with before reading the belief payload. Enabled-ness must
     // match the save or ReconSystem::Deserialize refuses (see its comment).
     ReconLayer.Initialize(ReconSettingsRef, Map.Width, Map.Height);
-    if (Version >= 3)
     {
+        // Present in every loadable version, so no gate and no pre-recon fallback:
+        // a save old enough to lack a belief payload is already refused up front.
         if (!ReconLayer.Deserialize(R))
         {
             return false;
         }
-    }
-    else if (ReconLayer.IsEnabled())
-    {
-        // A pre-intel save has no belief state to restore; refusing beats
-        // silently starting the HQ map empty mid-match.
-        return false;
     }
 
     // Prime fog of war visibility for the current state so systems running on the

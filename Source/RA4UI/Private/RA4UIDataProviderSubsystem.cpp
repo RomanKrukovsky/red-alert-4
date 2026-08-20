@@ -24,6 +24,17 @@ ERA4SelectionKind ToBlueprint(RP::SelectionKind Kind)
     }
 }
 
+ERA4PowerPriority ToBlueprint(RA4::PowerPriority Priority)
+{
+    switch (Priority)
+    {
+        case RA4::PowerPriority::Vital: return ERA4PowerPriority::Vital;
+        case RA4::PowerPriority::Defense: return ERA4PowerPriority::Defense;
+        case RA4::PowerPriority::Auxiliary: return ERA4PowerPriority::Auxiliary;
+        default: return ERA4PowerPriority::Production;
+    }
+}
+
 ERA4BuildBlockReason ToBlueprint(RP::BuildBlockReason Reason)
 {
     switch (Reason)
@@ -204,7 +215,10 @@ bool URA4UIDataProviderSubsystem::HasVisibleProductionChange(const TArray<FRA4Pr
         const FRA4ProductionEntry& Old = PreviousQueue[Index];
         const FRA4ProductionEntry& New = ProductionQueue[Index];
         if (Old.ContentId != New.ContentId || Old.ProgressPercent != New.ProgressPercent ||
-            Old.bPaused != New.bPaused || Old.bAwaitingPlacement != New.bAwaitingPlacement)
+            Old.bPaused != New.bPaused || Old.bAwaitingPlacement != New.bAwaitingPlacement ||
+            // A starving item's progress bar does not move, so without this the
+            // widget would never refresh to show (or clear) the warning.
+            Old.bStarvedForCredits != New.bStarvedForCredits)
         {
             return true;
         }
@@ -278,6 +292,15 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
             ? float(Snapshot.Selection.PrimaryHealthCurrent) / float(Snapshot.Selection.PrimaryHealthMax)
             : 0.0f;
     SelectionKind = ToBlueprint(Snapshot.Selection.Kind);
+    HUDViewModel->SetSelectionKind(SelectionKind);
+
+    // ADR-0013 building controls. Mirrored straight from the snapshot: the UI reads
+    // state and issues commands, and never decides any of this for itself.
+    bSelectionIsBuilding = Snapshot.Selection.bPrimaryIsBuilding;
+    SelectionPowerPriority = ToBlueprint(Snapshot.Selection.PrimaryPowerPriority);
+    bSelectionPowerOffline = Snapshot.Selection.bPrimaryPowerOffline;
+    bSelectionRepairing = Snapshot.Selection.bPrimaryIsRepairing;
+    bSelectionCanRepair = Snapshot.Selection.bPrimaryCanRepair;
 
     // What a selection widget actually displays. Compared before broadcasting, because
     // the delegate is what rebuilds the group rows: a widget that clears and reconstructs
@@ -297,6 +320,11 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
     PreviousPrimaryEntity = Snapshot.Selection.Primary.Packed();
     PreviousPrimaryHealth = Snapshot.Selection.PrimaryHealthCurrent;
     PreviousSelectionGroupCount = int32(Snapshot.Selection.Groups.size());
+
+    if (bSelectionChanged)
+    {
+        OnSelectionChanged.Broadcast();
+    }
 
     // --- selection groups -----------------------------------------------------
     // FRA4SelectionGroup carries a DisplayName, but the snapshot's group rows only carry
@@ -356,9 +384,18 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
         Out.RemainingSeconds = TicksToSeconds(Entry.RemainingTicks);
         Out.bPaused = Entry.bPaused;
         Out.bAwaitingPlacement = Entry.bAwaitingPlacement;
+        Out.bStarvedForCredits = Entry.bStarvedForCredits;
+        Out.PaidCredits = Entry.PaidCredits;
+        Out.TotalCost = Entry.TotalCost;
         Out.SlotIndex = Entry.SlotIndex;
         ProductionQueue.Add(Out);
 
+        FRA4ProductionQueueItem VMItem;
+        VMItem.DisplayName = Out.DisplayName;
+        VMItem.Cost = Entry.TotalCost;
+        VMItem.Progress = FMath::Clamp(float(Entry.ProgressPercent) / 100.0f, 0.0f, 1.0f);
+        VMItem.Quantity = 1;
+        VMProductionQueue.Add(VMItem);
     }
 
     // --- build sidebar --------------------------------------------------------
@@ -388,6 +425,7 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
     // markers it is allowed to draw and therefore cannot reveal hidden enemies.
     RadarMapSize = FVector2D(Snapshot.Radar.MapWidthUnits, Snapshot.Radar.MapHeightUnits);
     RadarLocalPlayer = int32(Snapshot.LocalPlayer);
+    bRadarOnline = Snapshot.Radar.bOnline;
     RadarMarkers.Reset(int32(Snapshot.Radar.Markers.size()));
     for (const RP::RadarMarker& Marker : Snapshot.Radar.Markers)
     {
@@ -409,6 +447,41 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
         }
         Out.bSelected = Marker.bSelected;
         RadarMarkers.Add(Out);
+    }
+
+    // The background is only copied on the ticks it actually changed. Re-uploading a few
+    // thousand cells 20 times a second to say "identical" would be the most expensive thing
+    // the HUD does, and on a fully explored map that is every tick.
+    if (Snapshot.Radar.bBackgroundChanged)
+    {
+        const RP::MinimapBackground& Background = Snapshot.Radar.Background;
+        MinimapCellCounts = FIntPoint(Background.Width, Background.Height);
+        MinimapTerrain.SetNumUninitialized(int32(Background.Terrain.size()));
+        MinimapShroud.SetNumUninitialized(int32(Background.Shroud.size()));
+        if (!Background.Terrain.empty())
+        {
+            FMemory::Memcpy(MinimapTerrain.GetData(), Background.Terrain.data(),
+                            Background.Terrain.size());
+        }
+        if (!Background.Shroud.empty())
+        {
+            FMemory::Memcpy(MinimapShroud.GetData(), Background.Shroud.data(),
+                            Background.Shroud.size());
+        }
+        MinimapBackgroundRevision = int32(Snapshot.Radar.BackgroundRevision);
+    }
+
+    // Rebuilt every tick because the intensities are counting down; the list is bounded by
+    // the alert feed, so this is a handful of entries at most.
+    RadarPings.Reset(int32(Snapshot.Radar.Pings.size()));
+    for (const RP::RadarPing& Ping : Snapshot.Radar.Pings)
+    {
+        FRA4RadarPing Out;
+        Out.WorldPosition = FVector2D(Ping.Position.X.ToDoubleUnsafe(),
+                                      Ping.Position.Y.ToDoubleUnsafe());
+        Out.Kind = ERA4RadarPingKind(Ping.Kind);
+        Out.Intensity = float(Ping.IntensityPercent) / 100.0f;
+        RadarPings.Add(Out);
     }
 
     // --- alerts ---------------------------------------------------------------

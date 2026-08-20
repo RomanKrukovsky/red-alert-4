@@ -20,6 +20,23 @@ enum class ERA4SelectionKind : uint8
     Mixed,
 };
 
+/**
+ * ADR-0013 power priority, mirrored for Blueprints. Order matters: it is the order the
+ * cycle control steps through, and it is the order a deficit reaches the bands in.
+ */
+UENUM(BlueprintType)
+enum class ERA4PowerPriority : uint8
+{
+    /** HQ, barracks, refinery. Never goes offline, whatever the deficit. */
+    Vital,
+    /** Factories and docks. Offline at Critical. */
+    Production,
+    /** Turrets and walls. Offline at Critical. */
+    Defense,
+    /** Radar, repair, tech. First to go -- offline from Moderate. */
+    Auxiliary,
+};
+
 UENUM(BlueprintType)
 enum class ERA4BuildBlockReason : uint8
 {
@@ -46,6 +63,84 @@ enum class ERA4MatchPhase : uint8
     Running,
     Finished,
 };
+
+// Mirrors RA4::Presentation::MinimapTerrain / MinimapShroud. Duplicated as UENUMs because
+// the simulation enums are plain C++ and Blueprint cannot see them. The values are compared
+// with static_assert in RA4SidebarWidget.cpp, where both headers are visible, so a change to
+// either side is a build failure rather than a silently mismatched colour.
+// Mirrors RA4::Presentation::RadarPingKind; the values are checked with static_assert in
+// RA4SidebarWidget.cpp, where both headers are visible.
+UENUM(BlueprintType)
+enum class ERA4RadarPingKind : uint8
+{
+    Attack,
+    Loss,
+    Construction,
+};
+
+USTRUCT(BlueprintType)
+struct FRA4RadarPing
+{
+    GENERATED_BODY()
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|Radar")
+    FVector2D WorldPosition = FVector2D::ZeroVector;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|Radar")
+    ERA4RadarPingKind Kind = ERA4RadarPingKind::Attack;
+
+    /** 0..1, counting down as the ping ages. Drives both size and opacity. */
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|Radar")
+    float Intensity = 1.0f;
+};
+
+/** The colour a ping is drawn in. Attack is the loud one; the others must not compete. */
+inline FLinearColor RA4RadarPingColour(ERA4RadarPingKind Kind)
+{
+    switch (Kind)
+    {
+        case ERA4RadarPingKind::Attack:       return FLinearColor(1.00f, 0.25f, 0.15f, 1.0f);
+        case ERA4RadarPingKind::Loss:         return FLinearColor(0.95f, 0.65f, 0.15f, 1.0f);
+        case ERA4RadarPingKind::Construction: return FLinearColor(0.35f, 0.80f, 1.00f, 1.0f);
+    }
+    return FLinearColor::White;
+}
+
+UENUM(BlueprintType)
+enum class ERA4MinimapTerrain : uint8
+{
+    Unknown,
+    Ground,
+    Water,
+    Cliff,
+    Ore,
+    Structure,
+};
+
+UENUM(BlueprintType)
+enum class ERA4MinimapShroud : uint8
+{
+    NeverSeen,
+    Remembered,
+    Visible,
+};
+
+/** The colour the minimap paints for a terrain class. */
+inline FLinearColor RA4MinimapTerrainColour(ERA4MinimapTerrain Terrain)
+{
+    switch (Terrain)
+    {
+        // Deliberately desaturated: the background must stay legible underneath the unit
+        // markers, which are the saturated reds and greens the player actually reads.
+        case ERA4MinimapTerrain::Ground:    return FLinearColor(0.16f, 0.20f, 0.14f, 1.0f);
+        case ERA4MinimapTerrain::Water:     return FLinearColor(0.06f, 0.13f, 0.28f, 1.0f);
+        case ERA4MinimapTerrain::Cliff:     return FLinearColor(0.24f, 0.22f, 0.19f, 1.0f);
+        case ERA4MinimapTerrain::Ore:       return FLinearColor(0.42f, 0.34f, 0.09f, 1.0f);
+        case ERA4MinimapTerrain::Structure: return FLinearColor(0.26f, 0.27f, 0.30f, 1.0f);
+        case ERA4MinimapTerrain::Unknown:   break;
+    }
+    return FLinearColor(0.02f, 0.03f, 0.04f, 1.0f);
+}
 
 UENUM(BlueprintType)
 enum class ERA4RadarMarkerKind : uint8
@@ -177,6 +272,22 @@ struct FRA4ProductionEntry
     /** Finished structure waiting for the player to choose a spot. */
     UPROPERTY(BlueprintReadOnly, Category = "RA4|Production")
     bool bAwaitingPlacement = false;
+
+    /**
+     * ADR-0012: production is paid a slice per tick, so an item can stall because the
+     * treasury is empty rather than because the player paused it. Without this the
+     * two are indistinguishable on screen -- a frozen progress bar either way.
+     */
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|Production")
+    bool bStarvedForCredits = false;
+
+    /** Credits paid into this item so far, for the funding bar. */
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|Production")
+    int32 PaidCredits = 0;
+
+    /** Full price of this item, fixed when it was queued. */
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|Production")
+    int32 TotalCost = 0;
 
     UPROPERTY(BlueprintReadOnly, Category = "RA4|Production")
     int32 SlotIndex = 0;

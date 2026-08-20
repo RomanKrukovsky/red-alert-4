@@ -179,7 +179,15 @@ private:
     // --- Systems, executed in this order every tick ------------------------
     void SystemApplyCommands(const CommandFrame* Frame);
     void SystemPower();
+    // Runs after SystemPower so the throttle decisions it makes read this tick's
+    // power balance, and before SystemProduction so an item funded this tick can
+    // begin advancing on the same tick it becomes fully paid.
+    void SystemFlowPayment();
     void SystemConstruction();
+    // ADR-0013. Runs after SystemConstruction so a building that finished this tick is
+    // already Complete, and before SystemCombat so a repaired structure survives the
+    // shot that would otherwise have killed it at its pre-repair health.
+    void SystemRepair();
     void SystemProduction();
     void SystemHarvesters();
     void SystemOrders();
@@ -197,12 +205,34 @@ private:
 
     // --- Internals ---------------------------------------------------------
     EntityId AllocateEntity();
-    void DestroyEntity(EntityId Id, EntityId Killer);
+    // bWasSold distinguishes a voluntary sale from a violent death. It is a
+    // parameter rather than a flag on BuildingComp because the intent lasts exactly
+    // one tick: a persisted flag can outlive the sale it described (a save taken
+    // between the command and the death sweep reloads a building that is flagged
+    // selling forever) and then silently forfeits the ADR-0012 destruction refund.
+    void DestroyEntity(EntityId Id, EntityId Killer, bool bWasSold = false);
     void ApplyDamage(EntityId TargetId, int32_t BaseDamage, WarheadClass Warhead, EntityId Source, PlayerId SourcePlayer);
     void ApplySplashDamage(const Vec2& Center, Fixed Radius, int32_t BaseDamage, WarheadClass Warhead,
                            int32_t FalloffPercent, EntityId Source, PlayerId SourcePlayer);
 
     void OccupyTiles(const BuildingComp& B, bool bOccupy);
+    // ADR-0013 tier speed for a player, as a percentage. One place decides it so the
+    // construction and production systems cannot drift apart.
+    int32_t PowerSpeedPercent(PlayerId Owner) const;
+    // At Critical only barracks-class producers and harvesters keep working. Which
+    // buildings qualify is a content question (what can this thing produce), not a
+    // hardcoded name list, so it is answered here from the definition.
+    bool ProducerRunsAtCriticalPower(const EntityDef& Def) const;
+    // Seeds BuildingComp::Priority at spawn. Anything ProducerRunsAtCriticalPower
+    // keeps alive is Vital, so the priority bands and the Critical carve-out cannot
+    // contradict each other.
+    PowerPriority DefaultPowerPriorityFor(const EntityDef& Def) const;
+    // The single ADR-0013 verdict on "is this queue head stopped by the power state".
+    // Both SystemFlowPayment and SystemProduction ask it, because the two answering
+    // the question separately is what produced a blackout deadlock: payment kept
+    // charging for an item production refused to advance, and the money that should
+    // have finished the power plant went into a frozen queue instead.
+    bool IsProductionPowerStalled(uint32_t BuildingIndex) const;
     void BuildNavigationGrid();
     uint8_t GetNavigationPassability(const TileCoord& Tile) const;
     Nav::NavQuery MakeNavigationQuery(const EntityDef& Def) const;
@@ -312,8 +342,24 @@ private:
     // iteration stable: a unit dying in the combat system must not invalidate the
     // slot the movement system is about to read.
     std::vector<EntityId> PendingDestroy;
+    // Buildings the player sold this tick, as opposed to lost. ADR-0012 pays no
+    // queue refund for a sale (the sale price is the compensation), and this is
+    // tick-scoped intent rather than durable state, so it is neither serialized nor
+    // hashed -- it is consumed by SystemDeaths on the tick it is written.
+    std::vector<EntityId> PendingSales;
 
     std::vector<SimEvent> Events;
+
+    // ADR-0012 credit-allocation scratch, reused every tick so the funding pass does
+    // not allocate. Rebuilt from scratch each call, so it is not simulation state and
+    // is deliberately absent from Serialize and ComputeStateChecksum.
+    struct FundingCandidate
+    {
+        uint32_t BuildingIndex = 0;
+        int32_t Priority = 0;
+        PlayerId Owner = kInvalidPlayer;
+    };
+    std::vector<FundingCandidate> FundingCandidates;
 
     // Per-player command budget, reset every tick. A client that exceeds it is
     // throttled rather than trusted; see Docs/ThreatModel.md.
