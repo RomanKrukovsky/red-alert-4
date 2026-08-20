@@ -3736,6 +3736,15 @@ void SimWorld::SystemFogOfWar()
     for (int32_t P = 0; P < kMaxPlayers; ++P)
     {
         FogGrid->ClearCurrentVisibility(P);
+        // Dirty regions describe what changed during ONE tick. Nothing cleared
+        // them before, so RevealCircularArea pushed one rectangle per unit per
+        // tick and the list grew for the length of the match -- 200 units at
+        // 20 Hz is 4,000 rectangles a second, forever, and every one of them was
+        // re-uploaded by the fog texture consumer on every frame. Clearing here,
+        // where the tick's visibility is also rebuilt from scratch, is what makes
+        // the list mean what its name says. Fog is excluded from the state
+        // checksum (see ComputeStateChecksum), so this cannot move a desync.
+        FogGrid->ClearDirtyRegions(P);
     }
 
     for (uint32_t I = 0; I < HighWaterMark; ++I)

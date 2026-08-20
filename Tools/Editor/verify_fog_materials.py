@@ -5,7 +5,7 @@ Run: UnrealEditor-Cmd RedAlert4.uproject -run=pythonscript \
          -script=Tools/Editor/verify_fog_materials.py -unattended -nopause -nosplash
 
 Why this exists: Unreal silently ignores SetScalarParameterValue for a parameter
-the material does not have. When ADR-0028's fog first landed, the code set four
+the material does not have. When ADR-0030's fog first landed, the code set four
 parameters and the generated materials declared one -- fog strength and the
 high-contrast accessibility mode did nothing at all, with no error anywhere.
 Nothing in a compile or a headless test can catch that, because the contract is

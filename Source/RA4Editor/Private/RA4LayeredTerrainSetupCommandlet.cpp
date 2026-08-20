@@ -35,7 +35,7 @@
 #include "Materials/MaterialExpressionLandscapeLayerBlend.h"
 #include "Materials/MaterialExpressionTextureCoordinate.h"
 #include "Materials/MaterialExpressionTextureSample.h"
-// Fog nodes (ADR-0028). These live here rather than being hand-wired in the
+// Fog nodes (ADR-0030). These live here rather than being hand-wired in the
 // editor because this commandlet rebuilds the material from scratch on every run
 // -- an editor-side edit would be silently reverted the next time it runs, which
 // is exactly how the ground-tiling fix was lost before.
@@ -51,7 +51,7 @@
 #include "Materials/MaterialExpressionTextureObjectParameter.h"
 #include "Materials/MaterialExpressionTextureSampleParameter2D.h"
 #include "Materials/MaterialExpressionWorldPosition.h"
-// Post-process fog (ADR-0028 / V-7): needed so props, water and buildings are
+// Post-process fog (ADR-0030 / V-7): needed so props, water and buildings are
 // fogged too. The landscape material only tints the ground, which leaves lit
 // objects floating over unexplored black -- worse than no fog, because it points
 // at exactly what the player is not supposed to know is there.
@@ -362,7 +362,7 @@ int32 URA4LayeredTerrainSetupCommandlet::Main(const FString& Params)
         AddLayerEntry(RoughBlend, RoughSample);
     }
 
-    // --- fog of war (ADR-0028) ----------------------------------------------
+    // --- fog of war (ADR-0030) ----------------------------------------------
     // The layer blend result is tinted by the local player's visibility before it
     // reaches BaseColor. Two channels carry the fog, never one: brightness AND
     // desaturation, because UI_UX_BIBLE section 1.1 forbids conveying state by
@@ -396,7 +396,7 @@ int32 URA4LayeredTerrainSetupCommandlet::Main(const FString& Params)
         Cast<UMaterialExpressionScalarParameter>(UMaterialEditingLibrary::CreateMaterialExpression(
             Material, UMaterialExpressionScalarParameter::StaticClass(), -1600, 1400));
 
-    // Accessibility parameters from ADR-0028 section 4. Defaults match the
+    // Accessibility parameters from ADR-0030 section 4. Defaults match the
     // intended look so a material used without the subsystem still renders
     // correct fog rather than none.
     UMaterialExpressionScalarParameter* FogStrengthParam =
@@ -442,7 +442,7 @@ int32 URA4LayeredTerrainSetupCommandlet::Main(const FString& Params)
 
     // Floor on darkness: unexplored ground is very dark but not pure black, so a
     // player can still read terrain silhouette enough to navigate the camera.
-    // ADR-0028 forbids the opposite extreme -- fog strength may not be lowered to
+    // ADR-0030 forbids the opposite extreme -- fog strength may not be lowered to
     // where unexplored and visible are indistinguishable -- so this is a constant
     // in generated content, not a user setting.
     UMaterialExpressionConstant* FogFloor =
@@ -546,7 +546,7 @@ int32 URA4LayeredTerrainSetupCommandlet::Main(const FString& Params)
     FAssetRegistryModule::AssetCreated(Material);
     UMaterialEditingLibrary::RecompileMaterial(Material);
 
-    // --- post-process fog (ADR-0028 / V-7) -----------------------------------
+    // --- post-process fog (ADR-0030 / V-7) -----------------------------------
     // A second material, applied to the camera, fogs EVERYTHING the landscape
     // material cannot reach: props, water, buildings, particles. It reconstructs
     // the same fog UV from world position, so both surfaces read the same texture
