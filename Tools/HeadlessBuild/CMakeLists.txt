@@ -123,8 +123,11 @@ add_library(RA4AI STATIC
     ${RA4_SOURCE_ROOT}/RA4AI/Private/AIWorldView.cpp
     ${RA4_SOURCE_ROOT}/RA4AI/Private/TacticalOperation.cpp
     ${RA4_SOURCE_ROOT}/RA4AI/Private/ArmyGroup.cpp
+    ${RA4_SOURCE_ROOT}/RA4AI/Private/AIDirectors.cpp
     ${RA4_SOURCE_ROOT}/RA4AI/Private/AIDoctrine.cpp
     ${RA4_SOURCE_ROOT}/RA4AI/Private/AIDebugOverlay.cpp
+    ${RA4_SOURCE_ROOT}/RA4AI/Private/BattlePredictor.cpp
+    ${RA4_SOURCE_ROOT}/RA4AI/Private/OpponentModel.cpp
     ${RA4_SOURCE_ROOT}/RA4AI/Private/ThreatMap.cpp
     ${RA4_SOURCE_ROOT}/RA4AI/Private/ValueMap.cpp
     ${RA4_SOURCE_ROOT}/RA4AI/Private/AIDirectors.cpp

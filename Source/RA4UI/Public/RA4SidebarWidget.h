@@ -222,6 +222,9 @@ private:
      */
     virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
+    /** Hotkey handler called by the player controller when a card hotkey is pressed. */
+    void OnBuildCardHotkey(int32 HotkeyIndex);
+
     // Widgets rebuilt on refresh rather than kept in sync one by one: the card grid is
     // at most a couple of dozen entries and only changes when availability does.
     UPROPERTY(Transient)

@@ -98,8 +98,10 @@ public:
     UFUNCTION(BlueprintCallable, Category = "RA4|DirectControl")
     void ToggleDirectControl();
 
-    UFUNCTION(BlueprintCallable, Category = "RA4|DirectControl")
-    void EnterDirectControl(int64 EntityIdValue);
+    // Not a UFUNCTION: RA4::EntityId is a plain C++ sim type invisible to
+    // reflection, and possession must start from a validated sim id, not from an
+    // arbitrary integer a Blueprint could pass. Blueprints use ToggleDirectControl.
+    void EnterDirectControl(RA4::EntityId TargetId);
 
     UFUNCTION(BlueprintCallable, Category = "RA4|DirectControl")
     void ExitDirectControl();
@@ -308,6 +310,11 @@ private:
 
     bool bDirectControlActive = false;
     RA4::EntityId DirectControlEntityId{};
+
+    // Seconds until the next held-key move order may be sent. Move orders are
+    // throttled: submitting one per rendered frame floods the command queue and
+    // makes the unit stutter as each new path replaces the last.
+    float DirectControlMoveCooldown = 0.0f;
     FRotator DirectControlCameraRotation = FRotator::ZeroRotator;
 
     UPROPERTY(Transient)

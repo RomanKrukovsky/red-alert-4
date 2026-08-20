@@ -279,7 +279,7 @@ void URA4CampaignSelectWidget::BuildLayout()
         WidgetTree, LOCTEXT("ProfileLevel", "УРОВЕНЬ 47  //  СЕТЬ ПОДКЛЮЧЕНА"), 11, TextMuted, TEXT("ProfileLevel"), false));
     UProgressBar* ProfileProgress = WidgetTree->ConstructWidget<UProgressBar>(
         UProgressBar::StaticClass(), TEXT("ProfileProgress"));
-    ProfileProgress->SetPercent(0.54f);
+    ProfileProgress->SetPercent(45780.0f / 75000.0f);
     ProfileProgress->SetFillColorAndOpacity(SovietRed);
     Profile->AddChildToVerticalBox(ProfileProgress)->SetPadding(FMargin(0.0f, 8.0f));
     Place(

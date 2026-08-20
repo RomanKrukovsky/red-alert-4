@@ -204,11 +204,36 @@ class RA4UI_API URA4CommandGridWidget : public URA4ActivatableWidget
     GENERATED_BODY()
 };
 
-/** Timed tactical messages and economy warnings. */
-UCLASS(Abstract, Blueprintable)
+/** Timed tactical messages and economy warnings. Built in C++ like the resource
+ *  bar: the feed consumes the provider's fog-filtered alert list and renders the
+ *  SC-20 reference's EVA block (severity-coloured rows with repeat counters). */
+UCLASS(Blueprintable)
 class RA4UI_API URA4NotificationFeedWidget : public URA4ActivatableWidget
 {
     GENERATED_BODY()
+
+public:
+    virtual TSharedRef<SWidget> RebuildWidget() override;
+    virtual void NativeConstruct() override;
+    virtual void NativeDestruct() override;
+
+protected:
+    virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+
+private:
+    class URA4UIDataProviderSubsystem* GetProvider() const;
+
+    /** Rebuilds alert rows from the provider. Called on change, never on tick. */
+    void Refresh();
+
+    UPROPERTY(Transient)
+    TObjectPtr<class UVerticalBox> FeedBox;
+
+    FDelegateHandle AlertsChangeHandle;
+
+    // Seconds since the newest alert arrived; drives the attention flash.
+    float NewestAlertAge = 0.0f;
+    bool bFlashActive = false;
 };
 
 /** Current primary, secondary, and optional mission objectives. */

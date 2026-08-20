@@ -447,22 +447,23 @@ void URA4CommandCentreMenuWidget::BuildLayout()
 
     UHorizontalBox* LevelRow = WidgetTree->ConstructWidget<UHorizontalBox>(
         UHorizontalBox::StaticClass(), TEXT("LevelRow"));
+    // Values from the SC-02 reference commander card: Level 25, 45,780 / 75,000 XP.
     LevelRow->AddChildToHorizontalBox(
-        MakeText(WidgetTree, LOCTEXT("Level", "UROVEN 27"), 15, Text, TEXT("Level")));
+        MakeText(WidgetTree, LOCTEXT("Level", "UROVEN 25"), 15, Text, TEXT("Level")));
     UTextBlock* Experience = MakeText(
-        WidgetTree, LOCTEXT("Experience", "28 750 / 34 000 OP"), 14, Text, TEXT("Experience"));
+        WidgetTree, LOCTEXT("Experience", "45 780 / 75 000 OP"), 14, Text, TEXT("Experience"));
     UHorizontalBoxSlot* ExperienceSlot = LevelRow->AddChildToHorizontalBox(Experience);
     ExperienceSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
     ExperienceSlot->SetHorizontalAlignment(HAlign_Right);
     Commander->AddChildToVerticalBox(LevelRow)->SetPadding(FMargin(12.0f, 3.0f));
     UProgressBar* ExperienceBar = WidgetTree->ConstructWidget<UProgressBar>(
         UProgressBar::StaticClass(), TEXT("ExperienceBar"));
-    ExperienceBar->SetPercent(0.845f);
+    ExperienceBar->SetPercent(45780.0f / 75000.0f);
     ExperienceBar->SetFillColorAndOpacity(Red);
     Commander->AddChildToVerticalBox(ExperienceBar)->SetPadding(FMargin(12.0f, 0.0f, 12.0f, 10.0f));
 
     UBorder* CommanderPanel = MakeFramedPanel(WidgetTree, Commander, TEXT("CommanderPanel"), FMargin(8.0f));
-    PlaceOnCanvas(MainCanvas, CommanderPanel, FVector2D(18.0f, 804.0f), FVector2D(548.0f, 254.0f), 5);
+    PlaceOnCanvas(MainCanvas, CommanderPanel, FVector2D(18.0f, 804.0f), FVector2D(460.0f, 224.0f), 5);
 
     UVerticalBox* News = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("News"));
     UTextBlock* NewsHeader = MakeText(
@@ -509,13 +510,84 @@ void URA4CommandCentreMenuWidget::BuildLayout()
     News->AddChildToVerticalBox(Pager);
 
     UBorder* NewsPanel = MakeFramedPanel(WidgetTree, News, TEXT("NewsPanel"), FMargin(8.0f));
-    PlaceOnCanvas(MainCanvas, NewsPanel, FVector2D(580.0f, 804.0f), FVector2D(1060.0f, 254.0f), 5);
+    PlaceOnCanvas(MainCanvas, NewsPanel, FVector2D(492.0f, 804.0f), FVector2D(950.0f, 224.0f), 5);
 
-    UTextBlock* Version = MakeText(
-        WidgetTree, LOCTEXT("Version", "v1.0.0  //  RU"), 12, Muted, TEXT("Version"), false);
-    Version->SetJustification(ETextJustify::Center);
-    UBorder* VersionPanel = MakeFramedPanel(WidgetTree, Version, TEXT("VersionPanel"), FMargin(8.0f));
-    PlaceOnCanvas(MainCanvas, VersionPanel, FVector2D(1690.0f, 1010.0f), FVector2D(210.0f, 48.0f), 5);
+    // Operations summary panel -- present on the SC-02 reference to the right of the
+    // news block: active theatres, last match, next objective.
+    UVerticalBox* Operations = WidgetTree->ConstructWidget<UVerticalBox>(
+        UVerticalBox::StaticClass(), TEXT("Operations"));
+    UTextBlock* OperationsHeader = MakeText(
+        WidgetTree, LOCTEXT("OperationsHeader", "SVODKA OPERATsIY"), 16, Text, TEXT("OperationsHeader"));
+    Operations->AddChildToVerticalBox(OperationsHeader)->SetPadding(FMargin(8.0f, 4.0f, 0.0f, 8.0f));
+
+    const auto AddOperationsRow = [this, Operations](
+        const FText& Caption, const FText& Value, const FName Name)
+    {
+        UHorizontalBox* OpRow = WidgetTree->ConstructWidget<UHorizontalBox>(
+            UHorizontalBox::StaticClass(), FName(Name.ToString() + TEXT("_Row")));
+        OpRow->AddChildToHorizontalBox(MakeText(
+            WidgetTree, Caption, 12, Muted, FName(Name.ToString() + TEXT("_Caption")), false));
+        UTextBlock* ValueText = MakeText(
+            WidgetTree, Value, 12, Text, FName(Name.ToString() + TEXT("_Value")), false);
+        ValueText->SetJustification(ETextJustify::Right);
+        UHorizontalBoxSlot* ValueSlot = OpRow->AddChildToHorizontalBox(ValueText);
+        ValueSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+        ValueSlot->SetHorizontalAlignment(HAlign_Fill);
+        Operations->AddChildToVerticalBox(OpRow)->SetPadding(FMargin(8.0f, 3.0f));
+    };
+
+    AddOperationsRow(
+        LOCTEXT("OpCampaign", "KAMPANIYa"),
+        LOCTEXT("OpCampaignValue", "Soviet — Missiya 06 / 18"), TEXT("OpCampaign"));
+    AddOperationsRow(
+        LOCTEXT("OpTasks", "DOP. ZADAChI"),
+        LOCTEXT("OpTasksValue", "09 / 36"), TEXT("OpTasks"));
+    AddOperationsRow(
+        LOCTEXT("OpLastMatch", "POSLEDNIY BOY"),
+        LOCTEXT("OpLastMatchValue", "Victory — Pepel stolitsy"), TEXT("OpLastMatch"));
+    AddOperationsRow(
+        LOCTEXT("OpNext", "SLEDUYuShchAYa TsEL"),
+        LOCTEXT("OpNextValue", "Zheleznyy koridor"), TEXT("OpNext"));
+
+    UBorder* OperationsPanel = MakeFramedPanel(WidgetTree, Operations, TEXT("OperationsPanel"), FMargin(8.0f));
+    PlaceOnCanvas(MainCanvas, OperationsPanel, FVector2D(1456.0f, 804.0f), FVector2D(446.0f, 224.0f), 5);
+
+    // Footer status strip -- SC-02 shows a full-width bottom strip with network,
+    // services and version status rather than a lone version chip.
+    UHorizontalBox* FooterStrip = WidgetTree->ConstructWidget<UHorizontalBox>(
+        UHorizontalBox::StaticClass(), TEXT("FooterStrip"));
+    const auto AddFooterField = [this, FooterStrip](
+        const FText& Caption, const FText& Value, const FLinearColor& ValueColour, const FName Name)
+    {
+        UHorizontalBox* Field = WidgetTree->ConstructWidget<UHorizontalBox>(
+            UHorizontalBox::StaticClass(), FName(Name.ToString() + TEXT("_Field")));
+        Field->AddChildToHorizontalBox(MakeText(
+            WidgetTree, Caption, 11, Muted, FName(Name.ToString() + TEXT("_Caption")), false));
+        UHorizontalBoxSlot* ValueSlot = Field->AddChildToHorizontalBox(MakeText(
+            WidgetTree, Value, 11, ValueColour, FName(Name.ToString() + TEXT("_Value"))));
+        ValueSlot->SetPadding(FMargin(8.0f, 0.0f, 0.0f, 0.0f));
+        UHorizontalBoxSlot* FieldSlot = FooterStrip->AddChildToHorizontalBox(Field);
+        FieldSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+        FieldSlot->SetHorizontalAlignment(HAlign_Center);
+        FieldSlot->SetVerticalAlignment(VAlign_Center);
+    };
+
+    const FLinearColor StatusOk(0.20f, 0.88f, 0.35f, 1.0f);
+    AddFooterField(
+        LOCTEXT("FooterNetwork", "SET"),
+        LOCTEXT("FooterNetworkValue", "PODKLYuChENO"), StatusOk, TEXT("FooterNetwork"));
+    AddFooterField(
+        LOCTEXT("FooterServices", "SLUZhBY KOMANDOVANIYa"),
+        LOCTEXT("FooterServicesValue", "V SETI"), StatusOk, TEXT("FooterServices"));
+    AddFooterField(
+        LOCTEXT("FooterProfile", "PROFIL"),
+        LOCTEXT("FooterProfileValue", "KOMANDUYuShchIY"), Text, TEXT("FooterProfile"));
+    AddFooterField(
+        LOCTEXT("FooterVersion", "VERSIYa"),
+        LOCTEXT("FooterVersionValue", "v1.0.0 // RU"), Text, TEXT("FooterVersion"));
+
+    UBorder* FooterPanel = MakeFramedPanel(WidgetTree, FooterStrip, TEXT("FooterPanel"), FMargin(6.0f, 4.0f));
+    PlaceOnCanvas(MainCanvas, FooterPanel, FVector2D(18.0f, 1034.0f), FVector2D(1884.0f, 40.0f), 13);
 
     if (UTexture2D* ChromeTexture = LoadObject<UTexture2D>(
         nullptr, TEXT("/Game/RA4UI/Art/T_RA4_USSR_MainMenuChrome.T_RA4_USSR_MainMenuChrome")))

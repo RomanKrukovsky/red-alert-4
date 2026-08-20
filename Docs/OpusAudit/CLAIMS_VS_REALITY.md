@@ -1,8 +1,8 @@
 # Opus Audit — Claims vs Reality
 
 **Auditor**: Claude Fable 5
-**Baseline**: `cae7b36` (tag `baseline/opus-audit-start`)
-**Date**: 2026-08-04
+**Baseline**: `1fe9f58` (feat/soviet-asset-integration, HEAD)
+**Date**: 2026-08-05 (updated after build fix)
 
 ---
 
@@ -18,13 +18,13 @@ Every claim below was verified against the actual source code, test output, or b
 
 **Reality**: **PARTIALLY FALSE**
 
-- 297 `RA4_TEST` macros exist across 21 test files
-- All 21 files are compiled into `RA4Tests` executable (CMakeLists.txt, lines `add_executable(RA4Tests ...)`)
+- 308 `RA4_TEST` macros exist across 22 test files
+- All 22 files are compiled into `RA4Tests` executable (CMakeLists.txt, lines `add_executable(RA4Tests ...)`)
 - `ctest` shows 4 test groups (core, input, presentation, ai) all passing
-- Running `./build/hb/RA4Tests` shows individual test names; the `core` filter runs 127 tests
-- The "245" number is inaccurate — actual count is 297 registered tests (verified by `grep -c "RA4_TEST"`)
-- **Evidence**: `grep -rn "RA4_TEST" Source/RA4Tests/Private/ | wc -l` = 297
-- **Status**: Tests exist and pass. The count claim is wrong.
+- Running `./RA4Tests --list` shows all 308 test names
+- The "245" number is inaccurate — actual count is 308 registered tests (verified by `--list`)
+- **Evidence**: `./RA4Tests --list | wc -l` = 308
+- **Status**: Tests exist and pass. The count claim is wrong. Updated from 297→308 after adding 11 AIDirectors tests.
 
 ---
 

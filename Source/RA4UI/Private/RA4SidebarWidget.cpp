@@ -203,21 +203,34 @@ public:
 
             float MarkerExtent = 4.0f;
             FLinearColor Colour;
+            FLinearColor GlowColour;
             if (Marker.Kind == ERA4RadarMarkerKind::Resource)
             {
                 MarkerExtent = 3.0f;
                 Colour = FLinearColor(0.96f, 0.78f, 0.20f, 1.0f);
+                GlowColour = FLinearColor(0.96f, 0.78f, 0.20f, 0.25f);
             }
             else if (Marker.Owner == LocalPlayer)
             {
                 MarkerExtent = Marker.Kind == ERA4RadarMarkerKind::Building ? 6.0f : 4.0f;
                 Colour = FLinearColor(0.20f, 0.92f, 0.38f, 1.0f);
+                GlowColour = FLinearColor(0.20f, 0.92f, 0.38f, 0.20f);
             }
             else
             {
                 MarkerExtent = Marker.Kind == ERA4RadarMarkerKind::Building ? 6.0f : 4.0f;
                 Colour = FLinearColor(0.96f, 0.22f, 0.16f, 1.0f);
+                GlowColour = FLinearColor(0.96f, 0.22f, 0.16f, 0.20f);
             }
+
+            // Glow halo behind marker
+            const float GlowRadius = MarkerExtent * 2.5f;
+            const FVector2D GlowSize(GlowRadius, GlowRadius);
+            FSlateDrawElement::MakeBox(
+                OutDrawElements, LayerId + 4,
+                AllottedGeometry.ToPaintGeometry(
+                    GlowSize, FSlateLayoutTransform(Centre - GlowSize * 0.5f)),
+                WhiteBrush, ESlateDrawEffect::None, GlowColour);
 
             if (Marker.bSelected)
             {
@@ -529,6 +542,25 @@ FText FormatBuildRemaining(float Seconds)
                          FText::AsNumber(Total % 60, &TwoDigits));
 }
 
+// Shared chrome for the sidebar cards: a rounded panel with a subtle outline so the
+// minimap, resources, selection and queue read as one family of framed blocks.
+UBorder* MakeStyledPanel(UWidgetTree* Tree, const FName Name, const FLinearColor& Fill)
+{
+    UBorder* Frame = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), Name);
+
+    FSlateBrush Brush;
+    Brush.DrawAs = ESlateBrushDrawType::RoundedBox;
+    Brush.TintColor = FSlateColor(Fill);
+    Brush.OutlineSettings.RoundingType = ESlateBrushRoundingType::FixedRadius;
+    Brush.OutlineSettings.CornerRadii = FVector4(4.0f, 4.0f, 4.0f, 4.0f);
+    Brush.OutlineSettings.Width = 1.0f;
+    Brush.OutlineSettings.Color = FSlateColor(FLinearColor(0.16f, 0.19f, 0.24f, 1.0f));
+    Frame->SetBrush(Brush);
+    Frame->SetPadding(FMargin(8.0f, 6.0f));
+    return Frame;
+}
+}
+
 void StyleButton(UButton* Button, const FLinearColor& Base)
 {
     FButtonStyle Style = Button->GetStyle();
@@ -787,9 +819,8 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
 
     // --- minimap ------------------------------------------------------------
     {
-        UBorder* Frame = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("MinimapFrame"));
-        Frame->SetBrushColor(kPanelDeep);
-        Frame->SetPadding(FMargin(6.0f));
+        UBorder* Frame = MakeStyledPanel(WidgetTree, TEXT("MinimapFrame"), kPanelDeep);
+        Frame->SetPadding(FMargin(4.0f));
 
         RadarWidget = WidgetTree->ConstructWidget<URA4RadarWidget>(
             URA4RadarWidget::StaticClass(), TEXT("Radar"));
@@ -800,7 +831,7 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
         USizeBox* Sizer = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("MinimapSizer"));
         Sizer->SetHeightOverride(kMinimapHeight);
         Sizer->AddChild(Frame);
-        AddRow(Sizer, 6.0f);
+        AddRow(Sizer, 4.0f);
     }
 
     // --- credits and power --------------------------------------------------
@@ -809,9 +840,7 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
     // decides whether the next structure runs, and the bar makes that margin visible
     // without having to subtract two numbers under pressure.
     {
-        UBorder* Frame = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("ResourceFrame"));
-        Frame->SetBrushColor(kPanelDeep);
-        Frame->SetPadding(FMargin(8.0f, 6.0f));
+        UBorder* Frame = MakeStyledPanel(WidgetTree, TEXT("ResourceFrame"), kPanelDeep);
 
         UVerticalBox* Stack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("ResStack"));
 
@@ -891,14 +920,12 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
         }
 
         Frame->AddChild(Stack);
-        AddRow(Frame, 6.0f);
+        AddRow(Frame, 4.0f);
     }
 
     // --- selected object info card ("OBJECT INFO") -------------------
     {
-        UBorder* Frame = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("SelectionFrame"));
-        Frame->SetBrushColor(kPanelDeep);
-        Frame->SetPadding(FMargin(8.0f, 6.0f));
+        UBorder* Frame = MakeStyledPanel(WidgetTree, TEXT("SelectionFrame"), kPanelDeep);
 
         UVerticalBox* Stack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("SelStack"));
 
@@ -963,7 +990,7 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
         }
 
         Frame->AddChild(Stack);
-        AddRow(Frame, 6.0f);
+        AddRow(Frame, 4.0f);
     }
 
     // --- category tabs ------------------------------------------------------
@@ -993,14 +1020,19 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
             }
             TabButtons.Add(Button);
         }
-        AddRow(TabRow, 6.0f);
+        AddRow(TabRow, 4.0f);
     }
 
     // --- build cards --------------------------------------------------------
     {
+        // Section header with hotkey hint
+        UTextBlock* BuildHeader = MakeLabel(WidgetTree, TEXT("BuildHeader"), kTextDim, 9, true);
+        BuildHeader->SetText(NSLOCTEXT("RA4", "Sidebar_BuildHeader", "BUILD"));
+        AddRow(BuildHeader, 2.0f);
+
         CardGrid = WidgetTree->ConstructWidget<UUniformGridPanel>(UUniformGridPanel::StaticClass(), TEXT("CardGrid"));
         CardGrid->SetSlotPadding(FMargin(2.0f));
-        UVerticalBoxSlot* Slot = AddRow(CardGrid, 6.0f);
+        UVerticalBoxSlot* Slot = AddRow(CardGrid, 4.0f);
         if (Slot != nullptr)
         {
             // The card grid takes the leftover height so the queue stays pinned to the
@@ -1011,9 +1043,13 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
 
     // --- production queue ---------------------------------------------------
     {
-        UBorder* Frame = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("QueueFrame"));
-        Frame->SetBrushColor(kPanelDeep);
-        Frame->SetPadding(FMargin(6.0f));
+        UBorder* Frame = MakeStyledPanel(WidgetTree, TEXT("QueueFrame"), kPanelDeep);
+        Frame->SetPadding(FMargin(4.0f));
+
+        // Queue header
+        UTextBlock* QueueHeader = MakeLabel(WidgetTree, TEXT("QueueHeader"), kTextDim, 9, true);
+        QueueHeader->SetText(NSLOCTEXT("RA4", "Sidebar_QueueHeader", "PRODUCTION QUEUE"));
+        Frame->AddChild(QueueHeader);
 
         UVerticalBox* Stack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(),
                                                                         TEXT("QueueStack"));
@@ -1076,6 +1112,39 @@ void URA4SidebarWidget::NativeConstruct()
         RefreshResources();
         RefreshCards();
         RefreshSelection();
+    }
+}
+
+void URA4SidebarWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+    Super::NativeTick(MyGeometry, InDeltaTime);
+
+    // Smoothly scale hovered build cards. A render-transform tween is cheap (no
+    // relayout, no Slate invalidation cascade) and gives the grid the same tactile
+    // feedback the menu buttons already have via URA4ButtonBase.
+    constexpr float kHoverScale = 1.05f;
+    constexpr float kAnimSpeed = 10.0f;
+
+    CardHoverProgress.SetNum(CardButtons.Num());
+    for (int32 Index = 0; Index < CardButtons.Num(); ++Index)
+    {
+        URA4IndexedButton* Button = CardButtons[Index];
+        if (Button == nullptr)
+        {
+            continue;
+        }
+
+        const float Target = Button->IsHovered() ? 1.0f : 0.0f;
+        float& Progress = CardHoverProgress[Index];
+        if (FMath::IsNearlyEqual(Progress, Target, 0.001f))
+        {
+            continue;
+        }
+
+        Progress = FMath::FInterpTo(Progress, Target, InDeltaTime, kAnimSpeed);
+        const float Scale = FMath::Lerp(1.0f, kHoverScale, Progress);
+        Button->SetRenderTransformPivot(FVector2D(0.5f, 0.5f));
+        Button->SetRenderScale(FVector2D(Scale, Scale));
     }
 }
 

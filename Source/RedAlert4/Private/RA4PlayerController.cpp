@@ -26,8 +26,12 @@
 #include "Layout/WidgetPath.h"
 #include "Misc/PackageName.h"
 #include "UnrealClient.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
+#include "Misc/Paths.h"
 #include "EngineUtils.h"
 #include "Camera/CameraComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 
 #include "RA4Content/ContentDatabase.h"
 #include "RA4Core/SimConfig.h"
@@ -115,6 +119,26 @@ void ARA4PlayerController::BeginPlay()
             UE_LOG(LogTemp, Error, TEXT("RA4 HUD: failed to create the sidebar"));
         }
 
+        NotificationFeed = CreateWidget<URA4NotificationFeedWidget>(
+            this, URA4NotificationFeedWidget::StaticClass());
+        if (NotificationFeed != nullptr)
+        {
+            // SC-20 places the EVA feed top-left under the resource bar, clear of
+            // the sidebar column on the right.
+            FGameViewportWidgetSlot Slot;
+            Slot.Anchors = FAnchors(0.0f, 0.0f);
+            Slot.Offsets = FMargin(16.0f, 78.0f, 420.0f, 220.0f);
+            Slot.Alignment = FVector2D::ZeroVector;
+            Slot.ZOrder = 11;
+            const bool bAdded = ViewportSubsystem != nullptr &&
+                                ViewportSubsystem->AddWidget(NotificationFeed, Slot);
+            UE_LOG(LogTemp, Display, TEXT("RA4 HUD: notification feed viewport add=%d"), bAdded ? 1 : 0);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("RA4 HUD: failed to create the notification feed"));
+        }
+
         HoverTooltip = CreateWidget<URA4HoverTooltipWidget>(this, URA4HoverTooltipWidget::StaticClass());
         if (HoverTooltip != nullptr)
         {
@@ -128,7 +152,15 @@ void ARA4PlayerController::BeginPlay()
     InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
     InputMode.SetHideCursorDuringCapture(false);
     SetInputMode(InputMode);
-    
+
+    if (IsLocalController() && FParse::Param(FCommandLine::Get(), TEXT("RA4CaptureUI")))
+    {
+        // Long enough for the match to spawn its starting base and the HUD to fill
+        // with real data; the delay mirrors the showcase capture flow.
+        GetWorldTimerManager().SetTimer(
+            HudCaptureTimer, this, &ARA4PlayerController::CaptureHudForQA, 8.0f, false);
+    }
+
     BindMatchResultEvents();
 
     // Only in an actual match. The menu world has no simulation subsystem, and
@@ -469,7 +501,6 @@ void ARA4PlayerController::SyncSidebarReservedWidth()
 void ARA4PlayerController::PlayerTick(float DeltaTime)
 {
     Super::PlayerTick(DeltaTime);
-
 
     if (!bMatchResultEventsBound)
     {
@@ -2022,14 +2053,13 @@ void ARA4PlayerController::ToggleDirectControl()
     }
 }
 
-void ARA4PlayerController::EnterDirectControl(int64 EntityIdValue)
+void ARA4PlayerController::EnterDirectControl(const EntityId TargetId)
 {
     if (URA4DirectControlSubsystem* Dc = GetDirectControlSubsystem())
     {
-        const uint32_t Index = static_cast<uint32_t>(EntityIdValue);
-        RA4::EntityId Vehicle{Index, 0u};
-        Dc->RequestEnter(this, Vehicle);
+        Dc->RequestEnter(this, TargetId);
     }
+    UE_LOG(LogTemp, Display, TEXT("RA4 First Person Direct Control activated for entity %u"), TargetId.Index);
 }
 
 void ARA4PlayerController::ExitDirectControl()
