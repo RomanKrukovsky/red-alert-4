@@ -751,19 +751,31 @@ void ARA4PlayerController::HandleRetryRequested()
 
 void ARA4PlayerController::HandleExitRequested()
 {
-    static const TCHAR* MainMenuMap = TEXT("/Engine/Maps/Entry");
-    UE_LOG(LogTemp, Display, TEXT("RA4 HUD: leaving match for %s"), MainMenuMap);
-    UGameplayStatics::OpenLevel(
-        this,
-        FName(MainMenuMap),
-        true,
-        TEXT("game=/Script/RedAlert4.RA4UIShowcaseGameMode"));
+    static const FString MainMenuMap = TEXT("/Game/Maps/RA4_MainMenu");
+    UE_LOG(LogTemp, Display, TEXT("RA4 HUD: leaving match for %s"), *MainMenuMap);
+    if (FPackageName::DoesPackageExist(MainMenuMap))
+    {
+        UGameplayStatics::OpenLevel(
+            this,
+            FName(*MainMenuMap),
+            true,
+            TEXT("game=/Script/RedAlert4.RA4UIShowcaseGameMode"));
+    }
+    else
+    {
+        UGameplayStatics::OpenLevel(
+            this,
+            TEXT("/Game/Maps/Showcase_UI"),
+            true,
+            TEXT("game=/Script/RedAlert4.RA4UIShowcaseGameMode"));
+    }
 }
 
 bool ARA4PlayerController::HasMainMenuMap() const
 {
-    static const FString MainMenuMap = TEXT("/Engine/Maps/Entry");
-    return FPackageName::DoesPackageExist(MainMenuMap);
+    static const FString MainMenuMap = TEXT("/Game/Maps/RA4_MainMenu");
+    static const FString FallbackMap = TEXT("/Game/Maps/Showcase_UI");
+    return FPackageName::DoesPackageExist(MainMenuMap) || FPackageName::DoesPackageExist(FallbackMap);
 }
 
 void ARA4PlayerController::UpdateCameraInput(float DeltaTime)
@@ -1840,7 +1852,23 @@ void ARA4PlayerController::HandlePauseMenuSettings()
 void ARA4PlayerController::HandlePauseMenuQuitToMenu()
 {
     UGameplayStatics::SetGamePaused(this, false);
-    UGameplayStatics::OpenLevel(this, TEXT("Entry"));
+    static const FString MainMenuMap = TEXT("/Game/Maps/RA4_MainMenu");
+    if (FPackageName::DoesPackageExist(MainMenuMap))
+    {
+        UGameplayStatics::OpenLevel(
+            this,
+            FName(*MainMenuMap),
+            true,
+            TEXT("game=/Script/RedAlert4.RA4UIShowcaseGameMode"));
+    }
+    else
+    {
+        UGameplayStatics::OpenLevel(
+            this,
+            TEXT("/Game/Maps/Showcase_UI"),
+            true,
+            TEXT("game=/Script/RedAlert4.RA4UIShowcaseGameMode"));
+    }
 }
 
 void ARA4PlayerController::HandlePauseMenuQuitToDesktop()
