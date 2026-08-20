@@ -4,6 +4,7 @@
 
 #include "RA4UIInputRouter.h"
 #include "RA4UIRouterSubsystem.h"
+#include "RA4UIScreenContract.h"
 
 void URA4UINavigationService::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -92,39 +93,7 @@ void URA4UINavigationService::ApplyInputModeForScreen(ERA4UIScreenId Screen)
         return;
     }
 
-    ERA4UIInputMode TargetInputMode = ERA4UIInputMode::UIOnly;
-
-    switch (Screen)
-    {
-    case ERA4UIScreenId::SovietHud:
-    case ERA4UIScreenId::AlliesHud:
-    case ERA4UIScreenId::EasternHud:
-    case ERA4UIScreenId::ChronoHud:
-        TargetInputMode = ERA4UIInputMode::GameAndUI;
-        break;
-
-    case ERA4UIScreenId::Splash:
-    case ERA4UIScreenId::MainMenu:
-    case ERA4UIScreenId::CampaignSelect:
-    case ERA4UIScreenId::SovietCampaign:
-    case ERA4UIScreenId::AlliesCampaign:
-    case ERA4UIScreenId::EasternCampaign:
-    case ERA4UIScreenId::ChronoCampaign:
-    case ERA4UIScreenId::MissionMap:
-    case ERA4UIScreenId::Briefing:
-    case ERA4UIScreenId::VideoComms:
-    case ERA4UIScreenId::Loading:
-    case ERA4UIScreenId::Pause:
-    case ERA4UIScreenId::Victory:
-    case ERA4UIScreenId::MultiplayerLobby:
-    case ERA4UIScreenId::Encyclopedia:
-    case ERA4UIScreenId::TechTree:
-    case ERA4UIScreenId::Mods:
-    case ERA4UIScreenId::Settings:
-    default:
-        TargetInputMode = ERA4UIInputMode::UIOnly;
-        break;
-    }
+    const ERA4UIInputMode TargetInputMode = ResolveScreenContract(Screen).InputMode;
 
     InputRouter->SetInputMode(TargetInputMode);
     OnNavigationStateChanged.Broadcast(Screen, TargetInputMode);
