@@ -234,6 +234,12 @@ private:
     // Frame of the last landscape lookup, so a failed search is retried next frame
     // instead of latching for the rest of the match.
     uint64 LastLandscapeSearchFrame = 0;
+
+    // Automatic screenshot timer, driven by ra4.AutoShot. See the comment on the
+    // console variable: a screenshot taken at engine-init time photographs the
+    // loading screen, not the game.
+    float AutoShotElapsed = 0.0f;
+    bool bAutoShotTaken = false;
     // FitGroundPlaneToMap runs once, on the first Tick rather than in Initialize --
     // see the call site for why.
     bool bGroundPlaneFitted = false;

@@ -22,6 +22,7 @@
 #include "RA4UIDataProviderSubsystem.h"
 #include "Engine/World.h"
 #include "Engine/Texture2D.h"
+#include "UnrealClient.h"
 #include "Materials/MaterialInstanceDynamic.h"
 // The fog camera path needs these two by name. They were reaching this file
 // through the unity blob, so it compiled while nothing here had changed and
@@ -411,9 +412,54 @@ void URA4SimWorldSubsystem::Deinitialize()
     Super::Deinitialize();
 }
 
+// Seconds to wait before taking an automatic screenshot, or 0 for never.
+//
+// -ExecCmds="HighResShot" fires the moment the engine finishes initialising,
+// which is around frame 5 -- still on the loading screen. Every screenshot taken
+// that way is a picture of nothing, and a whole afternoon of "still dark, try
+// another value" was spent comparing pictures of nothing to each other. Waiting a
+// few seconds of real time is the difference between looking at the game and
+// looking at the loading screen.
+//
+// Usage: -ExecCmds="ra4.AutoShot 6"
+static TAutoConsoleVariable<float> CVarAutoShot(
+    TEXT("ra4.AutoShot"),
+    0.0f,
+    TEXT("Take a screenshot this many seconds after the match starts. 0 = off.\n")
+    TEXT("Exists because -ExecCmds HighResShot captures the loading screen."),
+    ECVF_Default);
+
 void URA4SimWorldSubsystem::Tick(float DeltaTime)
 {
     if (!SimWorld) return;
+
+    // Command line wins over the console variable. -ExecCmds runs early enough
+    // that setting this variable there did not stick, and a switch that silently
+    // does nothing is exactly the kind of thing that cost an afternoon here.
+    float AutoShotDelay = CVarAutoShot.GetValueOnGameThread();
+    if (AutoShotDelay <= 0.0f)
+    {
+        float FromCmdLine = 0.0f;
+        if (FParse::Value(FCommandLine::Get(), TEXT("ra4shot="), FromCmdLine))
+        {
+            AutoShotDelay = FromCmdLine;
+        }
+    }
+    if (AutoShotDelay > 0.0f && !bAutoShotTaken)
+    {
+        AutoShotElapsed += DeltaTime;
+        if (AutoShotElapsed >= AutoShotDelay)
+        {
+            bAutoShotTaken = true;
+            // FScreenshotRequest rather than an Exec of HighResShot: the console
+            // command returned without error and wrote no file, which is the same
+            // class of silent no-op as everything else in this feature's history.
+            FScreenshotRequest::RequestScreenshot(false);
+            UE_LOG(LogTemp, Display,
+                   TEXT("RA4Shot: screenshot requested %.1fs in, on a frame that has the match on it"),
+                   AutoShotElapsed);
+        }
+    }
 
     if (!bGroundPlaneFitted)
     {
