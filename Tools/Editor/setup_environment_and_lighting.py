@@ -6,8 +6,28 @@ MAP_EXTENT = 12800.0
 MAP_CENTRE = 6400.0
 SEA_LEVEL = 0.0
 
+# Report to a file as well as the log. unreal.log output does not reach the
+# commandlet's captured stdout under -unattended, so for three rounds this script
+# appeared to run and say nothing while in fact not running at all. A check whose
+# result you cannot see is not a check.
+REPORT_PATH = "/tmp/ra4_env_report.txt"
+_lines = []
+
+
 def log(msg):
-    unreal.log(f"[RA4 Env Setup] {msg}")
+    _lines.append(str(msg))
+    try:
+        unreal.log(f"[RA4 Env Setup] {msg}")
+    except Exception:
+        pass
+
+
+def _flush():
+    try:
+        with open(REPORT_PATH, "w") as fh:
+            fh.write("\n".join(_lines) + "\n")
+    except Exception:
+        pass
 
 def safe_set_prop(obj, prop_name, value):
     try:
@@ -60,6 +80,23 @@ def run():
         unreal.Rotator(0.0, 0.0, 0.0)
     )
     sky_atm_actor.set_actor_label("RA4_SkyAtmosphere")
+    sky_atm_comp = sky_atm_actor.get_component_by_class(unreal.SkyAtmosphereComponent)
+    if sky_atm_comp:
+        # Pin where the planet is. This was left at whatever the component
+        # defaulted to, and the arithmetic said it was wrong: at 75,000 lux with
+        # exposure at EV100 14 the ground should be over-bright, and instead the
+        # map rendered black. Sunlight reaching zero is what happens when the
+        # sample point sits below the planet surface -- the atmosphere absorbs the
+        # whole path. Turning the atmosphere off with r.SkyAtmosphere 0 blew the
+        # same frame out to white, which confirms the light was there all along
+        # and the atmosphere was eating it.
+        #
+        # PlanetTopAtAbsoluteWorldOrigin puts the planet surface at Z=0, which is
+        # this project's sea level (SEA_LEVEL above), so the terrain sits on the
+        # planet rather than inside it.
+        safe_set_prop(sky_atm_comp, "transform_mode",
+                      unreal.SkyAtmosphereTransformMode.PLANET_TOP_AT_ABSOLUTE_WORLD_ORIGIN)
+        log("SkyAtmosphere pinned: planet top at world origin (Z=0 sea level)")
     log("Created RA4_SkyAtmosphere")
 
     # 4. SkyLight
@@ -157,39 +194,80 @@ def run():
     # the exposure never moves, so fog stays as dark as the fog decides.
     #
     # EV100 14 is the standard outdoor-daylight stop for this sun intensity.
+    import os
+    EV = float(os.environ.get("RA4_EV", "9.0"))
     try:
         pp = pp_actor.get_editor_property("settings")
-        pp.set_editor_property("auto_exposure_method", unreal.AutoExposureMethod.AEM_MANUAL)
-        pp.set_editor_property("auto_exposure_bias", 14.0)
-        pp.set_editor_property("auto_exposure_min_brightness", 14.0)
-        pp.set_editor_property("auto_exposure_max_brightness", 14.0)
+        # Histogram with min == max, not AEM_MANUAL. Manual mode ignores these two
+        # and reads the camera's shutter/ISO/aperture instead, so setting them
+        # there does nothing. Pinning min to max is what actually freezes the
+        # exposure while still letting the engine compute it in EV100.
+        #
+        # And bias is not the same knob: it is a compensation in stops where
+        # higher means brighter, while min/max are the EV100 the scene is exposed
+        # for, where higher means darker. Setting both to one number -- which is
+        # what the first attempt did -- has them pulling against each other.
+        pp.set_editor_property("auto_exposure_method", unreal.AutoExposureMethod.AEM_HISTOGRAM)
+        pp.set_editor_property("auto_exposure_bias", 0.0)
+        pp.set_editor_property("auto_exposure_min_brightness", EV)
+        pp.set_editor_property("auto_exposure_max_brightness", EV)
         for flag in ("override_auto_exposure_method",
                      "override_auto_exposure_bias",
                      "override_auto_exposure_min_brightness",
                      "override_auto_exposure_max_brightness"):
             pp.set_editor_property(flag, True)
         pp_actor.set_editor_property("settings", pp)
-        log("Pinned exposure: manual, EV100 14, min == max so fog cannot be exposed away")
+        log(f"Pinned exposure: manual, EV100 {EV}, min == max so fog cannot be exposed away")
     except Exception as exc:
         log(f"EXPOSURE NOT SET -- the level will render white: {exc}")
 
     log("Created RA4_PostProcessVolume")
 
-    # 9. Verify Landscape Material
-    mat_ground = unreal.load_asset("/Game/ThirdParty/CityPark/Materials/Ground/MI_Landscape")
+    # 9. Landscape material -- ours first.
+    #
+    # This step used to assign CityPark's MI_Landscape unconditionally, which
+    # undid RA4LayeredTerrainSetup every time it ran. That commandlet builds
+    # M_RA4_TerrainLayered with the four paintable layers (dirt, sand, grass,
+    # rock) and the fog-of-war nodes from ADR-0030; MI_Landscape is a third-party
+    # material with neither. So the ground lost its layers and its fog, and
+    # whichever of the two tools ran last decided what the map looked like.
+    #
+    # CityPark stays only as a fallback for a project state where our own material
+    # has not been generated yet. It is also one of the three undocumented packs in
+    # the licence audit, so depending on it by default is a commercial risk as well
+    # as a visual regression.
+    mat_ground = unreal.load_asset("/Game/RA4/Generated/Terrain/M_RA4_TerrainLayered")
+    source = "project"
+    if mat_ground is None:
+        mat_ground = unreal.load_asset("/Game/ThirdParty/CityPark/Materials/Ground/MI_Landscape")
+        source = "CityPark fallback -- run RA4LayeredTerrainSetup to get the real one"
     if mat_ground is None:
         mat_ground = unreal.load_asset("/Game/ThirdParty/CityPark/Materials/Ground/MI_Ground01")
+        source = "CityPark fallback -- run RA4LayeredTerrainSetup to get the real one"
 
     for actor in actor_subsystem.get_all_level_actors():
         if isinstance(actor, unreal.LandscapeProxy):
             if mat_ground:
                 actor.set_editor_property("landscape_material", mat_ground)
-                log(f"Verified landscape material: {mat_ground.get_path_name()}")
+                log(f"Landscape material set to {mat_ground.get_path_name()} ({source})")
+            else:
+                log("NO LANDSCAPE MATERIAL FOUND -- the ground will render untextured")
             break
 
     # Save level
     level_editor.save_current_level()
     log("Environment and lighting setup complete and level saved!")
 
-if __name__ == "__main__":
+# Called unconditionally, and that matters: UnrealEditor-Cmd -run=pythonscript
+# does not execute the file as "__main__", so the usual guard meant run() was
+# never called. The commandlet still reported "Python script executed
+# successfully" and exited 0, so every change this file makes -- exposure, the
+# sky atmosphere transform, the landscape material -- silently did nothing while
+# looking like it had worked. Three rounds of "still dark" came from exactly that.
+import traceback
+
+try:
     run()
+except Exception:
+    log("EXCEPTION:\n" + traceback.format_exc())
+_flush()

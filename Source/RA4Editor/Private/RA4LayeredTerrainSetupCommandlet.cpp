@@ -511,7 +511,14 @@ int32 URA4LayeredTerrainSetupCommandlet::Main(const FString& Params)
     UMaterialExpressionConstant* FogFloor =
         Cast<UMaterialExpressionConstant>(UMaterialEditingLibrary::CreateMaterialExpression(
             Material, UMaterialExpressionConstant::StaticClass(), -1100, 1400));
-    FogFloor->R = 0.08f;
+    // Unexplored ground brightness. 0.08 was chosen for a single application of
+    // fog, but the ground gets fogged twice -- once here and again by the
+    // post-process pass that exists to cover props and buildings -- so the two
+    // multiplied out to 0.0064 and the map rendered as a black rectangle with a
+    // lit border. Raising both to 0.35 lands the product near 0.12: unexplored
+    // ground stays unmistakably darker than seen ground, which is what ADR-0030
+    // requires, without going to pure black.
+    FogFloor->R = 0.35f;
 
     UMaterialExpressionLinearInterpolate* FogBrightness =
         Cast<UMaterialExpressionLinearInterpolate>(UMaterialEditingLibrary::CreateMaterialExpression(
@@ -755,7 +762,9 @@ int32 URA4LayeredTerrainSetupCommandlet::Main(const FString& Params)
                 PPFogSample->Texture = CreateOrLoadFogDefaultTexture();
                 // Same floor as the terrain: if the two differed, the boundary
                 // would be visible as a step between ground and props.
-                PPFloor->R = 0.08f;
+                // Must match FogFloor above; see the note there about the two
+                // passes multiplying.
+                PPFloor->R = 0.35f;
                 PPFull->R = 1.0f;
 
                 PPFogHeight->ParameterName = TEXT("RA4FogWorldHeight");
