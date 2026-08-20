@@ -67,16 +67,38 @@ def run():
         safe_set_prop(sun_comp, "mobility", unreal.ComponentMobility.MOVABLE)
         safe_set_prop(sun_comp, "intensity", 75000.0)
         safe_set_prop(sun_comp, "light_color", unreal.Color(255, 248, 235, 255))
-        safe_set_prop(sun_comp, "atmosphere_sun_light", True)
-        safe_set_prop(sun_comp, "atmosphere_sun_light_index", 0)
+        # Sun detached from the atmosphere, deliberately.
+        #
+        # With atmosphere_sun_light on, the SkyAtmosphere modulates this light by
+        # its computed transmittance -- and measured here, that transmittance was
+        # effectively zero: the lit pass contributed nothing and the map rendered
+        # black, while r.SkyAtmosphere 0 blew the identical frame out to white.
+        # Both planet transform modes were tried and neither changed it.
+        #
+        # Off, the directional light delivers its 75,000 lux straight to the
+        # scene. The SkyAtmosphere still draws the sky; it just no longer stands
+        # between the sun and the ground.
+        safe_set_prop(sun_comp, "atmosphere_sun_light", False)
         safe_set_prop(sun_comp, "cast_shadows", True)
         safe_set_prop(sun_comp, "dynamic_shadow_distance_movable_light", 25000.0)
     log("Created RA4_Sun (Directional Light)")
 
     # 3. Sky Atmosphere
+    # Planet surface placed BELOW the terrain, not at it.
+    #
+    # Anchoring the planet top at Z=0 puts it exactly at this map's sea level, so
+    # every point of ground at or under the waterline -- which on an archipelago
+    # is most of it -- sits inside the planet, and the atmosphere absorbs the
+    # entire light path to it. That is the black ground with lit buildings: the
+    # buildings stand at Z=76..511 and catch the sun, the ground does not.
+    #
+    # Measured on the way here: r.SkyAtmosphere 0 blows the same frame out to
+    # white, so the sun was always delivering its 75,000 lux and the atmosphere
+    # was eating it.
+    ATMOSPHERE_FLOOR = -2000.0
     sky_atm_actor = actor_subsystem.spawn_actor_from_class(
         unreal.SkyAtmosphere,
-        unreal.Vector(MAP_CENTRE, MAP_CENTRE, 0.0),
+        unreal.Vector(MAP_CENTRE, MAP_CENTRE, ATMOSPHERE_FLOOR),
         unreal.Rotator(0.0, 0.0, 0.0)
     )
     sky_atm_actor.set_actor_label("RA4_SkyAtmosphere")
@@ -95,8 +117,8 @@ def run():
         # this project's sea level (SEA_LEVEL above), so the terrain sits on the
         # planet rather than inside it.
         safe_set_prop(sky_atm_comp, "transform_mode",
-                      unreal.SkyAtmosphereTransformMode.PLANET_TOP_AT_ABSOLUTE_WORLD_ORIGIN)
-        log("SkyAtmosphere pinned: planet top at world origin (Z=0 sea level)")
+                      unreal.SkyAtmosphereTransformMode.PLANET_TOP_AT_COMPONENT_TRANSFORM)
+        log("SkyAtmosphere: planet top at Z=%.0f, below the terrain" % ATMOSPHERE_FLOOR)
     log("Created RA4_SkyAtmosphere")
 
     # 4. SkyLight
@@ -148,7 +170,21 @@ def run():
             sm_comp.set_material(0, sky_mat)
         sky_sphere.set_actor_scale3d(unreal.Vector(4000.0, 4000.0, 4000.0))
         sky_sphere.set_mobility(unreal.ComponentMobility.STATIC)
-        log("Created RA4_SkySphere Dome")
+        # A sky dome must not cast shadows or take part in lighting. This one is a
+        # sphere scaled 4000x centred on the map, so the entire playable area sits
+        # inside it: with shadow casting left on, it puts the whole map in
+        # permanent eclipse. That is the black interior with a correctly lit
+        # border -- the border is the dome and the ocean plane seen from outside
+        # the shadow, the interior is everything underneath it.
+        #
+        # Rendering with ShowFlag.Lighting 0 showed the landscape bright green,
+        # which is what ruled the fog out: unlit draws BaseColor, and BaseColor
+        # already has the fog multiplied into it.
+        safe_set_prop(sm_comp, "cast_shadow", False)
+        safe_set_prop(sm_comp, "b_cast_dynamic_shadow", False)
+        safe_set_prop(sm_comp, "b_cast_static_shadow", False)
+        safe_set_prop(sm_comp, "b_affect_distance_field_lighting", False)
+        log("Created RA4_SkySphere Dome (shadow casting off)")
 
     # 7. Horizon Ocean Plane (extends 2000m x 2000m to the horizon)
     plane_mesh = unreal.load_asset("/Engine/BasicShapes/Plane.Plane")
@@ -195,7 +231,7 @@ def run():
     #
     # EV100 14 is the standard outdoor-daylight stop for this sun intensity.
     import os
-    EV = float(os.environ.get("RA4_EV", "9.0"))
+    EV = float(os.environ.get("RA4_EV", "14.0"))
     try:
         pp = pp_actor.get_editor_property("settings")
         # Histogram with min == max, not AEM_MANUAL. Manual mode ignores these two

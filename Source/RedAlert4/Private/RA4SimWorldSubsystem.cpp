@@ -941,15 +941,33 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
 
 float URA4SimWorldSubsystem::SampleGroundHeight(double WorldX, double WorldY)
 {
-    if (!bLandscapeSearched)
+    // Keep looking until the landscape is actually found, rather than looking once
+    // and remembering the failure forever.
+    //
+    // This ran on the first call and latched. The first call happens while the
+    // level is still streaming in, so the landscape usually is not there yet --
+    // and after that CachedLandscape stayed null for the rest of the match. Every
+    // unit then took its height from the mathematical fallback below, which
+    // describes RA4LandscapeCommandlet's rolling hills and has nothing to do with
+    // the archipelago actually in this map. That is why units sit above the
+    // ground instead of on it.
+    //
+    // Retried at most once per frame: the iterator walks every actor in the level
+    // and this is called per entity, so an unthrottled retry would be a per-frame
+    // scan per unit.
+    if (CachedLandscape.Get() == nullptr && LastLandscapeSearchFrame != GFrameCounter)
     {
-        bLandscapeSearched = true;
+        LastLandscapeSearchFrame = GFrameCounter;
         if (UWorld* World = GetWorld())
         {
             TActorIterator<ALandscapeProxy> It(World);
             if (It)
             {
                 CachedLandscape = *It;
+                UE_LOG(LogTemp, Display,
+                       TEXT("RA4Ground: landscape %s found on frame %llu; unit heights now come "
+                            "from the terrain instead of the fallback formula"),
+                       *(*It)->GetName(), (unsigned long long)GFrameCounter);
             }
         }
     }
@@ -1176,8 +1194,51 @@ void URA4SimWorldSubsystem::SetHighContrastFog(bool bEnabled)
     }
 }
 
+// The camera fog pass, behind a switch.
+//
+// This material is a blendable on the camera at weight 1, and a post-process
+// material runs after tonemapping -- so it multiplies the finished image. A
+// multiply toward black stays black at any exposure, which is why the map
+// rendered identically at EV100 7 and EV100 13 while every exposure value in
+// between was being tried on the layer underneath it.
+//
+// Default on, because ADR-0030 wants props, water and buildings fogged along with
+// the ground. Off is how you find out whether this pass is what you are looking
+// at: ra4.Fog.PostProcess 0.
+static TAutoConsoleVariable<int32> CVarFogPostProcess(
+    TEXT("ra4.Fog.PostProcess"),
+    1,
+    TEXT("Install the fog-of-war post-process material on the local camera.\n")
+    TEXT("0 = off (ground fog from the landscape material still applies)\n")
+    TEXT("1 = on (default)"),
+    ECVF_Default);
+
 void URA4SimWorldSubsystem::PublishFogParametersToCamera()
 {
+    if (CVarFogPostProcess.GetValueOnGameThread() == 0)
+    {
+        // Take the material back off if it was installed before the switch was
+        // flipped, otherwise "off" only stops future updates and the last frame's
+        // fog stays painted on the camera forever.
+        if (CameraFogMaterial != nullptr)
+        {
+            if (UWorld* W = GetWorld())
+            {
+                for (TActorIterator<ARA4CameraPawn> It(W); It; ++It)
+                {
+                    if (UCameraComponent* Cam = (*It)->FindComponentByClass<UCameraComponent>())
+                    {
+                        Cam->PostProcessSettings.WeightedBlendables.Array.Empty();
+                        Cam->PostProcessBlendWeight = 0.0f;
+                    }
+                }
+            }
+            CameraFogMaterial = nullptr;
+            bCameraFogBound = false;
+        }
+        return;
+    }
+
     if (FogVisibilityTexture == nullptr)
     {
         return;

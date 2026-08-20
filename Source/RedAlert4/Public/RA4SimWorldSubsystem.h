@@ -231,7 +231,9 @@ private:
     // Cached rather than re-found every actor every frame; a level either has one
     // landscape or none; there is no reason to search for it 20 times a second.
     TWeakObjectPtr<class ALandscapeProxy> CachedLandscape;
-    bool bLandscapeSearched = false;
+    // Frame of the last landscape lookup, so a failed search is retried next frame
+    // instead of latching for the rest of the match.
+    uint64 LastLandscapeSearchFrame = 0;
     // FitGroundPlaneToMap runs once, on the first Tick rather than in Initialize --
     // see the call site for why.
     bool bGroundPlaneFitted = false;
