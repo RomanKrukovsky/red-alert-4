@@ -118,13 +118,6 @@ class RA4UI_API URA4ChronoHUDWidget : public URA4HUDWidget
     GENERATED_BODY()
 };
 
-/** Container for the minimap rendering. */
-UCLASS(Abstract)
-class RA4UI_API URA4MinimapWidget : public URA4ActivatableWidget
-{
-    GENERATED_BODY()
-};
-
 /** Production queue container. */
 UCLASS(Abstract)
 class RA4UI_API URA4ProductionQueueWidget : public URA4ActivatableWidget

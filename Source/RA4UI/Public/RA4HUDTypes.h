@@ -55,6 +55,66 @@ enum class ERA4RadarMarkerKind : uint8
     Resource,
 };
 
+UENUM(BlueprintType)
+enum class ERA4MarkerTeam : uint8
+{
+    Friendly,
+    Allied,
+    Neutral,
+    Enemy,
+};
+
+UENUM(BlueprintType)
+enum class ERA4MarkerIntel : uint8
+{
+    Hidden,
+    Remembered,
+    Visible,
+};
+
+UENUM(BlueprintType)
+enum class ERA4MarkerGlyph : uint8
+{
+    Hidden,
+    Friendly,
+    FriendlySelected,
+    Allied,
+    Neutral,
+    Enemy,
+};
+
+UENUM(BlueprintType)
+enum class ERA4HealthBand : uint8
+{
+    Critical,
+    Damaged,
+    Healthy,
+};
+
+USTRUCT(BlueprintType)
+struct FRA4WorldMarkerView
+{
+    GENERATED_BODY()
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|World Markers")
+    FVector2D ScreenPosition = FVector2D::ZeroVector;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|World Markers")
+    FVector2D ScreenSize = FVector2D(48.0f, 8.0f);
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|World Markers")
+    ERA4MarkerTeam Team = ERA4MarkerTeam::Neutral;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|World Markers")
+    ERA4MarkerIntel Intel = ERA4MarkerIntel::Visible;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|World Markers")
+    float HealthRatio = 1.0f;
+
+    UPROPERTY(BlueprintReadOnly, Category = "RA4|World Markers")
+    bool bSelected = false;
+};
+
 USTRUCT(BlueprintType)
 struct FRA4RadarMarker
 {

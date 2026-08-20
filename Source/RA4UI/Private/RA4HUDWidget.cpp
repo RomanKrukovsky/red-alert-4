@@ -22,6 +22,7 @@
 #include "Misc/Parse.h"
 #include "RA4AngularPanelWidget.h"
 #include "RA4HUDViewModel.h"
+#include "RA4MinimapWidget.h"
 #include "RA4UIDataProviderSubsystem.h"
 
 #define LOCTEXT_NAMESPACE "RA4HUDWidget"
@@ -179,6 +180,28 @@ FRA4HUDSnapshotView MakeShowcaseSnapshot()
     Snapshot.Alerts.Add(Alert);
     return Snapshot;
 }
+
+TArray<FRA4RadarMarker> MakeShowcaseRadarMarkers()
+{
+    TArray<FRA4RadarMarker> Markers;
+    int32 MarkerCount = 74;
+    FParse::Value(FCommandLine::Get(), TEXT("RA4MarkerCount="), MarkerCount);
+    MarkerCount = FMath::Clamp(MarkerCount, 0, 5000);
+    for (int32 Index = 0; Index < MarkerCount; ++Index)
+    {
+        FRA4RadarMarker Marker;
+        Marker.WorldPosition = FVector2D(
+            10.0f + float((Index * 23) % 82),
+            8.0f + float((Index * 37) % 84));
+        Marker.Owner = Index < 46 ? 0 : 1;
+        Marker.Kind = Index % 9 == 0
+            ? ERA4RadarMarkerKind::Building
+            : ERA4RadarMarkerKind::Unit;
+        Marker.bSelected = Index >= 12 && Index <= 18;
+        Markers.Add(Marker);
+    }
+    return Markers;
+}
 } // namespace
 
 URA4HUDWidget::URA4HUDWidget(const FObjectInitializer& ObjectInitializer)
@@ -245,26 +268,10 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
         WidgetTree, ResourceText, TEXT("ResourceBarPanel")),
         FVector2D(1110.0f, 12.0f), FVector2D(790.0f, 55.0f), 10);
 
-    UOverlay* Minimap = WidgetTree->ConstructWidget<UOverlay>(
-        UOverlay::StaticClass(), TEXT("MinimapPlaceholder"));
-    UImage* MinimapImage = WidgetTree->ConstructWidget<UImage>(
-        UImage::StaticClass(), TEXT("MinimapImage"));
-    if (UTexture2D* Texture = LoadObject<UTexture2D>(
-        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_USSR_CommandCenter.T_RA4_USSR_CommandCenter")))
-    {
-        MinimapImage->SetBrushFromTexture(Texture, false);
-    }
-    MinimapImage->SetColorAndOpacity(FLinearColor(0.36f, 0.38f, 0.40f, 1.0f));
-    UOverlaySlot* MinimapImageSlot = Minimap->AddChildToOverlay(MinimapImage);
-    MinimapImageSlot->SetHorizontalAlignment(HAlign_Fill);
-    MinimapImageSlot->SetVerticalAlignment(VAlign_Fill);
-    UTextBlock* RadarLabel = MakeHUDText(
-        WidgetTree, LOCTEXT("RadarOnline", "РАДАР: СЕТЬ АКТИВНА"),
-        13, HUDGreen, TEXT("RadarStatus"), true);
-    UOverlaySlot* RadarSlot = Minimap->AddChildToOverlay(RadarLabel);
-    RadarSlot->SetHorizontalAlignment(HAlign_Left);
-    RadarSlot->SetVerticalAlignment(VAlign_Bottom);
-    RadarSlot->SetPadding(FMargin(10.0f));
+    URA4MinimapWidget* Minimap = WidgetTree->ConstructWidget<URA4MinimapWidget>(
+        URA4MinimapWidget::StaticClass(), TEXT("TacticalMinimap"));
+    Minimap->SetSnapshot(MakeShowcaseRadarMarkers(), FVector2D(100.0f, 100.0f), 0);
+    Minimap->SetViewportWorldBounds(FVector2D(18.0f, 54.0f), FVector2D(46.0f, 82.0f));
     const FVector2D MinimapPosition(1590.0f, 80.0f);
     const FVector2D MinimapSize(310.0f, 285.0f);
     PlaceHUDWidget(Canvas, MakeHUDPanel(

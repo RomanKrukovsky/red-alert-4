@@ -11,10 +11,13 @@
 #include "RA4MainMenuViewModel.h"
 #include "RA4LobbyScreenWidget.h"
 #include "RA4LobbyViewModel.h"
+#include "RA4MinimapWidget.h"
 #include "RA4MissionFlowWidgets.h"
 #include "RA4ScreenRootWidget.h"
 #include "RA4SplashScreenWidget.h"
 #include "RA4UIScreenContract.h"
+#include "Slate/SRA4Minimap.h"
+#include "Slate/SRA4WorldMarkerLayer.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -413,6 +416,81 @@ bool FRA4HUDShellInputRegionsTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Command grid blocks input"), HUD->IsWorldInputBlockedAtReferencePoint(FVector2D(1510.0f, 960.0f)));
     TestFalse(TEXT("World viewport passes input"), HUD->IsWorldInputBlockedAtReferencePoint(FVector2D(900.0f, 420.0f)));
     TestEqual(TEXT("All HUD regions exist"), HUD->GetInteractiveRegionCount(), 6);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FRA4MinimapGeometryTest,
+    "RA4.UI.HUD.SlateLayers.MinimapGeometryAndClicks",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRA4MinimapGeometryTest::RunTest(const FString& Parameters)
+{
+    const FVector2D MapPoint = SRA4Minimap::WorldToMap(
+        FVector2D(50.0f, 25.0f), FVector2D(100.0f, 50.0f), FVector2D(300.0f, 150.0f));
+    TestTrue(TEXT("World center maps to center"), MapPoint.Equals(FVector2D(150.0f, 75.0f)));
+    const FVector2D WorldPoint = SRA4Minimap::MapToWorld(
+        FVector2D(150.0f, 75.0f), FVector2D(300.0f, 150.0f), FVector2D(100.0f, 50.0f));
+    TestTrue(TEXT("Map click converts back to world"), WorldPoint.Equals(FVector2D(50.0f, 25.0f)));
+    TestTrue(TEXT("Coordinates clamp to map"), SRA4Minimap::WorldToMap(
+        FVector2D(-40.0f, 90.0f), FVector2D(100.0f, 50.0f), FVector2D(300.0f, 150.0f))
+        .Equals(FVector2D(0.0f, 150.0f)));
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FRA4MinimapBatchedMarkersTest,
+    "RA4.UI.HUD.SlateLayers.UsesOneSlateLayerForLargeSnapshots",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRA4MinimapBatchedMarkersTest::RunTest(const FString& Parameters)
+{
+    TArray<FRA4RadarMarker> Markers;
+    Markers.SetNum(1000);
+    for (int32 Index = 0; Index < Markers.Num(); ++Index)
+    {
+        Markers[Index].WorldPosition = FVector2D(Index % 100, Index / 100);
+        Markers[Index].Owner = Index % 4;
+        Markers[Index].Kind = Index % 7 == 0
+            ? ERA4RadarMarkerKind::Building
+            : ERA4RadarMarkerKind::Unit;
+    }
+
+    URA4MinimapWidget* Minimap = NewObject<URA4MinimapWidget>();
+    Minimap->SetSnapshot(Markers, FVector2D(100.0f, 100.0f), 0);
+    TestTrue(TEXT("Minimap initializes"), Minimap->Initialize());
+    Minimap->TakeWidget();
+
+    TestEqual(TEXT("All markers stay in the Slate snapshot"), Minimap->GetMarkerCount(), 1000);
+    TestEqual(TEXT("No marker child widgets are created"), Minimap->GetMarkerWidgetCount(), 0);
+    TestTrue(TEXT("Click conversion uses current map size"), Minimap->ConvertMapClickToWorld(
+        FVector2D(128.0f, 128.0f), FVector2D(256.0f, 256.0f)).Equals(FVector2D(50.0f, 50.0f)));
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FRA4WorldMarkerLayerStateTest,
+    "RA4.UI.HUD.SlateLayers.WorldMarkersResolveTeamAndIntelState",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRA4WorldMarkerLayerStateTest::RunTest(const FString& Parameters)
+{
+    FRA4WorldMarkerView Friendly;
+    Friendly.Team = ERA4MarkerTeam::Friendly;
+    Friendly.Intel = ERA4MarkerIntel::Visible;
+    Friendly.HealthRatio = 0.8f;
+    Friendly.bSelected = true;
+
+    FRA4WorldMarkerView HiddenEnemy;
+    HiddenEnemy.Team = ERA4MarkerTeam::Enemy;
+    HiddenEnemy.Intel = ERA4MarkerIntel::Hidden;
+
+    TestEqual(TEXT("Friendly marker uses friendly glyph"),
+        SRA4WorldMarkerLayer::ResolveGlyph(Friendly), ERA4MarkerGlyph::FriendlySelected);
+    TestEqual(TEXT("Hidden enemy is not painted"),
+        SRA4WorldMarkerLayer::ResolveGlyph(HiddenEnemy), ERA4MarkerGlyph::Hidden);
+    TestEqual(TEXT("Healthy marker is green"),
+        SRA4WorldMarkerLayer::ResolveHealthBand(Friendly.HealthRatio), ERA4HealthBand::Healthy);
     return true;
 }
 
