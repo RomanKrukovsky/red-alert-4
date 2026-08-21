@@ -2,6 +2,8 @@
 
 #include "RA4MainMenuScreenWidget.h"
 
+#include "RA4FactionData.h"
+
 #include "Blueprint/WidgetTree.h"
 #include "Brushes/SlateColorBrush.h"
 #include "Brushes/SlateRoundedBoxBrush.h"
@@ -27,9 +29,11 @@
 
 namespace
 {
-constexpr FLinearColor MenuRed(0.88f, 0.035f, 0.04f, 1.0f);
-constexpr FLinearColor MenuText(0.88f, 0.84f, 0.80f, 1.0f);
-constexpr FLinearColor MutedText(0.56f, 0.53f, 0.50f, 1.0f);
+// The command centre is neutral ground: the frame carries the shared Scarlet
+// horizon line, while bloc colour arrives only with the selected direction.
+const FLinearColor MenuAccent = FRA4FactionDataRegistry::GetHorizonScarletColor();
+constexpr FLinearColor MenuText(0.87f, 0.89f, 0.94f, 1.0f);
+constexpr FLinearColor MutedText(0.55f, 0.58f, 0.64f, 1.0f);
 
 void PlaceMenuWidget(
     UCanvasPanel* Canvas,
@@ -180,35 +184,35 @@ TSharedRef<SWidget> URA4MainMenuScreenWidget::RebuildWidget()
         URA4AngularPanelWidget::StaticClass(), TEXT("MainMenuPanel"));
     MenuPanel->SetPanelRole(ERA4PanelRole::Compact);
     MenuPanel->SetBrush(FSlateRoundedBoxBrush(
-        FLinearColor(0.005f, 0.005f, 0.008f, 0.88f), 0.0f, MenuRed, 1.5f));
+        FLinearColor(0.005f, 0.005f, 0.008f, 0.88f), 0.0f, MenuAccent, 1.5f));
     MenuPanel->SetContent(MenuList);
     PlaceMenuWidget(Canvas, MenuPanel, FVector2D(18.0f, 74.0f), FVector2D(454.0f, 716.0f), 2);
 
     BuildInformationCard(
         Canvas,
-        LOCTEXT("CommanderHeading", "КОМАНДИР  ·  УРОВЕНЬ 25"),
-        LOCTEXT("CommanderBody", "РЕЙТИНГ  45 780 / 75 000\nДОПУСК: ВЕРХОВНЫЙ СОВЕТ БЕЗОПАСНОСТИ"),
+        LOCTEXT("CommanderHeading", "КОМАНДИР  ·  УРОВЕНЬ 24"),
+        LOCTEXT("CommanderBody", "ОПЫТ  34 750 / 48 000 ОП\nДОПУСК: ОПЕРАТИВНАЯ СЕТЬ · УРОВЕНЬ A"),
         FVector2D(28.0f, 878.0f),
         FVector2D(532.0f, 170.0f),
         TEXT("CommanderCard"));
     BuildInformationCard(
         Canvas,
-        LOCTEXT("NewsHeading", "ОПЕРАТИВНЫЕ НОВОСТИ"),
-        LOCTEXT("NewsBody", "Scarlet Horizon: статус боеготовности.\nГлобальные рубежи блоков развёрнуты."),
+        LOCTEXT("NewsHeading", "СВОДКА ФРОНТОВ"),
+        LOCTEXT("NewsBody", "Евразийский пакт · Атлантический альянс\nВосточная коалиция · Тихоокеанский пакт\nНезависимые державы"),
         FVector2D(579.0f, 878.0f),
         FVector2D(496.0f, 170.0f),
         TEXT("NewsCard"));
     BuildInformationCard(
         Canvas,
-        LOCTEXT("OperationsHeading", "СВОДКА ТЕАТРА ДЕЙСТВИЙ"),
-        LOCTEXT("OperationsBody", "Напряжение между блоками нарастает.\nДоктринальные силы приведены в готовность."),
+        LOCTEXT("OperationsHeading", "ТЕКУЩАЯ ОПЕРАЦИЯ"),
+        LOCTEXT("OperationsBody", "Барьер «Тифон»  ·  фаза 2 / 4\nВосстановить контроль над защищённым маршрутом."),
         FVector2D(1086.0f, 878.0f),
         FVector2D(523.0f, 170.0f),
         TEXT("OperationsCard"));
     BuildInformationCard(
         Canvas,
-        LOCTEXT("EmblemHeading", "ЗАЩИЩЁННЫЙ КАНАЛ"),
-        LOCTEXT("EmblemBody", "SCARLET HORIZON  //  КАНАЛ 01"),
+        LOCTEXT("EmblemHeading", "СОСТОЯНИЕ СЕТИ"),
+        LOCTEXT("EmblemBody", "СЕТЬ ПОДКЛЮЧЕНА  //  КАНАЛ 01"),
         FVector2D(1620.0f, 878.0f),
         FVector2D(274.0f, 170.0f),
         TEXT("EmblemCard"));
@@ -237,7 +241,7 @@ TSharedRef<SWidget> URA4MainMenuScreenWidget::RebuildWidget()
         URA4AngularPanelWidget::StaticClass(), TEXT("FooterPanel"));
     FooterPanel->SetPanelRole(ERA4PanelRole::Compact);
     FooterPanel->SetBrush(FSlateRoundedBoxBrush(
-        FLinearColor(0.005f, 0.005f, 0.007f, 0.94f), 0.0f, MenuRed, 1.25f));
+        FLinearColor(0.005f, 0.005f, 0.007f, 0.94f), 0.0f, MenuAccent, 1.25f));
     FooterPanel->SetContent(Footer);
     PlaceMenuWidget(Canvas, FooterPanel, FVector2D(18.0f, 1024.0f), FVector2D(1884.0f, 40.0f), 6);
     return RootWidget;
@@ -332,7 +336,7 @@ void URA4MainMenuScreenWidget::BuildInformationCard(
         WidgetTree,
         Heading,
         17,
-        MenuRed,
+        MenuAccent,
         FName(Name.ToString() + TEXT("_Heading")),
         true))->SetPadding(FMargin(34.0f, 10.0f, 34.0f, 4.0f));
     Content->AddChildToVerticalBox(MakeMenuText(
@@ -346,7 +350,7 @@ void URA4MainMenuScreenWidget::BuildInformationCard(
         URA4AngularPanelWidget::StaticClass(), Name);
     Panel->SetPanelRole(ERA4PanelRole::Compact);
     Panel->SetBrush(FSlateRoundedBoxBrush(
-        FLinearColor(0.006f, 0.006f, 0.009f, 0.92f), 0.0f, MenuRed, 1.25f));
+        FLinearColor(0.006f, 0.006f, 0.009f, 0.92f), 0.0f, MenuAccent, 1.25f));
     Panel->SetContent(Content);
     PlaceMenuWidget(Canvas, Panel, Position, Size, 2);
 }

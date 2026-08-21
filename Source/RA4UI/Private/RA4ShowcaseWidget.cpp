@@ -2,6 +2,7 @@
 
 #include "RA4ShowcaseWidget.h"
 
+#include "RA4FactionData.h"
 #include "RA4MainMenuScreenWidget.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
@@ -29,13 +30,18 @@
 
 namespace
 {
-constexpr FLinearColor PanelBlack(0.005f, 0.008f, 0.013f, 0.58f);
-constexpr FLinearColor PanelDark(0.012f, 0.018f, 0.028f, 0.80f);
-constexpr FLinearColor TextWhite(0.87f, 0.91f, 0.95f, 1.0f);
-constexpr FLinearColor SovietRed(0.90f, 0.07f, 0.08f, 1.0f);
-constexpr FLinearColor AlliesBlue(0.10f, 0.48f, 0.95f, 1.0f);
-constexpr FLinearColor EasternGold(0.92f, 0.64f, 0.13f, 1.0f);
-constexpr FLinearColor ChronoViolet(0.61f, 0.25f, 0.94f, 1.0f);
+const FLinearColor PanelBlack(0.005f, 0.008f, 0.013f, 0.58f);
+const FLinearColor PanelDark(0.012f, 0.018f, 0.028f, 0.80f);
+const FLinearColor TextWhite(0.87f, 0.91f, 0.95f, 1.0f);
+// Bloc accents come from FRA4FactionDataRegistry so the showcase can never drift
+// away from the palette the live selection and HUD screens use.
+const FLinearColor EurasianPlum = FRA4FactionDataRegistry::GetBlocAccentColor(ERA4FactionTheme::EurasianPact);
+const FLinearColor AtlanticCobalt = FRA4FactionDataRegistry::GetBlocAccentColor(ERA4FactionTheme::AtlanticAlliance);
+const FLinearColor EasternJade = FRA4FactionDataRegistry::GetBlocAccentColor(ERA4FactionTheme::EasternCoalition);
+const FLinearColor PacificTurquoise = FRA4FactionDataRegistry::GetBlocAccentColor(ERA4FactionTheme::PacificPact);
+const FLinearColor IndependentAmber = FRA4FactionDataRegistry::GetBlocAccentColor(ERA4FactionTheme::Independent);
+// Scarlet is the shared horizon and alarm accent only, never a bloc colour.
+const FLinearColor ScarletAlert = FRA4FactionDataRegistry::GetHorizonScarletColor();
 
 bool IsHudScreen(const int32 ScreenIndex)
 {
@@ -210,7 +216,7 @@ void URA4ShowcaseWidget::BuildLayout()
 
     UVerticalBox* BrandBlock = WidgetTree->ConstructWidget<UVerticalBox>(
         UVerticalBox::StaticClass(), TEXT("BrandBlock"));
-    TitleText = CreateText(LOCTEXT("Title", "RED ALERT 4"), 36.0f, SovietRed, TEXT("TitleText"));
+    TitleText = CreateText(LOCTEXT("Title", "SCARLET HORIZON"), 36.0f, EurasianPlum, TEXT("TitleText"));
     BrandBlock->AddChildToVerticalBox(TitleText);
     UTextBlock* CommandLink = CreateText(
         LOCTEXT("CommandLink", "ЗАЩИЩЁННАЯ СЕТЬ КОМАНДОВАНИЯ  //  КАНАЛ 04"), 11.0f,
@@ -231,7 +237,7 @@ void URA4ShowcaseWidget::BuildLayout()
 
     UVerticalBox* Rail = WidgetTree->ConstructWidget<UVerticalBox>(
         UVerticalBox::StaticClass(), TEXT("FactionRail"));
-    UTextBlock* RailMark = CreateText(LOCTEXT("RailMark", "RA4"), 28.0f, SovietRed, TEXT("RailMark"));
+    UTextBlock* RailMark = CreateText(LOCTEXT("RailMark", "SH"), 28.0f, EurasianPlum, TEXT("RailMark"));
     RailMark->SetJustification(ETextJustify::Center);
     Rail->AddChildToVerticalBox(RailMark)->SetPadding(FMargin(0.0f, 20.0f));
     UTextBlock* RailCode = CreateText(
@@ -249,7 +255,7 @@ void URA4ShowcaseWidget::BuildLayout()
     ContentColumn->AddChildToVerticalBox(SubtitleText)->SetPadding(FMargin(34.0f, 28.0f, 34.0f, 12.0f));
     UTextBlock* SectionRule = CreateText(
         LOCTEXT("SectionRule", "================================================"), 12.0f,
-        SovietRed, TEXT("SectionRule"));
+        EurasianPlum, TEXT("SectionRule"));
     ContentColumn->AddChildToVerticalBox(SectionRule)->SetPadding(FMargin(34.0f, 0.0f, 34.0f, 20.0f));
     ContentText = CreateText(FText::GetEmpty(), 20.0f, TextWhite, TEXT("ContentText"));
     ContentText->SetLineHeightPercentage(1.12f);
@@ -298,7 +304,7 @@ void URA4ShowcaseWidget::BuildLayout()
             USlider* Slider = WidgetTree->ConstructWidget<USlider>(USlider::StaticClass(), Name);
             Slider->SetValue(Value);
             Slider->SetSliderBarColor(FLinearColor(0.20f, 0.18f, 0.18f, 1.0f));
-            Slider->SetSliderHandleColor(SovietRed);
+            Slider->SetSliderHandleColor(EurasianPlum);
             USizeBox* SliderSize = WidgetTree->ConstructWidget<USizeBox>(
                 USizeBox::StaticClass(), FName(Name.ToString() + TEXT("_Size")));
             SliderSize->SetWidthOverride(420.0f);
@@ -317,7 +323,7 @@ void URA4ShowcaseWidget::BuildLayout()
     ProgressBar = WidgetTree->ConstructWidget<UProgressBar>(
         UProgressBar::StaticClass(), TEXT("ScreenProgress"));
     ProgressBar->SetPercent(0.72f);
-    ProgressBar->SetFillColorAndOpacity(SovietRed);
+    ProgressBar->SetFillColorAndOpacity(EurasianPlum);
     ContentColumn->AddChildToVerticalBox(ProgressBar)->SetPadding(FMargin(34.0f, 12.0f, 34.0f, 28.0f));
     AccentPanel = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("AccentPanel"));
     AccentPanel->SetBrushColor(FLinearColor(0.10f, 0.004f, 0.006f, 0.90f));
@@ -344,7 +350,7 @@ void URA4ShowcaseWidget::BuildLayout()
         LOCTEXT("StatusHeader", "OPERATIVNYE DANNYE"), 16.0f, TextWhite, TEXT("StatusHeader"));
     StatusColumn->AddChildToVerticalBox(StatusHeader)->SetPadding(FMargin(24.0f, 24.0f, 24.0f, 12.0f));
     UTextBlock* StatusRule = CreateText(
-        LOCTEXT("StatusRule", "================"), 11.0f, SovietRed, TEXT("StatusRule"));
+        LOCTEXT("StatusRule", "================"), 11.0f, EurasianPlum, TEXT("StatusRule"));
     StatusColumn->AddChildToVerticalBox(StatusRule)->SetPadding(FMargin(24.0f, 0.0f, 24.0f, 18.0f));
     StatusText = CreateText(FText::GetEmpty(), 17.0f, TextWhite, TEXT("StatusText"));
     StatusText->SetLineHeightPercentage(1.15f);
@@ -402,7 +408,7 @@ void URA4ShowcaseWidget::BuildHudLayout()
     ResourceStrip->SetBrushColor(FLinearColor(0.005f, 0.008f, 0.013f, 0.86f));
     UHorizontalBox* ResourceRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("ResourceRow"));
     ResourceStrip->SetContent(ResourceRow);
-    TitleText = CreateText(LOCTEXT("HudTitle", "СССР // ОПЕРАЦИЯ"), 25.0f, SovietRed, TEXT("HudTitleText"));
+    TitleText = CreateText(LOCTEXT("HudTitle", "ЕВРАЗИЙСКИЙ ПАКТ // ОПЕРАЦИЯ"), 25.0f, EurasianPlum, TEXT("HudTitleText"));
     ResourceRow->AddChildToHorizontalBox(TitleText)->SetPadding(FMargin(18.0f, 11.0f));
     UTextBlock* Credits = CreateText(LOCTEXT("HudCredits", "KREDITY  12 450"), 18.0f, TextWhite, TEXT("HudCredits"));
     ResourceRow->AddChildToHorizontalBox(Credits)->SetPadding(FMargin(28.0f, 14.0f));
@@ -417,7 +423,7 @@ void URA4ShowcaseWidget::BuildHudLayout()
     UButton* BackButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("HudBackButton"));
     FButtonStyle BackStyle;
     BackStyle.SetNormal(FSlateColorBrush(FLinearColor(0.12f, 0.02f, 0.03f, 0.90f)));
-    BackStyle.SetHovered(FSlateColorBrush(SovietRed));
+    BackStyle.SetHovered(FSlateColorBrush(EurasianPlum));
     BackStyle.SetPressed(FSlateColorBrush(FLinearColor(0.50f, 0.02f, 0.03f, 1.0f)));
     BackButton->SetStyle(BackStyle);
     UTextBlock* BackLabel = CreateText(LOCTEXT("HudBack", "◄ В МЕНЮ"), 14.0f, TextWhite, TEXT("HudBackLabel"));
@@ -467,7 +473,7 @@ void URA4ShowcaseWidget::BuildHudLayout()
     ProductionColumn->AddChildToVerticalBox(QueueOne)->SetPadding(FMargin(18.0f, 12.0f));
     ProgressBar = WidgetTree->ConstructWidget<UProgressBar>(UProgressBar::StaticClass(), TEXT("ProductionProgress"));
     ProgressBar->SetPercent(0.72f);
-    ProgressBar->SetFillColorAndOpacity(SovietRed);
+    ProgressBar->SetFillColorAndOpacity(EurasianPlum);
     ProductionColumn->AddChildToVerticalBox(ProgressBar)->SetPadding(FMargin(18.0f, 0.0f, 18.0f, 18.0f));
     UTextBlock* QueueTwo = CreateText(LOCTEXT("QueueTwo", "ПРИЗЫВНИК ×5\nКазармы  ·  очередь 02\n\nМИГ «КУЗНЕЦ»\nАэродром  ·  ожидание"), 16.0f, TextWhite, TEXT("QueueTwo"));
     UVerticalBoxSlot* QueueTwoSlot = ProductionColumn->AddChildToVerticalBox(QueueTwo);
@@ -491,201 +497,201 @@ void URA4ShowcaseWidget::SetScreen(const int32 InScreen)
     ActiveScreen = InScreen;
     UE_LOG(LogTemp, Display, TEXT("RA4 UI showcase selected screen %d."), ActiveScreen);
 
-    FLinearColor Accent = SovietRed;
-    FText Heading = LOCTEXT("MainHeading", "ГЛАВНОЕ КОМАНДОВАНИЕ");
-    FText Body = LOCTEXT("MainBody", "Выберите направление операции. Кампания, сетевой бой и системные параметры доступны из защищённого командного центра.");
-    FText Status = LOCTEXT("MainStatus", "КОМАНДУЮЩИЙ\nГотов к операции\n\nСОСТОЯНИЕ СЕТИ\nСтабильное\n\nТЕАТР ВОЙНЫ\nЕвропа // 2049");
+    FLinearColor Accent = EurasianPlum;
+    FText Heading = LOCTEXT("MainHeading", "ГЛОБАЛЬНЫЙ КОМАНДНЫЙ ЦЕНТР");
+    FText Body = LOCTEXT("MainBody", "Выберите направление операции. Кампания, сетевая игра, схватка, редактор и энциклопедия доступны из защищённой оперативной сети.");
+    FText Status = LOCTEXT("MainStatus", "КОМАНДИР\nУровень 24\n\nСОСТОЯНИЕ СЕТИ\nПодключена\n\nТЕКУЩАЯ ОПЕРАЦИЯ\nБарьер «Тифон» — фаза 2/4");
     float Progress = 1.0f;
 
     switch (ActiveScreen)
     {
     case 1:
-        Accent = EasternGold;
-        Heading = LOCTEXT("CampaignHeading", "ВЫБОР КАМПАНИИ");
-        Body = LOCTEXT("CampaignBody", "СССР — красно-чёрная доктрина подавления. Альянс — сине-стальная мобильность. Восточная коалиция — нефрит и золото. Хронолегион — технологии вне времени.");
-        Status = LOCTEXT("CampaignStatus", "ОПЕРАЦИЯ 01\nПепел столицы\n\nСЛОЖНОСТЬ\nВетеран\n\nВЫБРАНА ФРАКЦИЯ\nСССР");
+        Accent = EurasianPlum;
+        Heading = LOCTEXT("CampaignHeading", "ВЫБОР: БЛОК ИЛИ КАТЕГОРИЯ");
+        Body = LOCTEXT("CampaignBody", "Евразийский пакт — тяжёлая механизация, РЭБ и эшелонированная ПВО.\nАтлантический альянс — авиация, разведка и точные удары.\nВосточная коалиция — массовое производство, ракеты и дроны.\nТихоокеанский пакт — робототехника, ПВО и море.\nНезависимые державы — категория выбора самостоятельных стран, а не союз.");
+        Status = LOCTEXT("CampaignStatus", "ПУТЬ ВЫБОРА\n01 Блок → 02 Страна → 03 Доктрина\n\nВЫБРАНО\nЕвразийский пакт\n\nДАЛЕЕ\nСтрана");
         Progress = 0.18f;
         break;
     case 2:
-        Accent = SovietRed;
-        Heading = LOCTEXT("HudHeading", "ОПЕРАЦИЯ: ПЕПЕЛ СТОЛИЦЫ");
-        Body = LOCTEXT("HudBody", "БОЕВОЙ HUD СССР\n\nКРЕДИТЫ 12 450     ЭНЕРГИЯ 780 / 920\n\nОЧЕРЕДЬ ПРОИЗВОДСТВА\nТанк «Гранит» — 72%\nСтрелок «Рубеж» ×5\n\nЗАДАЧА: удержать плацдарм и уничтожить командный узел противника.");
-        Status = LOCTEXT("HudStatus", "МИНИ-КАРТА\nСектор: M-14\n\nВЫДЕЛЕНО\n3 × Танк «Гранит»\n12 × Стрелок «Рубеж»\n\nТРЕВОГА\nНизкая");
+        Accent = EurasianPlum;
+        Heading = LOCTEXT("HudHeading", "ОПЕРАЦИЯ «ТИХИЙ РЕЛЕЙ»");
+        Body = LOCTEXT("HudBody", "БОЕВОЙ HUD · РОССИЯ · ТЯЖЁЛЫЙ ПРОРЫВ\n\nКРЕДИТЫ 23 450     ЭНЕРГИЯ 17 820     ЛИМИТ 186 / 200\n\nОЧЕРЕДЬ ПРОИЗВОДСТВА\nОБТ-92 «Гранит» — 72%\nМС-12 «Рубеж» ×5\n\nЗАДАЧА: подавить 3 узла связи и провести бронегруппу через перевал.");
+        Status = LOCTEXT("HudStatus", "МИНИ-КАРТА\nГорный коридор\n\nВЫДЕЛЕНО\n3 × ОБТ-92 «Гранит»\n12 × МС-12 «Рубеж»\n\nТРЕВОГА\nНизкая");
         Progress = 0.72f;
         break;
     case 3:
-        Accent = AlliesBlue;
-        Heading = LOCTEXT("LobbyHeading", "СЕТЕВОЕ ЛОББИ");
-        Body = LOCTEXT("LobbyBody", "КАРТА: КРАСНЫЙ ПЕРЕВАЛ\nРЕЖИМ: СТАНДАРТНЫЙ БОЙ\n\nКОМАНДУЮЩИЙ — СССР — ГОТОВ\nАДМИРАЛ ВАРД — АЛЬЯНС — ГОТОВ\nГЕНЕРАЛ ГАО — ВОСТОЧНАЯ КОАЛИЦИЯ — ОЖИДАНИЕ\nХРОНОС-07 — ХРОНОЛЕГИОН — ОЖИДАНИЕ");
-        Status = LOCTEXT("LobbyStatus", "ЧАТ КОМАНДОВАНИЯ\n[20:49] Вард: Готов.\n[20:49] Гао: Проверяю связь.\n\nПИНГ\n34 мс");
+        Accent = AtlanticCobalt;
+        Heading = LOCTEXT("LobbyHeading", "ЛОББИ СЕТЕВОГО МАТЧА");
+        Body = LOCTEXT("LobbyBody", "КАРТА: АРХИПЕЛАГ «ТИФОН»\nРЕЖИМ: СХВАТКА\n\nSOKOLOV_1945 — ЕВРАЗИЙСКИЙ ПАКТ — РОССИЯ — ТЯЖЁЛЫЙ ПРОРЫВ — ГОТОВ\nAllied_Command — АТЛАНТИЧЕСКИЙ АЛЬЯНС — США — СЕТЕВАЯ ВОЙНА — ГОТОВ\nJadeTiger — ВОСТОЧНАЯ КОАЛИЦИЯ — КИТАЙ — ДРОНОВАЯ ВОЙНА — ГОТОВ\nShinKaze — ТИХООКЕАНСКИЙ ПАКТ — ЯПОНИЯ — ОБОРОНА ОСТРОВОВ — ГОТОВ\nDesertSignal — НЕЗАВИСИМЫЕ ДЕРЖАВЫ — ИРАН — РАКЕТНЫЕ ВОЙСКА — ГОТОВ");
+        Status = LOCTEXT("LobbyStatus", "ОБЩИЙ ЧАТ\n[20:49] Allied_Command: Готов.\n[20:49] JadeTiger: Проверяю связь.\n\nПИНГ\n34 мс\n\nГОТОВНОСТЬ\n8 / 8");
         Progress = 0.50f;
         break;
     case 4:
-        Accent = SovietRed;
+        Accent = EurasianPlum;
         Heading = LOCTEXT("SettingsHeading", "НАСТРОЙКИ СИСТЕМЫ");
         Body = LOCTEXT("SettingsBody", "ИЗОБРАЖЕНИЕ\nРазрешение: 1920×1080\nМасштаб интерфейса: автоматически\n\nЗВУК\nМузыка: 80%\nЭффекты: 90%\n\nУПРАВЛЕНИЕ\nEnhanced Input: активно");
-        Status = LOCTEXT("SettingsStatus", "ПРОФИЛЬ\nКомандующий\n\nЛОКАЛИЗАЦИЯ\nРусский\n\nВЕРСИЯ\n0.1.0");
+        Status = LOCTEXT("SettingsStatus", "ПРОФИЛЬ\nКомандир\n\nЛОКАЛИЗАЦИЯ\nРусский\n\nВЕРСИЯ\n0.1.0");
         Progress = 0.86f;
         break;
     case 5:
-        Accent = SovietRed;
-        Heading = LOCTEXT("SplashHeading", "RED ALERT 4");
-        Body = LOCTEXT("SplashBody", "СИСТЕМА КОМАНДОВАНИЯ И СВЯЗИ\n\nНажмите любую клавишу, чтобы войти в защищённую сеть.");
+        Accent = ScarletAlert;
+        Heading = LOCTEXT("SplashHeading", "SCARLET HORIZON");
+        Body = LOCTEXT("SplashBody", "АЛЬТЕРНАТИВНАЯ СОВРЕМЕННОСТЬ\n\nНажмите любую клавишу, чтобы войти в оперативную сеть.");
         Status = LOCTEXT("SplashStatus", "СТАТУС СИСТЕМ\nВсе контуры готовы\n\nСЕАНС\nЗашифрован");
         Progress = 0.08f;
         break;
     case 6:
-        Accent = EasternGold;
-        Heading = LOCTEXT("FactionHeading", "ВЫБОР ФРАКЦИИ");
-        Body = LOCTEXT("FactionBody", "СССР — тяжёлая броня и подавление.\nАЛЬЯНС — мобильность и точные удары.\nВОСТОЧНАЯ КОАЛИЦИЯ — массовое производство.\nХРОНОЛЕГИОН — технологии вне времени.");
-        Status = LOCTEXT("FactionStatus", "ВЫБРАНО\nСССР\n\nДОКТРИНА\nШтурм\n\nТЕХНОЛОГИИ\nУровень 1");
+        Accent = EurasianPlum;
+        Heading = LOCTEXT("FactionHeading", "ЕВРАЗИЙСКИЙ ПАКТ → РОССИЯ");
+        Body = LOCTEXT("FactionBody", "Опора Пакта и ударная сила на континенте. Масштабные бронетанковые объединения, развитые средства РЭБ и эшелонированная ПВО создают непреодолимый щит.\n\nДОКТРИНЫ\nРЭБ и ракетные войска · Тяжёлый прорыв · Арктическая группировка");
+        Status = LOCTEXT("FactionStatus", "ВЫБРАНО\nРоссия\n\nДОКТРИНА\nТяжёлый прорыв\n\nСОЮЗНИКИ ПО БЛОКУ\nБеларусь · Казахстан");
         Progress = 0.25f;
         break;
     case 7:
-        Accent = AlliesBlue;
-        Heading = LOCTEXT("AlliesCampaignHeading", "КАМПАНИЯ АЛЬЯНСА");
-        Body = LOCTEXT("AlliesCampaignBody", "Операция «Северный щит». Сдержите наступление СССР, верните контроль над портами и откройте маршрут для флота.");
-        Status = LOCTEXT("AlliesCampaignStatus", "КОМАНДУЮЩИЙ\nАдмирал Вард\n\nТЕАТР\nСеверная Атлантика\n\nМИССИЯ\n01 / 09");
-        Progress = 0.12f;
+        Accent = AtlanticCobalt;
+        Heading = LOCTEXT("AtlanticCampaignHeading", "США: ДАЛЬНИЙ РУБЕЖ");
+        Body = LOCTEXT("AtlanticCampaignBody", "На дальних подступах к нашим интересам формируется нестабильность. Мы прощупываем силу, поддерживаем союзников и обеспечиваем свободу манёвра в любой точке океана.");
+        Status = LOCTEXT("AtlanticCampaignStatus", "КОМАНДИР\nЛейтенант-коммандер Маркус Рид\n\nТЕАТР\nСеверная Атлантика\n\nМИССИЙ ЗАВЕРШЕНО\n5 / 12");
+        Progress = 0.42f;
         break;
     case 8:
-        Accent = EasternGold;
-        Heading = LOCTEXT("EasternCampaignHeading", "КАМПАНИЯ ВОСТОЧНОЙ КОАЛИЦИИ");
-        Body = LOCTEXT("EasternCampaignBody", "Операция «Золотой рассвет». Захватите энергетические узлы и превратите плацдарм в опорную базу коалиции.");
-        Status = LOCTEXT("EasternCampaignStatus", "КОМАНДУЮЩИЙ\nГенерал Гао\n\nТЕАТР\nТихоокеанский пояс\n\nМИССИЯ\n01 / 08");
-        Progress = 0.16f;
+        Accent = EasternJade;
+        Heading = LOCTEXT("EasternCampaignHeading", "КИТАЙ: НЕФРИТОВАЯ СЕТЬ");
+        Body = LOCTEXT("EasternCampaignBody", "Умные автозаводы, массовая бронетехника и гиперзвуковые ракетные рубежи связаны в единую сеть. Потеря узлов быстро снижает синхронизацию всей группировки.");
+        Status = LOCTEXT("EasternCampaignStatus", "ГЛАВА 5\nРой над дельтой\n\nСЛОЖНОСТЬ\nВетеран\n\nМИССИЙ ЗАВЕРШЕНО\n8 / 12");
+        Progress = 0.63f;
         break;
     case 9:
-        Accent = ChronoViolet;
-        Heading = LOCTEXT("ChronoCampaignHeading", "КАМПАНИЯ ХРОНОЛЕГИОНА");
-        Body = LOCTEXT("ChronoCampaignBody", "Операция «Парадокс». Восстановите временной коридор до того, как враг закрепится в ключевых точках хронолинии.");
-        Status = LOCTEXT("ChronoCampaignStatus", "КООРДИНАТОР\nХронос-07\n\nВРЕМЕННОЙ СЛОЙ\nНестабилен\n\nМИССИЯ\n01 / 07");
-        Progress = 0.09f;
+        Accent = PacificTurquoise;
+        Heading = LOCTEXT("PacificCampaignHeading", "ЯПОНИЯ: ДУГА ШТОРМА");
+        Body = LOCTEXT("PacificCampaignBody", "Островная оборона строится на лазерном перехвате, автономных боевых роботах и скоростной переброске между терминалами побережья.");
+        Status = LOCTEXT("PacificCampaignStatus", "ГЛАВА 3\nПервая волна\n\nСЛОЖНОСТЬ\nНормально\n\nМИССИЙ ЗАВЕРШЕНО\n4 / 12");
+        Progress = 0.37f;
         break;
     case 10:
-        Accent = SovietRed;
-        Heading = LOCTEXT("MissionMapHeading", "КАРТА ОПЕРАЦИЙ: ЕВРОПА");
-        Body = LOCTEXT("MissionMapBody", "МИССИЯ 01 — ПЕПЕЛ СТОЛИЦЫ\nУдержите мост через Рейн.\n\nМИССИЯ 02 — ЖЕЛЕЗНЫЙ КОРИДОР\nПерережьте линию снабжения Альянса.\n\nМИССИЯ 03 — ПОЛЯРНАЯ НОЧЬ\nЗахватите станцию раннего предупреждения.");
-        Status = LOCTEXT("MissionMapStatus", "ВЫБРАННАЯ МИССИЯ\nПепел столицы\n\nСЛОЖНОСТЬ\nВетеран\n\nНАГРАДА\nТесла-танк");
+        Accent = EurasianPlum;
+        Heading = LOCTEXT("MissionMapHeading", "КАРТА ОПЕРАЦИЙ: ЕВРАЗИЙСКИЙ ПАКТ");
+        Body = LOCTEXT("MissionMapBody", "01 — БАЗА «КАРПАТЫ»\nРазвернуть передовой узел снабжения.\n\n04 — ЖЕЛЕЗНАЯ ДУГА\nОбеспечить проход бронеколонны по железнодорожному коридору.\n\n07 — ТИХИЙ РЕЛЕЙ\nПодавить сеть наведения противника в горном коридоре.");
+        Status = LOCTEXT("MissionMapStatus", "ВЫБРАННАЯ ОПЕРАЦИЯ\nТихий релей\n\nСЛОЖНОСТЬ\nВетеран\n\nНАГРАДА\nЭМП-7 «Громобой»");
         Progress = 0.33f;
         break;
     case 11:
-        Accent = SovietRed;
-        Heading = LOCTEXT("BriefingHeading", "БРИФИНГ: ПЕПЕЛ СТОЛИЦЫ");
-        Body = LOCTEXT("BriefingBody", "Войска Альянса удерживают городской командный узел. Разверните базу на восточном берегу, обеспечьте энергоснабжение и уничтожьте узел до прибытия подкрепления.");
-        Status = LOCTEXT("BriefingStatus", "ОСНОВНАЯ ЦЕЛЬ\nУничтожить командный узел\n\nДОПОЛНИТЕЛЬНАЯ\nСохранить мост\n\nВРЕМЯ\n06:30");
+        Accent = EurasianPlum;
+        Heading = LOCTEXT("BriefingHeading", "БРИФИНГ: ТИХИЙ РЕЛЕЙ");
+        Body = LOCTEXT("BriefingBody", "Горный коридор закрывается. Противник развернул сеть наведения на перевале. Подавите узлы связи, проведите бронегруппу до рассвета и сохраните мобильный комплекс РЭБ.");
+        Status = LOCTEXT("BriefingStatus", "ОСНОВНЫЕ ЦЕЛИ\nПодавить 3 узла связи\nПровести бронегруппу через перевал\n\nДОПОЛНИТЕЛЬНАЯ\nСохранить комплекс РЭБ\n\nОЦЕНКА ПРОТИВНИКА\nВысокая");
         Progress = 0.44f;
         break;
     case 12:
-        Accent = AlliesBlue;
-        Heading = LOCTEXT("VideoHeading", "ЗАЩИЩЁННЫЙ ВИДЕОКАНАЛ");
-        Body = LOCTEXT("VideoBody", "АДМИРАЛ ВАРД:\n«Командующий, сканеры фиксируют движение бронеколонн. Не давайте им закрепиться у моста. Воздушный коридор будет открыт на три минуты.»");
-        Status = LOCTEXT("VideoStatus", "КАНАЛ\nВаршава-01\n\nШИФРОВАНИЕ\nАктивно\n\nЗАДЕРЖКА\n18 мс");
+        Accent = AtlanticCobalt;
+        Heading = LOCTEXT("VideoHeading", "ЗАЩИЩЁННЫЙ КАНАЛ СВЯЗИ");
+        Body = LOCTEXT("VideoBody", "МАРКУС РИД, АТЛАНТИЧЕСКИЙ АЛЬЯНС:\n«У нас девять минут до закрытия коридора. Решение нужно сейчас.»\n\nИРИНА ВОЛКОВА, ЕВРАЗИЙСКИЙ ПАКТ:\n«Бронегруппа выйдет на рубеж раньше. Держите воздух.»");
+        Status = LOCTEXT("VideoStatus", "ШИФРОВАНИЕ\nКаскад-4\n\nЗАДЕРЖКА\n42 мс\n\nРИСК ПЕРЕХВАТА\nНизкий");
         Progress = 0.61f;
         break;
     case 13:
-        Accent = SovietRed;
-        Heading = LOCTEXT("LoadingHeading", "ПОДГОТОВКА ОПЕРАЦИИ");
-        Body = LOCTEXT("LoadingBody", "Загрузка театра боевых действий. Синхронизация данных командования, маршрутов снабжения и тактической разведки.");
-        Status = LOCTEXT("LoadingStatus", "КАРТА\nПепел столицы\n\nФРАКЦИЯ\nСССР\n\nСОСТОЯНИЕ\nСинхронизация");
+        Accent = EurasianPlum;
+        Heading = LOCTEXT("LoadingHeading", "ЗАГРУЗКА МИССИИ");
+        Body = LOCTEXT("LoadingBody", "Синхронизация театра боевых действий. Загрузка маршрутов снабжения, боевых групп и защищённых каналов управления.");
+        Status = LOCTEXT("LoadingStatus", "ОПЕРАЦИЯ\nТихий релей\n\nСТРАНА\nРоссия\n\nСОСТОЯНИЕ\nСинхронизация театра");
         Progress = 0.72f;
         break;
     case 14:
-        Accent = AlliesBlue;
-        Heading = LOCTEXT("AlliesHudHeading", "ОПЕРАЦИЯ: СЕВЕРНЫЙ ЩИТ");
-        Body = LOCTEXT("AlliesHudBody", "БОЕВОЙ HUD АЛЬЯНСА\n\nКРЕДИТЫ 10 280     ЭНЕРГИЯ 640 / 760\n\nОЧЕРЕДЬ ПРОИЗВОДСТВА\nСтраж — 54%\nАвиакрыло «Копьё» ×2\n\nЗАДАЧА: удержать гавань и защитить конвой.");
-        Status = LOCTEXT("AlliesHudStatus", "МИНИ-КАРТА\nСектор: N-07\n\nВЫДЕЛЕНО\n2 × Страж\n4 × Ракетчик\n\nФЛОТ\nГотов");
+        Accent = AtlanticCobalt;
+        Heading = LOCTEXT("AtlanticHudHeading", "ОПЕРАЦИЯ: ЛИНИЯ ПРИБОЯ");
+        Body = LOCTEXT("AtlanticHudBody", "БОЕВОЙ HUD · США · ЭКСПЕДИЦИОННЫЕ СИЛЫ\n\nКРЕДИТЫ 23 450     ЭНЕРГИЯ 17 820     ЛИМИТ 186 / 200\n\nОЧЕРЕДЬ ПРОИЗВОДСТВА\nОБТ «Bulwark» — 54%\nM6 «Sentinel» ×4\n\nЗАДАЧА: удержать пролив и защитить экспедиционную группу.");
+        Status = LOCTEXT("AtlanticHudStatus", "МИНИ-КАРТА\nПрибрежный сектор\n\nВЫДЕЛЕНО\nАвианосец «Свобода»\n\nПАЛУБНАЯ АВИАЦИЯ\n78 / 78");
         Progress = 0.54f;
         break;
     case 15:
-        Accent = EasternGold;
-        Heading = LOCTEXT("EasternHudHeading", "ОПЕРАЦИЯ: ЗОЛОТОЙ РАССВЕТ");
-        Body = LOCTEXT("EasternHudBody", "БОЕВОЙ HUD ВОСТОЧНОЙ КОАЛИЦИИ\n\nКРЕДИТЫ 15 600     ЭНЕРГИЯ 850 / 940\n\nОЧЕРЕДЬ ПРОИЗВОДСТВА\nШтурмовой мех — 43%\nДрон «Хуан» ×3\n\nЗАДАЧА: удержать энергетические узлы.");
-        Status = LOCTEXT("EasternHudStatus", "МИНИ-КАРТА\nСектор: P-21\n\nВЫДЕЛЕНО\n1 × Штурмовой мех\n8 × Пехота\n\nРЕЗЕРВ\nГотов");
+        Accent = EasternJade;
+        Heading = LOCTEXT("EasternHudHeading", "ОПЕРАЦИЯ: РОЙ НАД ДЕЛЬТОЙ");
+        Body = LOCTEXT("EasternHudBody", "БОЕВОЙ HUD · КИТАЙ · МАССОВАЯ МЕХАНИЗАЦИЯ\n\nКРЕДИТЫ 23 450     ЭНЕРГИЯ 17 820     ЛИМИТ 186 / 200\n\nОЧЕРЕДЬ ПРОИЗВОДСТВА\nОБТ «Цинлун» — 43%\nБоевой дрон ×3\n\nЗАДАЧА: развернуть производственный контур и выпустить 12 боевых машин.");
+        Status = LOCTEXT("EasternHudStatus", "МИНИ-КАРТА\nПромышленная дельта\n\nВЫДЕЛЕНО\nУмный автозавод\n\nСИНХРОНИЗАЦИЯ\n91%");
         Progress = 0.43f;
         break;
     case 16:
-        Accent = ChronoViolet;
-        Heading = LOCTEXT("ChronoHudHeading", "ОПЕРАЦИЯ: ПАРАДОКС");
-        Body = LOCTEXT("ChronoHudBody", "БОЕВОЙ HUD ХРОНОЛЕГИОНА\n\nКРЕДИТЫ 13 040     ХРОНОЭНЕРГИЯ 72 / 100\n\nОЧЕРЕДЬ ПРОИЗВОДСТВА\nТемпоральный страж — 68%\nРазведчик «Эхо» ×2\n\nЗАДАЧА: стабилизировать временной якорь.");
-        Status = LOCTEXT("ChronoHudStatus", "ХРОНО-КАРТА\nСлой: 3-А\n\nВЫДЕЛЕНО\n2 × Страж\n1 × Якорь\n\nРАЗРЫВ\nСдержан");
+        Accent = PacificTurquoise;
+        Heading = LOCTEXT("PacificHudHeading", "ОПЕРАЦИЯ: ЧИСТЫЙ ГОРИЗОНТ");
+        Body = LOCTEXT("PacificHudBody", "БОЕВОЙ HUD · ЯПОНИЯ · РОБОТИЗИРОВАННЫЕ СИЛЫ\n\nКРЕДИТЫ 23 450     ЭНЕРГИЯ 17 820     ЛИМИТ 184 / 200\n\nОЧЕРЕДЬ ПРОИЗВОДСТВА\nПерехватчик «Сирокко» — 68%\nШагоход «Камакири» ×2\n\nЗАДАЧА: перехватить ударную группу и защитить радарный узел.");
+        Status = LOCTEXT("PacificHudStatus", "МИНИ-КАРТА\nОстровная гряда\n\nВЫДЕЛЕНО\nЭскадрилья «Сирокко» 6 / 6\n\nБОЕКОМПЛЕКТ\n100%");
         Progress = 0.68f;
         break;
     case 17:
-        Accent = SovietRed;
+        Accent = EurasianPlum;
         Heading = LOCTEXT("PauseHeading", "ПАУЗА");
         Body = LOCTEXT("PauseBody", "Операция приостановлена. Продолжите бой, откройте настройки или вернитесь в командный центр.");
-        Status = LOCTEXT("PauseStatus", "ОПЕРАЦИЯ\nПепел столицы\n\nВРЕМЯ БОЯ\n18:42\n\nСОХРАНЕНИЕ\nАвтоматическое");
+        Status = LOCTEXT("PauseStatus", "ОПЕРАЦИЯ\nТихий релей\n\nВРЕМЯ БОЯ\n18:42\n\nСОХРАНЕНИЕ\nАвтоматическое");
         Progress = 0.50f;
         break;
     case 18:
-        Accent = SovietRed;
+        Accent = EurasianPlum;
         Heading = LOCTEXT("VictoryHeading", "ПОБЕДА");
-        Body = LOCTEXT("VictoryBody", "Командный узел противника уничтожен. Мост и плацдарм удержаны. Театр операций открыт для следующей фазы наступления.");
-        Status = LOCTEXT("VictoryStatus", "РЕЗУЛЬТАТ\nПобеда СССР\n\nВРЕМЯ\n24:18\n\nПОТЕРИ\nПриемлемые");
+        Body = LOCTEXT("VictoryBody", "Сеть наведения противника подавлена, бронегруппа прошла перевал. Район переходит под наш контроль.");
+        Status = LOCTEXT("VictoryStatus", "РЕЗУЛЬТАТ\nПобеда · Россия\n\nВРЕМЯ\n24:18\n\nПОТЕРИ\nПриемлемые");
         Progress = 1.0f;
         break;
     case 19:
-        Accent = AlliesBlue;
-        Heading = LOCTEXT("EncyclopediaHeading", "ЭНЦИКЛОПЕДИЯ ВОЙНЫ");
-        Body = LOCTEXT("EncyclopediaBody", "ТЕСЛА-ТАНК\nТяжёлая бронированная единица СССР с цепной электрической пушкой.\n\nСТРАЖ\nУниверсальная боевая машина Альянса с модульной защитой.\n\nТЕМПОРАЛЬНЫЙ СТРАЖ\nПередовая единица Хронолегиона.");
-        Status = LOCTEXT("EncyclopediaStatus", "КАТЕГОРИЯ\nБоевые единицы\n\nЗАПИСЕЙ\n128\n\nФИЛЬТР\nВсе фракции");
+        Accent = AtlanticCobalt;
+        Heading = LOCTEXT("EncyclopediaHeading", "ЭНЦИКЛОПЕДИЯ");
+        Body = LOCTEXT("EncyclopediaBody", "ЭМП-7 «ГРОМОБОЙ»\nМашина РЭБ Евразийского пакта: подавляет наведение и связь противника.\n\nM6 «SENTINEL»\nБазовый стрелок общего атлантического арсенала.\n\nШАГОХОД «КАМАКИРИ»\nАвтономная роботизированная платформа Тихоокеанского пакта.");
+        Status = LOCTEXT("EncyclopediaStatus", "КАТЕГОРИЯ\nБоевые единицы\n\nЗАПИСЕЙ\n128\n\nФИЛЬТР\nВсе страны");
         Progress = 0.40f;
         break;
     case 20:
-        Accent = EasternGold;
+        Accent = EasternJade;
         Heading = LOCTEXT("TechTreeHeading", "ТЕХНОЛОГИЧЕСКОЕ ДЕРЕВО");
-        Body = LOCTEXT("TechTreeBody", "КОМАНДНЫЙ ЦЕНТР → БАРАКИ → ВОЕННЫЙ ЗАВОД\n\nВОЕННЫЙ ЗАВОД → ТЕСЛА-ЛАБОРАТОРИЯ → ТЕСЛА-ТАНК\n\nЭЛЕКТРОСТАНЦИЯ → РАДАР → СПУТНИКОВАЯ СВЯЗЬ");
-        Status = LOCTEXT("TechTreeStatus", "ФРАКЦИЯ\nСССР\n\nОТКРЫТО\n18 / 46\n\nОЧКИ\n3");
+        Body = LOCTEXT("TechTreeBody", "T1  ШТАБ → КАЗАРМА → ЗАВОД БРОНЕТЕХНИКИ\n\nT2  РАДАРНЫЙ УЗЕЛ → АЭРОДРОМ → ВОЕННО-МОРСКАЯ БАЗА\n\nT3  ЦЕНТР ПЕРСПЕКТИВНЫХ РАЗРАБОТОК → КОМПЛЕКС ЭМИ → РАКЕТНАЯ ШАХТА");
+        Status = LOCTEXT("TechTreeStatus", "СТРАНА\nРоссия\n\nОТКРЫТО\n18 / 46\n\nУРОВЕНЬ\nT2");
         Progress = 0.39f;
         break;
     case 21:
-        Accent = ChronoViolet;
+        Accent = PacificTurquoise;
         Heading = LOCTEXT("ModsHeading", "МОДИФИКАЦИИ");
-        Body = LOCTEXT("ModsBody", "РАСШИРЕННЫЕ КАРТЫ — включено\nНовые сценарии и таблицы баланса.\n\nТАКТИЧЕСКИЕ ПОРТРЕТЫ — включено\nДополнительные портреты командующих.\n\nЭКСПЕРИМЕНТАЛЬНЫЙ БАЛАНС — выключено");
+        Body = LOCTEXT("ModsBody", "РАСШИРЕННЫЕ КАРТЫ — включено\nНовые сценарии и таблицы баланса.\n\nТАКТИЧЕСКИЕ ПОРТРЕТЫ — включено\nДополнительные портреты командиров.\n\nEXPERIMENTAL / LEGACY — выключено\nАномальный темпоральный контент вне стандартного канона.");
         Status = LOCTEXT("ModsStatus", "АКТИВНЫХ МОДОВ\n2\n\nСОВМЕСТИМОСТЬ\nПроверена\n\nПЕРЕЗАПУСК\nНе требуется");
         Progress = 0.67f;
         break;
     case 22:
-        Accent = EasternGold;
-        Heading = LOCTEXT("EasternDetailHeading", "ВОСТОЧНАЯ КОАЛИЦИЯ: ГЕНЕРАЛ ГАО");
-        Body = LOCTEXT("EasternDetailBody", "Гао строит войну на дисциплине, темпе производства и контроле узлов снабжения. Его штаб ведёт наступление к промышленному центру Европы.");
-        Status = LOCTEXT("EasternDetailStatus", "ДОКТРИНА\nНефритовый молот\n\nБОНУС\nУскоренное производство\n\nКАМПАНИЯ\n01 / 08");
-        Progress = 0.20f;
+        Accent = IndependentAmber;
+        Heading = LOCTEXT("IndependentDetailHeading", "ИРАН: ТЕНЬ НАД ХРЕБТОМ");
+        Body = LOCTEXT("IndependentDetailBody", "Разрозненные мобильные группы превращают рельеф, маскировку и ложные сигналы в единую сеть сдерживания. Иран — самостоятельная держава и не входит ни в один военный блок.");
+        Status = LOCTEXT("IndependentDetailStatus", "ДОКТРИНА\nБПЛА и асимметричная война\n\nОГРАНИЧЕНИЕ\nОграниченная тяжёлая броня\n\nГЛАВА 2\nПустой след");
+        Progress = 0.21f;
         break;
     case 23:
-        Accent = SovietRed;
+        Accent = ScarletAlert;
         Heading = LOCTEXT("BattleHudHeading", "ТРЕВОГА: БРОНЕКОЛОННА");
-        Body = LOCTEXT("BattleHudBody", "КРЕДИТЫ 18 300     ЭНЕРГИЯ 1020 / 1180\n\nПРОИЗВОДСТВО\nАпокалипсис — 89%\nМиГ «Кузнец» — 31%\n\nТАКТИЧЕСКОЕ СОБЫТИЕ\nВраг атакует южный мост. Активируйте заградительный огонь.");
-        Status = LOCTEXT("BattleHudStatus", "МИНИ-КАРТА\nЮг: красный контакт\n\nВЫДЕЛЕНО\n4 × Тесла-танк\n\nУГРОЗА\nВысокая");
+        Body = LOCTEXT("BattleHudBody", "КРЕДИТЫ 23 450     ЭНЕРГИЯ 17 820     ЛИМИТ 186 / 200\n\nПРОИЗВОДСТВО\nТТП-11 «Воевода» — 89%\nЭМП-7 «Громобой» — 31%\n\nТАКТИЧЕСКОЕ СОБЫТИЕ\nПротивник атакует южный мост. Активируйте заградительный огонь.");
+        Status = LOCTEXT("BattleHudStatus", "МИНИ-КАРТА\nЮг: контакт\n\nВЫДЕЛЕНО\n4 × ТТП-11 «Воевода»\n\nУГРОЗА\nВысокая");
         Progress = 0.89f;
         break;
     case 24:
-        Accent = SovietRed;
-        Heading = LOCTEXT("AlertHudHeading", "ПРЕДУПРЕЖДЕНИЕ: АВИАНАЛЁТ");
-        Body = LOCTEXT("AlertHudBody", "Обнаружены самолёты противника. Разверните ПВО, переместите мобильные генераторы и защитите энерголабораторию.");
+        Accent = ScarletAlert;
+        Heading = LOCTEXT("AlertHudHeading", "ПРЕДУПРЕЖДЕНИЕ: ВОЗДУШНАЯ УГРОЗА");
+        Body = LOCTEXT("AlertHudBody", "Обнаружена ударная группа противника. Разверните ПВО, смените позиции мобильных комплексов и защитите энергоузел.");
         Status = LOCTEXT("AlertHudStatus", "КОНТАКТОВ\n12\n\nДО ПОДЛЁТА\n00:32\n\nПВО\n4 батареи");
         Progress = 0.32f;
         break;
     case 25:
-        Accent = AlliesBlue;
-        Heading = LOCTEXT("NavalHudHeading", "МОРСКАЯ ОПЕРАЦИЯ: ЛЕДЯНОЙ ПРОЛИВ");
-        Body = LOCTEXT("NavalHudBody", "КРЕДИТЫ 16 800     ЭНЕРГИЯ 720 / 840\n\nФЛОТ\nАвианосец «Свобода» — готов\nЭсминец ×3\n\nЗАДАЧА: провести конвой через пролив и подавить береговые батареи.");
+        Accent = AtlanticCobalt;
+        Heading = LOCTEXT("NavalHudHeading", "МОРСКАЯ ОПЕРАЦИЯ: ЛИНИЯ ПРИБОЯ");
+        Body = LOCTEXT("NavalHudBody", "КРЕДИТЫ 23 450     ЭНЕРГИЯ 17 820     ЛИМИТ 186 / 200\n\nФЛОТ\nАвианосец «Свобода» — готов\nЭсминец ×3\n\nЗАДАЧА: провести экспедиционную группу через пролив и подавить береговые батареи.");
         Status = LOCTEXT("NavalHudStatus", "МОРСКАЯ КАРТА\nКвадрат D-4\n\nКОНВОЙ\n5 / 6 кораблей\n\nПОГОДА\nШторм");
         Progress = 0.58f;
         break;
     case 26:
-        Accent = AlliesBlue;
-        Heading = LOCTEXT("AirHudHeading", "ВОЗДУШНАЯ ОПЕРАЦИЯ: ЧИСТОЕ НЕБО");
-        Body = LOCTEXT("AirHudBody", "КРЕДИТЫ 11 900     ЭНЕРГИЯ 680 / 820\n\nАВИАКРЫЛО\nИстребитель «Копьё» ×6\nБомбардировщик «Гром» ×2\n\nЗАДАЧА: уничтожить радар противника и удержать воздушный коридор.");
-        Status = LOCTEXT("AirHudStatus", "ВОЗДУШНАЯ КАРТА\nВысота 8 000 м\n\nТОПЛИВО\n76%\n\nКОНТАКТЫ\n3 эскадрильи");
+        Accent = PacificTurquoise;
+        Heading = LOCTEXT("AirHudHeading", "ВОЗДУШНАЯ ОПЕРАЦИЯ: ЧИСТЫЙ ГОРИЗОНТ");
+        Body = LOCTEXT("AirHudBody", "КРЕДИТЫ 23 450     ЭНЕРГИЯ 17 820     ЛИМИТ 184 / 200\n\nЭСКАДРИЛЬЯ «СИРОККО»\nМногоцелевой перехватчик ×6\nБПЛА «Гаруда» ×2\n\nЗАДАЧА: перехватить ударную группу и не допустить прорыва к городу.");
+        Status = LOCTEXT("AirHudStatus", "ВОЗДУШНАЯ КАРТА\nОстровная гряда\n\nТОПЛИВО\n76%\n\nКОНТАКТЫ\n3 эскадрильи");
         Progress = 0.76f;
         break;
     case 27:
-        Accent = ChronoViolet;
-        Heading = LOCTEXT("SuperweaponHudHeading", "ХРОНО-ОРУЖИЕ: ГОТОВНОСТЬ 94%");
-        Body = LOCTEXT("SuperweaponHudBody", "ХРОНОЭНЕРГИЯ 94 / 100\n\nВРЕМЕННОЙ ЯКОРЬ\nСтабилен\n\nВЫБЕРИТЕ ЗОНУ НАЗНАЧЕНИЯ\nПосле активации цель будет выведена из текущей временной линии на 12 секунд.");
-        Status = LOCTEXT("SuperweaponHudStatus", "РАДИУС\n420 м\n\nПЕРЕЗАРЯДКА\n00:18\n\nРИСК ПАРАДОКСА\nУмеренный");
+        Accent = IndependentAmber;
+        Heading = LOCTEXT("SaturationHudHeading", "САТУРАЦИОННЫЙ УДАР: ГОТОВНОСТЬ 94%");
+        Body = LOCTEXT("SaturationHudBody", "МОБИЛЬНЫЙ УЗЕЛ «МИРАЖ»\nГотовность 100%\n\nВЫБЕРИТЕ КООРДИНАТУ УДАРА\nЗалп мобильных пусковых и дроновый рой накрывают район одновременно, перегружая активную защиту противника.");
+        Status = LOCTEXT("SaturationHudStatus", "ДО ЗАЛПА\n00:18\n\nПУСКОВЫХ\n9\n\nПОСЛЕ УДАРА\nОбязательная смена позиции");
         Progress = 0.94f;
         break;
     default:

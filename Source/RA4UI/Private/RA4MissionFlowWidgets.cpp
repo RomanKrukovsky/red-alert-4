@@ -2,6 +2,8 @@
 
 #include "RA4MissionFlowWidgets.h"
 
+#include "RA4FactionData.h"
+
 #include "Blueprint/WidgetTree.h"
 #include "Brushes/SlateColorBrush.h"
 #include "Brushes/SlateRoundedBoxBrush.h"
@@ -25,11 +27,14 @@
 
 namespace
 {
-constexpr FLinearColor MissionRed(0.92f, 0.035f, 0.04f, 1.0f);
-constexpr FLinearColor MissionBlue(0.14f, 0.54f, 1.0f, 1.0f);
-constexpr FLinearColor MissionText(0.88f, 0.84f, 0.78f, 1.0f);
-constexpr FLinearColor MissionMuted(0.58f, 0.56f, 0.54f, 1.0f);
-constexpr FLinearColor MissionPanel(0.012f, 0.008f, 0.010f, 0.94f);
+// The campaign flow is the Eurasian Pact theatre: deep plum, never red.
+// Scarlet stays reserved for the shared horizon line and alarm states.
+const FLinearColor MissionAccent = FRA4FactionDataRegistry::GetBlocAccentColor(ERA4FactionTheme::EurasianPact);
+const FLinearColor MissionAtlantic = FRA4FactionDataRegistry::GetBlocAccentColor(ERA4FactionTheme::AtlanticAlliance);
+const FLinearColor MissionAlarm = FRA4FactionDataRegistry::GetHorizonScarletColor();
+constexpr FLinearColor MissionText(0.86f, 0.85f, 0.92f, 1.0f);
+constexpr FLinearColor MissionMuted(0.56f, 0.55f, 0.62f, 1.0f);
+constexpr FLinearColor MissionPanel(0.030f, 0.018f, 0.048f, 0.94f);
 
 void PlaceMissionWidget(
     UCanvasPanel* Canvas,
@@ -83,7 +88,7 @@ URA4AngularPanelWidget* MakeMissionPanel(
     FLinearColor Outline = (Color * 4.0f).GetClamped();
     if (FMath::Max3(Outline.R, Outline.G, Outline.B) < 0.20f)
     {
-        Outline = MissionRed * 0.72f;
+        Outline = MissionAccent * 0.72f;
     }
     Outline.A = 1.0f;
     Panel->SetBrush(FSlateRoundedBoxBrush(Color, 0.0f, Outline, 1.4f));
@@ -92,13 +97,13 @@ URA4AngularPanelWidget* MakeMissionPanel(
 }
 
 FButtonStyle MakeMissionButtonStyle(
-    const FLinearColor& Accent = MissionRed,
+    const FLinearColor& Accent = MissionAccent,
     const bool bSelected = false)
 {
     FButtonStyle Style;
     Style.SetNormal(FSlateColorBrush(bSelected
         ? FLinearColor(Accent.R * 0.30f, Accent.G * 0.30f, Accent.B * 0.30f, 0.98f)
-        : FLinearColor(0.018f, 0.012f, 0.014f, 0.96f)));
+        : FLinearColor(0.022f, 0.014f, 0.034f, 0.96f)));
     Style.SetHovered(FSlateColorBrush(FLinearColor(
         Accent.R * 0.50f, Accent.G * 0.50f, Accent.B * 0.50f, 1.0f)));
     Style.SetPressed(FSlateColorBrush(Accent));
@@ -186,16 +191,16 @@ TSharedRef<SWidget> URA4MissionMapScreenWidget::RebuildWidget()
     UVerticalBox* CampaignTitle = WidgetTree->ConstructWidget<UVerticalBox>(
         UVerticalBox::StaticClass(), TEXT("MissionCampaignTitle"));
     CampaignTitle->AddChildToVerticalBox(MakeMissionText(
-        WidgetTree, LOCTEXT("MissionCampaign", "★  КАМПАНИЯ: СССР"), 28,
-        MissionRed, TEXT("MissionCampaignHeading")));
+        WidgetTree, LOCTEXT("MissionCampaign", "★  КАМПАНИЯ: ЕВРАЗИЙСКИЙ ПАКТ · РОССИЯ"), 28,
+        MissionAccent, TEXT("MissionCampaignHeading")));
     CampaignTitle->AddChildToVerticalBox(MakeMissionText(
-        WidgetTree, LOCTEXT("MissionChapter", "ГЛАВА 3: КРАСНЫЙ ШТОРМ"), 17,
+        WidgetTree, LOCTEXT("MissionChapter", "ГЛАВА 4: БЕЛЫЙ ШУМ"), 17,
         MissionText, TEXT("MissionChapterHeading"), false));
     PlaceMissionWidget(Canvas, CampaignTitle, FVector2D(24.0f, 130.0f), FVector2D(520.0f, 90.0f), 4);
 
     UBorder* TacticalMap = WidgetTree->ConstructWidget<UBorder>(
         UBorder::StaticClass(), TEXT("TacticalMapSurface"));
-    TacticalMap->SetBrushColor(FLinearColor(0.04f, 0.002f, 0.004f, 0.16f));
+    TacticalMap->SetBrushColor(FLinearColor(0.030f, 0.012f, 0.058f, 0.16f));
     PlaceMissionWidget(Canvas, TacticalMap, FVector2D(24.0f, 220.0f), FVector2D(1325.0f, 690.0f), 2);
 
     const FVector2D NodePositions[] = {
@@ -214,7 +219,7 @@ TSharedRef<SWidget> URA4MissionMapScreenWidget::RebuildWidget()
             URA4MissionNodeButton::StaticClass(),
             FName(*FString::Printf(TEXT("MissionNode_%d"), Index)));
         Button->InitializeMissionNode(this, Mission.ContentId);
-        Button->SetStyle(MakeMissionButtonStyle(MissionRed, bSelected));
+        Button->SetStyle(MakeMissionButtonStyle(MissionAccent, bSelected));
         Button->SetIsEnabled(!Mission.bLocked);
         UTextBlock* Label = MakeMissionText(
             WidgetTree,
@@ -233,11 +238,11 @@ TSharedRef<SWidget> URA4MissionMapScreenWidget::RebuildWidget()
         UVerticalBox::StaticClass(), TEXT("ChapterProgress"));
     ChapterProgress->AddChildToVerticalBox(MakeMissionText(
         WidgetTree, LOCTEXT("ChapterProgressTitle", "ПРОГРЕСС ГЛАВЫ"), 18,
-        MissionRed, TEXT("ChapterProgressTitle")));
+        MissionAccent, TEXT("ChapterProgressTitle")));
     UProgressBar* Progress = WidgetTree->ConstructWidget<UProgressBar>(
         UProgressBar::StaticClass(), TEXT("ChapterProgressBar"));
     Progress->SetPercent(8.0f / 12.0f);
-    Progress->SetFillColorAndOpacity(MissionRed);
+    Progress->SetFillColorAndOpacity(MissionAccent);
     ChapterProgress->AddChildToVerticalBox(Progress)->SetPadding(FMargin(0.0f, 12.0f));
     ChapterProgress->AddChildToVerticalBox(MakeMissionText(
         WidgetTree, LOCTEXT("CompletedMissions", "ВЫПОЛНЕНО МИССИЙ                         8 / 12"),
@@ -249,7 +254,7 @@ TSharedRef<SWidget> URA4MissionMapScreenWidget::RebuildWidget()
     UVerticalBox* Details = WidgetTree->ConstructWidget<UVerticalBox>(
         UVerticalBox::StaticClass(), TEXT("MissionDetails"));
     MissionTitleText = MakeMissionText(
-        WidgetTree, FText::GetEmpty(), 25, MissionRed, TEXT("SelectedMissionTitle"));
+        WidgetTree, FText::GetEmpty(), 25, MissionAccent, TEXT("SelectedMissionTitle"));
     Details->AddChildToVerticalBox(MissionTitleText)->SetPadding(FMargin(4.0f, 4.0f, 4.0f, 12.0f));
     UImage* MissionPreview = MakeImage(
         WidgetTree,
@@ -258,7 +263,7 @@ TSharedRef<SWidget> URA4MissionMapScreenWidget::RebuildWidget()
     Details->AddChildToVerticalBox(MissionPreview)->SetPadding(FMargin(0.0f, 4.0f, 0.0f, 16.0f));
     Details->AddChildToVerticalBox(MakeMissionText(
         WidgetTree, LOCTEXT("MissionObjectiveHeading", "ЦЕЛЬ МИССИИ"), 17,
-        MissionRed, TEXT("MissionObjectiveHeading")));
+        MissionAccent, TEXT("MissionObjectiveHeading")));
     MissionObjectiveText = MakeMissionText(
         WidgetTree, FText::GetEmpty(), 16, MissionText, TEXT("SelectedMissionObjective"), false);
     Details->AddChildToVerticalBox(MissionObjectiveText)->SetPadding(FMargin(0.0f, 8.0f, 0.0f, 18.0f));
@@ -267,10 +272,10 @@ TSharedRef<SWidget> URA4MissionMapScreenWidget::RebuildWidget()
         16, MissionText, TEXT("MissionRewards"), false))->SetPadding(FMargin(0.0f, 6.0f, 0.0f, 18.0f));
     Details->AddChildToVerticalBox(MakeMissionText(
         WidgetTree, LOCTEXT("MissionDifficulty", "СЛОЖНОСТЬ                                  ВЕТЕРАН"),
-        16, MissionRed, TEXT("MissionDifficulty"), false));
+        16, MissionAccent, TEXT("MissionDifficulty"), false));
     UButton* StartButton = WidgetTree->ConstructWidget<UButton>(
         UButton::StaticClass(), TEXT("StartMissionButton"));
-    StartButton->SetStyle(MakeMissionButtonStyle(MissionRed, true));
+    StartButton->SetStyle(MakeMissionButtonStyle(MissionAccent, true));
     UTextBlock* StartLabel = MakeMissionText(
         WidgetTree, LOCTEXT("StartMission", "★   НАЧАТЬ МИССИЮ"), 26,
         FLinearColor::White, TEXT("StartMissionLabel"));
@@ -389,24 +394,24 @@ TSharedRef<SWidget> URA4BriefingScreenWidget::RebuildWidget()
     UVerticalBox* Intel = WidgetTree->ConstructWidget<UVerticalBox>(
         UVerticalBox::StaticClass(), TEXT("BriefingIntel"));
     Intel->AddChildToVerticalBox(MakeMissionText(
-        WidgetTree, LOCTEXT("Operation", "ОПЕРАЦИЯ"), 15, MissionRed, TEXT("OperationLabel")));
+        WidgetTree, LOCTEXT("Operation", "ОПЕРАЦИЯ"), 15, MissionAccent, TEXT("OperationLabel")));
     Intel->AddChildToVerticalBox(MakeMissionText(
-        WidgetTree, LOCTEXT("RedDawn", "КРАСНЫЙ РАССВЕТ"), 38, MissionRed, TEXT("OperationName")))
+        WidgetTree, LOCTEXT("RedDawn", "ТИХИЙ РЕЛЕЙ"), 38, MissionAccent, TEXT("OperationName")))
         ->SetPadding(FMargin(0.0f, 4.0f, 0.0f, 12.0f));
     Intel->AddChildToVerticalBox(MakeMissionText(
         WidgetTree,
-        LOCTEXT("OperationSummary", "Альянс стягивает войска к нашим границам. Нанесите упреждающий удар и сломайте сопротивление до прибытия подкреплений."),
+        LOCTEXT("OperationSummary", "Горный коридор закрывается. Противник развернул сеть наведения на перевале. Подавите узлы связи и проведите бронегруппу до рассвета."),
         17, MissionText, TEXT("OperationSummary"), false))->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 18.0f));
     Intel->AddChildToVerticalBox(MakeMissionText(
         WidgetTree, LOCTEXT("ObjectivesHeading", "ЦЕЛИ ОПЕРАЦИИ"), 17,
-        MissionRed, TEXT("ObjectivesHeading")));
+        MissionAccent, TEXT("ObjectivesHeading")));
     Intel->AddChildToVerticalBox(MakeMissionText(
         WidgetTree,
-        LOCTEXT("Objectives", "★  Уничтожить командный центр Альянса\n★  Вывести из строя спутниковую связь\n★  Обеспечить контроль над мостом\n★  Эвакуировать войска в зону сбора"),
+        LOCTEXT("Objectives", "★  Подавить 3 узла связи\n★  Провести бронегруппу через перевал\n★  Сохранить мобильный комплекс РЭБ\n★  Обеспечить проход колонны до рассвета"),
         16, MissionText, TEXT("Objectives"), false))->SetPadding(FMargin(0.0f, 8.0f, 0.0f, 18.0f));
     Intel->AddChildToVerticalBox(MakeMissionText(
         WidgetTree, LOCTEXT("IntelHeading", "ДАННЫЕ РАЗВЕДКИ"), 17,
-        MissionRed, TEXT("IntelHeading")));
+        MissionAccent, TEXT("IntelHeading")));
     Intel->AddChildToVerticalBox(MakeMissionText(
         WidgetTree,
         LOCTEXT("Intel", "•  Противник переправляет силы через реку.\n•  Замечены тяжёлая техника и авиация.\n•  Координация подразделений нарушена."),
@@ -418,8 +423,8 @@ TSharedRef<SWidget> URA4BriefingScreenWidget::RebuildWidget()
     UVerticalBox* Commander = WidgetTree->ConstructWidget<UVerticalBox>(
         UVerticalBox::StaticClass(), TEXT("BriefingCommander"));
     Commander->AddChildToVerticalBox(MakeMissionText(
-        WidgetTree, LOCTEXT("SovietUnion", "СОВЕТСКИЙ СОЮЗ"), 17,
-        MissionRed, TEXT("SovietUnion")));
+        WidgetTree, LOCTEXT("BlocLabel", "ЕВРАЗИЙСКИЙ ПАКТ · РОССИЯ"), 17,
+        MissionAccent, TEXT("BlocLabel")));
     UImage* CommanderImage = MakeImage(
         WidgetTree,
         TEXT("/Game/RA4UI/Art/T_RA4_USSR_CampaignCommander.T_RA4_USSR_CampaignCommander"),
@@ -428,8 +433,8 @@ TSharedRef<SWidget> URA4BriefingScreenWidget::RebuildWidget()
     CommanderImageSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
     CommanderImageSlot->SetPadding(FMargin(0.0f, 12.0f));
     UTextBlock* CommanderName = MakeMissionText(
-        WidgetTree, LOCTEXT("MarshalSokolov", "МАРШАЛ\nВИКТОР СОКОЛОВ"), 24,
-        MissionText, TEXT("MarshalSokolov"));
+        WidgetTree, LOCTEXT("CommanderVolkova", "КОМАНДИР\nИРИНА ВОЛКОВА"), 24,
+        MissionText, TEXT("CommanderVolkova"));
     CommanderName->SetJustification(ETextJustify::Center);
     Commander->AddChildToVerticalBox(CommanderName)->SetPadding(FMargin(0.0f, 10.0f));
     PlaceMissionWidget(Canvas, MakeMissionPanel(
@@ -440,7 +445,7 @@ TSharedRef<SWidget> URA4BriefingScreenWidget::RebuildWidget()
         UVerticalBox::StaticClass(), TEXT("BriefingSignals"));
     Signals->AddChildToVerticalBox(MakeMissionText(
         WidgetTree, LOCTEXT("EnemyDeployment", "РАССТАНОВКА СИЛ ПРОТИВНИКА"), 16,
-        MissionRed, TEXT("EnemyDeployment")));
+        MissionAccent, TEXT("EnemyDeployment")));
     Signals->AddChildToVerticalBox(MakeMissionText(
         WidgetTree, LOCTEXT("DeploymentData", "△  △  △     ◆  ◆\n\nПЕРЕХВАЧЕННЫЕ ПЕРЕГОВОРЫ\n〰〰〰〰〰〰〰\n\nКОДОВОЕ СЛОВО ОПЕРАЦИИ\n\nГРОМ"),
         18, MissionText, TEXT("DeploymentData"), false))->SetPadding(FMargin(0.0f, 16.0f));
@@ -461,7 +466,7 @@ TSharedRef<SWidget> URA4BriefingScreenWidget::RebuildWidget()
 
     ContinueButton = WidgetTree->ConstructWidget<UButton>(
         UButton::StaticClass(), TEXT("BriefingContinueButton"));
-    ContinueButton->SetStyle(MakeMissionButtonStyle(MissionRed, true));
+    ContinueButton->SetStyle(MakeMissionButtonStyle(MissionAccent, true));
     UTextBlock* ContinueLabel = MakeMissionText(
         WidgetTree, LOCTEXT("BriefingContinue", "ПРОДОЛЖИТЬ"), 29,
         FLinearColor::White, TEXT("BriefingContinueLabel"));
@@ -525,60 +530,60 @@ TSharedRef<SWidget> URA4VideoCommsScreenWidget::RebuildWidget()
     SecureHeader->SetJustification(ETextJustify::Center);
     PlaceMissionWidget(Canvas, SecureHeader, FVector2D(640.0f, 126.0f), FVector2D(640.0f, 52.0f), 4);
 
-    UVerticalBox* SovietChannel = WidgetTree->ConstructWidget<UVerticalBox>(
-        UVerticalBox::StaticClass(), TEXT("SovietChannel"));
-    SovietChannel->AddChildToVerticalBox(MakeMissionText(
-        WidgetTree, LOCTEXT("MarshalChannel", "★  МАРШАЛ ВИКТОР СОКОЛОВ\nВЕРХОВНОЕ КОМАНДОВАНИЕ СССР"),
-        19, MissionRed, TEXT("MarshalChannel")));
-    UImage* SovietImage = MakeImage(
+    UVerticalBox* EurasianChannel = WidgetTree->ConstructWidget<UVerticalBox>(
+        UVerticalBox::StaticClass(), TEXT("EurasianChannel"));
+    EurasianChannel->AddChildToVerticalBox(MakeMissionText(
+        WidgetTree, LOCTEXT("MarshalChannel", "★  КОМАНДИР ИРИНА ВОЛКОВА\nОПЕРАТИВНАЯ ГРУППА «СЕВЕР» · ЕВРАЗИЙСКИЙ ПАКТ"),
+        19, MissionAccent, TEXT("MarshalChannel")));
+    UImage* EurasianImage = MakeImage(
         WidgetTree,
         TEXT("/Game/RA4UI/Art/T_RA4_USSR_CampaignCommander.T_RA4_USSR_CampaignCommander"),
-        TEXT("SovietChannelImage"));
-    UVerticalBoxSlot* SovietImageSlot = SovietChannel->AddChildToVerticalBox(SovietImage);
-    SovietImageSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-    SovietImageSlot->SetPadding(FMargin(0.0f, 12.0f));
-    SovietChannel->AddChildToVerticalBox(MakeMissionText(
-        WidgetTree, LOCTEXT("SovietStatus", "КАНАЛ ЗАЩИЩЁН   •   ЗАДЕРЖКА 17 МС   •   ШИФРОВАНИЕ АКТИВНО"),
-        14, FLinearColor(0.32f, 0.90f, 0.46f, 1.0f), TEXT("SovietStatus"), false));
+        TEXT("EurasianChannelImage"));
+    UVerticalBoxSlot* EurasianImageSlot = EurasianChannel->AddChildToVerticalBox(EurasianImage);
+    EurasianImageSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+    EurasianImageSlot->SetPadding(FMargin(0.0f, 12.0f));
+    EurasianChannel->AddChildToVerticalBox(MakeMissionText(
+        WidgetTree, LOCTEXT("EurasianChannelStatus", "КАНАЛ ЗАЩИЩЁН   •   ЗАДЕРЖКА 17 МС   •   ШИФРОВАНИЕ АКТИВНО"),
+        14, FLinearColor(0.32f, 0.90f, 0.46f, 1.0f), TEXT("EurasianChannelStatus"), false));
     PlaceMissionWidget(Canvas, MakeMissionPanel(
-        WidgetTree, SovietChannel, TEXT("SovietChannelPanel"),
-        FLinearColor(0.16f, 0.008f, 0.012f, 0.96f), ERA4PanelRole::Standard),
+        WidgetTree, EurasianChannel, TEXT("EurasianChannelPanel"),
+        FLinearColor(0.085f, 0.030f, 0.135f, 0.96f), ERA4PanelRole::Standard),
         FVector2D(42.0f, 190.0f), FVector2D(880.0f, 640.0f), 5);
 
-    UVerticalBox* AlliesChannel = WidgetTree->ConstructWidget<UVerticalBox>(
-        UVerticalBox::StaticClass(), TEXT("AlliesChannel"));
-    UTextBlock* AlliesHeading = MakeMissionText(
-        WidgetTree, LOCTEXT("PresidentChannel", "ПРЕЗИДЕНТ ЭЛЕАНОР УОРД  ◆\nСОЕДИНЁННЫЕ ШТАТЫ АМЕРИКИ"),
-        19, MissionBlue, TEXT("PresidentChannel"));
-    AlliesHeading->SetJustification(ETextJustify::Right);
-    AlliesChannel->AddChildToVerticalBox(AlliesHeading);
-    UImage* AlliesImage = MakeImage(
+    UVerticalBox* AtlanticChannelBox = WidgetTree->ConstructWidget<UVerticalBox>(
+        UVerticalBox::StaticClass(), TEXT("AtlanticChannelBox"));
+    UTextBlock* AtlanticHeading = MakeMissionText(
+        WidgetTree, LOCTEXT("AtlanticChannel", "МАРКУС РИД  ◆\nАТЛАНТИЧЕСКИЙ АЛЬЯНС · США"),
+        19, MissionAtlantic, TEXT("AtlanticChannel"));
+    AtlanticHeading->SetJustification(ETextJustify::Right);
+    AtlanticChannelBox->AddChildToVerticalBox(AtlanticHeading);
+    UImage* AtlanticImage = MakeImage(
         WidgetTree,
         TEXT("/Game/RA4UI/Art/T_RA4_Allies_CampaignCommander.T_RA4_Allies_CampaignCommander"),
-        TEXT("AlliesChannelImage"));
-    UVerticalBoxSlot* AlliesImageSlot = AlliesChannel->AddChildToVerticalBox(AlliesImage);
-    AlliesImageSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-    AlliesImageSlot->SetPadding(FMargin(0.0f, 12.0f));
-    UTextBlock* AlliesStatus = MakeMissionText(
-        WidgetTree, LOCTEXT("AlliesStatus", "КАНАЛ ЗАЩИЩЁН   •   ЗАДЕРЖКА 18 МС   •   ШИФРОВАНИЕ АКТИВНО"),
-        14, FLinearColor(0.32f, 0.90f, 0.46f, 1.0f), TEXT("AlliesStatus"), false);
-    AlliesStatus->SetJustification(ETextJustify::Right);
-    AlliesChannel->AddChildToVerticalBox(AlliesStatus);
+        TEXT("AtlanticChannelBoxImage"));
+    UVerticalBoxSlot* AtlanticImageSlot = AtlanticChannelBox->AddChildToVerticalBox(AtlanticImage);
+    AtlanticImageSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+    AtlanticImageSlot->SetPadding(FMargin(0.0f, 12.0f));
+    UTextBlock* AtlanticStatus = MakeMissionText(
+        WidgetTree, LOCTEXT("AtlanticStatus", "КАНАЛ ЗАЩИЩЁН   •   ЗАДЕРЖКА 18 МС   •   ШИФРОВАНИЕ АКТИВНО"),
+        14, FLinearColor(0.32f, 0.90f, 0.46f, 1.0f), TEXT("AtlanticStatus"), false);
+    AtlanticStatus->SetJustification(ETextJustify::Right);
+    AtlanticChannelBox->AddChildToVerticalBox(AtlanticStatus);
     PlaceMissionWidget(Canvas, MakeMissionPanel(
-        WidgetTree, AlliesChannel, TEXT("AlliesChannelPanel"),
+        WidgetTree, AtlanticChannelBox, TEXT("AtlanticChannelBoxPanel"),
         FLinearColor(0.008f, 0.055f, 0.14f, 0.96f), ERA4PanelRole::Standard),
         FVector2D(998.0f, 190.0f), FVector2D(880.0f, 640.0f), 5);
 
     UTextBlock* Subtitle = MakeMissionText(
         WidgetTree,
-        LOCTEXT("CommsSubtitle", "СОКОЛОВ: Госпожа президент… у вас есть один шанс избежать войны."),
+        LOCTEXT("CommsSubtitle", "РИД: У нас девять минут до закрытия коридора. Решение нужно сейчас."),
         22, MissionText, TEXT("CommsSubtitle"));
     Subtitle->SetJustification(ETextJustify::Center);
     PlaceMissionWidget(Canvas, Subtitle, FVector2D(260.0f, 845.0f), FVector2D(1400.0f, 52.0f), 7);
 
     EndSessionButton = WidgetTree->ConstructWidget<UButton>(
         UButton::StaticClass(), TEXT("EndSessionButton"));
-    EndSessionButton->SetStyle(MakeMissionButtonStyle(MissionRed, true));
+    EndSessionButton->SetStyle(MakeMissionButtonStyle(MissionAccent, true));
     UTextBlock* EndLabel = MakeMissionText(
         WidgetTree, LOCTEXT("EndSession", "☎   ЗАВЕРШИТЬ СЕАНС"), 21,
         FLinearColor::White, TEXT("EndSessionLabel"));
@@ -664,7 +669,7 @@ TSharedRef<SWidget> URA4LoadingScreenWidget::RebuildWidget()
 
     UTextBlock* OperationTitle = MakeMissionText(
         WidgetTree, LOCTEXT("LoadingOperation", "ОПЕРАЦИЯ «КИЕВ-86»"), 24,
-        MissionRed, TEXT("LoadingOperation"));
+        MissionAccent, TEXT("LoadingOperation"));
     OperationTitle->SetJustification(ETextJustify::Center);
     PlaceMissionWidget(
         Canvas, OperationTitle,
@@ -681,14 +686,14 @@ TSharedRef<SWidget> URA4LoadingScreenWidget::RebuildWidget()
             UVerticalBox::StaticClass(), TEXT("LoadingBriefingSummary"));
         Summary->AddChildToVerticalBox(MakeMissionText(
             WidgetTree, LOCTEXT("SummaryHeading", "СВОДКА"), 18,
-            MissionRed, TEXT("SummaryHeading")));
+            MissionAccent, TEXT("SummaryHeading")));
         Summary->AddChildToVerticalBox(MakeMissionText(
             WidgetTree,
             LOCTEXT("SummaryText", "Американцы укрепили позиции в Киеве. Подготовьте город к наступлению и уничтожьте командный центр противника."),
             19, MissionText, TEXT("SummaryText"), false))->SetPadding(FMargin(0.0f, 14.0f, 0.0f, 34.0f));
         Summary->AddChildToVerticalBox(MakeMissionText(
             WidgetTree, LOCTEXT("GoalsHeading", "ЦЕЛИ"), 18,
-            MissionRed, TEXT("GoalsHeading")));
+            MissionAccent, TEXT("GoalsHeading")));
         Summary->AddChildToVerticalBox(MakeMissionText(
             WidgetTree,
             LOCTEXT("LoadingGoals", "☆  Уничтожить командный центр США\n☆  Ликвидировать генерала Хейса\n☆  Захватить центральный район Киева\n☆  Эвакуировать инженеров"),
@@ -700,7 +705,7 @@ TSharedRef<SWidget> URA4LoadingScreenWidget::RebuildWidget()
 
     LoadingProgressBar = WidgetTree->ConstructWidget<UProgressBar>(
         UProgressBar::StaticClass(), TEXT("LoadingProgressBar"));
-    LoadingProgressBar->SetFillColorAndOpacity(MissionRed);
+    LoadingProgressBar->SetFillColorAndOpacity(MissionAccent);
     PlaceMissionWidget(Canvas, MakeMissionPanel(
         WidgetTree, LoadingProgressBar, TEXT("LoadingProgressPanel"), MissionPanel, ERA4PanelRole::Compact),
         FVector2D(350.0f, 900.0f), FVector2D(1220.0f, 58.0f), 7);
@@ -714,7 +719,7 @@ TSharedRef<SWidget> URA4LoadingScreenWidget::RebuildWidget()
         WidgetTree,
         LoadingVariant == ERA4UIScreenVariant::LoadingBriefing
             ? LOCTEXT("LoadingBriefingTip", "Подсказка: Используйте инженеров для захвата вражеских зданий.")
-            : LOCTEXT("LoadingTip", "Совет: Используйте маскировку и диверсии, чтобы ослабить базу противника."),
+            : LOCTEXT("LoadingTip", "Совет: РЭБ снижает дальность обнаружения, но требует устойчивой линии снабжения."),
         17, MissionText, TEXT("LoadingTip"), false);
     Tip->SetJustification(ETextJustify::Center);
     PlaceMissionWidget(Canvas, Tip, FVector2D(350.0f, 980.0f), FVector2D(1360.0f, 42.0f), 8);
