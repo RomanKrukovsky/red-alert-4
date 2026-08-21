@@ -117,6 +117,12 @@ protected:
      * Bottom-left action pair, chosen-country summary and the doctrine preview
      * the country step shows before the doctrine step is entered.
      */
+    /** Confirmation panel showing the full path, plus commit and back actions. */
+    void BuildDoctrineStepChrome(
+        const FRA4BlocInfo& ActiveBloc,
+        const FRA4CountryInfo& Country,
+        TFunctionRef<FBox2D(float, float, float, float)> Ref);
+
     void BuildCountryStepChrome(
         const FRA4BlocInfo& ActiveBloc,
         TFunctionRef<FBox2D(float, float, float, float)> Ref);
@@ -165,8 +171,9 @@ protected:
     UPROPERTY(Transient)
     TObjectPtr<UCanvasPanel> CountryCardsContainer;
 
+    /** Doctrine step keeps the same grammar: one hero doctrine and smaller plates. */
     UPROPERTY(Transient)
-    TObjectPtr<UHorizontalBox> DoctrineCardsContainer;
+    TObjectPtr<UCanvasPanel> DoctrineCardsContainer;
 
     UPROPERTY(Transient)
     TArray<TObjectPtr<UBorder>> BlocCardFrames;

@@ -421,10 +421,10 @@ void URA4CampaignSelectWidget::BuildLayout()
     // ==========================================
     // STEP 3 CONTAINER: DOCTRINE CARDS
     // ==========================================
-    DoctrineCardsContainer = WidgetTree->ConstructWidget<UHorizontalBox>(
-        UHorizontalBox::StaticClass(), TEXT("DoctrineCardsContainer"));
+    DoctrineCardsContainer = WidgetTree->ConstructWidget<UCanvasPanel>(
+        UCanvasPanel::StaticClass(), TEXT("DoctrineCardsContainer"));
     DoctrineCardsContainer->SetVisibility(ESlateVisibility::Collapsed);
-    Place(MainCanvas, DoctrineCardsContainer, FVector2D(35.0f, 160.0f), FVector2D(1320.0f, 780.0f), 5);
+    Place(MainCanvas, DoctrineCardsContainer, FVector2D(0.0f, 0.0f), ReferenceSize, 5);
 
     // ==========================================
     // RIGHT COLUMN: HERO DOSSIER & INTEL PANEL
@@ -969,6 +969,74 @@ void URA4CampaignSelectWidget::RefreshCountryCards()
     BuildCountryStepChrome(ActiveBloc, Ref);
 }
 
+void URA4CampaignSelectWidget::BuildDoctrineStepChrome(
+    const FRA4BlocInfo& ActiveBloc,
+    const FRA4CountryInfo& Country,
+    TFunctionRef<FBox2D(float, float, float, float)> Ref)
+{
+    const auto PlaceRect = [this](UWidget* Widget, const FBox2D& Rect, const int32 Z)
+    {
+        Place(DoctrineCardsContainer, Widget, Rect.Min, Rect.GetSize(), Z);
+    };
+    const FLinearColor DoctrineGold(0.88f, 0.72f, 0.22f, 1.0f);
+
+    // The whole path stays visible at the point of commitment, so the player can
+    // see exactly what is about to start.
+    UHorizontalBox* Path = WidgetTree->ConstructWidget<UHorizontalBox>(
+        UHorizontalBox::StaticClass(), TEXT("DoctrinePathBox"));
+    const auto AddPathCell = [this, Path](const FText& Caption, const FText& Value,
+        const FLinearColor& Colour, const FName Name)
+    {
+        UVerticalBox* Cell = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), Name);
+        Cell->AddChildToVerticalBox(MakeText(
+            WidgetTree, Caption, 10, TextMuted, FName(Name.ToString() + TEXT("_Cap")), true, false));
+        Cell->AddChildToVerticalBox(MakeText(
+            WidgetTree, Value, 17, Colour, FName(Name.ToString() + TEXT("_Val"))))
+            ->SetPadding(FMargin(0.0f, 2.0f, 0.0f, 0.0f));
+        UHorizontalBoxSlot* Slot = Path->AddChildToHorizontalBox(Cell);
+        Slot->SetSize(FillWeight(1.0f));
+        Slot->SetPadding(FMargin(14.0f, 10.0f, 14.0f, 10.0f));
+    };
+
+    const bool bHasDoctrine = Country.Doctrines.IsValidIndex(SelectedDoctrineIndex);
+    AddPathCell(
+        ActiveBloc.bIsCategoryOnly ? LOCTEXT("PathCategory", "01 КАТЕГОРИЯ") : LOCTEXT("PathBloc", "01 БЛОК"),
+        ActiveBloc.DisplayName, ActiveBloc.GlowColor, TEXT("PathBlocCell"));
+    AddPathCell(LOCTEXT("PathCountry", "02 СТРАНА"),
+        Country.DisplayName, Country.AccentColor, TEXT("PathCountryCell"));
+    AddPathCell(LOCTEXT("PathDoctrine", "03 ДОКТРИНА"),
+        bHasDoctrine ? Country.Doctrines[SelectedDoctrineIndex].DisplayName : FText::GetEmpty(),
+        DoctrineGold, TEXT("PathDoctrineCell"));
+
+    PlaceRect(
+        MakePanel(WidgetTree, Path, TEXT("DoctrinePathFrame"), Country.AccentColor,
+            DensityPadding(ERA4PanelRole::Compact), ActiveBloc.FrameRail),
+        Ref(20.0f, 710.0f, 1080.0f, 90.0f), 3);
+
+    UButton* StartButton = WidgetTree->ConstructWidget<UButton>(
+        UButton::StaticClass(), TEXT("DoctrineStartButton"));
+    StartButton->SetStyle(MakeCardButtonStyle(DoctrineGold));
+    StartButton->SetIsEnabled(bHasDoctrine && Country.Doctrines[SelectedDoctrineIndex].bUnlocked);
+    UTextBlock* StartLabel = MakeText(
+        WidgetTree, LOCTEXT("StartOperation", "НАЧАТЬ ОПЕРАЦИЮ  »"), 18, TextHighlight,
+        TEXT("DoctrineStartLabel"), true, false);
+    StartLabel->SetJustification(ETextJustify::Center);
+    StartButton->AddChild(StartLabel);
+    StartButton->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::ContinueCampaign);
+    PlaceRect(StartButton, Ref(1120.0f, 710.0f, 525.0f, 90.0f), 4);
+
+    UButton* BackToCountries = WidgetTree->ConstructWidget<UButton>(
+        UButton::StaticClass(), TEXT("DoctrineBackButton"));
+    BackToCountries->SetStyle(MakeCardButtonStyle(FLinearColor(0.40f, 0.45f, 0.55f, 1.0f)));
+    UTextBlock* BackLabel = MakeText(
+        WidgetTree, LOCTEXT("BackToCountries", "‹  НАЗАД К СТРАНАМ"), 15, TextPrimary,
+        TEXT("DoctrineBackLabel"), true, false);
+    BackLabel->SetJustification(ETextJustify::Center);
+    BackToCountries->AddChild(BackLabel);
+    BackToCountries->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::GotoCountryStep);
+    PlaceRect(BackToCountries, Ref(20.0f, 812.0f, 380.0f, 50.0f), 4);
+}
+
 void URA4CampaignSelectWidget::BuildCountryStepChrome(
     const FRA4BlocInfo& ActiveBloc,
     TFunctionRef<FBox2D(float, float, float, float)> Ref)
@@ -1095,77 +1163,106 @@ void URA4CampaignSelectWidget::RefreshDoctrineCards()
     {
         return;
     }
-
     const FRA4BlocInfo& ActiveBloc = Blocs[SelectedBlocIndex];
     if (!ActiveBloc.Countries.IsValidIndex(SelectedCountryIndex))
     {
         return;
     }
+    const FRA4CountryInfo& Country = ActiveBloc.Countries[SelectedCountryIndex];
 
-    const FRA4CountryInfo& ActiveCountry = ActiveBloc.Countries[SelectedCountryIndex];
-    for (int32 Index = 0; Index < ActiveCountry.Doctrines.Num(); ++Index)
+    const float ToAuthoring = ReferenceSize.X / 1672.0f;
+    const auto Ref = [ToAuthoring](const float X, const float Y, const float W, const float H)
     {
-        const FRA4DoctrineInfo& Doctrine = ActiveCountry.Doctrines[Index];
-        const bool bSelected = (Index == SelectedDoctrineIndex);
+        return FBox2D(
+            FVector2D(X * ToAuthoring, Y * ToAuthoring),
+            FVector2D((X + W) * ToAuthoring, (Y + H) * ToAuthoring));
+    };
+
+    // Same grammar as the previous two steps: one hero and smaller plates, never
+    // a row of identical tiles.
+    const FBox2D HeroRect = Ref(20.0f, 115.0f, 810.0f, 575.0f);
+    const FBox2D PlateRects[2] = {
+        Ref(900.0f, 115.0f, 745.0f, 275.0f),
+        Ref(900.0f, 405.0f, 745.0f, 285.0f)
+    };
+    const FLinearColor DoctrineGold(0.88f, 0.72f, 0.22f, 1.0f);
+
+    int32 PlateIndex = 0;
+    for (int32 Index = 0; Index < Country.Doctrines.Num(); ++Index)
+    {
+        const FRA4DoctrineInfo& Doctrine = Country.Doctrines[Index];
+        const bool bHero = (Index == SelectedDoctrineIndex);
+        if (!bHero && PlateIndex >= UE_ARRAY_COUNT(PlateRects))
+        {
+            continue;
+        }
+        const FBox2D Rect = bHero ? HeroRect : PlateRects[PlateIndex++];
 
         UVerticalBox* CardContent = WidgetTree->ConstructWidget<UVerticalBox>(
             UVerticalBox::StaticClass(), FName(*FString::Printf(TEXT("DoctrineContent_%d"), Index)));
 
-        // Roman numeral & Doctrine badge
         UTextBlock* Numeral = MakeText(
             WidgetTree, FText::Format(LOCTEXT("DocNum", "ДОКТРИНА 0{0}"), FText::AsNumber(Index + 1)),
-            12, FLinearColor(0.88f, 0.72f, 0.22f, 1.0f), FName(*FString::Printf(TEXT("DocNum_%d"), Index)));
-        CardContent->AddChildToVerticalBox(Numeral)->SetPadding(FMargin(14.0f, 14.0f, 14.0f, 2.0f));
+            bHero ? 13 : 11, DoctrineGold,
+            FName(*FString::Printf(TEXT("DocNum_%d"), Index)), true, false);
+        CardContent->AddChildToVerticalBox(Numeral)->SetPadding(FMargin(14.0f, 12.0f, 14.0f, 2.0f));
 
         UTextBlock* Title = MakeText(
-            WidgetTree, Doctrine.DisplayName, 20, TextHighlight,
+            WidgetTree, Doctrine.DisplayName, bHero ? 32 : 19, TextHighlight,
             FName(*FString::Printf(TEXT("DocTitle_%d"), Index)));
         CardContent->AddChildToVerticalBox(Title)->SetPadding(FMargin(14.0f, 0.0f, 14.0f, 4.0f));
 
-        UTextBlock* Subtitle = MakeText(
-            WidgetTree, Doctrine.CombatPhilosophy, 12, TextMuted,
-            FName(*FString::Printf(TEXT("DocSub_%d"), Index)), false);
-        CardContent->AddChildToVerticalBox(Subtitle)->SetPadding(FMargin(14.0f, 0.0f, 14.0f, 10.0f));
+        UTextBlock* Philosophy = MakeText(
+            WidgetTree, Doctrine.CombatPhilosophy, bHero ? 14 : 11, TextMuted,
+            FName(*FString::Printf(TEXT("DocPhil_%d"), Index)), false);
+        CardContent->AddChildToVerticalBox(Philosophy)->SetPadding(FMargin(14.0f, 0.0f, 14.0f, 10.0f));
 
         UTextBlock* Desc = MakeText(
-            WidgetTree, Doctrine.Description, 13, TextPrimary,
+            WidgetTree, Doctrine.Description, bHero ? 14 : 11, TextPrimary,
             FName(*FString::Printf(TEXT("DocDesc_%d"), Index)), false);
-        Desc->SetAutoWrapText(true);
-        UVerticalBoxSlot* DescSlot = CardContent->AddChildToVerticalBox(Desc);
-        DescSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-        DescSlot->SetPadding(FMargin(14.0f, 4.0f, 14.0f, 12.0f));
+        CardContent->AddChildToVerticalBox(Desc)->SetPadding(FMargin(14.0f, 0.0f, 14.0f, 12.0f));
 
-        // Replaced units list (25% composition replacement)
-        UTextBlock* SwapHeader = MakeText(
-            WidgetTree, LOCTEXT("SwapHeader", "МОДИФИКАЦИЯ СОСТАВА АРМИИ (25%):"), 11, ScarletHorizon,
-            FName(*FString::Printf(TEXT("DocSwapHdr_%d"), Index)));
-        CardContent->AddChildToVerticalBox(SwapHeader)->SetPadding(FMargin(14.0f, 0.0f, 14.0f, 4.0f));
-
-        FString UnitsList;
-        for (int32 UIdx = 0; UIdx < Doctrine.ModifiedUnits.Num(); ++UIdx)
+        // The roster swap is the point of a doctrine, so the hero spells it out.
+        if (bHero)
         {
-            UnitsList += (UIdx > 0 ? TEXT("\n• ") : TEXT("• ")) + Doctrine.ModifiedUnits[UIdx].ToString();
+            UTextBlock* SwapHeader = MakeText(
+                WidgetTree, LOCTEXT("SwapHeader", "МОДИФИКАЦИЯ СОСТАВА АРМИИ (25%)"), 12, ScarletHorizon,
+                FName(*FString::Printf(TEXT("DocSwapHdr_%d"), Index)), true, false);
+            CardContent->AddChildToVerticalBox(SwapHeader)->SetPadding(FMargin(14.0f, 0.0f, 14.0f, 6.0f));
+
+            for (int32 U = 0; U < Doctrine.ModifiedUnits.Num(); ++U)
+            {
+                UTextBlock* Unit = MakeText(
+                    WidgetTree,
+                    FText::Format(LOCTEXT("UnitBullet", "•  {0}"), Doctrine.ModifiedUnits[U]),
+                    12, TextHighlight,
+                    FName(*FString::Printf(TEXT("DocUnit_%d_%d"), Index, U)), false);
+                CardContent->AddChildToVerticalBox(Unit)->SetPadding(FMargin(22.0f, 0.0f, 14.0f, 4.0f));
+            }
+
+            UTextBlock* AbilityHeader = MakeText(
+                WidgetTree, LOCTEXT("SuperHeader", "КЛЮЧЕВАЯ СПОСОБНОСТЬ"), 12, TextMuted,
+                FName(*FString::Printf(TEXT("DocSpHdr_%d"), Index)), true, false);
+            CardContent->AddChildToVerticalBox(AbilityHeader)->SetPadding(FMargin(14.0f, 10.0f, 14.0f, 4.0f));
+
+            UTextBlock* Ability = MakeText(
+                WidgetTree, Doctrine.SignatureSuperweapon, 13, DoctrineGold,
+                FName(*FString::Printf(TEXT("DocSpTrait_%d"), Index)), false);
+            CardContent->AddChildToVerticalBox(Ability)->SetPadding(FMargin(22.0f, 0.0f, 14.0f, 14.0f));
         }
-        UTextBlock* UnitsBlock = MakeText(
-            WidgetTree, FText::FromString(UnitsList), 11, TextHighlight,
-            FName(*FString::Printf(TEXT("DocUnits_%d"), Index)), false);
-        CardContent->AddChildToVerticalBox(UnitsBlock)->SetPadding(FMargin(14.0f, 0.0f, 14.0f, 10.0f));
 
-        // Signature superweapon / trait
-        UTextBlock* SuperHeader = MakeText(
-            WidgetTree, LOCTEXT("SuperHeader", "КЛЮЧЕВАЯ СПОСОБНОСТЬ:"), 11, TextMuted,
-            FName(*FString::Printf(TEXT("DocSpHdr_%d"), Index)));
-        CardContent->AddChildToVerticalBox(SuperHeader)->SetPadding(FMargin(14.0f, 0.0f, 14.0f, 2.0f));
+        if (!Doctrine.bUnlocked)
+        {
+            UTextBlock* Locked = MakeText(
+                WidgetTree, LOCTEXT("DoctrineLocked", "ЗАБЛОКИРОВАНА"), 11, TextMuted,
+                FName(*FString::Printf(TEXT("DocLocked_%d"), Index)), true, false);
+            CardContent->AddChildToVerticalBox(Locked)->SetPadding(FMargin(14.0f, 0.0f, 14.0f, 10.0f));
+        }
 
-        UTextBlock* SuperTrait = MakeText(
-            WidgetTree, Doctrine.SignatureSuperweapon, 12, FLinearColor(0.88f, 0.72f, 0.22f, 1.0f),
-            FName(*FString::Printf(TEXT("DocSpTrait_%d"), Index)));
-        CardContent->AddChildToVerticalBox(SuperTrait)->SetPadding(FMargin(14.0f, 0.0f, 14.0f, 14.0f));
-
-        // Button
         UButton* CardButton = WidgetTree->ConstructWidget<UButton>(
             UButton::StaticClass(), FName(*FString::Printf(TEXT("DoctrineBtn_%d"), Index)));
-        CardButton->SetStyle(MakeCardButtonStyle(FLinearColor(0.88f, 0.72f, 0.22f, 1.0f)));
+        CardButton->SetStyle(MakeCardButtonStyle(DoctrineGold));
+        CardButton->SetIsEnabled(Doctrine.bUnlocked);
         CardButton->AddChild(CardContent);
 
         switch (Index)
@@ -1178,18 +1275,13 @@ void URA4CampaignSelectWidget::RefreshDoctrineCards()
 
         UBorder* CardFrame = MakePanel(
             WidgetTree, CardButton, FName(*FString::Printf(TEXT("DoctrineFrame_%d"), Index)),
-            bSelected ? FLinearColor(0.88f, 0.72f, 0.22f, 1.0f) : ActiveCountry.AccentColor,
+            bHero ? DoctrineGold : Country.AccentColor,
             DensityPadding(ActiveBloc.PanelDensity), ActiveBloc.FrameRail);
         DoctrineCardFrames.Add(CardFrame);
-
-        // Doctrines are a stepped ribbon, not three identical tiles: the active
-        // one opens up and the others sit lower.
-        UHorizontalBoxSlot* CardSlot = DoctrineCardsContainer->AddChildToHorizontalBox(CardFrame);
-        CardSlot->SetSize(FillWeight(bSelected ? 1.45f : 1.0f));
-        CardSlot->SetPadding(bSelected
-            ? FMargin(6.0f, 0.0f)
-            : FMargin(6.0f, 16.0f + 6.0f * static_cast<float>(Index), 6.0f, 0.0f));
+        Place(DoctrineCardsContainer, CardFrame, Rect.Min, Rect.GetSize(), bHero ? 3 : 2);
     }
+
+    BuildDoctrineStepChrome(ActiveBloc, Country, Ref);
 }
 
 void URA4CampaignSelectWidget::RefreshDossierPanel()
@@ -1301,6 +1393,7 @@ void URA4CampaignSelectWidget::OnCountryCardClicked(const int32 CountryIndex)
     if (DossierFrameWidget) DossierFrameWidget->SetVisibility(ESlateVisibility::Visible);
     if (CountryCardsContainer) CountryCardsContainer->SetVisibility(ESlateVisibility::Collapsed);
     if (DoctrineCardsContainer) DoctrineCardsContainer->SetVisibility(ESlateVisibility::Visible);
+    if (DossierFrameWidget) DossierFrameWidget->SetVisibility(ESlateVisibility::Collapsed);
 
     RefreshBreadcrumbs();
     RefreshDoctrineCards();
@@ -1348,6 +1441,7 @@ void URA4CampaignSelectWidget::GotoDoctrineStep()
     if (DossierFrameWidget) DossierFrameWidget->SetVisibility(ESlateVisibility::Visible);
     if (CountryCardsContainer) CountryCardsContainer->SetVisibility(ESlateVisibility::Collapsed);
     if (DoctrineCardsContainer) DoctrineCardsContainer->SetVisibility(ESlateVisibility::Visible);
+    if (DossierFrameWidget) DossierFrameWidget->SetVisibility(ESlateVisibility::Collapsed);
 
     RefreshBreadcrumbs();
     RefreshDoctrineCards();
