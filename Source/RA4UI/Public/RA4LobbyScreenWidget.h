@@ -20,6 +20,9 @@ class RA4UI_API URA4LobbyPlayerListView : public UListView
     GENERATED_BODY()
 
 public:
+    /** The entry class actually handed to the list, for tests and diagnostics. */
+    UClass* GetEntryWidgetClass() const { return EntryWidgetClass; }
+
     void ConfigureEntryWidgetClass(TSubclassOf<UUserWidget> InClass)
     {
         EntryWidgetClass = InClass;

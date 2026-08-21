@@ -29,7 +29,8 @@
 
 namespace
 {
-constexpr FLinearColor LobbyRed(0.92f, 0.035f, 0.04f, 1.0f);
+constexpr FLinearColor LobbyAccent(0.32f, 0.42f, 0.56f, 1.0f);
+constexpr FLinearColor LobbyAlarm(0.92f, 0.035f, 0.04f, 1.0f);
 constexpr FLinearColor LobbyText(0.86f, 0.82f, 0.78f, 1.0f);
 constexpr FLinearColor LobbyMuted(0.54f, 0.52f, 0.50f, 1.0f);
 constexpr FLinearColor LobbyPanel(0.008f, 0.008f, 0.011f, 0.95f);
@@ -88,17 +89,18 @@ URA4AngularPanelWidget* MakeLobbyPanel(
         {
             FSlateBrush TextureBrush;
             TextureBrush.SetResourceObject(Texture);
-            TextureBrush.DrawAs = ESlateBrushDrawType::Image;
+            TextureBrush.DrawAs = ESlateBrushDrawType::Box;
+            TextureBrush.Margin = FMargin(0.26f);
             Panel->SetBrush(TextureBrush);
         }
         else
         {
-            Panel->SetBrush(FSlateRoundedBoxBrush(LobbyPanel, 0.0f, LobbyRed, 1.35f));
+            Panel->SetBrush(FSlateRoundedBoxBrush(LobbyPanel, 0.0f, LobbyAccent, 1.35f));
         }
     }
     else
     {
-        Panel->SetBrush(FSlateRoundedBoxBrush(LobbyPanel, 0.0f, LobbyRed, 1.35f));
+        Panel->SetBrush(FSlateRoundedBoxBrush(LobbyPanel, 0.0f, LobbyAccent, 1.35f));
     }
     Panel->SetContent(Content);
     return Panel;
@@ -138,7 +140,7 @@ FButtonStyle MakeLobbyButtonStyle(const bool bPrimary = false)
             ? FLinearColor(0.28f, 0.012f, 0.018f, 0.98f)
             : FLinearColor(0.025f, 0.022f, 0.024f, 0.96f)));
         Style.SetHovered(FSlateColorBrush(FLinearColor(0.48f, 0.018f, 0.026f, 1.0f)));
-        Style.SetPressed(FSlateColorBrush(LobbyRed));
+        Style.SetPressed(FSlateColorBrush(LobbyAlarm));
         Style.SetDisabled(FSlateColorBrush(FLinearColor(0.02f, 0.02f, 0.022f, 0.45f)));
     }
     return Style;
@@ -149,19 +151,19 @@ FText GetFactionName(const ERA4FactionTheme Faction)
     switch (Faction)
     {
     case ERA4FactionTheme::EurasianPact:
-        return LOCTEXT("FactionEurasia", "★  ЕВРАЗИЙСКИЙ ПАКТ");
+        return LOCTEXT("FactionEurasia", "◆  ЕВРАЗИЙСКИЙ ПАКТ");
     case ERA4FactionTheme::AtlanticAlliance:
-        return LOCTEXT("FactionAtlantic", "◆  АТЛАНТИЧЕСКИЙ АЛЬЯНС");
+        return LOCTEXT("FactionAtlantic", "▲  АТЛАНТИЧЕСКИЙ АЛЬЯНС");
     case ERA4FactionTheme::EasternCoalition:
-        return LOCTEXT("FactionEastern", "◈  ВОСТОЧНАЯ КОАЛИЦИЯ");
+        return LOCTEXT("FactionEastern", "■  ВОСТОЧНАЯ КОАЛИЦИЯ");
     case ERA4FactionTheme::PacificPact:
-        return LOCTEXT("FactionPacific", "▲  ТИХООКЕАНСКИЙ ПАКТ");
+        return LOCTEXT("FactionPacific", "◇  ТИХООКЕАНСКИЙ ПАКТ");
     case ERA4FactionTheme::Independent:
-        return LOCTEXT("FactionIndep", "●  НЕЗАВИСИМЫЕ ДЕРЖАВЫ");
+        return LOCTEXT("FactionIndep", "○  НЕЗАВИСИМЫЕ ДЕРЖАВЫ");
     case ERA4FactionTheme::Chronolegion:
-        return LOCTEXT("FactionChrono", "△  ХРОНОЛЕГИОН");
+        return LOCTEXT("FactionChrono", "△  EXPERIMENTAL / LEGACY");
     default:
-        return LOCTEXT("FactionEurasia", "★  ЕВРАЗИЙСКИЙ ПАКТ");
+        return LOCTEXT("FactionEurasia", "◆  ЕВРАЗИЙСКИЙ ПАКТ");
     }
 }
 
@@ -199,7 +201,7 @@ TSharedRef<SWidget> URA4LobbyPlayerRowWidget::RebuildWidget()
         {
             Background->SetBrushColor(FLinearColor(0.018f, 0.016f, 0.018f, 0.96f));
         }
-        Background->SetPadding(FMargin(8.0f, 6.0f));
+        Background->SetPadding(FMargin(8.0f, 5.0f));
         WidgetTree->RootWidget = Background;
 
         UHorizontalBox* Row = WidgetTree->ConstructWidget<UHorizontalBox>(
@@ -294,7 +296,7 @@ TSharedRef<SWidget> URA4LobbyScreenWidget::RebuildWidget()
         nullptr, TEXT("/Game/RA4UI/Art/T_RA4_USSR_MainMenuBackground.T_RA4_USSR_MainMenuBackground")))
     {
         GetBackgroundLayer()->SetBrushFromTexture(Background, false);
-        GetBackgroundLayer()->SetColorAndOpacity(FLinearColor(0.23f, 0.20f, 0.20f, 1.0f));
+        GetBackgroundLayer()->SetColorAndOpacity(FLinearColor(0.14f, 0.22f, 0.38f, 1.0f));
     }
 
     UCanvasPanel* Canvas = WidgetTree->ConstructWidget<UCanvasPanel>(
@@ -328,7 +330,7 @@ TSharedRef<SWidget> URA4LobbyScreenWidget::RebuildWidget()
     UImage* Emblem = WidgetTree->ConstructWidget<UImage>(
         UImage::StaticClass(), TEXT("LobbyEmblem"));
     if (UTexture2D* EmblemTexture = LoadObject<UTexture2D>(
-        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_USSR_CommandCenter.T_RA4_USSR_CommandCenter")))
+        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_TitleBackdrop.T_RA4_TitleBackdrop")))
     {
         Emblem->SetBrushFromTexture(EmblemTexture, false);
     }
@@ -338,8 +340,7 @@ TSharedRef<SWidget> URA4LobbyScreenWidget::RebuildWidget()
         WidgetTree, LOCTEXT("GameMode", "РЕЖИМ ИГРЫ\nСХВАТКА\n\nПОБЕДНЫЕ УСЛОВИЯ\nУНИЧТОЖИТЬ ВСЕХ ПРОТИВНИКОВ\n\nНАСТРОЙКИ ЛОББИ\nДРУЖЕСКИЙ ОГОНЬ       ВЫКЛ.\nОГРАНИЧЕНИЕ ВРЕМЕНИ   60 МИН.\nНАБЛЮДАТЕЛИ            ВКЛ."),
         15, LobbyMuted, TEXT("LobbyRules"), false))->SetPadding(FMargin(0.0f, 12.0f));
     PlaceLobbyWidget(Canvas, MakeLobbyPanel(
-        WidgetTree, LobbyInfo, TEXT("LobbyInfoPanel"), ERA4PanelRole::Standard,
-        TEXT("/Game/RA4UI/Art/T_RA4_UI_PanelTall.T_RA4_UI_PanelTall")),
+        WidgetTree, LobbyInfo, TEXT("LobbyInfoPanel"), ERA4PanelRole::Standard),
         FVector2D(18.0f, 28.0f), FVector2D(330.0f, 820.0f), 5);
 
     UHorizontalBox* ListHeader = WidgetTree->ConstructWidget<UHorizontalBox>(
@@ -363,13 +364,27 @@ TSharedRef<SWidget> URA4LobbyScreenWidget::RebuildWidget()
 
     PlayerList = WidgetTree->ConstructWidget<URA4LobbyPlayerListView>(
         URA4LobbyPlayerListView::StaticClass(), TEXT("LobbyPlayerList"));
-    PlayerList->ConfigureEntryWidgetClass(URA4LobbyPlayerRowWidget::StaticClass());
+    // UListView only accepts a Blueprint-generated entry class. Handing it the
+    // raw C++ class made the engine reject every row, so the list rendered empty
+    // while still reporting eight items. WBP_RA4_LobbyPlayerRow is a thin
+    // Blueprint over that same C++ row: layout and binding stay in C++.
+    if (UClass* RowClass = LoadClass<UUserWidget>(
+        nullptr,
+        TEXT("/Game/RA4UI/Widgets/WBP_RA4_LobbyPlayerRow.WBP_RA4_LobbyPlayerRow_C")))
+    {
+        PlayerList->ConfigureEntryWidgetClass(RowClass);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error,
+            TEXT("RA4 lobby: WBP_RA4_LobbyPlayerRow is missing, the player list will be empty."));
+    }
     PlayerList->SetSelectionMode(ESelectionMode::Single);
     PlayerList->SetScrollbarVisibility(ESlateVisibility::Collapsed);
     PlaceLobbyWidget(Canvas, MakeLobbyPanel(
         WidgetTree, PlayerList, TEXT("LobbyPlayerListPanel"), ERA4PanelRole::Compact,
         TEXT("/Game/RA4UI/Art/T_RA4_Frame_PanelV2.T_RA4_Frame_PanelV2")),
-        FVector2D(365.0f, 175.0f), FVector2D(980.0f, 470.0f), 6);
+        FVector2D(365.0f, 168.0f), FVector2D(980.0f, 520.0f), 6);
     PopulatePlayerList();
 
     UVerticalBox* Chat = WidgetTree->ConstructWidget<UVerticalBox>(
@@ -408,12 +423,12 @@ TSharedRef<SWidget> URA4LobbyScreenWidget::RebuildWidget()
     PlaceLobbyWidget(Canvas, MakeLobbyPanel(
         WidgetTree, Chat, TEXT("LobbyChatPanel"), ERA4PanelRole::Compact,
         TEXT("/Game/RA4UI/Art/T_RA4_UI_ChatFrame.T_RA4_UI_ChatFrame")),
-        FVector2D(365.0f, 660.0f), FVector2D(980.0f, 250.0f), 6);
+        FVector2D(365.0f, 700.0f), FVector2D(980.0f, 215.0f), 6);
 
     UVerticalBox* MapAndSettings = WidgetTree->ConstructWidget<UVerticalBox>(
         UVerticalBox::StaticClass(), TEXT("LobbyMapAndSettings"));
     MapAndSettings->AddChildToVerticalBox(MakeLobbyText(
-        WidgetTree, LOCTEXT("MapHeading", "КАРТА\nАЛЯСКА — ХОЛОДНАЯ ВЕРШИНА"), 18,
+        WidgetTree, LOCTEXT("MapHeading", "КАРТА\nАРХИПЕЛАГ «ТИФОН»"), 18,
         LobbyText, TEXT("MapHeading")));
     UImage* MapPreview = WidgetTree->ConstructWidget<UImage>(
         UImage::StaticClass(), TEXT("LobbyMapPreview"));
@@ -519,7 +534,7 @@ void URA4LobbyScreenWidget::RefreshStartState()
     {
         ReadyStatusText->SetText(LobbyViewModel->GetValidationMessage());
         ReadyStatusText->SetColorAndOpacity(FSlateColor(
-            LobbyViewModel->CanStartMatch() ? LobbyGreen : LobbyRed));
+            LobbyViewModel->CanStartMatch() ? LobbyGreen : LobbyAccent));
     }
     if (StartButton && LobbyViewModel)
     {

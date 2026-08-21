@@ -384,6 +384,22 @@ bool FRA4LobbyScreenCompositionTest::RunTest(const FString& Parameters)
 
     TestNotNull(TEXT("Player list"), Lobby->GetPlayerList());
     TestEqual(TEXT("Player list item count"), Lobby->GetPlayerList()->GetNumItems(), 8);
+
+    // Items alone are not enough: UListView silently refuses a non-Blueprint
+    // entry class, which once left the lobby rendering an empty list while still
+    // reporting eight items. The entry class must exist and be a Blueprint.
+    UClass* EntryClass = Lobby->GetPlayerList()->GetEntryWidgetClass();
+    TestNotNull(TEXT("Row entry class is set"), EntryClass);
+    if (EntryClass)
+    {
+        TestTrue(
+            TEXT("Row entry class is a Blueprint class, as UListView requires"),
+            EntryClass->ClassGeneratedBy != nullptr);
+        TestTrue(
+            TEXT("Row entry class derives from the C++ row"),
+            EntryClass->IsChildOf(URA4LobbyPlayerRowWidget::StaticClass()));
+    }
+
     TestNotNull(TEXT("Start button"), Lobby->GetStartButton());
     return true;
 }
