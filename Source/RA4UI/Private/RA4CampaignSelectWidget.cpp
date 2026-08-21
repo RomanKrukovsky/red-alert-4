@@ -200,8 +200,11 @@ void URA4CampaignSelectWidget::NativeConstruct()
             EntranceTimer, this, &URA4CampaignSelectWidget::AnimateEntrance, 1.0f / 60.0f, true);
     }
 
-    SelectedBlocIndex = 0;
-    SelectedCountryIndex = 0;
+    const TArray<FRA4BlocInfo>& StartBlocs = FRA4FactionDataRegistry::Get().GetAllBlocs();
+    SelectedBlocIndex = StartBlocs.IsValidIndex(InitialBlocIndex) ? InitialBlocIndex : 0;
+    SelectedCountryIndex = StartBlocs.IsValidIndex(SelectedBlocIndex)
+        && StartBlocs[SelectedBlocIndex].Countries.IsValidIndex(InitialCountryIndex)
+        ? InitialCountryIndex : 0;
     SelectedDoctrineIndex = 0;
     CurrentStep = ERA4CampaignSelectStep::BlocSelection;
 

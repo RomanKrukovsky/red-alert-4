@@ -44,6 +44,13 @@ public:
      */
     void SetInitialStep(ERA4CampaignSelectStep InStep) { InitialStep = InStep; }
 
+    /** Opens the screen on a given direction and country, for QA state capture. */
+    void SetInitialSelection(int32 InBloc, int32 InCountry)
+    {
+        InitialBlocIndex = InBloc;
+        InitialCountryIndex = InCountry;
+    }
+
 protected:
     virtual TSharedRef<SWidget> RebuildWidget() override;
     virtual void NativeConstruct() override;
@@ -220,6 +227,8 @@ protected:
 
     ERA4CampaignSelectStep CurrentStep = ERA4CampaignSelectStep::BlocSelection;
     ERA4CampaignSelectStep InitialStep = ERA4CampaignSelectStep::BlocSelection;
+    int32 InitialBlocIndex = 0;
+    int32 InitialCountryIndex = 0;
     int32 SelectedBlocIndex = 0;
     int32 SelectedCountryIndex = 0;
     int32 SelectedDoctrineIndex = 0;

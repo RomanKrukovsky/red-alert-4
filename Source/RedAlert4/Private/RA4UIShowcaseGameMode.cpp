@@ -67,6 +67,12 @@ void ARA4UIShowcaseGameMode::ShowInterface(APlayerController* PlayerController)
             FParse::Value(FCommandLine::Get(), TEXT("RA4Step="), RequestedStep);
             Select->SetInitialStep(static_cast<ERA4CampaignSelectStep>(
                 FMath::Clamp(RequestedStep, 0, 2)));
+
+            int32 RequestedBloc = 0;
+            int32 RequestedCountry = 0;
+            FParse::Value(FCommandLine::Get(), TEXT("RA4Bloc="), RequestedBloc);
+            FParse::Value(FCommandLine::Get(), TEXT("RA4Country="), RequestedCountry);
+            Select->SetInitialSelection(RequestedBloc, RequestedCountry);
             RootWidget = Select;
         }
     }
@@ -202,7 +208,15 @@ void ARA4UIShowcaseGameMode::CaptureInterfaceForQA()
     if (APlayerController* PlayerController = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr)
     {
         PlayerController->bShowMouseCursor = false;
-        PlayerController->SetMouseLocation(2, 2);
+    }
+
+    // Parking the cursor is not enough: whatever sits under it keeps its hover
+    // brush, and a direction whose hover colour is bright reads as a solid fill.
+    // Making the tree hit-test invisible for the frame forces every widget back
+    // to its resting state, which is what a reference comparison needs.
+    if (ActiveRootWidget)
+    {
+        ActiveRootWidget->SetVisibility(ESlateVisibility::HitTestInvisible);
     }
 
     FScreenshotRequest::RequestScreenshot(ScreenshotPath, true, false);
