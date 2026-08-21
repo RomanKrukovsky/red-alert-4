@@ -326,6 +326,12 @@ void ARA4PlayerController::SetupInputComponent()
     {
         InputComponent->BindKey(Key, IE_Pressed, this, &ARA4PlayerController::OnBuildCardKeyByKey);
     }
+
+    // Direct tactical hotkeys:
+    // 'H' -> Snap/focus camera on Home Base / MCV / Construction Yard
+    InputComponent->BindKey(EKeys::H, IE_Pressed, this, &ARA4PlayerController::JumpToHomeBase);
+    // 'J' -> Toggle First-Person / 3rd-Person Direct Control on selected unit
+    InputComponent->BindKey(EKeys::J, IE_Pressed, this, &ARA4PlayerController::ToggleDirectControl);
 }
 
 void ARA4PlayerController::OnBoundKeyPressed(const FKey Key)
@@ -918,12 +924,50 @@ bool ARA4PlayerController::ScreenToGround(const FVector2D& ScreenPosition, Vec2&
     {
         return false;
     }
-    FVector Hit;
-    if (!RA4Coords::IntersectGroundPlane(RayOrigin, RayDirection, Hit))
+
+    FVector HitPos = FVector::ZeroVector;
+    bool bHitFound = false;
+
+    if (const UWorld* World = GetWorld())
     {
-        return false;
+        FHitResult TraceHit;
+        FCollisionQueryParams QueryParams(TEXT("RA4ClickTrace"), false);
+        QueryParams.AddIgnoredActor(this);
+        if (World->LineTraceSingleByChannel(TraceHit, RayOrigin, RayOrigin + RayDirection * 100000.0, ECC_WorldStatic, QueryParams))
+        {
+            if (TraceHit.bBlockingHit)
+            {
+                HitPos = TraceHit.ImpactPoint;
+                bHitFound = true;
+            }
+        }
     }
-    OutPosition = RA4Coords::FromUnreal(Hit);
+
+    if (!bHitFound)
+    {
+        if (!RA4Coords::IntersectGroundPlane(RayOrigin, RayDirection, HitPos))
+        {
+            return false;
+        }
+    }
+
+    OutPosition = RA4Coords::FromUnreal(HitPos);
+
+    // Apply strict map boundary constraint (Invisible Barrier)
+    const URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
+    if (Subsystem != nullptr && Subsystem->GetSimWorld() != nullptr)
+    {
+        const RA4::MapDescription& Map = Subsystem->GetSimWorld()->GetMap();
+        if (Map.Width > 0 && Map.Height > 0)
+        {
+            const RA4::Fixed MinMargin = RA4::Fixed::FromInt(50);
+            const RA4::Fixed MaxX = RA4::Fixed::FromInt(int64(Map.Width) * RA4::MapDescription::kTileSizeUnitsLocal) - MinMargin;
+            const RA4::Fixed MaxY = RA4::Fixed::FromInt(int64(Map.Height) * RA4::MapDescription::kTileSizeUnitsLocal) - MinMargin;
+            OutPosition.X = RA4::Fixed::FromRaw(FMath::Clamp(OutPosition.X.Raw, MinMargin.Raw, MaxX.Raw));
+            OutPosition.Y = RA4::Fixed::FromRaw(FMath::Clamp(OutPosition.Y.Raw, MinMargin.Raw, MaxY.Raw));
+        }
+    }
+
     return true;
 }
 
@@ -1818,6 +1862,25 @@ void ARA4PlayerController::TogglePauseMenu()
                 MenuWidget->OnSettingsRequested.AddUObject(this, &ARA4PlayerController::HandlePauseMenuSettings);
                 MenuWidget->OnQuitToMenuRequested.AddUObject(this, &ARA4PlayerController::HandlePauseMenuQuitToMenu);
                 MenuWidget->OnQuitToDesktopRequested.AddUObject(this, &ARA4PlayerController::HandlePauseMenuQuitToDesktop);
+                MenuWidget->OnNextTrackRequested.AddUObject(this, &ARA4PlayerController::HandlePauseMenuNextTrack);
+                MenuWidget->OnPrevTrackRequested.AddUObject(this, &ARA4PlayerController::HandlePauseMenuPrevTrack);
+                MenuWidget->OnToggleMusicPauseRequested.AddUObject(this, &ARA4PlayerController::HandlePauseMenuToggleMusic);
+                MenuWidget->OnTrackSelected.AddUObject(this, &ARA4PlayerController::HandlePauseMenuTrackSelected);
+                MenuWidget->OnVolumeChanged.AddUObject(this, &ARA4PlayerController::HandlePauseMenuVolumeChanged);
+
+                MenuWidget->OnQualityPresetChanged.AddUObject(this, &ARA4PlayerController::HandlePauseMenuQualityPresetChanged);
+                MenuWidget->OnFpsCapChanged.AddUObject(this, &ARA4PlayerController::HandlePauseMenuFpsCapChanged);
+                MenuWidget->OnAntiAliasingChanged.AddUObject(this, &ARA4PlayerController::HandlePauseMenuAntiAliasingChanged);
+                MenuWidget->OnScreenShakeChanged.AddUObject(this, &ARA4PlayerController::HandlePauseMenuScreenShakeChanged);
+                MenuWidget->OnMasterVolumeChanged.AddUObject(this, &ARA4PlayerController::HandlePauseMenuMasterVolumeChanged);
+                MenuWidget->OnSfxVolumeChanged.AddUObject(this, &ARA4PlayerController::HandlePauseMenuSfxVolumeChanged);
+                MenuWidget->OnEvaVolumeChanged.AddUObject(this, &ARA4PlayerController::HandlePauseMenuEvaVolumeChanged);
+                MenuWidget->OnUnitVoicesChanged.AddUObject(this, &ARA4PlayerController::HandlePauseMenuUnitVoicesChanged);
+                MenuWidget->OnControlSchemeChanged.AddUObject(this, &ARA4PlayerController::HandlePauseMenuControlSchemeChanged);
+                MenuWidget->OnCameraSpeedChanged.AddUObject(this, &ARA4PlayerController::HandlePauseMenuCameraSpeedChanged);
+                MenuWidget->OnEdgeScrollChanged.AddUObject(this, &ARA4PlayerController::HandlePauseMenuEdgeScrollChanged);
+                MenuWidget->OnHealthBarModeChanged.AddUObject(this, &ARA4PlayerController::HandlePauseMenuHealthBarModeChanged);
+                MenuWidget->OnDirectControlFovChanged.AddUObject(this, &ARA4PlayerController::HandlePauseMenuDirectControlFovChanged);
 
                 PauseMenuOverlay = MenuWidget;
                 PauseMenuOverlay->AddToViewport(100);
@@ -1825,6 +1888,16 @@ void ARA4PlayerController::TogglePauseMenu()
         }
         if (PauseMenuOverlay != nullptr)
         {
+            if (URA4PauseMenuWidget* MenuWidget = Cast<URA4PauseMenuWidget>(PauseMenuOverlay))
+            {
+                if (URA4AudioSubsystem* Audio = GetWorld()->GetSubsystem<URA4AudioSubsystem>())
+                {
+                    MenuWidget->SetTrackList(Audio->GetTrackTitles(), Audio->GetCurrentTrackIndex());
+                    MenuWidget->SetCurrentTrack(Audio->GetCurrentTrackIndex(), Audio->GetCurrentTrackTitle(), Audio->IsMusicPlaying());
+                    MenuWidget->SetMusicVolume(Audio->GetMusicVolume());
+                }
+            }
+
             PauseMenuOverlay->SetVisibility(ESlateVisibility::Visible);
             FInputModeGameAndUI InputMode;
             InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
@@ -1878,6 +1951,149 @@ void ARA4PlayerController::HandlePauseMenuQuitToMenu()
 void ARA4PlayerController::HandlePauseMenuQuitToDesktop()
 {
     UKismetSystemLibrary::QuitGame(this, this, EQuitPreference::Quit, false);
+}
+
+void ARA4PlayerController::HandlePauseMenuNextTrack()
+{
+    if (URA4AudioSubsystem* Audio = GetWorld()->GetSubsystem<URA4AudioSubsystem>())
+    {
+        Audio->NextTrack();
+        if (URA4PauseMenuWidget* MenuWidget = Cast<URA4PauseMenuWidget>(PauseMenuOverlay))
+        {
+            MenuWidget->SetCurrentTrack(Audio->GetCurrentTrackIndex(), Audio->GetCurrentTrackTitle(), Audio->IsMusicPlaying());
+        }
+    }
+}
+
+void ARA4PlayerController::HandlePauseMenuPrevTrack()
+{
+    if (URA4AudioSubsystem* Audio = GetWorld()->GetSubsystem<URA4AudioSubsystem>())
+    {
+        Audio->PreviousTrack();
+        if (URA4PauseMenuWidget* MenuWidget = Cast<URA4PauseMenuWidget>(PauseMenuOverlay))
+        {
+            MenuWidget->SetCurrentTrack(Audio->GetCurrentTrackIndex(), Audio->GetCurrentTrackTitle(), Audio->IsMusicPlaying());
+        }
+    }
+}
+
+void ARA4PlayerController::HandlePauseMenuToggleMusic()
+{
+    if (URA4AudioSubsystem* Audio = GetWorld()->GetSubsystem<URA4AudioSubsystem>())
+    {
+        Audio->ToggleMusicPause();
+        if (URA4PauseMenuWidget* MenuWidget = Cast<URA4PauseMenuWidget>(PauseMenuOverlay))
+        {
+            MenuWidget->SetCurrentTrack(Audio->GetCurrentTrackIndex(), Audio->GetCurrentTrackTitle(), Audio->IsMusicPlaying());
+        }
+    }
+}
+
+void ARA4PlayerController::HandlePauseMenuTrackSelected(int32 TrackIndex)
+{
+    if (URA4AudioSubsystem* Audio = GetWorld()->GetSubsystem<URA4AudioSubsystem>())
+    {
+        Audio->PlayTrackByIndex(TrackIndex);
+        if (URA4PauseMenuWidget* MenuWidget = Cast<URA4PauseMenuWidget>(PauseMenuOverlay))
+        {
+            MenuWidget->SetCurrentTrack(Audio->GetCurrentTrackIndex(), Audio->GetCurrentTrackTitle(), Audio->IsMusicPlaying());
+        }
+    }
+}
+
+void ARA4PlayerController::HandlePauseMenuVolumeChanged(float DeltaVolume)
+{
+    if (URA4AudioSubsystem* Audio = GetWorld()->GetSubsystem<URA4AudioSubsystem>())
+    {
+        const float NewVol = FMath::Clamp(Audio->GetMusicVolume() + DeltaVolume, 0.0f, 1.0f);
+        Audio->SetMusicVolume(NewVol);
+        if (URA4PauseMenuWidget* MenuWidget = Cast<URA4PauseMenuWidget>(PauseMenuOverlay))
+        {
+            MenuWidget->SetMusicVolume(NewVol);
+        }
+    }
+}
+
+void ARA4PlayerController::HandlePauseMenuQualityPresetChanged(int32 Preset)
+{
+    const int32 Clamped = FMath::Clamp(Preset, 0, 3);
+    ConsoleCommand(FString::Printf(TEXT("sg.ViewDistanceQuality %d"), Clamped));
+    ConsoleCommand(FString::Printf(TEXT("sg.AntiAliasingQuality %d"), Clamped));
+    ConsoleCommand(FString::Printf(TEXT("sg.ShadowQuality %d"), Clamped));
+    ConsoleCommand(FString::Printf(TEXT("sg.PostProcessQuality %d"), Clamped));
+    ConsoleCommand(FString::Printf(TEXT("sg.TextureQuality %d"), Clamped));
+    ConsoleCommand(FString::Printf(TEXT("sg.EffectsQuality %d"), Clamped));
+    ConsoleCommand(FString::Printf(TEXT("sg.FoliageQuality %d"), Clamped));
+    ConsoleCommand(FString::Printf(TEXT("sg.ShadingQuality %d"), Clamped));
+    UE_LOG(LogTemp, Display, TEXT("RA4 Graphics Quality set to preset %d"), Clamped);
+}
+
+void ARA4PlayerController::HandlePauseMenuFpsCapChanged(int32 FpsCap)
+{
+    ConsoleCommand(FString::Printf(TEXT("t.MaxFPS %d"), FpsCap));
+    UE_LOG(LogTemp, Display, TEXT("RA4 FPS Cap set to %d"), FpsCap);
+}
+
+void ARA4PlayerController::HandlePauseMenuAntiAliasingChanged(int32 AaIndex)
+{
+    int32 UEMethod = 2; // Default TAA
+    if (AaIndex == 0) UEMethod = 1; // FXAA
+    else if (AaIndex == 1) UEMethod = 2; // TAA
+    else if (AaIndex == 2) UEMethod = 4; // TSR
+    ConsoleCommand(FString::Printf(TEXT("r.AntiAliasingMethod %d"), UEMethod));
+    UE_LOG(LogTemp, Display, TEXT("RA4 Anti-Aliasing set to method %d"), UEMethod);
+}
+
+void ARA4PlayerController::HandlePauseMenuScreenShakeChanged(bool bEnabled)
+{
+    UE_LOG(LogTemp, Display, TEXT("RA4 Screen Shake set to %s"), bEnabled ? TEXT("Enabled") : TEXT("Disabled"));
+}
+
+void ARA4PlayerController::HandlePauseMenuMasterVolumeChanged(float Volume)
+{
+    ConsoleCommand(FString::Printf(TEXT("au.SetMasterVolume %f"), Volume));
+    UE_LOG(LogTemp, Display, TEXT("RA4 Master volume set to %f"), Volume);
+}
+
+void ARA4PlayerController::HandlePauseMenuSfxVolumeChanged(float Volume)
+{
+    UE_LOG(LogTemp, Display, TEXT("RA4 SFX volume set to %f"), Volume);
+}
+
+void ARA4PlayerController::HandlePauseMenuEvaVolumeChanged(float Volume)
+{
+    UE_LOG(LogTemp, Display, TEXT("RA4 EVA volume set to %f"), Volume);
+}
+
+void ARA4PlayerController::HandlePauseMenuUnitVoicesChanged(bool bEnabled)
+{
+    UE_LOG(LogTemp, Display, TEXT("RA4 Unit chatter set to %s"), bEnabled ? TEXT("Enabled") : TEXT("Disabled"));
+}
+
+void ARA4PlayerController::HandlePauseMenuControlSchemeChanged(int32 SchemeIndex)
+{
+    Scheme = SchemeIndex == 0 ? RA4::Input::ControlScheme::ClassicRA : RA4::Input::ControlScheme::ModernRTS;
+    UE_LOG(LogTemp, Display, TEXT("RA4 Control Scheme changed to %s"), SchemeIndex == 0 ? TEXT("Classic C&C (LMB)") : TEXT("Modern RTS (RMB)"));
+}
+
+void ARA4PlayerController::HandlePauseMenuCameraSpeedChanged(float SpeedMultiplier)
+{
+    UE_LOG(LogTemp, Display, TEXT("RA4 Camera Pan Speed multiplier set to %f"), SpeedMultiplier);
+}
+
+void ARA4PlayerController::HandlePauseMenuEdgeScrollChanged(bool bEnabled)
+{
+    UE_LOG(LogTemp, Display, TEXT("RA4 Edge Scroll set to %s"), bEnabled ? TEXT("Enabled") : TEXT("Disabled"));
+}
+
+void ARA4PlayerController::HandlePauseMenuHealthBarModeChanged(int32 ModeIndex)
+{
+    UE_LOG(LogTemp, Display, TEXT("RA4 Health Bar Mode set to %d"), ModeIndex);
+}
+
+void ARA4PlayerController::HandlePauseMenuDirectControlFovChanged(float FOV)
+{
+    UE_LOG(LogTemp, Display, TEXT("RA4 Direct Control FOV set to %f"), FOV);
 }
 
 void ARA4PlayerController::HandleRadarClicked(FVector2D WorldPosition)
@@ -2024,6 +2240,69 @@ URA4SimWorldSubsystem* ARA4PlayerController::GetSimSubsystem() const
 {
     UWorld* World = GetWorld();
     return World != nullptr ? World->GetSubsystem<URA4SimWorldSubsystem>() : nullptr;
+}
+
+void ARA4PlayerController::JumpToHomeBase()
+{
+    const URA4SimWorldSubsystem* SimSub = GetSimSubsystem();
+    if (SimSub == nullptr || SimSub->GetSimWorld() == nullptr)
+    {
+        return;
+    }
+
+    const RA4::SimWorld* Sim = SimSub->GetSimWorld();
+    const RA4::PlayerId LocalPlayer = Selection.GetLocalPlayer();
+
+    RA4::Vec2 TargetPos(RA4::Fixed::FromInt(2400), RA4::Fixed::FromInt(2400));
+    bool bFound = false;
+
+    const auto& Cores = Sim->GetAllCores();
+    const auto& Transforms = Sim->GetAllTransforms();
+    const auto* Content = Sim->GetContent();
+
+    // 1. First priority: Construction Yard or MCV
+    for (size_t I = 0; I < Cores.size() && I < Transforms.size(); ++I)
+    {
+        if (Cores[I].bAlive && Cores[I].Owner == LocalPlayer)
+        {
+            if (Content != nullptr)
+            {
+                const auto* Def = Content->FindEntity(Cores[I].Def);
+                if (Def != nullptr)
+                {
+                    if (Def->Name.find("construction_yard") != std::string::npos ||
+                        Def->Name.find("mcv") != std::string::npos ||
+                        Def->Name.find("headquarters") != std::string::npos)
+                    {
+                        TargetPos = Transforms[I].Position;
+                        bFound = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Second priority: Any owned unit or building
+    if (!bFound)
+    {
+        for (size_t I = 0; I < Cores.size() && I < Transforms.size(); ++I)
+        {
+            if (Cores[I].bAlive && Cores[I].Owner == LocalPlayer)
+            {
+                TargetPos = Transforms[I].Position;
+                bFound = true;
+                break;
+            }
+        }
+    }
+
+    if (ARA4CameraPawn* Cam = Cast<ARA4CameraPawn>(GetPawn()))
+    {
+        const FVector UnrealPos = RA4Coords::ToUnreal(TargetPos);
+        Cam->GetCameraController().FocusOn(RA4::Input::Vec2f(float(UnrealPos.X), float(UnrealPos.Y)), /*bInstant*/ false);
+        UE_LOG(LogTemp, Display, TEXT("RA4: Jumped to Home Base at (%.0f, %.0f)"), UnrealPos.X, UnrealPos.Y);
+    }
 }
 
 void ARA4PlayerController::OnDirectControlTogglePressed()

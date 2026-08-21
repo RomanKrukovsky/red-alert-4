@@ -66,6 +66,13 @@ ARA4EntityActor::ARA4EntityActor()
     if (CubeMesh.Succeeded())
     {
         MeshComponent->SetStaticMesh(CubeMesh.Object);
+        FoundationBibComponent->SetStaticMesh(CubeMesh.Object);
+    }
+    static ConstructorHelpers::FObjectFinder<UMaterialInterface> ConcreteFloorMat(
+        TEXT("/Game/ThirdParty/CityPark/Materials/Buildings/MI_Floor01.MI_Floor01"));
+    if (ConcreteFloorMat.Succeeded())
+    {
+        FoundationBibComponent->SetMaterial(0, ConcreteFloorMat.Object);
     }
     static ConstructorHelpers::FObjectFinder<UMaterialInterface> PlaceholderMaterial(
         TEXT("/Game/RA4/Materials/M_RA4EntityPlaceholder_Lit.M_RA4EntityPlaceholder_Lit"));
@@ -253,10 +260,16 @@ void ARA4EntityActor::SetVisualScale(const FVector& Scale)
         SourceSize.Z > UE_SMALL_NUMBER ? DesiredSize.Z / SourceSize.Z : 1.0);
     MeshComponent->SetWorldScale3D(NormalizedScale);
 
-    // Units stand directly on the ground. Only center-pivoted engine placeholder cubes need half-height offset.
-    if (Mesh != nullptr && Mesh->GetName().Contains(TEXT("Cube")))
+    // Ensure all unit and building meshes sit flush on the ground surface without dipping below or floating
+    if (Mesh != nullptr)
     {
-        VisualZOffset = DesiredSize.Z * 0.5f;
+        const FBoxSphereBounds Bounds = Mesh->GetBounds();
+        const float MeshMinZ = (Bounds.Origin.Z - Bounds.BoxExtent.Z) * NormalizedScale.Z;
+        VisualZOffset = -MeshMinZ;
+        if (VisualZOffset < 0.0f)
+        {
+            VisualZOffset = 0.0f;
+        }
     }
     else
     {
@@ -398,20 +411,10 @@ void ARA4EntityActor::SetEntityId(const FString& InEntityId)
                              InEntityId.Contains(TEXT("silo"), ESearchCase::IgnoreCase) ||
                              InEntityId.Contains(TEXT("superweapon"), ESearchCase::IgnoreCase);
 
-    if (FoundationBibComponent != nullptr)
+    if (IsValid(FoundationBibComponent))
     {
         if (bIsBuilding)
         {
-            static UStaticMesh* CubeMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube"));
-            static UMaterialInterface* BibMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/ThirdParty/CityPark/Materials/Buildings/MI_Floor01.MI_Floor01"));
-            if (CubeMesh != nullptr)
-            {
-                FoundationBibComponent->SetStaticMesh(CubeMesh);
-            }
-            if (BibMat != nullptr)
-            {
-                FoundationBibComponent->SetMaterial(0, BibMat);
-            }
             FoundationBibComponent->SetRelativeLocation(FVector(0.0f, 0.0f, -0.45f));
             FoundationBibComponent->SetRelativeScale3D(FVector(1.25f, 1.25f, 0.08f));
             FoundationBibComponent->SetVisibility(true);
@@ -714,9 +717,10 @@ void ARA4EntityActor::ApplyPrimitiveComposition(const FString& InEntityId)
             MeshComponent->SetVisibility(false, true); // Hide cube and all child components
             SkeletalMeshComponent->SetSkeletalMesh(QuantumMesh);
             SkeletalMeshComponent->SetVisibility(true);
-            SkeletalMeshComponent->SetRelativeLocation(FVector(0, 0, -90));
+            SkeletalMeshComponent->SetRelativeLocation(FVector(0, 0, 0));
             SkeletalMeshComponent->SetRelativeRotation(FRotator(0, -90, 0));
             SkeletalMeshComponent->SetWorldScale3D(FVector(1.0f, 1.0f, 1.0f));
+            VisualZOffset = 0.0f;
         }
     }
     else

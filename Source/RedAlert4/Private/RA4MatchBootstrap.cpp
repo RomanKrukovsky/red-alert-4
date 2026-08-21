@@ -20,21 +20,28 @@ const ContentId OreField = MakeContentId("resource.ore_field");
 // as "the AI always wins".
 struct StartingForce
 {
-    ContentId Yard;
-    ContentId Refinery;
-    ContentId Harvester;
-    ContentId Infantry;
-    ContentId Tank;
+    ContentId Mcv;
+    ContentId BasicInfantry;
+    ContentId AntiArmorInfantry;
+    ContentId MainTank;
+    ContentId Artillery;
+    ContentId SuperTank;
 };
 
 const StartingForce SovietForce{
-    MakeContentId("building.sov.construction_yard"), MakeContentId("building.sov.ore_refinery"),
-    MakeContentId("unit.sov.ore_harvester"), MakeContentId("unit.sov.conscript"),
+    MakeContentId("unit.sov.mcv"),
+    MakeContentId("unit.sov.conscript"),
+    MakeContentId("unit.sov.rocket_trooper"),
+    MakeContentId("unit.sov.heavy_tank"),
+    MakeContentId("unit.sov.zarevo_mlrs"),
     MakeContentId("unit.sov.heavy_tank")};
 
 const StartingForce AllianceForce{
-    MakeContentId("building.all.construction_yard"), MakeContentId("building.all.ore_refinery"),
-    MakeContentId("unit.all.ore_harvester"), MakeContentId("unit.all.rifleman"),
+    MakeContentId("unit.all.mcv"),
+    MakeContentId("unit.all.rifleman"),
+    MakeContentId("unit.all.missile_infantry"),
+    MakeContentId("unit.all.light_tank"),
+    MakeContentId("unit.all.oracle_artillery"),
     MakeContentId("unit.all.light_tank")};
 
 Vec2 TileCentre(const TileCoord& Tile)
@@ -43,16 +50,13 @@ Vec2 TileCentre(const TileCoord& Tile)
                 RA4::Fixed::FromInt(int64(Tile.Y) * kTileSizeUnits + kTileSizeUnits / 2));
 }
 
-// A construction yard on an empty field is not a playable start: with nothing to
-// select there is no selection, no orders and nothing for the sidebar to attach to.
-// Both sides open with the classic skirmish kit -- yard, refinery, a harvester on the
-// ore and a small escort.
+// Opens with only the MCV (Mobile Construction Vehicle) and a robust starting combat army:
+// 10 Infantry (6 basic + 4 rocket troopers), 5 Main Battle Tanks, 2 Rocket Launchers/Artillery,
+// 1 Super Tank, and an Ore field for economic expansion.
 void SeedBase(SimWorld& World, const StartingForce& Force, PlayerId Owner, const TileCoord& YardTile,
               const TileCoord& OreOrigin)
 {
-    World.SpawnBuilding(Force.Yard, Owner, YardTile, /*bInstantComplete*/ true);
-    World.SpawnBuilding(Force.Refinery, Owner, TileCoord(YardTile.X + 4, YardTile.Y), true);
-
+    // 1. Ore Field Resource Nodes
     for (int32 X = 0; X < 3; ++X)
     {
         for (int32 Y = 0; Y < 3; ++Y)
@@ -61,19 +65,31 @@ void SeedBase(SimWorld& World, const StartingForce& Force, PlayerId Owner, const
         }
     }
 
-    World.SpawnUnit(Force.Harvester, Owner, TileCentre(TileCoord(YardTile.X + 4, YardTile.Y + 2)));
+    // 2. Mobile Construction Vehicle (MCV / МСЦ)
+    World.SpawnUnit(Force.Mcv, Owner, TileCentre(YardTile));
 
-    // Spread along a row rather than stacked on one tile, so the opening screen shows
-    // a formation and the movement systems are not asked to untangle an overlap on
-    // the first tick.
+    // 3. 10x Infantry (6 Basic + 4 Anti-Armor / Rocket Troopers)
+    for (int32 Index = 0; Index < 6; ++Index)
+    {
+        World.SpawnUnit(Force.BasicInfantry, Owner, TileCentre(TileCoord(YardTile.X - 3 + Index, YardTile.Y + 3)));
+    }
     for (int32 Index = 0; Index < 4; ++Index)
     {
-        World.SpawnUnit(Force.Infantry, Owner, TileCentre(TileCoord(YardTile.X - 2 + Index, YardTile.Y + 3)));
+        World.SpawnUnit(Force.AntiArmorInfantry, Owner, TileCentre(TileCoord(YardTile.X - 2 + Index, YardTile.Y + 4)));
     }
-    for (int32 Index = 0; Index < 2; ++Index)
+
+    // 4. 5x Main Battle Tanks
+    for (int32 Index = 0; Index < 5; ++Index)
     {
-        World.SpawnUnit(Force.Tank, Owner, TileCentre(TileCoord(YardTile.X - 2 + Index * 3, YardTile.Y + 5)));
+        World.SpawnUnit(Force.MainTank, Owner, TileCentre(TileCoord(YardTile.X - 4 + Index * 2, YardTile.Y + 6)));
     }
+
+    // 5. 2x Rocket Artillery (Zarevo MLRS / Oracle Artillery)
+    World.SpawnUnit(Force.Artillery, Owner, TileCentre(TileCoord(YardTile.X - 3, YardTile.Y + 8)));
+    World.SpawnUnit(Force.Artillery, Owner, TileCentre(TileCoord(YardTile.X + 3, YardTile.Y + 8)));
+
+    // 6. 1x Super Tank / Command Assault Armor
+    World.SpawnUnit(Force.SuperTank, Owner, TileCentre(TileCoord(YardTile.X, YardTile.Y + 8)));
 }
 } // namespace
 

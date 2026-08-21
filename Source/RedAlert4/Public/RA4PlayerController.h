@@ -94,6 +94,9 @@ public:
     UFUNCTION(BlueprintCallable, Category = "RA4|UI")
     void TogglePauseMenu();
 
+    UFUNCTION(BlueprintCallable, Category = "RA4|Navigation")
+    void JumpToHomeBase();
+
     // --- Direct Control / Possession Mode ------------------------------------
     UFUNCTION(BlueprintCallable, Category = "RA4|DirectControl")
     void ToggleDirectControl();
@@ -277,6 +280,26 @@ private:
     void HandlePauseMenuSettings();
     void HandlePauseMenuQuitToMenu();
     void HandlePauseMenuQuitToDesktop();
+    void HandlePauseMenuNextTrack();
+    void HandlePauseMenuPrevTrack();
+    void HandlePauseMenuToggleMusic();
+    void HandlePauseMenuTrackSelected(int32 TrackIndex);
+    void HandlePauseMenuVolumeChanged(float DeltaVolume);
+
+    void HandlePauseMenuQualityPresetChanged(int32 Preset);
+    void HandlePauseMenuFpsCapChanged(int32 FpsCap);
+    void HandlePauseMenuAntiAliasingChanged(int32 AaIndex);
+    void HandlePauseMenuScreenShakeChanged(bool bEnabled);
+    void HandlePauseMenuMasterVolumeChanged(float Volume);
+    void HandlePauseMenuSfxVolumeChanged(float Volume);
+    void HandlePauseMenuEvaVolumeChanged(float Volume);
+    void HandlePauseMenuUnitVoicesChanged(bool bEnabled);
+    void HandlePauseMenuControlSchemeChanged(int32 SchemeIndex);
+    void HandlePauseMenuCameraSpeedChanged(float SpeedMultiplier);
+    void HandlePauseMenuEdgeScrollChanged(bool bEnabled);
+    void HandlePauseMenuHealthBarModeChanged(int32 ModeIndex);
+    void HandlePauseMenuDirectControlFovChanged(float FOV);
+
     bool HasMainMenuMap() const;
 
     // --- state ---------------------------------------------------------------
