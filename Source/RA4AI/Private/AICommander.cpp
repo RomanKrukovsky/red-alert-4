@@ -297,6 +297,49 @@ ContentId AICommander::FindCombatUnit(const SimWorld& World) const
         }
     }
 
+    // Calculate current owned combat composition by role to balance doctrine ratios
+    int32_t TotalCombatUnits = 0;
+    int32_t CountInfantry = 0;
+    int32_t CountAntiArmor = 0;
+    int32_t CountAntiAir = 0;
+    int32_t CountArtillery = 0;
+
+    const std::vector<EntityCore>& Cores = World.GetAllCores();
+    for (uint32_t I = 0; I < uint32_t(Cores.size()); ++I)
+    {
+        if (!Cores[I].bAlive || Cores[I].Owner != Player || Cores[I].Kind != EntityKind::Unit)
+        {
+            continue;
+        }
+        const EntityDef* D = Content->FindEntity(Cores[I].Def);
+        if (D == nullptr || !D->Weapon.IsValid() || D->Unit.bIsHarvester || D->Unit.bIsBuilder)
+        {
+            continue;
+        }
+
+        ++TotalCombatUnits;
+        if (HasRole(D->Roles, EntityRole::Artillery))
+        {
+            ++CountArtillery;
+        }
+        else if (HasRole(D->Roles, EntityRole::AntiAir))
+        {
+            ++CountAntiAir;
+        }
+        else if (HasRole(D->Roles, EntityRole::AntiArmor))
+        {
+            ++CountAntiArmor;
+        }
+        else if (D->Unit.Layer == MovementLayer::Infantry)
+        {
+            ++CountInfantry;
+        }
+        else if (HasRole(D->Roles, EntityRole::Combat))
+        {
+            ++CountAntiArmor;
+        }
+    }
+
     ContentId Best;
     int32_t BestScore = -1;
     for (const EntityDef& Def : Content->GetEntities())
@@ -342,6 +385,43 @@ ContentId AICommander::FindCombatUnit(const SimWorld& World) const
         if (EnemyDefenceCount > 0 && HasRole(Def.Roles, EntityRole::Artillery))
         {
             Score += 200 + std::min(EnemyDefenceCount, 4) * 120;
+        }
+
+        // Faction doctrine ratio balancing: prioritize deficit roles in army composition
+        if (bDoctrineLoaded && TotalCombatUnits > 0)
+        {
+            if (HasRole(Def.Roles, EntityRole::AntiAir))
+            {
+                const int32_t CurrentRatio = (CountAntiAir * 100) / TotalCombatUnits;
+                if (CurrentRatio < Personality.RatioAntiAir)
+                {
+                    Score += (Personality.RatioAntiAir - CurrentRatio) * 10;
+                }
+            }
+            if (HasRole(Def.Roles, EntityRole::Artillery))
+            {
+                const int32_t CurrentRatio = (CountArtillery * 100) / TotalCombatUnits;
+                if (CurrentRatio < Personality.RatioArtillery)
+                {
+                    Score += (Personality.RatioArtillery - CurrentRatio) * 10;
+                }
+            }
+            if (HasRole(Def.Roles, EntityRole::AntiArmor))
+            {
+                const int32_t CurrentRatio = (CountAntiArmor * 100) / TotalCombatUnits;
+                if (CurrentRatio < Personality.RatioAntiArmor)
+                {
+                    Score += (Personality.RatioAntiArmor - CurrentRatio) * 8;
+                }
+            }
+            if (Def.Unit.Layer == MovementLayer::Infantry)
+            {
+                const int32_t CurrentRatio = (CountInfantry * 100) / TotalCombatUnits;
+                if (CurrentRatio < Personality.RatioInfantry)
+                {
+                    Score += (Personality.RatioInfantry - CurrentRatio) * 6;
+                }
+            }
         }
 
         // The opponent model reinforces what the current sighting list already hints
@@ -1082,10 +1162,14 @@ bool AICommander::TryBuildTech(const SimWorld& World, std::vector<Command>& Out)
         return false;
     }
     const FactionId Faction = World.GetPlayer(Player).Faction;
+    const PlayerState& State = World.GetPlayer(Player);
 
-    // Walk production categories in tech order and build the first producer the
-    // commander is missing.
-    const ProductionCategory Wanted[2] = {ProductionCategory::Infantry, ProductionCategory::Vehicle};
+    // Walk production categories in tech order: Infantry, Vehicle, Aircraft
+    const ProductionCategory Wanted[3] = {
+        ProductionCategory::Infantry,
+        ProductionCategory::Vehicle,
+        ProductionCategory::Aircraft
+    };
     for (const ProductionCategory Category : Wanted)
     {
         ContentId Producer;
@@ -1119,6 +1203,35 @@ bool AICommander::TryBuildTech(const SimWorld& World, std::vector<Command>& Out)
         if (Owned == 0 && QueueProduction(World, Producer, "missing production building", Out))
         {
             return true;
+        }
+    }
+
+    // Late-game tech: queue Superweapon if well-funded and prerequisites met
+    if (State.Credits > 3500)
+    {
+        for (const EntityDef& Def : Content->GetEntities())
+        {
+            if (Def.Faction != Faction || Def.Kind != EntityKind::Building ||
+                Def.Production.ProducedBy.empty())
+            {
+                continue;
+            }
+            if (Def.Building.SuperweaponRechargeTicks > 0 && World.HasPrerequisites(Player, Def))
+            {
+                int32_t Owned = 0;
+                const std::vector<EntityCore>& Cores = World.GetAllCores();
+                for (uint32_t I = 0; I < uint32_t(Cores.size()); ++I)
+                {
+                    if (Cores[I].bAlive && Cores[I].Owner == Player && Cores[I].Def == Def.Id)
+                    {
+                        ++Owned;
+                    }
+                }
+                if (Owned == 0 && QueueProduction(World, Def.Id, "tech superweapon structure", Out))
+                {
+                    return true;
+                }
+            }
         }
     }
     return false;
@@ -1336,6 +1449,307 @@ void AICommander::IssueSquadAttackMove(const SimWorld& World, const Vec2& Destin
     }
 }
 
+EntityId AICommander::FindTacticalFocusTarget(const SimWorld& World, EntityId AttackerId,
+                                             const std::vector<EntityId>& CandidateEnemies) const
+{
+    const ContentDatabase* Content = World.GetContent();
+    const TransformComp* AttackerTransform = World.GetTransform(AttackerId);
+    const EntityCore* AttackerCore = World.GetCore(AttackerId);
+    if (Content == nullptr || AttackerTransform == nullptr || AttackerCore == nullptr)
+    {
+        return EntityId::Invalid();
+    }
+
+    const EntityDef* AttackerDef = Content->FindEntity(AttackerCore->Def);
+    if (AttackerDef == nullptr || !AttackerDef->Weapon.IsValid())
+    {
+        return EntityId::Invalid();
+    }
+    const WeaponDef* AttackerWeapon = Content->FindWeapon(AttackerDef->Weapon);
+    if (AttackerWeapon == nullptr)
+    {
+        return EntityId::Invalid();
+    }
+
+    EntityId BestTarget = EntityId::Invalid();
+    int32_t BestScore = -100000;
+
+    const Vec2 AttackerPos = AttackerTransform->Position;
+    const Fixed MaxSearchDist = FxMax(AttackerDef->VisionRange, AttackerWeapon->MaxRange * Fixed::FromInt(2));
+    const Fixed MaxSearchDistSq = MaxSearchDist * MaxSearchDist;
+
+    for (EntityId EnemyId : CandidateEnemies)
+    {
+        if (!World.IsAlive(EnemyId))
+        {
+            continue;
+        }
+        const EntityCore* EnemyCore = World.GetCore(EnemyId);
+        const TransformComp* EnemyTransform = World.GetTransform(EnemyId);
+        const HealthComp* EnemyHealth = World.GetHealth(EnemyId);
+        if (EnemyCore == nullptr || EnemyTransform == nullptr || EnemyHealth == nullptr)
+        {
+            continue;
+        }
+
+        if (EnemyCore->Owner == Player || EnemyCore->Owner >= kMaxPlayers ||
+            !World.IsEntityVisibleTo(Player, EnemyId.Index))
+        {
+            continue;
+        }
+
+        const EntityDef* EnemyDef = Content->FindEntity(EnemyCore->Def);
+        if (EnemyDef == nullptr)
+        {
+            continue;
+        }
+
+        const bool bIsAir = EnemyDef->Unit.Layer == MovementLayer::Air;
+        if (bIsAir && !AttackerWeapon->bCanTargetAir) continue;
+        if (!bIsAir && !AttackerWeapon->bCanTargetGround) continue;
+
+        const Fixed DistSq = DistanceSquared(AttackerPos, EnemyTransform->Position);
+        if (DistSq > MaxSearchDistSq)
+        {
+            continue;
+        }
+
+        int32_t Score = EnemyDef->Production.Cost / 2;
+
+        if (EnemyHealth->Max > 0)
+        {
+            const int32_t HpPct = int32_t((int64_t(EnemyHealth->Current) * 100) / EnemyHealth->Max);
+            if (HpPct < 25)
+            {
+                Score += 450;
+            }
+            else if (HpPct < 50)
+            {
+                Score += 250;
+            }
+        }
+
+        if (HasRole(EnemyDef->Roles, EntityRole::Artillery))
+        {
+            Score += 350;
+        }
+        else if (HasRole(EnemyDef->Roles, EntityRole::AntiArmor) && HasRole(AttackerDef->Roles, EntityRole::Combat))
+        {
+            Score += 250;
+        }
+        else if (HasRole(EnemyDef->Roles, EntityRole::Harvester))
+        {
+            Score += 300;
+        }
+        else if (EnemyDef->Kind == EntityKind::Building && EnemyDef->Production.Category == ProductionCategory::Defense)
+        {
+            Score += 200;
+        }
+
+        const int32_t DistTiles = int32_t(DistSq.Raw / (MapDescription::kTileSizeUnitsLocal * MapDescription::kTileSizeUnitsLocal * RA4::kFixedOne));
+        Score -= DistTiles * 10;
+
+        if (Score > BestScore)
+        {
+            BestScore = Score;
+            BestTarget = EnemyId;
+        }
+    }
+
+    return BestTarget;
+}
+
+void AICommander::IssueSquadTacticalCombatOrders(const SimWorld& World, const Vec2& Destination,
+                                                std::vector<Command>& Out)
+{
+    const ContentDatabase* Content = World.GetContent();
+    if (Content == nullptr)
+    {
+        return;
+    }
+
+    std::vector<EntityId> VisibleEnemies;
+    const std::vector<EntityCore>& AllCores = World.GetAllCores();
+    for (uint32_t I = 0; I < uint32_t(AllCores.size()); ++I)
+    {
+        if (!AllCores[I].bAlive || AllCores[I].Owner == Player || AllCores[I].Owner >= kMaxPlayers)
+        {
+            continue;
+        }
+        if (World.IsEntityVisibleTo(Player, I))
+        {
+            VisibleEnemies.push_back(World.MakeId(I));
+        }
+    }
+
+    for (EntityId Id : ActiveOperation.AssignedUnits)
+    {
+        if (!World.IsAlive(Id))
+        {
+            continue;
+        }
+
+        const OrderQueue* Orders = World.GetOrders(Id);
+        const TransformComp* UnitTransform = World.GetTransform(Id);
+        const HealthComp* UnitHealth = World.GetHealth(Id);
+        const EntityCore* UnitCore = World.GetCore(Id);
+        if (UnitTransform == nullptr || UnitCore == nullptr)
+        {
+            continue;
+        }
+        const EntityDef* UnitDef = Content->FindEntity(UnitCore->Def);
+        if (UnitDef == nullptr)
+        {
+            continue;
+        }
+
+        if (Orders != nullptr && !Orders->IsEmpty())
+        {
+            const Order& CurrentOrder = Orders->Front();
+            if (CurrentOrder.Type == OrderType::Attack && World.IsAlive(CurrentOrder.Target))
+            {
+                continue;
+            }
+            if (CurrentOrder.Type == OrderType::Move && Orders->Count > 1)
+            {
+                continue;
+            }
+        }
+
+        // Tactical Kiting for fragile ranged units
+        if (UnitDef->Weapon.IsValid() && UnitHealth != nullptr && UnitHealth->Max > 0)
+        {
+            const WeaponDef* Wpn = Content->FindWeapon(UnitDef->Weapon);
+            if (Wpn != nullptr && Wpn->MaxRange >= Fixed::FromInt(700))
+            {
+                EntityId NearestThreat = EntityId::Invalid();
+                Fixed MinThreatDistSq = Fixed::FromInt(400 * 400);
+                for (EntityId EnemyId : VisibleEnemies)
+                {
+                    const TransformComp* EnemyTransform = World.GetTransform(EnemyId);
+                    if (EnemyTransform != nullptr)
+                    {
+                        const Fixed D2 = DistanceSquared(UnitTransform->Position, EnemyTransform->Position);
+                        if (D2 < MinThreatDistSq)
+                        {
+                            MinThreatDistSq = D2;
+                            NearestThreat = EnemyId;
+                        }
+                    }
+                }
+
+                if (NearestThreat.IsValid())
+                {
+                    const TransformComp* ThreatTransform = World.GetTransform(NearestThreat);
+                    if (ThreatTransform != nullptr)
+                    {
+                        Vec2 AwayDir = UnitTransform->Position - ThreatTransform->Position;
+                        if (AwayDir.LengthSquared().Raw > 0)
+                        {
+                            const Vec2 KiteDestination = UnitTransform->Position + AwayDir.Normalized() * Fixed::FromInt(300);
+                            Command KiteCmd;
+                            KiteCmd.Type = CommandType::Move;
+                            KiteCmd.Issuer = Player;
+                            KiteCmd.Primary = Id;
+                            KiteCmd.Location = KiteDestination;
+                            Out.push_back(KiteCmd);
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Tactical cycling: if unit is critically wounded (< 35% HP), pull back slightly
+        // so healthier front-line armor takes the brunt of incoming fire
+        if (UnitHealth != nullptr && UnitHealth->Max > 0 &&
+            (UnitHealth->Current * 100) / UnitHealth->Max < 35 &&
+            !VisibleEnemies.empty())
+        {
+            EntityId NearestThreat = EntityId::Invalid();
+            Fixed MinThreatDistSq = Fixed::FromInt(600 * 600);
+            for (EntityId EnemyId : VisibleEnemies)
+            {
+                const TransformComp* EnemyTransform = World.GetTransform(EnemyId);
+                if (EnemyTransform != nullptr)
+                {
+                    const Fixed D2 = DistanceSquared(UnitTransform->Position, EnemyTransform->Position);
+                    if (D2 < MinThreatDistSq)
+                    {
+                        MinThreatDistSq = D2;
+                        NearestThreat = EnemyId;
+                    }
+                }
+            }
+            if (NearestThreat.IsValid())
+            {
+                const TransformComp* ThreatTransform = World.GetTransform(NearestThreat);
+                if (ThreatTransform != nullptr)
+                {
+                    Vec2 AwayDir = UnitTransform->Position - ThreatTransform->Position;
+                    if (AwayDir.LengthSquared().Raw > 0)
+                    {
+                        const Vec2 FallbackDest = UnitTransform->Position + AwayDir.Normalized() * Fixed::FromInt(250);
+                        Command CycleCmd;
+                        CycleCmd.Type = CommandType::Move;
+                        CycleCmd.Issuer = Player;
+                        CycleCmd.Primary = Id;
+                        CycleCmd.Location = FallbackDest;
+                        Out.push_back(CycleCmd);
+                        continue;
+                    }
+                }
+            }
+        }
+
+        EntityId FocusTarget = FindTacticalFocusTarget(World, Id, VisibleEnemies);
+
+        // Artillery standoff positioning
+        if (HasRole(UnitDef->Roles, EntityRole::Artillery) && UnitDef->Weapon.IsValid() && FocusTarget.IsValid())
+        {
+            const WeaponDef* Wpn = Content->FindWeapon(UnitDef->Weapon);
+            if (Wpn != nullptr && Wpn->MaxRange > Fixed::FromInt(600))
+            {
+                const TransformComp* TargetTransform = World.GetTransform(FocusTarget);
+                if (TargetTransform != nullptr)
+                {
+                    const Fixed TargetDistSq = DistanceSquared(UnitTransform->Position, TargetTransform->Position);
+                    const Fixed MaxRangeSq = Wpn->MaxRange * Wpn->MaxRange;
+                    if (TargetDistSq <= MaxRangeSq)
+                    {
+                        Command C;
+                        C.Type = CommandType::Attack;
+                        C.Issuer = Player;
+                        C.Primary = Id;
+                        C.Target = FocusTarget;
+                        Out.push_back(C);
+                        continue;
+                    }
+                }
+            }
+        }
+
+        if (FocusTarget.IsValid())
+        {
+            Command C;
+            C.Type = CommandType::Attack;
+            C.Issuer = Player;
+            C.Primary = Id;
+            C.Target = FocusTarget;
+            Out.push_back(C);
+        }
+        else
+        {
+            Command C;
+            C.Type = CommandType::AttackMove;
+            C.Issuer = Player;
+            C.Primary = Id;
+            C.Location = Destination;
+            Out.push_back(C);
+        }
+    }
+}
+
 void AICommander::IssueSquadRetreat(const SimWorld& World, std::vector<Command>& Out)
 {
     const EntityId Yard = FindOwnConstructionYard(World);
@@ -1514,6 +1928,114 @@ bool AICommander::TryHarassRaid(const SimWorld& World, int32_t ArmySize,
     LastHarassRaidTick = Now;
     Log(Now, CommandType::AttackMove, ContentId(), "harass raid");
     return true;
+}
+
+bool AICommander::TryFireSuperweapons(const SimWorld& World, std::vector<Command>& Out)
+{
+    const ContentDatabase* Content = World.GetContent();
+    if (Content == nullptr || Knowledge == nullptr)
+    {
+        return false;
+    }
+
+    const PlayerState& State = World.GetPlayer(Player);
+    if (State.PowerConsumed > State.PowerProduced)
+    {
+        return false;
+    }
+
+    const auto& Cores = World.GetAllCores();
+    for (size_t I = 0; I < Cores.size(); ++I)
+    {
+        if (!Cores[I].bAlive || Cores[I].Owner != Player || Cores[I].Kind != EntityKind::Building)
+        {
+            continue;
+        }
+
+        const EntityId BldId = World.MakeId(uint32_t(I));
+        const BuildingComp* B = World.GetBuilding(BldId);
+        if (B == nullptr || B->State != ConstructionState::Complete)
+        {
+            continue;
+        }
+
+        const EntityDef* Def = Content->FindEntity(Cores[I].Def);
+        if (Def == nullptr || Def->Building.SuperweaponRechargeTicks <= 0)
+        {
+            continue;
+        }
+
+        if (B->SuperweaponChargeTicks < Def->Building.SuperweaponRechargeTicks)
+        {
+            continue;
+        }
+
+        TileCoord BestTargetTile{-1, -1};
+        int32_t BestScore = 0;
+
+        const auto& KnownEnemies = Knowledge->GetKnownEnemies();
+        const int32_t RadiusTiles = int32_t(Def->Building.SuperweaponRadius.Raw / (MapDescription::kTileSizeUnitsLocal * RA4::kFixedOne)) + 2;
+
+        for (const EnemyMemory& CenterMem : KnownEnemies)
+        {
+            if (CenterMem.LastSeenTick == 0)
+            {
+                continue;
+            }
+
+            int32_t ClusterScore = 0;
+            for (const EnemyMemory& NearbyMem : KnownEnemies)
+            {
+                const int32_t DX = std::abs(NearbyMem.Position.X - CenterMem.Position.X);
+                const int32_t DY = std::abs(NearbyMem.Position.Y - CenterMem.Position.Y);
+                if (DX <= RadiusTiles && DY <= RadiusTiles)
+                {
+                    const EntityDef* EDef = Content->FindEntity(NearbyMem.DefId);
+                    if (EDef != nullptr)
+                    {
+                        if (EDef->Building.bIsConstructionYard)
+                        {
+                            ClusterScore += 1000;
+                        }
+                        else if (EDef->Production.Category == ProductionCategory::Defense)
+                        {
+                            ClusterScore += 450;
+                        }
+                        else if (EDef->Kind == EntityKind::Building)
+                        {
+                            ClusterScore += 400;
+                        }
+                        else if (EDef->Kind == EntityKind::Unit)
+                        {
+                            ClusterScore += 150;
+                        }
+                    }
+                }
+            }
+
+            if (ClusterScore > BestScore)
+            {
+                BestScore = ClusterScore;
+                BestTargetTile = CenterMem.Position;
+            }
+        }
+
+        if (BestScore > 0 && World.GetMap().IsInBounds(BestTargetTile.X, BestTargetTile.Y))
+        {
+            Command Cmd;
+            Cmd.Type = CommandType::FireSuperweapon;
+            Cmd.Issuer = Player;
+            Cmd.Primary = World.MakeId(uint32_t(I));
+            Cmd.Tile = BestTargetTile;
+            Cmd.Location = World.GetMap().TileCenterToWorld(BestTargetTile);
+            Out.push_back(Cmd);
+            Log(World.GetTick(), CommandType::FireSuperweapon, Cores[I].Def,
+                "superweapon launched at enemy cluster");
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void AICommander::EvaluateDirectors(const SimWorld& World,
@@ -1863,10 +2385,10 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
         }
         case OperationState::Engaging:
         {
-            // Re-issue AttackMove to keep idle stragglers moving toward the target.
+            // Issue tactical focus and kiting orders to actively dismantle enemy targets.
             const Vec2 TargetWorld =
                 World.GetMap().TileCenterToWorld(ActiveOperation.TargetLocation);
-            IssueSquadAttackMove(World, TargetWorld, Out);
+            IssueSquadTacticalCombatOrders(World, TargetWorld, Out);
 
             if (ActiveOperation.AssignedUnits.size() < size_t(ActiveOperation.MinRetreatUnits))
             {
@@ -2058,6 +2580,35 @@ void AICommander::Tick(const SimWorld& World, std::vector<Command>& OutCommands)
         }
     }
 
+    // Opening rule: If the commander has no construction yard but holds an MCV, deploy it immediately!
+    if (!FindOwnConstructionYard(World).IsValid())
+    {
+        const auto& Cores = World.GetAllCores();
+        const auto* Content = World.GetContent();
+        const auto& Transforms = World.GetAllTransforms();
+        for (size_t I = 0; I < Cores.size(); ++I)
+        {
+            if (Cores[I].bAlive && Cores[I].Owner == Player && Cores[I].Kind == EntityKind::Unit)
+            {
+                const auto* Def = Content ? Content->FindEntity(Cores[I].Def) : nullptr;
+                if (Def != nullptr && Def->Unit.bIsBuilder && Def->Unit.DeploysInto.IsValid())
+                {
+                    Command Cmd;
+                    Cmd.Type = CommandType::Deploy;
+                    Cmd.Issuer = Player;
+                    Cmd.Primary = World.MakeId(uint32_t(I));
+                    if (I < Transforms.size())
+                    {
+                        Cmd.Tile = World.GetMap().WorldToTile(Transforms[I].Position);
+                    }
+                    OutCommands.push_back(Cmd);
+                    Log(World.GetTick(), CommandType::Deploy, Def->Unit.DeploysInto, "deploying starting MCV");
+                    break;
+                }
+            }
+        }
+    }
+
     if (++TicksSinceDecision < Config.DecisionIntervalTicks)
     {
         return;
@@ -2086,35 +2637,12 @@ void AICommander::Tick(const SimWorld& World, std::vector<Command>& OutCommands)
 
     const size_t CommandCountBefore = OutCommands.size();
 
-    // If the commander has no construction yard but holds an MCV, deploy it immediately
-    if (!FindOwnConstructionYard(World).IsValid())
-    {
-        const auto& Cores = World.GetAllCores();
-        const auto* Content = World.GetContent();
-        for (size_t I = 0; I < Cores.size(); ++I)
-        {
-            if (Cores[I].bAlive && Cores[I].Owner == Player && Cores[I].Kind == EntityKind::Unit)
-            {
-                const auto* Def = Content ? Content->FindEntity(Cores[I].Def) : nullptr;
-                if (Def != nullptr && Def->Unit.bIsBuilder && Def->Unit.DeploysInto.IsValid())
-                {
-                    Command Cmd;
-                    Cmd.Type = CommandType::Deploy;
-                    Cmd.Issuer = Player;
-                    Cmd.Primary = World.MakeId(uint32_t(I));
-                    OutCommands.push_back(Cmd);
-                    Log(World.GetTick(), CommandType::Deploy, Def->Unit.DeploysInto, "deploying starting MCV");
-                    break;
-                }
-            }
-        }
-    }
-
     // Scouting runs before army command: with nothing known there is nothing to
     // attack, and this is what turns an unknown map into a known one.
     TryScout(World, OutCommands);
 
     CommandArmy(World, OutCommands);
+    TryFireSuperweapons(World, OutCommands);
 
     if (!TryPlaceFinishedStructure(World, OutCommands))
     {

@@ -25,10 +25,11 @@ ARA4EntityActor::ARA4EntityActor()
 
     DirectControlSpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("DirectControlSpringArm"));
     DirectControlSpringArm->SetupAttachment(MeshComponent);
-    DirectControlSpringArm->TargetArmLength = 260.0f;
-    DirectControlSpringArm->SetRelativeLocation(FVector(0.0f, 0.0f, 60.0f));
-    DirectControlSpringArm->SetRelativeRotation(FRotator(-8.0f, 0.0f, 0.0f));
-    DirectControlSpringArm->bDoCollisionTest = false;
+    DirectControlSpringArm->TargetArmLength = 0.0f; // True First-Person cockpit/commander view (no clipping behind hills)
+    DirectControlSpringArm->SetRelativeLocation(FVector(25.0f, 0.0f, 150.0f));
+    DirectControlSpringArm->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
+    DirectControlSpringArm->bDoCollisionTest = true;
+    DirectControlSpringArm->ProbeSize = 12.0f;
     DirectControlSpringArm->bEnableCameraLag = true;
     DirectControlSpringArm->CameraLagSpeed = 22.0f;
     DirectControlSpringArm->bEnableCameraRotationLag = true;
@@ -36,9 +37,8 @@ ARA4EntityActor::ARA4EntityActor()
     DirectControlSpringArm->bInheritPitch = true;
     DirectControlSpringArm->bInheritYaw = true;
     DirectControlSpringArm->bInheritRoll = false;
-    // Centered directly behind the turret/hull
-    DirectControlSpringArm->SocketOffset = FVector(0.0f, 0.0f, 30.0f);
-    DirectControlSpringArm->TargetOffset = FVector(0.0f, 0.0f, 25.0f);
+    DirectControlSpringArm->SocketOffset = FVector(0.0f, 0.0f, 20.0f);
+    DirectControlSpringArm->TargetOffset = FVector(0.0f, 0.0f, 0.0f);
 
     FirstPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCameraComponent"));
     FirstPersonCameraComponent->SetupAttachment(DirectControlSpringArm, USpringArmComponent::SocketName);
@@ -131,9 +131,10 @@ void ARA4EntityActor::SetupDirectControlView(bool bEnable, float InFov)
     if (DirectControlSpringArm != nullptr)
     {
         const float ScaleMult = FMath::Clamp(float(RequestedVisualScale.GetMax()), 0.8f, 3.0f);
-        DirectControlSpringArm->TargetArmLength = 260.0f * ScaleMult;
-        DirectControlSpringArm->SocketOffset = FVector(0.0f, 0.0f, 30.0f * ScaleMult);
-        DirectControlSpringArm->TargetOffset = FVector(0.0f, 0.0f, 25.0f * ScaleMult);
+        DirectControlSpringArm->TargetArmLength = 0.0f;
+        DirectControlSpringArm->SetRelativeLocation(FVector(25.0f * ScaleMult, 0.0f, 150.0f * ScaleMult));
+        DirectControlSpringArm->SocketOffset = FVector(0.0f, 0.0f, 20.0f * ScaleMult);
+        DirectControlSpringArm->TargetOffset = FVector(0.0f, 0.0f, 0.0f);
     }
 }
 

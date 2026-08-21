@@ -109,6 +109,9 @@ private:
     bool AnySquadNearTarget(const SimWorld& World, const TileCoord& TargetTile) const;
     void IssueSquadAttackMove(const SimWorld& World, const Vec2& Destination,
                               std::vector<Command>& Out);
+    EntityId FindTacticalFocusTarget(const SimWorld& World, EntityId AttackerId, const std::vector<EntityId>& CandidateEnemies) const;
+    void IssueSquadTacticalCombatOrders(const SimWorld& World, const Vec2& Destination,
+                                        std::vector<Command>& Out);
     void IssueSquadRetreat(const SimWorld& World, std::vector<Command>& Out);
     void PruneRetreatedUnits(const SimWorld& World);
 
@@ -122,6 +125,7 @@ private:
     int32_t EffectiveTargetHarvesters() const;
     int32_t EffectiveAssaultArmySize() const;
     bool TryHarassRaid(const SimWorld& World, int32_t ArmySize, std::vector<Command>& Out);
+    bool TryFireSuperweapons(const SimWorld& World, std::vector<Command>& Out);
 
     // --- world queries ----------------------------------------------------
     ContentId FindStructure(const SimWorld& World, bool (*Predicate)(const EntityDef&)) const;

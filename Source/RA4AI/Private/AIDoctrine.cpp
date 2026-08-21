@@ -19,7 +19,7 @@ FactionDoctrineDef AIDoctrineRegistry::GetDoctrineForFaction(FactionId Faction, 
         Doc.Description = "Mass armor, V2 artillery prep, relentless front assault.";
         Doc.MinimumAssaultArmySize = 12;
         Doc.TargetHarvesterCount = 4;
-        Doc.PowerPlantBuffer = 60;
+        Doc.PowerPlantBuffer = 80;
         Doc.Personality = CreatePersonality(Doc.Type, Profile);
         break;
 
@@ -71,15 +71,15 @@ AIPersonality AIDoctrineRegistry::CreatePersonality(AIDoctrineType Doctrine, AIP
     {
     case AIDoctrineType::SovietArmoredPush:
         P.Name = "General Sokolov";
-        P.Aggressiveness = 75;
-        P.Cautiousness = 30;
+        P.Aggressiveness = 80;
+        P.Cautiousness = 25;
         P.EconomicRisk = 40;
         P.ScoutPriority = 50;
-        P.AcceptableLossesPercent = 60;
+        P.AcceptableLossesPercent = 65;
         P.ReserveDepthPercent = 15;
-        P.FlankingTendency = 20;
-        P.RatioInfantry = 25;
-        P.RatioAntiArmor = 45;
+        P.FlankingTendency = 35;
+        P.RatioInfantry = 20;
+        P.RatioAntiArmor = 50;
         P.RatioAntiAir = 15;
         P.RatioArtillery = 15;
         break;

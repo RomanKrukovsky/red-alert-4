@@ -90,6 +90,7 @@ enum class OrderType : uint8_t
     // Internal steps the harvester state machine issues to itself; never produced
     // by player input, but they live in the same queue so cancellation works.
     DeliverToRefinery,
+    Deploy,
 };
 
 struct Order

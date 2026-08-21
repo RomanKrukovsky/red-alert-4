@@ -1359,91 +1359,31 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
             // Case A: MCV -> Construction Yard (Deploy)
             if (Core[I].Kind == EntityKind::Unit && Def->Unit.bIsBuilder && Def->Unit.DeploysInto.IsValid())
             {
-                TileCoord Tile = Map.WorldToTile(Transforms[I].Position);
+                TileCoord TargetTile = Map.WorldToTile(Transforms[I].Position);
                 if (Cmd.Tile.X > 0 || Cmd.Tile.Y > 0)
                 {
-                    Tile = Cmd.Tile;
-                }
-                const EntityDef* ConYardDef = Content->FindEntity(Def->Unit.DeploysInto);
-                const int32_t FootX = ConYardDef ? ConYardDef->Building.FootprintX : 3;
-                const int32_t FootY = ConYardDef ? ConYardDef->Building.FootprintY : 3;
-
-                // Search for nearest valid clear tile if requested tile is blocked by obstacles/cliffs
-                TileCoord BestTile = Tile;
-                bool bFoundValidTile = false;
-
-                auto IsTileClearForConYard = [&](const TileCoord& T) -> bool
-                {
-                    if (T.X < 1 || T.Y < 1 || T.X + FootX >= Map.Width - 1 || T.Y + FootY >= Map.Height - 1)
-                    {
-                        return false;
-                    }
-                    for (int32_t FY = 0; FY < FootY; ++FY)
-                    {
-                        for (int32_t FX = 0; FX < FootX; ++FX)
-                        {
-                            const uint8_t Flags = Map.GetTile(T.X + FX, T.Y + FY);
-                            if ((Flags & Tile_GroundPassable) == 0 ||
-                                (Flags & (Tile_Water | Tile_Cliff | Tile_Occupied | Tile_Resource)) != 0)
-                            {
-                                return false;
-                            }
-                        }
-                    }
-                    return true;
-                };
-
-                if (IsTileClearForConYard(Tile))
-                {
-                    BestTile = Tile;
-                    bFoundValidTile = true;
-                }
-                else
-                {
-                    // Search in expanding rings (1..8 tiles out) to find closest clear terrain
-                    for (int32_t Radius = 1; Radius <= 8 && !bFoundValidTile; ++Radius)
-                    {
-                        for (int32_t DY = -Radius; DY <= Radius && !bFoundValidTile; ++DY)
-                        {
-                            for (int32_t DX = -Radius; DX <= Radius && !bFoundValidTile; ++DX)
-                            {
-                                if (std::abs(DX) == Radius || std::abs(DY) == Radius)
-                                {
-                                    TileCoord Candidate{Tile.X + DX, Tile.Y + DY};
-                                    if (IsTileClearForConYard(Candidate))
-                                    {
-                                        BestTile = Candidate;
-                                        bFoundValidTile = true;
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    TargetTile = Cmd.Tile;
                 }
 
-                if (!bFoundValidTile)
+                const Vec2 TargetLoc = Map.TileCenterToWorld(TargetTile);
+                const Fixed DistSq = DistanceSquared(Transforms[I].Position, TargetLoc);
+                constexpr int64_t kArrivalDistUnits = 250; // ~1.25 tiles
+
+                Orders[I].Clear();
+
+                if (DistSq > Fixed::FromInt(kArrivalDistUnits) * Fixed::FromInt(kArrivalDistUnits))
                 {
-                    return Reject(CommandReject::InvalidPlacement);
+                    // The MCV is far from the target location: MOVE THERE FIRST!
+                    Order MoveOrder;
+                    MoveOrder.Type = OrderType::Move;
+                    MoveOrder.Location = TargetLoc;
+                    Orders[I].Push(MoveOrder);
                 }
-                Tile = BestTile;
 
-                const Vec2 DeployLoc = Map.TileCenterToWorld(Tile);
-
-                // Silently remove MCV without "Unit Lost" event
-                RemoveEntitySilently(Cmd.Primary);
-
-                // Spawn the Construction Yard
-                EntityId NewBuilding = SpawnBuilding(Def->Unit.DeploysInto, Cmd.Issuer, Tile, /*bInstantComplete*/ true);
-
-                // Emit MCVDeployed event
-                SimEvent Ev;
-                Ev.Type = SimEventType::MCVDeployed;
-                Ev.Tick = CurrentTick;
-                Ev.Entity = NewBuilding;
-                Ev.Player = Cmd.Issuer;
-                Ev.Content = Def->Unit.DeploysInto;
-                Ev.Location = DeployLoc;
-                EmitEvent(Ev);
+                Order DeployOrder;
+                DeployOrder.Type = OrderType::Deploy;
+                DeployOrder.Location = TargetLoc;
+                Orders[I].Push(DeployOrder);
                 break;
             }
 
@@ -3312,6 +3252,98 @@ void SimWorld::SystemOrders()
                 const EntityId Acquired = AcquireTarget(MakeId(I));
                 C.Target = Acquired;
                 C.bTargetIsForced = false;
+                break;
+            }
+
+            case OrderType::Deploy:
+            {
+                const EntityDef* D = Content ? Content->FindEntity(Core[I].Def) : nullptr;
+                if (D != nullptr && D->Unit.bIsBuilder && D->Unit.DeploysInto.IsValid())
+                {
+                    M.bHasDestination = false;
+                    M.CurrentSpeed = Fixed::Zero();
+
+                    TileCoord Tile = Map.WorldToTile(Transforms[I].Position);
+                    const EntityDef* ConYardDef = Content->FindEntity(D->Unit.DeploysInto);
+                    const int32_t FootX = ConYardDef ? ConYardDef->Building.FootprintX : 3;
+                    const int32_t FootY = ConYardDef ? ConYardDef->Building.FootprintY : 3;
+
+                    // Intelligent proximity search for best clear placement tile
+                    TileCoord BestTile = Tile;
+                    bool bFoundValidTile = false;
+
+                    auto IsTileClearForConYard = [&](const TileCoord& T) -> bool
+                    {
+                        if (T.X < 1 || T.Y < 1 || T.X + FootX >= Map.Width - 1 || T.Y + FootY >= Map.Height - 1)
+                        {
+                            return false;
+                        }
+                        for (int32_t FY = 0; FY < FootY; ++FY)
+                        {
+                            for (int32_t FX = 0; FX < FootX; ++FX)
+                            {
+                                const uint8_t Flags = Map.GetTile(T.X + FX, T.Y + FY);
+                                if ((Flags & Tile_GroundPassable) == 0 ||
+                                    (Flags & (Tile_Water | Tile_Cliff | Tile_Resource)) != 0)
+                                {
+                                    return false;
+                                }
+                            }
+                        }
+                        return true;
+                    };
+
+                    if (IsTileClearForConYard(Tile))
+                    {
+                        BestTile = Tile;
+                        bFoundValidTile = true;
+                    }
+                    else
+                    {
+                        for (int32_t Radius = 1; Radius <= 8 && !bFoundValidTile; ++Radius)
+                        {
+                            for (int32_t DY = -Radius; DY <= Radius && !bFoundValidTile; ++DY)
+                            {
+                                for (int32_t DX = -Radius; DX <= Radius && !bFoundValidTile; ++DX)
+                                {
+                                    if (std::abs(DX) == Radius || std::abs(DY) == Radius)
+                                    {
+                                        TileCoord Candidate{Tile.X + DX, Tile.Y + DY};
+                                        if (IsTileClearForConYard(Candidate))
+                                        {
+                                            BestTile = Candidate;
+                                            bFoundValidTile = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (bFoundValidTile)
+                    {
+                        const Vec2 DeployLoc = Map.TileCenterToWorld(BestTile);
+                        const PlayerId Owner = Core[I].Owner;
+                        const ContentId DeploysInto = D->Unit.DeploysInto;
+
+                        // Silently remove MCV
+                        RemoveEntitySilently(MakeId(I));
+
+                        // Spawn the Construction Yard
+                        EntityId NewBuilding = SpawnBuilding(DeploysInto, Owner, BestTile, /*bInstantComplete*/ true);
+
+                        // Emit MCVDeployed event
+                        SimEvent Ev;
+                        Ev.Type = SimEventType::MCVDeployed;
+                        Ev.Tick = CurrentTick;
+                        Ev.Entity = NewBuilding;
+                        Ev.Player = Owner;
+                        Ev.Content = DeploysInto;
+                        Ev.Location = DeployLoc;
+                        EmitEvent(Ev);
+                    }
+                }
+                Q.PopFront();
                 break;
             }
 
