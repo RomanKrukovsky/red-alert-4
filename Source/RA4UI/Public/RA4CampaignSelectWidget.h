@@ -136,8 +136,15 @@ protected:
     UPROPERTY(Transient)
     TObjectPtr<UTextBlock> BreadcrumbDoctrineText;
 
+    /**
+     * The direction step is a mosaic, not a row: one hero plate and four unequal
+     * plates at fixed reference positions, so it needs a canvas rather than a box.
+     */
     UPROPERTY(Transient)
-    TObjectPtr<UHorizontalBox> BlocCardsContainer;
+    TObjectPtr<UCanvasPanel> BlocCardsContainer;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UWidget> DossierFrameWidget;
 
     UPROPERTY(Transient)
     TObjectPtr<UHorizontalBox> CountryCardsContainer;

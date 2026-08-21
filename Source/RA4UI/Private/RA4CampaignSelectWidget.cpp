@@ -192,6 +192,11 @@ void URA4CampaignSelectWidget::NativeConstruct()
     SelectedDoctrineIndex = 0;
     CurrentStep = ERA4CampaignSelectStep::BlocSelection;
 
+    if (DossierFrameWidget)
+    {
+        DossierFrameWidget->SetVisibility(ESlateVisibility::Collapsed);
+    }
+
     RefreshBreadcrumbs();
     RefreshBlocCards();
     RefreshCountryCards();
@@ -322,10 +327,11 @@ void URA4CampaignSelectWidget::BuildLayout()
         ->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::OpenBarracks);
     AddNav(LOCTEXT("SettingsNav", "ПАРАМЕТРЫ"), TEXT("SettingsNavButton"), false)
         ->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::OpenSettings);
-    Place(
-        MainCanvas,
-        MakePanel(WidgetTree, Navigation, TEXT("CampaignNavigationFrame"), FLinearColor(0.68f, 0.28f, 0.88f, 1.0f), FMargin(3.0f)),
-        FVector2D(420.0f, 15.0f), FVector2D(1040.0f, 62.0f), 5);
+    UWidget* NavigationFrame = MakePanel(
+        WidgetTree, Navigation, TEXT("CampaignNavigationFrame"),
+        FLinearColor(0.68f, 0.28f, 0.88f, 1.0f), FMargin(3.0f));
+    NavigationFrame->SetVisibility(ESlateVisibility::Collapsed);
+    Place(MainCanvas, NavigationFrame, FVector2D(420.0f, 84.0f), FVector2D(1040.0f, 54.0f), 5);
 
     // Profile & Network status
     UVerticalBox* Profile = WidgetTree->ConstructWidget<UVerticalBox>(
@@ -375,14 +381,14 @@ void URA4CampaignSelectWidget::BuildLayout()
     Place(
         MainCanvas,
         MakePanel(WidgetTree, BreadcrumbsBox, TEXT("BreadcrumbsFrame"), FLinearColor(0.40f, 0.45f, 0.55f, 1.0f), FMargin(6.0f, 4.0f)),
-        FVector2D(35.0f, 95.0f), FVector2D(1320.0f, 52.0f), 5);
+        FVector2D(535.0f, 16.0f), FVector2D(760.0f, 60.0f), 7);
 
     // ==========================================
     // STEP 1 CONTAINER: 5 BLOC CARDS
     // ==========================================
-    BlocCardsContainer = WidgetTree->ConstructWidget<UHorizontalBox>(
-        UHorizontalBox::StaticClass(), TEXT("BlocCardsContainer"));
-    Place(MainCanvas, BlocCardsContainer, FVector2D(35.0f, 160.0f), FVector2D(1320.0f, 780.0f), 5);
+    BlocCardsContainer = WidgetTree->ConstructWidget<UCanvasPanel>(
+        UCanvasPanel::StaticClass(), TEXT("BlocCardsContainer"));
+    Place(MainCanvas, BlocCardsContainer, FVector2D(0.0f, 0.0f), ReferenceSize, 5);
 
     // ==========================================
     // STEP 2 CONTAINER: COUNTRY CARDS
@@ -479,10 +485,10 @@ void URA4CampaignSelectWidget::BuildLayout()
     UVerticalBoxSlot* ActionSlot = DossierBox->AddChildToVerticalBox(ContinueButton);
     ActionSlot->SetPadding(FMargin(12.0f, 16.0f, 12.0f, 12.0f));
 
-    Place(
-        MainCanvas,
-        MakePanel(WidgetTree, DossierBox, TEXT("DossierFrame"), FLinearColor(0.68f, 0.28f, 0.88f, 1.0f), FMargin(6.0f)),
-        FVector2D(1380.0f, 95.0f), FVector2D(505.0f, 845.0f), 6);
+    DossierFrameWidget = MakePanel(
+        WidgetTree, DossierBox, TEXT("DossierFrame"),
+        FLinearColor(0.68f, 0.28f, 0.88f, 1.0f), FMargin(6.0f));
+    Place(MainCanvas, DossierFrameWidget, FVector2D(1380.0f, 95.0f), FVector2D(505.0f, 845.0f), 6);
 
     // ==========================================
     // BOTTOM STATUS / FOOTER
@@ -516,7 +522,7 @@ void URA4CampaignSelectWidget::BuildLayout()
     Place(
         MainCanvas,
         MakePanel(WidgetTree, Footer, TEXT("CampaignFooterFrame"), FLinearColor(0.30f, 0.35f, 0.40f, 1.0f), FMargin(4.0f)),
-        FVector2D(35.0f, 955.0f), FVector2D(1850.0f, 50.0f), 5);
+        FVector2D(35.0f, 1005.0f), FVector2D(1560.0f, 52.0f), 5);
 }
 
 void URA4CampaignSelectWidget::RefreshBreadcrumbs()
@@ -578,57 +584,187 @@ void URA4CampaignSelectWidget::RefreshBlocCards()
     const FRA4FactionDataRegistry& Registry = FRA4FactionDataRegistry::Get();
     const TArray<FRA4BlocInfo>& Blocs = Registry.GetAllBlocs();
 
+    // Geometry read off 05_block_overview_cinematic_vivid.png. The reference is a
+    // 1672x941 frame while this screen is authored at ReferenceSize, so every
+    // measurement is carried across by ReferenceSize.X / 1672.
+    const float ToAuthoring = ReferenceSize.X / 1672.0f;
+    const auto Ref = [ToAuthoring](const float X, const float Y, const float W, const float H)
+    {
+        return FBox2D(
+            FVector2D(X * ToAuthoring, Y * ToAuthoring),
+            FVector2D((X + W) * ToAuthoring, (Y + H) * ToAuthoring));
+    };
+
+    // One main theatre and four secondary zones of deliberately unequal size.
+    const FBox2D HeroRect = Ref(28.0f, 88.0f, 762.0f, 632.0f);
+    const FBox2D PlateRects[4] = {
+        Ref(935.0f, 88.0f, 710.0f, 202.0f),   // wide and short, top right
+        Ref(800.0f, 300.0f, 845.0f, 200.0f),  // the widest band, reaching furthest left
+        Ref(800.0f, 505.0f, 400.0f, 210.0f),  // bottom left of the mosaic
+        Ref(1210.0f, 505.0f, 435.0f, 210.0f)  // bottom right of the mosaic
+    };
+
+    // Bottom summary strip: operational figures, the direction's doctrine line and
+    // its combat profile. Reference bands y 735..865 and the "next step" action.
+    if (Blocs.IsValidIndex(SelectedBlocIndex))
+    {
+        const FRA4BlocInfo& Active = Blocs[SelectedBlocIndex];
+
+        UVerticalBox* Summary = WidgetTree->ConstructWidget<UVerticalBox>(
+            UVerticalBox::StaticClass(), TEXT("BlocSummaryBox"));
+        Summary->AddChildToVerticalBox(MakeText(
+            WidgetTree, LOCTEXT("OpsSummary", "ОПЕРАЦИОННАЯ СВОДКА"), 12, Active.GlowColor,
+            TEXT("OpsSummaryHeader"), true, false))->SetPadding(FMargin(14.0f, 10.0f, 14.0f, 8.0f));
+
+        UHorizontalBox* Figures = WidgetTree->ConstructWidget<UHorizontalBox>(
+            UHorizontalBox::StaticClass(), TEXT("BlocSummaryFigures"));
+        const auto AddFigure = [this, Figures](const FText& Caption, const FText& Value, const FName Name)
+        {
+            UVerticalBox* Cell = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), Name);
+            Cell->AddChildToVerticalBox(MakeText(
+                WidgetTree, Caption, 10, TextMuted, FName(Name.ToString() + TEXT("_Cap")), false));
+            Cell->AddChildToVerticalBox(MakeText(
+                WidgetTree, Value, 22, TextHighlight, FName(Name.ToString() + TEXT("_Val")), true, false))
+                ->SetPadding(FMargin(0.0f, 2.0f, 0.0f, 0.0f));
+            UHorizontalBoxSlot* Slot = Figures->AddChildToHorizontalBox(Cell);
+            Slot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            Slot->SetPadding(FMargin(14.0f, 0.0f, 14.0f, 0.0f));
+        };
+        AddFigure(LOCTEXT("Fig_Regions", "РЕГИОНОВ ПОД КОНТРОЛЕМ"),
+            FText::AsNumber(Active.ControlledRegions), TEXT("FigRegions"));
+        AddFigure(LOCTEXT("Fig_Personnel", "АКТИВНЫХ ПОДРАЗДЕЛЕНИЙ"),
+            FText::AsNumber(Active.ActivePersonnel), TEXT("FigPersonnel"));
+        AddFigure(LOCTEXT("Fig_Readiness", "УРОВЕНЬ ГОТОВНОСТИ"),
+            FText::Format(LOCTEXT("PercentFmt", "{0}%"),
+                FText::AsNumber(FMath::RoundToInt(Active.ReadinessRatio * 100.0f))),
+            TEXT("FigReadiness"));
+        Summary->AddChildToVerticalBox(Figures)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 12.0f));
+
+        Place(BlocCardsContainer,
+            MakePanel(WidgetTree, Summary, TEXT("BlocSummaryFrame"), Active.PrimaryColor,
+                DensityPadding(Active.PanelDensity), Active.FrameRail),
+            Ref(28.0f, 735.0f, 612.0f, 122.0f).Min,
+            Ref(28.0f, 735.0f, 612.0f, 122.0f).GetSize(), 2);
+
+        // Combat profile of the direction, mirroring the reference's right block.
+        UVerticalBox* Profile = WidgetTree->ConstructWidget<UVerticalBox>(
+            UVerticalBox::StaticClass(), TEXT("BlocProfileBox"));
+        Profile->AddChildToVerticalBox(MakeText(
+            WidgetTree, LOCTEXT("CombatProfile", "БОЕВАЯ ХАРАКТЕРИСТИКА"), 12, Active.GlowColor,
+            TEXT("BlocProfileHeader"), true, false))->SetPadding(FMargin(14.0f, 7.0f, 14.0f, 5.0f));
+
+        const FRA4CountryInfo* Lead = Active.Countries.Num() > 0 ? &Active.Countries[0] : nullptr;
+        const auto AddProfileRow = [this, Profile](const FText& Label, const float Value, const FName Name)
+        {
+            UHorizontalBox* Row = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), Name);
+            UTextBlock* Caption = MakeText(
+                WidgetTree, Label, 11, TextPrimary, FName(Name.ToString() + TEXT("_Lbl")), false, false);
+            Row->AddChildToHorizontalBox(Caption)->SetSize(FillWeight(1.0f));
+            UProgressBar* Bar = WidgetTree->ConstructWidget<UProgressBar>(
+                UProgressBar::StaticClass(), FName(Name.ToString() + TEXT("_Bar")));
+            Bar->SetPercent(Value);
+            UHorizontalBoxSlot* BarSlot = Row->AddChildToHorizontalBox(Bar);
+            BarSlot->SetSize(FillWeight(2.0f));
+            BarSlot->SetVerticalAlignment(VAlign_Center);
+            BarSlot->SetPadding(FMargin(10.0f, 0.0f, 0.0f, 0.0f));
+            Profile->AddChildToVerticalBox(Row)->SetPadding(FMargin(14.0f, 0.0f, 14.0f, 3.0f));
+        };
+        AddProfileRow(LOCTEXT("P_Fire", "ОГНЕВАЯ МОЩЬ"), Lead ? Lead->FirepowerRating : 0.8f, TEXT("PFire"));
+        AddProfileRow(LOCTEXT("P_Armor", "ЗАЩИТА"), Lead ? Lead->ArmorRating : 0.8f, TEXT("PArmor"));
+        AddProfileRow(LOCTEXT("P_Mob", "МОБИЛЬНОСТЬ"), Lead ? Lead->MobilityRating : 0.8f, TEXT("PMob"));
+        AddProfileRow(LOCTEXT("P_Tech", "ТЕХНОЛОГИИ"), Lead ? Lead->TechRating : 0.8f, TEXT("PTech"));
+
+        Place(BlocCardsContainer,
+            MakePanel(WidgetTree, Profile, TEXT("BlocProfileFrame"), Active.PrimaryColor,
+                DensityPadding(Active.PanelDensity), Active.FrameRail),
+            Ref(655.0f, 735.0f, 990.0f, 122.0f).Min,
+            Ref(655.0f, 735.0f, 990.0f, 122.0f).GetSize(), 2);
+
+        // "Next step" action sits bottom right in the reference.
+        UButton* NextButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("BlocNextButton"));
+        NextButton->SetStyle(MakeCardButtonStyle(Active.GlowColor));
+        UTextBlock* NextLabel = MakeText(
+            WidgetTree, LOCTEXT("NextCountry", "ДАЛЕЕ: СТРАНА  ›"), 16, TextHighlight,
+            TEXT("BlocNextLabel"), true, false);
+        NextLabel->SetJustification(ETextJustify::Center);
+        NextButton->AddChild(NextLabel);
+        NextButton->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::GotoCountryStep);
+        Place(BlocCardsContainer, NextButton,
+            Ref(1390.0f, 875.0f, 255.0f, 50.0f).Min,
+            Ref(1390.0f, 875.0f, 255.0f, 50.0f).GetSize(), 3);
+    }
+
+    int32 PlateIndex = 0;
     for (int32 Index = 0; Index < Blocs.Num(); ++Index)
     {
         const FRA4BlocInfo& Bloc = Blocs[Index];
-        const bool bSelected = (Index == SelectedBlocIndex);
+        const bool bHero = (Index == SelectedBlocIndex);
+        const FBox2D Rect = bHero
+            ? HeroRect
+            : PlateRects[FMath::Min(PlateIndex++, 3)];
+        const FVector2D Size = Rect.GetSize();
 
         UVerticalBox* CardContent = WidgetTree->ConstructWidget<UVerticalBox>(
             UVerticalBox::StaticClass(), FName(*FString::Printf(TEXT("BlocContent_%d"), Index)));
 
-        // Bloc Header & Roman numeral
         UTextBlock* Numeral = MakeText(
             WidgetTree, FText::Format(LOCTEXT("BlocNum", "0{0}"), FText::AsNumber(Index + 1)),
-            13, Bloc.GlowColor, FName(*FString::Printf(TEXT("BlocNum_%d"), Index)));
-        CardContent->AddChildToVerticalBox(Numeral)->SetPadding(FMargin(10.0f, 10.0f, 10.0f, 2.0f));
+            bHero ? 15 : 12, Bloc.GlowColor,
+            FName(*FString::Printf(TEXT("BlocNum_%d"), Index)), true, false);
+        CardContent->AddChildToVerticalBox(Numeral)->SetPadding(FMargin(14.0f, 12.0f, 14.0f, 2.0f));
 
-        const int32 TitleSize = Bloc.LayoutWeight >= 2.0f ? 22 : (Bloc.LayoutWeight >= 1.2f ? 17 : 15);
         UTextBlock* Title = MakeText(
-            WidgetTree, Bloc.DisplayName, TitleSize, TextHighlight,
+            WidgetTree, Bloc.DisplayName, bHero ? 34 : 19, TextHighlight,
             FName(*FString::Printf(TEXT("BlocTitle_%d"), Index)));
-        CardContent->AddChildToVerticalBox(Title)->SetPadding(FMargin(10.0f, 0.0f, 10.0f, 4.0f));
+        CardContent->AddChildToVerticalBox(Title)->SetPadding(FMargin(14.0f, 0.0f, 14.0f, 4.0f));
 
-        // Independent badge if index == 4
         if (Bloc.bIsCategoryOnly)
         {
             UTextBlock* Badge = MakeText(
                 WidgetTree, LOCTEXT("CatBadge", "[ КАТЕГОРИЯ ВЫБОРА ]"), 11,
-                FLinearColor(0.95f, 0.75f, 0.30f, 1.0f), FName(*FString::Printf(TEXT("CatBadge_%d"), Index)));
-            CardContent->AddChildToVerticalBox(Badge)->SetPadding(FMargin(10.0f, 0.0f, 10.0f, 4.0f));
+                FLinearColor(0.95f, 0.75f, 0.30f, 1.0f),
+                FName(*FString::Printf(TEXT("CatBadge_%d"), Index)), true, false);
+            CardContent->AddChildToVerticalBox(Badge)->SetPadding(FMargin(14.0f, 0.0f, 14.0f, 4.0f));
         }
 
         UTextBlock* Motto = MakeText(
-            WidgetTree, Bloc.Motto, 11, Bloc.GlowColor,
+            WidgetTree, Bloc.Motto, bHero ? 13 : 11, Bloc.GlowColor,
             FName(*FString::Printf(TEXT("BlocMotto_%d"), Index)), false);
-        CardContent->AddChildToVerticalBox(Motto)->SetPadding(FMargin(10.0f, 0.0f, 10.0f, 12.0f));
+        CardContent->AddChildToVerticalBox(Motto)->SetPadding(FMargin(14.0f, 0.0f, 14.0f, 10.0f));
 
-        UTextBlock* Desc = MakeText(
-            WidgetTree, Bloc.Description, 12, TextPrimary,
-            FName(*FString::Printf(TEXT("BlocDesc_%d"), Index)), false);
-        Desc->SetAutoWrapText(true);
-        UVerticalBoxSlot* DescSlot = CardContent->AddChildToVerticalBox(Desc);
-        DescSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-        DescSlot->SetPadding(FMargin(10.0f, 4.0f, 10.0f, 10.0f));
+        // Only the hero has the height for the full dossier. A secondary plate
+        // that tried to carry it would just clip its own text.
+        if (bHero)
+        {
+            UTextBlock* Desc = MakeText(
+                WidgetTree, Bloc.Description, 14, TextPrimary,
+                FName(*FString::Printf(TEXT("BlocDesc_%d"), Index)), false);
+            CardContent->AddChildToVerticalBox(Desc)->SetPadding(FMargin(14.0f, 4.0f, 14.0f, 14.0f));
 
-        // Member Countries mini-tags. A category is never labelled as a bloc.
+            UTextBlock* AdvHeader = MakeText(
+                WidgetTree, LOCTEXT("KeyAdvantages", "КЛЮЧЕВЫЕ ПРЕИМУЩЕСТВА"), 12, Bloc.GlowColor,
+                FName(*FString::Printf(TEXT("BlocAdvHdr_%d"), Index)), true, false);
+            CardContent->AddChildToVerticalBox(AdvHeader)->SetPadding(FMargin(14.0f, 0.0f, 14.0f, 8.0f));
+
+            for (int32 A = 0; A < Bloc.KeyAdvantages.Num(); ++A)
+            {
+                UTextBlock* Row = MakeText(
+                    WidgetTree, Bloc.KeyAdvantages[A], 12, TextPrimary,
+                    FName(*FString::Printf(TEXT("BlocAdv_%d_%d"), Index, A)), false);
+                CardContent->AddChildToVerticalBox(Row)->SetPadding(FMargin(22.0f, 0.0f, 14.0f, 6.0f));
+            }
+        }
+
         UTextBlock* CountriesHeader = MakeText(
             WidgetTree,
             Bloc.bIsCategoryOnly
                 ? LOCTEXT("CountriesInCategory", "СТРАНЫ КАТЕГОРИИ:")
                 : LOCTEXT("CountriesInBloc", "СОСТАВ БЛОКА:"),
             11, TextMuted,
-            FName(*FString::Printf(TEXT("BlocCntHeader_%d"), Index)));
-        CardContent->AddChildToVerticalBox(CountriesHeader)->SetPadding(FMargin(10.0f, 2.0f, 10.0f, 2.0f));
+            FName(*FString::Printf(TEXT("BlocCntHeader_%d"), Index)), true, false);
+        UVerticalBoxSlot* HeaderSlot = CardContent->AddChildToVerticalBox(CountriesHeader);
+        HeaderSlot->SetPadding(FMargin(14.0f, 6.0f, 14.0f, 2.0f));
+        HeaderSlot->SetVerticalAlignment(VAlign_Bottom);
 
         FString CountryNamesList;
         for (int32 CIdx = 0; CIdx < Bloc.Countries.Num(); ++CIdx)
@@ -638,10 +774,8 @@ void URA4CampaignSelectWidget::RefreshBlocCards()
         UTextBlock* CountriesList = MakeText(
             WidgetTree, FText::FromString(CountryNamesList), 11, TextHighlight,
             FName(*FString::Printf(TEXT("BlocCntList_%d"), Index)), false);
-        CountriesList->SetAutoWrapText(true);
-        CardContent->AddChildToVerticalBox(CountriesList)->SetPadding(FMargin(10.0f, 0.0f, 10.0f, 14.0f));
+        CardContent->AddChildToVerticalBox(CountriesList)->SetPadding(FMargin(14.0f, 0.0f, 14.0f, 12.0f));
 
-        // Card Button
         UButton* CardButton = WidgetTree->ConstructWidget<UButton>(
             UButton::StaticClass(), FName(*FString::Printf(TEXT("BlocBtn_%d"), Index)));
         CardButton->SetStyle(MakeCardButtonStyle(Bloc.PrimaryColor));
@@ -659,18 +793,11 @@ void URA4CampaignSelectWidget::RefreshBlocCards()
 
         UBorder* CardFrame = MakePanel(
             WidgetTree, CardButton, FName(*FString::Printf(TEXT("BlocFrame_%d"), Index)),
-            bSelected ? Bloc.GlowColor : Bloc.PrimaryColor,
+            bHero ? Bloc.GlowColor : Bloc.PrimaryColor,
             DensityPadding(Bloc.PanelDensity), Bloc.FrameRail);
         BlocCardFrames.Add(CardFrame);
 
-        // One main theatre and several secondary zones: the row is never an
-        // even grid, and the active direction expands further still.
-        const float SlotWeight = Bloc.LayoutWeight * (bSelected ? 1.35f : 1.0f);
-
-        UHorizontalBoxSlot* CardSlot = BlocCardsContainer->AddChildToHorizontalBox(CardFrame);
-        CardSlot->SetSize(FillWeight(SlotWeight));
-        CardSlot->SetPadding(bSelected ? FMargin(4.0f, 0.0f, 4.0f, 0.0f) : FMargin(4.0f, 14.0f));
-        CardSlot->SetVerticalAlignment(bSelected ? VAlign_Fill : VAlign_Fill);
+        Place(BlocCardsContainer, CardFrame, Rect.Min, Size, bHero ? 3 : 2);
     }
 }
 
@@ -983,6 +1110,7 @@ void URA4CampaignSelectWidget::OnBlocCardClicked(const int32 BlocIndex)
     CurrentStep = ERA4CampaignSelectStep::CountrySelection;
 
     if (BlocCardsContainer) BlocCardsContainer->SetVisibility(ESlateVisibility::Collapsed);
+    if (DossierFrameWidget) DossierFrameWidget->SetVisibility(ESlateVisibility::Visible);
     if (CountryCardsContainer) CountryCardsContainer->SetVisibility(ESlateVisibility::Visible);
     if (DoctrineCardsContainer) DoctrineCardsContainer->SetVisibility(ESlateVisibility::Collapsed);
 
@@ -998,6 +1126,7 @@ void URA4CampaignSelectWidget::OnCountryCardClicked(const int32 CountryIndex)
     CurrentStep = ERA4CampaignSelectStep::DoctrineSelection;
 
     if (BlocCardsContainer) BlocCardsContainer->SetVisibility(ESlateVisibility::Collapsed);
+    if (DossierFrameWidget) DossierFrameWidget->SetVisibility(ESlateVisibility::Visible);
     if (CountryCardsContainer) CountryCardsContainer->SetVisibility(ESlateVisibility::Collapsed);
     if (DoctrineCardsContainer) DoctrineCardsContainer->SetVisibility(ESlateVisibility::Visible);
 
@@ -1018,6 +1147,7 @@ void URA4CampaignSelectWidget::GotoBlocStep()
 {
     CurrentStep = ERA4CampaignSelectStep::BlocSelection;
     if (BlocCardsContainer) BlocCardsContainer->SetVisibility(ESlateVisibility::Visible);
+    if (DossierFrameWidget) DossierFrameWidget->SetVisibility(ESlateVisibility::Collapsed);
     if (CountryCardsContainer) CountryCardsContainer->SetVisibility(ESlateVisibility::Collapsed);
     if (DoctrineCardsContainer) DoctrineCardsContainer->SetVisibility(ESlateVisibility::Collapsed);
 
@@ -1030,6 +1160,7 @@ void URA4CampaignSelectWidget::GotoCountryStep()
 {
     CurrentStep = ERA4CampaignSelectStep::CountrySelection;
     if (BlocCardsContainer) BlocCardsContainer->SetVisibility(ESlateVisibility::Collapsed);
+    if (DossierFrameWidget) DossierFrameWidget->SetVisibility(ESlateVisibility::Visible);
     if (CountryCardsContainer) CountryCardsContainer->SetVisibility(ESlateVisibility::Visible);
     if (DoctrineCardsContainer) DoctrineCardsContainer->SetVisibility(ESlateVisibility::Collapsed);
 
@@ -1042,6 +1173,7 @@ void URA4CampaignSelectWidget::GotoDoctrineStep()
 {
     CurrentStep = ERA4CampaignSelectStep::DoctrineSelection;
     if (BlocCardsContainer) BlocCardsContainer->SetVisibility(ESlateVisibility::Collapsed);
+    if (DossierFrameWidget) DossierFrameWidget->SetVisibility(ESlateVisibility::Visible);
     if (CountryCardsContainer) CountryCardsContainer->SetVisibility(ESlateVisibility::Collapsed);
     if (DoctrineCardsContainer) DoctrineCardsContainer->SetVisibility(ESlateVisibility::Visible);
 
