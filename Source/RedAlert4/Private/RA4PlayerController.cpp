@@ -8,6 +8,7 @@
 #include "RA4SimCoords.h"
 #include "RA4SimWorldSubsystem.h"
 #include "RA4HUDWidget.h"
+#include "RA4HUD.h"
 #include "RA4MatchResultOverlayWidget.h"
 #include "RA4PauseMenuWidget.h"
 #include "RA4AudioSubsystem.h"
@@ -1709,7 +1710,7 @@ void ARA4PlayerController::HandleBuildCardClicked(int64 ContentIdValue)
 {
     const URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
     const SimWorld* World = Subsystem != nullptr ? Subsystem->GetSimWorld() : nullptr;
-    if (World == nullptr)
+    if (World == nullptr || World->GetContent() == nullptr)
     {
         return;
     }
@@ -1735,11 +1736,21 @@ void ARA4PlayerController::HandleBuildCardClicked(int64 ContentIdValue)
         }
     }
 
-    Command C;
-    C.Type = CommandType::StartProduction;
-    C.Issuer = Selection.GetLocalPlayer();
-    C.Content = Content;
-    SubmitOrders({C});
+    const EntityDef* Def = World->GetContent()->FindEntity(Content);
+    const bool bShiftHeld = IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift);
+    const int32 CountToQueue = (bShiftHeld && Def != nullptr && Def->Kind == EntityKind::Unit) ? 10 : 1;
+
+    std::vector<Command> Orders;
+    Orders.reserve(CountToQueue);
+    for (int32 I = 0; I < CountToQueue; ++I)
+    {
+        Command C;
+        C.Type = CommandType::StartProduction;
+        C.Issuer = Selection.GetLocalPlayer();
+        C.Content = Content;
+        Orders.push_back(C);
+    }
+    SubmitOrders(Orders);
 }
 
 void ARA4PlayerController::CycleSelectedPowerPriority()
@@ -2414,10 +2425,31 @@ void ARA4PlayerController::DeploySelectedMcv()
 
     if (TargetEntity.IsValid())
     {
+        const auto* Def = Content ? Content->FindEntity(Cores[TargetEntity.Index].Def) : nullptr;
+        const bool bIsMcv = (Cores[TargetEntity.Index].Kind == RA4::EntityKind::Unit && Def != nullptr && Def->Unit.bIsBuilder && Def->Unit.DeploysInto.IsValid());
+
+        // If it's an MCV and placement mode is not yet armed, arm placement mode to show the green/red ConYard ghost!
+        if (bIsMcv && !bPlacementArmed)
+        {
+            BeginPlacement(Def->Unit.DeploysInto.Value);
+            UE_LOG(LogTemp, Display, TEXT("RA4: Armed MCV ConYard placement ghost preview for Entity %u"), TargetEntity.Index);
+            return;
+        }
+
+        // If placement is already armed or it's a ConYard folding back into MCV, execute deployment!
         RA4::Command Cmd;
         Cmd.Type = RA4::CommandType::Deploy;
         Cmd.Issuer = LocalPlayer;
         Cmd.Primary = TargetEntity;
+
+        Vec2 CursorGround;
+        if (bPlacementArmed && GetCursorGroundPosition(CursorGround))
+        {
+            Cmd.Tile = Sim->GetMap().WorldToTile(CursorGround);
+        }
+
+        bPlacementArmed = false;
+        PlacementContent = ContentId();
 
         URA4SimWorldSubsystem* MutableSim = GetWorld() ? GetWorld()->GetSubsystem<URA4SimWorldSubsystem>() : nullptr;
         if (MutableSim != nullptr)
@@ -2631,6 +2663,19 @@ void ARA4PlayerController::UpdateDirectControl(float DeltaTime)
                         bEngineDamaged, bTracksDamaged, bTurretDamaged,
                         FText::GetEmpty(),  // current task (Stage 2)
                         FText::GetEmpty()); // EVA message (Stage 2)
+
+                    if (ARA4HUD* Ra4Hud = Cast<ARA4HUD>(GetHUD()))
+                    {
+                        Ra4Hud->UpdateDirectControlDisplay(
+                            true,
+                            VehicleHealth, VehicleMaxHealth,
+                            PrimaryName, SecondaryName,
+                            float(PrimaryCdPct) / 100.0f,
+                            0.0f,
+                            SpeedKph,
+                            bZoomed
+                        );
+                    }
                 }
             }
         }
@@ -2655,6 +2700,10 @@ void ARA4PlayerController::UpdateDirectControl(float DeltaTime)
         if (DirectControlHUDViewModel != nullptr)
         {
             DirectControlHUDViewModel = nullptr;
+        }
+        if (ARA4HUD* Ra4Hud = Cast<ARA4HUD>(GetHUD()))
+        {
+            Ra4Hud->UpdateDirectControlDisplay(false, 0, 0, FText::GetEmpty(), FText::GetEmpty(), 0.0f, 0.0f, 0.0f, false);
         }
         if (GEngine != nullptr)
         {

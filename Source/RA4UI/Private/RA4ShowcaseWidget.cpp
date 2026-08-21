@@ -413,6 +413,20 @@ void URA4ShowcaseWidget::BuildHudLayout()
     ClockSlot->SetPadding(FMargin(20.0f, 14.0f));
     ClockSlot->SetHorizontalAlignment(HAlign_Right);
     ClockSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+
+    UButton* BackButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("HudBackButton"));
+    FButtonStyle BackStyle;
+    BackStyle.SetNormal(FSlateColorBrush(FLinearColor(0.12f, 0.02f, 0.03f, 0.90f)));
+    BackStyle.SetHovered(FSlateColorBrush(SovietRed));
+    BackStyle.SetPressed(FSlateColorBrush(FLinearColor(0.50f, 0.02f, 0.03f, 1.0f)));
+    BackButton->SetStyle(BackStyle);
+    UTextBlock* BackLabel = CreateText(LOCTEXT("HudBack", "◄ В МЕНЮ"), 14.0f, TextWhite, TEXT("HudBackLabel"));
+    BackButton->AddChild(BackLabel);
+    BackButton->OnClicked.AddDynamic(this, &URA4ShowcaseWidget::OpenMainMenu);
+    UHorizontalBoxSlot* BackSlot = ResourceRow->AddChildToHorizontalBox(BackButton);
+    BackSlot->SetPadding(FMargin(16.0f, 6.0f));
+    BackSlot->SetVerticalAlignment(VAlign_Center);
+
     Frame->AddChildToVerticalBox(ResourceStrip)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 12.0f));
 
     UHorizontalBox* TacticalSpace = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("TacticalSpace"));
@@ -678,7 +692,10 @@ void URA4ShowcaseWidget::SetScreen(const int32 InScreen)
         break;
     }
 
-    TitleText->SetColorAndOpacity(FSlateColor(Accent));
+    if (TitleText)
+    {
+        TitleText->SetColorAndOpacity(FSlateColor(Accent));
+    }
     if (Artwork)
     {
         const TCHAR* ArtworkPath = TEXT("/Game/RA4UI/Art/T_RA4_USSR_CommandCenter.T_RA4_USSR_CommandCenter");
@@ -700,14 +717,29 @@ void URA4ShowcaseWidget::SetScreen(const int32 InScreen)
             Artwork->SetBrushFromTexture(ScreenArtwork, false);
         }
     }
-    AccentPanel->SetBrushColor(ActiveScreen == 4
-        ? FLinearColor(1.0f, 1.0f, 1.0f, 0.96f)
-        : FLinearColor(Accent.R * 0.09f, Accent.G * 0.09f, Accent.B * 0.09f, 0.78f));
-    SubtitleText->SetText(Heading);
-    ContentText->SetText(Body);
-    StatusText->SetText(Status);
-    ProgressBar->SetPercent(Progress);
-    ProgressBar->SetFillColorAndOpacity(Accent);
+    if (AccentPanel)
+    {
+        AccentPanel->SetBrushColor(ActiveScreen == 4
+            ? FLinearColor(1.0f, 1.0f, 1.0f, 0.96f)
+            : FLinearColor(Accent.R * 0.09f, Accent.G * 0.09f, Accent.B * 0.09f, 0.78f));
+    }
+    if (SubtitleText)
+    {
+        SubtitleText->SetText(Heading);
+    }
+    if (ContentText)
+    {
+        ContentText->SetText(Body);
+    }
+    if (StatusText)
+    {
+        StatusText->SetText(Status);
+    }
+    if (ProgressBar)
+    {
+        ProgressBar->SetPercent(Progress);
+        ProgressBar->SetFillColorAndOpacity(Accent);
+    }
 }
 
 void URA4ShowcaseWidget::OpenMainMenu()

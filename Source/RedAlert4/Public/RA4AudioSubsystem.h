@@ -45,6 +45,23 @@ enum class ERA4EVAEvent : uint8
     UnitLost
 };
 
+USTRUCT(BlueprintType)
+struct REDALERT4_API FRA4MusicTrackInfo
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RA4|Audio")
+    FString Title;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RA4|Audio")
+    FString PrimaryAssetPath;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RA4|Audio")
+    FString FallbackAssetPath;
+};
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnRA4MusicTrackChanged, int32, TrackIndex, const FString&, TrackTitle, bool, bIsPlaying);
+
 UCLASS()
 class REDALERT4_API URA4AudioSubsystem : public UWorldSubsystem
 {
@@ -74,17 +91,98 @@ public:
     UFUNCTION(BlueprintCallable, Category = "RA4|Audio")
     void StopMusic();
 
+    /** Switch to a specific music track by index. */
+    UFUNCTION(BlueprintCallable, Category = "RA4|Audio")
+    void PlayTrackByIndex(int32 TrackIndex);
+
+    /** Advance to the next music track in playlist. */
+    UFUNCTION(BlueprintCallable, Category = "RA4|Audio")
+    void NextTrack();
+
+    /** Step back to the previous music track in playlist. */
+    UFUNCTION(BlueprintCallable, Category = "RA4|Audio")
+    void PreviousTrack();
+
+    /** Toggle play / pause of current music. */
+    UFUNCTION(BlueprintCallable, Category = "RA4|Audio")
+    void ToggleMusicPause();
+
+    /** Set master volume (0.0 to 1.0). */
+    UFUNCTION(BlueprintCallable, Category = "RA4|Audio")
+    void SetMasterVolume(float Volume);
+
+    UFUNCTION(BlueprintCallable, Category = "RA4|Audio")
+    float GetMasterVolume() const { return CurrentMasterVolume; }
+
+    /** Set SFX volume (0.0 to 1.0). */
+    UFUNCTION(BlueprintCallable, Category = "RA4|Audio")
+    void SetSfxVolume(float Volume);
+
+    UFUNCTION(BlueprintCallable, Category = "RA4|Audio")
+    float GetSfxVolume() const { return CurrentSfxVolume; }
+
+    /** Set EVA volume (0.0 to 1.0). */
+    UFUNCTION(BlueprintCallable, Category = "RA4|Audio")
+    void SetEvaVolume(float Volume);
+
+    UFUNCTION(BlueprintCallable, Category = "RA4|Audio")
+    float GetEvaVolume() const { return CurrentEvaVolume; }
+
+    /** Toggle unit voice chatter. */
+    UFUNCTION(BlueprintCallable, Category = "RA4|Audio")
+    void SetUnitVoicesEnabled(bool bEnabled);
+
+    UFUNCTION(BlueprintCallable, Category = "RA4|Audio")
+    bool IsUnitVoicesEnabled() const { return bUnitVoicesEnabled; }
+
+    /** Set the music volume (0.0 to 1.0). */
+    UFUNCTION(BlueprintCallable, Category = "RA4|Audio")
+    void SetMusicVolume(float Volume);
+
+    /** Get current music volume. */
+    UFUNCTION(BlueprintCallable, Category = "RA4|Audio")
+    float GetMusicVolume() const { return CurrentMusicVolume; }
+
+    /** Returns true if music is currently actively playing (not stopped or paused). */
+    UFUNCTION(BlueprintCallable, Category = "RA4|Audio")
+    bool IsMusicPlaying() const;
+
+    /** Get current track title. */
+    UFUNCTION(BlueprintCallable, Category = "RA4|Audio")
+    FString GetCurrentTrackTitle() const;
+
+    /** Get current track index. */
+    UFUNCTION(BlueprintCallable, Category = "RA4|Audio")
+    int32 GetCurrentTrackIndex() const { return CurrentTrackIndex; }
+
+    /** Get all available track titles. */
+    UFUNCTION(BlueprintCallable, Category = "RA4|Audio")
+    TArray<FString> GetTrackTitles() const;
+
+    UPROPERTY(BlueprintAssignable, Category = "RA4|Audio")
+    FOnRA4MusicTrackChanged OnMusicTrackChanged;
+
 private:
     USoundBase* FindVoiceClip(const FString& VoiceId, ERA4VoiceEvent Event);
     USoundBase* FindEVAClip(uint8 Faction, ERA4EVAEvent Event);
+    void InitPlaylist();
 
-    // Resolved clips are cached because a miss costs a synchronous package load, and
-    // most lookups miss: only Soviet units are recorded so far.
     UPROPERTY(Transient)
     TMap<FString, TObjectPtr<USoundBase>> ClipCache;
 
     UPROPERTY(Transient)
     TObjectPtr<UAudioComponent> MusicComponent;
+
+    UPROPERTY(Transient)
+    TArray<FRA4MusicTrackInfo> Playlist;
+
+    int32 CurrentTrackIndex = 0;
+    float CurrentMasterVolume = 0.85f;
+    float CurrentMusicVolume = 0.35f;
+    float CurrentSfxVolume = 1.0f;
+    float CurrentEvaVolume = 1.0f;
+    bool bUnitVoicesEnabled = true;
+    bool bMusicPaused = false;
 
     // Rapid re-selection of the same unit would otherwise retrigger its line every
     // click and turn the mix into a stutter.

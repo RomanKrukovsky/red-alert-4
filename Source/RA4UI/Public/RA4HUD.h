@@ -19,6 +19,12 @@ public:
     // Set selection rectangle coordinates for box-selection (rubberbanding)
     void SetSelectionRect(const FVector2D& InStart, const FVector2D& InEnd, bool bDraw);
 
+    // Direct Control HUD presentation state
+    void UpdateDirectControlDisplay(bool bActive, int32 Health, int32 MaxHealth,
+                                   const FText& InPrimaryName, const FText& InSecondaryName,
+                                   float InPrimaryCd, float InSecondaryCd, float InSpeedKph,
+                                   bool bInOpticsZoomed);
+
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Selection")
     FLinearColor SelectionRectColor = FLinearColor(0.0f, 1.0f, 0.0f, 0.25f);
@@ -30,4 +36,15 @@ private:
     FVector2D SelectionStart;
     FVector2D SelectionEnd;
     bool bDrawSelectionRect = false;
+
+    // Direct control HUD data
+    bool bDirectControlActive = false;
+    int32 DirectControlHealth = 100;
+    int32 DirectControlMaxHealth = 100;
+    FText DirectControlPrimaryWeapon;
+    FText DirectControlSecondaryWeapon;
+    float DirectControlPrimaryCd = 0.0f;
+    float DirectControlSecondaryCd = 0.0f;
+    float DirectControlSpeedKph = 0.0f;
+    bool bDirectControlOpticsZoomed = false;
 };

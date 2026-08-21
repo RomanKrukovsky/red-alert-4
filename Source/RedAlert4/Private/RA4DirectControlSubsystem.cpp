@@ -146,9 +146,11 @@ bool URA4DirectControlSubsystem::RequestEnter(APlayerController* PC, RA4::Entity
     {
         const float Fov = (ActiveProfile != nullptr && ActiveProfile->Camera.WideFOV > 0.0f) ? ActiveProfile->Camera.WideFOV : 90.0f;
         EntityActor->SetupDirectControlView(true, Fov);
-        PC->SetViewTargetWithBlend(EntityActor, ActiveProfile != nullptr ? ActiveProfile->EnterBlendTime : 0.35f);
-        PC->bShowMouseCursor = false;
-        PC->SetInputMode(FInputModeGameOnly());
+        PC->bShowMouseCursor = true;
+        FInputModeGameAndUI InputMode;
+        InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+        InputMode.SetHideCursorDuringCapture(false);
+        PC->SetInputMode(InputMode);
     }
     return true;
 }
@@ -226,9 +228,9 @@ void URA4DirectControlSubsystem::TickInput(APlayerController* PC, float DeltaSec
     PC->GetInputMouseDelta(MouseDx, MouseDy);
 
     uint8_t Flags = 0;
-    if (PC->WasInputKeyJustPressed(EKeys::LeftMouseButton)) { Flags |= 0x01; }
-    if (PC->WasInputKeyJustPressed(EKeys::RightMouseButton)) { Flags |= 0x08; } // optics toggle on RMB
-    if (PC->WasInputKeyJustPressed(EKeys::MiddleMouseButton)) { Flags |= 0x02; } // secondary on MMB (placeholder until remap)
+    if (PC->WasInputKeyJustPressed(EKeys::LeftMouseButton)) { Flags |= 0x01; } // Primary fire on LMB
+    if (PC->WasInputKeyJustPressed(EKeys::RightMouseButton)) { Flags |= 0x02; } // Special Ability / Secondary fire on RMB
+    if (PC->WasInputKeyJustPressed(EKeys::Z) || PC->WasInputKeyJustPressed(EKeys::MiddleMouseButton)) { Flags |= 0x08; } // optics toggle on Z or MMB
     if (PC->WasInputKeyJustPressed(EKeys::R)) { Flags |= 0x10; } // manual reload request
 
     RA4::DirectControlAxes Axes = QuantizeAxes(
@@ -242,9 +244,8 @@ void URA4DirectControlSubsystem::TickInput(APlayerController* PC, float DeltaSec
     Cmd.DirectAxes = Axes;
     SubmitCommand(Cmd);
 
-    // Fire is a separate command in the same frame, so cooldown and weapon
-    // selection are validated independently of the drive axes.
-    if (Flags & 0x01)
+    // Fire command for primary (0x01) or secondary / ability (0x02)
+    if (Flags & 0x03)
     {
         RA4::Command Fire;
         Fire.Type = RA4::CommandType::DirectControlFire;

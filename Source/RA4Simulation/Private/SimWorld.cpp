@@ -1359,7 +1359,11 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
             // Case A: MCV -> Construction Yard (Deploy)
             if (Core[I].Kind == EntityKind::Unit && Def->Unit.bIsBuilder && Def->Unit.DeploysInto.IsValid())
             {
-                const TileCoord Tile = Map.WorldToTile(Transforms[I].Position);
+                TileCoord Tile = Map.WorldToTile(Transforms[I].Position);
+                if (Cmd.Tile.X > 0 || Cmd.Tile.Y > 0)
+                {
+                    Tile = Cmd.Tile;
+                }
                 const EntityDef* ConYardDef = Content->FindEntity(Def->Unit.DeploysInto);
                 const int32_t FootX = ConYardDef ? ConYardDef->Building.FootprintX : 3;
                 const int32_t FootY = ConYardDef ? ConYardDef->Building.FootprintY : 3;
@@ -1368,7 +1372,7 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
                     return Reject(CommandReject::InvalidPlacement);
                 }
 
-                const Vec2 DeployLoc = Transforms[I].Position;
+                const Vec2 DeployLoc = Map.TileCenterToWorld(Tile);
 
                 // Silently remove MCV without "Unit Lost" event
                 RemoveEntitySilently(Cmd.Primary);
@@ -3908,6 +3912,16 @@ void SimWorld::SystemMovement()
             if (NavigationGrid->IsTraversable(Map.WorldToTile(Candidate), Query))
             {
                 Transforms[I].Position = Candidate;
+                if (Map.Width > 0 && Map.Height > 0)
+                {
+                    const Fixed MinMargin = Fixed::FromInt(50);
+                    const Fixed MaxX = Fixed::FromInt(int64_t(Map.Width) * MapDescription::kTileSizeUnitsLocal) - MinMargin;
+                    const Fixed MaxY = Fixed::FromInt(int64_t(Map.Height) * MapDescription::kTileSizeUnitsLocal) - MinMargin;
+                    if (Transforms[I].Position.X < MinMargin) { Transforms[I].Position.X = MinMargin; }
+                    else if (Transforms[I].Position.X > MaxX) { Transforms[I].Position.X = MaxX; }
+                    if (Transforms[I].Position.Y < MinMargin) { Transforms[I].Position.Y = MinMargin; }
+                    else if (Transforms[I].Position.Y > MaxY) { Transforms[I].Position.Y = MaxY; }
+                }
             }
         }
     };

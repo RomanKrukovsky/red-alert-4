@@ -25,18 +25,20 @@ ARA4EntityActor::ARA4EntityActor()
 
     DirectControlSpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("DirectControlSpringArm"));
     DirectControlSpringArm->SetupAttachment(MeshComponent);
-    DirectControlSpringArm->TargetArmLength = 360.0f;
-    DirectControlSpringArm->SetRelativeLocation(FVector(0.0f, 0.0f, 80.0f));
-    DirectControlSpringArm->SetRelativeRotation(FRotator(-10.0f, 0.0f, 0.0f));
+    DirectControlSpringArm->TargetArmLength = 260.0f;
+    DirectControlSpringArm->SetRelativeLocation(FVector(0.0f, 0.0f, 60.0f));
+    DirectControlSpringArm->SetRelativeRotation(FRotator(-8.0f, 0.0f, 0.0f));
     DirectControlSpringArm->bDoCollisionTest = false;
-    DirectControlSpringArm->bEnableCameraLag = false;
-    DirectControlSpringArm->bEnableCameraRotationLag = false;
+    DirectControlSpringArm->bEnableCameraLag = true;
+    DirectControlSpringArm->CameraLagSpeed = 22.0f;
+    DirectControlSpringArm->bEnableCameraRotationLag = true;
+    DirectControlSpringArm->CameraRotationLagSpeed = 28.0f;
     DirectControlSpringArm->bInheritPitch = true;
     DirectControlSpringArm->bInheritYaw = true;
     DirectControlSpringArm->bInheritRoll = false;
-    // Over-the-shoulder offset: +Y is right in UE -> shifts camera to the right and puts object on LEFT of screen
-    DirectControlSpringArm->SocketOffset = FVector(0.0f, 90.0f, 45.0f);
-    DirectControlSpringArm->TargetOffset = FVector(0.0f, 0.0f, 35.0f);
+    // Centered directly behind the turret/hull
+    DirectControlSpringArm->SocketOffset = FVector(0.0f, 0.0f, 30.0f);
+    DirectControlSpringArm->TargetOffset = FVector(0.0f, 0.0f, 25.0f);
 
     FirstPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCameraComponent"));
     FirstPersonCameraComponent->SetupAttachment(DirectControlSpringArm, USpringArmComponent::SocketName);
@@ -129,8 +131,9 @@ void ARA4EntityActor::SetupDirectControlView(bool bEnable, float InFov)
     if (DirectControlSpringArm != nullptr)
     {
         const float ScaleMult = FMath::Clamp(float(RequestedVisualScale.GetMax()), 0.8f, 3.0f);
-        DirectControlSpringArm->TargetArmLength = 340.0f * ScaleMult;
-        DirectControlSpringArm->SocketOffset = FVector(0.0f, 90.0f * ScaleMult, 45.0f * ScaleMult);
+        DirectControlSpringArm->TargetArmLength = 260.0f * ScaleMult;
+        DirectControlSpringArm->SocketOffset = FVector(0.0f, 0.0f, 30.0f * ScaleMult);
+        DirectControlSpringArm->TargetOffset = FVector(0.0f, 0.0f, 25.0f * ScaleMult);
     }
 }
 
@@ -312,39 +315,18 @@ void ARA4EntityActor::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
     
-    // Simple interpolation for smooth presentation (lerp rate ~ 15.0f to smooth 20Hz tick)
-    FVector CurrentLocation = GetActorLocation();
-    FVector InterpolatedLocation = FMath::VInterpTo(CurrentLocation, TargetPosition, DeltaTime, 15.0f);
+    // Smooth interpolation for silky presentation (interp rate ~ 18.0f to smoothly interpolate 20Hz tick)
+    const FVector CurrentLocation = GetActorLocation();
+    const FVector InterpolatedLocation = FMath::VInterpTo(CurrentLocation, TargetPosition, DeltaTime, 18.0f);
     
-    FRotator CurrentRotation = GetActorRotation();
-    FRotator TargetRotator(0.0f, TargetRotationZ, 0.0f);
-    FRotator InterpolatedRotation = FMath::RInterpTo(CurrentRotation, TargetRotator, DeltaTime, 15.0f);
+    const FRotator CurrentRotation = GetActorRotation();
+    const FRotator TargetRotator(0.0f, TargetRotationZ, 0.0f);
+    const FRotator InterpolatedRotation = FMath::RInterpTo(CurrentRotation, TargetRotator, DeltaTime, 18.0f);
 
-    // Vehicle Dynamics: pitch dip on acceleration/brake, roll lean on turn
+    SetActorLocationAndRotation(InterpolatedLocation, InterpolatedRotation);
+
     const FVector Velocity = (InterpolatedLocation - CurrentLocation) / FMath::Max(DeltaTime, 0.001f);
     const float Speed = Velocity.Size();
-
-    if (MeshComponent != nullptr && Speed > 10.0f && GetWorld() != nullptr)
-    {
-        const FVector Forward = InterpolatedRotation.Vector();
-        const FVector Right = FRotationMatrix(InterpolatedRotation).GetUnitAxis(EAxis::Y);
-
-        const float ForwardSpeed = FVector::DotProduct(Velocity, Forward);
-        const float LateralSpeed = FVector::DotProduct(Velocity, Right);
-
-        const float PitchTilt = FMath::Clamp(ForwardSpeed * 0.004f, -5.0f, 5.0f);
-        const float RollTilt = FMath::Clamp(LateralSpeed * 0.005f, -4.0f, 4.0f);
-
-        FRotator DynamicRotator = InterpolatedRotation;
-        DynamicRotator.Pitch += PitchTilt;
-        DynamicRotator.Roll += RollTilt;
-
-        SetActorLocationAndRotation(InterpolatedLocation, DynamicRotator);
-    }
-    else
-    {
-        SetActorLocationAndRotation(InterpolatedLocation, InterpolatedRotation);
-    }
 
     // Phase 2: Infantry Locomotion Animation
     if (SkeletalMeshComponent && SkeletalMeshComponent->IsVisible())

@@ -27,7 +27,7 @@ constexpr Fixed kTileSize = Fixed::FromInt(kTileSizeUnits);
 // condition, so they are asserted rather than handled.
 constexpr uint32_t kMaxEntities = 8192;
 constexpr int32_t kMaxMapTiles = 512;
-constexpr int32_t kMaxProductionQueueLength = 9;
+constexpr int32_t kMaxProductionQueueLength = 99;
 
 // Simulation state checksums are exchanged on this cadence. Every tick would cost
 // bandwidth for no benefit; too rare and the desync report points nowhere near the

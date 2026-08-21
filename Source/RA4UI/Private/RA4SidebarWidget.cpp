@@ -1679,6 +1679,22 @@ void URA4SidebarWidget::RefreshCards()
             CardStack->AddChildToVerticalBox(Reason);
         }
 
+        // On-card Production Progress percentage, bar, and quantity queue badge
+        UProgressBar* CardProgBar = MakeThinBar(WidgetTree, *FString::Printf(TEXT("CardProgBar%d"), Index), kPowerOk, 4.0f);
+        CardProgBar->SetPercent(0.0f);
+        CardProgBar->SetVisibility(ESlateVisibility::Collapsed);
+        CardStack->AddChildToVerticalBox(CardProgBar);
+
+        UTextBlock* CardProgText = MakeLabel(WidgetTree, *FString::Printf(TEXT("CardProgText%d"), Index), kPowerOk, 11, true);
+        CardProgText->SetJustification(ETextJustify::Center);
+        CardProgText->SetVisibility(ESlateVisibility::Collapsed);
+        CardStack->AddChildToVerticalBox(CardProgText);
+
+        UTextBlock* CardQueueBadge = MakeLabel(WidgetTree, *FString::Printf(TEXT("CardQueueBadge%d"), Index), kCredits, 10, true);
+        CardQueueBadge->SetJustification(ETextJustify::Center);
+        CardQueueBadge->SetVisibility(ESlateVisibility::Collapsed);
+        CardStack->AddChildToVerticalBox(CardQueueBadge);
+
         Button->AddChild(CardStack);
 
         if (UUniformGridSlot* Slot = CardGrid->AddChildToUniformGrid(Button, Index / kCardColumns,
@@ -1883,6 +1899,77 @@ void URA4SidebarWidget::RefreshQueue()
                     WidgetTree->FindWidget(*FString::Printf(TEXT("QueueStatus%d"), Index))))
             {
                 Status->SetText(FormatBuildRemaining(Entry.RemainingSeconds));
+            }
+        }
+    }
+
+    // Reflect production progress percentages and queue counts directly on the build cards
+    for (int32 CardIdx = 0; CardIdx < CardContentIds.Num(); ++CardIdx)
+    {
+        const int64 CardContentId = CardContentIds[CardIdx];
+        int32 TotalQueued = 0;
+        int32 ActiveProgPct = -1;
+        bool bAwaitingPlace = false;
+
+        for (int32 QIdx = 0; QIdx < Queue.Num(); ++QIdx)
+        {
+            if (Queue[QIdx].ContentId == CardContentId)
+            {
+                TotalQueued++;
+                if (ActiveProgPct < 0)
+                {
+                    ActiveProgPct = Queue[QIdx].ProgressPercent;
+                    bAwaitingPlace = Queue[QIdx].bAwaitingPlacement;
+                }
+            }
+        }
+
+        if (UProgressBar* CardBar = Cast<UProgressBar>(
+                WidgetTree->FindWidget(*FString::Printf(TEXT("CardProgBar%d"), CardIdx))))
+        {
+            if (ActiveProgPct >= 0)
+            {
+                CardBar->SetVisibility(ESlateVisibility::Visible);
+                CardBar->SetPercent(bAwaitingPlace ? 1.0f : FMath::Clamp(float(ActiveProgPct) / 100.0f, 0.0f, 1.0f));
+            }
+            else
+            {
+                CardBar->SetVisibility(ESlateVisibility::Collapsed);
+            }
+        }
+
+        if (UTextBlock* CardProg = Cast<UTextBlock>(
+                WidgetTree->FindWidget(*FString::Printf(TEXT("CardProgText%d"), CardIdx))))
+        {
+            if (ActiveProgPct >= 0)
+            {
+                CardProg->SetVisibility(ESlateVisibility::Visible);
+                if (bAwaitingPlace)
+                {
+                    CardProg->SetText(NSLOCTEXT("RA4", "Card_ReadyPlace", "ГОТОВО (КЛИК)"));
+                }
+                else
+                {
+                    CardProg->SetText(FText::Format(NSLOCTEXT("RA4", "Card_ProgPct", "{0}%"), FText::AsNumber(ActiveProgPct)));
+                }
+            }
+            else
+            {
+                CardProg->SetVisibility(ESlateVisibility::Collapsed);
+            }
+        }
+
+        if (UTextBlock* CardQueue = Cast<UTextBlock>(
+                WidgetTree->FindWidget(*FString::Printf(TEXT("CardQueueBadge%d"), CardIdx))))
+        {
+            if (TotalQueued > 1)
+            {
+                CardQueue->SetVisibility(ESlateVisibility::Visible);
+                CardQueue->SetText(FText::Format(NSLOCTEXT("RA4", "Card_QueueBadge", "x{0} В ОЧЕРЕДИ"), FText::AsNumber(TotalQueued)));
+            }
+            else
+            {
+                CardQueue->SetVisibility(ESlateVisibility::Collapsed);
             }
         }
     }

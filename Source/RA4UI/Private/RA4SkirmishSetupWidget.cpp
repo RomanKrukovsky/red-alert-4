@@ -89,14 +89,40 @@ UBorder* MakeFramedSetupPanel(UWidgetTree* Tree, UWidget* Content, const FName N
     return Metal;
 }
 
-void StyleSetupButton(UButton* Button, const FLinearColor& Base)
+UButton* MakeSetupButton(
+    UWidgetTree* Tree,
+    const FText& Text,
+    const FName ButtonName,
+    const FLinearColor& NormalColor,
+    const FLinearColor& HoverColor,
+    const FLinearColor& PressedColor,
+    const FLinearColor& LabelColor,
+    const int32 FontSize = 20)
 {
-    FButtonStyle Style = Button->GetStyle();
-    Style.Normal.TintColor = FSlateColor(Base);
-    Style.Hovered.TintColor = FSlateColor(Base * 1.45f);
-    Style.Pressed.TintColor = FSlateColor(Base * 0.70f);
-    Style.Disabled.TintColor = FSlateColor(Base * 0.45f);
+    UButton* Button = Tree->ConstructWidget<UButton>(UButton::StaticClass(), ButtonName);
+
+    FButtonStyle Style;
+    Style.SetNormal(FSlateColorBrush(NormalColor));
+    Style.SetHovered(FSlateColorBrush(HoverColor));
+    Style.SetPressed(FSlateColorBrush(PressedColor));
+    Style.SetDisabled(FSlateColorBrush(FLinearColor(0.08f, 0.08f, 0.10f, 0.45f)));
+    Style.NormalPadding = FMargin(0.0f);
+    Style.PressedPadding = FMargin(2.0f, 2.0f, 0.0f, 0.0f);
     Button->SetStyle(Style);
+
+    UTextBlock* Label = MakeSetupText(Tree, Text, FontSize, LabelColor, FName(ButtonName.ToString() + TEXT("_Label")), true);
+    Label->SetJustification(ETextJustify::Center);
+    Label->SetShadowOffset(FVector2D(2.0f, 2.0f));
+    Label->SetShadowColorAndOpacity(FLinearColor::Black);
+
+    Button->AddChild(Label);
+    if (UButtonSlot* BSlot = Cast<UButtonSlot>(Label->Slot))
+    {
+        BSlot->SetPadding(FMargin(24.0f, 12.0f));
+        BSlot->SetHorizontalAlignment(HAlign_Center);
+        BSlot->SetVerticalAlignment(VAlign_Center);
+    }
+    return Button;
 }
 }
 
@@ -260,36 +286,86 @@ void URA4SkirmishSetupWidget::BuildLayout()
     RightBox->AddChildToVerticalBox(AISpotCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 16.0f));
 
     UBorder* RightPanel = MakeFramedSetupPanel(WidgetTree, RightBox, TEXT("RightPanel"));
-    PlaceSetupWidget(MainCanvas, RightPanel, FVector2D(640.0f, 140.0f), FVector2D(520.0f, 520.0f), 2);
+    PlaceSetupWidget(MainCanvas, RightPanel, FVector2D(630.0f, 140.0f), FVector2D(530.0f, 500.0f), 2);
 
-    // Validation & Action Banner (Bottom)
+    // Right Column: Tactical Intel & Match Rules
+    UVerticalBox* IntelBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("IntelBox"));
+    UTextBlock* IntelHeader = MakeSetupText(
+        WidgetTree, LOCTEXT("IntelHeader", "ТАКТИЧЕСКИЕ ДАННЫЕ ОПЕРАЦИИ"), 18, TextColor, TEXT("IntelHeader"));
+    IntelBox->AddChildToVerticalBox(IntelHeader)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 12.0f));
+
+    UTextBlock* IntelDesc = MakeSetupText(
+        WidgetTree,
+        LOCTEXT("IntelDesc", "ЛАНДШАФТ: Архипелаг с возвышенностями, водными преградами и узкими проходами.\n"
+                             "БАЗОСТРОЕНИЕ: Развёртывание Сборочного цеха (MCV) и добыча руды.\n"
+                             "ТУМАН ВОЙНЫ: Включён (Требуется разведка радаром и мобильными силами).\n"
+                             "СУПЕРОРУЖИЕ: Активно после достижения 3-го технологического уровня.\n"
+                             "УСЛОВИЕ ПОБЕДЫ: Полная ликвидация всех баз и боевых подразделений противника."),
+        14, Muted, TEXT("IntelDesc"), false);
+    IntelBox->AddChildToVerticalBox(IntelDesc)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 16.0f));
+
+    UBorder* IntelPanel = MakeFramedSetupPanel(WidgetTree, IntelBox, TEXT("IntelPanel"));
+    PlaceSetupWidget(MainCanvas, IntelPanel, FVector2D(1190.0f, 140.0f), FVector2D(650.0f, 500.0f), 2);
+
+    // Validation Status Bar (Bottom Row 1)
     UVerticalBox* BannerStack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("BannerStack"));
-
     ValidationWarningText = MakeSetupText(
-        WidgetTree, LOCTEXT("ValidationOk", "Параметры матча корректны."), 15, GreenOk, TEXT("ValidationWarningText"));
-    BannerStack->AddChildToVerticalBox(ValidationWarningText)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 12.0f));
+        WidgetTree,
+        LOCTEXT("ValidationOk", "Параметры матча проверены. Нажмите «НАЧАТЬ МАТЧ» для загрузки."),
+        16, GreenOk, TEXT("ValidationWarningText"), true);
+    BannerStack->AddChildToVerticalBox(ValidationWarningText)->SetPadding(FMargin(4.0f, 2.0f, 4.0f, 2.0f));
 
+    ValidationBanner = MakeFramedSetupPanel(WidgetTree, BannerStack, TEXT("ValidationBanner"), FMargin(16.0f, 10.0f));
+    PlaceSetupWidget(MainCanvas, ValidationBanner, FVector2D(80.0f, 660.0f), FVector2D(1760.0f, 60.0f), 2);
+
+    // Action Buttons Panel (Bottom Row 2)
     UHorizontalBox* ActionRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("ActionRow"));
 
-    UButton* BackButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("BackButton"));
-    StyleSetupButton(BackButton, FLinearColor(0.055f, 0.05f, 0.052f, 1.0f));
-    BackButton->AddChild(MakeSetupText(
-        WidgetTree, LOCTEXT("Back", "В ГЛАВНОЕ МЕНЮ"), 18, TextColor, TEXT("BackLabel")));
+    // Back to Main Menu Button
+    USizeBox* BackBox = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("BackBox"));
+    BackBox->SetWidthOverride(560.0f);
+    BackBox->SetHeightOverride(64.0f);
+
+    UButton* BackButton = MakeSetupButton(
+        WidgetTree,
+        LOCTEXT("Back", "◄ В ГЛАВНОЕ МЕНЮ"),
+        TEXT("BackButton"),
+        FLinearColor(0.10f, 0.11f, 0.13f, 0.98f),
+        FLinearColor(0.24f, 0.26f, 0.30f, 1.0f),
+        FLinearColor(0.06f, 0.07f, 0.08f, 1.0f),
+        TextColor,
+        18);
     BackButton->OnClicked.AddDynamic(this, &URA4SkirmishSetupWidget::HandleBackClicked);
-    UHorizontalBoxSlot* BackSlot = ActionRow->AddChildToHorizontalBox(BackButton);
-    BackSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-    BackSlot->SetPadding(FMargin(0.0f, 0.0f, 16.0f, 0.0f));
+    BackBox->SetContent(BackButton);
 
-    StartButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("StartButton"));
-    StyleSetupButton(StartButton, RedDim);
-    StartButton->AddChild(MakeSetupText(WidgetTree, LOCTEXT("StartMatch", "НАЧАТЬ МАТЧ"), 20, TextColor, TEXT("StartMatchLabel")));
+    UHorizontalBoxSlot* BackSlot = ActionRow->AddChildToHorizontalBox(BackBox);
+    BackSlot->SetPadding(FMargin(0.0f, 0.0f, 32.0f, 0.0f));
+    BackSlot->SetHorizontalAlignment(HAlign_Left);
+    BackSlot->SetVerticalAlignment(VAlign_Center);
+
+    // Start Match Button
+    USizeBox* StartBox = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("StartBox"));
+    StartBox->SetWidthOverride(1168.0f);
+    StartBox->SetHeightOverride(64.0f);
+
+    StartButton = MakeSetupButton(
+        WidgetTree,
+        LOCTEXT("StartMatch", "▶ НАЧАТЬ МАТЧ"),
+        TEXT("StartButton"),
+        FLinearColor(0.85f, 0.08f, 0.09f, 1.0f),
+        FLinearColor(0.98f, 0.15f, 0.16f, 1.0f),
+        FLinearColor(0.48f, 0.02f, 0.03f, 1.0f),
+        FLinearColor::White,
+        22);
     StartButton->OnClicked.AddDynamic(this, &URA4SkirmishSetupWidget::HandleStartMatchClicked);
-    UHorizontalBoxSlot* StartSlot = ActionRow->AddChildToHorizontalBox(StartButton);
-    StartSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-    BannerStack->AddChildToVerticalBox(ActionRow)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+    StartBox->SetContent(StartButton);
 
-    ValidationBanner = MakeFramedSetupPanel(WidgetTree, BannerStack, TEXT("ValidationBanner"), FMargin(16.0f, 12.0f));
-    PlaceSetupWidget(MainCanvas, ValidationBanner, FVector2D(80.0f, 680.0f), FVector2D(1080.0f, 140.0f), 2);
+    UHorizontalBoxSlot* StartSlot = ActionRow->AddChildToHorizontalBox(StartBox);
+    StartSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+    StartSlot->SetHorizontalAlignment(HAlign_Fill);
+    StartSlot->SetVerticalAlignment(VAlign_Center);
+
+    PlaceSetupWidget(MainCanvas, ActionRow, FVector2D(80.0f, 736.0f), FVector2D(1760.0f, 68.0f), 3);
 }
 
 void URA4SkirmishSetupWidget::HandleOptionChanged(FString SelectedItem, ESelectInfo::Type SelectionType)

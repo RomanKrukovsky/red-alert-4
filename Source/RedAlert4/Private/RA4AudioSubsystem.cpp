@@ -140,6 +140,11 @@ void URA4AudioSubsystem::PlayUnitVoice(const FString& VoiceId, ERA4VoiceEvent Ev
         return;
     }
 
+    if (!bUnitVoicesEnabled)
+    {
+        return;
+    }
+
     const double Now = World->GetTimeSeconds();
     if (!bBypassCooldown && Now - LastVoiceTimeSeconds < kVoiceCooldownSeconds)
     {
@@ -152,8 +157,9 @@ void URA4AudioSubsystem::PlayUnitVoice(const FString& VoiceId, ERA4VoiceEvent Ev
         return;
     }
 
-    // 2D: these are the commander's radio, not a sound emitted at a world position.
-    UGameplayStatics::PlaySound2D(World, Clip);
+    // 2D: these are the commander's radio, scaled by SFX and Master volume
+    const float EffectiveVolume = FMath::Clamp(CurrentSfxVolume * CurrentMasterVolume, 0.0f, 1.0f);
+    UGameplayStatics::PlaySound2D(World, Clip, EffectiveVolume);
     LastVoiceTimeSeconds = Now;
     LastVoiceId = VoiceId;
 }
@@ -183,43 +189,47 @@ USoundBase* URA4AudioSubsystem::FindEVAClip(uint8 Faction, ERA4EVAEvent Event)
         AltPrefix = TEXT("Chrono");
     }
 
-    const FString AssetName = FString::Printf(
-        TEXT("VO_RU_%s_EVA_%s_01"), Code, ToEvaEventName(Event));
-    const FString ObjectPath = FString::Printf(
-        TEXT("/Game/RA4/Audio/Generated/EVA/%s/%s.%s"),
-        Folder, *AssetName, *AssetName);
+    const int32 VariationIndex = FMath::RandRange(1, 4);
+    const TCHAR* EventName = ToEvaEventName(Event);
 
-    if (TObjectPtr<USoundBase>* Cached = ClipCache.Find(ObjectPath))
+    TArray<FString, TInlineAllocator<6>> CandidatePaths;
+    // 1. Primary Russian EVA variation
+    CandidatePaths.Add(FString::Printf(
+        TEXT("/Game/RA4/Audio/Generated/EVA/%s/VO_RU_%s_EVA_%s_%02d.VO_RU_%s_EVA_%s_%02d"),
+        Folder, Code, EventName, VariationIndex, Code, EventName, VariationIndex));
+    // 2. Base variation _01
+    CandidatePaths.Add(FString::Printf(
+        TEXT("/Game/RA4/Audio/Generated/EVA/%s/VO_RU_%s_EVA_%s_01.VO_RU_%s_EVA_%s_01"),
+        Folder, Code, EventName, Code, EventName));
+    // 3. Alternative naming standard
+    CandidatePaths.Add(FString::Printf(
+        TEXT("/Game/RA4/Audio/Generated/EVA/%s/VO_EVA_%s_%s_%02d.VO_EVA_%s_%s_%02d"),
+        Folder, Code, EventName, VariationIndex, Code, EventName, VariationIndex));
+    CandidatePaths.Add(FString::Printf(
+        TEXT("/Game/RA4/Audio/Generated/EVA/%s/VO_EVA_%s_%s_01.VO_EVA_%s_%s_01"),
+        Folder, Code, EventName, Code, EventName));
+
+    for (const FString& ObjectPath : CandidatePaths)
     {
-        return Cached->Get();
+        if (TObjectPtr<USoundBase>* Cached = ClipCache.Find(ObjectPath))
+        {
+            if (Cached->Get() != nullptr)
+            {
+                return Cached->Get();
+            }
+            continue;
+        }
+
+        USoundBase* Clip = LoadObject<USoundBase>(nullptr, *ObjectPath);
+        if (Clip != nullptr)
+        {
+            ClipCache.Add(ObjectPath, Clip);
+            return Clip;
+        }
+        ClipCache.Add(ObjectPath, nullptr);
     }
 
-    USoundBase* Clip = LoadObject<USoundBase>(nullptr, *ObjectPath);
-    if (Clip == nullptr)
-    {
-        FString AltEventName;
-        switch (Event)
-        {
-        case ERA4EVAEvent::ConstructionComplete: AltEventName = TEXT("BuildingConstructionComplete"); break;
-        case ERA4EVAEvent::UnitReady: AltEventName = TEXT("UnitReady"); break;
-        case ERA4EVAEvent::BaseUnderAttack: AltEventName = TEXT("BaseUnderAttack"); break;
-        case ERA4EVAEvent::InsufficientFunds: AltEventName = TEXT("ResourcesLow"); break;
-        case ERA4EVAEvent::PowerLow: AltEventName = TEXT("PowerLow"); break;
-        case ERA4EVAEvent::Victory: AltEventName = TEXT("PlayerVictory"); break;
-        case ERA4EVAEvent::Defeat: AltEventName = TEXT("PlayerDefeat"); break;
-        case ERA4EVAEvent::BuildingLost: AltEventName = TEXT("BuildingLost"); break;
-        case ERA4EVAEvent::UnitLost: AltEventName = TEXT("UnitLost"); break;
-        }
-        if (!AltEventName.IsEmpty())
-        {
-            const FString AltAssetName = FString::Printf(TEXT("VO_%s_EVA_%s"), AltPrefix, *AltEventName);
-            const FString AltObjectPath = FString::Printf(TEXT("/Game/RA4/Audio/Generated/EVA/%s/%s.%s"), Folder, *AltAssetName, *AltAssetName);
-            Clip = LoadObject<USoundBase>(nullptr, *AltObjectPath);
-        }
-    }
-
-    ClipCache.Add(ObjectPath, Clip);
-    return Clip;
+    return nullptr;
 }
 
 void URA4AudioSubsystem::PlayEVA(uint8 Faction, ERA4EVAEvent Event, bool bBypassCooldown)
@@ -238,7 +248,8 @@ void URA4AudioSubsystem::PlayEVA(uint8 Faction, ERA4EVAEvent Event, bool bBypass
 
     if (USoundBase* Clip = FindEVAClip(Faction, Event))
     {
-        UGameplayStatics::PlaySound2D(World, Clip);
+        const float EffectiveVolume = FMath::Clamp(CurrentEvaVolume * CurrentMasterVolume, 0.0f, 1.0f);
+        UGameplayStatics::PlaySound2D(World, Clip, EffectiveVolume);
         LastEvaTimeSeconds = Now;
     }
 }
@@ -295,12 +306,28 @@ void URA4AudioSubsystem::InitPlaylist()
 void URA4AudioSubsystem::StartMusic()
 {
     InitPlaylist();
-    if (MusicComponent != nullptr && MusicComponent->IsPlaying())
+    if (Playlist.Num() == 0)
     {
         return;
     }
 
-    PlayTrackByIndex(CurrentTrackIndex);
+    if (MusicComponent == nullptr)
+    {
+        PlayTrackByIndex(CurrentTrackIndex);
+        return;
+    }
+
+    if (bMusicPaused)
+    {
+        MusicComponent->SetPaused(false);
+        bMusicPaused = false;
+        OnMusicTrackChanged.Broadcast(CurrentTrackIndex, GetCurrentTrackTitle(), true);
+    }
+    else if (!MusicComponent->IsPlaying())
+    {
+        MusicComponent->Play();
+        OnMusicTrackChanged.Broadcast(CurrentTrackIndex, GetCurrentTrackTitle(), true);
+    }
 }
 
 void URA4AudioSubsystem::StopMusic()
@@ -308,62 +335,66 @@ void URA4AudioSubsystem::StopMusic()
     if (MusicComponent != nullptr)
     {
         MusicComponent->Stop();
-        MusicComponent = nullptr;
         bMusicPaused = false;
+        OnMusicTrackChanged.Broadcast(CurrentTrackIndex, GetCurrentTrackTitle(), false);
     }
 }
 
 void URA4AudioSubsystem::PlayTrackByIndex(int32 TrackIndex)
 {
     InitPlaylist();
-    if (Playlist.Num() == 0)
+    if (!Playlist.IsValidIndex(TrackIndex))
     {
         return;
     }
 
-    CurrentTrackIndex = FMath::Clamp(TrackIndex, 0, Playlist.Num() - 1);
-    const FRA4MusicTrackInfo& TrackInfo = Playlist[CurrentTrackIndex];
+    CurrentTrackIndex = TrackIndex;
+    const FRA4MusicTrackInfo& Track = Playlist[TrackIndex];
 
-    UWorld* World = GetWorld();
-    if (World == nullptr)
+    USoundBase* MusicCue = nullptr;
+    if (TObjectPtr<USoundBase>* Cached = ClipCache.Find(Track.PrimaryAssetPath))
     {
+        MusicCue = Cached->Get();
+    }
+    else
+    {
+        MusicCue = LoadObject<USoundBase>(nullptr, *Track.PrimaryAssetPath);
+        if (MusicCue == nullptr && !Track.FallbackAssetPath.IsEmpty())
+        {
+            MusicCue = LoadObject<USoundBase>(nullptr, *Track.FallbackAssetPath);
+        }
+        ClipCache.Add(Track.PrimaryAssetPath, MusicCue);
+    }
+
+    if (MusicCue == nullptr)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("RA4Audio: Track '%s' asset not found at %s"), *Track.Title, *Track.PrimaryAssetPath);
         return;
     }
 
-    USoundBase* Track = LoadObject<USoundBase>(nullptr, *TrackInfo.PrimaryAssetPath);
-    if (Track == nullptr && !TrackInfo.FallbackAssetPath.IsEmpty())
+    if (MusicComponent == nullptr)
     {
-        Track = LoadObject<USoundBase>(nullptr, *TrackInfo.FallbackAssetPath);
+        UWorld* World = GetWorld();
+        if (World == nullptr)
+        {
+            return;
+        }
+        MusicComponent = UGameplayStatics::SpawnSound2D(World, MusicCue, CurrentMusicVolume * CurrentMasterVolume, 1.0f, 0.0f, nullptr, true);
+        if (MusicComponent != nullptr)
+        {
+            MusicComponent->bAutoDestroy = false;
+        }
+    }
+    else
+    {
+        MusicComponent->SetSound(MusicCue);
+        MusicComponent->SetVolumeMultiplier(CurrentMusicVolume * CurrentMasterVolume);
+        MusicComponent->Play();
     }
 
-    if (Track == nullptr)
-    {
-        UE_LOG(LogTemp, Warning,
-               TEXT("RA4 audio: music track '%s' not found at %s"),
-               *TrackInfo.Title, *TrackInfo.PrimaryAssetPath);
-        return;
-    }
-
-    if (MusicComponent != nullptr)
-    {
-        MusicComponent->Stop();
-        MusicComponent = nullptr;
-    }
-
-    MusicComponent = UGameplayStatics::SpawnSound2D(World, Track, CurrentMusicVolume,
-                                                    /*PitchMultiplier*/ 1.0f, /*StartTime*/ 0.0f,
-                                                    /*ConcurrencySettings*/ nullptr,
-                                                    /*bPersistAcrossLevelTransition*/ false,
-                                                    /*bAutoDestroy*/ false);
-    if (MusicComponent != nullptr)
-    {
-        MusicComponent->bIsUISound = true;
-        bMusicPaused = false;
-        UE_LOG(LogTemp, Display, TEXT("RA4 audio: music started [%d/%d]: %s"),
-               CurrentTrackIndex + 1, Playlist.Num(), *TrackInfo.Title);
-    }
-
-    OnMusicTrackChanged.Broadcast(CurrentTrackIndex, TrackInfo.Title, IsMusicPlaying());
+    bMusicPaused = false;
+    OnMusicTrackChanged.Broadcast(CurrentTrackIndex, Track.Title, true);
+    UE_LOG(LogTemp, Display, TEXT("RA4Audio: Now playing track %02d: %s"), CurrentTrackIndex + 1, *Track.Title);
 }
 
 void URA4AudioSubsystem::NextTrack()
@@ -418,12 +449,36 @@ void URA4AudioSubsystem::ToggleMusicPause()
     OnMusicTrackChanged.Broadcast(CurrentTrackIndex, GetCurrentTrackTitle(), IsMusicPlaying());
 }
 
+void URA4AudioSubsystem::SetMasterVolume(float Volume)
+{
+    CurrentMasterVolume = FMath::Clamp(Volume, 0.0f, 1.0f);
+    if (MusicComponent != nullptr)
+    {
+        MusicComponent->SetVolumeMultiplier(CurrentMusicVolume * CurrentMasterVolume);
+    }
+}
+
+void URA4AudioSubsystem::SetSfxVolume(float Volume)
+{
+    CurrentSfxVolume = FMath::Clamp(Volume, 0.0f, 1.0f);
+}
+
+void URA4AudioSubsystem::SetEvaVolume(float Volume)
+{
+    CurrentEvaVolume = FMath::Clamp(Volume, 0.0f, 1.0f);
+}
+
+void URA4AudioSubsystem::SetUnitVoicesEnabled(bool bEnabled)
+{
+    bUnitVoicesEnabled = bEnabled;
+}
+
 void URA4AudioSubsystem::SetMusicVolume(float Volume)
 {
     CurrentMusicVolume = FMath::Clamp(Volume, 0.0f, 1.0f);
     if (MusicComponent != nullptr)
     {
-        MusicComponent->SetVolumeMultiplier(CurrentMusicVolume);
+        MusicComponent->SetVolumeMultiplier(CurrentMusicVolume * CurrentMasterVolume);
     }
 }
 
