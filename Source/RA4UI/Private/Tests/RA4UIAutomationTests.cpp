@@ -593,4 +593,40 @@ bool FRA4FactionHUDCompositionTest::RunTest(const FString& Parameters)
     return true;
 }
 
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FRA4HUDBattlefieldBudgetTest,
+    "RA4.UI.HUD.Layout.BattlefieldKeepsItsShareOfTheScreen",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRA4HUDBattlefieldBudgetTest::RunTest(const FString& Parameters)
+{
+    // Every faction profile shares one shell, so each one must respect the same
+    // budget: panels may differ in rhythm, never in how much fight they hide.
+    const int32 CombatReferences[] = {13, 14, 15, 16, 17, 20, 21, 22, 23, 24};
+
+    for (const int32 Reference : CombatReferences)
+    {
+        URA4FactionHUDWidget* Faction = NewObject<URA4FactionHUDWidget>();
+        TestTrue(TEXT("Combat reference configures"), Faction->ConfigureReference(Reference));
+        TestTrue(TEXT("Faction HUD initializes"), Faction->Initialize());
+        Faction->TakeWidget();
+
+        const float Fraction = Faction->GetBattlefieldViewFraction();
+        AddInfo(*FString::Printf(
+            TEXT("Reference %d battlefield share: %.1f%%"), Reference, Fraction * 100.0f));
+        TestTrue(
+            *FString::Printf(
+                TEXT("Reference %d keeps at least 65%% battlefield (got %.1f%%)"),
+                Reference, Fraction * 100.0f),
+            Fraction >= 0.65f);
+        TestTrue(
+            *FString::Printf(
+                TEXT("Reference %d keeps panels readable, at most 72%% battlefield (got %.1f%%)"),
+                Reference, Fraction * 100.0f),
+            Fraction <= 0.72f);
+    }
+    return true;
+}
+
 #endif

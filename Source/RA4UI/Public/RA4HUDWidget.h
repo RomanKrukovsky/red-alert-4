@@ -54,6 +54,19 @@ public:
     UFUNCTION(BlueprintPure, Category = "RA4|HUD|Input")
     int32 GetInteractiveRegionCount() const { return InteractiveRegions.Num(); }
 
+    /**
+     * Share of the reference canvas the player can still see the battle through,
+     * with overlapping panels counted once. The design budget is 65-72%: below
+     * that the HUD is swallowing the fight, above it the panels are too thin to
+     * read.
+     */
+    UFUNCTION(BlueprintPure, Category = "RA4|HUD|Layout")
+    float GetBattlefieldViewFraction() const;
+
+    /** Canvas the HUD panels are authored against. */
+    static constexpr float ReferenceCanvasWidth = 1920.0f;
+    static constexpr float ReferenceCanvasHeight = 1080.0f;
+
 protected:
     virtual TSharedRef<SWidget> RebuildWidget() override;
     virtual void NativeConstruct() override;
