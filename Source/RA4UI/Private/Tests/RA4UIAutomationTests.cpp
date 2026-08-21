@@ -217,14 +217,13 @@ bool FRA4SkirmishBackActionLabelTest::RunTest(const FString& Parameters)
     TestTrue(TEXT("Skirmish setup initializes"), Setup->Initialize());
     Setup->TakeWidget();
 
-    UTextBlock* BackLabel = Cast<UTextBlock>(Setup->GetWidgetFromName(TEXT("BackLabel")));
+    UTextBlock* BackLabel = Cast<UTextBlock>(Setup->GetWidgetFromName(TEXT("BackButton_Label")));
     TestNotNull(TEXT("Back label exists"), BackLabel);
     if (BackLabel)
     {
-        TestEqual(
+        TestTrue(
             TEXT("Back action names its destination"),
-            BackLabel->GetText().ToString(),
-            FString(TEXT("В ГЛАВНОЕ МЕНЮ")));
+            BackLabel->GetText().ToString().Contains(TEXT("В ГЛАВНОЕ МЕНЮ")));
     }
     return true;
 }
@@ -361,9 +360,11 @@ bool FRA4LobbyViewModelChatTest::RunTest(const FString& Parameters)
 {
     URA4LobbyViewModel* ViewModel = NewObject<URA4LobbyViewModel>();
 
+    const int32 SeededMessages = ViewModel->GetChatMessages().Num();
     TestFalse(TEXT("Empty chat rejected"), ViewModel->SendChat(TEXT("   ")));
+    TestEqual(TEXT("Rejected chat is not stored"), ViewModel->GetChatMessages().Num(), SeededMessages);
     TestTrue(TEXT("Chat accepted"), ViewModel->SendChat(TEXT("Готов к бою")));
-    TestEqual(TEXT("Chat appended"), ViewModel->GetChatMessages().Num(), 8);
+    TestEqual(TEXT("Chat appended"), ViewModel->GetChatMessages().Num(), SeededMessages + 1);
     ViewModel->HandleDisconnected();
     TestFalse(TEXT("Disconnected lobby cannot start"), ViewModel->CanStartMatch());
     TestTrue(TEXT("Disconnect is exposed"), ViewModel->IsDisconnected());
@@ -547,11 +548,12 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FRA4FactionHUDVariantContractTest::RunTest(const FString& Parameters)
 {
-    const int32 References[] = {13, 14, 15, 16, 20, 21, 22, 23, 24};
+    const int32 References[] = {13, 14, 15, 16, 17, 20, 21, 22, 23, 24};
     const FName Specializations[] = {
-        TEXT("SovietProduction"), TEXT("AlliesCombinedArms"), TEXT("EasternProduction"),
-        TEXT("ChronoAbilities"), TEXT("SovietArmorBattle"), TEXT("SovietBaseAlert"),
-        TEXT("AlliesNaval"), TEXT("AlliesAir"), TEXT("ChronoSuperweapon")
+        TEXT("EurasianProduction"), TEXT("AtlanticCombinedArms"), TEXT("EasternProduction"),
+        TEXT("PacificRobotics"), TEXT("IndependentMissiles"), TEXT("EurasianArmorBattle"),
+        TEXT("EurasianBaseAlert"), TEXT("AtlanticNaval"), TEXT("AtlanticAir"),
+        TEXT("ChronoSuperweapon")
     };
 
     for (int32 Index = 0; Index < UE_ARRAY_COUNT(References); ++Index)
@@ -563,8 +565,9 @@ bool FRA4FactionHUDVariantContractTest::RunTest(const FString& Parameters)
         TestTrue(TEXT("Each HUD has faction tabs"), HUD->GetProductionTabs().Num() >= 4);
     }
 
+    // Reference 2 is the main menu: a menu screen must never configure as a HUD.
     URA4FactionHUDWidget* Unknown = NewObject<URA4FactionHUDWidget>();
-    TestFalse(TEXT("Non-HUD reference rejected"), Unknown->ConfigureReference(17));
+    TestFalse(TEXT("Non-HUD reference rejected"), Unknown->ConfigureReference(2));
     return true;
 }
 

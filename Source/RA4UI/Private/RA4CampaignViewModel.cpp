@@ -77,11 +77,14 @@ URA4CampaignViewModel::URA4CampaignViewModel()
     };
 
     AllMissionNodes = {
-        MakeMission(TEXT("ru_polar_echo"), ERA4FactionTheme::EurasianPact, 1, LOCTEXT("RU1", "ОПЕРАЦИЯ «ПОЛЯРНОЕ ЭХО»"), LOCTEXT("RU1_Loc", "МУРМАНСКИЙ РУБЕЖ"), LOCTEXT("RU1_Obj", "Развернуть передовой комплекс РЭБ «Громобой» и подавить вражеский радар."), 3, true),
-        MakeMission(TEXT("ru_iron_tooth"), ERA4FactionTheme::EurasianPact, 2, LOCTEXT("RU2", "ОПЕРАЦИЯ «ЖЕЛЕЗНЫЙ ЗУБ»"), LOCTEXT("RU2_Loc", "УРАЛЬСКИЙ КОРИДОР"), LOCTEXT("RU2_Obj", "Отразить танковый прорыв с запада силами ОБТ «Гранит»."), 3, true),
-        MakeMission(TEXT("ru_deep_signal"), ERA4FactionTheme::EurasianPact, 3, LOCTEXT("RU3", "ОПЕРАЦИЯ «ГЛУБОКИЙ СИГНАЛ»"), LOCTEXT("RU3_Loc", "КАСПИЙСКИЙ УЗЕЛ"), LOCTEXT("RU3_Obj", "Захватить терминал связи и обеспечить развёртывание РСЗО «Зарево»."), 3, true),
-        MakeMission(TEXT("ru_quiet_relay"), ERA4FactionTheme::EurasianPact, 7, LOCTEXT("RU7", "07. ОПЕРАЦИЯ «ТИХИЙ РЕЛЕЙ»"), LOCTEXT("RU7_Loc", "ГОРНЫЙ КОРИДОР"), LOCTEXT("RU7_Obj", "Подавить 3 узла связи. Провести бронегруппу через перевал. Сохранить мобильный комплекс РЭБ."), 3, true),
-        MakeMission(TEXT("ru_clean_key"), ERA4FactionTheme::EurasianPact, 8, LOCTEXT("RU8", "08. ОПЕРАЦИЯ «ЧИСТЫЙ КЛЮЧ»"), LOCTEXT("RU8_Loc", "СЕВЕРНЫЙ РУБЕЖ"), LOCTEXT("RU8_Obj", "Прорвать укреплённый рубеж и зачистить плацдарм танками «Воевода»."), 2, true),
+        MakeMission(TEXT("ru_polar_echo"), ERA4FactionTheme::EurasianPact, 1, LOCTEXT("RU1", "ПОЛЯРНЫЙ ЭХО"), LOCTEXT("RU1_Loc", "МУРМАНСКИЙ РУБЕЖ"), LOCTEXT("RU1_Obj", "Развернуть передовой комплекс РЭБ «Громобой» и подавить вражеский радар."), 3, true),
+        MakeMission(TEXT("ru_kargaly_base"), ERA4FactionTheme::EurasianPact, 2, LOCTEXT("RU2", "БАЗА «КАРГАЛЫ»"), LOCTEXT("RU2_Loc", "СТЕПНОЙ ПЛАЦДАРМ"), LOCTEXT("RU2_Obj", "Развернуть передовой узел снабжения и удержать периметр до подхода бронегруппы."), 3, true),
+        MakeMission(TEXT("ru_north_node"), ERA4FactionTheme::EurasianPact, 3, LOCTEXT("RU3", "УЗЕЛ «СЕВЕР»"), LOCTEXT("RU3_Loc", "СЕВЕРНЫЙ РАДАРНЫЙ ПОЯС"), LOCTEXT("RU3_Obj", "Вскрыть расположение сил противника разведмашинами БРМ-27 «Рысь»."), 3, true),
+        MakeMission(TEXT("ru_iron_tooth"), ERA4FactionTheme::EurasianPact, 4, LOCTEXT("RU4", "ЖЕЛЕЗНЫЙ ЗУБ"), LOCTEXT("RU4_Loc", "УРАЛЬСКИЙ КОРИДОР"), LOCTEXT("RU4_Obj", "Отразить танковый прорыв с запада силами ОБТ-92 «Гранит»."), 3, true),
+        MakeMission(TEXT("ru_relay_station"), ERA4FactionTheme::EurasianPact, 5, LOCTEXT("RU5", "РЕЛЕЙНАЯ СТАНЦИЯ"), LOCTEXT("RU5_Loc", "ЖЕЛЕЗНОДОРОЖНЫЙ УЗЕЛ"), LOCTEXT("RU5_Obj", "Восстановить железнодорожную логистику и обеспечить питание радарного узла."), 3, true),
+        MakeMission(TEXT("ru_deep_signal"), ERA4FactionTheme::EurasianPact, 6, LOCTEXT("RU6", "ГЛУБОКИЙ СИГНАЛ"), LOCTEXT("RU6_Loc", "КАСПИЙСКИЙ УЗЕЛ"), LOCTEXT("RU6_Obj", "Захватить терминал связи и обеспечить развёртывание ТРС-18 «Зарево»."), 3, true),
+        MakeMission(TEXT("ru_quiet_relay"), ERA4FactionTheme::EurasianPact, 7, LOCTEXT("RU7", "ТИХИЙ РЕЛЕЙ"), LOCTEXT("RU7_Loc", "ГОРНЫЙ КОРИДОР"), LOCTEXT("RU7_Obj", "Подавить 3 узла связи. Провести бронегруппу через перевал. Сохранить мобильный комплекс РЭБ."), 3, false),
+        MakeMission(TEXT("ru_clean_key"), ERA4FactionTheme::EurasianPact, 8, LOCTEXT("RU8", "ЧИСТЫЙ КЛЮЧ"), LOCTEXT("RU8_Loc", "СЕВЕРНЫЙ РУБЕЖ"), LOCTEXT("RU8_Obj", "Прорвать укреплённый рубеж и зачистить плацдарм танками ТТП-11 «Воевода»."), 2, false, true),
         MakeMission(TEXT("us_ice_dawn"), ERA4FactionTheme::AtlanticAlliance, 1, LOCTEXT("US1", "ОПЕРАЦИЯ «ЛЕДЯНОЙ РАССВЕТ»"), LOCTEXT("US1_Loc", "АРКТИКА"), LOCTEXT("US1_Obj", "Защитить северный радарный пояс и развернуть стелс-авиацию F-35."), 3, true),
         MakeMission(TEXT("us_carrier_strike"), ERA4FactionTheme::AtlanticAlliance, 2, LOCTEXT("US2", "ОПЕРАЦИЯ «ДАЛЬНИЙ РУБЕЖ»"), LOCTEXT("US2_Loc", "СЕВЕРНОЕ МОРЕ"), LOCTEXT("US2_Obj", "Обеспечить сопровождение авианосной группы «Свобода»."), 2, false),
         MakeMission(TEXT("cn_jade_network"), ERA4FactionTheme::EasternCoalition, 1, LOCTEXT("CN1", "ОПЕРАЦИЯ «НЕФРИТОВАЯ СЕТЬ»"), LOCTEXT("CN1_Loc", "ДЕЛЬТА РЕКИ"), LOCTEXT("CN1_Obj", "Запустить автоматизированный конвейер и развернуть рои дронов «Шэньлун»."), 3, true),
@@ -228,12 +231,22 @@ void URA4CampaignViewModel::RefreshMissionNodes()
         }
     }
 
-    const FRA4MissionNodeView* FirstUnlocked = MissionNodes.FindByPredicate(
+    // Open on the current objective: the first playable mission that is not yet
+    // finished, falling back to the first playable one for a completed chapter.
+    const FRA4MissionNodeView* Current = MissionNodes.FindByPredicate(
         [](const FRA4MissionNodeView& Mission)
         {
-            return !Mission.bLocked;
+            return !Mission.bLocked && !Mission.bCompleted;
         });
-    SelectedMissionId = FirstUnlocked ? FirstUnlocked->ContentId : NAME_None;
+    if (!Current)
+    {
+        Current = MissionNodes.FindByPredicate(
+            [](const FRA4MissionNodeView& Mission)
+            {
+                return !Mission.bLocked;
+            });
+    }
+    SelectedMissionId = Current ? Current->ContentId : NAME_None;
     UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(MissionNodes);
     UE_MVVM_BROADCAST_FIELD_VALUE_CHANGED(SelectedMissionId);
 }
