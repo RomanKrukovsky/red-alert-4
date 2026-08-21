@@ -60,4 +60,5 @@ private:
     void DrawPlacementFootprint(const class ARA4PlayerController* Controller);
     // One-shot ping at the spot a move order was just issued.
     void DrawMoveTargetRing(const class ARA4PlayerController* Controller);
+    void DrawDirectControlHUD(const class ARA4PlayerController* Controller);
 };

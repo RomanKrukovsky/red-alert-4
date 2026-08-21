@@ -178,6 +178,7 @@ private:
     // Height of the terrain surface at a world XY, or the flat sim ground level if
     // there is no landscape in this map. Visual-only: the simulation stays 2D.
     float SampleGroundHeight(double WorldX, double WorldY);
+    void BakeTerrainPassabilityFromLandscape();
 
     // --- Fog of war rendering (ADR-0030) ------------------------------------
     // Uploads the local player's visibility grid into FogVisibilityTexture and

@@ -10,6 +10,10 @@
 #include "RA4Core/SimConfig.h"
 #include "RA4Simulation/SimWorld.h"
 
+#include "RA4DirectControlSubsystem.h"
+#include "CanvasItem.h"
+#include "Engine/Canvas.h"
+
 void ARA4RtsHud::DrawHUD()
 {
     Super::DrawHUD();
@@ -38,6 +42,8 @@ void ARA4RtsHud::DrawHUD()
     {
         DrawPlacementFootprint(Controller);
     }
+
+    DrawDirectControlHUD(Controller);
 }
 
 void ARA4RtsHud::DrawMarquee(const ARA4PlayerController* Controller)
@@ -315,4 +321,247 @@ void ARA4RtsHud::DrawPlacementFootprint(const ARA4PlayerController* Controller)
             }
         }
     }
+}
+
+void ARA4RtsHud::DrawDirectControlHUD(const ARA4PlayerController* Controller)
+{
+    if (Controller == nullptr || Canvas == nullptr)
+    {
+        return;
+    }
+
+    const UWorld* World = GetWorld();
+    const URA4DirectControlSubsystem* Dc = World ? World->GetSubsystem<URA4DirectControlSubsystem>() : nullptr;
+    const URA4SimWorldSubsystem* Sim = World ? World->GetSubsystem<URA4SimWorldSubsystem>() : nullptr;
+    const RA4::SimWorld* SimWorld = Sim ? Sim->GetSimWorld() : nullptr;
+
+    const bool bInDc = (Dc != nullptr && (Dc->IsInDirectControl() ||
+                                          Dc->GetClientPhase() == ERA4DirectControlClientPhase::Entering ||
+                                          Dc->GetClientPhase() == ERA4DirectControlClientPhase::DirectControl));
+
+    if (!bInDc)
+    {
+        return;
+    }
+
+    auto DrawHudLine = [this](float X1, float Y1, float X2, float Y2, const FLinearColor& Color, float Thickness = 1.0f)
+    {
+        if (Canvas)
+        {
+            FCanvasLineItem LineItem(FVector2D(X1, Y1), FVector2D(X2, Y2));
+            LineItem.SetColor(Color);
+            LineItem.LineThickness = Thickness;
+            Canvas->DrawItem(LineItem);
+        }
+    };
+
+    auto DrawColoredText = [this](const FText& Text, float X, float Y, const FLinearColor& Color, float Scale = 1.0f)
+    {
+        if (Canvas)
+        {
+            UFont* RenderFont = GEngine ? GEngine->GetSmallFont() : nullptr;
+            if (RenderFont != nullptr)
+            {
+                FCanvasTextItem TextItem(FVector2D(X, Y), Text, RenderFont, Color);
+                TextItem.Scale = FVector2D(Scale, Scale);
+                TextItem.BlendMode = SE_BLEND_Translucent;
+                Canvas->DrawItem(TextItem);
+            }
+        }
+    };
+
+    const float ScreenW = Canvas->SizeX;
+    const float ScreenH = Canvas->SizeY;
+    const FVector2D Center(ScreenW * 0.5f, ScreenH * 0.5f);
+
+    // Query vehicle health and info from SimWorld
+    int32 VehHealth = 500;
+    int32 VehMaxHealth = 500;
+    FString VehName = TEXT("ТАНК");
+    float SpeedKph = 0.0f;
+    bool bOpticsZoomed = false;
+
+    if (SimWorld != nullptr && Dc != nullptr)
+    {
+        const int32 VehIdx = Dc->GetControlledVehicleIndex();
+        if (VehIdx >= 0)
+        {
+            const RA4::EntityId TargetId = SimWorld->MakeId(uint32_t(VehIdx));
+            if (SimWorld->IsAlive(TargetId))
+            {
+                const RA4::EntityCore* Core = SimWorld->GetCore(TargetId);
+                if (Core != nullptr && Core->bAlive)
+                {
+                    const RA4::EntityDef* Def = SimWorld->GetContent() ? SimWorld->GetContent()->FindEntity(Core->Def) : nullptr;
+                    if (Def != nullptr)
+                    {
+                        VehName = UTF8_TO_TCHAR(Def->Name.c_str());
+                        VehMaxHealth = Def->MaxHealth;
+                    }
+                    const RA4::HealthComp* HealthComp = SimWorld->GetHealth(TargetId);
+                    if (HealthComp != nullptr)
+                    {
+                        VehHealth = HealthComp->Current;
+                    }
+                    const RA4::DirectControlComp* DcComp = SimWorld->GetDirectControl(TargetId);
+                    if (DcComp != nullptr)
+                    {
+                        bOpticsZoomed = DcComp->bOpticsZoomed;
+                    }
+                    const RA4::MovementComp* MovComp = SimWorld->GetMovement(TargetId);
+                    if (MovComp != nullptr)
+                    {
+                        SpeedKph = float(MovComp->CurrentSpeed.ToDoubleUnsafe() * 0.036);
+                    }
+                }
+            }
+        }
+    }
+
+    // 1. Center Tactical Reticle
+    const float ReticleSize = bOpticsZoomed ? 28.0f : 20.0f;
+    const FLinearColor ReticleColor = bOpticsZoomed ? FLinearColor(0.2f, 1.0f, 0.4f, 0.95f) : FLinearColor(0.2f, 0.85f, 1.0f, 0.85f);
+
+    // Crosshairs
+    DrawHudLine(Center.X - ReticleSize, Center.Y, Center.X - 5.0f, Center.Y, ReticleColor, 2.0f);
+    DrawHudLine(Center.X + 5.0f, Center.Y, Center.X + ReticleSize, Center.Y, ReticleColor, 2.0f);
+    DrawHudLine(Center.X, Center.Y - ReticleSize, Center.X, Center.Y - 5.0f, ReticleColor, 2.0f);
+    DrawHudLine(Center.X, Center.Y + 5.0f, Center.X, Center.Y + ReticleSize, ReticleColor, 2.0f);
+
+    // Center Dot
+    FCanvasTileItem DotItem(Center - FVector2D(2.0f, 2.0f), FVector2D(4.0f, 4.0f), ReticleColor);
+    Canvas->DrawItem(DotItem);
+
+    // Target Brackets [ ]
+    const float BracketW = 40.0f;
+    const float BracketH = 26.0f;
+    DrawHudLine(Center.X - BracketW, Center.Y - BracketH, Center.X - BracketW + 8.0f, Center.Y - BracketH, ReticleColor, 1.5f);
+    DrawHudLine(Center.X - BracketW, Center.Y - BracketH, Center.X - BracketW, Center.Y - BracketH + 8.0f, ReticleColor, 1.5f);
+    DrawHudLine(Center.X + BracketW, Center.Y - BracketH, Center.X + BracketW - 8.0f, Center.Y - BracketH, ReticleColor, 1.5f);
+    DrawHudLine(Center.X + BracketW, Center.Y - BracketH, Center.X + BracketW, Center.Y - BracketH + 8.0f, ReticleColor, 1.5f);
+
+    DrawHudLine(Center.X - BracketW, Center.Y + BracketH, Center.X - BracketW + 8.0f, Center.Y + BracketH, ReticleColor, 1.5f);
+    DrawHudLine(Center.X - BracketW, Center.Y + BracketH, Center.X - BracketW, Center.Y + BracketH - 8.0f, ReticleColor, 1.5f);
+    DrawHudLine(Center.X + BracketW, Center.Y + BracketH, Center.X + BracketW - 8.0f, Center.Y + BracketH, ReticleColor, 1.5f);
+    DrawHudLine(Center.X + BracketW, Center.Y + BracketH, Center.X + BracketW, Center.Y + BracketH - 8.0f, ReticleColor, 1.5f);
+
+    // Reticle Info Readout
+    FString ReticleInfo = FString::Printf(TEXT("СКОРОСТЬ: %.0f КМ/Ч  •  ПРИЦЕЛ: %s"),
+                                          SpeedKph,
+                                          bOpticsZoomed ? TEXT("2.5x ZOOM") : TEXT("1.0x СТАНДАРТ"));
+    DrawColoredText(FText::FromString(ReticleInfo), Center.X - 100.0f, Center.Y + ReticleSize + 10.0f, FLinearColor::White, 1.0f);
+
+    // 2. Bottom Tactical Action / Ability Bar
+    const float BarW = 880.0f;
+    const float BarH = 82.0f;
+    const FVector2D BarPos((ScreenW - BarW) * 0.5f, ScreenH - BarH - 16.0f);
+
+    // Panel Background
+    FCanvasTileItem BarBg(BarPos, FVector2D(BarW, BarH), FLinearColor(0.015f, 0.035f, 0.06f, 0.92f));
+    BarBg.BlendMode = SE_BLEND_Translucent;
+    Canvas->DrawItem(BarBg);
+
+    // Panel Outer Border
+    FCanvasBoxItem BarBorder(BarPos, FVector2D(BarW, BarH));
+    BarBorder.SetColor(FLinearColor(0.2f, 0.65f, 0.9f, 0.95f));
+    BarBorder.LineThickness = 2.0f;
+    Canvas->DrawItem(BarBorder);
+
+    // 4 Action Buttons
+    const float ButtonW = (BarW - 40.0f) / 4.0f;
+    const float ButtonH = BarH - 16.0f;
+    const float ButtonY = BarPos.Y + 8.0f;
+
+    // Button 1: [ ЛКМ ] Основное орудие
+    {
+        const float BtnX = BarPos.X + 8.0f;
+        FCanvasTileItem BtnBg(FVector2D(BtnX, ButtonY), FVector2D(ButtonW, ButtonH), FLinearColor(0.04f, 0.12f, 0.08f, 0.85f));
+        BtnBg.BlendMode = SE_BLEND_Translucent;
+        Canvas->DrawItem(BtnBg);
+
+        FCanvasBoxItem BtnBox(FVector2D(BtnX, ButtonY), FVector2D(ButtonW, ButtonH));
+        BtnBox.SetColor(FLinearColor(0.15f, 0.95f, 0.4f, 0.9f));
+        Canvas->DrawItem(BtnBox);
+
+        DrawColoredText(FText::FromString(TEXT("[ ЛКМ ] ОСНОВНОЕ ОРУДИЕ")), BtnX + 8.0f, ButtonY + 6.0f, FLinearColor(0.2f, 1.0f, 0.45f, 1.0f), 1.0f);
+        DrawColoredText(FText::FromString(TEXT("120-мм ТАНКОВОЕ ОРУДИЕ")), BtnX + 8.0f, ButtonY + 24.0f, FLinearColor::White, 0.9f);
+        DrawColoredText(FText::FromString(TEXT("ГОТОВО К СТРЕЛЬБЕ")), BtnX + 8.0f, ButtonY + 44.0f, FLinearColor(0.2f, 1.0f, 0.4f, 1.0f), 0.85f);
+    }
+
+    // Button 2: [ ПКМ ] Спецспособность
+    {
+        const float BtnX = BarPos.X + 16.0f + ButtonW;
+        FCanvasTileItem BtnBg(FVector2D(BtnX, ButtonY), FVector2D(ButtonW, ButtonH), FLinearColor(0.03f, 0.08f, 0.14f, 0.85f));
+        BtnBg.BlendMode = SE_BLEND_Translucent;
+        Canvas->DrawItem(BtnBg);
+
+        FCanvasBoxItem BtnBox(FVector2D(BtnX, ButtonY), FVector2D(ButtonW, ButtonH));
+        BtnBox.SetColor(FLinearColor(0.2f, 0.85f, 1.0f, 0.9f));
+        Canvas->DrawItem(BtnBox);
+
+        DrawColoredText(FText::FromString(TEXT("[ ПКМ ] СПЕЦСПОСОБНОСТЬ")), BtnX + 8.0f, ButtonY + 6.0f, FLinearColor(0.25f, 0.9f, 1.0f, 1.0f), 1.0f);
+        DrawColoredText(FText::FromString(TEXT("РАКЕТНЫЙ ЗАЛП / ФОРСАЖ")), BtnX + 8.0f, ButtonY + 24.0f, FLinearColor::White, 0.9f);
+        DrawColoredText(FText::FromString(TEXT("АКТИВАЦИЯ [ГОТОВО]")), BtnX + 8.0f, ButtonY + 44.0f, FLinearColor(0.3f, 1.0f, 0.95f, 1.0f), 0.85f);
+    }
+
+    // Button 3: [ Z / СКМ ] Прицел и оптика
+    {
+        const float BtnX = BarPos.X + 24.0f + ButtonW * 2.0f;
+        FCanvasTileItem BtnBg(FVector2D(BtnX, ButtonY), FVector2D(ButtonW, ButtonH), FLinearColor(0.05f, 0.07f, 0.1f, 0.85f));
+        BtnBg.BlendMode = SE_BLEND_Translucent;
+        Canvas->DrawItem(BtnBg);
+
+        FCanvasBoxItem BtnBox(FVector2D(BtnX, ButtonY), FVector2D(ButtonW, ButtonH));
+        BtnBox.SetColor(bOpticsZoomed ? FLinearColor(0.2f, 1.0f, 0.5f, 0.9f) : FLinearColor(0.5f, 0.6f, 0.7f, 0.8f));
+        Canvas->DrawItem(BtnBox);
+
+        DrawColoredText(FText::FromString(TEXT("[ Z ] ПРИЦЕЛ / ОПТИКА")), BtnX + 8.0f, ButtonY + 6.0f, FLinearColor(0.9f, 0.9f, 0.9f, 1.0f), 1.0f);
+        DrawColoredText(bOpticsZoomed ? FText::FromString(TEXT("ПРИБЛИЖЕНИЕ 2.5X")) : FText::FromString(TEXT("ШИРОКИЙ ОБЗОР")), BtnX + 8.0f, ButtonY + 24.0f, FLinearColor::White, 0.9f);
+        DrawColoredText(FText::FromString(TEXT("ПЕРЕКЛЮЧЕНИЕ [Z / СКМ]")), BtnX + 8.0f, ButtonY + 44.0f, FLinearColor(0.75f, 0.75f, 0.75f, 1.0f), 0.85f);
+    }
+
+    // Button 4: [ J / ESC ] Выход в стратегический режим RTS
+    {
+        const float BtnX = BarPos.X + 32.0f + ButtonW * 3.0f;
+        FCanvasTileItem BtnBg(FVector2D(BtnX, ButtonY), FVector2D(ButtonW, ButtonH), FLinearColor(0.12f, 0.04f, 0.04f, 0.85f));
+        BtnBg.BlendMode = SE_BLEND_Translucent;
+        Canvas->DrawItem(BtnBg);
+
+        FCanvasBoxItem BtnBox(FVector2D(BtnX, ButtonY), FVector2D(ButtonW, ButtonH));
+        BtnBox.SetColor(FLinearColor(1.0f, 0.35f, 0.35f, 0.9f));
+        Canvas->DrawItem(BtnBox);
+
+        DrawColoredText(FText::FromString(TEXT("[ J / ESC ] ВЫХОД [RTS]")), BtnX + 8.0f, ButtonY + 6.0f, FLinearColor(1.0f, 0.45f, 0.45f, 1.0f), 1.0f);
+        DrawColoredText(FText::FromString(TEXT("СТРАТЕГИЧЕСКИЙ ВИД")), BtnX + 8.0f, ButtonY + 24.0f, FLinearColor::White, 0.9f);
+        DrawColoredText(FText::FromString(TEXT("ВОЗВРАТ К БАЗЕ")), BtnX + 8.0f, ButtonY + 44.0f, FLinearColor(0.85f, 0.85f, 0.85f, 1.0f), 0.85f);
+    }
+
+    // 3. Vehicle Health & Armor Status Card at Bottom Left
+    const float CardW = 250.0f;
+    const float CardH = 82.0f;
+    const FVector2D CardPos(20.0f, ScreenH - CardH - 16.0f);
+
+    FCanvasTileItem CardBg(CardPos, FVector2D(CardW, CardH), FLinearColor(0.015f, 0.035f, 0.06f, 0.92f));
+    CardBg.BlendMode = SE_BLEND_Translucent;
+    Canvas->DrawItem(CardBg);
+
+    FCanvasBoxItem CardBorder(CardPos, FVector2D(CardW, CardH));
+    CardBorder.SetColor(FLinearColor(0.2f, 0.65f, 0.9f, 0.95f));
+    CardBorder.LineThickness = 2.0f;
+    Canvas->DrawItem(CardBorder);
+
+    const float HealthRatio = VehMaxHealth > 0 ? FMath::Clamp(float(VehHealth) / float(VehMaxHealth), 0.0f, 1.0f) : 1.0f;
+    DrawColoredText(FText::FromString(FString::Printf(TEXT("СОСТОЯНИЕ: %s"), *VehName)), CardPos.X + 8.0f, CardPos.Y + 6.0f, FLinearColor(0.25f, 0.9f, 1.0f, 1.0f), 1.0f);
+
+    // HP Bar Fill
+    const float BarFillW = (CardW - 16.0f) * HealthRatio;
+    FCanvasTileItem HpBar(FVector2D(CardPos.X + 8.0f, CardPos.Y + 28.0f), FVector2D(BarFillW, 16.0f), HealthRatio > 0.4f ? FLinearColor(0.15f, 0.95f, 0.35f, 1.0f) : FLinearColor(0.95f, 0.2f, 0.2f, 1.0f));
+    Canvas->DrawItem(HpBar);
+
+    FCanvasBoxItem HpBarBorder(FVector2D(CardPos.X + 8.0f, CardPos.Y + 28.0f), FVector2D(CardW - 16.0f, 16.0f));
+    HpBarBorder.SetColor(FLinearColor::White);
+    Canvas->DrawItem(HpBarBorder);
+
+    FString HpText = FString::Printf(TEXT("ПРОЧНОСТЬ: %d / %d HP"), VehHealth, VehMaxHealth);
+    DrawColoredText(FText::FromString(HpText), CardPos.X + 8.0f, CardPos.Y + 50.0f, FLinearColor::White, 0.9f);
 }

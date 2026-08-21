@@ -1367,10 +1367,65 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
                 const EntityDef* ConYardDef = Content->FindEntity(Def->Unit.DeploysInto);
                 const int32_t FootX = ConYardDef ? ConYardDef->Building.FootprintX : 3;
                 const int32_t FootY = ConYardDef ? ConYardDef->Building.FootprintY : 3;
-                if (Tile.X < 1 || Tile.Y < 1 || Tile.X + FootX >= Map.Width - 1 || Tile.Y + FootY >= Map.Height - 1)
+
+                // Search for nearest valid clear tile if requested tile is blocked by obstacles/cliffs
+                TileCoord BestTile = Tile;
+                bool bFoundValidTile = false;
+
+                auto IsTileClearForConYard = [&](const TileCoord& T) -> bool
+                {
+                    if (T.X < 1 || T.Y < 1 || T.X + FootX >= Map.Width - 1 || T.Y + FootY >= Map.Height - 1)
+                    {
+                        return false;
+                    }
+                    for (int32_t FY = 0; FY < FootY; ++FY)
+                    {
+                        for (int32_t FX = 0; FX < FootX; ++FX)
+                        {
+                            const uint8_t Flags = Map.GetTile(T.X + FX, T.Y + FY);
+                            if ((Flags & Tile_GroundPassable) == 0 ||
+                                (Flags & (Tile_Water | Tile_Cliff | Tile_Occupied | Tile_Resource)) != 0)
+                            {
+                                return false;
+                            }
+                        }
+                    }
+                    return true;
+                };
+
+                if (IsTileClearForConYard(Tile))
+                {
+                    BestTile = Tile;
+                    bFoundValidTile = true;
+                }
+                else
+                {
+                    // Search in expanding rings (1..8 tiles out) to find closest clear terrain
+                    for (int32_t Radius = 1; Radius <= 8 && !bFoundValidTile; ++Radius)
+                    {
+                        for (int32_t DY = -Radius; DY <= Radius && !bFoundValidTile; ++DY)
+                        {
+                            for (int32_t DX = -Radius; DX <= Radius && !bFoundValidTile; ++DX)
+                            {
+                                if (std::abs(DX) == Radius || std::abs(DY) == Radius)
+                                {
+                                    TileCoord Candidate{Tile.X + DX, Tile.Y + DY};
+                                    if (IsTileClearForConYard(Candidate))
+                                    {
+                                        BestTile = Candidate;
+                                        bFoundValidTile = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (!bFoundValidTile)
                 {
                     return Reject(CommandReject::InvalidPlacement);
                 }
+                Tile = BestTile;
 
                 const Vec2 DeployLoc = Map.TileCenterToWorld(Tile);
 
@@ -1662,10 +1717,6 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
             if (Def == nullptr)
             {
                 return Reject(CommandReject::UnknownContent);
-            }
-            if (!Def->Weapon.IsValid() && Def->Unit.TurretTurnRatePerSecond == 0)
-            {
-                return Reject(CommandReject::DirectIneligibleUnit);
             }
             DirectControlComp& Dc = DirectControls[Cmd.Primary.Index];
             Dc.Phase = DirectControlPhase::Entering;

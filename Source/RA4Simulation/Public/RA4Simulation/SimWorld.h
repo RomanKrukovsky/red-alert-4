@@ -112,6 +112,7 @@ public:
 
     const PlayerState& GetPlayer(PlayerId Id) const;
     const MapDescription& GetMap() const { return Map; }
+    MapDescription& GetMapMutable() { return Map; }
     const ContentDatabase* GetContent() const { return Content; }
     const FFogOfWarGrid* GetFogGrid() const { return FogGrid.get(); }
 

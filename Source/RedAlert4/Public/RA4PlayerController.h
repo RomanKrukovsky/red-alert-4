@@ -378,5 +378,7 @@ private:
     TObjectPtr<class ARA4EntityActor> GhostPlacementActor;
     void UpdateGhostPlacement();
 
+    RA4::EntityId PendingMcvDeployEntity;
+
     FDelegateHandle MatchEndedHandle;
 };

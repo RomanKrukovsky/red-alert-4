@@ -193,6 +193,8 @@ void URA4SimWorldSubsystem::StartSkirmishMatch(uint8 PlayerFaction, uint8 EnemyF
         bReconEnabled ? &ReconSettings : nullptr);
     bWasLocalPowerShortage = false;
 
+    BakeTerrainPassabilityFromLandscape();
+
     AttachAICommanders(Difficulty, 20260728ull, /*LocalPlayer*/ 0);
 
     UE_LOG(LogTemp, Display, TEXT("RA4 skirmish initialized with %llu simulation entities"),
@@ -239,6 +241,8 @@ bool URA4SimWorldSubsystem::StartCampaignMission(const FString& MissionId, int32
     SimWorld->Initialize(Content, RA4::BuildMissionMatchSetup(*Def));
     const int32 Placed = RA4::SpawnMissionEntities(*SimWorld, *Def);
     const int32 Declared = int32(Def->Setup.Spawns.size());
+
+    BakeTerrainPassabilityFromLandscape();
 
     bWasLocalPowerShortage = false;
     ActiveMissionId = MissionId;
@@ -1071,6 +1075,54 @@ float URA4SimWorldSubsystem::SampleGroundHeight(double WorldX, double WorldY)
     const double HeightNorm = V / 1.75;
     constexpr double AmplitudeUnits = 220.0;
     return float(HeightNorm * AmplitudeUnits);
+}
+
+void URA4SimWorldSubsystem::BakeTerrainPassabilityFromLandscape()
+{
+    if (SimWorld == nullptr)
+    {
+        return;
+    }
+
+    const RA4::MapDescription& Map = SimWorld->GetMap();
+    if (Map.Width <= 0 || Map.Height <= 0)
+    {
+        return;
+    }
+
+    int32 CliffTilesMarked = 0;
+    constexpr double kTileHalf = double(RA4::kTileSizeUnits) * 0.5;
+    constexpr float kMaxClimbableHeightDelta = 85.0f; // >85cm elevation jump per 200cm tile is a steep cliff (>23 deg slope)
+
+    for (int32 Y = 0; Y < Map.Height; ++Y)
+    {
+        for (int32 X = 0; X < Map.Width; ++X)
+        {
+            const double WorldX = (double(X) + 0.5) * double(RA4::kTileSizeUnits);
+            const double WorldY = (double(Y) + 0.5) * double(RA4::kTileSizeUnits);
+
+            const float CenterZ = SampleGroundHeight(WorldX, WorldY);
+            const float NorthZ  = SampleGroundHeight(WorldX, WorldY + kTileHalf);
+            const float SouthZ  = SampleGroundHeight(WorldX, WorldY - kTileHalf);
+            const float EastZ   = SampleGroundHeight(WorldX + kTileHalf, WorldY);
+            const float WestZ   = SampleGroundHeight(WorldX - kTileHalf, WorldY);
+
+            const float MaxDelta = FMath::Max(
+                FMath::Max(FMath::Abs(NorthZ - CenterZ), FMath::Abs(SouthZ - CenterZ)),
+                FMath::Max(FMath::Abs(EastZ - CenterZ), FMath::Abs(WestZ - CenterZ))
+            );
+
+            // If slope is steep (mountain/cliff) or tile is submerged in deep water
+            if (MaxDelta > kMaxClimbableHeightDelta || CenterZ < -500.0f)
+            {
+                // Mark this tile as Cliff (impassable for tanks/vehicles and unbuildable)
+                SimWorld->GetMapMutable().SetTileFlag(X, Y, RA4::Tile_Cliff, true);
+                SimWorld->GetMapMutable().SetTileFlag(X, Y, RA4::Tile_GroundPassable, false);
+                CliffTilesMarked++;
+            }
+        }
+    }
+    UE_LOG(LogTemp, Display, TEXT("RA4: Baked terrain passability - marked %d steep cliff tiles as impassable"), CliffTilesMarked);
 }
 
 // --- Fog of war rendering (ADR-0030) ----------------------------------------

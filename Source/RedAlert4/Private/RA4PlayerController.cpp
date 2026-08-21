@@ -1209,6 +1209,36 @@ void ARA4PlayerController::HandleClick(bool bLeftButton, const FVector2D& EndScr
     {
     case ClickIntent::IssueOrder:
     {
+        if (bPlacementArmed && PendingMcvDeployEntity.IsValid())
+        {
+            // MCV deployment at clicked location: move MCV to location and deploy into Construction Yard
+            RA4::Command MoveCmd;
+            MoveCmd.Type = RA4::CommandType::Move;
+            MoveCmd.Issuer = Selection.GetLocalPlayer();
+            MoveCmd.Primary = PendingMcvDeployEntity;
+            MoveCmd.Location = EndGround;
+
+            RA4::Command DeployCmd;
+            DeployCmd.Type = RA4::CommandType::Deploy;
+            DeployCmd.Issuer = Selection.GetLocalPlayer();
+            DeployCmd.Primary = PendingMcvDeployEntity;
+            DeployCmd.Tile = World->GetMap().WorldToTile(EndGround);
+
+            SubmitOrders({MoveCmd, DeployCmd});
+
+            bAttackMoveArmed = false;
+            bPlacementArmed = false;
+            PlacementContent = ContentId();
+            PendingMcvDeployEntity = RA4::EntityId::Invalid();
+
+            static USoundBase* DeploySound = LoadObject<USoundBase>(nullptr, TEXT("/Engine/VREditor/Sounds/UI/VR_Teleport_Mode_01.VR_Teleport_Mode_01"));
+            if (DeploySound)
+            {
+                UGameplayStatics::PlaySound2D(this, DeploySound, 1.0f, 0.9f);
+            }
+            break;
+        }
+
         const OrderContext Context = MakeOrderContext(EndGround);
         const std::vector<Command> Orders = ResolveOrder(*World, Selection, Context);
         SubmitOrders(Orders);
@@ -1234,6 +1264,7 @@ void ARA4PlayerController::HandleClick(bool bLeftButton, const FVector2D& EndScr
         bAttackMoveArmed = false;
         bPlacementArmed = false;
         PlacementContent = ContentId();
+        PendingMcvDeployEntity = RA4::EntityId::Invalid();
         break;
     }
 
@@ -2431,6 +2462,7 @@ void ARA4PlayerController::DeploySelectedMcv()
         // If it's an MCV and placement mode is not yet armed, arm placement mode to show the green/red ConYard ghost!
         if (bIsMcv && !bPlacementArmed)
         {
+            PendingMcvDeployEntity = TargetEntity;
             BeginPlacement(Def->Unit.DeploysInto.Value);
             UE_LOG(LogTemp, Display, TEXT("RA4: Armed MCV ConYard placement ghost preview for Entity %u"), TargetEntity.Index);
             return;
@@ -2450,6 +2482,7 @@ void ARA4PlayerController::DeploySelectedMcv()
 
         bPlacementArmed = false;
         PlacementContent = ContentId();
+        PendingMcvDeployEntity = RA4::EntityId::Invalid();
 
         URA4SimWorldSubsystem* MutableSim = GetWorld() ? GetWorld()->GetSubsystem<URA4SimWorldSubsystem>() : nullptr;
         if (MutableSim != nullptr)

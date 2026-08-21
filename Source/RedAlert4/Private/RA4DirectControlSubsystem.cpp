@@ -70,30 +70,33 @@ RA4::DirectControlAxes URA4DirectControlSubsystem::QuantizeAxes(
 
 URA4DirectControlProfile* URA4DirectControlSubsystem::ResolveProfile(RA4::ContentId VehicleContentId) const
 {
-    // Stage 1 placeholder: scan loaded primary data assets of this class.
-    // Stage 2 will use a registry populated by the AssetManager at startup.
     if (UAssetManager* Am = UAssetManager::GetIfInitialized())
     {
         TArray<FPrimaryAssetId> Found;
         Am->GetPrimaryAssetIdList(URA4DirectControlProfile::StaticClass()->GetFName(), Found);
         for (const FPrimaryAssetId& Id : Found)
         {
-            if (UAssetManager* AM = UAssetManager::GetIfInitialized())
+            if (UObject* Obj = Am->GetPrimaryAssetObject(Id))
             {
-                if (UObject* Obj = AM->GetPrimaryAssetObject(Id))
+                if (URA4DirectControlProfile* Prof = Cast<URA4DirectControlProfile>(Obj))
                 {
-                    if (URA4DirectControlProfile* Prof = Cast<URA4DirectControlProfile>(Obj))
-                    {
-                        if (Prof->BoundContentId.PrimaryAssetType.IsValid() == false)
-                        {
-                            return Prof; // Stage 1 fallback: first profile wins
-                        }
-                    }
+                    return Prof;
                 }
             }
         }
     }
-    return nullptr;
+    // Dynamic fallback profile with responsive settings
+    URA4DirectControlProfile* Fallback = NewObject<URA4DirectControlProfile>(const_cast<URA4DirectControlSubsystem*>(this));
+    Fallback->EnterBlendTime = 0.25f;
+    Fallback->ExitBlendTime = 0.25f;
+    Fallback->Camera.WideFOV = 90.0f;
+    Fallback->Camera.ZoomedFOV = 45.0f;
+    Fallback->Camera.MouseSensitivityYaw = 1.0f;
+    Fallback->Camera.MouseSensitivityPitch = 1.0f;
+    Fallback->Camera.TurretPitchMin = -35.0f;
+    Fallback->Camera.TurretPitchMax = 55.0f;
+    Fallback->Camera.InputDeadZone = 0.05f;
+    return Fallback;
 }
 
 bool URA4DirectControlSubsystem::RequestEnter(APlayerController* PC, RA4::EntityId Vehicle)
@@ -146,6 +149,7 @@ bool URA4DirectControlSubsystem::RequestEnter(APlayerController* PC, RA4::Entity
     {
         const float Fov = (ActiveProfile != nullptr && ActiveProfile->Camera.WideFOV > 0.0f) ? ActiveProfile->Camera.WideFOV : 90.0f;
         EntityActor->SetupDirectControlView(true, Fov);
+        PC->SetViewTargetWithBlend(EntityActor, ActiveProfile != nullptr ? ActiveProfile->EnterBlendTime : 0.35f);
         PC->bShowMouseCursor = true;
         FInputModeGameAndUI InputMode;
         InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
