@@ -176,6 +176,8 @@ FText AlertToText(RP::AlertType Type)
         case RP::AlertType::ConstructionComplete: return NSLOCTEXT("RA4", "Alert_Built", "Строительство завершено");
         case RP::AlertType::UnitReady: return NSLOCTEXT("RA4", "Alert_UnitReady", "Боевая единица готова");
         case RP::AlertType::ResourcesDepleted: return NSLOCTEXT("RA4", "Alert_NoOre", "Месторождение истощено");
+        case RP::AlertType::MCVDeployed: return NSLOCTEXT("RA4", "Alert_MCVDeployed", "МСЦ развернут");
+        case RP::AlertType::MCVUndeployed: return NSLOCTEXT("RA4", "Alert_MCVUndeployed", "МСЦ свернут");
         default: return FText::GetEmpty();
     }
 }

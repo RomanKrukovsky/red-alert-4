@@ -1346,31 +1346,98 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
                 return Reject(CommandReject::NoSuchEntity);
             }
             const uint32_t I = Cmd.Primary.Index;
-            if (!Core[I].bAlive || Core[I].Owner != Cmd.Issuer || Core[I].Kind != EntityKind::Unit)
+            if (!Core[I].bAlive || Core[I].Owner != Cmd.Issuer)
             {
                 return Reject(CommandReject::NotOwner);
             }
             const EntityDef* Def = Content ? Content->FindEntity(Core[I].Def) : nullptr;
-            if (Def == nullptr || !Def->Unit.bIsBuilder || !Def->Unit.DeploysInto.IsValid())
+            if (Def == nullptr)
             {
-                return Reject(CommandReject::TargetInvalid);
+                return Reject(CommandReject::UnknownContent);
             }
 
-            const TileCoord Tile = Map.WorldToTile(Transforms[I].Position);
-            const EntityDef* ConYardDef = Content->FindEntity(Def->Unit.DeploysInto);
-            const int32_t FootX = ConYardDef ? ConYardDef->Building.FootprintX : 3;
-            const int32_t FootY = ConYardDef ? ConYardDef->Building.FootprintY : 3;
-            if (Tile.X < 1 || Tile.Y < 1 || Tile.X + FootX >= Map.Width - 1 || Tile.Y + FootY >= Map.Height - 1)
+            // Case A: MCV -> Construction Yard (Deploy)
+            if (Core[I].Kind == EntityKind::Unit && Def->Unit.bIsBuilder && Def->Unit.DeploysInto.IsValid())
             {
-                return Reject(CommandReject::InvalidPlacement);
+                const TileCoord Tile = Map.WorldToTile(Transforms[I].Position);
+                const EntityDef* ConYardDef = Content->FindEntity(Def->Unit.DeploysInto);
+                const int32_t FootX = ConYardDef ? ConYardDef->Building.FootprintX : 3;
+                const int32_t FootY = ConYardDef ? ConYardDef->Building.FootprintY : 3;
+                if (Tile.X < 1 || Tile.Y < 1 || Tile.X + FootX >= Map.Width - 1 || Tile.Y + FootY >= Map.Height - 1)
+                {
+                    return Reject(CommandReject::InvalidPlacement);
+                }
+
+                const Vec2 DeployLoc = Transforms[I].Position;
+
+                // Silently remove MCV without "Unit Lost" event
+                RemoveEntitySilently(Cmd.Primary);
+
+                // Spawn the Construction Yard
+                EntityId NewBuilding = SpawnBuilding(Def->Unit.DeploysInto, Cmd.Issuer, Tile, /*bInstantComplete*/ true);
+
+                // Emit MCVDeployed event
+                SimEvent Ev;
+                Ev.Type = SimEventType::MCVDeployed;
+                Ev.Tick = CurrentTick;
+                Ev.Entity = NewBuilding;
+                Ev.Player = Cmd.Issuer;
+                Ev.Content = Def->Unit.DeploysInto;
+                Ev.Location = DeployLoc;
+                EmitEvent(Ev);
+                break;
             }
 
-            // Despawn the MCV builder unit
-            DestroyEntity(Cmd.Primary, EntityId::Invalid(), false);
+            // Case B: Construction Yard -> MCV (Undeploy / Pack)
+            if (Core[I].Kind == EntityKind::Building && Def->Name.find("construction_yard") != std::string::npos)
+            {
+                ContentId McvDefId;
+                const auto& AllEntities = Content->GetEntities();
+                for (const auto& E : AllEntities)
+                {
+                    if (E.Kind == EntityKind::Unit && E.Unit.bIsBuilder && E.Unit.DeploysInto == Core[I].Def)
+                    {
+                        McvDefId = E.Id;
+                        break;
+                    }
+                }
 
-            // Spawn the deployed Construction Yard building
-            SpawnBuilding(Def->Unit.DeploysInto, Cmd.Issuer, Tile, /*bInstantComplete*/ true);
-            break;
+                if (!McvDefId.IsValid())
+                {
+                    const PlayerState& P = GetPlayer(Cmd.Issuer);
+                    std::string McvName = (P.Faction == FactionId::Alliance) ? "unit.all.mcv" : "unit.sov.mcv";
+                    if (const auto* McvDef = Content->FindEntityByName(McvName))
+                    {
+                        McvDefId = McvDef->Id;
+                    }
+                }
+
+                if (!McvDefId.IsValid())
+                {
+                    return Reject(CommandReject::UnknownContent);
+                }
+
+                const Vec2 ConYardLoc = Transforms[I].Position;
+
+                // Silently remove Construction Yard without "Building Lost" event
+                RemoveEntitySilently(Cmd.Primary);
+
+                // Spawn MCV vehicle
+                EntityId NewUnit = SpawnUnit(McvDefId, Cmd.Issuer, ConYardLoc);
+
+                // Emit MCVUndeployed event
+                SimEvent Ev;
+                Ev.Type = SimEventType::MCVUndeployed;
+                Ev.Tick = CurrentTick;
+                Ev.Entity = NewUnit;
+                Ev.Player = Cmd.Issuer;
+                Ev.Content = McvDefId;
+                Ev.Location = ConYardLoc;
+                EmitEvent(Ev);
+                break;
+            }
+
+            return Reject(CommandReject::TargetInvalid);
         }
 
         case CommandType::PlaceBuilding:
@@ -2003,6 +2070,48 @@ void SimWorld::DestroyEntity(EntityId Id, EntityId Killer, bool bWasSold)
         DcEv.Player = DirectControls[Index].Controller;
         EmitEvent(DcEv);
         DirectControls[Index].Phase = DirectControlPhase::VehicleDestroyed;
+        DirectControls[Index].PhaseUntilTick = 0;
+        DirectControls[Index].Controller = kInvalidPlayer;
+    }
+
+    Core[Index].bAlive = false;
+    Core[Index].Generation += 1;
+    FreeSlots.push_back(Index);
+
+    if (Kind == EntityKind::Building && Owner < kMaxPlayers)
+    {
+        RefreshPlayerTech(Owner);
+    }
+}
+
+void SimWorld::RemoveEntitySilently(EntityId Id)
+{
+    if (!IsAlive(Id))
+    {
+        return;
+    }
+    const uint32_t Index = Id.Index;
+    const EntityKind Kind = Core[Index].Kind;
+    const PlayerId Owner = Core[Index].Owner;
+
+    if (Kind == EntityKind::Building)
+    {
+        OccupyTiles(Buildings[Index], false);
+        Buildings[Index].Queue.clear();
+        Buildings[Index].DockedHarvester = EntityId::Invalid();
+        Buildings[Index].UnloadingQueue.clear();
+    }
+
+    if (DirectControls[Index].Phase == DirectControlPhase::Active ||
+        DirectControls[Index].Phase == DirectControlPhase::Entering)
+    {
+        SimEvent DcEv;
+        DcEv.Type = SimEventType::DirectControlExited;
+        DcEv.Tick = CurrentTick;
+        DcEv.Entity = Id;
+        DcEv.Player = DirectControls[Index].Controller;
+        EmitEvent(DcEv);
+        DirectControls[Index].Phase = DirectControlPhase::Inactive;
         DirectControls[Index].PhaseUntilTick = 0;
         DirectControls[Index].Controller = kInvalidPlayer;
     }

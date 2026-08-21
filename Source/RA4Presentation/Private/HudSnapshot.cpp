@@ -24,6 +24,8 @@ const char* ToString(AlertType Type)
         case AlertType::ConstructionComplete: return "ConstructionComplete";
         case AlertType::UnitReady: return "UnitReady";
         case AlertType::ResourcesDepleted: return "ResourcesDepleted";
+        case AlertType::MCVDeployed: return "MCVDeployed";
+        case AlertType::MCVUndeployed: return "MCVUndeployed";
         default: return "Unknown";
     }
 }
@@ -590,6 +592,8 @@ bool RadarPingKindForAlert(AlertType Type, RadarPingKind& OutKind)
             return true;
         case AlertType::ConstructionComplete:
         case AlertType::UnitReady:
+        case AlertType::MCVDeployed:
+        case AlertType::MCVUndeployed:
             OutKind = RadarPingKind::Construction;
             return true;
 
@@ -963,6 +967,34 @@ void HudSnapshotBuilder::AccumulateAlerts(const SimWorld& World, const ResourceS
                 }
                 Alert A = Make(AlertType::UnitReady, AlertSeverity::Info);
                 A.Content = Event.Content;
+                PushAlert(A);
+                break;
+            }
+
+            case SimEventType::MCVDeployed:
+            {
+                if (Event.Player != LocalPlayer)
+                {
+                    break;
+                }
+                Alert A = Make(AlertType::MCVDeployed, AlertSeverity::Info);
+                A.Content = Event.Content;
+                A.Location = Event.Location;
+                A.bHasLocation = true;
+                PushAlert(A);
+                break;
+            }
+
+            case SimEventType::MCVUndeployed:
+            {
+                if (Event.Player != LocalPlayer)
+                {
+                    break;
+                }
+                Alert A = Make(AlertType::MCVUndeployed, AlertSeverity::Info);
+                A.Content = Event.Content;
+                A.Location = Event.Location;
+                A.bHasLocation = true;
                 PushAlert(A);
                 break;
             }

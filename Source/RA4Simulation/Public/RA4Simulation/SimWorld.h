@@ -212,6 +212,7 @@ private:
     // between the command and the death sweep reloads a building that is flagged
     // selling forever) and then silently forfeits the ADR-0012 destruction refund.
     void DestroyEntity(EntityId Id, EntityId Killer, bool bWasSold = false);
+    void RemoveEntitySilently(EntityId Id);
     void ApplyDamage(EntityId TargetId, int32_t BaseDamage, WarheadClass Warhead, EntityId Source, PlayerId SourcePlayer);
     void ApplySplashDamage(const Vec2& Center, Fixed Radius, int32_t BaseDamage, WarheadClass Warhead,
                            int32_t FalloffPercent, EntityId Source, PlayerId SourcePlayer);

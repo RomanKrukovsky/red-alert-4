@@ -601,6 +601,8 @@ enum class SimEventType : uint8_t
     DirectControlEntered,
     DirectControlExited,
     DirectControlFireRejected,
+    MCVDeployed,
+    MCVUndeployed,
 };
 
 struct SimEvent

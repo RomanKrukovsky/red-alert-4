@@ -67,6 +67,8 @@ enum class AlertType : uint8_t
     ConstructionComplete,
     UnitReady,
     ResourcesDepleted,
+    MCVDeployed,
+    MCVUndeployed,
 };
 
 enum class AlertSeverity : uint8_t

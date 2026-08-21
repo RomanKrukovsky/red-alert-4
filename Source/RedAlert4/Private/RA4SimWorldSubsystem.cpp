@@ -889,6 +889,20 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
             }
             break;
 
+        case RA4::SimEventType::MCVDeployed:
+            if (Event.Player == LocalPlayer)
+            {
+                PlayEVA(ERA4EVAEvent::ConstructionComplete);
+            }
+            break;
+
+        case RA4::SimEventType::MCVUndeployed:
+            if (Event.Player == LocalPlayer)
+            {
+                PlayEVA(ERA4EVAEvent::UnitReady);
+            }
+            break;
+
         case RA4::SimEventType::ProductionCompleted:
             if (Event.Player == LocalPlayer)
             {
@@ -1008,26 +1022,31 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
 
 float URA4SimWorldSubsystem::SampleGroundHeight(double WorldX, double WorldY)
 {
+    UWorld* World = GetWorld();
+    if (World != nullptr)
+    {
+        FHitResult Hit;
+        const FVector RayStart(WorldX, WorldY, 25000.0);
+        const FVector RayEnd(WorldX, WorldY, -25000.0);
+        FCollisionQueryParams QueryParams(TEXT("RA4GroundTrace"), false);
+        QueryParams.bReturnPhysicalMaterial = false;
+        if (World->LineTraceSingleByChannel(Hit, RayStart, RayEnd, ECC_WorldStatic, QueryParams))
+        {
+            if (Hit.bBlockingHit)
+            {
+                return Hit.ImpactPoint.Z;
+            }
+        }
+    }
+
     // Keep looking until the landscape is actually found, rather than looking once
     // and remembering the failure forever.
-    //
-    // This ran on the first call and latched. The first call happens while the
-    // level is still streaming in, so the landscape usually is not there yet --
-    // and after that CachedLandscape stayed null for the rest of the match. Every
-    // unit then took its height from the mathematical fallback below, which
-    // describes RA4LandscapeCommandlet's rolling hills and has nothing to do with
-    // the archipelago actually in this map. That is why units sit above the
-    // ground instead of on it.
-    //
-    // Retried at most once per frame: the iterator walks every actor in the level
-    // and this is called per entity, so an unthrottled retry would be a per-frame
-    // scan per unit.
     if (CachedLandscape.Get() == nullptr && LastLandscapeSearchFrame != GFrameCounter)
     {
         LastLandscapeSearchFrame = GFrameCounter;
-        if (UWorld* World = GetWorld())
+        if (UWorld* W = GetWorld())
         {
-            TActorIterator<ALandscapeProxy> It(World);
+            TActorIterator<ALandscapeProxy> It(W);
             if (It)
             {
                 CachedLandscape = *It;
@@ -1111,6 +1130,7 @@ void URA4SimWorldSubsystem::UpdateFogVisibilityTexture()
         FogTexelScratch.clear();
         // Rebinding is required: the material instance holds the old texture.
         bFogMaterialBound = false;
+        bCameraFogBound = false;
     }
 
     // Local seat. Hardcoded 0 like every other seat reference in this subsystem;
@@ -1317,35 +1337,12 @@ void URA4SimWorldSubsystem::PublishFogParametersToCamera()
         return;
     }
 
-    // The camera pawn is spawned by the game mode, so on the first frames of a
-    // match there may not be one yet. Returning without setting bCameraFogBound
-    // means this retries next frame rather than giving up for the match.
-    // First camera pawn only: a level has one. Written as an if rather than a
-    // for-with-break because the compiler rightly rejects a loop that never
-    // increments (-Wunreachable-code-loop-increment, warnings are errors here).
-    TActorIterator<ARA4CameraPawn> CameraIt(World);
-    ARA4CameraPawn* CameraPawn = CameraIt ? *CameraIt : nullptr;
-    if (CameraPawn == nullptr)
-    {
-        return;
-    }
-    UCameraComponent* CameraComp = CameraPawn->FindComponentByClass<UCameraComponent>();
-    if (CameraComp == nullptr)
-    {
-        return;
-    }
-
     if (CameraFogMaterial == nullptr)
     {
         UMaterialInterface* Base =
             LoadObject<UMaterialInterface>(nullptr, kFogPostProcessPath);
         if (Base == nullptr)
         {
-            // The generated asset is missing: the commandlet has not been run in
-            // this branch yet. Log once and leave the landscape-only fog in place
-            // rather than crashing -- a missing generated asset must not break a
-            // match (the "missing decorative asset" invariant), but it IS a real
-            // gap, so it is an error and not a silent return.
             if (!bReportedPresentationState)
             {
                 UE_LOG(LogTemp, Error,
@@ -1353,7 +1350,6 @@ void URA4SimWorldSubsystem::PublishFogParametersToCamera()
                        TEXT("Run the RA4LayeredTerrainSetup commandlet to generate it."),
                        kFogPostProcessPath);
             }
-            bCameraFogBound = true;   // do not spam the log every frame
             return;
         }
         CameraFogMaterial = UMaterialInstanceDynamic::Create(Base, this);
@@ -1361,80 +1357,88 @@ void URA4SimWorldSubsystem::PublishFogParametersToCamera()
         {
             return;
         }
-        // Weight 1: the fog is not an optional grade, it is the rule made visible.
-        CameraComp->PostProcessSettings.WeightedBlendables.Array.Empty();
-        CameraComp->PostProcessSettings.AddBlendable(CameraFogMaterial, 1.0f);
-        CameraComp->PostProcessBlendWeight = 1.0f;
     }
 
-    if (bCameraFogBound)
+    bool bAttachedToAny = false;
+    for (TActorIterator<ARA4CameraPawn> CameraIt(World); CameraIt; ++CameraIt)
     {
-        return;
+        if (UCameraComponent* CameraComp = (*CameraIt)->FindComponentByClass<UCameraComponent>())
+        {
+            CameraComp->PostProcessSettings.WeightedBlendables.Array.Empty();
+            CameraComp->PostProcessSettings.AddBlendable(CameraFogMaterial, 1.0f);
+            CameraComp->PostProcessBlendWeight = 1.0f;
+            bAttachedToAny = true;
+        }
     }
 
-    CameraFogMaterial->SetTextureParameterValue(TEXT("RA4FogVisibility"), FogVisibilityTexture);
     const double MapWidthUU = double(FogTextureWidth) * double(RA4::kTileSizeUnits);
     const double MapHeightUU = double(FogTextureHeight) * double(RA4::kTileSizeUnits);
+    CameraFogMaterial->SetTextureParameterValue(TEXT("RA4FogVisibility"), FogVisibilityTexture);
     CameraFogMaterial->SetScalarParameterValue(TEXT("RA4FogWorldWidth"), float(MapWidthUU));
     CameraFogMaterial->SetScalarParameterValue(TEXT("RA4FogWorldHeight"), float(MapHeightUU));
     CameraFogMaterial->SetScalarParameterValue(TEXT("RA4FogStrength"), FogStrength);
     CameraFogMaterial->SetScalarParameterValue(TEXT("RA4FogHighContrast"),
                                                bHighContrastFog ? 1.0f : 0.0f);
-    bCameraFogBound = true;
+
+    if (bAttachedToAny)
+    {
+        bCameraFogBound = true;
+    }
 }
 
 void URA4SimWorldSubsystem::PublishFogParametersToTerrain()
 {
-    if (bFogMaterialBound || FogVisibilityTexture == nullptr)
+    if (FogVisibilityTexture == nullptr)
     {
         return;
     }
 
-    // Reuse the same cached landscape SampleGroundHeight found; do not start a
-    // second search with its own staleness rules.
-    SampleGroundHeight(0.0, 0.0);
-    ALandscapeProxy* Landscape = CachedLandscape.Get();
-    if (Landscape == nullptr)
+    UWorld* World = GetWorld();
+    if (World == nullptr)
     {
-        // No landscape in this level (art lab, UI showcase): nothing to tint.
-        // Leave unbound so a level that gains one later still binds.
         return;
     }
 
-    if (TerrainFogMaterial == nullptr)
+    bool bAnyBound = false;
+    for (TActorIterator<ALandscapeProxy> It(World); It; ++It)
     {
+        ALandscapeProxy* Landscape = *It;
+        if (Landscape == nullptr)
+        {
+            continue;
+        }
+
         UMaterialInterface* Base = Landscape->GetLandscapeMaterial();
         if (Base == nullptr)
         {
-            return;
+            continue;
         }
-        TerrainFogMaterial = UMaterialInstanceDynamic::Create(Base, this);
-        if (TerrainFogMaterial == nullptr)
+
+        if (TerrainFogMaterial == nullptr || TerrainFogMaterial->Parent != Base)
         {
-            return;
+            TerrainFogMaterial = UMaterialInstanceDynamic::Create(Base, this);
         }
-        Landscape->LandscapeMaterial = TerrainFogMaterial;
+
+        if (TerrainFogMaterial != nullptr)
+        {
+            Landscape->LandscapeMaterial = TerrainFogMaterial;
+
+            const double MapWidthUU = double(FogTextureWidth) * double(RA4::kTileSizeUnits);
+            const double MapHeightUU = double(FogTextureHeight) * double(RA4::kTileSizeUnits);
+            TerrainFogMaterial->SetTextureParameterValue(TEXT("RA4FogVisibility"), FogVisibilityTexture);
+            TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogWorldWidth"), float(MapWidthUU));
+            TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogWorldHeight"), float(MapHeightUU));
+            TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogStrength"), FogStrength);
+            TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogHighContrast"),
+                                                        bHighContrastFog ? 1.0f : 0.0f);
+            bAnyBound = true;
+        }
     }
 
-    // Parameter names are the contract with the generated terrain material
-    // (RA4LayeredTerrainSetupCommandlet). If the material lacks them the sets are
-    // silently ignored by Unreal, which is why the commandlet must add the nodes
-    // -- hand-wiring them in the editor would be reverted by its next run.
-    TerrainFogMaterial->SetTextureParameterValue(TEXT("RA4FogVisibility"), FogVisibilityTexture);
-    // World extent in Unreal units, so the material can map a world position to a
-    // fog UV without knowing the tile size. RA4Coords::ToUnreal is 1:1 between sim
-    // units and Unreal units (it passes the fixed value straight through), so tile
-    // count times tile size IS the Unreal extent -- no scale factor, and none
-    // invented: there is no SimToUnrealScale constant to apply.
-    const double MapWidthUU = double(FogTextureWidth) * double(RA4::kTileSizeUnits);
-    const double MapHeightUU = double(FogTextureHeight) * double(RA4::kTileSizeUnits);
-    TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogWorldWidth"), float(MapWidthUU));
-    TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogWorldHeight"), float(MapHeightUU));
-    TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogStrength"), FogStrength);
-    TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogHighContrast"),
-                                                bHighContrastFog ? 1.0f : 0.0f);
-
-    bFogMaterialBound = true;
+    if (bAnyBound)
+    {
+        bFogMaterialBound = true;
+    }
 }
 
 void URA4SimWorldSubsystem::SyncPresentation()

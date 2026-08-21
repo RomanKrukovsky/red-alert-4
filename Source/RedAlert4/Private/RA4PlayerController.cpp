@@ -2054,21 +2054,37 @@ void ARA4PlayerController::HandlePauseMenuScreenShakeChanged(bool bEnabled)
 void ARA4PlayerController::HandlePauseMenuMasterVolumeChanged(float Volume)
 {
     ConsoleCommand(FString::Printf(TEXT("au.SetMasterVolume %f"), Volume));
+    if (URA4AudioSubsystem* Audio = GetWorld()->GetSubsystem<URA4AudioSubsystem>())
+    {
+        Audio->SetMasterVolume(Volume);
+    }
     UE_LOG(LogTemp, Display, TEXT("RA4 Master volume set to %f"), Volume);
 }
 
 void ARA4PlayerController::HandlePauseMenuSfxVolumeChanged(float Volume)
 {
+    if (URA4AudioSubsystem* Audio = GetWorld()->GetSubsystem<URA4AudioSubsystem>())
+    {
+        Audio->SetSfxVolume(Volume);
+    }
     UE_LOG(LogTemp, Display, TEXT("RA4 SFX volume set to %f"), Volume);
 }
 
 void ARA4PlayerController::HandlePauseMenuEvaVolumeChanged(float Volume)
 {
+    if (URA4AudioSubsystem* Audio = GetWorld()->GetSubsystem<URA4AudioSubsystem>())
+    {
+        Audio->SetEvaVolume(Volume);
+    }
     UE_LOG(LogTemp, Display, TEXT("RA4 EVA volume set to %f"), Volume);
 }
 
 void ARA4PlayerController::HandlePauseMenuUnitVoicesChanged(bool bEnabled)
 {
+    if (URA4AudioSubsystem* Audio = GetWorld()->GetSubsystem<URA4AudioSubsystem>())
+    {
+        Audio->SetUnitVoicesEnabled(bEnabled);
+    }
     UE_LOG(LogTemp, Display, TEXT("RA4 Unit chatter set to %s"), bEnabled ? TEXT("Enabled") : TEXT("Disabled"));
 }
 
@@ -2080,11 +2096,23 @@ void ARA4PlayerController::HandlePauseMenuControlSchemeChanged(int32 SchemeIndex
 
 void ARA4PlayerController::HandlePauseMenuCameraSpeedChanged(float SpeedMultiplier)
 {
+    if (ARA4CameraPawn* CameraPawn = GetCameraPawn())
+    {
+        RA4::Input::CameraConfig Config = CameraPawn->GetCameraController().GetConfig();
+        Config.PanSpeedAtMinHeight = 1800.0f * SpeedMultiplier;
+        CameraPawn->GetCameraController().Configure(Config);
+    }
     UE_LOG(LogTemp, Display, TEXT("RA4 Camera Pan Speed multiplier set to %f"), SpeedMultiplier);
 }
 
 void ARA4PlayerController::HandlePauseMenuEdgeScrollChanged(bool bEnabled)
 {
+    if (ARA4CameraPawn* CameraPawn = GetCameraPawn())
+    {
+        RA4::Input::CameraConfig Config = CameraPawn->GetCameraController().GetConfig();
+        Config.bEdgeScrollEnabled = bEnabled;
+        CameraPawn->GetCameraController().Configure(Config);
+    }
     UE_LOG(LogTemp, Display, TEXT("RA4 Edge Scroll set to %s"), bEnabled ? TEXT("Enabled") : TEXT("Disabled"));
 }
 
@@ -2095,6 +2123,13 @@ void ARA4PlayerController::HandlePauseMenuHealthBarModeChanged(int32 ModeIndex)
 
 void ARA4PlayerController::HandlePauseMenuDirectControlFovChanged(float FOV)
 {
+    if (URA4DirectControlSubsystem* Dc = GetDirectControlSubsystem())
+    {
+        if (Dc->ActiveProfile != nullptr)
+        {
+            Dc->ActiveProfile->Camera.WideFOV = FOV;
+        }
+    }
     UE_LOG(LogTemp, Display, TEXT("RA4 Direct Control FOV set to %f"), FOV);
 }
 
@@ -2320,66 +2355,75 @@ void ARA4PlayerController::DeploySelectedMcv()
     const auto* Content = Sim->GetContent();
     const auto& Cores = Sim->GetAllCores();
 
-    // 1. Check primary or selected units
-    RA4::EntityId McvTarget = Selection.GetPrimary();
-    if (!McvTarget.IsValid())
+    RA4::EntityId TargetEntity = RA4::EntityId::Invalid();
+
+    // 1. Check selected entities first (MCV or Construction Yard)
+    const auto& Sel = Selection.Get();
+    for (const auto& Id : Sel)
     {
-        const auto& Sel = Selection.Get();
-        for (const auto& Id : Sel)
+        if (Id.IsValid() && Id.Index < Cores.size() && Cores[Id.Index].bAlive && Cores[Id.Index].Owner == LocalPlayer)
         {
-            if (Id.IsValid() && Id.Index < Cores.size() && Cores[Id.Index].bAlive && Cores[Id.Index].Owner == LocalPlayer)
+            const auto* Def = Content ? Content->FindEntity(Cores[Id.Index].Def) : nullptr;
+            if (Def != nullptr)
             {
-                const auto* Def = Content ? Content->FindEntity(Cores[Id.Index].Def) : nullptr;
-                if (Def != nullptr && Def->Unit.bIsBuilder && Def->Unit.DeploysInto.IsValid())
+                // MCV builder unit
+                if (Cores[Id.Index].Kind == RA4::EntityKind::Unit && Def->Unit.bIsBuilder && Def->Unit.DeploysInto.IsValid())
                 {
-                    McvTarget = Id;
+                    TargetEntity = Id;
+                    break;
+                }
+                // Construction Yard building (to pack/undeploy)
+                if (Cores[Id.Index].Kind == RA4::EntityKind::Building && Def->Name.find("construction_yard") != std::string::npos)
+                {
+                    TargetEntity = Id;
                     break;
                 }
             }
         }
     }
-    else
-    {
-        // Check if primary is builder
-        if (McvTarget.Index < Cores.size() && Cores[McvTarget.Index].bAlive)
-        {
-            const auto* Def = Content ? Content->FindEntity(Cores[McvTarget.Index].Def) : nullptr;
-            if (Def == nullptr || !Def->Unit.bIsBuilder)
-            {
-                McvTarget = RA4::EntityId::Invalid();
-            }
-        }
-    }
 
-    // 2. If no MCV was explicitly selected, fallback to the player's MCV
-    if (!McvTarget.IsValid())
+    // 2. If nothing selected and player has 0 buildings, allow D to deploy starting MCV
+    if (!TargetEntity.IsValid() && Sel.empty())
     {
+        bool bHasAnyBuilding = false;
+        RA4::EntityId McvCandidate = RA4::EntityId::Invalid();
         for (size_t I = 0; I < Cores.size(); ++I)
         {
-            if (Cores[I].bAlive && Cores[I].Owner == LocalPlayer && Cores[I].Kind == RA4::EntityKind::Unit)
+            if (Cores[I].bAlive && Cores[I].Owner == LocalPlayer)
             {
-                const auto* Def = Content ? Content->FindEntity(Cores[I].Def) : nullptr;
-                if (Def != nullptr && Def->Unit.bIsBuilder && Def->Unit.DeploysInto.IsValid())
+                if (Cores[I].Kind == RA4::EntityKind::Building)
                 {
-                    McvTarget = Sim->MakeId(uint32_t(I));
+                    bHasAnyBuilding = true;
                     break;
+                }
+                if (Cores[I].Kind == RA4::EntityKind::Unit)
+                {
+                    const auto* Def = Content ? Content->FindEntity(Cores[I].Def) : nullptr;
+                    if (Def != nullptr && Def->Unit.bIsBuilder && Def->Unit.DeploysInto.IsValid())
+                    {
+                        McvCandidate = Sim->MakeId(uint32_t(I));
+                    }
                 }
             }
         }
+        if (!bHasAnyBuilding && McvCandidate.IsValid())
+        {
+            TargetEntity = McvCandidate;
+        }
     }
 
-    if (McvTarget.IsValid())
+    if (TargetEntity.IsValid())
     {
         RA4::Command Cmd;
         Cmd.Type = RA4::CommandType::Deploy;
         Cmd.Issuer = LocalPlayer;
-        Cmd.Primary = McvTarget;
+        Cmd.Primary = TargetEntity;
 
         URA4SimWorldSubsystem* MutableSim = GetWorld() ? GetWorld()->GetSubsystem<URA4SimWorldSubsystem>() : nullptr;
         if (MutableSim != nullptr)
         {
             MutableSim->EnqueueCommand(Cmd);
-            UE_LOG(LogTemp, Display, TEXT("RA4: Issued Deploy command on MCV (Index=%u)"), McvTarget.Index);
+            UE_LOG(LogTemp, Display, TEXT("RA4: Issued Deploy/Pack command on Entity (Index=%u)"), TargetEntity.Index);
 
             // Audio feedback
             static USoundBase* DeploySound = LoadObject<USoundBase>(nullptr, TEXT("/Engine/VREditor/Sounds/UI/VR_Teleport_Mode_01.VR_Teleport_Mode_01"));
