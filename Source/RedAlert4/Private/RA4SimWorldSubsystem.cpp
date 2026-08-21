@@ -1022,6 +1022,30 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
 
 float URA4SimWorldSubsystem::SampleGroundHeight(double WorldX, double WorldY)
 {
+    // First priority: Query ALandscapeProxy directly for precise terrain surface height
+    if (CachedLandscape.Get() == nullptr && LastLandscapeSearchFrame != GFrameCounter)
+    {
+        LastLandscapeSearchFrame = GFrameCounter;
+        if (UWorld* W = GetWorld())
+        {
+            TActorIterator<ALandscapeProxy> It(W);
+            if (It)
+            {
+                CachedLandscape = *It;
+            }
+        }
+    }
+
+    if (ALandscapeProxy* Landscape = CachedLandscape.Get())
+    {
+        const TOptional<float> Height = Landscape->GetHeightAtLocation(FVector(WorldX, WorldY, 0.0));
+        if (Height.IsSet())
+        {
+            return Height.GetValue();
+        }
+    }
+
+    // Second priority: Raycast against world static geometry (landscape/static ground)
     UWorld* World = GetWorld();
     if (World != nullptr)
     {
@@ -1039,36 +1063,7 @@ float URA4SimWorldSubsystem::SampleGroundHeight(double WorldX, double WorldY)
         }
     }
 
-    // Keep looking until the landscape is actually found, rather than looking once
-    // and remembering the failure forever.
-    if (CachedLandscape.Get() == nullptr && LastLandscapeSearchFrame != GFrameCounter)
-    {
-        LastLandscapeSearchFrame = GFrameCounter;
-        if (UWorld* W = GetWorld())
-        {
-            TActorIterator<ALandscapeProxy> It(W);
-            if (It)
-            {
-                CachedLandscape = *It;
-                UE_LOG(LogTemp, Display,
-                       TEXT("RA4Ground: landscape %s found on frame %llu; unit heights now come "
-                            "from the terrain instead of the fallback formula"),
-                       *(*It)->GetName(), (unsigned long long)GFrameCounter);
-            }
-        }
-    }
-
-    ALandscapeProxy* Landscape = CachedLandscape.Get();
-    if (Landscape != nullptr)
-    {
-        const TOptional<float> Height = Landscape->GetHeightAtLocation(FVector(WorldX, WorldY, 0.0));
-        if (Height.IsSet())
-        {
-            return Height.GetValue();
-        }
-    }
-
-    // Deterministic mathematical terrain height matching RA4LandscapeCommandlet rolling hills
+    // Third priority: Deterministic mathematical terrain height matching RA4LandscapeCommandlet rolling hills
     constexpr double SeedPhase = 20260730 % 1000 * 0.01;
     const double V = FMath::Sin(WorldX * 0.00028 + SeedPhase) * FMath::Cos(WorldY * 0.00024 + SeedPhase * 1.7)
                    + 0.5 * FMath::Sin(WorldX * 0.0006 - SeedPhase * 0.5) * FMath::Cos(WorldY * 0.0005 + SeedPhase)
@@ -1399,6 +1394,21 @@ void URA4SimWorldSubsystem::PublishFogParametersToTerrain()
         return;
     }
 
+    const double MapWidthUU = double(FogTextureWidth) * double(RA4::kTileSizeUnits);
+    const double MapHeightUU = double(FogTextureHeight) * double(RA4::kTileSizeUnits);
+
+    if (TerrainFogMaterial != nullptr)
+    {
+        TerrainFogMaterial->SetTextureParameterValue(TEXT("RA4FogVisibility"), FogVisibilityTexture);
+        TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogWorldWidth"), float(MapWidthUU));
+        TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogWorldHeight"), float(MapHeightUU));
+        TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogStrength"), FogStrength);
+        TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogHighContrast"),
+                                                    bHighContrastFog ? 1.0f : 0.0f);
+        bFogMaterialBound = true;
+        return;
+    }
+
     bool bAnyBound = false;
     for (TActorIterator<ALandscapeProxy> It(World); It; ++It)
     {
@@ -1408,23 +1418,28 @@ void URA4SimWorldSubsystem::PublishFogParametersToTerrain()
             continue;
         }
 
-        UMaterialInterface* Base = Landscape->GetLandscapeMaterial();
-        if (Base == nullptr)
+        UMaterialInstanceDynamic* MatDynamic = Cast<UMaterialInstanceDynamic>(Landscape->LandscapeMaterial);
+        if (MatDynamic == nullptr)
         {
-            continue;
+            UMaterialInterface* CurrentMat = Landscape->GetLandscapeMaterial();
+            if (CurrentMat != nullptr)
+            {
+                MatDynamic = Cast<UMaterialInstanceDynamic>(CurrentMat);
+                if (MatDynamic == nullptr)
+                {
+                    // Pass an explicit unique FName so Unreal Engine never chains "MID_MID_MID..."
+                    MatDynamic = UMaterialInstanceDynamic::Create(CurrentMat, this, FName(TEXT("RA4_TerrainFog_MID")));
+                }
+                if (MatDynamic != nullptr)
+                {
+                    Landscape->LandscapeMaterial = MatDynamic;
+                }
+            }
         }
 
-        if (TerrainFogMaterial == nullptr || TerrainFogMaterial->Parent != Base)
+        if (MatDynamic != nullptr)
         {
-            TerrainFogMaterial = UMaterialInstanceDynamic::Create(Base, this);
-        }
-
-        if (TerrainFogMaterial != nullptr)
-        {
-            Landscape->LandscapeMaterial = TerrainFogMaterial;
-
-            const double MapWidthUU = double(FogTextureWidth) * double(RA4::kTileSizeUnits);
-            const double MapHeightUU = double(FogTextureHeight) * double(RA4::kTileSizeUnits);
+            TerrainFogMaterial = MatDynamic;
             TerrainFogMaterial->SetTextureParameterValue(TEXT("RA4FogVisibility"), FogVisibilityTexture);
             TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogWorldWidth"), float(MapWidthUU));
             TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogWorldHeight"), float(MapHeightUU));
@@ -1432,6 +1447,7 @@ void URA4SimWorldSubsystem::PublishFogParametersToTerrain()
             TerrainFogMaterial->SetScalarParameterValue(TEXT("RA4FogHighContrast"),
                                                         bHighContrastFog ? 1.0f : 0.0f);
             bAnyBound = true;
+            break;
         }
     }
 
