@@ -50,7 +50,8 @@ UTextBlock* MakeText(
     const int32 Size,
     const FLinearColor& Color,
     const FName Name,
-    const bool bEmphasis = true)
+    const bool bEmphasis = true,
+    const bool bWrap = true)
 {
     UTextBlock* Label = Tree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), Name);
     Label->SetText(Value);
@@ -66,6 +67,9 @@ UTextBlock* MakeText(
     }
     Label->SetShadowOffset(FVector2D(1.5f, 1.5f));
     Label->SetShadowColorAndOpacity(FLinearColor(0.0f, 0.0f, 0.0f, 0.85f));
+    // Narrow cards used to let long Russian titles spill over their neighbour.
+    Label->SetAutoWrapText(bWrap);
+    Label->SetClipping(EWidgetClipping::Inherit);
     return Label;
 }
 
@@ -109,6 +113,9 @@ UBorder* MakePanel(
     Interior->SetBrushColor(PanelDark);
     Interior->SetPadding(Padding);
     Interior->SetContent(Content);
+    // A panel is a hard boundary: content that does not fit is cut, never drawn
+    // over the neighbouring panel.
+    Interior->SetClipping(EWidgetClipping::ClipToBounds);
     Edge->SetContent(Interior);
     return Metal;
 }
@@ -118,9 +125,9 @@ FButtonStyle MakeCardButtonStyle(const FLinearColor& Accent)
     FButtonStyle Style;
     Style.SetNormal(FSlateColorBrush(FLinearColor(0.008f, 0.010f, 0.014f, 0.95f)));
     Style.SetHovered(FSlateColorBrush(FLinearColor(
-        Accent.R * 0.22f,
-        Accent.G * 0.22f,
-        Accent.B * 0.22f,
+        Accent.R * 0.16f,
+        Accent.G * 0.16f,
+        Accent.B * 0.16f,
         1.0f)));
     Style.SetPressed(FSlateColorBrush(FLinearColor(
         Accent.R * 0.45f,
@@ -290,25 +297,28 @@ void URA4CampaignSelectWidget::BuildLayout()
         Button->SetStyle(Style);
         UTextBlock* LabelText = MakeText(
             WidgetTree, Label, 14, bActive ? TextHighlight : TextMuted,
-            FName(Name.ToString() + TEXT("_Label")));
+            FName(Name.ToString() + TEXT("_Label")), true, false);
         LabelText->SetJustification(ETextJustify::Center);
+        LabelText->SetMinDesiredWidth(0.0f);
         Button->AddChild(LabelText);
+        Button->SetClipping(EWidgetClipping::ClipToBounds);
         UHorizontalBoxSlot* Slot = Navigation->AddChildToHorizontalBox(Button);
-        Slot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-        Slot->SetPadding(FMargin(3.0f, 6.0f));
+        Slot->SetSize(FSlateChildSize(ESlateSizeRule::Automatic));
+        Slot->SetPadding(FMargin(9.0f, 6.0f));
+        Slot->SetHorizontalAlignment(HAlign_Center);
         return Button;
     };
 
     AddNav(LOCTEXT("MainNav", "ГЛАВНАЯ"), TEXT("MainNavButton"), false)
         ->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::OpenMainMenu);
     UButton* CampaignNav = AddNav(
-        LOCTEXT("CampaignNav", "СТРАТЕГИЧЕСКИЙ ВЫБОР"), TEXT("CampaignNavButton"), true);
+        LOCTEXT("CampaignNav", "КАМПАНИЯ"), TEXT("CampaignNavButton"), true);
     CampaignNav->SetIsEnabled(false);
     AddNav(LOCTEXT("NetworkNav", "СЕТЕВАЯ ИГРА"), TEXT("NetworkNavButton"), false)
         ->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::OpenMultiplayer);
-    AddNav(LOCTEXT("ChallengesNav", "ТАКТИЧЕСКИЕ ИСПЫТАНИЯ"), TEXT("ChallengesNavButton"), false)
+    AddNav(LOCTEXT("ChallengesNav", "ИСПЫТАНИЯ"), TEXT("ChallengesNavButton"), false)
         ->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::OpenChallenges);
-    AddNav(LOCTEXT("BarracksNav", "АРХИВ ОПЕРАЦИЙ"), TEXT("BarracksNavButton"), false)
+    AddNav(LOCTEXT("BarracksNav", "АРХИВ"), TEXT("BarracksNavButton"), false)
         ->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::OpenBarracks);
     AddNav(LOCTEXT("SettingsNav", "ПАРАМЕТРЫ"), TEXT("SettingsNavButton"), false)
         ->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::OpenSettings);
@@ -337,27 +347,27 @@ void URA4CampaignSelectWidget::BuildLayout()
 
     BreadcrumbBlocBtn = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("BreadcrumbBlocBtn"));
     BreadcrumbBlocBtn->SetStyle(MakeCardButtonStyle(FLinearColor(0.68f, 0.28f, 0.88f, 1.0f)));
-    BreadcrumbBlocText = MakeText(WidgetTree, LOCTEXT("BC1", "01 БЛОК / КАТЕГОРИЯ"), 14, TextHighlight, TEXT("BCText1"));
+    BreadcrumbBlocText = MakeText(WidgetTree, LOCTEXT("BC1", "01 БЛОК / КАТЕГОРИЯ"), 14, TextHighlight, TEXT("BCText1"), true, false);
     BreadcrumbBlocBtn->AddChild(BreadcrumbBlocText);
     BreadcrumbBlocBtn->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::GotoBlocStep);
     BreadcrumbsBox->AddChildToHorizontalBox(BreadcrumbBlocBtn)->SetPadding(FMargin(4.0f, 2.0f));
 
-    UTextBlock* Arrow1 = MakeText(WidgetTree, LOCTEXT("Arrow1", "›"), 16, TextMuted, TEXT("Arrow1"));
+    UTextBlock* Arrow1 = MakeText(WidgetTree, LOCTEXT("Arrow1", "›"), 16, TextMuted, TEXT("Arrow1"), true, false);
     BreadcrumbsBox->AddChildToHorizontalBox(Arrow1)->SetPadding(FMargin(6.0f, 4.0f));
 
     BreadcrumbCountryBtn = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("BreadcrumbCountryBtn"));
     BreadcrumbCountryBtn->SetStyle(MakeCardButtonStyle(FLinearColor(0.35f, 0.70f, 0.98f, 1.0f)));
-    BreadcrumbCountryText = MakeText(WidgetTree, LOCTEXT("BC2", "02 СТРАНА"), 14, TextMuted, TEXT("BCText2"));
+    BreadcrumbCountryText = MakeText(WidgetTree, LOCTEXT("BC2", "02 СТРАНА"), 14, TextMuted, TEXT("BCText2"), true, false);
     BreadcrumbCountryBtn->AddChild(BreadcrumbCountryText);
     BreadcrumbCountryBtn->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::GotoCountryStep);
     BreadcrumbsBox->AddChildToHorizontalBox(BreadcrumbCountryBtn)->SetPadding(FMargin(4.0f, 2.0f));
 
-    UTextBlock* Arrow2 = MakeText(WidgetTree, LOCTEXT("Arrow2", "›"), 16, TextMuted, TEXT("Arrow2"));
+    UTextBlock* Arrow2 = MakeText(WidgetTree, LOCTEXT("Arrow2", "›"), 16, TextMuted, TEXT("Arrow2"), true, false);
     BreadcrumbsBox->AddChildToHorizontalBox(Arrow2)->SetPadding(FMargin(6.0f, 4.0f));
 
     BreadcrumbDoctrineBtn = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("BreadcrumbDoctrineBtn"));
     BreadcrumbDoctrineBtn->SetStyle(MakeCardButtonStyle(FLinearColor(0.88f, 0.72f, 0.22f, 1.0f)));
-    BreadcrumbDoctrineText = MakeText(WidgetTree, LOCTEXT("BC3", "03 ДОКТРИНА"), 14, TextMuted, TEXT("BCText3"));
+    BreadcrumbDoctrineText = MakeText(WidgetTree, LOCTEXT("BC3", "03 ДОКТРИНА"), 14, TextMuted, TEXT("BCText3"), true, false);
     BreadcrumbDoctrineBtn->AddChild(BreadcrumbDoctrineText);
     BreadcrumbDoctrineBtn->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::GotoDoctrineStep);
     BreadcrumbsBox->AddChildToHorizontalBox(BreadcrumbDoctrineBtn)->SetPadding(FMargin(4.0f, 2.0f));
@@ -460,7 +470,8 @@ void URA4CampaignSelectWidget::BuildLayout()
     ContinueButton->SetStyle(ActionStyle);
 
     ContinueLabelText = MakeText(
-        WidgetTree, LOCTEXT("CTA_ChooseCountry", "ВЫБРАТЬ СТРАНУ ›"), 16, TextHighlight, TEXT("ContinueLabel"));
+        WidgetTree, LOCTEXT("CTA_ChooseCountry", "ВЫБРАТЬ СТРАНУ ›"), 16, TextHighlight,
+        TEXT("ContinueLabel"), true, false);
     ContinueLabelText->SetJustification(ETextJustify::Center);
     ContinueButton->AddChild(ContinueLabelText);
     ContinueButton->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::ContinueCampaign);
@@ -481,14 +492,16 @@ void URA4CampaignSelectWidget::BuildLayout()
     UButton* BackButton = WidgetTree->ConstructWidget<UButton>(
         UButton::StaticClass(), TEXT("CampaignBackButton"));
     BackButton->AddChild(MakeText(
-        WidgetTree, LOCTEXT("BackButton", "‹  НАЗАД"), 14, TextPrimary, TEXT("CampaignBackLabel")));
+        WidgetTree, LOCTEXT("BackButton", "‹  НАЗАД"), 14, TextPrimary,
+        TEXT("CampaignBackLabel"), true, false));
     BackButton->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::GotoBlocStep);
     Footer->AddChildToHorizontalBox(BackButton)->SetPadding(FMargin(6.0f, 2.0f));
 
     UButton* TrainingButton = WidgetTree->ConstructWidget<UButton>(
         UButton::StaticClass(), TEXT("TrainingButton"));
     TrainingButton->AddChild(MakeText(
-        WidgetTree, LOCTEXT("Training", "ОБУЧЕНИЕ"), 14, TextPrimary, TEXT("TrainingLabel")));
+        WidgetTree, LOCTEXT("Training", "ОБУЧЕНИЕ"), 14, TextPrimary,
+        TEXT("TrainingLabel"), true, false));
     TrainingButton->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::OpenChallenges);
     Footer->AddChildToHorizontalBox(TrainingButton)->SetPadding(FMargin(6.0f, 2.0f));
 
@@ -579,8 +592,9 @@ void URA4CampaignSelectWidget::RefreshBlocCards()
             13, Bloc.GlowColor, FName(*FString::Printf(TEXT("BlocNum_%d"), Index)));
         CardContent->AddChildToVerticalBox(Numeral)->SetPadding(FMargin(10.0f, 10.0f, 10.0f, 2.0f));
 
+        const int32 TitleSize = Bloc.LayoutWeight >= 2.0f ? 22 : (Bloc.LayoutWeight >= 1.2f ? 17 : 15);
         UTextBlock* Title = MakeText(
-            WidgetTree, Bloc.DisplayName, 18, TextHighlight,
+            WidgetTree, Bloc.DisplayName, TitleSize, TextHighlight,
             FName(*FString::Printf(TEXT("BlocTitle_%d"), Index)));
         CardContent->AddChildToVerticalBox(Title)->SetPadding(FMargin(10.0f, 0.0f, 10.0f, 4.0f));
 
