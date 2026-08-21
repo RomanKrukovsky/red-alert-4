@@ -189,4 +189,20 @@ void ARA4UIShowcaseGameMode::CaptureInterfaceForQA()
         FString::Printf(TEXT("RA4_UI_Reference_%02d.png"), ActiveReference));
     FScreenshotRequest::RequestScreenshot(ScreenshotPath, true, false);
     UE_LOG(LogTemp, Display, TEXT("RA4 UI QA screenshot requested: %s"), *ScreenshotPath);
+
+    // A batch capture walks every reference in turn, so the process must close
+    // itself once the frame is on disk. The delay lets the screenshot request
+    // finish flushing before the exit is issued.
+    if (FParse::Param(FCommandLine::Get(), TEXT("RA4ExitAfterCapture")))
+    {
+        GetWorldTimerManager().SetTimer(
+            ExitTimer,
+            FTimerDelegate::CreateLambda([]()
+            {
+                UE_LOG(LogTemp, Display, TEXT("RA4 UI QA capture complete, exiting."));
+                FPlatformMisc::RequestExit(false);
+            }),
+            2.0f,
+            false);
+    }
 }

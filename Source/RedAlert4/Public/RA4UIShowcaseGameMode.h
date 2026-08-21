@@ -26,6 +26,7 @@ private:
     TObjectPtr<UUserWidget> ActiveRootWidget;
 
     FTimerHandle CaptureTimer;
+    FTimerHandle ExitTimer;
     bool bCaptureScheduled = false;
     int32 ActiveReference = 0;
 };
