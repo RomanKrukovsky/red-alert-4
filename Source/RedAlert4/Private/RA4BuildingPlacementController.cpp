@@ -9,6 +9,7 @@
 #include "RA4SimCoords.h"
 
 #include "Engine/World.h"
+#include "DrawDebugHelpers.h"
 #include "GameFramework/PlayerController.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
@@ -135,6 +136,28 @@ void URA4BuildingPlacementController::UpdateGhostTransform()
         {
             GhostActor->SetActorLocation(CurrentGridLocation);
             UpdateGhostMaterial(bCurrentLocationValid);
+        }
+
+        // Draw holographic building placement footprint grid on terrain
+        if (UWorld* World = GetWorld())
+        {
+            const FColor GridColor = bCurrentLocationValid ? FColor(50, 240, 70) : FColor(240, 50, 50);
+            constexpr float FootprintSize = 256.0f;
+            const FVector Center = CurrentGridLocation + FVector(0.0f, 0.0f, 6.0f);
+
+            // Bounding box frame on ground
+            DrawDebugBox(World, Center, FVector(FootprintSize, FootprintSize, 4.0f), GridColor, false, -1.0f, 0, 2.5f);
+
+            // Inner cell crosshairs
+            DrawDebugLine(World, Center - FVector(FootprintSize, 0, 0), Center + FVector(FootprintSize, 0, 0), GridColor, false, -1.0f, 0, 1.2f);
+            DrawDebugLine(World, Center - FVector(0, FootprintSize, 0), Center + FVector(0, FootprintSize, 0), GridColor, false, -1.0f, 0, 1.2f);
+
+            // Tactical 4-corner vertical ticks
+            const float O = FootprintSize;
+            DrawDebugLine(World, Center + FVector(O, O, 0), Center + FVector(O, O, 40.0f), GridColor, false, -1.0f, 0, 2.0f);
+            DrawDebugLine(World, Center + FVector(-O, O, 0), Center + FVector(-O, O, 40.0f), GridColor, false, -1.0f, 0, 2.0f);
+            DrawDebugLine(World, Center + FVector(O, -O, 0), Center + FVector(O, -O, 40.0f), GridColor, false, -1.0f, 0, 2.0f);
+            DrawDebugLine(World, Center + FVector(-O, -O, 0), Center + FVector(-O, -O, 40.0f), GridColor, false, -1.0f, 0, 2.0f);
         }
     }
 }
