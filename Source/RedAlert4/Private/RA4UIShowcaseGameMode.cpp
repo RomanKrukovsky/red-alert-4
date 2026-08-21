@@ -58,8 +58,17 @@ void ARA4UIShowcaseGameMode::ShowInterface(APlayerController* PlayerController)
     }
     else if (RequestedScreen == 3)
     {
-        RootWidget = CreateWidget<URA4CampaignSelectWidget>(
-            PlayerController, URA4CampaignSelectWidget::StaticClass());
+        if (URA4CampaignSelectWidget* Select = CreateWidget<URA4CampaignSelectWidget>(
+            PlayerController, URA4CampaignSelectWidget::StaticClass()))
+        {
+            // Each step of the selection path has its own reference frame, so QA
+            // capture must be able to open the screen directly on a given step.
+            int32 RequestedStep = 0;
+            FParse::Value(FCommandLine::Get(), TEXT("RA4Step="), RequestedStep);
+            Select->SetInitialStep(static_cast<ERA4CampaignSelectStep>(
+                FMath::Clamp(RequestedStep, 0, 2)));
+            RootWidget = Select;
+        }
     }
     else if (RequestedScreen >= 4 && RequestedScreen <= 7)
     {
@@ -187,6 +196,15 @@ void ARA4UIShowcaseGameMode::CaptureInterfaceForQA()
         FPaths::ProjectSavedDir(),
         TEXT("Screenshots/MacEditor"),
         FString::Printf(TEXT("RA4_UI_Reference_%02d.png"), ActiveReference));
+    // The pointer starts at the viewport centre, which leaves whatever panel sits
+    // there stuck in its hover state. A QA frame must show the resting look, so
+    // the cursor is parked in the corner first.
+    if (APlayerController* PlayerController = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr)
+    {
+        PlayerController->bShowMouseCursor = false;
+        PlayerController->SetMouseLocation(2, 2);
+    }
+
     FScreenshotRequest::RequestScreenshot(ScreenshotPath, true, false);
     UE_LOG(LogTemp, Display, TEXT("RA4 UI QA screenshot requested: %s"), *ScreenshotPath);
 

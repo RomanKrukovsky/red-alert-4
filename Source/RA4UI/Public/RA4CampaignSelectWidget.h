@@ -37,6 +37,13 @@ class RA4UI_API URA4CampaignSelectWidget : public UUserWidget
 {
     GENERATED_BODY()
 
+public:
+    /**
+     * Opens the screen on a given step. QA capture drives this so each step can
+     * be photographed against its own reference frame.
+     */
+    void SetInitialStep(ERA4CampaignSelectStep InStep) { InitialStep = InStep; }
+
 protected:
     virtual TSharedRef<SWidget> RebuildWidget() override;
     virtual void NativeConstruct() override;
@@ -105,6 +112,14 @@ protected:
     void OpenSettings();
 
     void BuildLayout();
+
+    /**
+     * Bottom-left action pair, chosen-country summary and the doctrine preview
+     * the country step shows before the doctrine step is entered.
+     */
+    void BuildCountryStepChrome(
+        const FRA4BlocInfo& ActiveBloc,
+        TFunctionRef<FBox2D(float, float, float, float)> Ref);
     void RefreshBreadcrumbs();
     void RefreshBlocCards();
     void RefreshCountryCards();
@@ -146,8 +161,9 @@ protected:
     UPROPERTY(Transient)
     TObjectPtr<UWidget> DossierFrameWidget;
 
+    /** Country step is a mosaic too: hero country plus partner plates. */
     UPROPERTY(Transient)
-    TObjectPtr<UHorizontalBox> CountryCardsContainer;
+    TObjectPtr<UCanvasPanel> CountryCardsContainer;
 
     UPROPERTY(Transient)
     TObjectPtr<UHorizontalBox> DoctrineCardsContainer;
@@ -196,6 +212,7 @@ protected:
     TObjectPtr<UButton> ContinueButton;
 
     ERA4CampaignSelectStep CurrentStep = ERA4CampaignSelectStep::BlocSelection;
+    ERA4CampaignSelectStep InitialStep = ERA4CampaignSelectStep::BlocSelection;
     int32 SelectedBlocIndex = 0;
     int32 SelectedCountryIndex = 0;
     int32 SelectedDoctrineIndex = 0;
