@@ -150,6 +150,16 @@ public:
     DECLARE_MULTICAST_DELEGATE(FOnAlertsChanged);
     FOnAlertsChanged OnAlertsChanged;
 
+    /** Fired when user clicks on an alert or requests jump to alert location. */
+    DECLARE_MULTICAST_DELEGATE_OneParam(FOnJumpToAlertRequested, FVector2D /*SimLocation*/);
+    FOnJumpToAlertRequested OnJumpToAlertRequested;
+
+    UFUNCTION(BlueprintCallable, Category = "RA4|Navigation")
+    void RequestJumpToAlert(FVector2D SimLocation)
+    {
+        OnJumpToAlertRequested.Broadcast(SimLocation);
+    }
+
     /**
      * Fired only when a displayed resource value actually changed. Widgets refresh
      * on this instead of ticking: an idle base produces no UI work at all.

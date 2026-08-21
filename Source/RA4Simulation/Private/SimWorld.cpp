@@ -222,8 +222,10 @@ void SimWorld::Initialize(const ContentDatabase* InContent, const MatchSetup& Se
         PlayerState& P = Players[I];
         P.bActive = Slot.bActive;
         P.bDefeated = false;
+        P.Team = Slot.Team;
         P.Faction = Slot.Faction;
         P.Credits = Slot.StartingCredits;
+
         switch (P.Faction)
         {
         case FactionId::Soviet: P.FactionResourceType = FactionResourceType::Mobilization; break;
@@ -718,6 +720,24 @@ void SimWorld::OccupyTiles(const BuildingComp& B, bool bOccupy)
     {
         NavigationGrid->EndTopologyUpdate();
     }
+
+    // When placing/deploying a building, displace any units caught inside its footprint out to the perimeter
+    if (bOccupy)
+    {
+        for (uint32_t U = 0; U < uint32_t(Core.size()); ++U)
+        {
+            if (Core[U].bAlive && Core[U].Kind == EntityKind::Unit)
+            {
+                const TileCoord UnitTile = Map.WorldToTile(Transforms[U].Position);
+                if (UnitTile.X >= B.OriginTile.X && UnitTile.X < B.OriginTile.X + B.FootprintX &&
+                    UnitTile.Y >= B.OriginTile.Y && UnitTile.Y < B.OriginTile.Y + B.FootprintY)
+                {
+                    const Vec2 FreePos = FindFreeSpawnPoint(B, Core[U].Def);
+                    Transforms[U].Position = FreePos;
+                }
+            }
+        }
+    }
 }
 
 void SimWorld::BuildNavigationGrid()
@@ -874,9 +894,7 @@ const Nav::FlowField* SimWorld::GetFlowField(const TileCoord& Target, const Nav:
 
 Vec2 SimWorld::FindFreeSpawnPoint(const BuildingComp& Producer, ContentId /*UnitDef*/) const
 {
-    // Walk the ring of tiles around the footprint and take the first passable one.
-    // Deterministic because the scan order is fixed; the navigation milestone will
-    // replace this with a proper factory exit lane.
+    // Search rings outward from building footprint for the closest passable tile without other units sitting on it
     for (int32_t Ring = 1; Ring <= 4; ++Ring)
     {
         const int32_t MinX = Producer.OriginTile.X - Ring;
@@ -893,6 +911,45 @@ Vec2 SimWorld::FindFreeSpawnPoint(const BuildingComp& Producer, ContentId /*Unit
                 {
                     continue;
                 }
+                const uint8_t T = Map.GetTile(X, Y);
+                if ((T & Tile_GroundPassable) != 0 && (T & Tile_Occupied) == 0 && (T & (Tile_Water | Tile_Cliff)) == 0)
+                {
+                    const Vec2 CandPos = Map.TileCenterToWorld(TileCoord(X, Y));
+                    bool bUnitNearby = false;
+                    for (size_t U = 0; U < Core.size() && U < Transforms.size(); ++U)
+                    {
+                        if (Core[U].bAlive && Core[U].Kind == EntityKind::Unit)
+                        {
+                            if (DistanceSquared(Transforms[U].Position, CandPos) < Fixed::FromInt(70 * 70))
+                            {
+                                bUnitNearby = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!bUnitNearby)
+                    {
+                        return CandPos;
+                    }
+                }
+            }
+        }
+    }
+
+    // Fallback: search any passable tile on ring 1..3
+    for (int32_t Ring = 1; Ring <= 3; ++Ring)
+    {
+        const int32_t MinX = Producer.OriginTile.X - Ring;
+        const int32_t MaxX = Producer.OriginTile.X + Producer.FootprintX - 1 + Ring;
+        const int32_t MinY = Producer.OriginTile.Y - Ring;
+        const int32_t MaxY = Producer.OriginTile.Y + Producer.FootprintY - 1 + Ring;
+
+        for (int32_t Y = MinY; Y <= MaxY; ++Y)
+        {
+            for (int32_t X = MinX; X <= MaxX; ++X)
+            {
+                const bool bOnRing = (X == MinX || X == MaxX || Y == MinY || Y == MaxY);
+                if (!bOnRing) continue;
                 const uint8_t T = Map.GetTile(X, Y);
                 if ((T & Tile_GroundPassable) != 0 && (T & Tile_Occupied) == 0)
                 {
@@ -997,9 +1054,16 @@ bool SimWorld::IsHostile(PlayerId A, PlayerId B) const
     if (A == kInvalidPlayer || B == kInvalidPlayer) { return false; }
     if (A == B) { return false; }
     if (A == kNeutralPlayer || B == kNeutralPlayer) { return false; }
-    // Team support lands with the lobby; every non-neutral player is hostile today.
+    if (A < kMaxPlayers && B < kMaxPlayers)
+    {
+        if (Players[A].Team != 0 && Players[A].Team == Players[B].Team)
+        {
+            return false;
+        }
+    }
     return true;
 }
+
 
 bool SimWorld::IsPlacementValid(ContentId BuildingDef, PlayerId Owner, const TileCoord& OriginTile) const
 {
@@ -1020,10 +1084,25 @@ bool SimWorld::IsPlacementValid(ContentId BuildingDef, PlayerId Owner, const Til
                 return false;
             }
             const uint8_t T = Map.GetTile(TX, TY);
-            if ((T & Tile_GroundPassable) == 0) { return false; }
-            if ((T & (Tile_Water | Tile_Cliff | Tile_Occupied | Tile_Resource)) != 0) { return false; }
+            if ((T & (Tile_Cliff | Tile_Occupied | Tile_Resource)) != 0)
+            {
+                return false;
+            }
+            if (D->Building.bWaterOnly)
+            {
+                if ((T & Tile_Water) == 0) { return false; }
+            }
+            else if (D->Building.bAllowOnWater)
+            {
+                if ((T & (Tile_GroundPassable | Tile_Water)) == 0) { return false; }
+            }
+            else
+            {
+                if ((T & Tile_GroundPassable) == 0 || (T & Tile_Water) != 0) { return false; }
+            }
         }
     }
+
 
     // Must sit inside the build radius of a completed structure that projects one.
     const Vec2 Centre = Map.TileCenterToWorld(OriginTile);
@@ -1437,6 +1516,67 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
             }
 
             return Reject(CommandReject::TargetInvalid);
+        }
+
+        case CommandType::ToggleSecondaryAbility:
+        {
+            if (Cmd.Primary == EntityId::Invalid() || Cmd.Primary.Index >= Core.size())
+            {
+                return Reject(CommandReject::NoSuchEntity);
+            }
+            const uint32_t I = Cmd.Primary.Index;
+            if (!Core[I].bAlive || Core[I].Owner != Cmd.Issuer)
+            {
+                return Reject(CommandReject::NotOwner);
+            }
+            const EntityDef* Def = Content ? Content->FindEntity(Core[I].Def) : nullptr;
+            if (Def == nullptr || !Def->Unit.bHasSecondaryAbility)
+            {
+                return Reject(CommandReject::UnknownContent);
+            }
+
+            if (Combats[I].SecondaryAbilityCooldownTicks > 0)
+            {
+                return Reject(CommandReject::OnCooldown);
+            }
+
+
+            Combats[I].bSecondaryModeActive = !Combats[I].bSecondaryModeActive;
+            if (Combats[I].bSecondaryModeActive)
+            {
+                if (Def->Unit.AbilityDurationTicks > 0)
+                {
+                    Combats[I].SecondaryAbilityDurationTicks = Def->Unit.AbilityDurationTicks;
+                }
+                Combats[I].SecondaryAbilityCooldownTicks = Def->Unit.AbilityCooldownTicks;
+            }
+            else
+            {
+                Combats[I].SecondaryAbilityDurationTicks = 0;
+            }
+
+            SimEvent Ev;
+            Ev.Type = SimEventType::SecondaryAbilityToggled;
+            Ev.Tick = CurrentTick;
+            Ev.Entity = MakeId(I);
+            Ev.Player = Cmd.Issuer;
+            Ev.Content = Core[I].Def;
+            Ev.Location = Transforms[I].Position;
+            Ev.Value = Combats[I].bSecondaryModeActive ? 1 : 0;
+            EmitEvent(Ev);
+            break;
+        }
+
+        case CommandType::CoopPing:
+        {
+            SimEvent Ev;
+            Ev.Type = SimEventType::CoopPingEmitted;
+            Ev.Tick = CurrentTick;
+            Ev.Player = Cmd.Issuer;
+            Ev.Location = Cmd.Location;
+            Ev.Value = Cmd.Param;
+            EmitEvent(Ev);
+            break;
         }
 
         case CommandType::PlaceBuilding:
@@ -1919,6 +2059,10 @@ void SimWorld::ApplyDamage(EntityId TargetId, int32_t BaseDamage, WarheadClass W
 
     const int32_t Multiplier = Content->GetDamageMultiplier(Warhead, D->Armor);
     int32_t Damage = (BaseDamage * Multiplier) / 100;
+    if (Combats[TargetId.Index].bSecondaryModeActive && D->Unit.AbilityArmorBonusPercent > 0)
+    {
+        Damage = (Damage * (100 - D->Unit.AbilityArmorBonusPercent)) / 100;
+    }
     // A weapon that is not useless against a target should always do at least one
     // point, otherwise rounding produces unkillable stalemates at low damage.
     if (Damage <= 0 && Multiplier > 0 && BaseDamage > 0)
@@ -1929,6 +2073,7 @@ void SimWorld::ApplyDamage(EntityId TargetId, int32_t BaseDamage, WarheadClass W
     {
         return;
     }
+
 
     HealthComp& H = Healths[TargetId.Index];
     H.Current -= Damage;
@@ -1955,7 +2100,17 @@ void SimWorld::ApplyDamage(EntityId TargetId, int32_t BaseDamage, WarheadClass W
     }
 }
 
+void SimWorld::TeleportEntity(EntityId Id, const Vec2& NewPosition)
+{
+    if (!IsAlive(Id))
+    {
+        return;
+    }
+    Transforms[Id.Index].Position = NewPosition;
+}
+
 void SimWorld::ApplySplashDamage(const Vec2& Center, Fixed Radius, int32_t BaseDamage, WarheadClass Warhead,
+
                                  int32_t FalloffPercent, EntityId Source, PlayerId SourcePlayer)
 {
     if (Radius <= Fixed::Zero())
@@ -3361,22 +3516,6 @@ namespace
 // Sentinel for "this formation has no living leader this tick".
 constexpr uint32_t kNoFormationLeader = 0xFFFFFFFFu;
 
-// Soft separation (see SystemMovement). Two units closer than this many world units
-// push apart. The tile is 200 units and the default CollisionRadius is 20, so this
-// keeps roughly three bodies per tile edge rather than forcing one unit per tile --
-// formations and choke points still work.
-constexpr int64_t kSeparationRadiusUnits = 56;
-
-// The separation nudge is deliberately smaller than the deadband below, so a pair
-// that has just been pushed apart cannot be pushed back on the following tick. That
-// asymmetry is what makes the fixed point stable instead of a two-tick oscillation.
-constexpr int64_t kSeparationStepUnits = 6;
-
-// Overlap below this is left alone. Without a deadband a pair sitting exactly at the
-// separation radius would jitter across it forever, reading as "arrived" to a
-// distance check while never actually settling.
-constexpr int64_t kSeparationDeadbandUnits = 10;
-
 // Returns the entity slot leading Formation, or kNoFormationLeader.
 //
 // A file-local free function rather than a SimWorld method: adding a member would
@@ -3450,9 +3589,15 @@ void SimWorld::SystemMovement()
         else if (Diff < -TurnPerTick) { T.Facing = WrapAngle(T.Facing - TurnPerTick); }
         else { T.Facing = DesiredFacing; }
 
-        const Fixed MaxSpeedPerTick = PerSecondToPerTick(Def.Unit.MaxSpeed);
+        Fixed EffectiveMaxSpeed = Def.Unit.MaxSpeed;
+        if (Combats[Index].bSecondaryModeActive)
+        {
+            EffectiveMaxSpeed = EffectiveMaxSpeed * Def.Unit.AbilitySpeedMultiplier;
+        }
+        const Fixed MaxSpeedPerTick = PerSecondToPerTick(EffectiveMaxSpeed);
         const Fixed AccelPerTick = PerSecondToPerTick(Def.Unit.Acceleration);
         const int32_t AlignedThreshold = kAngleTurn / 8;
+
         if (Diff > -AlignedThreshold && Diff < AlignedThreshold)
         {
             M.CurrentSpeed = FxMin(M.CurrentSpeed + AccelPerTick, MaxSpeedPerTick);
@@ -3908,25 +4053,8 @@ void SimWorld::SystemMovement()
             return;
         }
 
-        // Correct only overlap deeper than (radius - deadband); pairs in the slack
-        // band between that and the radius are already at rest and must not be moved.
-        constexpr int64_t kCorrectBelowUnits = kSeparationRadiusUnits - kSeparationDeadbandUnits;
-        static_assert(kSeparationStepUnits < kSeparationDeadbandUnits,
-                      "The nudge must be smaller than the deadband slack, or a pair that "
-                      "was just resolved is pushed back into corrective range on the next "
-                      "tick and the two oscillate forever.");
-        static_assert(kCorrectBelowUnits > 0, "Separation deadband cannot exceed the radius.");
+        const Fixed QueryRadius = Fixed::FromInt(260 + MapDescription::kTileSizeUnitsLocal * kSpatialCellTiles);
 
-        const Fixed CorrectBelowSq = Fixed::FromInt(kCorrectBelowUnits * kCorrectBelowUnits);
-        // Half the correction each, so a pair converges instead of one unit chasing a
-        // neighbour that never yields.
-        const Fixed HalfStep = Fixed::FromInt(kSeparationStepUnits) / int64_t(2);
-        const Fixed QueryRadius = Fixed::FromInt(kSeparationRadiusUnits +
-                                                MapDescription::kTileSizeUnitsLocal * kSpatialCellTiles);
-
-        // Local, not a member: adding one would mean editing SimWorld.h. Deliberately
-        // NOT SpatialQueryScratch -- that buffer is reused below and aliasing it would
-        // invalidate the candidate list mid-iteration.
         std::vector<Vec2> Offsets(Core.size(), Vec2::Zero());
         std::vector<uint32_t> Candidates;
         bool bAnyOverlap = false;
@@ -3934,46 +4062,110 @@ void SimWorld::SystemMovement()
         for (uint32_t I = 0; I < uint32_t(Core.size()); ++I)
         {
             if (!Core[I].bAlive || Core[I].Kind != EntityKind::Unit) continue;
+            const EntityDef* DefI = Content ? Content->FindEntity(Core[I].Def) : nullptr;
+            const Fixed RadI = DefI ? FxMax(DefI->Unit.CollisionRadius, Fixed::FromInt(30)) : Fixed::FromInt(35);
 
+            // 1. Unit vs Unit separation
             QuerySpatial(Transforms[I].Position, QueryRadius, Candidates);
             for (const uint32_t J : Candidates)
             {
-                // J > I visits each pair exactly once and keeps the push antisymmetric.
                 if (J <= I) continue;
                 if (!Core[J].bAlive || Core[J].Kind != EntityKind::Unit) continue;
+
+                const EntityDef* DefJ = Content ? Content->FindEntity(Core[J].Def) : nullptr;
+                const Fixed RadJ = DefJ ? FxMax(DefJ->Unit.CollisionRadius, Fixed::FromInt(30)) : Fixed::FromInt(35);
+
+                const Fixed DesiredSeparation = (RadI + RadJ) * Fixed::FromRatio(85, 100);
+                const Fixed Deadband = Fixed::FromInt(8);
+                const Fixed CorrectBelow = FxMax(Fixed::FromInt(20), DesiredSeparation - Deadband);
+                const Fixed CorrectBelowSq = CorrectBelow * CorrectBelow;
 
                 const Vec2 Delta = Transforms[J].Position - Transforms[I].Position;
                 const Fixed DistSq = Delta.LengthSquared();
                 if (DistSq.Raw >= CorrectBelowSq.Raw)
                 {
-                    continue;   // at or beyond the rest band: leave it alone
+                    continue;
+                }
+
+                // Tank Crushing Infantry (Classic Red Alert combat mechanic):
+                if (Core[I].Owner != Core[J].Owner && IsHostile(Core[I].Owner, Core[J].Owner))
+                {
+                    const bool bHeavyI = DefI && (DefI->Name.find("tank") != std::string::npos || DefI->Name.find("harvester") != std::string::npos || DefI->Name.find("mcv") != std::string::npos);
+                    const bool bInfJ = DefJ && (DefJ->Name.find("conscript") != std::string::npos || DefJ->Name.find("soldier") != std::string::npos || DefJ->Name.find("infantry") != std::string::npos || DefJ->Name.find("trooper") != std::string::npos || DefJ->Unit.CollisionRadius < Fixed::FromInt(32));
+                    if (bHeavyI && bInfJ && Movements[I].CurrentSpeed > Fixed::FromInt(3))
+                    {
+                        ApplyDamage(MakeId(J), 9999, WarheadClass::Crush, MakeId(I), Core[I].Owner);
+                        continue;
+                    }
+
+                    const bool bHeavyJ = DefJ && (DefJ->Name.find("tank") != std::string::npos || DefJ->Name.find("harvester") != std::string::npos || DefJ->Name.find("mcv") != std::string::npos);
+                    const bool bInfI = DefI && (DefI->Name.find("conscript") != std::string::npos || DefI->Name.find("soldier") != std::string::npos || DefI->Name.find("infantry") != std::string::npos || DefI->Name.find("trooper") != std::string::npos || DefI->Unit.CollisionRadius < Fixed::FromInt(32));
+                    if (bHeavyJ && bInfI && Movements[J].CurrentSpeed > Fixed::FromInt(3))
+                    {
+                        ApplyDamage(MakeId(I), 9999, WarheadClass::Crush, MakeId(J), Core[J].Owner);
+                        continue;
+                    }
                 }
 
                 Vec2 PushDir;
+                Fixed Overlap = Fixed::Zero();
                 if (DistSq.Raw == 0)
                 {
-                    // Exactly coincident: no separating direction can be derived from
-                    // the geometry, so take one from identity rather than leaving the
-                    // pair fused forever. Antisymmetric and identical on every peer --
-                    // the lower index goes -X, the higher +X.
                     PushDir = Vec2(Fixed::One(), Fixed::Zero());
+                    Overlap = CorrectBelow;
                 }
                 else
                 {
                     const Fixed Dist = FxSqrt(DistSq);
-                    if (Dist.Raw == 0) continue;   // FxSqrt underflow: treat as no-op
+                    if (Dist.Raw == 0) continue;
                     PushDir = Vec2(Delta.X / Dist, Delta.Y / Dist);
+                    Overlap = CorrectBelow - Dist;
                 }
 
+                const Fixed HalfStep = FxClamp(Overlap / int64_t(2), Fixed::FromInt(4), Fixed::FromInt(18));
                 Offsets[I] -= PushDir * HalfStep;
                 Offsets[J] += PushDir * HalfStep;
                 bAnyOverlap = true;
+            }
+
+            // 2. Unit vs Building/Structure separation
+            const TileCoord UnitTile = Map.WorldToTile(Transforms[I].Position);
+            for (int32_t DY = -1; DY <= 1; ++DY)
+            {
+                for (int32_t DX = -1; DX <= 1; ++DX)
+                {
+                    const int32_t TX = UnitTile.X + DX;
+                    const int32_t TY = UnitTile.Y + DY;
+                    if (TX < 0 || TY < 0 || TX >= Map.Width || TY >= Map.Height) continue;
+                    if ((Map.GetTile(TX, TY) & Tile_Occupied) != 0)
+                    {
+                        const Vec2 BldgCenter = Map.TileCenterToWorld(TileCoord(TX, TY));
+                        const Vec2 BldgDelta = Transforms[I].Position - BldgCenter;
+                        const Fixed BDistSq = BldgDelta.LengthSquared();
+                        const Fixed MinDist = RadI + Fixed::FromInt(MapDescription::kTileSizeUnitsLocal / 2 + 5);
+                        if (BDistSq < MinDist * MinDist)
+                        {
+                            Vec2 OutDir;
+                            if (BDistSq.Raw == 0)
+                            {
+                                OutDir = Vec2(Fixed::One(), Fixed::Zero());
+                            }
+                            else
+                            {
+                                const Fixed BDist = FxSqrt(BDistSq);
+                                OutDir = Vec2(BldgDelta.X / BDist, BldgDelta.Y / BDist);
+                            }
+                            Offsets[I] += OutDir * Fixed::FromInt(12);
+                            bAnyOverlap = true;
+                        }
+                    }
+                }
             }
         }
 
         if (!bAnyOverlap)
         {
-            return;   // already a fixed point; no position changes at all
+            return;
         }
 
         for (uint32_t I = 0; I < uint32_t(Core.size()); ++I)
@@ -3986,25 +4178,38 @@ void SimWorld::SystemMovement()
             const Nav::NavQuery Query = MakeNavigationQuery(*D);
             if (Query.LayerMask == Nav::NavLayer_None) continue;
 
-            // Separation may never push a unit into terrain it cannot occupy, or this
-            // becomes a way to shove units inside cliffs and buildings -- a hole
-            // straight through the navigation grid. IsTraversable is bounds-safe (an
-            // out-of-range tile resolves to the invalid cell and fails), so this also
-            // keeps nudged units on the map.
             const Vec2 Candidate = Transforms[I].Position + Offsets[I];
             if (NavigationGrid->IsTraversable(Map.WorldToTile(Candidate), Query))
             {
                 Transforms[I].Position = Candidate;
-                if (Map.Width > 0 && Map.Height > 0)
+            }
+            else
+            {
+                // Sliding fallback: try X and Y separately
+                const Vec2 CandX = Transforms[I].Position + Vec2(Offsets[I].X, Fixed::Zero());
+                if (NavigationGrid->IsTraversable(Map.WorldToTile(CandX), Query))
                 {
-                    const Fixed MinMargin = Fixed::FromInt(50);
-                    const Fixed MaxX = Fixed::FromInt(int64_t(Map.Width) * MapDescription::kTileSizeUnitsLocal) - MinMargin;
-                    const Fixed MaxY = Fixed::FromInt(int64_t(Map.Height) * MapDescription::kTileSizeUnitsLocal) - MinMargin;
-                    if (Transforms[I].Position.X < MinMargin) { Transforms[I].Position.X = MinMargin; }
-                    else if (Transforms[I].Position.X > MaxX) { Transforms[I].Position.X = MaxX; }
-                    if (Transforms[I].Position.Y < MinMargin) { Transforms[I].Position.Y = MinMargin; }
-                    else if (Transforms[I].Position.Y > MaxY) { Transforms[I].Position.Y = MaxY; }
+                    Transforms[I].Position = CandX;
                 }
+                else
+                {
+                    const Vec2 CandY = Transforms[I].Position + Vec2(Fixed::Zero(), Offsets[I].Y);
+                    if (NavigationGrid->IsTraversable(Map.WorldToTile(CandY), Query))
+                    {
+                        Transforms[I].Position = CandY;
+                    }
+                }
+            }
+
+            if (Map.Width > 0 && Map.Height > 0)
+            {
+                const Fixed MinMargin = Fixed::FromInt(50);
+                const Fixed MaxX = Fixed::FromInt(int64_t(Map.Width) * MapDescription::kTileSizeUnitsLocal) - MinMargin;
+                const Fixed MaxY = Fixed::FromInt(int64_t(Map.Height) * MapDescription::kTileSizeUnitsLocal) - MinMargin;
+                if (Transforms[I].Position.X < MinMargin) { Transforms[I].Position.X = MinMargin; }
+                else if (Transforms[I].Position.X > MaxX) { Transforms[I].Position.X = MaxX; }
+                if (Transforms[I].Position.Y < MinMargin) { Transforms[I].Position.Y = MinMargin; }
+                else if (Transforms[I].Position.Y > MaxY) { Transforms[I].Position.Y = MaxY; }
             }
         }
     };
@@ -4336,12 +4541,38 @@ void SimWorld::SystemCombat()
         {
             C.CooldownTicks -= 1;
         }
+        if (C.SecondaryAbilityCooldownTicks > 0)
+        {
+            C.SecondaryAbilityCooldownTicks -= 1;
+        }
+        if (C.SecondaryAbilityDurationTicks > 0)
+        {
+            C.SecondaryAbilityDurationTicks -= 1;
+            if (C.SecondaryAbilityDurationTicks == 0)
+            {
+                C.bSecondaryModeActive = false;
+                SimEvent Ev;
+                Ev.Type = SimEventType::SecondaryAbilityToggled;
+                Ev.Tick = CurrentTick;
+                Ev.Entity = MakeId(I);
+                Ev.Player = Core[I].Owner;
+                Ev.Content = Core[I].Def;
+                Ev.Location = Transforms[I].Position;
+                Ev.Value = 0;
+                EmitEvent(Ev);
+            }
+        }
 
         const EntityDef* D = Content->FindEntity(Core[I].Def);
         if (D == nullptr || !D->Weapon.IsValid())
         {
             continue;
         }
+        if (C.bSecondaryModeActive && D->Unit.bAbilityDisablesPrimaryWeapon)
+        {
+            continue;
+        }
+
         if (Kind == EntityKind::Building && Buildings[I].State != ConstructionState::Complete)
         {
             continue;   // a turret under construction does not shoot
@@ -5345,7 +5576,11 @@ uint64_t SimWorld::ComputeStateChecksum() const
         H.FeedInt32(Combats[I].CooldownTicks);
         H.FeedInt32(Combats[I].AcquireCooldownTicks);
         H.FeedUInt64(Combats[I].Target.Packed());
+        H.FeedBool(Combats[I].bSecondaryModeActive);
+        H.FeedInt32(Combats[I].SecondaryAbilityCooldownTicks);
+        H.FeedInt32(Combats[I].SecondaryAbilityDurationTicks);
         H.FeedInt64(Movements[I].CurrentSpeed.Raw);
+
         H.FeedBool(Movements[I].bHasDestination);
         H.FeedInt64(Movements[I].Destination.X.Raw);
         H.FeedInt64(Movements[I].Destination.Y.Raw);
@@ -5419,9 +5654,170 @@ uint64_t SimWorld::ComputeStateChecksum() const
     return H.Get();
 }
 
+StateHashBreakdown SimWorld::ComputeDetailedChecksum() const
+{
+    StateHashBreakdown Breakdown;
+    Breakdown.Overall = ComputeStateChecksum();
+
+    Hash64 HRng;
+    HRng.FeedUInt64(Rng.GetState());
+    HRng.FeedUInt64(ReconRng.GetState());
+    Breakdown.Rng = HRng.Get();
+
+    Hash64 HEcon;
+    for (PlayerId I = 0; I < kMaxPlayers; ++I)
+    {
+        const PlayerState& P = Players[I];
+        HEcon.FeedBool(P.bActive);
+        HEcon.FeedBool(P.bDefeated);
+        HEcon.FeedInt32(P.Credits);
+        HEcon.FeedInt32(P.PowerProduced);
+        HEcon.FeedInt32(P.PowerConsumed);
+        HEcon.FeedInt32(P.TotalHarvested);
+        HEcon.FeedUInt8(uint8_t(P.LastPowerTier));
+        for (const ContentId& C : P.CompletedBuildingTypes)
+        {
+            HEcon.FeedUInt32(C.Value);
+        }
+    }
+
+    Hash64 HEnt, HPos, HHealth, HCombat, HProd, HOrders;
+
+    for (uint32_t I = 0; I < Core.size(); ++I)
+    {
+        HEnt.FeedBool(Core[I].bAlive);
+        if (!Core[I].bAlive)
+        {
+            continue;
+        }
+
+        HEnt.FeedUInt32(I);
+        HEnt.FeedUInt32(Core[I].Generation);
+        HEnt.FeedUInt32(Core[I].Def.Value);
+        HEnt.FeedUInt8(uint8_t(Core[I].Kind));
+        HEnt.FeedUInt8(Core[I].Owner);
+
+        HPos.FeedInt64(Transforms[I].Position.X.Raw);
+        HPos.FeedInt64(Transforms[I].Position.Y.Raw);
+        HPos.FeedInt32(Transforms[I].Facing);
+        HPos.FeedInt32(Transforms[I].TurretFacing);
+        HPos.FeedInt64(Movements[I].CurrentSpeed.Raw);
+        HPos.FeedBool(Movements[I].bHasDestination);
+        HPos.FeedInt64(Movements[I].Destination.X.Raw);
+        HPos.FeedInt64(Movements[I].Destination.Y.Raw);
+
+        HHealth.FeedInt32(Healths[I].Current);
+
+        HCombat.FeedInt32(Combats[I].CooldownTicks);
+        HCombat.FeedInt32(Combats[I].AcquireCooldownTicks);
+        HCombat.FeedUInt64(Combats[I].Target.Packed());
+        HCombat.FeedBool(Combats[I].bSecondaryModeActive);
+        HCombat.FeedInt32(Combats[I].SecondaryAbilityCooldownTicks);
+        HCombat.FeedInt32(Combats[I].SecondaryAbilityDurationTicks);
+        HCombat.FeedInt64(Morales[I].Morale.Raw);
+
+        HCombat.FeedInt64(Morales[I].Fatigue.Raw);
+        HCombat.FeedInt64(Morales[I].Suppression.Raw);
+        HCombat.FeedInt32(Morales[I].TicksUnderFire);
+
+        HOrders.FeedInt32(Orders[I].Count);
+        HOrders.FeedUInt8(uint8_t(DirectControls[I].Phase));
+        HOrders.FeedUInt8(DirectControls[I].Controller);
+        HOrders.FeedInt32(DirectControls[I].TurretYawCentiDeg);
+        HOrders.FeedInt32(DirectControls[I].TurretPitchCentiDeg);
+        HOrders.FeedInt32(DirectControls[I].CooldownTicksPrimary);
+        HOrders.FeedInt32(DirectControls[I].CooldownTicksSecondary);
+
+        if (Core[I].Kind == EntityKind::Building)
+        {
+            HProd.FeedUInt8(uint8_t(Buildings[I].State));
+            HProd.FeedUInt8(uint8_t(Buildings[I].Priority));
+            HProd.FeedBool(Buildings[I].bRepairing);
+            HProd.FeedInt32(Buildings[I].RepairCreditAccumulator);
+            HProd.FeedInt32(Buildings[I].ConstructionProgressTicks);
+            HProd.FeedInt32(int32_t(Buildings[I].Queue.size()));
+            for (const ProductionItem& QueueItem : Buildings[I].Queue)
+            {
+                HProd.FeedUInt32(QueueItem.Content.Value);
+                HProd.FeedInt32(QueueItem.ProgressTicks);
+                HProd.FeedUInt8(uint8_t(QueueItem.State));
+                HProd.FeedInt32(QueueItem.PaidCredits);
+                HProd.FeedInt32(QueueItem.Priority);
+                HProd.FeedBool(QueueItem.bPaused);
+            }
+        }
+        else if (Core[I].Kind == EntityKind::Unit)
+        {
+            HEcon.FeedUInt8(uint8_t(Harvesters[I].State));
+            HEcon.FeedInt32(Harvesters[I].Cargo);
+        }
+        else if (Core[I].Kind == EntityKind::ResourceNode)
+        {
+            HEcon.FeedInt32(ResourceNodes[I].Amount);
+        }
+        else if (Core[I].Kind == EntityKind::Projectile)
+        {
+            HCombat.FeedUInt64(Projectiles[I].Source.Packed());
+            HCombat.FeedUInt64(Projectiles[I].Target.Packed());
+            HCombat.FeedInt64(Projectiles[I].ImpactPoint.X.Raw);
+            HCombat.FeedInt64(Projectiles[I].ImpactPoint.Y.Raw);
+            HCombat.FeedUInt32(Projectiles[I].Weapon.Value);
+            HCombat.FeedUInt8(Projectiles[I].OwnerPlayer);
+            HCombat.FeedInt64(Projectiles[I].Speed.Raw);
+        }
+    }
+
+    Breakdown.Economy = HEcon.Get();
+    Breakdown.Entities = HEnt.Get();
+    Breakdown.Positions = HPos.Get();
+    Breakdown.Health = HHealth.Get();
+    Breakdown.Combat = HCombat.Get();
+    Breakdown.Production = HProd.Get();
+    Breakdown.Orders = HOrders.Get();
+
+    return Breakdown;
+}
+
+SimSnapshot SimWorld::CaptureSnapshot() const
+{
+    SimSnapshot Snapshot;
+    Snapshot.Tick = CurrentTick;
+    Snapshot.Checksum = ComputeStateChecksum();
+    Snapshot.Breakdown = ComputeDetailedChecksum();
+
+    ByteWriter Writer;
+    Serialize(Writer);
+    const auto& Buffer = Writer.GetBuffer();
+    Snapshot.StateBuffer.assign(Buffer.begin(), Buffer.end());
+    Snapshot.bValid = true;
+    return Snapshot;
+}
+
+bool SimWorld::RestoreFromSnapshot(const SimSnapshot& Snapshot)
+{
+    if (!Snapshot.bValid || Snapshot.StateBuffer.empty())
+    {
+        return false;
+    }
+
+    ByteReader Reader(Snapshot.StateBuffer);
+    const bool bSuccess = Deserialize(Reader, Content);
+    if (bSuccess)
+    {
+        CurrentTick = Snapshot.Tick;
+    }
+    return bSuccess;
+}
+
+void SimWorld::RecordSnapshot()
+{
+    SnapshotHistory.Push(CaptureSnapshot());
+}
+
 // ---------------------------------------------------------------------------
 // Serialization & Restoration
 // ---------------------------------------------------------------------------
+
 
 constexpr uint32_t kSimSaveMagic = 0x52413453u; // "RA4S"
 constexpr uint32_t kSimSaveVersion = 9;

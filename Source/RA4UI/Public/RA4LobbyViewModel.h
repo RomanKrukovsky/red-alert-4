@@ -19,7 +19,13 @@ struct FRA4LobbyPlayerView
     FText PlayerName;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Lobby")
-    ERA4FactionTheme Faction = ERA4FactionTheme::USSR;
+    ERA4FactionTheme Faction = ERA4FactionTheme::EurasianPact;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Lobby")
+    FText CountryName;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Lobby")
+    FText DoctrineName;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Lobby")
     int32 ColorIndex = 0;

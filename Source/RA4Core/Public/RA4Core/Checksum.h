@@ -44,4 +44,73 @@ inline uint64_t HashBytes(const void* Data, size_t Size)
     return H.Get();
 }
 
+// Subsystem-isolated breakdown of the simulation state checksum.
+// When a desync occurs in multiplayer, comparing these individual subsystem hashes
+// immediately pinpoints the exact culprit subsystem without binary diffing.
+struct StateHashBreakdown
+{
+    uint64_t Overall = 0;
+    uint64_t Entities = 0;
+    uint64_t Positions = 0;
+    uint64_t Health = 0;
+    uint64_t Economy = 0;
+    uint64_t Combat = 0;
+    uint64_t Production = 0;
+    uint64_t Orders = 0;
+    uint64_t Rng = 0;
+
+    bool operator==(const StateHashBreakdown& O) const
+    {
+        return Overall == O.Overall &&
+               Entities == O.Entities &&
+               Positions == O.Positions &&
+               Health == O.Health &&
+               Economy == O.Economy &&
+               Combat == O.Combat &&
+               Production == O.Production &&
+               Orders == O.Orders &&
+               Rng == O.Rng;
+    }
+
+    bool operator!=(const StateHashBreakdown& O) const { return !(*this == O); }
+
+    // Returns false if identical; returns true and appends diff explanations if diverged.
+    bool FindDivergence(const StateHashBreakdown& Peer, char* OutBuffer, size_t BufferSize) const
+    {
+        if (*this == Peer)
+        {
+            return false;
+        }
+
+        if (!OutBuffer || BufferSize == 0)
+        {
+            return true;
+        }
+
+        size_t Written = 0;
+        auto Append = [&](const char* Subsystem, uint64_t LocalVal, uint64_t PeerVal)
+        {
+            if (LocalVal != PeerVal && Written < BufferSize - 1)
+            {
+                // Simple append without snprintf dependencies
+                const char* Prefix = (Written == 0) ? "Desync in: " : ", ";
+                while (*Prefix && Written < BufferSize - 1) OutBuffer[Written++] = *Prefix++;
+                while (*Subsystem && Written < BufferSize - 1) OutBuffer[Written++] = *Subsystem++;
+            }
+        };
+
+        Append("Entities", Entities, Peer.Entities);
+        Append("Positions", Positions, Peer.Positions);
+        Append("Health", Health, Peer.Health);
+        Append("Economy", Economy, Peer.Economy);
+        Append("Combat", Combat, Peer.Combat);
+        Append("Production", Production, Peer.Production);
+        Append("Orders", Orders, Peer.Orders);
+        Append("Rng", Rng, Peer.Rng);
+
+        OutBuffer[Written] = '\0';
+        return true;
+    }
+};
+
 } // namespace RA4

@@ -25,6 +25,7 @@
 #include "RA4Navigation/MNavRouter.h"
 #include "RA4Navigation/ReservationGrid.h"
 #include "RA4Simulation/SimTypes.h"
+#include "RA4Simulation/SimSnapshot.h"
 
 #include "FogOfWarGrid.h"
 
@@ -46,10 +47,12 @@ struct MatchSetup
     struct PlayerSlot
     {
         bool bActive = false;
+        uint8_t Team = 0;
         FactionId Faction = FactionId::None;
         int32_t StartingCredits = 10000;
         int32_t StartPositionIndex = 0;
     };
+
     PlayerSlot Players[kMaxPlayers];
 };
 
@@ -111,6 +114,7 @@ public:
     EntityId MakeId(uint32_t Index) const;
 
     const PlayerState& GetPlayer(PlayerId Id) const;
+    void AddCredits(PlayerId Id, int32_t Amount) { if (Id < kMaxPlayers) { Players[Id].Credits += Amount; } }
     const MapDescription& GetMap() const { return Map; }
     MapDescription& GetMapMutable() { return Map; }
     const ContentDatabase* GetContent() const { return Content; }
@@ -143,6 +147,8 @@ public:
     EntityId SpawnBuilding(ContentId Def, PlayerId Owner, const TileCoord& OriginTile, bool bInstantComplete);
     EntityId SpawnResourceNode(ContentId Def, const TileCoord& Tile, int32_t Amount);
     void DebugDamage(EntityId TargetId, int32_t DamageAmount);
+    void TeleportEntity(EntityId Id, const Vec2& NewPosition);
+
 
     // --- Commands ----------------------------------------------------------
     // Validation is total: ownership, liveness, affordability, tech, placement and
@@ -159,10 +165,18 @@ public:
     void CheatInstantBuild(PlayerId Owner);
     void CheatToggleGodMode(PlayerId Owner);
 
-    // --- Determinism & Save/Restore -----------------------------------------
+    // --- Determinism, Snapshots & Save/Restore -----------------------------
     // Hashes every value that can influence future state. Deliberately excludes
     // event lists and caches, which are outputs rather than state.
     uint64_t ComputeStateChecksum() const;
+    StateHashBreakdown ComputeDetailedChecksum() const;
+
+    SimSnapshot CaptureSnapshot() const;
+    bool RestoreFromSnapshot(const SimSnapshot& Snapshot);
+    void RecordSnapshot(); // Captures and stores current snapshot into ring buffer
+
+    SnapshotRingBuffer& GetSnapshotHistory() { return SnapshotHistory; }
+    const SnapshotRingBuffer& GetSnapshotHistory() const { return SnapshotHistory; }
 
     void Serialize(ByteWriter& W) const;
     bool Deserialize(ByteReader& R, const ContentDatabase* InContent);
@@ -172,6 +186,9 @@ public:
     void ClearEvents() { Events.clear(); }
 
     Random& GetRandom() { return Rng; }
+    bool IsHostile(PlayerId A, PlayerId B) const;
+
+
 
     // --- Navigation milestone diagnostics -----------------------------------
     const MovementStats& GetMovementStats() const { return Stats; }
@@ -205,8 +222,12 @@ private:
     void SystemVictory();
 
 
+    friend struct VacuumImploderState;
+    friend class ExoticSuperweaponPhysics;
+
     // --- Internals ---------------------------------------------------------
     EntityId AllocateEntity();
+
     // bWasSold distinguishes a voluntary sale from a violent death. It is a
     // parameter rather than a flag on BuildingComp because the intent lasts exactly
     // one tick: a persisted flag can outlive the sale it described (a save taken
@@ -263,8 +284,8 @@ private:
     // Appends live entity indices whose cell overlaps the square around Centre.
     void QuerySpatial(const Vec2& Centre, Fixed Radius, std::vector<uint32_t>& Out) const;
 
-    bool IsHostile(PlayerId A, PlayerId B) const;
     Vec2 FindFreeSpawnPoint(const BuildingComp& Producer, ContentId UnitDef) const;
+
     void EmitEvent(const SimEvent& Event) { Events.push_back(Event); }
     void FireWeapon(EntityId Attacker, EntityId TargetId, const WeaponDef& Weapon);
 
@@ -371,6 +392,8 @@ private:
     // throttled rather than trusted; see Docs/ThreatModel.md.
     int32_t CommandsThisTick[kMaxPlayers] = {};
     static constexpr int32_t kMaxCommandsPerPlayerPerTick = 64;
+
+    SnapshotRingBuffer SnapshotHistory;
 };
 
 } // namespace RA4

@@ -12,6 +12,7 @@
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
+#include "Components/Button.h"
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/SizeBox.h"
@@ -127,6 +128,23 @@ URA4UIDataProviderSubsystem* URA4NotificationFeedWidget::GetProvider() const
     return World != nullptr ? World->GetSubsystem<URA4UIDataProviderSubsystem>() : nullptr;
 }
 
+void URA4NotificationFeedWidget::TriggerAlertClick(int32 Index)
+{
+    if (AlertLocations.IsValidIndex(Index))
+    {
+        if (URA4UIDataProviderSubsystem* Provider = GetProvider())
+        {
+            Provider->RequestJumpToAlert(AlertLocations[Index]);
+        }
+    }
+}
+
+void URA4NotificationFeedWidget::OnAlert0Clicked() { TriggerAlertClick(0); }
+void URA4NotificationFeedWidget::OnAlert1Clicked() { TriggerAlertClick(1); }
+void URA4NotificationFeedWidget::OnAlert2Clicked() { TriggerAlertClick(2); }
+void URA4NotificationFeedWidget::OnAlert3Clicked() { TriggerAlertClick(3); }
+void URA4NotificationFeedWidget::OnAlert4Clicked() { TriggerAlertClick(4); }
+
 void URA4NotificationFeedWidget::Refresh()
 {
     const URA4UIDataProviderSubsystem* Provider = GetProvider();
@@ -136,6 +154,7 @@ void URA4NotificationFeedWidget::Refresh()
     }
 
     FeedBox->ClearChildren();
+    AlertLocations.Reset();
 
     const TArray<FRA4Alert>& Alerts = Provider->GetAlerts();
     const int32 Count = FMath::Min(Alerts.Num(), kMaxVisibleAlerts);
@@ -145,8 +164,7 @@ void URA4NotificationFeedWidget::Refresh()
         const FLinearColor& Accent = SeverityAccent(Alert.Severity);
         const FString Base = FString::Printf(TEXT("Alert%d"), Index);
 
-        // Severity is shown as a coloured edge strip on the left of the row, the
-        // same treatment the reference uses, rather than tinting the whole row.
+        // Severity is shown as a coloured edge strip on the left of the row
         UBorder* EdgeStrip = WidgetTree->ConstructWidget<UBorder>(
             UBorder::StaticClass(), *(Base + TEXT("Edge")));
         EdgeStrip->SetBrushColor(Accent);
@@ -189,7 +207,32 @@ void URA4NotificationFeedWidget::Refresh()
         RowPanel->SetPadding(FMargin(0.0f));
         RowPanel->SetContent(Row);
 
-        if (UVerticalBoxSlot* RowSlot = FeedBox->AddChildToVerticalBox(RowPanel))
+        UButton* RowButton = WidgetTree->ConstructWidget<UButton>(
+            UButton::StaticClass(), *(Base + TEXT("Button")));
+        FButtonStyle Style = RowButton->GetStyle();
+        Style.Normal.DrawAs = ESlateBrushDrawType::NoDrawType;
+        Style.Hovered.DrawAs = ESlateBrushDrawType::Box;
+        Style.Hovered.TintColor = FSlateColor(FLinearColor(0.2f, 0.4f, 0.6f, 0.35f));
+        Style.Pressed.DrawAs = ESlateBrushDrawType::Box;
+        Style.Pressed.TintColor = FSlateColor(FLinearColor(0.3f, 0.6f, 0.9f, 0.6f));
+        RowButton->SetStyle(Style);
+        RowButton->SetContent(RowPanel);
+
+        if (Alert.bHasLocation)
+        {
+            AlertLocations.Add(Alert.WorldLocation);
+            if (Index == 0) RowButton->OnClicked.AddDynamic(this, &URA4NotificationFeedWidget::OnAlert0Clicked);
+            else if (Index == 1) RowButton->OnClicked.AddDynamic(this, &URA4NotificationFeedWidget::OnAlert1Clicked);
+            else if (Index == 2) RowButton->OnClicked.AddDynamic(this, &URA4NotificationFeedWidget::OnAlert2Clicked);
+            else if (Index == 3) RowButton->OnClicked.AddDynamic(this, &URA4NotificationFeedWidget::OnAlert3Clicked);
+            else if (Index == 4) RowButton->OnClicked.AddDynamic(this, &URA4NotificationFeedWidget::OnAlert4Clicked);
+        }
+        else
+        {
+            AlertLocations.Add(FVector2D::ZeroVector);
+        }
+
+        if (UVerticalBoxSlot* RowSlot = FeedBox->AddChildToVerticalBox(RowButton))
         {
             RowSlot->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 3.0f));
             RowSlot->SetHorizontalAlignment(HAlign_Fill);

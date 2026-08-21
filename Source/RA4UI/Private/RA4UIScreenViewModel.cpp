@@ -14,10 +14,11 @@ URA4UIScreenViewModel::URA4UIScreenViewModel()
     };
 
     LobbySlots = {
-        {LOCTEXT("LobbyCommander", "КОМАНДУЮЩИЙ"), ERA4FactionTheme::USSR, true},
-        {LOCTEXT("LobbyWard", "АДМИРАЛ ВАРД"), ERA4FactionTheme::Allies, true},
-        {LOCTEXT("LobbyGao", "ГЕНЕРАЛ ГАО"), ERA4FactionTheme::EasternCoalition, false},
-        {LOCTEXT("LobbyChronos", "ХРОНОС-07"), ERA4FactionTheme::Chronolegion, false},
+        {LOCTEXT("LobbySokolov", "ГЕНЕРАЛ СОКОЛОВ"), ERA4FactionTheme::EurasianPact, true},
+        {LOCTEXT("LobbyWard", "АДМИРАЛ УОРД"), ERA4FactionTheme::AtlanticAlliance, true},
+        {LOCTEXT("LobbyZhang", "ГЕНЕРАЛ ЧЖАН"), ERA4FactionTheme::EasternCoalition, false},
+        {LOCTEXT("LobbyTanaka", "КОМАНДУЮЩИЙ ТАНАКА"), ERA4FactionTheme::PacificPact, false},
+        {LOCTEXT("LobbyRezai", "КОМАНДИР РЕЗАИ"), ERA4FactionTheme::Independent, false},
     };
 }
 

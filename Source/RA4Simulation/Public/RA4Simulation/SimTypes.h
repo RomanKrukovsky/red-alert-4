@@ -360,7 +360,13 @@ struct CombatComp
     // identical on every machine, and it only delays re-acquisition. It cannot
     // change WHICH target is chosen when a search does run.
     int32_t AcquireCooldownTicks = 0;
+
+    // --- Secondary Ability / Dual Mode (RA3 F-ability) ---
+    bool bSecondaryModeActive = false;
+    int32_t SecondaryAbilityCooldownTicks = 0;
+    int32_t SecondaryAbilityDurationTicks = 0;
 };
+
 
 enum class ConstructionState : uint8_t
 {
@@ -523,8 +529,10 @@ struct PlayerState
 {
     bool bActive = false;
     bool bDefeated = false;
+    uint8_t Team = 0;
     FactionId Faction = FactionId::None;
     int32_t Credits = 0;
+
 
     int32_t PowerProduced = 0;
     int32_t PowerConsumed = 0;
@@ -604,7 +612,10 @@ enum class SimEventType : uint8_t
     DirectControlFireRejected,
     MCVDeployed,
     MCVUndeployed,
+    SecondaryAbilityToggled,
+    CoopPingEmitted,
 };
+
 
 struct SimEvent
 {

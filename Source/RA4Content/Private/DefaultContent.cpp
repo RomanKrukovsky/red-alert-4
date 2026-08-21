@@ -355,6 +355,7 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Building.bProvidesBuildRadius = true;
         E.Building.BuildRadius = Metres(12);
         E.Building.BundledUnit = S.Harvester;   // C&C convention: refinery ships a harvester
+
         E.Production.Cost = 2000;
         E.Production.BuildTimeTicks = SecondsToTicks(20);
         E.Production.Category = ProductionCategory::Structure;
@@ -738,7 +739,13 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Unit.TurretTurnRatePerSecond = 1600;
         E.Unit.CollisionRadius = Fixed::FromInt(110);
         E.Unit.bCanCrushInfantry = true;
+        E.Unit.bHasSecondaryAbility = true;
+        E.Unit.AbilityCooldownTicks = SecondsToTicks(10);
+        E.Unit.AbilityDurationTicks = SecondsToTicks(5);
+        E.Unit.AbilitySpeedMultiplier = Fixed::FromRatio(1, 2);
+        E.Unit.AbilityArmorBonusPercent = 50;
         E.Production.Cost = S.TankCost;
+
         E.Production.BuildTimeTicks = SecondsToTicks(12);
         E.Production.Category = ProductionCategory::Vehicle;
         E.Production.Tier = TechTier::T2;

@@ -10,6 +10,8 @@ FRA4LobbyPlayerView MakeLobbyPlayer(
     const TCHAR* Id,
     const FText& Name,
     const ERA4FactionTheme Faction,
+    const FText& Country,
+    const FText& Doctrine,
     const int32 Color,
     const int32 Team,
     const int32 Ping,
@@ -19,6 +21,8 @@ FRA4LobbyPlayerView MakeLobbyPlayer(
     Player.PlayerId = FName(Id);
     Player.PlayerName = Name;
     Player.Faction = Faction;
+    Player.CountryName = Country;
+    Player.DoctrineName = Doctrine;
     Player.ColorIndex = Color;
     Player.Team = Team;
     Player.Ping = Ping;
@@ -43,24 +47,25 @@ FRA4LobbyChatMessageView MakeChat(
 URA4LobbyViewModel::URA4LobbyViewModel()
 {
     Players = {
-        MakeLobbyPlayer(TEXT("sokolov_1945"), LOCTEXT("Sokolov", "SOKOLOV_1945"), ERA4FactionTheme::USSR, 0, 1, 32, true),
-        MakeLobbyPlayer(TEXT("allied_command"), LOCTEXT("AlliedCommand", "Allied_Command"), ERA4FactionTheme::Allies, 1, 1, 41),
-        MakeLobbyPlayer(TEXT("dragon_warlord"), LOCTEXT("DragonWarlord", "Dragon_Warlord"), ERA4FactionTheme::EasternCoalition, 2, 2, 37),
-        MakeLobbyPlayer(TEXT("chrono_legionnaire"), LOCTEXT("ChronoLegionnaire", "ChronoLegionnaire"), ERA4FactionTheme::Chronolegion, 3, 2, 45),
-        MakeLobbyPlayer(TEXT("red_october"), LOCTEXT("RedOctober", "RedOctober"), ERA4FactionTheme::USSR, 4, 3, 29),
-        MakeLobbyPlayer(TEXT("sky_eagle"), LOCTEXT("SkyEagle", "SkyEagle"), ERA4FactionTheme::Allies, 5, 3, 52),
-        MakeLobbyPlayer(TEXT("jade_tiger"), LOCTEXT("JadeTiger", "JadeTiger"), ERA4FactionTheme::EasternCoalition, 6, 4, 34),
-        MakeLobbyPlayer(TEXT("time_walker"), LOCTEXT("TimeWalker", "TimeWalker"), ERA4FactionTheme::Chronolegion, 7, 4, 47)
+        MakeLobbyPlayer(TEXT("sokolov_1945"), LOCTEXT("Sokolov", "SOKOLOV_1945"), ERA4FactionTheme::EurasianPact, LOCTEXT("C_RU", "РОССИЯ"), LOCTEXT("D_RU", "ТЯЖЁЛЫЙ ПРОРЫВ"), 0, 1, 32, true),
+        MakeLobbyPlayer(TEXT("allied_command"), LOCTEXT("AlliedCommand", "Allied_Command"), ERA4FactionTheme::AtlanticAlliance, LOCTEXT("C_US", "США"), LOCTEXT("D_US", "СЕТЕВАЯ ВОЙНА"), 1, 1, 41),
+        MakeLobbyPlayer(TEXT("jade_tiger"), LOCTEXT("JadeTiger", "JadeTiger"), ERA4FactionTheme::EasternCoalition, LOCTEXT("C_CN", "КИТАЙ"), LOCTEXT("D_CN", "ДРОНОВАЯ ВОЙНА"), 2, 2, 37),
+        MakeLobbyPlayer(TEXT("shin_kaze"), LOCTEXT("ShinKaze", "ShinKaze"), ERA4FactionTheme::PacificPact, LOCTEXT("C_JP", "ЯПОНИЯ"), LOCTEXT("D_JP", "ОБОРОНА ОСТРОВОВ"), 3, 2, 45),
+        MakeLobbyPlayer(TEXT("desert_signal"), LOCTEXT("DesertSignal", "DesertSignal"), ERA4FactionTheme::Independent, LOCTEXT("C_IR", "ИРАН"), LOCTEXT("D_IR", "РАКЕТНЫЕ ВОЙСКА"), 4, 3, 29),
+        MakeLobbyPlayer(TEXT("amazonas"), LOCTEXT("Amazonas", "Amazonas"), ERA4FactionTheme::Independent, LOCTEXT("C_BR", "БРАЗИЛИЯ"), LOCTEXT("D_BR", "РЕЧНАЯ МОБИЛЬНОСТЬ"), 5, 3, 52),
+        MakeLobbyPlayer(TEXT("nord_wolf"), LOCTEXT("NordWolf", "NordWolf"), ERA4FactionTheme::AtlanticAlliance, LOCTEXT("C_DE", "ГЕРМАНИЯ"), LOCTEXT("D_DE", "ВОЗДУШНОЕ ГОСПОДСТВО"), 6, 4, 34),
+        MakeLobbyPlayer(TEXT("southern_cross"), LOCTEXT("SouthernCross", "SouthernCross"), ERA4FactionTheme::PacificPact, LOCTEXT("C_AU", "АВСТРАЛИЯ"), LOCTEXT("D_AU", "ЭКСПЕДИЦИОННЫЕ СИЛЫ"), 7, 4, 47)
     };
 
     ChatMessages = {
-        MakeChat(LOCTEXT("ChatSokolov", "SOKOLOV_1945"), LOCTEXT("ChatSokolovMessage", "Всем удачи. За Родину!"), FLinearColor(0.95f, 0.18f, 0.20f, 1.0f)),
-        MakeChat(LOCTEXT("ChatAllied", "Allied_Command"), LOCTEXT("ChatAlliedMessage", "For freedom!"), FLinearColor(0.22f, 0.58f, 1.0f, 1.0f)),
-        MakeChat(LOCTEXT("ChatDragon", "Dragon_Warlord"), LOCTEXT("ChatDragonMessage", "Честь и традиции."), FLinearColor(0.42f, 0.86f, 0.26f, 1.0f)),
-        MakeChat(LOCTEXT("ChatChrono", "ChronoLegionnaire"), LOCTEXT("ChatChronoMessage", "Время на нашей стороне."), FLinearColor(0.70f, 0.32f, 1.0f, 1.0f)),
-        MakeChat(LOCTEXT("ChatSky", "SkyEagle"), LOCTEXT("ChatSkyMessage", "Ready when you are."), FLinearColor(0.36f, 0.74f, 1.0f, 1.0f)),
-        MakeChat(LOCTEXT("ChatJade", "JadeTiger"), LOCTEXT("ChatJadeMessage", "Пусть дракон ведёт нас к победе."), FLinearColor(0.58f, 0.88f, 0.28f, 1.0f)),
-        MakeChat(LOCTEXT("ChatTime", "TimeWalker"), LOCTEXT("ChatTimeMessage", "История перепишется."), FLinearColor(0.82f, 0.42f, 1.0f, 1.0f))
+        MakeChat(LOCTEXT("ChatSokolov", "SOKOLOV_1945"), LOCTEXT("ChatSokolovMessage", "Всем удачи. Победа будет за нами!"), FLinearColor(0.75f, 0.35f, 0.95f, 1.0f)),
+        MakeChat(LOCTEXT("ChatAllied", "Allied_Command"), LOCTEXT("ChatAlliedMessage", "Готовы к синхронной операции."), FLinearColor(0.35f, 0.70f, 0.98f, 1.0f)),
+        MakeChat(LOCTEXT("ChatJade", "JadeTiger"), LOCTEXT("ChatJadeMessage", "Дальновидность определяет победу!"), FLinearColor(0.88f, 0.72f, 0.22f, 1.0f)),
+        MakeChat(LOCTEXT("ChatShin", "ShinKaze"), LOCTEXT("ChatShinMessage", "Связь установлена."), FLinearColor(0.20f, 0.80f, 0.90f, 1.0f)),
+        MakeChat(LOCTEXT("ChatDesert", "DesertSignal"), LOCTEXT("ChatDesertMessage", "Пески не прощают ошибок."), FLinearColor(0.78f, 0.52f, 0.18f, 1.0f)),
+        MakeChat(LOCTEXT("ChatQuantum", "QuantumEcho"), LOCTEXT("ChatQuantumMessage", "Кибер-превосходство — ключ к победе."), FLinearColor(0.40f, 0.85f, 0.95f, 1.0f)),
+        MakeChat(LOCTEXT("ChatNord", "NordWolf"), LOCTEXT("ChatNordMessage", "В небе решается исход войны."), FLinearColor(0.45f, 0.75f, 1.0f, 1.0f)),
+        MakeChat(LOCTEXT("ChatIron", "IronHawk"), LOCTEXT("ChatIronMessage", "Сталь и скорость!"), FLinearColor(0.95f, 0.80f, 0.40f, 1.0f))
     };
 }
 

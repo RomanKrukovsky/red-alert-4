@@ -104,7 +104,10 @@ def iter_workspace_files(repo_root: pathlib.Path, roots: Iterable[str]) -> list[
         if not abs_root.exists():
             continue
         for dirpath, dirnames, filenames in os.walk(abs_root):
-            dirnames[:] = [name for name in dirnames if name not in {".git", "__pycache__"}]
+            dirnames[:] = [
+                name for name in dirnames
+                if name not in {".git", "__pycache__", "build", "CMakeFiles", "node_modules", ".claude", "DerivedDataCache", "Intermediate", "Saved"}
+            ]
             for filename in filenames:
                 abs_path = pathlib.Path(dirpath) / filename
                 rel_path = normalize_relpath(str(abs_path.relative_to(repo_root)))

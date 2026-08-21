@@ -69,6 +69,11 @@ TSharedRef<SWidget> URA4SplashScreenWidget::RebuildWidget()
     CanvasSlot->SetHorizontalAlignment(HAlign_Fill);
     CanvasSlot->SetVerticalAlignment(VAlign_Fill);
 
+    // Global Scarlet Horizon thin line
+    UBorder* HorizonLine = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("SplashHorizonLine"));
+    HorizonLine->SetBrushColor(FLinearColor(0.95f, 0.12f, 0.16f, 1.0f));
+    PlaceSplashWidget(Canvas, HorizonLine, FVector2D(0.0f, 0.0f), FVector2D(1920.0f, 3.0f), 10);
+
     LogoImage = WidgetTree->ConstructWidget<UImage>(
         UImage::StaticClass(), TEXT("SplashLogo"));
     if (UTexture2D* LogoTexture = LoadObject<UTexture2D>(

@@ -158,4 +158,57 @@ RA4CORE_API Fixed FxCos(int32_t Angle);
 // Full-circle arctangent returning the fixed-point angle unit above.
 RA4CORE_API int32_t FxAtan2(Fixed Y, Fixed X);
 
+// --- Extended Deterministic Soft-Math Utilities ---
+
+inline constexpr int32_t FxSign(Fixed V)
+{
+    return V.Raw < 0 ? -1 : (V.Raw > 0 ? 1 : 0);
+}
+
+inline constexpr Fixed FxClamp01(Fixed V)
+{
+    return FxClamp(V, Fixed::Zero(), Fixed::One());
+}
+
+// Linear interpolation: A + (B - A) * Alpha. Alpha is clamped to [0, 1].
+inline constexpr Fixed FxLerp(Fixed A, Fixed B, Fixed Alpha)
+{
+    const Fixed ClampedAlpha = FxClamp01(Alpha);
+    return A + (B - A) * ClampedAlpha;
+}
+
+// Deterministic reciprocal square root (1 / sqrt(V)). Returns 0 for V <= 0.
+inline Fixed FxInvSqrt(Fixed V)
+{
+    const Fixed SqrtVal = FxSqrt(V);
+    if (SqrtVal.Raw <= 0)
+    {
+        return Fixed::Zero();
+    }
+    return Fixed::One() / SqrtVal;
+}
+
+// Cubic Hermite spline interpolation:
+// P0, P1 are positions at t=0 and t=1.
+// M0, M1 are tangent velocities at t=0 and t=1.
+// Alpha is normalized time in [0, 1].
+inline Fixed FxHermiteSpline(Fixed P0, Fixed P1, Fixed M0, Fixed M1, Fixed Alpha)
+{
+    const Fixed T = FxClamp01(Alpha);
+    const Fixed T2 = T * T;
+    const Fixed T3 = T2 * T;
+
+    // Basis polynomials:
+    // h00 =  2*t^3 - 3*t^2 + 1
+    // h10 =    t^3 - 2*t^2 + t
+    // h01 = -2*t^3 + 3*t^2
+    // h11 =    t^3 -   t^2
+    const Fixed H00 = Fixed::FromInt(2) * T3 - Fixed::FromInt(3) * T2 + Fixed::One();
+    const Fixed H10 = T3 - Fixed::FromInt(2) * T2 + T;
+    const Fixed H01 = Fixed::FromInt(-2) * T3 + Fixed::FromInt(3) * T2;
+    const Fixed H11 = T3 - T2;
+
+    return P0 * H00 + M0 * H10 + P1 * H01 + M1 * H11;
+}
+
 } // namespace RA4

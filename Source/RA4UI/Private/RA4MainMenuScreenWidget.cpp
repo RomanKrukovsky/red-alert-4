@@ -187,28 +187,28 @@ TSharedRef<SWidget> URA4MainMenuScreenWidget::RebuildWidget()
     BuildInformationCard(
         Canvas,
         LOCTEXT("CommanderHeading", "КОМАНДИР  ·  УРОВЕНЬ 25"),
-        LOCTEXT("CommanderBody", "РЕЙТИНГ  45 780 / 75 000\nДОПУСК: ВЕРХОВНОЕ КОМАНДОВАНИЕ"),
+        LOCTEXT("CommanderBody", "РЕЙТИНГ  45 780 / 75 000\nДОПУСК: ВЕРХОВНЫЙ СОВЕТ БЕЗОПАСНОСТИ"),
         FVector2D(28.0f, 878.0f),
         FVector2D(532.0f, 170.0f),
         TEXT("CommanderCard"));
     BuildInformationCard(
         Canvas,
-        LOCTEXT("NewsHeading", "НОВОСТИ"),
-        LOCTEXT("NewsBody", "Добро пожаловать, командир.\nКрасная угроза возвращается."),
+        LOCTEXT("NewsHeading", "ОПЕРАТИВНЫЕ НОВОСТИ"),
+        LOCTEXT("NewsBody", "Scarlet Horizon: статус боеготовности.\nГлобальные рубежи блоков развёрнуты."),
         FVector2D(579.0f, 878.0f),
         FVector2D(496.0f, 170.0f),
         TEXT("NewsCard"));
     BuildInformationCard(
         Canvas,
-        LOCTEXT("OperationsHeading", "СВОДКА ОПЕРАЦИЙ"),
-        LOCTEXT("OperationsBody", "Глобальная обстановка нестабильна.\nБудьте готовы к любому сценарию."),
+        LOCTEXT("OperationsHeading", "СВОДКА ТЕАТРА ДЕЙСТВИЙ"),
+        LOCTEXT("OperationsBody", "Напряжение между блоками нарастает.\nДоктринальные силы приведены в готовность."),
         FVector2D(1086.0f, 878.0f),
         FVector2D(523.0f, 170.0f),
         TEXT("OperationsCard"));
     BuildInformationCard(
         Canvas,
-        LOCTEXT("EmblemHeading", "СВЯЗЬ УСТАНОВЛЕНА"),
-        LOCTEXT("EmblemBody", "СССР  //  КАНАЛ 04"),
+        LOCTEXT("EmblemHeading", "ЗАЩИЩЁННЫЙ КАНАЛ"),
+        LOCTEXT("EmblemBody", "SCARLET HORIZON  //  КАНАЛ 01"),
         FVector2D(1620.0f, 878.0f),
         FVector2D(274.0f, 170.0f),
         TEXT("EmblemCard"));
@@ -217,7 +217,7 @@ TSharedRef<SWidget> URA4MainMenuScreenWidget::RebuildWidget()
         UHorizontalBox::StaticClass(), TEXT("MainMenuFooter"));
     UTextBlock* Connection = MakeMenuText(
         WidgetTree,
-        LOCTEXT("Connection", "◉  СЕТЬ: ПОДКЛЮЧЕНО     СЕРВИСЫ: ДОСТУПНЫ"),
+        LOCTEXT("Connection", "◉  СЕТЬ: ПОДКЛЮЧЕНО     СЕРВИСЫ БЛОКОВ: ДОСТУПНЫ"),
         14,
         FLinearColor(0.34f, 0.78f, 0.44f, 1.0f),
         TEXT("ConnectionStatus"));
@@ -225,7 +225,7 @@ TSharedRef<SWidget> URA4MainMenuScreenWidget::RebuildWidget()
     Footer->AddChildToHorizontalBox(Connection)->SetPadding(FMargin(16.0f, 7.0f));
     UTextBlock* Version = MakeMenuText(
         WidgetTree,
-        LOCTEXT("Version", "ВЕРСИЯ 1.0.0.0"),
+        LOCTEXT("Version", "SCARLET HORIZON v1.0-RC1"),
         13,
         MutedText,
         TEXT("VersionText"));

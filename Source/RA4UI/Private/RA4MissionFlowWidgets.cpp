@@ -169,8 +169,8 @@ TSharedRef<SWidget> URA4MissionMapScreenWidget::RebuildWidget()
     }
 
     CampaignViewModel = NewObject<URA4CampaignViewModel>(this);
-    CampaignViewModel->SelectFaction(ERA4FactionTheme::USSR);
-    CampaignViewModel->SelectMission(TEXT("ussr_operation_molot"));
+    CampaignViewModel->SelectFaction(ERA4FactionTheme::EurasianPact);
+    CampaignViewModel->SelectMission(TEXT("ru_quiet_relay"));
     MissionButtons.Reset();
     SetRootBackground(
         this,
@@ -350,7 +350,7 @@ void URA4MissionMapScreenWidget::GoBack()
         if (URA4CampaignScreenWidget* Campaign = CreateWidget<URA4CampaignScreenWidget>(
             PlayerController, URA4CampaignScreenWidget::StaticClass()))
         {
-            Campaign->ConfigureCampaign(ERA4FactionTheme::USSR);
+            Campaign->ConfigureCampaign(ERA4FactionTheme::EurasianPact);
             Campaign->AddToViewport(0);
             RemoveFromParent();
         }

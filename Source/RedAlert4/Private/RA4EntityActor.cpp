@@ -9,8 +9,12 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/MeshComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/SpotLightComponent.h"
+#include "Components/PointLightComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
+#include "Kismet/GameplayStatics.h"
+#include "Engine/World.h"
 #include "UObject/ConstructorHelpers.h"
 
 ARA4EntityActor::ARA4EntityActor()
@@ -60,6 +64,48 @@ ARA4EntityActor::ARA4EntityActor()
     SelectionDecalComponent->SetupAttachment(MeshComponent);
     SelectionDecalComponent->SetVisibility(false);
     SelectionDecalComponent->DecalSize = FVector(64.0f, 64.0f, 64.0f);
+
+    HeadlightLeftComponent = CreateDefaultSubobject<USpotLightComponent>(TEXT("HeadlightLeftComponent"));
+    HeadlightLeftComponent->SetupAttachment(MeshComponent);
+    HeadlightLeftComponent->SetRelativeLocation(FVector(65.0f, -30.0f, 30.0f));
+    HeadlightLeftComponent->SetRelativeRotation(FRotator(-8.0f, 0.0f, 0.0f));
+    HeadlightLeftComponent->InnerConeAngle = 16.0f;
+    HeadlightLeftComponent->OuterConeAngle = 36.0f;
+    HeadlightLeftComponent->AttenuationRadius = 1400.0f;
+    HeadlightLeftComponent->Intensity = 4500.0f;
+    HeadlightLeftComponent->SetLightColor(FLinearColor(1.0f, 0.95f, 0.85f, 1.0f));
+    HeadlightLeftComponent->SetCastShadows(false);
+    HeadlightLeftComponent->SetVisibility(false);
+
+    HeadlightRightComponent = CreateDefaultSubobject<USpotLightComponent>(TEXT("HeadlightRightComponent"));
+    HeadlightRightComponent->SetupAttachment(MeshComponent);
+    HeadlightRightComponent->SetRelativeLocation(FVector(65.0f, 30.0f, 30.0f));
+    HeadlightRightComponent->SetRelativeRotation(FRotator(-8.0f, 0.0f, 0.0f));
+    HeadlightRightComponent->InnerConeAngle = 16.0f;
+    HeadlightRightComponent->OuterConeAngle = 36.0f;
+    HeadlightRightComponent->AttenuationRadius = 1400.0f;
+    HeadlightRightComponent->Intensity = 4500.0f;
+    HeadlightRightComponent->SetLightColor(FLinearColor(1.0f, 0.95f, 0.85f, 1.0f));
+    HeadlightRightComponent->SetCastShadows(false);
+    HeadlightRightComponent->SetVisibility(false);
+
+    BeaconLightComponent = CreateDefaultSubobject<UPointLightComponent>(TEXT("BeaconLightComponent"));
+    BeaconLightComponent->SetupAttachment(MeshComponent);
+    BeaconLightComponent->SetRelativeLocation(FVector(0.0f, 0.0f, 200.0f));
+    BeaconLightComponent->AttenuationRadius = 800.0f;
+    BeaconLightComponent->Intensity = 1500.0f;
+    BeaconLightComponent->SetLightColor(FLinearColor(1.0f, 0.15f, 0.15f, 1.0f));
+    BeaconLightComponent->SetCastShadows(false);
+    BeaconLightComponent->SetVisibility(false);
+
+    MuzzleFlashLightComponent = CreateDefaultSubobject<UPointLightComponent>(TEXT("MuzzleFlashLightComponent"));
+    MuzzleFlashLightComponent->SetupAttachment(MeshComponent);
+    MuzzleFlashLightComponent->SetRelativeLocation(FVector(90.0f, 0.0f, 40.0f));
+    MuzzleFlashLightComponent->AttenuationRadius = 700.0f;
+    MuzzleFlashLightComponent->Intensity = 8000.0f;
+    MuzzleFlashLightComponent->SetLightColor(FLinearColor(1.0f, 0.75f, 0.35f, 1.0f));
+    MuzzleFlashLightComponent->SetCastShadows(false);
+    MuzzleFlashLightComponent->SetVisibility(false);
 
     // Fall back to an engine primitive so an entity is always visible. Without this
     // an unregistered content id spawns an actor with no mesh, and the match looks
@@ -312,13 +358,79 @@ void ARA4EntityActor::BindToEntity(uint32 InEntityIndex, uint32 InEntityGenerati
     EntityGeneration = InEntityGeneration;
 }
 
+void ARA4EntityActor::SetNightMode(bool bIsNight)
+{
+    if (bIsVehicle)
+    {
+        if (HeadlightLeftComponent) HeadlightLeftComponent->SetVisibility(bIsNight);
+        if (HeadlightRightComponent) HeadlightRightComponent->SetVisibility(bIsNight);
+    }
+    if (bIsBuilding)
+    {
+        if (BeaconLightComponent) BeaconLightComponent->SetVisibility(bIsNight);
+    }
+}
+
+void ARA4EntityActor::TriggerMuzzleFlash()
+{
+    if (MuzzleFlashLightComponent)
+    {
+        MuzzleFlashLightComponent->SetVisibility(true);
+        MuzzleFlashRemaining = 0.09f;
+    }
+}
+
+void ARA4EntityActor::SetVeterancyRank(uint8 InRank)
+{
+    VeterancyRank = InRank;
+    if (VeterancyRank >= 2 && MeshComponent)
+    {
+        for (int32 MatIdx = 0; MatIdx < MeshComponent->GetNumMaterials(); ++MatIdx)
+        {
+            if (UMaterialInstanceDynamic* MID = Cast<UMaterialInstanceDynamic>(MeshComponent->GetMaterial(MatIdx)))
+            {
+                MID->SetVectorParameterValue(TEXT("EmissiveColor"), FLinearColor(1.0f, 0.25f, 0.1f, 1.0f));
+                MID->SetScalarParameterValue(TEXT("EmissiveIntensity"), 2.2f);
+            }
+        }
+    }
+}
+
+void ARA4EntityActor::TriggerConstructionRise(float DurationSeconds)
+{
+    bIsConstructing = true;
+    ConstructionDuration = FMath::Max(0.5f, DurationSeconds);
+    ConstructionElapsed = 0.0f;
+}
+
+void ARA4EntityActor::SetHarvesterUnloading(bool bUnloading)
+{
+    bHarvesterDocked = bUnloading;
+}
+
 void ARA4EntityActor::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
     
     // Smooth interpolation for silky presentation (interp rate ~ 18.0f to smoothly interpolate 20Hz tick)
     const FVector CurrentLocation = GetActorLocation();
-    const FVector InterpolatedLocation = FMath::VInterpTo(CurrentLocation, TargetPosition, DeltaTime, 18.0f);
+    FVector InterpTarget = TargetPosition;
+
+    // Construction rise animation
+    if (bIsConstructing)
+    {
+        ConstructionElapsed += DeltaTime;
+        const float Fraction = FMath::Clamp(ConstructionElapsed / ConstructionDuration, 0.0f, 1.0f);
+        const float RiseOffset = (1.0f - Fraction) * -120.0f;
+        InterpTarget.Z += RiseOffset;
+
+        if (Fraction >= 1.0f)
+        {
+            bIsConstructing = false;
+        }
+    }
+
+    const FVector InterpolatedLocation = FMath::VInterpTo(CurrentLocation, InterpTarget, DeltaTime, 18.0f);
     
     const FRotator CurrentRotation = GetActorRotation();
     const FRotator TargetRotator(0.0f, TargetRotationZ, 0.0f);
@@ -328,6 +440,44 @@ void ARA4EntityActor::Tick(float DeltaTime)
 
     const FVector Velocity = (InterpolatedLocation - CurrentLocation) / FMath::Max(DeltaTime, 0.001f);
     const float Speed = Velocity.Size();
+
+    // Dynamic vehicle tank tread marks on ground
+    if (bIsVehicle && Speed > 25.0f)
+    {
+        if (LastTreadSpawnPosition.IsNearlyZero() || FVector::DistSquared(InterpolatedLocation, LastTreadSpawnPosition) > (45.0f * 45.0f))
+        {
+            LastTreadSpawnPosition = InterpolatedLocation;
+            if (UWorld* World = GetWorld())
+            {
+                const FVector Right = GetActorRightVector();
+                const FVector Forward = GetActorForwardVector();
+                const FVector LeftTrack = InterpolatedLocation - Right * 28.0f;
+                const FVector RightTrack = InterpolatedLocation + Right * 28.0f;
+
+                DrawDebugLine(World, LeftTrack - Forward * 16.0f, LeftTrack + Forward * 16.0f, FColor(20, 18, 14), false, 20.0f, 0, 3.2f);
+                DrawDebugLine(World, RightTrack - Forward * 16.0f, RightTrack + Forward * 16.0f, FColor(20, 18, 14), false, 20.0f, 0, 3.2f);
+            }
+        }
+    }
+
+    // Muzzle flash decay
+    if (MuzzleFlashRemaining > 0.0f)
+    {
+        MuzzleFlashRemaining -= DeltaTime;
+        if (MuzzleFlashRemaining <= 0.0f && MuzzleFlashLightComponent)
+        {
+            MuzzleFlashLightComponent->SetVisibility(false);
+        }
+    }
+
+    // Base beacon light pulsing
+    if (bIsBuilding && BeaconLightComponent && BeaconLightComponent->IsVisible())
+    {
+        UWorld* World = GetWorld();
+        const float TimeSec = World ? World->GetTimeSeconds() : 0.0f;
+        const float Pulse = 0.5f + 0.5f * FMath::Sin(TimeSec * 4.5f);
+        BeaconLightComponent->SetIntensity(FMath::Lerp(300.0f, 2000.0f, Pulse));
+    }
 
     // Phase 2: Infantry Locomotion Animation
     if (SkeletalMeshComponent && SkeletalMeshComponent->IsVisible())
@@ -380,19 +530,26 @@ void ARA4EntityActor::SetEntityId(const FString& InEntityId)
 {
     EntityId = InEntityId;
 
-    const bool bIsBuilding = InEntityId.Contains(TEXT("building"), ESearchCase::IgnoreCase) ||
-                             InEntityId.Contains(TEXT("structure"), ESearchCase::IgnoreCase) ||
-                             InEntityId.Contains(TEXT("conyard"), ESearchCase::IgnoreCase) ||
-                             InEntityId.Contains(TEXT("headquarters"), ESearchCase::IgnoreCase) ||
-                             InEntityId.Contains(TEXT("barracks"), ESearchCase::IgnoreCase) ||
-                             InEntityId.Contains(TEXT("factory"), ESearchCase::IgnoreCase) ||
-                             InEntityId.Contains(TEXT("power"), ESearchCase::IgnoreCase) ||
-                             InEntityId.Contains(TEXT("refinery"), ESearchCase::IgnoreCase) ||
-                             InEntityId.Contains(TEXT("radar"), ESearchCase::IgnoreCase) ||
-                             InEntityId.Contains(TEXT("turret"), ESearchCase::IgnoreCase) ||
-                             InEntityId.Contains(TEXT("techcenter"), ESearchCase::IgnoreCase) ||
-                             InEntityId.Contains(TEXT("silo"), ESearchCase::IgnoreCase) ||
-                             InEntityId.Contains(TEXT("superweapon"), ESearchCase::IgnoreCase);
+    bIsBuilding = InEntityId.Contains(TEXT("building"), ESearchCase::IgnoreCase) ||
+                  InEntityId.Contains(TEXT("structure"), ESearchCase::IgnoreCase) ||
+                  InEntityId.Contains(TEXT("conyard"), ESearchCase::IgnoreCase) ||
+                  InEntityId.Contains(TEXT("headquarters"), ESearchCase::IgnoreCase) ||
+                  InEntityId.Contains(TEXT("barracks"), ESearchCase::IgnoreCase) ||
+                  InEntityId.Contains(TEXT("factory"), ESearchCase::IgnoreCase) ||
+                  InEntityId.Contains(TEXT("power"), ESearchCase::IgnoreCase) ||
+                  InEntityId.Contains(TEXT("refinery"), ESearchCase::IgnoreCase) ||
+                  InEntityId.Contains(TEXT("radar"), ESearchCase::IgnoreCase) ||
+                  InEntityId.Contains(TEXT("turret"), ESearchCase::IgnoreCase) ||
+                  InEntityId.Contains(TEXT("techcenter"), ESearchCase::IgnoreCase) ||
+                  InEntityId.Contains(TEXT("silo"), ESearchCase::IgnoreCase) ||
+                  InEntityId.Contains(TEXT("superweapon"), ESearchCase::IgnoreCase);
+
+    bIsVehicle = !bIsBuilding && (InEntityId.Contains(TEXT("tank"), ESearchCase::IgnoreCase) ||
+                                  InEntityId.Contains(TEXT("harvester"), ESearchCase::IgnoreCase) ||
+                                  InEntityId.Contains(TEXT("scout"), ESearchCase::IgnoreCase) ||
+                                  InEntityId.Contains(TEXT("carrier"), ESearchCase::IgnoreCase) ||
+                                  InEntityId.Contains(TEXT("mcv"), ESearchCase::IgnoreCase) ||
+                                  InEntityId.Contains(TEXT("unit."), ESearchCase::IgnoreCase));
 
     if (IsValid(FoundationBibComponent))
     {

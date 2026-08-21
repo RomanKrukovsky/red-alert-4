@@ -17,10 +17,16 @@ class UCommonButtonStyle;
 UENUM(BlueprintType)
 enum class ERA4FactionTheme : uint8
 {
-    USSR = 0,
-    Allies,
-    EasternCoalition,
-    Chronolegion
+    EurasianPact = 0 UMETA(DisplayName = "Евразийский пакт"),
+    AtlanticAlliance = 1 UMETA(DisplayName = "Атлантический альянс"),
+    EasternCoalition = 2 UMETA(DisplayName = "Восточная коалиция"),
+    PacificPact = 3 UMETA(DisplayName = "Тихоокеанский пакт"),
+    Independent = 4 UMETA(DisplayName = "Независимые державы"),
+    Chronolegion = 5 UMETA(DisplayName = "Хронолегион (Legacy)"),
+
+    // Legacy aliases
+    USSR = EurasianPact,
+    Allies = AtlanticAlliance
 };
 
 /**

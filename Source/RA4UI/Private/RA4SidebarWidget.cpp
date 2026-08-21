@@ -18,10 +18,88 @@
 #include "Engine/GameViewportClient.h"
 #include "Engine/World.h"
 #include "Input/Reply.h"
-#include "InputCoreTypes.h"
+#include "Components/Image.h"
+#include "Components/Overlay.h"
+#include "Components/OverlaySlot.h"
+#include "Engine/Texture2D.h"
 #include "Rendering/DrawElements.h"
 #include "Styling/CoreStyle.h"
 #include "Widgets/SLeafWidget.h"
+
+namespace
+{
+constexpr int32 kRadialTexSize = 64;
+
+UTexture2D* CreateRadialProgressTexture(UObject* Outer, const FString& Name)
+{
+    UTexture2D* Tex = UTexture2D::CreateTransient(kRadialTexSize, kRadialTexSize, PF_B8G8R8A8, *Name);
+    if (Tex != nullptr)
+    {
+        Tex->Filter = TF_Nearest;
+        Tex->SRGB = true;
+
+        if (Tex->GetPlatformData() && Tex->GetPlatformData()->Mips.Num() > 0)
+        {
+            uint8* MipData = static_cast<uint8*>(Tex->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
+            if (MipData != nullptr)
+            {
+                FMemory::Memzero(MipData, kRadialTexSize * kRadialTexSize * 4);
+                Tex->GetPlatformData()->Mips[0].BulkData.Unlock();
+                Tex->UpdateResource();
+            }
+        }
+    }
+    return Tex;
+}
+
+void UpdateRadialProgressTexture(UTexture2D* Tex, float ProgressFraction)
+{
+    if (Tex == nullptr || Tex->GetPlatformData() == nullptr || Tex->GetPlatformData()->Mips.Num() == 0)
+    {
+        return;
+    }
+
+    uint32* Pixels = static_cast<uint32*>(Tex->GetPlatformData()->Mips[0].BulkData.Lock(LOCK_READ_WRITE));
+    if (Pixels == nullptr)
+    {
+        return;
+    }
+
+    const float Center = (float(kRadialTexSize) - 1.0f) * 0.5f;
+    const float FracClamped = FMath::Clamp(ProgressFraction, 0.0f, 1.0f);
+    const uint32 GreenFill = FColor(38, 225, 82, 110).ToPackedARGB();
+    const uint32 LeadLine  = FColor(160, 255, 195, 235).ToPackedARGB();
+
+    for (int32 Y = 0; Y < kRadialTexSize; ++Y)
+    {
+        for (int32 X = 0; X < kRadialTexSize; ++X)
+        {
+            const float DX = float(X) - Center;
+            const float DY = Center - float(Y); // Up is positive Y for 12 o'clock
+
+            // Clockwise angle: 0 at top (DX=0, DY>0), 0.25 at 3 o'clock, 0.5 at 6 o'clock, 0.75 at 9 o'clock
+            float Angle = FMath::Atan2(DX, DY) / (2.0f * PI);
+            if (Angle < 0.0f)
+            {
+                Angle += 1.0f;
+            }
+
+            if (Angle <= FracClamped && FracClamped > 0.001f)
+            {
+                const bool bIsLead = (Angle >= FracClamped - 0.045f);
+                Pixels[Y * kRadialTexSize + X] = bIsLead ? LeadLine : GreenFill;
+            }
+            else
+            {
+                Pixels[Y * kRadialTexSize + X] = 0;
+            }
+        }
+    }
+
+    Tex->GetPlatformData()->Mips[0].BulkData.Unlock();
+    Tex->UpdateResource();
+}
+}
 
 #include "RA4HUDViewModel.h"
 #include "RA4UIDataProviderSubsystem.h"
@@ -30,7 +108,7 @@
 
 namespace
 {
-constexpr float kRadarDesiredSize = 208.0f;
+constexpr float kRadarDesiredSize = 244.0f;
 }
 
 // The Blueprint-facing minimap enums are a hand-written copy of the presentation ones, so
@@ -432,6 +510,10 @@ const FLinearColor kPowerLow(0.94f, 0.36f, 0.28f);
 const FLinearColor kPowerTight(0.94f, 0.74f, 0.30f);
 const FLinearColor kBarTrack(0.09f, 0.11f, 0.13f, 1.0f);
 const FLinearColor kQueueWaiting(0.30f, 0.44f, 0.58f);
+const FLinearColor kRepairIdle(0.12f, 0.12f, 0.08f, 1.0f);
+const FLinearColor kRepairActive(0.85f, 0.65f, 0.10f, 1.0f);
+const FLinearColor kSellIdle(0.14f, 0.08f, 0.08f, 1.0f);
+const FLinearColor kSellActive(0.85f, 0.22f, 0.15f, 1.0f);
 
 // Keys that commit build cards, in grid order. Deliberately not the digits: those are
 // control groups, and the ordinary RTS reflex of pressing a number to recall a squad has
@@ -992,6 +1074,68 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
         AddRow(Frame, 4.0f);
     }
 
+    // --- superweapon alert / launch strip ----------------------------------
+    {
+        SuperweaponButton = WidgetTree->ConstructWidget<URA4IndexedButton>(
+            URA4IndexedButton::StaticClass(), TEXT("SuperweaponBtn"));
+        SuperweaponButton->SetIndex(3);
+        SuperweaponButton->BindForwarding();
+        SuperweaponButton->OnIndexedClicked.AddUObject(this, &URA4SidebarWidget::HandleSuperweaponClicked);
+        StyleButton(SuperweaponButton, FLinearColor(0.25f, 0.05f, 0.05f, 1.0f));
+
+        SuperweaponText = MakeLabel(WidgetTree, TEXT("SuperweaponText"), FLinearColor(1.0f, 0.85f, 0.2f), 10, true);
+        SuperweaponText->SetText(NSLOCTEXT("RA4", "Sidebar_Superweapon", "⚛ СУПЕРОРУЖИЕ: 03:00"));
+        SuperweaponText->SetJustification(ETextJustify::Center);
+        SuperweaponButton->AddChild(SuperweaponText);
+        SuperweaponButton->SetVisibility(ESlateVisibility::Collapsed);
+
+        AddRow(SuperweaponButton, 4.0f);
+    }
+
+    // --- command toolbar (Repair & Sell) -----------------------------------
+    {
+        UHorizontalBox* CommandRow = WidgetTree->ConstructWidget<UHorizontalBox>(
+            UHorizontalBox::StaticClass(), TEXT("CommandRow"));
+
+        RepairButton = WidgetTree->ConstructWidget<URA4IndexedButton>(
+            URA4IndexedButton::StaticClass(), TEXT("RepairBtn"));
+        RepairButton->SetIndex(1);
+        RepairButton->BindForwarding();
+        RepairButton->OnIndexedClicked.AddUObject(this, &URA4SidebarWidget::HandleRepairClicked);
+        StyleButton(RepairButton, CurrentInteractionMode == 1 ? kRepairActive : kRepairIdle);
+
+        UTextBlock* RepairText = MakeLabel(WidgetTree, TEXT("RepairText"), kTextNormal, 10, true);
+        RepairText->SetText(NSLOCTEXT("RA4", "Sidebar_Repair", "РЕМОНТ [K]"));
+        RepairText->SetJustification(ETextJustify::Center);
+        RepairButton->AddChild(RepairText);
+
+        if (UHorizontalBoxSlot* Slot = CommandRow->AddChildToHorizontalBox(RepairButton))
+        {
+            Slot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            Slot->SetPadding(FMargin(0.0f, 0.0f, 2.0f, 0.0f));
+        }
+
+        SellButton = WidgetTree->ConstructWidget<URA4IndexedButton>(
+            URA4IndexedButton::StaticClass(), TEXT("SellBtn"));
+        SellButton->SetIndex(2);
+        SellButton->BindForwarding();
+        SellButton->OnIndexedClicked.AddUObject(this, &URA4SidebarWidget::HandleSellClicked);
+        StyleButton(SellButton, CurrentInteractionMode == 2 ? kSellActive : kSellIdle);
+
+        UTextBlock* SellText = MakeLabel(WidgetTree, TEXT("SellText"), kTextNormal, 10, true);
+        SellText->SetText(NSLOCTEXT("RA4", "Sidebar_Sell", "ПРОДАЖА [L]"));
+        SellText->SetJustification(ETextJustify::Center);
+        SellButton->AddChild(SellText);
+
+        if (UHorizontalBoxSlot* Slot = CommandRow->AddChildToHorizontalBox(SellButton))
+        {
+            Slot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            Slot->SetPadding(FMargin(2.0f, 0.0f, 0.0f, 0.0f));
+        }
+
+        AddRow(CommandRow, 4.0f);
+    }
+
     // --- category tabs ------------------------------------------------------
     {
         UHorizontalBox* TabRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(),
@@ -1421,6 +1565,36 @@ void URA4SidebarWidget::SetActiveCategory(int32 Category)
     RefreshCards();
 }
 
+void URA4SidebarWidget::HandleRepairClicked(int32 Index)
+{
+    SetInteractionMode(CurrentInteractionMode == 1 ? 0 : 1);
+    OnInteractionModeChanged.Broadcast(CurrentInteractionMode);
+}
+
+void URA4SidebarWidget::HandleSellClicked(int32 Index)
+{
+    SetInteractionMode(CurrentInteractionMode == 2 ? 0 : 2);
+    OnInteractionModeChanged.Broadcast(CurrentInteractionMode);
+}
+
+void URA4SidebarWidget::HandleSuperweaponClicked(int32 Index)
+{
+    OnSuperweaponClicked.Broadcast();
+}
+
+void URA4SidebarWidget::SetInteractionMode(uint8 InMode)
+{
+    CurrentInteractionMode = InMode;
+    if (RepairButton != nullptr)
+    {
+        StyleButton(RepairButton, CurrentInteractionMode == 1 ? kRepairActive : kRepairIdle);
+    }
+    if (SellButton != nullptr)
+    {
+        StyleButton(SellButton, CurrentInteractionMode == 2 ? kSellActive : kSellIdle);
+    }
+}
+
 void URA4SidebarWidget::HandleTabClicked(int32 TabIndex)
 {
     if (TabButtons.IsValidIndex(TabIndex) && TabIndex < UE_ARRAY_COUNT(kTabs))
@@ -1574,6 +1748,13 @@ void URA4SidebarWidget::RefreshCards()
     CardButtons.Reset();
     CardHoverTargets.Reset();
     CardContentIds.Reset();
+    CardRadialOverlays.Reset();
+    CardRadialTextures.Reset();
+    CardReadyBadges.Reset();
+    CardCenterPctTexts.Reset();
+    CardQueueBorders.Reset();
+    CardQueueTexts.Reset();
+    CardLastDrawnPct.Reset();
     // Rebuilt cards start at rest: carrying a stale swell over would leave a card
     // enlarged with the pointer nowhere near it.
     CardHoverProgress.Reset();
@@ -1589,16 +1770,12 @@ void URA4SidebarWidget::RefreshCards()
         Button->BindForwarding();
         Button->OnIndexedClicked.AddUObject(this, &URA4SidebarWidget::HandleCardClicked);
         StyleButton(Button, Option.bAvailable ? kCardOk : kCardBlocked);
-        // Blocked cards stay clickable-looking but inert, and say why underneath --
-        // a greyed-out card that gives no reason is the classic sidebar's one real
-        // usability failure and there is no reason to reproduce it.
         Button->SetIsEnabled(Option.bAvailable);
 
         UVerticalBox* CardStack = WidgetTree->ConstructWidget<UVerticalBox>(
             UVerticalBox::StaticClass(), *FString::Printf(TEXT("CardStack%d"), Index));
 
-        // Name row, with the hotkey badge pinned to its left. The badge is drawn only for
-        // indices the controller actually binds, so it can never promise a dead key.
+        // Name row, with the hotkey badge pinned to its left.
         if (const TCHAR* Hotkey = GetCardHotkeyLabel(Index))
         {
             UHorizontalBox* NameRow = WidgetTree->ConstructWidget<UHorizontalBox>(
@@ -1679,23 +1856,76 @@ void URA4SidebarWidget::RefreshCards()
             CardStack->AddChildToVerticalBox(Reason);
         }
 
-        // On-card Production Progress percentage, bar, and quantity queue badge
-        UProgressBar* CardProgBar = MakeThinBar(WidgetTree, *FString::Printf(TEXT("CardProgBar%d"), Index), kPowerOk, 4.0f);
-        CardProgBar->SetPercent(0.0f);
-        CardProgBar->SetVisibility(ESlateVisibility::Collapsed);
-        CardStack->AddChildToVerticalBox(CardProgBar);
+        // Card Overlay:
+        // Layer 0: CardStack (labels, cost, power)
+        // Layer 1: RadialProgressImage (translucent green clockwise radial wipe)
+        // Layer 2: CenterPctText ("45%" in bold center text over radial progress)
+        // Layer 3: ReadyBadge ("ГОТОВО" when finished building)
+        // Layer 4: QueueBadge ("x3" badge in top-right corner)
+        UOverlay* CardOverlay = WidgetTree->ConstructWidget<UOverlay>(
+            UOverlay::StaticClass(), *FString::Printf(TEXT("CardOverlay%d"), Index));
 
-        UTextBlock* CardProgText = MakeLabel(WidgetTree, *FString::Printf(TEXT("CardProgText%d"), Index), kPowerOk, 11, true);
-        CardProgText->SetJustification(ETextJustify::Center);
-        CardProgText->SetVisibility(ESlateVisibility::Collapsed);
-        CardStack->AddChildToVerticalBox(CardProgText);
+        if (UOverlaySlot* BaseSlot = CardOverlay->AddChildToOverlay(CardStack))
+        {
+            BaseSlot->SetHorizontalAlignment(HAlign_Fill);
+            BaseSlot->SetVerticalAlignment(VAlign_Fill);
+        }
 
-        UTextBlock* CardQueueBadge = MakeLabel(WidgetTree, *FString::Printf(TEXT("CardQueueBadge%d"), Index), kCredits, 10, true);
-        CardQueueBadge->SetJustification(ETextJustify::Center);
-        CardQueueBadge->SetVisibility(ESlateVisibility::Collapsed);
-        CardStack->AddChildToVerticalBox(CardQueueBadge);
+        UImage* RadialImg = WidgetTree->ConstructWidget<UImage>(
+            UImage::StaticClass(), *FString::Printf(TEXT("CardRadial%d"), Index));
+        UTexture2D* RadialTex = CreateRadialProgressTexture(this, FString::Printf(TEXT("RadialTex_%d"), Index));
+        RadialImg->SetBrushFromTexture(RadialTex);
+        RadialImg->SetVisibility(ESlateVisibility::Collapsed);
+        if (UOverlaySlot* RadSlot = CardOverlay->AddChildToOverlay(RadialImg))
+        {
+            RadSlot->SetHorizontalAlignment(HAlign_Fill);
+            RadSlot->SetVerticalAlignment(VAlign_Fill);
+        }
 
-        Button->AddChild(CardStack);
+        UTextBlock* CenterPct = MakeLabel(WidgetTree, *FString::Printf(TEXT("CardCenterPct%d"), Index),
+                                          FLinearColor(1.0f, 1.0f, 1.0f, 1.0f), 13, true);
+        CenterPct->SetJustification(ETextJustify::Center);
+        CenterPct->SetVisibility(ESlateVisibility::Collapsed);
+        if (UOverlaySlot* PctSlot = CardOverlay->AddChildToOverlay(CenterPct))
+        {
+            PctSlot->SetHorizontalAlignment(HAlign_Center);
+            PctSlot->SetVerticalAlignment(VAlign_Center);
+        }
+
+        UBorder* ReadyBadge = WidgetTree->ConstructWidget<UBorder>(
+            UBorder::StaticClass(), *FString::Printf(TEXT("CardReadyBadge%d"), Index));
+        ReadyBadge->SetBrushColor(FLinearColor(0.04f, 0.22f, 0.08f, 0.92f));
+        ReadyBadge->SetPadding(FMargin(6.0f, 3.0f));
+        UTextBlock* ReadyText = MakeLabel(WidgetTree, *FString::Printf(TEXT("CardReadyText%d"), Index),
+                                          FLinearColor(0.25f, 1.0f, 0.45f, 1.0f), 11, true);
+        ReadyText->SetText(NSLOCTEXT("RA4", "Card_ReadyPlace", "ГОТОВО"));
+        ReadyText->SetJustification(ETextJustify::Center);
+        ReadyBadge->AddChild(ReadyText);
+        ReadyBadge->SetVisibility(ESlateVisibility::Collapsed);
+
+        if (UOverlaySlot* RdySlot = CardOverlay->AddChildToOverlay(ReadyBadge))
+        {
+            RdySlot->SetHorizontalAlignment(HAlign_Center);
+            RdySlot->SetVerticalAlignment(VAlign_Center);
+        }
+
+        UBorder* QueueBadgeBorder = WidgetTree->ConstructWidget<UBorder>(
+            UBorder::StaticClass(), *FString::Printf(TEXT("CardQueueBorder%d"), Index));
+        QueueBadgeBorder->SetBrushColor(FLinearColor(0.12f, 0.08f, 0.02f, 0.92f));
+        QueueBadgeBorder->SetPadding(FMargin(4.0f, 1.0f));
+        UTextBlock* QueueBadgeText = MakeLabel(WidgetTree, *FString::Printf(TEXT("CardQueueBadge%d"), Index), kCredits, 10, true);
+        QueueBadgeText->SetJustification(ETextJustify::Center);
+        QueueBadgeBorder->AddChild(QueueBadgeText);
+        QueueBadgeBorder->SetVisibility(ESlateVisibility::Collapsed);
+
+        if (UOverlaySlot* QueueSlot = CardOverlay->AddChildToOverlay(QueueBadgeBorder))
+        {
+            QueueSlot->SetHorizontalAlignment(HAlign_Right);
+            QueueSlot->SetVerticalAlignment(VAlign_Top);
+            QueueSlot->SetPadding(FMargin(0.0f, 2.0f, 2.0f, 0.0f));
+        }
+
+        Button->AddChild(CardOverlay);
 
         if (UUniformGridSlot* Slot = CardGrid->AddChildToUniformGrid(Button, Index / kCardColumns,
                                                                     Index % kCardColumns))
@@ -1705,10 +1935,15 @@ void URA4SidebarWidget::RefreshCards()
         }
 
         CardButtons.Add(Button);
-        // The stack, not the button, carries the swell: a UButton's render transform is
-        // overwritten by its own style states, and scaling the contents reads the same.
-        CardHoverTargets.Add(CardStack);
+        CardHoverTargets.Add(CardOverlay);
         CardContentIds.Add(Option.ContentId);
+        CardRadialOverlays.Add(RadialImg);
+        CardRadialTextures.Add(RadialTex);
+        CardCenterPctTexts.Add(CenterPct);
+        CardReadyBadges.Add(ReadyBadge);
+        CardQueueBorders.Add(QueueBadgeBorder);
+        CardQueueTexts.Add(QueueBadgeText);
+        CardLastDrawnPct.Add(-1);
     }
 
 #if !UE_BUILD_SHIPPING
@@ -1924,52 +2159,64 @@ void URA4SidebarWidget::RefreshQueue()
             }
         }
 
-        if (UProgressBar* CardBar = Cast<UProgressBar>(
-                WidgetTree->FindWidget(*FString::Printf(TEXT("CardProgBar%d"), CardIdx))))
+        // Radial clockwise sector wipe, center percentage, and ready badge updates
+        if (CardRadialOverlays.IsValidIndex(CardIdx) && CardRadialTextures.IsValidIndex(CardIdx) && CardReadyBadges.IsValidIndex(CardIdx) && CardCenterPctTexts.IsValidIndex(CardIdx))
         {
-            if (ActiveProgPct >= 0)
-            {
-                CardBar->SetVisibility(ESlateVisibility::Visible);
-                CardBar->SetPercent(bAwaitingPlace ? 1.0f : FMath::Clamp(float(ActiveProgPct) / 100.0f, 0.0f, 1.0f));
-            }
-            else
-            {
-                CardBar->SetVisibility(ESlateVisibility::Collapsed);
-            }
-        }
+            UImage* RadImg = CardRadialOverlays[CardIdx];
+            UTexture2D* RadTex = CardRadialTextures[CardIdx];
+            UBorder* RdyBadge = CardReadyBadges[CardIdx];
+            UTextBlock* CenterPct = CardCenterPctTexts[CardIdx];
 
-        if (UTextBlock* CardProg = Cast<UTextBlock>(
-                WidgetTree->FindWidget(*FString::Printf(TEXT("CardProgText%d"), CardIdx))))
-        {
             if (ActiveProgPct >= 0)
             {
-                CardProg->SetVisibility(ESlateVisibility::Visible);
                 if (bAwaitingPlace)
                 {
-                    CardProg->SetText(NSLOCTEXT("RA4", "Card_ReadyPlace", "ГОТОВО (КЛИК)"));
+                    if (RadImg) RadImg->SetVisibility(ESlateVisibility::Collapsed);
+                    if (CenterPct) CenterPct->SetVisibility(ESlateVisibility::Collapsed);
+                    if (RdyBadge) RdyBadge->SetVisibility(ESlateVisibility::HitTestInvisible);
                 }
                 else
                 {
-                    CardProg->SetText(FText::Format(NSLOCTEXT("RA4", "Card_ProgPct", "{0}%"), FText::AsNumber(ActiveProgPct)));
+                    if (RdyBadge) RdyBadge->SetVisibility(ESlateVisibility::Collapsed);
+                    if (RadImg) RadImg->SetVisibility(ESlateVisibility::HitTestInvisible);
+                    if (CenterPct)
+                    {
+                        CenterPct->SetVisibility(ESlateVisibility::HitTestInvisible);
+                        CenterPct->SetText(FText::Format(NSLOCTEXT("RA4", "Card_CenterPct", "{0}%"), FText::AsNumber(ActiveProgPct)));
+                    }
+                    if (CardLastDrawnPct.IsValidIndex(CardIdx) && CardLastDrawnPct[CardIdx] != ActiveProgPct)
+                    {
+                        CardLastDrawnPct[CardIdx] = ActiveProgPct;
+                        UpdateRadialProgressTexture(RadTex, float(ActiveProgPct) / 100.0f);
+                    }
                 }
             }
             else
             {
-                CardProg->SetVisibility(ESlateVisibility::Collapsed);
+                if (RadImg) RadImg->SetVisibility(ESlateVisibility::Collapsed);
+                if (CenterPct) CenterPct->SetVisibility(ESlateVisibility::Collapsed);
+                if (RdyBadge) RdyBadge->SetVisibility(ESlateVisibility::Collapsed);
+                if (CardLastDrawnPct.IsValidIndex(CardIdx))
+                {
+                    CardLastDrawnPct[CardIdx] = -1;
+                }
             }
         }
 
-        if (UTextBlock* CardQueue = Cast<UTextBlock>(
-                WidgetTree->FindWidget(*FString::Printf(TEXT("CardQueueBadge%d"), CardIdx))))
+        // Top-right queue count badge (e.g. x2, x5)
+        if (CardQueueBorders.IsValidIndex(CardIdx) && CardQueueTexts.IsValidIndex(CardIdx))
         {
-            if (TotalQueued > 1)
+            UBorder* QBorder = CardQueueBorders[CardIdx];
+            UTextBlock* QText = CardQueueTexts[CardIdx];
+
+            if (TotalQueued >= 1)
             {
-                CardQueue->SetVisibility(ESlateVisibility::Visible);
-                CardQueue->SetText(FText::Format(NSLOCTEXT("RA4", "Card_QueueBadge", "x{0} В ОЧЕРЕДИ"), FText::AsNumber(TotalQueued)));
+                if (QBorder) QBorder->SetVisibility(ESlateVisibility::HitTestInvisible);
+                if (QText) QText->SetText(FText::Format(NSLOCTEXT("RA4", "Card_QueueBadgeCount", "x{0}"), FText::AsNumber(TotalQueued)));
             }
             else
             {
-                CardQueue->SetVisibility(ESlateVisibility::Collapsed);
+                if (QBorder) QBorder->SetVisibility(ESlateVisibility::Collapsed);
             }
         }
     }

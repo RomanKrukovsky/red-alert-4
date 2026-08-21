@@ -91,8 +91,26 @@ public:
     // four states, for players who cannot resolve the gentle ramp (RISK-19).
     UFUNCTION(BlueprintCallable, Category = "RA4|Fog")
     void SetHighContrastFog(bool bEnabled);
-    UFUNCTION(BlueprintCallable, Category = "RA4|Fog")
-    bool IsHighContrastFog() const { return bHighContrastFog; }
+    // --- Dynamic Day / Night Cycle ------------------------------------------
+    UFUNCTION(BlueprintCallable, Category = "RA4|DayNight")
+    void SetTimeOfDay(float NormalizedTime); // 0.0=Midnight, 0.25=Dawn, 0.5=Noon, 0.75=Dusk
+
+    UFUNCTION(BlueprintCallable, Category = "RA4|DayNight")
+    float GetTimeOfDay() const { return CurrentTimeOfDay; }
+
+    UFUNCTION(BlueprintCallable, Category = "RA4|DayNight")
+    void SetDayNightCycleSpeed(float SpeedMultiplier);
+
+    UFUNCTION(BlueprintCallable, Category = "RA4|DayNight")
+    void SetDayNightCycleEnabled(bool bEnabled);
+
+    UFUNCTION(BlueprintCallable, Category = "RA4|DayNight")
+    bool IsDayNightCycleEnabled() const { return bDayNightCycleEnabled; }
+
+    UFUNCTION(BlueprintCallable, Category = "RA4|DayNight")
+    bool IsNight() const;
+
+    void UpdateDayNightCycle(float DeltaTime);
 
     UFUNCTION(BlueprintCallable, Category = "RA4|Fog")
     void GetFogTextureDimensions(int32& OutWidth, int32& OutHeight) const
@@ -128,6 +146,14 @@ public:
 
     // Sets the local player's selection for HUD projection
     void SetSelectedEntitiesForHUD(const std::vector<RA4::EntityId>& Selection);
+
+    void SpawnVehicleWreckage(UWorld* World, const FVector& Location, const std::string& EntityName);
+
+    void UpdateMysteryCrates(float DeltaTime);
+
+    // Height of the terrain surface at a world XY, or the flat sim ground level if
+    // there is no landscape in this map. Visual-only: the simulation stays 2D.
+    float SampleGroundHeight(double WorldX, double WorldY);
 
     // The single entry point for player and AI intent. Commands are queued here and
     // applied at the start of the next fixed tick, which is exactly where the
@@ -175,9 +201,6 @@ private:
     URA4NetworkManager* GetActiveNetwork() const;
     void ProcessPresentationEvents();
     void SyncPresentation();
-    // Height of the terrain surface at a world XY, or the flat sim ground level if
-    // there is no landscape in this map. Visual-only: the simulation stays 2D.
-    float SampleGroundHeight(double WorldX, double WorldY);
     void BakeTerrainPassabilityFromLandscape();
 
     // --- Fog of war rendering (ADR-0030) ------------------------------------
@@ -245,6 +268,17 @@ private:
     // see the call site for why.
     bool bGroundPlaneFitted = false;
 
+    // --- Dynamic Astronomical Day / Night Cycle State ---
+    float CurrentTimeOfDay = 0.40f; // Mid-morning default (10:00)
+    float DayNightDurationSeconds = 480.0f; // 8 minutes full cycle
+    float DayNightSpeedMultiplier = 1.0f;
+    bool bDayNightCycleEnabled = true;
+
+    TWeakObjectPtr<class ADirectionalLight> CachedSunLight;
+    TWeakObjectPtr<class ASkyLight> CachedSkyLight;
+    TWeakObjectPtr<class APostProcessVolume> CachedPostProcess;
+    TWeakObjectPtr<class AExponentialHeightFog> CachedHeightFog;
+
     // Pointer to the deterministic C++ simulation core
     RA4::SimWorld* SimWorld;
 
@@ -301,4 +335,43 @@ private:
     TSet<uint32> MissingMeshContentIds;
 
     bool bReportedPresentationState = false;
+
+    TArray<FVector> ActiveMysteryCratePositions;
+    float TimeSinceLastCrateSpawn = 10.0f;
+
+    struct FRA4ExplosiveBarrel
+    {
+        FVector Location;
+        float Health = 100.0f;
+        bool bAlive = true;
+    };
+
+    struct FRA4RadiationZone
+    {
+        FVector Location;
+        float Radius = 350.0f;
+        float RemainingSeconds = 25.0f;
+    };
+
+    struct FRA4FlyingTurret
+    {
+        FVector Location;
+        FVector Velocity;
+        float Yaw = 0.0f;
+        float Pitch = 0.0f;
+        float RemainingSeconds = 2.5f;
+    };
+
+    TArray<FRA4ExplosiveBarrel> ActiveExplosiveBarrels;
+    TArray<FRA4RadiationZone> ActiveRadiationZones;
+    TArray<FRA4FlyingTurret> ActiveFlyingTurrets;
+    bool bBarrelsInitialized = false;
+
+    void UpdateExplosiveBarrels(float DeltaTime);
+    void UpdateRadiationZones(float DeltaTime);
+    void UpdateFlyingTurrets(float DeltaTime);
+
+public:
+    void SpawnRadiationZone(const FVector& Location, float Radius = 350.0f, float Duration = 25.0f);
+    void SpawnFlyingTurret(const FVector& Location);
 };

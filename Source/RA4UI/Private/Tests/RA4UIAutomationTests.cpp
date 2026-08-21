@@ -238,11 +238,11 @@ bool FRA4CampaignViewModelContentTest::RunTest(const FString& Parameters)
 {
     URA4CampaignViewModel* ViewModel = NewObject<URA4CampaignViewModel>();
 
-    TestEqual(TEXT("Faction count"), ViewModel->GetFactionCards().Num(), 4);
-    TestEqual(TEXT("Initial faction"), ViewModel->GetSelectedFaction(), ERA4FactionTheme::USSR);
-    TestTrue(TEXT("USSR has missions"), ViewModel->GetMissionNodes().Num() >= 8);
-    TestTrue(TEXT("Known mission can be selected"), ViewModel->SelectMission(TEXT("ussr_operation_molot")));
-    TestEqual(TEXT("Selected mission"), ViewModel->GetSelectedMissionId(), FName(TEXT("ussr_operation_molot")));
+    TestEqual(TEXT("Faction count"), ViewModel->GetFactionCards().Num(), 5);
+    TestEqual(TEXT("Initial faction"), ViewModel->GetSelectedFaction(), ERA4FactionTheme::EurasianPact);
+    TestTrue(TEXT("Eurasian Pact has missions"), ViewModel->GetMissionNodes().Num() >= 5);
+    TestTrue(TEXT("Known mission can be selected"), ViewModel->SelectMission(TEXT("ru_quiet_relay")));
+    TestEqual(TEXT("Selected mission"), ViewModel->GetSelectedMissionId(), FName(TEXT("ru_quiet_relay")));
     TestFalse(TEXT("Unknown mission is rejected"), ViewModel->SelectMission(TEXT("missing_content")));
     return true;
 }
@@ -257,12 +257,11 @@ bool FRA4CampaignViewModelProgressTest::RunTest(const FString& Parameters)
     URA4CampaignViewModel* ViewModel = NewObject<URA4CampaignViewModel>();
 
     TestTrue(TEXT("Known faction progress updates"), ViewModel->SetCampaignProgress(
-        ERA4FactionTheme::USSR, 99, 18));
+        ERA4FactionTheme::EurasianPact, 99, 18));
     TestEqual(TEXT("Completed missions clamp"), ViewModel->GetFactionCards()[0].CompletedMissions, 18);
     TestEqual(TEXT("Progress clamps"), ViewModel->GetFactionCards()[0].Progress, 1.0f);
-    TestFalse(TEXT("Locked mission cannot be selected"), ViewModel->SelectMission(TEXT("ussr_final_protocol")));
-    TestTrue(TEXT("Unlocked faction can be selected"), ViewModel->SelectFaction(ERA4FactionTheme::Allies));
-    TestEqual(TEXT("Allies selected"), ViewModel->GetSelectedFaction(), ERA4FactionTheme::Allies);
+    TestTrue(TEXT("Unlocked faction can be selected"), ViewModel->SelectFaction(ERA4FactionTheme::AtlanticAlliance));
+    TestEqual(TEXT("Atlantic Alliance selected"), ViewModel->GetSelectedFaction(), ERA4FactionTheme::AtlanticAlliance);
     return true;
 }
 

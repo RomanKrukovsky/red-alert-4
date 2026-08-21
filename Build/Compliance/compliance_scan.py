@@ -1,249 +1,690 @@
 #!/usr/bin/env python3
-"""Blocking compliance scanner.
-
-Referenced by .github/workflows/core.yml since the workflow was written, but the
-script itself was never committed -- only a two-file test corpus. Every CI run
-therefore failed this job on a clean checkout with "No such file or directory",
-which is the same class of defect the project keeps hitting: a green-looking
-process that never actually ran.
-
-Two checks, both chosen because they catch failures that have really happened in
-this repository rather than hypothetical ones:
-
-1. Asset provenance. Third-party binary assets must be declared in
-   LEGAL_AND_LICENSES.md. Seven of eight packs (12.3 GB) were found undocumented
-   during the 2026-08-06 audit (RISK-21), and an unverified licence cannot be
-   cleared by counsel, so this blocks a commercial build regardless of what the
-   terms turn out to be.
-
-2. Commit scope. A commit that DELETES code outside its own stated subject is
-   the mechanism behind five separate losses of finished work in one day: a
-   "fix(build): cook to disk" commit removed 522 lines of gameplay code across
-   seven files, a "fix(ui): sidebar width" commit removed 165 lines of QA tests,
-   and a "perf(sim)" commit dropped an accessor three tests depended on. None of
-   that is visible from the commit message, which is exactly why it needs a
-   machine check.
-
-Exit code 0 means clean, 1 means a blocking violation. Usage:
-
-    python3 Build/Compliance/compliance_scan.py --scope both
-    python3 Build/Compliance/compliance_scan.py --scope provenance --root <dir>
-    python3 Build/Compliance/compliance_scan.py --scope commit-scope --base <ref>
 """
+Blocking clean-room compliance scanner for the Red Alert 4 repository.
+"""
+
 import argparse
+import datetime as dt
+import fnmatch
+import json
 import os
+import pathlib
 import re
 import subprocess
 import sys
-
-# Binary extensions that carry licence obligations. Source files are excluded:
-# provenance for code is handled by review, not by this scan.
-ASSET_EXTENSIONS = {
-    ".uasset", ".umap", ".fbx", ".obj", ".blend",
-    ".png", ".jpg", ".jpeg", ".tga", ".exr", ".hdr",
-    ".wav", ".mp3", ".ogg", ".flac",
-    ".ttf", ".otf", ".woff", ".woff2",
-}
-
-LEGAL_DOC = os.path.join("Docs", "Production", "LEGAL_AND_LICENSES.md")
-
-# Directories whose contents are first-party by definition, so they need no
-# third-party provenance entry.
-FIRST_PARTY_PREFIXES = (
-    os.path.join("Content", "RA4"),
-    os.path.join("Content", "Maps"),
-    os.path.join("Content", "Movies"),
-)
+from dataclasses import dataclass
+from typing import Any, Iterable
 
 
-# Directories that are copies of the repository or build output, not content to
-# audit. Without this the scan walks .claude/worktrees/ and reports the same pack
-# once per worktree -- three worktrees turned two real findings into nine lines.
-# Duplicate noise is how a scanner gets ignored, so it is filtered at the source
-# rather than deduplicated afterwards: the point is not to look at copies at all.
-SKIP_DIR_NAMES = {
-    ".git", ".claude", "node_modules", "__pycache__",
-    "Intermediate", "Binaries", "DerivedDataCache", "Saved",
+SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
+DEFAULT_POLICY_DIR = SCRIPT_DIR / "policy"
+TEXT_EXTENSIONS = {
+    ".bat",
+    ".cmake",
+    ".cpp",
+    ".cs",
+    ".csv",
+    ".h",
+    ".hpp",
+    ".html",
+    ".ini",
+    ".json",
+    ".md",
+    ".ps1",
+    ".py",
+    ".sh",
+    ".txt",
+    ".xml",
+    ".xsd",
+    ".yaml",
+    ".yml",
 }
 
 
-def find_third_party_roots(root):
-    """Every immediate subdirectory of a ThirdParty/ folder is a pack to account for."""
-    packs = []
-    for dirpath, dirnames, _filenames in os.walk(root):
-        # Prune before descending, so a worktree's whole tree is skipped rather
-        # than walked and discarded.
-        dirnames[:] = [d for d in dirnames if d not in SKIP_DIR_NAMES]
-        if os.path.basename(dirpath) != "ThirdParty":
+@dataclass(frozen=True)
+class Violation:
+    rule_id: str
+    scope: str
+    path: str
+    message: str
+
+    def render(self) -> str:
+        return f"[{self.scope}] {self.rule_id}: {self.path} -> {self.message}"
+
+
+def load_json(path: pathlib.Path) -> Any:
+    with path.open("r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def normalize_relpath(path: str) -> str:
+    return pathlib.PurePosixPath(path.replace("\\", "/")).as_posix()
+
+
+def add_violation(
+    sink: list[Violation],
+    seen: set[tuple[str, str, str, str]],
+    rule_id: str,
+    scope: str,
+    path: str,
+    message: str,
+) -> None:
+    normalized_path = normalize_relpath(path)
+    key = (rule_id, scope, normalized_path, message)
+    if key in seen:
+        return
+    seen.add(key)
+    sink.append(Violation(rule_id=rule_id, scope=scope, path=normalized_path, message=message))
+
+
+def list_git_index_files(repo_root: pathlib.Path) -> list[str]:
+    result = subprocess.run(
+        ["git", "-C", str(repo_root), "ls-files", "-z"],
+        check=True,
+        capture_output=True,
+    )
+    raw_paths = result.stdout.split(b"\0")
+    paths = [normalize_relpath(item.decode("utf-8")) for item in raw_paths if item]
+    return sorted(paths)
+
+
+def read_git_index_bytes(repo_root: pathlib.Path, rel_path: str) -> bytes:
+    result = subprocess.run(
+        ["git", "-C", str(repo_root), "show", f":{rel_path}"],
+        check=True,
+        capture_output=True,
+    )
+    return result.stdout
+
+
+def iter_workspace_files(repo_root: pathlib.Path, roots: Iterable[str]) -> list[str]:
+    files: list[str] = []
+    for root_name in roots:
+        abs_root = repo_root / root_name
+        if not abs_root.exists():
             continue
-        for name in sorted(dirnames):
-            packs.append(os.path.relpath(os.path.join(dirpath, name), root))
-        # Do not descend further: nested ThirdParty inside a pack is the pack's problem.
-        dirnames[:] = []
-    return packs
+        for dirpath, dirnames, filenames in os.walk(abs_root):
+            dirnames[:] = [
+                name for name in dirnames
+                if name not in {".git", "__pycache__", "build", "CMakeFiles", "node_modules", ".claude", "DerivedDataCache", "Intermediate", "Saved"}
+            ]
+            for filename in filenames:
+                abs_path = pathlib.Path(dirpath) / filename
+                rel_path = normalize_relpath(str(abs_path.relative_to(repo_root)))
+                files.append(rel_path)
+    return sorted(files)
 
 
-def pack_has_assets(root, pack_rel):
-    for dirpath, dirnames, filenames in os.walk(os.path.join(root, pack_rel)):
-        dirnames[:] = [d for d in dirnames if d not in SKIP_DIR_NAMES]
-        for f in filenames:
-            if os.path.splitext(f)[1].lower() in ASSET_EXTENSIONS:
-                return True
+def looks_text_bytes(payload: bytes, suffix: str) -> bool:
+    if suffix in TEXT_EXTENSIONS:
+        return True
+    if b"\0" in payload[:4096]:
+        return False
+    try:
+        payload[:4096].decode("utf-8")
+    except UnicodeDecodeError:
+        return False
+    return True
+
+
+def read_workspace_bytes(repo_root: pathlib.Path, rel_path: str) -> bytes:
+    return (repo_root / rel_path).read_bytes()
+
+
+def load_policy(policy_dir: pathlib.Path) -> dict[str, Any]:
+    return load_json(policy_dir / "denylist.json")
+
+
+def load_provenance_schema(policy_dir: pathlib.Path) -> dict[str, Any]:
+    return load_json(policy_dir / "provenance.schema.json")
+
+
+def load_suppressions(policy_dir: pathlib.Path) -> dict[str, Any]:
+    return load_json(policy_dir / "suppressions.json")
+
+
+def parse_iso_date(raw_value: str) -> dt.date | None:
+    try:
+        return dt.date.fromisoformat(raw_value)
+    except ValueError:
+        return None
+
+
+def validate_suppressions(
+    suppressions_doc: dict[str, Any],
+    today: dt.date,
+) -> tuple[list[Violation], list[dict[str, Any]]]:
+    violations: list[Violation] = []
+    seen: set[tuple[str, str, str, str]] = set()
+    suppressions = suppressions_doc.get("suppressions")
+    if not isinstance(suppressions, list):
+        add_violation(
+            violations,
+            seen,
+            "invalid_suppressions_file",
+            "config",
+            "Build/Compliance/policy/suppressions.json",
+            "Top-level 'suppressions' must be a list.",
+        )
+        return violations, []
+
+    valid_entries: list[dict[str, Any]] = []
+    for index, entry in enumerate(suppressions):
+        entry_path = f"Build/Compliance/policy/suppressions.json#{index}"
+        if not isinstance(entry, dict):
+            add_violation(
+                violations,
+                seen,
+                "invalid_suppression_entry",
+                "config",
+                entry_path,
+                "Suppression entry must be an object.",
+            )
+            continue
+        required_fields = ["id", "rule_id", "path_glob", "comment", "reviewer", "expires_on"]
+        missing = [field for field in required_fields if not isinstance(entry.get(field), str) or not entry.get(field).strip()]
+        if missing:
+            add_violation(
+                violations,
+                seen,
+                "invalid_suppression_entry",
+                "config",
+                entry_path,
+                f"Missing required non-empty fields: {', '.join(sorted(missing))}.",
+            )
+            continue
+        expiry = parse_iso_date(entry["expires_on"])
+        if expiry is None:
+            add_violation(
+                violations,
+                seen,
+                "invalid_suppression_entry",
+                "config",
+                entry_path,
+                "expires_on must be YYYY-MM-DD.",
+            )
+            continue
+        normalized_entry = dict(entry)
+        normalized_entry["expires_on_date"] = expiry
+        normalized_entry["expired"] = expiry < today
+        valid_entries.append(normalized_entry)
+    return violations, valid_entries
+
+
+def is_suppressed(
+    rule_id: str,
+    rel_path: str,
+    suppressions: list[dict[str, Any]],
+) -> bool:
+    normalized_path = normalize_relpath(rel_path)
+    for entry in suppressions:
+        if entry.get("expired"):
+            continue
+        if entry["rule_id"] != rule_id:
+            continue
+        if fnmatch.fnmatch(normalized_path, entry["path_glob"]):
+            return True
     return False
 
 
-def scan_provenance(root):
-    """Third-party packs containing assets must be named in the legal inventory.
+def maybe_add_violation(
+    sink: list[Violation],
+    seen: set[tuple[str, str, str, str]],
+    suppressions: list[dict[str, Any]],
+    rule_id: str,
+    scope: str,
+    path: str,
+    message: str,
+) -> None:
+    if is_suppressed(rule_id, path, suppressions):
+        return
+    add_violation(sink, seen, rule_id, scope, path, message)
 
-    Blind spot worth stating: this walks the FILESYSTEM, so it only sees packs that
-    are actually present. CityPark (4.1 GB) is gitignored, so a CI checkout has no
-    copy of it and this scan cannot report it -- yet it is one of the packs with no
-    recorded provenance, and RA4_Skirmish_Production depends on its art. Packs
-    outside version control therefore need the manual audit in
-    Docs/Production/THIRD_PARTY_PACK_AUDIT.md; this check cannot substitute for it
-    (RISK-20 and RISK-21 together).
-    """
-    violations = []
-    legal_path = os.path.join(root, LEGAL_DOC)
-    if not os.path.isfile(legal_path):
-        # A missing inventory is itself the violation: without it nothing can be
-        # cleared. Reported rather than skipped, because skipping is how this
-        # check would silently pass forever.
-        return ["%s is missing -- no asset provenance can be verified" % LEGAL_DOC]
 
-    with open(legal_path, "r", encoding="utf-8", errors="replace") as fh:
-        legal_text = fh.read().lower()
+def normalize_provenance_record(raw_record: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "asset_id": raw_record.get("asset_id") or raw_record.get("assetId"),
+        "path": raw_record.get("path") or raw_record.get("localImportPath"),
+        "sha256": raw_record.get("sha256") or raw_record.get("checksumSHA256"),
+        "artifact_kind": raw_record.get("artifact_kind") or raw_record.get("category"),
+        "creator": raw_record.get("creator") or raw_record.get("author"),
+        "creation_date": raw_record.get("creation_date") or raw_record.get("creationDate"),
+        "source_type": raw_record.get("source_type"),
+        "source_uri_or_contract": raw_record.get("source_uri_or_contract") or raw_record.get("url"),
+        "license": raw_record.get("license"),
+        "commercial_use_allowed": raw_record.get("commercial_use_allowed"),
+        "contains_third_party_ip": raw_record.get("contains_third_party_ip"),
+        "similarity_review_status": raw_record.get("similarity_review_status"),
+        "reviewer": raw_record.get("reviewer"),
+        "comment": raw_record.get("comment") or raw_record.get("notes"),
+        "release_allowed": raw_record.get("release_allowed"),
+    }
 
-    for pack in find_third_party_roots(root):
-        pack_name = os.path.basename(pack)
-        if not pack_has_assets(root, pack):
-            # An empty or stub directory carries no licence obligation yet.
-            continue
-        if pack_name.lower() not in legal_text:
-            violations.append(
-                "third-party pack '%s' contains assets but is not documented in %s "
-                "(record source URL, licence and commercial-use verdict)" % (pack, LEGAL_DOC)
+
+def validate_provenance_manifests(
+    repo_root: pathlib.Path,
+    policy: dict[str, Any],
+    schema: dict[str, Any],
+    suppressions: list[dict[str, Any]],
+) -> tuple[list[Violation], list[str]]:
+    violations: list[Violation] = []
+    seen: set[tuple[str, str, str, str]] = set()
+    valid_paths: list[str] = []
+    manifest_paths = policy.get("manifest_paths", [])
+    required_fields = schema.get("required_record_fields", {})
+    allowed_source_types = set(schema.get("allowed_source_types", []))
+    allowed_similarity_statuses = set(schema.get("allowed_similarity_review_statuses", []))
+
+    for manifest_rel in manifest_paths:
+        manifest_abs = repo_root / manifest_rel
+        if not manifest_abs.exists():
+            maybe_add_violation(
+                violations,
+                seen,
+                suppressions,
+                "missing_provenance_manifest",
+                "workspace",
+                manifest_rel,
+                "Required provenance manifest is missing.",
             )
+            continue
+        try:
+            document = load_json(manifest_abs)
+        except json.JSONDecodeError as exc:
+            maybe_add_violation(
+                violations,
+                seen,
+                suppressions,
+                "invalid_provenance_manifest",
+                "workspace",
+                manifest_rel,
+                f"Invalid JSON: {exc}.",
+            )
+            continue
+
+        raw_records = document.get("records")
+        if raw_records is None:
+            raw_records = document.get("assets")
+        if not isinstance(raw_records, list):
+            maybe_add_violation(
+                violations,
+                seen,
+                suppressions,
+                "invalid_provenance_manifest",
+                "workspace",
+                manifest_rel,
+                "Manifest must contain a top-level 'records' or 'assets' list.",
+            )
+            continue
+
+        for index, raw_record in enumerate(raw_records):
+            record_path = f"{manifest_rel}#{index}"
+            if not isinstance(raw_record, dict):
+                maybe_add_violation(
+                    violations,
+                    seen,
+                    suppressions,
+                    "invalid_provenance_record",
+                    "workspace",
+                    record_path,
+                    "Provenance record must be an object.",
+                )
+                continue
+            record = normalize_provenance_record(raw_record)
+            record_valid = True
+            for field_name, field_type in required_fields.items():
+                value = record.get(field_name)
+                if field_type == "string":
+                    if not isinstance(value, str) or not value.strip():
+                        maybe_add_violation(
+                            violations,
+                            seen,
+                            suppressions,
+                            "invalid_provenance_record",
+                            "workspace",
+                            record_path,
+                            f"Missing required string field '{field_name}'.",
+                        )
+                        record_valid = False
+                elif field_type == "boolean":
+                    if not isinstance(value, bool):
+                        maybe_add_violation(
+                            violations,
+                            seen,
+                            suppressions,
+                            "invalid_provenance_record",
+                            "workspace",
+                            record_path,
+                            f"Missing required boolean field '{field_name}'.",
+                        )
+                        record_valid = False
+
+            sha256 = record.get("sha256")
+            if isinstance(sha256, str) and not re.fullmatch(r"[0-9a-fA-F]{64}", sha256):
+                maybe_add_violation(
+                    violations,
+                    seen,
+                    suppressions,
+                    "invalid_provenance_record",
+                    "workspace",
+                    record_path,
+                    "sha256 must be a 64-character hex string.",
+                )
+                record_valid = False
+
+            creation_date = record.get("creation_date")
+            if isinstance(creation_date, str) and parse_iso_date(creation_date) is None:
+                maybe_add_violation(
+                    violations,
+                    seen,
+                    suppressions,
+                    "invalid_provenance_record",
+                    "workspace",
+                    record_path,
+                    "creation_date must be YYYY-MM-DD.",
+                )
+                record_valid = False
+
+            source_type = record.get("source_type")
+            if isinstance(source_type, str) and allowed_source_types and source_type not in allowed_source_types:
+                maybe_add_violation(
+                    violations,
+                    seen,
+                    suppressions,
+                    "invalid_provenance_record",
+                    "workspace",
+                    record_path,
+                    f"source_type '{source_type}' is not allowed.",
+                )
+                record_valid = False
+
+            similarity_status = record.get("similarity_review_status")
+            if isinstance(similarity_status, str) and allowed_similarity_statuses and similarity_status not in allowed_similarity_statuses:
+                maybe_add_violation(
+                    violations,
+                    seen,
+                    suppressions,
+                    "invalid_provenance_record",
+                    "workspace",
+                    record_path,
+                    f"similarity_review_status '{similarity_status}' is not allowed.",
+                )
+                record_valid = False
+
+            asset_path = record.get("path")
+            if isinstance(asset_path, str) and asset_path.strip():
+                normalized_asset_path = normalize_relpath(asset_path)
+                if pathlib.PurePosixPath(normalized_asset_path).is_absolute():
+                    maybe_add_violation(
+                        violations,
+                        seen,
+                        suppressions,
+                        "invalid_provenance_record",
+                        "workspace",
+                        record_path,
+                        "path must be repository-relative, not absolute.",
+                    )
+                    record_valid = False
+                elif not (repo_root / normalized_asset_path).exists():
+                    maybe_add_violation(
+                        violations,
+                        seen,
+                        suppressions,
+                        "invalid_provenance_record",
+                        "workspace",
+                        record_path,
+                        f"Referenced path does not exist: {normalized_asset_path}.",
+                    )
+                    record_valid = False
+                elif record_valid:
+                    valid_paths.append(normalized_asset_path)
+            else:
+                record_valid = False
+
+    return violations, valid_paths
+
+
+def path_is_under(rel_path: str, root_name: str) -> bool:
+    normalized = normalize_relpath(rel_path)
+    return normalized == root_name or normalized.startswith(f"{root_name}/")
+
+
+def coverage_matches(covered_path: str, target_path: str) -> bool:
+    normalized_covered = normalize_relpath(covered_path).rstrip("/")
+    normalized_target = normalize_relpath(target_path)
+    return normalized_target == normalized_covered or normalized_target.startswith(f"{normalized_covered}/")
+
+
+def scan_path_inventory(
+    repo_root: pathlib.Path,
+    rel_paths: list[str],
+    scope: str,
+    policy: dict[str, Any],
+    suppressions: list[dict[str, Any]],
+    provenance_paths: list[str],
+) -> list[Violation]:
+    violations: list[Violation] = []
+    seen: set[tuple[str, str, str, str]] = set()
+    production_roots = tuple(policy.get("production_roots", []))
+    forbidden_directories = tuple(normalize_relpath(item) for item in policy.get("forbidden_directories", []))
+    forbidden_extensions = set(policy.get("forbidden_extensions", []))
+    binary_extensions = set(policy.get("binary_asset_extensions", []))
+
+    def read_bytes(rel_path: str) -> bytes:
+        if scope == "index":
+            workspace_path = repo_root / rel_path
+            if workspace_path.exists():
+                return read_workspace_bytes(repo_root, rel_path)
+            return read_git_index_bytes(repo_root, rel_path)
+        return read_workspace_bytes(repo_root, rel_path)
+
+    for rel_path in rel_paths:
+        normalized_path = normalize_relpath(rel_path)
+        suffix = pathlib.PurePosixPath(normalized_path).suffix.lower()
+
+        if scope == "index" and path_is_under(normalized_path, "ExternalResearch"):
+            maybe_add_violation(
+                violations,
+                seen,
+                suppressions,
+                "external_research_in_index",
+                scope,
+                normalized_path,
+                "ExternalResearch content must never be committed to git index.",
+            )
+
+        for forbidden_dir in forbidden_directories:
+            if path_is_under(normalized_path, forbidden_dir):
+                maybe_add_violation(
+                    violations,
+                    seen,
+                    suppressions,
+                    "forbidden_directory",
+                    scope,
+                    normalized_path,
+                    f"Path lives under forbidden directory '{forbidden_dir}'.",
+                )
+
+        if not any(path_is_under(normalized_path, root_name) for root_name in production_roots):
+            continue
+
+        if suffix in forbidden_extensions:
+            maybe_add_violation(
+                violations,
+                seen,
+                suppressions,
+                "forbidden_extension",
+                scope,
+                normalized_path,
+                f"Forbidden extension '{suffix}' under production roots.",
+            )
+
+        should_read_as_text = suffix in TEXT_EXTENSIONS or suffix in forbidden_extensions
+        is_known_binary = suffix in binary_extensions
+
+        if is_known_binary:
+            if not any(coverage_matches(covered_path, normalized_path) for covered_path in provenance_paths):
+                maybe_add_violation(
+                    violations,
+                    seen,
+                    suppressions,
+                    "missing_provenance",
+                    scope,
+                    normalized_path,
+                    "Binary production asset is not covered by a valid provenance record.",
+                )
+            continue
+
+        file_bytes = b""
+        is_text = should_read_as_text
+        if should_read_as_text:
+            file_bytes = read_bytes(normalized_path)
+            is_text = looks_text_bytes(file_bytes, suffix)
+        else:
+            if not any(coverage_matches(covered_path, normalized_path) for covered_path in provenance_paths):
+                maybe_add_violation(
+                    violations,
+                    seen,
+                    suppressions,
+                    "missing_provenance",
+                    scope,
+                    normalized_path,
+                    "Binary production asset is not covered by a valid provenance record.",
+                )
+            continue
+
+        if not is_text:
+            if not any(coverage_matches(covered_path, normalized_path) for covered_path in provenance_paths):
+                maybe_add_violation(
+                    violations,
+                    seen,
+                    suppressions,
+                    "missing_provenance",
+                    scope,
+                    normalized_path,
+                    "Binary production asset is not covered by a valid provenance record.",
+                )
+            continue
+
+        text = file_bytes.decode("utf-8", errors="ignore")
+        for rule in policy.get("identifier_rules", []):
+            pattern = re.compile(rule["pattern"], re.IGNORECASE | re.MULTILINE)
+            if pattern.search(text):
+                maybe_add_violation(
+                    violations,
+                    seen,
+                    suppressions,
+                    rule["id"],
+                    scope,
+                    normalized_path,
+                    rule["description"],
+                )
+
+        for rule in policy.get("xml_policy_rules", []):
+            extensions = set(rule.get("extensions", []))
+            if extensions and suffix not in extensions:
+                continue
+            pattern = re.compile(rule["pattern"], re.IGNORECASE | re.MULTILINE)
+            if pattern.search(text):
+                maybe_add_violation(
+                    violations,
+                    seen,
+                    suppressions,
+                    rule["id"],
+                    scope,
+                    normalized_path,
+                    rule["description"],
+                )
+
     return violations
 
 
-# A commit's subject declares its area. Deleting code in an unrelated area is the
-# pattern this catches. Keys are conventional-commit scopes/types seen in this
-# repo; values are the path prefixes such a commit may legitimately delete from.
-SCOPE_ALLOWED_DELETIONS = {
-    "build": ("Scripts/", "Build/", "Tools/", ".github/", "CMakeLists"),
-    "ci": (".github/", "Build/", "Scripts/"),
-    "docs": ("Docs/", "README"),
-    "ui": ("Source/RA4UI/", "Source/RedAlert4/", "Content/RA4UI"),
-    "loc": ("Content/", "Config/", "Docs/"),
-    "content": ("Content/", "Docs/"),
-    "art": ("Content/", "Source/RA4Presentation/", "Docs/"),
-    "map": ("Content/Maps", "Tools/", "Docs/"),
-}
+def scan_repository(
+    repo_root: pathlib.Path,
+    scope: str = "both",
+    policy_dir: pathlib.Path | None = None,
+) -> list[Violation]:
+    resolved_policy_dir = policy_dir or DEFAULT_POLICY_DIR
+    policy = load_policy(resolved_policy_dir)
+    schema = load_provenance_schema(resolved_policy_dir)
+    suppressions_doc = load_suppressions(resolved_policy_dir)
+    today = dt.date.today()
 
-# Deleting from these paths is always significant enough to justify naming it in
-# the subject, whatever the scope claims.
-PROTECTED_PREFIXES = (
-    "Source/RA4Simulation/",
-    "Source/RA4Core/",
-    "Source/RA4Tests/",
-    "Source/RA4Recon/",
-    "Source/RA4AI/",
-)
+    violations: list[Violation] = []
+    suppressions_violations, suppressions = validate_suppressions(suppressions_doc, today)
+    violations.extend(suppressions_violations)
 
-DELETION_THRESHOLD = 40   # lines removed from one protected file before we object
+    provenance_violations, provenance_paths = validate_provenance_manifests(
+        repo_root=repo_root,
+        policy=policy,
+        schema=schema,
+        suppressions=suppressions,
+    )
+    violations.extend(provenance_violations)
 
-
-def git_output(args, cwd):
-    return subprocess.run(["git"] + args, cwd=cwd, capture_output=True, text=True).stdout
-
-
-def scan_commit_scope(root, base_ref):
-    """Flag commits that delete substantial code outside their declared scope."""
-    violations = []
-    rev_range = "%s..HEAD" % base_ref
-    shas = [s for s in git_output(["rev-list", rev_range], root).split() if s]
-    if not shas:
-        return violations
-
-    for sha in shas:
-        subject = git_output(["log", "-1", "--format=%s", sha], root).strip()
-        # A revert or an explicit restore is allowed to delete anything: undoing
-        # is its whole purpose.
-        if re.match(r"^(revert|Revert)", subject):
-            continue
-
-        match = re.match(r"^(\w+)\(([^)]*)\)", subject)
-        declared = []
-        if match:
-            declared = [p.strip() for p in match.group(2).split(",") if p.strip()]
-            declared.append(match.group(1).strip())
-        elif re.match(r"^(\w+):", subject):
-            declared = [re.match(r"^(\w+):", subject).group(1)]
-
-        allowed = set()
-        for scope in declared:
-            allowed.update(SCOPE_ALLOWED_DELETIONS.get(scope, ()))
-        if not allowed:
-            # An unrecognised scope cannot be judged; review covers it.
-            continue
-
-        numstat = git_output(["show", "--numstat", "--format=", sha], root)
-        for line in numstat.splitlines():
-            parts = line.split("\t")
-            if len(parts) != 3:
-                continue
-            added, removed, path = parts
-            if not removed.isdigit():
-                continue
-            removed_n = int(removed)
-            if removed_n < DELETION_THRESHOLD:
-                continue
-            if not path.startswith(PROTECTED_PREFIXES):
-                continue
-            if any(path.startswith(prefix) for prefix in allowed):
-                continue
-            violations.append(
-                "%s '%s' deletes %d lines from %s, which is outside its declared scope "
-                "(%s). If the deletion is intended, say so in the subject or split the "
-                "commit; five pieces of finished work were lost this way on 2026-08-06."
-                % (sha[:9], subject, removed_n, path, ", ".join(declared) or "none")
+    if scope in {"index", "both"}:
+        violations.extend(
+            scan_path_inventory(
+                repo_root=repo_root,
+                rel_paths=list_git_index_files(repo_root),
+                scope="index",
+                policy=policy,
+                suppressions=suppressions,
+                provenance_paths=provenance_paths,
             )
+        )
+
+    if scope in {"workspace", "both"}:
+        violations.extend(
+            scan_path_inventory(
+                repo_root=repo_root,
+                rel_paths=iter_workspace_files(repo_root, policy.get("production_roots", [])),
+                scope="workspace",
+                policy=policy,
+                suppressions=suppressions,
+                provenance_paths=provenance_paths,
+            )
+        )
+
+    violations.sort(key=lambda item: (item.scope, item.path, item.rule_id, item.message))
     return violations
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--scope", default="both",
-                        choices=["both", "provenance", "commit-scope"])
-    parser.add_argument("--root", default=".", help="repository root to scan")
-    parser.add_argument("--base", default="origin/main",
-                        help="ref to compare against for commit-scope")
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Run the blocking clean-room compliance scanner.")
+    parser.add_argument(
+        "--repo-root",
+        default=str(SCRIPT_DIR.parent.parent),
+        help="Repository root to scan.",
+    )
+    parser.add_argument(
+        "--scope",
+        choices=["index", "workspace", "both"],
+        default="both",
+        help="Scan git index, workspace production roots, or both.",
+    )
+    parser.add_argument(
+        "--policy-dir",
+        default=str(DEFAULT_POLICY_DIR),
+        help="Policy directory containing denylist, suppressions, and provenance schema.",
+    )
     args = parser.parse_args()
 
-    root = os.path.abspath(args.root)
-    violations = []
+    repo_root = pathlib.Path(args.repo_root).resolve()
+    policy_dir = pathlib.Path(args.policy_dir).resolve()
 
-    if args.scope in ("both", "provenance"):
-        violations += scan_provenance(root)
+    print(f"[Compliance Scan] Scanning repository at: {repo_root}")
+    print(f"[Compliance Scan] Scope: {args.scope}")
+    print(f"[Compliance Scan] Policy: {policy_dir}")
 
-    if args.scope in ("both", "commit-scope"):
-        # Missing base ref (shallow clone, first push) is not a violation: there
-        # is nothing to compare against, and inventing a failure here would train
-        # people to ignore this scanner.
-        if git_output(["rev-parse", "--verify", args.base], root).strip():
-            violations += scan_commit_scope(root, args.base)
-        else:
-            print("compliance: base ref '%s' not found, skipping commit-scope" % args.base)
-
-    for v in violations:
-        print("COMPLIANCE VIOLATION: %s" % v)
-
+    violations = scan_repository(repo_root=repo_root, scope=args.scope, policy_dir=policy_dir)
     if violations:
-        print("\ncompliance scan FAILED with %d violation(s)" % len(violations))
+        print(f"\n[FAIL] Compliance Scan found {len(violations)} violation(s):")
+        for violation in violations:
+            print(f"  - {violation.render()}")
         return 1
-    print("compliance scan PASSED")
+
+    print("[PASS] Compliance Scan completed with 0 violations.")
     return 0
 
 

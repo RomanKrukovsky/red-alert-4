@@ -30,6 +30,8 @@
 // set from `git status`, which means an edit -- any edit -- moves the file out of
 // the blob and exposes what it was borrowing.
 #include "RA4CameraPawn.h"
+#include "RA4EntityActor.h"
+#include "RA4RtsHud.h"
 #include "Camera/CameraComponent.h"
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
@@ -37,8 +39,37 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "Components/StaticMeshComponent.h"
+#include "Engine/DirectionalLight.h"
+#include "Components/DirectionalLightComponent.h"
+#include "Engine/SkyLight.h"
+#include "Components/SkyLightComponent.h"
+#include "Engine/PostProcessVolume.h"
+#include "Engine/ExponentialHeightFog.h"
+#include "Components/ExponentialHeightFogComponent.h"
 #include "LandscapeProxy.h"
 #include "HAL/IConsoleManager.h"
+
+// Day / Night Cycle Console Variables
+static float GDayNightTimeOverride = -1.0f;
+static FAutoConsoleVariableRef CVarDayNightTime(
+    TEXT("ra4.DayNight.Time"),
+    GDayNightTimeOverride,
+    TEXT("Set normalized time of day [0.0 = Midnight, 0.25 = Sunrise, 0.50 = Midday, 0.75 = Sunset, -1.0 = auto-progression]"),
+    ECVF_Default);
+
+static float GDayNightSpeed = 1.0f;
+static FAutoConsoleVariableRef CVarDayNightSpeed(
+    TEXT("ra4.DayNight.Speed"),
+    GDayNightSpeed,
+    TEXT("Speed multiplier for Day/Night cycle progression (1.0 = standard, 0.0 = pause, 10.0 = fast)"),
+    ECVF_Default);
+
+static int32 GDayNightEnabled = 1;
+static FAutoConsoleVariableRef CVarDayNightEnabled(
+    TEXT("ra4.DayNight.Enabled"),
+    GDayNightEnabled,
+    TEXT("1 = Day/Night cycle enabled, 0 = disabled"),
+    ECVF_Default);
 
 // Off by default: this is a debugging aid, and with it on every shot draws a bright
 // yellow tracer over the battlefield.
@@ -501,6 +532,21 @@ void URA4SimWorldSubsystem::Tick(float DeltaTime)
     // updating the picture after the actors keeps them from disagreeing by one
     // frame at a fog boundary.
     UpdateFogVisibilityTexture();
+
+    // Dynamic Astronomical Day / Night Cycle
+    UpdateDayNightCycle(DeltaTime);
+
+    // Mystery Battlefield Crates
+    UpdateMysteryCrates(DeltaTime);
+
+    // Explosive Fuel Barrels
+    UpdateExplosiveBarrels(DeltaTime);
+
+    // Radioactive Hazard Zones
+    UpdateRadiationZones(DeltaTime);
+
+    // Flying Turret Physics
+    UpdateFlyingTurrets(DeltaTime);
 }
 
 TStatId URA4SimWorldSubsystem::GetStatId() const
@@ -792,6 +838,26 @@ static void DrawExplosionEffect(UWorld* World, const FVector& Center, float Radi
     }
 }
 
+void URA4SimWorldSubsystem::SpawnVehicleWreckage(UWorld* World, const FVector& Location, const std::string& EntityName)
+{
+    if (World == nullptr)
+    {
+        return;
+    }
+
+    // Heavy crater scorch mark
+    DrawDebugCircle(World, Location + FVector(0, 0, 5), 75.0f, 20, FColor(20, 20, 20), false, 45.0f, 0, 4.0f, FVector(1, 0, 0), FVector(0, 1, 0), false);
+    DrawDebugCircle(World, Location + FVector(0, 0, 5), 40.0f, 16, FColor(10, 10, 10), false, 45.0f, 0, 5.0f, FVector(1, 0, 0), FVector(0, 1, 0), false);
+
+    // Glowing smoldering embers
+    for (int32 i = 0; i < 6; ++i)
+    {
+        const float Angle = float(i) * 1.047f;
+        const FVector EmberPos = Location + FVector(FMath::Cos(Angle) * 32.0f, FMath::Sin(Angle) * 32.0f, 8.0f);
+        DrawDebugPoint(World, EmberPos, 9.0f, FColor(255, 95, 20), false, 35.0f);
+    }
+}
+
 void URA4SimWorldSubsystem::ProcessPresentationEvents()
 {
     UWorld* UnrealWorld = GetWorld();
@@ -876,6 +942,21 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
                 FVector ImpactPoint = RA4Coords::ToUnreal(Event.Location);
                 ImpactPoint.Z = SampleGroundHeight(ImpactPoint.X, ImpactPoint.Y) + 25.0f;
                 DrawExplosionEffect(UnrealWorld, ImpactPoint, 65.0f);
+
+                if (TActorIterator<ARA4CameraPawn> CamIt(UnrealWorld); CamIt)
+                {
+                    CamIt->TriggerCameraShake(0.45f);
+                }
+
+                const RA4::EntityDef* Def = Content->FindEntity(Event.Content);
+                if (Def != nullptr && Def->Kind == RA4::EntityKind::Unit)
+                {
+                    SpawnVehicleWreckage(UnrealWorld, ImpactPoint, Def->Name);
+                    if (Def->Unit.bCanCrushInfantry || Def->Name.find("Tank") != std::string::npos || Def->Name.find("tank") != std::string::npos)
+                    {
+                        SpawnFlyingTurret(ImpactPoint);
+                    }
+                }
             }
             break;
 
@@ -904,6 +985,24 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
             if (Event.Player == LocalPlayer)
             {
                 PlayEVA(ERA4EVAEvent::UnitReady);
+            }
+            break;
+
+        case RA4::SimEventType::ResourceDelivered:
+            if (Event.Player == LocalPlayer && UnrealWorld && Event.Value > 0)
+            {
+                FVector RefPos = FVector::ZeroVector;
+                if (Event.Other.IsValid() && Event.Other.Index < SimWorld->GetAllTransforms().size())
+                {
+                    RefPos = RA4Coords::ToUnreal(SimWorld->GetAllTransforms()[Event.Other.Index].Position);
+                    RefPos.Z += 120.0f;
+                }
+                else
+                {
+                    RefPos = RA4Coords::ToUnreal(Event.Location);
+                    RefPos.Z += 80.0f;
+                }
+                ARA4RtsHud::SpawnFloatingText(UnrealWorld, RefPos, FString::Printf(TEXT("+%d КР"), Event.Value), FLinearColor(0.2f, 1.0f, 0.4f, 1.0f));
             }
             break;
 
@@ -1007,6 +1106,48 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
                 FVector ImpactPoint = RA4Coords::ToUnreal(Event.Location);
                 ImpactPoint.Z = SampleGroundHeight(ImpactPoint.X, ImpactPoint.Y) + 15.0f;
                 DrawExplosionEffect(UnrealWorld, ImpactPoint, 45.0f);
+
+                // Armor Ricochet and Debris Sparks
+                for (int32 s = 0; s < 5; ++s)
+                {
+                    const FVector SparkDir = FMath::VRandCone(FVector::UpVector, 0.75f);
+                    DrawDebugLine(UnrealWorld, ImpactPoint, ImpactPoint + SparkDir * FMath::FRandRange(25.0f, 65.0f), FColor(255, 230, 90), false, 0.12f, 0, 1.8f);
+                }
+
+                // Check direct hit on explosive fuel barrels
+                for (int32 b = 0; b < ActiveExplosiveBarrels.Num(); ++b)
+                {
+                    if (ActiveExplosiveBarrels[b].bAlive && FVector::Dist2D(ActiveExplosiveBarrels[b].Location, ImpactPoint) <= 90.0f)
+                    {
+                        ActiveExplosiveBarrels[b].bAlive = false;
+                        DrawExplosionEffect(UnrealWorld, ActiveExplosiveBarrels[b].Location, 140.0f);
+                        if (TActorIterator<ARA4CameraPawn> CamIt(UnrealWorld); CamIt)
+                        {
+                            CamIt->TriggerCameraShake(0.65f);
+                        }
+                        const auto& Cores = SimWorld->GetAllCores();
+                        const auto& Transforms = SimWorld->GetAllTransforms();
+                        for (size_t u = 0; u < Cores.size(); ++u)
+                        {
+                            if (!Cores[u].bAlive || u >= Transforms.size()) continue;
+                            const FVector UnitPos = RA4Coords::ToUnreal(Transforms[u].Position);
+                            const float Dist = FVector::Dist2D(UnitPos, ActiveExplosiveBarrels[b].Location);
+                            if (Dist <= 320.0f)
+                            {
+                                if (const RA4::HealthComp* Health = SimWorld->GetHealth(SimWorld->MakeId(uint32(u))))
+                                {
+                                    const int32 Dmg = int32(350.0f * (1.0f - Dist / 320.0f));
+                                    const_cast<RA4::HealthComp*>(Health)->Current = FMath::Max(0, Health->Current - Dmg);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (TActorIterator<ARA4CameraPawn> CamIt(UnrealWorld); CamIt)
+                {
+                    CamIt->TriggerCameraShake(0.25f);
+                }
             }
             break;
 
@@ -1708,6 +1849,12 @@ void URA4SimWorldSubsystem::SyncPresentation()
                 // 255 here rotated every unit by roughly a factor of sixteen.
                 const float UnrealRotZ = static_cast<float>(RA4Coords::FacingToYawDegrees(SimTransform.Facing));
                 Actor->UpdateFromSimulation(UnrealPos, UnrealRotZ, bNewActor);
+                Actor->SetNightMode(IsNight());
+
+                if (bNewActor && Cores[Index].Kind == RA4::EntityKind::Building)
+                {
+                    Actor->TriggerConstructionRise(2.5f);
+                }
 
                 // One-off dump of the first few actors. "The match runs but the
                 // screen is empty" is only answerable with the actual mesh, scale
@@ -2013,5 +2160,411 @@ void URA4SimWorldSubsystem::RegisterDefaultBlockoutMeshes()
     for (const FProductionMeshEntry& Entry : ProductionMeshes)
     {
         LoadBlockoutMesh(RA4::MakeContentId(Entry.ContentId).Value, Entry.AssetPath);
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Dynamic Day / Night Astronomical Cycle
+// -----------------------------------------------------------------------------
+
+void URA4SimWorldSubsystem::SetTimeOfDay(float NormalizedTime)
+{
+    CurrentTimeOfDay = FMath::Fmod(FMath::Max(0.0f, NormalizedTime), 1.0f);
+}
+
+void URA4SimWorldSubsystem::SetDayNightCycleSpeed(float SpeedMultiplier)
+{
+    DayNightSpeedMultiplier = FMath::Max(0.0f, SpeedMultiplier);
+}
+
+void URA4SimWorldSubsystem::SetDayNightCycleEnabled(bool bEnabled)
+{
+    bDayNightCycleEnabled = bEnabled;
+}
+
+bool URA4SimWorldSubsystem::IsNight() const
+{
+    return CurrentTimeOfDay < 0.22f || CurrentTimeOfDay > 0.78f;
+}
+
+void URA4SimWorldSubsystem::UpdateDayNightCycle(float DeltaTime)
+{
+    UWorld* World = GetWorld();
+    if (World == nullptr)
+    {
+        return;
+    }
+
+    if (GDayNightEnabled == 0 || !bDayNightCycleEnabled)
+    {
+        return;
+    }
+
+    // Time advancement
+    if (GDayNightTimeOverride >= 0.0f)
+    {
+        CurrentTimeOfDay = FMath::Fmod(FMath::Max(0.0f, GDayNightTimeOverride), 1.0f);
+    }
+    else
+    {
+        const float Speed = FMath::Max(0.0f, GDayNightSpeed) * DayNightSpeedMultiplier;
+        if (DayNightDurationSeconds > 0.0f)
+        {
+            CurrentTimeOfDay += (DeltaTime * Speed) / DayNightDurationSeconds;
+            if (CurrentTimeOfDay >= 1.0f)
+            {
+                CurrentTimeOfDay -= 1.0f;
+            }
+        }
+    }
+
+    // Lazy cache environment actors
+    if (!CachedSunLight.IsValid())
+    {
+        for (TActorIterator<ADirectionalLight> It(World); It; ++It)
+        {
+            if (It->GetActorLabel().Contains(TEXT("Sun")) || It->GetActorLabel().Contains(TEXT("RA4_Sun")))
+            {
+                CachedSunLight = *It;
+                break;
+            }
+        }
+    }
+    if (!CachedSkyLight.IsValid())
+    {
+        TActorIterator<ASkyLight> It(World);
+        if (It)
+        {
+            CachedSkyLight = *It;
+        }
+    }
+    if (!CachedPostProcess.IsValid())
+    {
+        for (TActorIterator<APostProcessVolume> It(World); It; ++It)
+        {
+            if (It->bUnbound)
+            {
+                CachedPostProcess = *It;
+                break;
+            }
+        }
+    }
+    if (!CachedHeightFog.IsValid())
+    {
+        TActorIterator<AExponentialHeightFog> It(World);
+        if (It)
+        {
+            CachedHeightFog = *It;
+        }
+    }
+
+    // Astronomical calculations
+    // 0.00 = Midnight, 0.25 = Sunrise, 0.50 = Midday, 0.75 = Sunset
+    const float AngleRad = CurrentTimeOfDay * 2.0f * PI - PI * 0.5f;
+    const float Elevation = FMath::Sin(AngleRad); // -1.0 (Midnight) to +1.0 (Noon)
+    const float SunYaw = 180.0f + CurrentTimeOfDay * 360.0f;
+
+    // Day transition factor: 0.0 at night, 1.0 at high noon
+    const float DayFactor = FMath::Clamp((Elevation + 0.15f) / 0.85f, 0.0f, 1.0f);
+    // Dawn/Dusk factor for warm golden sky/sun tints
+    const float DawnDusk = FMath::Clamp(1.0f - FMath::Abs(Elevation * 2.5f - 0.4f), 0.0f, 1.0f);
+
+    // 1. Sun / Moon Directional Light
+    if (CachedSunLight.IsValid())
+    {
+        UDirectionalLightComponent* SunComp = CachedSunLight->GetComponentByClass<UDirectionalLightComponent>();
+        if (SunComp != nullptr)
+        {
+            if (Elevation >= -0.05f)
+            {
+                // Daytime Sun: Pitch ranges from -2 deg (horizon) to -62 deg (zenith)
+                const float SunPitch = -2.0f - (Elevation * 60.0f);
+                CachedSunLight->SetActorRotation(FRotator(SunPitch, SunYaw, 0.0f));
+
+                const float SunLux = FMath::Lerp(1200.0f, 65000.0f, DayFactor * DayFactor);
+                SunComp->SetIntensity(SunLux);
+
+                const FLinearColor NoonColor(1.0f, 0.98f, 0.95f, 1.0f);
+                const FLinearColor DuskColor(1.0f, 0.52f, 0.22f, 1.0f);
+                const FLinearColor SunColor = FMath::Lerp(NoonColor, DuskColor, DawnDusk * 0.8f);
+                SunComp->SetLightColor(SunColor);
+            }
+            else
+            {
+                // Nighttime Moon: rises opposite to sun
+                const float MoonPitch = -15.0f - (-Elevation * 45.0f);
+                CachedSunLight->SetActorRotation(FRotator(MoonPitch, SunYaw + 180.0f, 0.0f));
+
+                SunComp->SetIntensity(2400.0f); // Cool silvery moonlight
+                SunComp->SetLightColor(FLinearColor(0.55f, 0.72f, 1.0f, 1.0f));
+            }
+        }
+    }
+
+    // 2. SkyLight Ambient
+    if (CachedSkyLight.IsValid())
+    {
+        USkyLightComponent* SkyComp = CachedSkyLight->GetComponentByClass<USkyLightComponent>();
+        if (SkyComp != nullptr)
+        {
+            const float SkyLux = FMath::Lerp(0.85f, 3.2f, DayFactor);
+            SkyComp->SetIntensity(SkyLux);
+
+            const FLinearColor DaySkyColor(0.85f, 0.92f, 1.0f, 1.0f);
+            const FLinearColor DuskSkyColor(0.95f, 0.60f, 0.40f, 1.0f);
+            const FLinearColor NightSkyColor(0.12f, 0.18f, 0.35f, 1.0f);
+
+            FLinearColor CurrentSkyColor = FMath::Lerp(NightSkyColor, DaySkyColor, DayFactor);
+            CurrentSkyColor = FMath::Lerp(CurrentSkyColor, DuskSkyColor, DawnDusk * 0.5f);
+            SkyComp->SetLightColor(CurrentSkyColor);
+
+            const FLinearColor DayGroundBounce(0.20f, 0.22f, 0.18f, 1.0f);
+            const FLinearColor NightGroundBounce(0.04f, 0.05f, 0.07f, 1.0f);
+            SkyComp->LowerHemisphereColor = FMath::Lerp(NightGroundBounce, DayGroundBounce, DayFactor);
+        }
+    }
+
+    // 3. Post Process & Camera Exposure
+    // Day EV100 = 12.0, Night EV100 = 6.0
+    const float TargetEV = FMath::Lerp(6.0f, 12.0f, DayFactor);
+
+    if (CachedPostProcess.IsValid())
+    {
+        FPostProcessSettings& PP = CachedPostProcess->Settings;
+        PP.bOverride_AutoExposureMinBrightness = true;
+        PP.AutoExposureMinBrightness = TargetEV;
+        PP.bOverride_AutoExposureMaxBrightness = true;
+        PP.AutoExposureMaxBrightness = TargetEV;
+        PP.bOverride_BloomIntensity = true;
+        PP.BloomIntensity = FMath::Lerp(0.35f, 0.10f, DayFactor); // Glowing lasers / lights at night
+    }
+
+    // Also synchronize local CameraPawns so camera matches exact day/night exposure
+    for (TActorIterator<ARA4CameraPawn> CamIt(World); CamIt; ++CamIt)
+    {
+        if (UCameraComponent* Cam = CamIt->FindComponentByClass<UCameraComponent>())
+        {
+            Cam->PostProcessSettings.bOverride_AutoExposureMinBrightness = true;
+            Cam->PostProcessSettings.AutoExposureMinBrightness = TargetEV;
+            Cam->PostProcessSettings.bOverride_AutoExposureMaxBrightness = true;
+            Cam->PostProcessSettings.AutoExposureMaxBrightness = TargetEV;
+            Cam->PostProcessSettings.bOverride_BloomIntensity = true;
+            Cam->PostProcessSettings.BloomIntensity = FMath::Lerp(0.35f, 0.10f, DayFactor);
+        }
+    }
+}
+
+void URA4SimWorldSubsystem::UpdateMysteryCrates(float DeltaTime)
+{
+    UWorld* UnrealWorld = GetWorld();
+    if (UnrealWorld == nullptr || SimWorld == nullptr) return;
+
+    TimeSinceLastCrateSpawn += DeltaTime;
+    if (TimeSinceLastCrateSpawn >= 22.0f && ActiveMysteryCratePositions.Num() < 4)
+    {
+        TimeSinceLastCrateSpawn = 0.0f;
+        const float SpawnX = FMath::FRandRange(1500.0f, 6500.0f);
+        const float SpawnY = FMath::FRandRange(1500.0f, 6500.0f);
+        const float SpawnZ = SampleGroundHeight(SpawnX, SpawnY) + 12.0f;
+        ActiveMysteryCratePositions.Add(FVector(SpawnX, SpawnY, SpawnZ));
+    }
+
+    const auto& Cores = SimWorld->GetAllCores();
+    const auto& Transforms = SimWorld->GetAllTransforms();
+
+    for (int32 i = ActiveMysteryCratePositions.Num() - 1; i >= 0; --i)
+    {
+        const FVector CratePos = ActiveMysteryCratePositions[i];
+
+        // Render crate visual (box + glowing beacon + pulsing ring)
+        DrawDebugBox(UnrealWorld, CratePos + FVector(0, 0, 16.0f), FVector(18, 18, 16), FColor(190, 145, 65), false, 0.05f, 0, 2.5f);
+        DrawDebugPoint(UnrealWorld, CratePos + FVector(0, 0, 36.0f), 10.0f, FColor(255, 230, 80), false, 0.05f);
+        DrawDebugCircle(UnrealWorld, CratePos + FVector(0, 0, 2.0f), 32.0f, 16, FColor(255, 210, 50), false, 0.05f, 0, 1.8f, FVector(1, 0, 0), FVector(0, 1, 0), false);
+
+        // Check if any unit picks up the crate
+        for (size_t u = 0; u < Cores.size(); ++u)
+        {
+            if (!Cores[u].bAlive || Cores[u].Kind != RA4::EntityKind::Unit || u >= Transforms.size()) continue;
+
+            const FVector UnitPos = RA4Coords::ToUnreal(Transforms[u].Position);
+            if (FVector::Dist2D(UnitPos, CratePos) <= 75.0f)
+            {
+                const uint8 UnitOwner = Cores[u].Owner;
+                const int32 RewardType = FMath::RandRange(0, 2);
+
+                if (RewardType == 0) // +2000 Credits
+                {
+                    SimWorld->AddCredits(UnitOwner, 2000);
+                    ARA4RtsHud::SpawnFloatingText(UnrealWorld, CratePos + FVector(0, 0, 40), TEXT("+2,000 КРЕДИТОВ!"), FLinearColor(0.2f, 1.0f, 0.4f, 1.0f));
+                }
+                else if (RewardType == 1) // Elite Veterancy
+                {
+                    if (ARA4EntityActor** ActorPtr = EntityActors.Find(uint32(u)))
+                    {
+                        if (*ActorPtr)
+                        {
+                            (*ActorPtr)->SetVeterancyRank(2);
+                        }
+                    }
+                    ARA4RtsHud::SpawnFloatingText(UnrealWorld, CratePos + FVector(0, 0, 40), TEXT("РАНГ: ЭЛИТА!"), FLinearColor(1.0f, 0.85f, 0.2f, 1.0f));
+                }
+                else // Full Repair
+                {
+                    if (const RA4::HealthComp* Health = SimWorld->GetHealth(SimWorld->MakeId(uint32(u))))
+                    {
+                        const_cast<RA4::HealthComp*>(Health)->Current = Health->Max;
+                    }
+                    ARA4RtsHud::SpawnFloatingText(UnrealWorld, CratePos + FVector(0, 0, 40), TEXT("ПОЛНЫЙ РЕМОНТ!"), FLinearColor(0.3f, 0.8f, 1.0f, 1.0f));
+                }
+
+                // Audio and pickup burst
+                if (UnitOwner == 0)
+                {
+                    if (URA4AudioSubsystem* Audio = UnrealWorld->GetSubsystem<URA4AudioSubsystem>())
+                    {
+                        Audio->PlayEVA(1, ERA4EVAEvent::UnitReady);
+                    }
+                }
+                DrawExplosionEffect(UnrealWorld, CratePos + FVector(0, 0, 20), 40.0f);
+                ActiveMysteryCratePositions.RemoveAt(i);
+                break;
+            }
+        }
+    }
+}
+
+void URA4SimWorldSubsystem::SpawnRadiationZone(const FVector& Location, float Radius, float Duration)
+{
+    FRA4RadiationZone Zone;
+    Zone.Location = Location;
+    Zone.Radius = Radius;
+    Zone.RemainingSeconds = Duration;
+    ActiveRadiationZones.Add(Zone);
+}
+
+void URA4SimWorldSubsystem::SpawnFlyingTurret(const FVector& Location)
+{
+    FRA4FlyingTurret Turret;
+    Turret.Location = Location + FVector(0, 0, 35.0f);
+    Turret.Velocity = FVector(FMath::FRandRange(-350.0f, 350.0f), FMath::FRandRange(-350.0f, 350.0f), FMath::FRandRange(750.0f, 1100.0f));
+    Turret.RemainingSeconds = 3.0f;
+    ActiveFlyingTurrets.Add(Turret);
+}
+
+void URA4SimWorldSubsystem::UpdateExplosiveBarrels(float DeltaTime)
+{
+    UWorld* UnrealWorld = GetWorld();
+    if (!UnrealWorld || !SimWorld) return;
+
+    if (!bBarrelsInitialized)
+    {
+        bBarrelsInitialized = true;
+        const RA4::MapDescription& Map = SimWorld->GetMap();
+        const float CenterX = (float(Map.Width) * float(RA4::kTileSizeUnits)) * 0.5f;
+        const float CenterY = (float(Map.Height) * float(RA4::kTileSizeUnits)) * 0.5f;
+
+        const FVector Offsets[] = {
+            FVector(CenterX - 600, CenterY - 400, 0),
+            FVector(CenterX - 550, CenterY - 370, 0),
+            FVector(CenterX - 620, CenterY - 340, 0),
+            FVector(CenterX + 600, CenterY + 400, 0),
+            FVector(CenterX + 560, CenterY + 440, 0),
+            FVector(CenterX + 640, CenterY + 420, 0),
+            FVector(CenterX, CenterY - 800, 0),
+            FVector(CenterX + 50, CenterY - 820, 0),
+            FVector(CenterX, CenterY + 800, 0),
+            FVector(CenterX - 50, CenterY + 820, 0),
+        };
+
+        for (const FVector& Offset : Offsets)
+        {
+            FRA4ExplosiveBarrel Barrel;
+            Barrel.Location = Offset;
+            Barrel.Location.Z = SampleGroundHeight(Offset.X, Offset.Y);
+            Barrel.Health = 100.0f;
+            Barrel.bAlive = true;
+            ActiveExplosiveBarrels.Add(Barrel);
+        }
+    }
+
+    for (int32 i = ActiveExplosiveBarrels.Num() - 1; i >= 0; --i)
+    {
+        FRA4ExplosiveBarrel& Barrel = ActiveExplosiveBarrels[i];
+        if (!Barrel.bAlive)
+        {
+            ActiveExplosiveBarrels.RemoveAt(i);
+            continue;
+        }
+
+        const FVector BLoc = Barrel.Location;
+        DrawDebugCapsule(UnrealWorld, BLoc + FVector(0, 0, 20.0f), 20.0f, 14.0f, FQuat::Identity, FColor(220, 35, 25), false, 0.05f, 0, 2.5f);
+        DrawDebugCircle(UnrealWorld, BLoc + FVector(0, 0, 20.0f), 15.0f, 12, FColor(255, 210, 40), false, 0.05f, 0, 2.0f, FVector(1, 0, 0), FVector(0, 1, 0), false);
+        DrawDebugPoint(UnrealWorld, BLoc + FVector(0, 0, 42.0f), 8.0f, FColor(255, 230, 70), false, 0.05f);
+    }
+}
+
+void URA4SimWorldSubsystem::UpdateRadiationZones(float DeltaTime)
+{
+    UWorld* UnrealWorld = GetWorld();
+    if (!UnrealWorld || !SimWorld) return;
+
+    for (int32 i = ActiveRadiationZones.Num() - 1; i >= 0; --i)
+    {
+        FRA4RadiationZone& Zone = ActiveRadiationZones[i];
+        Zone.RemainingSeconds -= DeltaTime;
+        if (Zone.RemainingSeconds <= 0.0f)
+        {
+            ActiveRadiationZones.RemoveAt(i);
+            continue;
+        }
+
+        const float Pulse = 0.5f + 0.5f * FMath::Sin(UnrealWorld->GetTimeSeconds() * 5.0f);
+        DrawDebugCircle(UnrealWorld, Zone.Location + FVector(0, 0, 5.0f), Zone.Radius, 32, FColor(60, 255, 40), false, 0.05f, 0, 3.0f, FVector(1, 0, 0), FVector(0, 1, 0), false);
+        DrawDebugCircle(UnrealWorld, Zone.Location + FVector(0, 0, 8.0f), Zone.Radius * 0.6f * (0.8f + 0.2f * Pulse), 24, FColor(120, 255, 70), false, 0.05f, 0, 2.0f, FVector(1, 0, 0), FVector(0, 1, 0), false);
+
+        for (int32 p = 0; p < 4; ++p)
+        {
+            const float Ang = FMath::FRandRange(0.0f, 6.28318f);
+            const float Dist = FMath::FRandRange(10.0f, Zone.Radius);
+            const FVector PartLoc = Zone.Location + FVector(FMath::Cos(Ang) * Dist, FMath::Sin(Ang) * Dist, FMath::FRandRange(5.0f, 40.0f));
+            DrawDebugPoint(UnrealWorld, PartLoc, 10.0f, FColor(100, 255, 60), false, 0.1f);
+        }
+    }
+}
+
+void URA4SimWorldSubsystem::UpdateFlyingTurrets(float DeltaTime)
+{
+    UWorld* UnrealWorld = GetWorld();
+    if (!UnrealWorld) return;
+
+    for (int32 i = ActiveFlyingTurrets.Num() - 1; i >= 0; --i)
+    {
+        FRA4FlyingTurret& Turret = ActiveFlyingTurrets[i];
+        Turret.RemainingSeconds -= DeltaTime;
+        if (Turret.RemainingSeconds <= 0.0f)
+        {
+            ActiveFlyingTurrets.RemoveAt(i);
+            continue;
+        }
+
+        Turret.Velocity.Z -= 1100.0f * DeltaTime;
+        Turret.Location += Turret.Velocity * DeltaTime;
+        Turret.Yaw += DeltaTime * 380.0f;
+        Turret.Pitch += DeltaTime * 220.0f;
+
+        const float GroundZ = SampleGroundHeight(Turret.Location.X, Turret.Location.Y) + 10.0f;
+        if (Turret.Location.Z <= GroundZ)
+        {
+            Turret.Location.Z = GroundZ;
+            Turret.Velocity = FVector::ZeroVector;
+        }
+
+        DrawDebugBox(UnrealWorld, Turret.Location, FVector(20, 16, 10), FQuat(FRotator(Turret.Pitch, Turret.Yaw, 0.0f)), FColor(45, 48, 52), false, 0.05f, 0, 2.5f);
+        const FVector Forward = FRotator(Turret.Pitch, Turret.Yaw, 0.0f).Vector();
+        DrawDebugLine(UnrealWorld, Turret.Location, Turret.Location + Forward * 35.0f, FColor(30, 32, 36), false, 0.05f, 0, 4.0f);
+        if (Turret.Velocity.SizeSquared() > 100.0f)
+        {
+            DrawDebugPoint(UnrealWorld, Turret.Location - Turret.Velocity * 0.03f, 12.0f, FColor(70, 70, 70), false, 0.3f);
+        }
     }
 }

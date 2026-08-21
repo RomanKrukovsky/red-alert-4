@@ -245,6 +245,10 @@ struct BuildingInfo
     ContentId BundledUnit;
     int32_t SellRefundPercent = 50;
 
+    // --- Water / Amphibious Base-Building (RA3 feature) --------------------
+    bool bAllowOnWater = false; // can be placed on water as well as land (e.g. Allied refinery/reactor)
+    bool bWaterOnly = false;    // must be placed on water (e.g. Naval Shipyard)
+
     // --- Superweapon ------------------------------------------------------
     // A building is a superweapon when SuperweaponRechargeTicks > 0. Keeping the
     // parameters here rather than in a parallel table means a new superweapon is
@@ -274,7 +278,17 @@ struct UnitInfo
     bool bCanCrushInfantry = false;
     bool bIsBuilder = false;                // deployable MCV
     ContentId DeploysInto;
+
+    // --- Secondary Ability / Dual Mode (RA3 F-ability) --------------------
+    bool bHasSecondaryAbility = false;
+    ContentId SecondaryAbilityDef;
+    int32_t AbilityCooldownTicks = 0;
+    int32_t AbilityDurationTicks = 0;      // 0 = toggle mode, >0 = timed buff/burst
+    Fixed AbilitySpeedMultiplier = Fixed::One();
+    int32_t AbilityArmorBonusPercent = 0;  // damage reduction percentage (e.g. 50 = 50% less damage taken)
+    bool bAbilityDisablesPrimaryWeapon = false;
 };
+
 
 struct EntityDef
 {

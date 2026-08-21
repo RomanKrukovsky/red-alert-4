@@ -10,6 +10,16 @@
 
 #include "RA4RtsHud.generated.h"
 
+struct FRA4FloatingText
+{
+    FVector WorldLocation = FVector::ZeroVector;
+    FString Text;
+    FLinearColor Color = FLinearColor(0.25f, 1.0f, 0.45f, 1.0f);
+    float LifeRemaining = 1.6f;
+    float TotalDuration = 1.6f;
+    float RiseSpeed = 45.0f;
+};
+
 UCLASS()
 class REDALERT4_API ARA4RtsHud : public AHUD
 {
@@ -17,6 +27,8 @@ class REDALERT4_API ARA4RtsHud : public AHUD
 
 public:
     virtual void DrawHUD() override;
+
+    static void SpawnFloatingText(UWorld* World, const FVector& Location, const FString& Text, const FLinearColor& Color = FLinearColor(0.25f, 1.0f, 0.45f, 1.0f));
 
 protected:
     UPROPERTY(EditAnywhere, Category = "RA4|HUD")
@@ -57,8 +69,12 @@ protected:
 private:
     void DrawMarquee(const class ARA4PlayerController* Controller);
     void DrawSelectionBrackets(const class ARA4PlayerController* Controller);
+    void DrawAll3DHealthBars(const class ARA4PlayerController* Controller);
+    void DrawFloatingTexts();
     void DrawPlacementFootprint(const class ARA4PlayerController* Controller);
     // One-shot ping at the spot a move order was just issued.
     void DrawMoveTargetRing(const class ARA4PlayerController* Controller);
     void DrawDirectControlHUD(const class ARA4PlayerController* Controller);
+
+    TArray<FRA4FloatingText> FloatingTexts;
 };

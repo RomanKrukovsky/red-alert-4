@@ -35,53 +35,59 @@ URA4CampaignViewModel::URA4CampaignViewModel()
 {
     FactionCards = {
         {
-            TEXT("ussr"), ERA4FactionTheme::USSR,
-            LOCTEXT("USSRName", "СССР"),
-            LOCTEXT("USSRMotto", "СЛАВА РОДИНЕ. БУДУЩЕЕ ЗА НАМИ."),
-            LOCTEXT("USSRDescription", "Возглавьте возрождённый Советский Союз. Тяжёлая броня, дисциплина и стальная воля сокрушат врагов революции."),
-            LOCTEXT("USSRCommander", "МАРШАЛ ВИКТОР СОКОЛОВ"),
+            TEXT("eurasian_pact"), ERA4FactionTheme::EurasianPact,
+            LOCTEXT("EurasianName", "ЕВРАЗИЙСКИЙ ПАКТ (РОССИЯ)"),
+            LOCTEXT("EurasianMotto", "ЕДИНСТВО. ТЕХНОЛОГИЯ. СУВЕРЕНИТЕТ."),
+            LOCTEXT("EurasianDescription", "Континентальный щит и глубинная оборона. Тяжёлая механизация, эшелонированная ПВО, артиллерия и комплексы РЭБ."),
+            LOCTEXT("EurasianCommander", "КОМАНДИР ИРИНА ВОЛКОВА"),
             14, 24, 14.0f / 24.0f, false
         },
         {
-            TEXT("allies"), ERA4FactionTheme::Allies,
-            LOCTEXT("AlliesName", "АЛЬЯНС"),
-            LOCTEXT("AlliesMotto", "ВЕРНОСТЬ. ЕДИНСТВО. ПОБЕДА."),
-            LOCTEXT("AlliesDescription", "Альянс объединяет технологии, авиацию и точные удары, чтобы удержать мир от новой глобальной войны."),
-            LOCTEXT("AlliesCommander", "ПРЕЗИДЕНТ ЭЛЕАНОР УОРД"),
+            TEXT("atlantic_alliance"), ERA4FactionTheme::AtlanticAlliance,
+            LOCTEXT("AtlanticName", "АТЛАНТИЧЕСКИЙ АЛЬЯНС (США)"),
+            LOCTEXT("AtlanticMotto", "СИЛА ЗАКОНА. ПРЕВОСХОДСТВО СЕТИ."),
+            LOCTEXT("AtlanticDescription", "Господство в воздухе и на море, экспедиционные ударные группы, загоризонтная разведка и сетевое командование."),
+            LOCTEXT("AtlanticCommander", "АДМИРАЛ МАРКУС РИД"),
             8, 24, 8.0f / 24.0f, false
         },
         {
             TEXT("eastern_coalition"), ERA4FactionTheme::EasternCoalition,
-            LOCTEXT("EasternName", "ВОСТОЧНАЯ КОАЛИЦИЯ"),
-            LOCTEXT("EasternMotto", "ЕДИНСТВО СОЗДАЁТ ПОБЕДУ."),
-            LOCTEXT("EasternDescription", "Восточная коалиция соединяет древние традиции, промышленную мощь, дроны и технологии будущего."),
-            LOCTEXT("EasternCommander", "ПРЕДСЕДАТЕЛЬ ЛИ ВЭЙ"),
+            LOCTEXT("EasternName", "ВОСТОЧНАЯ КОАЛИЦИЯ (КИТАЙ)"),
+            LOCTEXT("EasternMotto", "ВЕЛИКОЕ ОБЪЕДИНЕНИЕ. ИНДУСТРИЯ ПОБЕДЫ."),
+            LOCTEXT("EasternDescription", "Колоссальное автоматизированное производство, рои боевых БПЛА, танки Тип-99B и ракетные рубежи A2/AD."),
+            LOCTEXT("EasternCommander", "ГЕНЕРАЛ-МАЙОР ЧЖАН ВЭЙ"),
             17, 27, 17.0f / 27.0f, false
         },
         {
-            TEXT("chronolegion"), ERA4FactionTheme::Chronolegion,
-            LOCTEXT("ChronoName", "ХРОНОЛЕГИОН"),
-            LOCTEXT("ChronoMotto", "ВЛАСТЬ НАД ВРЕМЕНЕМ. ГОСПОДСТВО НАД ВСЕЛЕННОЙ."),
-            LOCTEXT("ChronoDescription", "Хронолегион существует вне линейности. Управляйте временными аномалиями и переписывайте исход войны."),
-            LOCTEXT("ChronoCommander", "ХРАНИТЕЛЬ ХРОНОС"),
-            3, 12, 3.0f / 12.0f, false
+            TEXT("pacific_pact"), ERA4FactionTheme::PacificPact,
+            LOCTEXT("PacificName", "ТИХООКЕАНСКИЙ ПАКТ (ЯПОНИЯ)"),
+            LOCTEXT("PacificMotto", "ОБОРОНА РУБЕЖЕЙ. РОБОТИЗАЦИЯ БУДУЩЕГО."),
+            LOCTEXT("PacificDescription", "Островная оборона, автономные боевые шагоходы «Кайган», передовые лазерные комплексы и скоростные перехватчики."),
+            LOCTEXT("PacificCommander", "КОМАНДОР РЕЙКО ТАНАКА"),
+            9, 21, 9.0f / 21.0f, false
+        },
+        {
+            TEXT("independent_powers"), ERA4FactionTheme::Independent,
+            LOCTEXT("IndepName", "НЕЗАВИСИМЫЕ ДЕРЖАВЫ (ИРАН)"),
+            LOCTEXT("IndepMotto", "КАТЕГОРИЯ ВЫБОРА • НЕ ЯВЛЯЕТСЯ СОЮЗОМ"),
+            LOCTEXT("IndepDescription", "Асимметричные действия, мобильные баллистические пусковые комплексы «Хейбар», рои БПЛА «Шахед» и скрытные горные базы."),
+            LOCTEXT("IndepCommander", "ПОЛКОВНИК ДАРИУШ РЕЗАИ"),
+            5, 16, 5.0f / 16.0f, false
         }
     };
 
     AllMissionNodes = {
-        MakeMission(TEXT("ussr_warsaw"), ERA4FactionTheme::USSR, 1, LOCTEXT("Warsaw", "ОПЕРАЦИЯ «ИСКРА»"), LOCTEXT("WarsawLocation", "ВАРШАВА"), LOCTEXT("WarsawObjective", "Вернуть узел связи под контроль СССР."), 3, true),
-        MakeMission(TEXT("ussr_berlin"), ERA4FactionTheme::USSR, 2, LOCTEXT("Berlin", "ОПЕРАЦИЯ «СТАЛЬ»"), LOCTEXT("BerlinLocation", "БЕРЛИН"), LOCTEXT("BerlinObjective", "Подавить бронетанковые силы противника."), 3, true),
-        MakeMission(TEXT("ussr_baltic"), ERA4FactionTheme::USSR, 3, LOCTEXT("Baltic", "ОПЕРАЦИЯ «БУРЯ»"), LOCTEXT("BalticLocation", "ПРИБАЛТИКА"), LOCTEXT("BalticObjective", "Захватить побережье и аэродромы."), 3, true),
-        MakeMission(TEXT("ussr_kiev"), ERA4FactionTheme::USSR, 4, LOCTEXT("Kiev", "ОПЕРАЦИЯ «КИЕВ-86»"), LOCTEXT("KievLocation", "КИЕВ"), LOCTEXT("KievObjective", "Уничтожить командный центр Альянса."), 3, true),
-        MakeMission(TEXT("ussr_leningrad"), ERA4FactionTheme::USSR, 5, LOCTEXT("Leningrad", "ОПЕРАЦИЯ «ЩИТ»"), LOCTEXT("LeningradLocation", "ЛЕНИНГРАД"), LOCTEXT("LeningradObjective", "Отразить морское вторжение."), 3, true),
-        MakeMission(TEXT("ussr_stalingrad"), ERA4FactionTheme::USSR, 6, LOCTEXT("Stalingrad", "ОПЕРАЦИЯ «КРЕПОСТЬ»"), LOCTEXT("StalingradLocation", "СТАЛИНГРАД"), LOCTEXT("StalingradObjective", "Удержать промышленный район."), 3, true),
-        MakeMission(TEXT("ussr_caucasus"), ERA4FactionTheme::USSR, 7, LOCTEXT("Caucasus", "ОПЕРАЦИЯ «НЕФТЬ»"), LOCTEXT("CaucasusLocation", "КАВКАЗ"), LOCTEXT("CaucasusObjective", "Защитить ресурсные комплексы."), 2, true),
-        MakeMission(TEXT("ussr_tehran"), ERA4FactionTheme::USSR, 8, LOCTEXT("Tehran", "ОПЕРАЦИЯ «РУБЕЖ»"), LOCTEXT("TehranLocation", "ТЕГЕРАН"), LOCTEXT("TehranObjective", "Перехватить вражескую ударную группу."), 2, true),
-        MakeMission(TEXT("ussr_operation_molot"), ERA4FactionTheme::USSR, 9, LOCTEXT("Molot", "ОПЕРАЦИЯ «МОЛОТ»"), LOCTEXT("MolotLocation", "НОВОСИБИРСК"), LOCTEXT("MolotObjective", "Прорвите оборону НАТО и захватите исследовательский комплекс."), 2, false),
-        MakeMission(TEXT("ussr_final_protocol"), ERA4FactionTheme::USSR, 10, LOCTEXT("FinalProtocol", "ФИНАЛЬНЫЙ ПРОТОКОЛ"), LOCTEXT("FinalLocation", "ЗАСЕКРЕЧЕНО"), LOCTEXT("FinalObjective", "Данные недоступны."), 0, false, true),
-        MakeMission(TEXT("allies_ice_dawn"), ERA4FactionTheme::Allies, 3, LOCTEXT("IceDawn", "ЛЕДЯНОЙ РАССВЕТ"), LOCTEXT("IceDawnLocation", "АРКТИКА"), LOCTEXT("IceDawnObjective", "Защитить северный радарный пояс."), 2, false),
-        MakeMission(TEXT("eastern_sky_shield"), ERA4FactionTheme::EasternCoalition, 18, LOCTEXT("SkyShield", "НЕБЕСНЫЙ ЩИТ"), LOCTEXT("SkyShieldLocation", "ТИХООКЕАНСКИЙ РЕГИОН"), LOCTEXT("SkyShieldObjective", "Испытать прототип энергетического щита."), 3, false),
-        MakeMission(TEXT("chrono_time_rift"), ERA4FactionTheme::Chronolegion, 3, LOCTEXT("TimeRift", "РАЗЛОМ ВРЕМЕНИ"), LOCTEXT("TimeRiftLocation", "ВРЕМЕННОЙ УЗЕЛ 07"), LOCTEXT("TimeRiftObjective", "Стабилизировать хронокоридор."), 1, false)
+        MakeMission(TEXT("ru_polar_echo"), ERA4FactionTheme::EurasianPact, 1, LOCTEXT("RU1", "ОПЕРАЦИЯ «ПОЛЯРНОЕ ЭХО»"), LOCTEXT("RU1_Loc", "МУРМАНСКИЙ РУБЕЖ"), LOCTEXT("RU1_Obj", "Развернуть передовой комплекс РЭБ «Громобой» и подавить вражеский радар."), 3, true),
+        MakeMission(TEXT("ru_iron_tooth"), ERA4FactionTheme::EurasianPact, 2, LOCTEXT("RU2", "ОПЕРАЦИЯ «ЖЕЛЕЗНЫЙ ЗУБ»"), LOCTEXT("RU2_Loc", "УРАЛЬСКИЙ КОРИДОР"), LOCTEXT("RU2_Obj", "Отразить танковый прорыв с запада силами ОБТ «Гранит»."), 3, true),
+        MakeMission(TEXT("ru_deep_signal"), ERA4FactionTheme::EurasianPact, 3, LOCTEXT("RU3", "ОПЕРАЦИЯ «ГЛУБОКИЙ СИГНАЛ»"), LOCTEXT("RU3_Loc", "КАСПИЙСКИЙ УЗЕЛ"), LOCTEXT("RU3_Obj", "Захватить терминал связи и обеспечить развёртывание РСЗО «Зарево»."), 3, true),
+        MakeMission(TEXT("ru_quiet_relay"), ERA4FactionTheme::EurasianPact, 7, LOCTEXT("RU7", "07. ОПЕРАЦИЯ «ТИХИЙ РЕЛЕЙ»"), LOCTEXT("RU7_Loc", "ГОРНЫЙ КОРИДОР"), LOCTEXT("RU7_Obj", "Подавить 3 узла связи. Провести бронегруппу через перевал. Сохранить мобильный комплекс РЭБ."), 3, true),
+        MakeMission(TEXT("ru_clean_key"), ERA4FactionTheme::EurasianPact, 8, LOCTEXT("RU8", "08. ОПЕРАЦИЯ «ЧИСТЫЙ КЛЮЧ»"), LOCTEXT("RU8_Loc", "СЕВЕРНЫЙ РУБЕЖ"), LOCTEXT("RU8_Obj", "Прорвать укреплённый рубеж и зачистить плацдарм танками «Воевода»."), 2, true),
+        MakeMission(TEXT("us_ice_dawn"), ERA4FactionTheme::AtlanticAlliance, 1, LOCTEXT("US1", "ОПЕРАЦИЯ «ЛЕДЯНОЙ РАССВЕТ»"), LOCTEXT("US1_Loc", "АРКТИКА"), LOCTEXT("US1_Obj", "Защитить северный радарный пояс и развернуть стелс-авиацию F-35."), 3, true),
+        MakeMission(TEXT("us_carrier_strike"), ERA4FactionTheme::AtlanticAlliance, 2, LOCTEXT("US2", "ОПЕРАЦИЯ «ДАЛЬНИЙ РУБЕЖ»"), LOCTEXT("US2_Loc", "СЕВЕРНОЕ МОРЕ"), LOCTEXT("US2_Obj", "Обеспечить сопровождение авианосной группы «Свобода»."), 2, false),
+        MakeMission(TEXT("cn_jade_network"), ERA4FactionTheme::EasternCoalition, 1, LOCTEXT("CN1", "ОПЕРАЦИЯ «НЕФРИТОВАЯ СЕТЬ»"), LOCTEXT("CN1_Loc", "ДЕЛЬТА РЕКИ"), LOCTEXT("CN1_Obj", "Запустить автоматизированный конвейер и развернуть рои дронов «Шэньлун»."), 3, true),
+        MakeMission(TEXT("cn_missile_shield"), ERA4FactionTheme::EasternCoalition, 2, LOCTEXT("CN2", "ОПЕРАЦИЯ «НЕБЕСНЫЙ ЩИТ»"), LOCTEXT("CN2_Loc", "ТИХООКЕАНСКИЙ РУБЕЖ"), LOCTEXT("CN2_Obj", "Развернуть гиперзвуковой комплекс DF-26 и отразить морской удар."), 2, false),
+        MakeMission(TEXT("jp_storm_arc"), ERA4FactionTheme::PacificPact, 1, LOCTEXT("JP1", "ОПЕРАЦИЯ «ДУГА ШТОРМА»"), LOCTEXT("JP1_Loc", "ОСТРОВНОЙ УЗЕЛ ПВО"), LOCTEXT("JP1_Obj", "Активировать лазерные батареи «Кагами» и защитить роботизированный цех."), 3, true),
+        MakeMission(TEXT("ir_shadow_ridge"), ERA4FactionTheme::Independent, 1, LOCTEXT("IR1", "ОПЕРАЦИЯ «ТЕНЬ НАД ХРЕБТОМ»"), LOCTEXT("IR1_Loc", "ГОРНЫЙ ХРЕБЕТ"), LOCTEXT("IR1_Obj", "Развернуть мобильные СПУ «Хейбар», провести сатурационный залп и сменить позицию."), 2, true)
     };
 
     RefreshMissionNodes();
@@ -195,16 +201,18 @@ ERA4UIScreenId URA4CampaignViewModel::GetSelectedCampaignScreen() const
 {
     switch (SelectedFaction)
     {
-    case ERA4FactionTheme::USSR:
+    case ERA4FactionTheme::EurasianPact:
         return ERA4UIScreenId::SovietCampaign;
-    case ERA4FactionTheme::Allies:
+    case ERA4FactionTheme::AtlanticAlliance:
         return ERA4UIScreenId::AlliesCampaign;
     case ERA4FactionTheme::EasternCoalition:
         return ERA4UIScreenId::EasternCampaign;
+    case ERA4FactionTheme::PacificPact:
     case ERA4FactionTheme::Chronolegion:
         return ERA4UIScreenId::ChronoCampaign;
+    case ERA4FactionTheme::Independent:
+        return ERA4UIScreenId::CampaignSelect;
     default:
-        checkNoEntry();
         return ERA4UIScreenId::SovietCampaign;
     }
 }

@@ -148,31 +148,34 @@ FText GetFactionName(const ERA4FactionTheme Faction)
 {
     switch (Faction)
     {
-    case ERA4FactionTheme::USSR:
-        return LOCTEXT("FactionUSSR", "★  СССР");
-    case ERA4FactionTheme::Allies:
-        return LOCTEXT("FactionAllies", "◆  АЛЬЯНС");
+    case ERA4FactionTheme::EurasianPact:
+        return LOCTEXT("FactionEurasia", "★  ЕВРАЗИЙСКИЙ ПАКТ");
+    case ERA4FactionTheme::AtlanticAlliance:
+        return LOCTEXT("FactionAtlantic", "◆  АТЛАНТИЧЕСКИЙ АЛЬЯНС");
     case ERA4FactionTheme::EasternCoalition:
         return LOCTEXT("FactionEastern", "◈  ВОСТОЧНАЯ КОАЛИЦИЯ");
+    case ERA4FactionTheme::PacificPact:
+        return LOCTEXT("FactionPacific", "▲  ТИХООКЕАНСКИЙ ПАКТ");
+    case ERA4FactionTheme::Independent:
+        return LOCTEXT("FactionIndep", "●  НЕЗАВИСИМЫЕ ДЕРЖАВЫ");
     case ERA4FactionTheme::Chronolegion:
         return LOCTEXT("FactionChrono", "△  ХРОНОЛЕГИОН");
     default:
-        checkNoEntry();
-        return FText::GetEmpty();
+        return LOCTEXT("FactionEurasia", "★  ЕВРАЗИЙСКИЙ ПАКТ");
     }
 }
 
 FLinearColor GetPlayerColor(const int32 ColorIndex)
 {
     const FLinearColor Colors[] = {
-        FLinearColor(0.90f, 0.08f, 0.08f, 1.0f),
-        FLinearColor(0.12f, 0.35f, 0.86f, 1.0f),
-        FLinearColor(0.30f, 0.68f, 0.16f, 1.0f),
-        FLinearColor(0.56f, 0.16f, 0.78f, 1.0f),
-        FLinearColor(0.84f, 0.20f, 0.08f, 1.0f),
-        FLinearColor(0.24f, 0.64f, 0.78f, 1.0f),
-        FLinearColor(0.86f, 0.66f, 0.10f, 1.0f),
-        FLinearColor(0.80f, 0.20f, 0.52f, 1.0f)
+        FLinearColor(0.68f, 0.28f, 0.88f, 1.0f), // Purple
+        FLinearColor(0.35f, 0.70f, 0.98f, 1.0f), // Blue
+        FLinearColor(0.88f, 0.72f, 0.22f, 1.0f), // Gold
+        FLinearColor(0.20f, 0.80f, 0.90f, 1.0f), // Turquoise
+        FLinearColor(0.78f, 0.52f, 0.18f, 1.0f), // Amber
+        FLinearColor(0.22f, 0.75f, 0.35f, 1.0f), // Green
+        FLinearColor(0.45f, 0.75f, 1.0f, 1.0f),  // Ice
+        FLinearColor(0.95f, 0.45f, 0.35f, 1.0f)  // Coral
     };
     return Colors[FMath::Clamp(ColorIndex, 0, UE_ARRAY_COUNT(Colors) - 1)];
 }
@@ -208,7 +211,7 @@ TSharedRef<SWidget> URA4LobbyPlayerRowWidget::RebuildWidget()
             const float Fill,
             const FName Name)
         {
-            Target = MakeLobbyText(WidgetTree, FText::GetEmpty(), 15, LobbyText, Name, false);
+            Target = MakeLobbyText(WidgetTree, FText::GetEmpty(), 14, LobbyText, Name, false);
             UHorizontalBoxSlot* Slot = Row->AddChildToHorizontalBox(Target.Get());
             Slot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
             Slot->SetPadding(FMargin(4.0f));
@@ -216,12 +219,13 @@ TSharedRef<SWidget> URA4LobbyPlayerRowWidget::RebuildWidget()
             Target->SetMinDesiredWidth(Fill);
         };
 
-        AddColumn(IndexText, 34.0f, TEXT("PlayerIndex"));
-        AddColumn(PlayerText, 190.0f, TEXT("PlayerName"));
-        AddColumn(FactionText, 250.0f, TEXT("PlayerFaction"));
-        AddColumn(ColorText, 70.0f, TEXT("PlayerColor"));
-        AddColumn(TeamText, 75.0f, TEXT("PlayerTeam"));
-        AddColumn(ReadyText, 110.0f, TEXT("PlayerReady"));
+        AddColumn(IndexText, 32.0f, TEXT("PlayerIndex"));
+        AddColumn(PlayerText, 160.0f, TEXT("PlayerName"));
+        AddColumn(TeamText, 55.0f, TEXT("PlayerTeam"));
+        AddColumn(FactionText, 180.0f, TEXT("PlayerFaction"));
+        AddColumn(CountryText, 130.0f, TEXT("PlayerCountry"));
+        AddColumn(DoctrineText, 180.0f, TEXT("PlayerDoctrine"));
+        AddColumn(ReadyText, 95.0f, TEXT("PlayerReady"));
     }
     return Super::RebuildWidget();
 }
@@ -244,25 +248,29 @@ void URA4LobbyPlayerRowWidget::NativeOnListItemObjectSet(UObject* ListItemObject
     {
         PlayerText->SetText(Player.PlayerName);
     }
-    if (FactionText)
-    {
-        FactionText->SetText(GetFactionName(Player.Faction));
-    }
-    if (ColorText)
-    {
-        ColorText->SetText(LOCTEXT("ColorSquare", "■"));
-        ColorText->SetColorAndOpacity(FSlateColor(GetPlayerColor(Player.ColorIndex)));
-    }
     if (TeamText)
     {
         TeamText->SetText(FText::AsNumber(Player.Team));
     }
+    if (FactionText)
+    {
+        FactionText->SetText(GetFactionName(Player.Faction));
+        FactionText->SetColorAndOpacity(FSlateColor(GetPlayerColor(Player.ColorIndex)));
+    }
+    if (CountryText)
+    {
+        CountryText->SetText(Player.CountryName);
+    }
+    if (DoctrineText)
+    {
+        DoctrineText->SetText(Player.DoctrineName);
+    }
     if (ReadyText)
     {
         ReadyText->SetText(Player.bReady
-            ? LOCTEXT("Ready", "✓  ГОТОВ")
-            : LOCTEXT("NotReady", "○  НЕ ГОТОВ"));
-        ReadyText->SetColorAndOpacity(FSlateColor(Player.bReady ? LobbyGreen : LobbyRed));
+            ? LOCTEXT("Ready", "✔  ГОТОВ")
+            : LOCTEXT("NotReady", "○  ОЖИДАНИЕ"));
+        ReadyText->SetColorAndOpacity(FSlateColor(Player.bReady ? LobbyGreen : LobbyMuted));
     }
 }
 
@@ -338,14 +346,15 @@ TSharedRef<SWidget> URA4LobbyScreenWidget::RebuildWidget()
         UHorizontalBox::StaticClass(), TEXT("PlayerListHeader"));
     const FText Headers[] = {
         LOCTEXT("HeaderSlot", "№"), LOCTEXT("HeaderPlayer", "ИГРОК"),
-        LOCTEXT("HeaderFaction", "ФРАКЦИЯ"), LOCTEXT("HeaderColor", "ЦВЕТ"),
-        LOCTEXT("HeaderTeam", "КОМАНДА"), LOCTEXT("HeaderReady", "ГОТОВНОСТЬ")
+        LOCTEXT("HeaderTeam", "КОМАНДА"), LOCTEXT("HeaderBloc", "БЛОК / КАТЕГОРИЯ"),
+        LOCTEXT("HeaderCountry", "СТРАНА"), LOCTEXT("HeaderDoctrine", "ДОКТРИНА"),
+        LOCTEXT("HeaderReady", "ГОТОВНОСТЬ")
     };
-    const float Widths[] = {34.0f, 190.0f, 250.0f, 70.0f, 75.0f, 110.0f};
+    const float Widths[] = {32.0f, 160.0f, 55.0f, 180.0f, 130.0f, 180.0f, 95.0f};
     for (int32 Index = 0; Index < UE_ARRAY_COUNT(Headers); ++Index)
     {
         UTextBlock* Header = MakeLobbyText(
-            WidgetTree, Headers[Index], 14, LobbyMuted,
+            WidgetTree, Headers[Index], 13, LobbyMuted,
             FName(*FString::Printf(TEXT("PlayerHeader_%d"), Index)), false);
         Header->SetMinDesiredWidth(Widths[Index]);
         ListHeader->AddChildToHorizontalBox(Header)->SetPadding(FMargin(4.0f));

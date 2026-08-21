@@ -34,6 +34,20 @@ ARA4CameraPawn::ARA4CameraPawn()
     Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
     Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
     Camera->bUsePawnControlRotation = false;
+
+    // Pin RTS camera exposure to fixed neutral daylight (EV100 12.0).
+    // In RTS games, auto-exposure adaptation must be fixed so fog of war,
+    // camera panning, and explosions never blow out the screen or crush to black.
+    Camera->PostProcessSettings.bOverride_AutoExposureMethod = true;
+    Camera->PostProcessSettings.AutoExposureMethod = EAutoExposureMethod::AEM_Histogram;
+    Camera->PostProcessSettings.bOverride_AutoExposureMinBrightness = true;
+    Camera->PostProcessSettings.AutoExposureMinBrightness = 12.0f;
+    Camera->PostProcessSettings.bOverride_AutoExposureMaxBrightness = true;
+    Camera->PostProcessSettings.AutoExposureMaxBrightness = 12.0f;
+    Camera->PostProcessSettings.bOverride_AutoExposureBias = true;
+    Camera->PostProcessSettings.AutoExposureBias = 0.0f;
+    Camera->PostProcessSettings.bOverride_BloomIntensity = true;
+    Camera->PostProcessSettings.BloomIntensity = 0.10f;
 }
 
 void ARA4CameraPawn::BeginPlay()
@@ -71,7 +85,18 @@ void ARA4CameraPawn::Tick(float DeltaSeconds)
         }
     }
 
-    SetActorLocation(FVector(Focus.X, Focus.Y, GroundZ));
+    FVector FinalLocation(Focus.X, Focus.Y, GroundZ);
+
+    if (CurrentShakeIntensity > 0.001f)
+    {
+        CurrentShakeIntensity = FMath::FInterpTo(CurrentShakeIntensity, 0.0f, DeltaSeconds, 8.0f);
+        const float ShakeX = FMath::FRandRange(-1.0f, 1.0f) * CurrentShakeIntensity * 16.0f;
+        const float ShakeY = FMath::FRandRange(-1.0f, 1.0f) * CurrentShakeIntensity * 16.0f;
+        const float ShakeZ = FMath::FRandRange(-1.0f, 1.0f) * CurrentShakeIntensity * 12.0f;
+        FinalLocation += FVector(ShakeX, ShakeY, ShakeZ);
+    }
+
+    SetActorLocation(FinalLocation);
 
     if (SpringArm != nullptr)
     {
@@ -96,4 +121,9 @@ void ARA4CameraPawn::Tick(float DeltaSeconds)
                *Camera->GetComponentLocation().ToCompactString(),
                *Camera->GetComponentRotation().ToCompactString());
     }
+}
+
+void ARA4CameraPawn::TriggerCameraShake(float Intensity)
+{
+    CurrentShakeIntensity = FMath::Clamp(CurrentShakeIntensity + Intensity, 0.0f, 3.0f);
 }

@@ -25,6 +25,9 @@ public:
 
     virtual void Tick(float DeltaSeconds) override;
 
+    UFUNCTION(BlueprintCallable, Category = "RA4|Camera")
+    void TriggerCameraShake(float Intensity = 1.0f);
+
     // The controller is the source of truth; this class never stores camera state
     // of its own, so there is nothing to keep in sync.
     RA4::Input::CameraController& GetCameraController() { return CameraController; }
@@ -54,4 +57,5 @@ protected:
 private:
     RA4::Input::CameraController CameraController;
     bool bReportedInitialCameraState = false;
+    float CurrentShakeIntensity = 0.0f;
 };

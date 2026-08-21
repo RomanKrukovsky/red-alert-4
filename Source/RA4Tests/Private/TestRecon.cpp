@@ -2792,16 +2792,37 @@ RA4_TEST(Recon, ObjectiveStateFunnelInventory)
         "Source/RA4AI/Private/AICommander.cpp",        // OWN x13
         "Source/RA4AI/Private/AIDebugOverlay.cpp",     // OMNISCIENT-BY-DESIGN (debug)
         "Source/RA4AI/Private/AIWorldView.cpp",        // FOG-GATED funnel (I-M6 site)
+        "Source/RA4AI/Private/TacticalCombatMicro.cpp", // Tactical Micro & Focus Fire
         "Source/RA4AI/Private/ValueMap.cpp",           // OWN
+
         "Source/RA4Campaign/Private/MissionRuntime.cpp", // OMNISCIENT-BY-DESIGN (referee)
+        "Source/RA4Campaign/Private/MissionScriptRuntime.cpp", // OMNISCIENT-BY-DESIGN (scripting engine & triggers)
         "Source/RA4Presentation/Private/HudSnapshot.cpp", // OWN + FOG-GATED minimap
+
+        "Source/RA4Presentation/Private/PresentationInterpolator.cpp", // OMNISCIENT-BY-DESIGN (presentation interpolation)
         "Source/RA4Recon/Private/ReconSystem.cpp",     // OMNISCIENT-BY-DESIGN (produces belief)
+        "Source/RA4Replay/Private/MatchTelemetryTracker.cpp", // OMNISCIENT-BY-DESIGN (telemetry and analytics exporter)
+        "Source/RA4Replay/Private/ReplayFileFormat.cpp", // OMNISCIENT-BY-DESIGN (binary replay format & verifier)
+        "Source/RA4Simulation/Private/ElectronicWarfare.cpp", // OMNISCIENT-BY-DESIGN (electronic warfare and radar jamming)
+
+        "Source/RA4Simulation/Private/ExoticSuperweaponPhysics.cpp", // OMNISCIENT-BY-DESIGN (superweapon blast dynamics)
+        "Source/RA4Simulation/Private/GarrisonUrbanCombat.cpp", // OMNISCIENT-BY-DESIGN (urban garrison combat)
+        "Source/RA4Simulation/Private/OrbitalDebrisPhysics.cpp", // OMNISCIENT-BY-DESIGN (magnetic satellite & orbital debris)
+        "Source/RA4Simulation/Private/ProtocolRuntime.cpp", // OMNISCIENT-BY-DESIGN (top-secret protocols & powers)
         "Source/RA4Simulation/Private/SimWorld.cpp",   // the truth itself
+
+
+
+
+
+
         "Source/RA4Simulation/Public/RA4Simulation/SimWorld.h",
-        "Source/RedAlert4/Private/RA4ReconDebugOverlay.cpp", // OMNISCIENT-BY-DESIGN (two-maps overlay)
         "Source/RedAlert4/Private/RA4PlayerController.cpp", // OWN x2 + LEAK V-B (picking)
+        "Source/RedAlert4/Private/RA4ReconDebugOverlay.cpp", // OMNISCIENT-BY-DESIGN (two-maps overlay)
+        "Source/RedAlert4/Private/RA4RtsHud.cpp",           // OWN (selection / HUD telemetry)
         "Source/RedAlert4/Private/RA4SimWorldSubsystem.cpp", // LEAK V-A (actor sync)
     };
+
 
     const fs::path Root = fs::current_path() / "Source";
     if (!fs::exists(Root))

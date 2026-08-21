@@ -1,7 +1,7 @@
 // Copyright (c) Red Alert 4 project.
 #include "RA4SkirmishSetupWidget.h"
 
-#include "RA4CommandCentreMenuWidget.h"
+#include "RA4MainMenuScreenWidget.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
@@ -180,7 +180,7 @@ void URA4SkirmishSetupWidget::BuildLayout()
     PlaceSetupWidget(MainCanvas, Title, FVector2D(80.0f, 40.0f), FVector2D(800.0f, 60.0f), 2);
 
     UTextBlock* Subtitle = MakeSetupText(
-        WidgetTree, LOCTEXT("Subtitle", "Parametry srazheniya, vybor fraktsiy, startovykh pozitsiy i pravil"), 14, Muted, TEXT("SubtitleText"), false);
+        WidgetTree, LOCTEXT("Subtitle", "Параметры сражения, выбор блоков, стран, стартовых позиций и правил"), 14, Muted, TEXT("SubtitleText"), false);
     PlaceSetupWidget(MainCanvas, Subtitle, FVector2D(82.0f, 95.0f), FVector2D(800.0f, 30.0f), 2);
 
     // Left Column: Map & Game Options
@@ -191,7 +191,7 @@ void URA4SkirmishSetupWidget::BuildLayout()
     LeftBox->AddChildToVerticalBox(MapLabel)->SetPadding(FMargin(0.0f, 10.0f, 0.0f, 4.0f));
 
     MapCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("MapCombo"));
-    MapCombo->AddOption(TEXT("RA4_Skirmish_Production — Архипелаг (Холмы и Вода, 2 игрока)"));
+    MapCombo->AddOption(TEXT("Архипелаг — Холмы и Проливы (2 игрока)"));
     MapCombo->SetSelectedIndex(0);
     MapCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
     LeftBox->AddChildToVerticalBox(MapCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 16.0f));
@@ -201,22 +201,22 @@ void URA4SkirmishSetupWidget::BuildLayout()
     LeftBox->AddChildToVerticalBox(CreditsLabel)->SetPadding(FMargin(0.0f, 10.0f, 0.0f, 4.0f));
 
     CreditsCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("CreditsCombo"));
-    CreditsCombo->AddOption(TEXT("5 000 Kreditov (Malyy)"));
-    CreditsCombo->AddOption(TEXT("10 000 Kreditov (Standart)"));
-    CreditsCombo->AddOption(TEXT("20 000 Kreditov (Bolshoy)"));
+    CreditsCombo->AddOption(TEXT("5 000 Кредитов (Малый)"));
+    CreditsCombo->AddOption(TEXT("10 000 Кредитов (Стандарт)"));
+    CreditsCombo->AddOption(TEXT("20 000 Кредитов (Большой)"));
     CreditsCombo->SetSelectedIndex(1);
     CreditsCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
     LeftBox->AddChildToVerticalBox(CreditsCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 16.0f));
 
     // AI Difficulty
-    UTextBlock* DiffLabel = MakeSetupText(WidgetTree, LOCTEXT("DiffLabel", "SLOZhNOST II (AI)"), 16, TextColor, TEXT("DiffLabelText"));
+    UTextBlock* DiffLabel = MakeSetupText(WidgetTree, LOCTEXT("DiffLabel", "СЛОЖНОСТЬ ИИ"), 16, TextColor, TEXT("DiffLabelText"));
     LeftBox->AddChildToVerticalBox(DiffLabel)->SetPadding(FMargin(0.0f, 10.0f, 0.0f, 4.0f));
 
     DifficultyCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("DifficultyCombo"));
-    DifficultyCombo->AddOption(TEXT("Legkiy (Easy)"));
-    DifficultyCombo->AddOption(TEXT("Sredniy (Medium)"));
-    DifficultyCombo->AddOption(TEXT("Tyazhyolyy (Hard)"));
-    DifficultyCombo->AddOption(TEXT("Bezumnyy (Brutal)"));
+    DifficultyCombo->AddOption(TEXT("Базовая (Легкий)"));
+    DifficultyCombo->AddOption(TEXT("Тактическая (Средний)"));
+    DifficultyCombo->AddOption(TEXT("Командная (Тяжёлый)"));
+    DifficultyCombo->AddOption(TEXT("Экстремальная (Эксперт)"));
     DifficultyCombo->SetSelectedIndex(1);
     DifficultyCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
     LeftBox->AddChildToVerticalBox(DifficultyCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 16.0f));
@@ -228,59 +228,63 @@ void URA4SkirmishSetupWidget::BuildLayout()
     UVerticalBox* RightBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("RightBox"));
 
     // Player Setup
-    UTextBlock* PlayerHeader = MakeSetupText(WidgetTree, LOCTEXT("PlayerHeader", "IGROK 1 (HUMAN)"), 18, Red, TEXT("PlayerHeader"));
+    UTextBlock* PlayerHeader = MakeSetupText(WidgetTree, LOCTEXT("PlayerHeader", "ИГРОК 1 (КОМАНДИР)"), 18, Red, TEXT("PlayerHeader"));
     RightBox->AddChildToVerticalBox(PlayerHeader)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
 
     PlayerFactionCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("PlayerFactionCombo"));
-    PlayerFactionCombo->AddOption(TEXT("Fraktsiya: Soviet (Soviet Union)"));
-    PlayerFactionCombo->AddOption(TEXT("Fraktsiya: Alliance (Alliance)"));
-    PlayerFactionCombo->AddOption(TEXT("Fraktsiya: Koalitsiya (Coalition)"));
-    PlayerFactionCombo->AddOption(TEXT("Fraktsiya: Khrono (Chrono)"));
+    PlayerFactionCombo->AddOption(TEXT("Евразийский пакт (Россия)"));
+    PlayerFactionCombo->AddOption(TEXT("Атлантический альянс (США)"));
+    PlayerFactionCombo->AddOption(TEXT("Восточная коалиция (Китай)"));
+    PlayerFactionCombo->AddOption(TEXT("Тихоокеанский пакт (Япония)"));
+    PlayerFactionCombo->AddOption(TEXT("Независимые державы (Иран)"));
     PlayerFactionCombo->SetSelectedIndex(0);
     PlayerFactionCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
     RightBox->AddChildToVerticalBox(PlayerFactionCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
 
     PlayerColorCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("PlayerColorCombo"));
-    PlayerColorCombo->AddOption(TEXT("Tsvet: Krasnyy"));
-    PlayerColorCombo->AddOption(TEXT("Tsvet: Siniy"));
-    PlayerColorCombo->AddOption(TEXT("Tsvet: Zelyonyy"));
-    PlayerColorCombo->AddOption(TEXT("Tsvet: Zhyoltyy"));
+    PlayerColorCombo->AddOption(TEXT("Цвет: Фиолетовый (Пакт)"));
+    PlayerColorCombo->AddOption(TEXT("Цвет: Кобальтовый (Альянс)"));
+    PlayerColorCombo->AddOption(TEXT("Цвет: Золотой (Коалиция)"));
+    PlayerColorCombo->AddOption(TEXT("Цвет: Бирюзовый (Тихоокеанский)"));
+    PlayerColorCombo->AddOption(TEXT("Цвет: Янтарный (Независимые)"));
     PlayerColorCombo->SetSelectedIndex(0);
     PlayerColorCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
     RightBox->AddChildToVerticalBox(PlayerColorCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
 
     PlayerSpotCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("PlayerSpotCombo"));
-    PlayerSpotCombo->AddOption(TEXT("Start: Pozitsiya 1 (Zapad)"));
-    PlayerSpotCombo->AddOption(TEXT("Start: Pozitsiya 2 (Vostok)"));
+    PlayerSpotCombo->AddOption(TEXT("Старт: Позиция 1 (Запад)"));
+    PlayerSpotCombo->AddOption(TEXT("Старт: Позиция 2 (Восток)"));
     PlayerSpotCombo->SetSelectedIndex(0);
     PlayerSpotCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
     RightBox->AddChildToVerticalBox(PlayerSpotCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 24.0f));
 
     // AI Setup
-    UTextBlock* AIHeader = MakeSetupText(WidgetTree, LOCTEXT("AIHeader", "IGROK 2 (AI COMMANDER)"), 18, Red, TEXT("AIHeader"));
+    UTextBlock* AIHeader = MakeSetupText(WidgetTree, LOCTEXT("AIHeader", "ИГРОК 2 (ИИ КОМАНДИР)"), 18, Red, TEXT("AIHeader"));
     RightBox->AddChildToVerticalBox(AIHeader)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
 
     AIFactionCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("AIFactionCombo"));
-    AIFactionCombo->AddOption(TEXT("Fraktsiya: Soviet (Soviet Union)"));
-    AIFactionCombo->AddOption(TEXT("Fraktsiya: Alliance (Alliance)"));
-    AIFactionCombo->AddOption(TEXT("Fraktsiya: Koalitsiya (Coalition)"));
-    AIFactionCombo->AddOption(TEXT("Fraktsiya: Khrono (Chrono)"));
+    AIFactionCombo->AddOption(TEXT("Евразийский пакт (Россия)"));
+    AIFactionCombo->AddOption(TEXT("Атлантический альянс (США)"));
+    AIFactionCombo->AddOption(TEXT("Восточная коалиция (Китай)"));
+    AIFactionCombo->AddOption(TEXT("Тихоокеанский пакт (Япония)"));
+    AIFactionCombo->AddOption(TEXT("Независимые державы (Иран)"));
     AIFactionCombo->SetSelectedIndex(1);
     AIFactionCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
     RightBox->AddChildToVerticalBox(AIFactionCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
 
     AIColorCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("AIColorCombo"));
-    AIColorCombo->AddOption(TEXT("Tsvet: Krasnyy"));
-    AIColorCombo->AddOption(TEXT("Tsvet: Siniy"));
-    AIColorCombo->AddOption(TEXT("Tsvet: Zelyonyy"));
-    AIColorCombo->AddOption(TEXT("Tsvet: Zhyoltyy"));
+    AIColorCombo->AddOption(TEXT("Цвет: Фиолетовый (Пакт)"));
+    AIColorCombo->AddOption(TEXT("Цвет: Кобальтовый (Альянс)"));
+    AIColorCombo->AddOption(TEXT("Цвет: Золотой (Коалиция)"));
+    AIColorCombo->AddOption(TEXT("Цвет: Бирюзовый (Тихоокеанский)"));
+    AIColorCombo->AddOption(TEXT("Цвет: Янтарный (Независимые)"));
     AIColorCombo->SetSelectedIndex(1);
     AIColorCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
     RightBox->AddChildToVerticalBox(AIColorCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
 
     AISpotCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("AISpotCombo"));
-    AISpotCombo->AddOption(TEXT("Start: Pozitsiya 1 (Zapad)"));
-    AISpotCombo->AddOption(TEXT("Start: Pozitsiya 2 (Vostok)"));
+    AISpotCombo->AddOption(TEXT("Старт: Позиция 1 (Запад)"));
+    AISpotCombo->AddOption(TEXT("Старт: Позиция 2 (Восток)"));
     AISpotCombo->SetSelectedIndex(1);
     AISpotCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
     RightBox->AddChildToVerticalBox(AISpotCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 16.0f));
@@ -433,8 +437,8 @@ void URA4SkirmishSetupWidget::HandleBackClicked()
 {
     if (APlayerController* PC = GetOwningPlayer())
     {
-        if (URA4CommandCentreMenuWidget* Menu = CreateWidget<URA4CommandCentreMenuWidget>(
-            PC, URA4CommandCentreMenuWidget::StaticClass()))
+        if (URA4MainMenuScreenWidget* Menu = CreateWidget<URA4MainMenuScreenWidget>(
+            PC, URA4MainMenuScreenWidget::StaticClass()))
         {
             Menu->AddToViewport(0);
             RemoveFromParent();

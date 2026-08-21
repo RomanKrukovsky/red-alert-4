@@ -24,6 +24,8 @@ void ARA4RtsHud::DrawHUD()
         return;
     }
     DrawSelectionBrackets(Controller);
+    DrawAll3DHealthBars(Controller);
+    DrawFloatingTexts();
     DrawMarquee(Controller);
     DrawMoveTargetRing(Controller);
 
@@ -138,22 +140,32 @@ void ARA4RtsHud::DrawSelectionBrackets(const ARA4PlayerController* Controller)
         // A quarter of the shorter side, so the ticks stay ticks at every zoom instead
         // of meeting in the middle on a distant infantryman.
         const float Tick =
-            float(FMath::Clamp(FMath::Min(MaxX - MinX, MaxY - MinY) * 0.25, 3.0, 14.0));
-        constexpr float Thickness = 1.6f;
+            float(FMath::Clamp(FMath::Min(MaxX - MinX, MaxY - MinY) * 0.25, 4.0, 16.0));
+        constexpr float Thickness = 2.5f;
+        const FLinearColor ShadowColor(0.01f, 0.01f, 0.015f, 0.95f);
+        constexpr float ShadowOffset = 1.0f;
 
         const float L = float(MinX);
         const float R = float(MaxX);
         const float T = float(MinY);
         const float B = float(MaxY);
 
-        DrawLine(L, T, L + Tick, T, SelectionColor, Thickness);
-        DrawLine(L, T, L, T + Tick, SelectionColor, Thickness);
-        DrawLine(R - Tick, T, R, T, SelectionColor, Thickness);
-        DrawLine(R, T, R, T + Tick, SelectionColor, Thickness);
-        DrawLine(L, B - Tick, L, B, SelectionColor, Thickness);
-        DrawLine(L, B, L + Tick, B, SelectionColor, Thickness);
-        DrawLine(R, B - Tick, R, B, SelectionColor, Thickness);
-        DrawLine(R - Tick, B, R, B, SelectionColor, Thickness);
+        // Draw dark shadow outline behind each tick for high readability on any background
+        auto DrawBracketCorner = [&](float X1, float Y1, float X2, float Y2)
+        {
+            DrawLine(X1 + ShadowOffset, Y1 + ShadowOffset, X2 + ShadowOffset, Y2 + ShadowOffset, ShadowColor, Thickness + 1.5f);
+            DrawLine(X1 - ShadowOffset, Y1 - ShadowOffset, X2 - ShadowOffset, Y2 - ShadowOffset, ShadowColor, Thickness + 1.5f);
+            DrawLine(X1, Y1, X2, Y2, SelectionColor, Thickness);
+        };
+
+        DrawBracketCorner(L, T, L + Tick, T);
+        DrawBracketCorner(L, T, L, T + Tick);
+        DrawBracketCorner(R - Tick, T, R, T);
+        DrawBracketCorner(R, T, R, T + Tick);
+        DrawBracketCorner(L, B - Tick, L, B);
+        DrawBracketCorner(L, B, L + Tick, B);
+        DrawBracketCorner(R, B - Tick, R, B);
+        DrawBracketCorner(R - Tick, B, R, B);
 
         // Health bar above the bracket, only once the thing has taken a hit -- a wall
         // of full green bars over an untouched army is noise.
@@ -172,6 +184,113 @@ void ARA4RtsHud::DrawSelectionBrackets(const ARA4PlayerController* Controller)
 
         DrawRect(FLinearColor(0.02f, 0.02f, 0.03f, 0.75f), L, BarY, BarWidth, 3.0f);
         DrawRect(BarColour, L, BarY, BarWidth * Fraction, 3.0f);
+    }
+}
+
+void ARA4RtsHud::SpawnFloatingText(UWorld* World, const FVector& Location, const FString& Text, const FLinearColor& Color)
+{
+    if (World == nullptr) return;
+    if (APlayerController* PC = World->GetFirstPlayerController())
+    {
+        if (ARA4RtsHud* Hud = Cast<ARA4RtsHud>(PC->GetHUD()))
+        {
+            FRA4FloatingText Ft;
+            Ft.WorldLocation = Location;
+            Ft.Text = Text;
+            Ft.Color = Color;
+            Ft.LifeRemaining = 1.6f;
+            Ft.TotalDuration = 1.6f;
+            Ft.RiseSpeed = 45.0f;
+            Hud->FloatingTexts.Add(Ft);
+        }
+    }
+}
+
+void ARA4RtsHud::DrawFloatingTexts()
+{
+    if (Canvas == nullptr) return;
+    const float DeltaTime = FMath::Clamp(GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.016f, 0.001f, 0.1f);
+    const ARA4PlayerController* Controller = Cast<ARA4PlayerController>(PlayerOwner);
+    if (Controller == nullptr) return;
+
+    for (int32 i = FloatingTexts.Num() - 1; i >= 0; --i)
+    {
+        FRA4FloatingText& Ft = FloatingTexts[i];
+        Ft.LifeRemaining -= DeltaTime;
+        if (Ft.LifeRemaining <= 0.0f)
+        {
+            FloatingTexts.RemoveAt(i);
+            continue;
+        }
+
+        const float Elapsed = Ft.TotalDuration - Ft.LifeRemaining;
+        const FVector CurrentWorldPos = Ft.WorldLocation + FVector(0.0f, 0.0f, Elapsed * Ft.RiseSpeed);
+        FVector2D ScreenPos;
+        if (Controller->ProjectWorldLocationToScreen(CurrentWorldPos, ScreenPos))
+        {
+            const float Alpha = FMath::Clamp(Ft.LifeRemaining / (Ft.TotalDuration * 0.35f), 0.0f, 1.0f);
+            FLinearColor DrawColor = Ft.Color;
+            DrawColor.A = Alpha;
+
+            DrawText(Ft.Text, FLinearColor(0.01f, 0.01f, 0.02f, Alpha * 0.9f), ScreenPos.X + 1.0f, ScreenPos.Y + 1.0f, nullptr, 1.15f);
+            DrawText(Ft.Text, DrawColor, ScreenPos.X, ScreenPos.Y, nullptr, 1.15f);
+        }
+    }
+}
+
+void ARA4RtsHud::DrawAll3DHealthBars(const ARA4PlayerController* Controller)
+{
+    if (Canvas == nullptr || Controller == nullptr) return;
+    UWorld* World = GetWorld();
+    const URA4SimWorldSubsystem* Subsystem = World != nullptr ? World->GetSubsystem<URA4SimWorldSubsystem>() : nullptr;
+    const RA4::SimWorld* Sim = Subsystem != nullptr ? Subsystem->GetSimWorld() : nullptr;
+    if (Sim == nullptr) return;
+
+    const auto& Cores = Sim->GetAllCores();
+    const auto& Transforms = Sim->GetAllTransforms();
+
+    for (size_t i = 0; i < Cores.size(); ++i)
+    {
+        if (!Cores[i].bAlive || i >= Transforms.size()) continue;
+        const RA4::EntityId Id = Sim->MakeId(uint32_t(i));
+        if (!Sim->IsEntityVisibleTo(Controller->GetSelection().GetLocalPlayer(), uint32_t(i))) continue;
+
+        const RA4::HealthComp* Health = Sim->GetHealth(Id);
+        if (Health == nullptr || Health->Max <= 0) continue;
+
+        const bool bIsDamaged = Health->Current < Health->Max;
+        const bool bIsSelected = Controller->GetSelection().IsSelected(Id);
+        if (!bIsDamaged && !bIsSelected) continue;
+
+        FVector WorldPos = RA4Coords::ToUnreal(Transforms[i].Position);
+        WorldPos.Z += (Cores[i].Kind == RA4::EntityKind::Building ? 110.0f : 55.0f);
+
+        FVector2D ScreenPos;
+        if (Controller->ProjectWorldLocationToScreen(WorldPos, ScreenPos))
+        {
+            const float Fraction = FMath::Clamp(float(Health->Current) / float(Health->Max), 0.0f, 1.0f);
+            const float BarWidth = (Cores[i].Kind == RA4::EntityKind::Building ? 54.0f : 32.0f);
+            const float BarHeight = 3.5f;
+            const float BarX = ScreenPos.X - BarWidth * 0.5f;
+            const float BarY = ScreenPos.Y;
+
+            const FLinearColor BarColour = Fraction > 0.66f   ? HealthHighColor
+                                           : Fraction > 0.33f ? HealthMediumColor
+                                                              : HealthLowColor;
+
+            // Background border
+            DrawRect(FLinearColor(0.01f, 0.01f, 0.02f, 0.90f), BarX - 1.0f, BarY - 1.0f, BarWidth + 2.0f, BarHeight + 2.0f);
+            // Empty track
+            DrawRect(FLinearColor(0.10f, 0.12f, 0.14f, 0.85f), BarX, BarY, BarWidth, BarHeight);
+            // Filled fraction
+            DrawRect(BarColour, BarX, BarY, BarWidth * Fraction, BarHeight);
+
+            if (bIsSelected)
+            {
+                DrawRect(FLinearColor(0.35f, 0.9f, 0.4f, 0.9f), BarX - 3.0f, BarY, 2.0f, BarHeight);
+                DrawRect(FLinearColor(0.35f, 0.9f, 0.4f, 0.9f), BarX + BarWidth + 1.0f, BarY, 2.0f, BarHeight);
+            }
+        }
     }
 }
 

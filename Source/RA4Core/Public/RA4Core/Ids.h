@@ -26,8 +26,10 @@ struct EntityId
     constexpr bool IsValid() const { return Index != 0xFFFFFFFFu; }
     constexpr bool operator==(const EntityId& O) const { return Index == O.Index && Generation == O.Generation; }
     constexpr bool operator!=(const EntityId& O) const { return !(*this == O); }
+    constexpr bool operator<(const EntityId& O) const { return Packed() < O.Packed(); }
 
     constexpr uint64_t Packed() const { return (uint64_t(Generation) << 32) | uint64_t(Index); }
+
 };
 
 // Player slots are fixed for the lifetime of a match (8 players + neutral/observer).

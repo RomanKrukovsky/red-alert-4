@@ -12,10 +12,16 @@ namespace RA4::UI
 {
 enum class FactionTheme : unsigned char
 {
-    USSR,
-    Allies,
-    EasternCoalition,
-    Chronolegion
+    EurasianPact = 0,
+    AtlanticAlliance = 1,
+    EasternCoalition = 2,
+    PacificPact = 3,
+    Independent = 4,
+    Chronolegion = 5,
+
+    // Aliases
+    USSR = EurasianPact,
+    Allies = AtlanticAlliance
 };
 
 enum class ScreenId : unsigned char

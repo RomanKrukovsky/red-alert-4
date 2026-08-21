@@ -2,7 +2,7 @@
 
 #include "RA4ShowcaseWidget.h"
 
-#include "RA4CommandCentreMenuWidget.h"
+#include "RA4MainMenuScreenWidget.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
@@ -746,8 +746,8 @@ void URA4ShowcaseWidget::OpenMainMenu()
 {
     if (APlayerController* PlayerController = GetOwningPlayer())
     {
-        if (URA4CommandCentreMenuWidget* MainMenu = CreateWidget<URA4CommandCentreMenuWidget>(
-            PlayerController, URA4CommandCentreMenuWidget::StaticClass()))
+        if (URA4MainMenuScreenWidget* MainMenu = CreateWidget<URA4MainMenuScreenWidget>(
+            PlayerController, URA4MainMenuScreenWidget::StaticClass()))
         {
             MainMenu->AddToViewport(0);
             RemoveFromParent();

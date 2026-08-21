@@ -50,35 +50,50 @@ FRA4HUDVisualStyle ResolveHUDVisualStyle(const ERA4FactionTheme Theme)
 {
     switch (Theme)
     {
-    case ERA4FactionTheme::USSR:
+    case ERA4FactionTheme::EurasianPact:
         return {
-            HUDRed, HUDPanel, HUDText,
+            FLinearColor(0.68f, 0.28f, 0.88f, 1.0f),
+            FLinearColor(0.016f, 0.008f, 0.024f, 0.95f),
+            FLinearColor(0.92f, 0.86f, 0.96f, 1.0f),
             TEXT("/Game/RA4UI/Art/T_RA4_USSR_CommandCenter.T_RA4_USSR_CommandCenter"),
-            LOCTEXT("SovietCommander", "ТОВАРИЩ КОМАНДИР  •  УРОВЕНЬ 45")};
-    case ERA4FactionTheme::Allies:
+            LOCTEXT("EurasianCommander", "ЕВРАЗИЙСКИЙ ПАКТ  •  РОССИЯ  •  РЭБ И БРОНЕГРУППА")};
+    case ERA4FactionTheme::AtlanticAlliance:
         return {
-            FLinearColor(0.08f, 0.54f, 1.0f, 1.0f),
-            FLinearColor(0.004f, 0.018f, 0.038f, 0.95f),
-            FLinearColor(0.78f, 0.90f, 1.0f, 1.0f),
+            FLinearColor(0.35f, 0.70f, 0.98f, 1.0f),
+            FLinearColor(0.006f, 0.018f, 0.038f, 0.95f),
+            FLinearColor(0.85f, 0.93f, 1.0f, 1.0f),
             TEXT("/Game/RA4UI/Art/T_RA4_Allies_ArcticFleet.T_RA4_Allies_ArcticFleet"),
-            LOCTEXT("AlliesCommander", "ПРЕЗИДЕНТ ЭЛЕАНОР УОРД  •  АЛЬЯНС")};
+            LOCTEXT("AtlanticCommander", "АТЛАНТИЧЕСКИЙ АЛЬЯНС  •  США  •  СЕТЕЦЕНТРИЧЕСКИЙ ШТАБ")};
     case ERA4FactionTheme::EasternCoalition:
         return {
-            FLinearColor(0.26f, 0.92f, 0.24f, 1.0f),
-            FLinearColor(0.006f, 0.030f, 0.012f, 0.95f),
-            FLinearColor(0.86f, 0.94f, 0.78f, 1.0f),
+            FLinearColor(0.88f, 0.72f, 0.22f, 1.0f),
+            FLinearColor(0.008f, 0.028f, 0.016f, 0.95f),
+            FLinearColor(0.95f, 0.92f, 0.80f, 1.0f),
             TEXT("/Game/RA4UI/Art/T_RA4_Eastern_CommandFortress.T_RA4_Eastern_CommandFortress"),
-            LOCTEXT("EasternCommander", "ВОСТОЧНАЯ КОАЛИЦИЯ  •  БОЕВАЯ МОЩЬ 12 450")};
+            LOCTEXT("EasternCommander", "ВОСТОЧНАЯ КОАЛИЦИЯ  •  КИТАЙ  •  ИНДУСТРИАЛЬНЫЙ КОМПЛЕКС")};
+    case ERA4FactionTheme::PacificPact:
+        return {
+            FLinearColor(0.20f, 0.80f, 0.90f, 1.0f),
+            FLinearColor(0.005f, 0.022f, 0.032f, 0.95f),
+            FLinearColor(0.80f, 0.96f, 1.0f, 1.0f),
+            TEXT("/Game/RA4UI/Art/T_RA4_Chrono_TemporalCitadel.T_RA4_Chrono_TemporalCitadel"),
+            LOCTEXT("PacificCommander", "ТИХООКЕАНСКИЙ ПАКТ  •  ЯПОНИЯ  •  РОБОТИЗИРОВАННЫЙ КОРПУС")};
+    case ERA4FactionTheme::Independent:
+        return {
+            FLinearColor(0.78f, 0.52f, 0.18f, 1.0f),
+            FLinearColor(0.024f, 0.016f, 0.008f, 0.95f),
+            FLinearColor(0.95f, 0.90f, 0.80f, 1.0f),
+            TEXT("/Game/RA4UI/Art/T_RA4_USSR_CommandCenter.T_RA4_USSR_CommandCenter"),
+            LOCTEXT("IndepCommander", "НЕЗАВИСИМЫЕ ДЕРЖАВЫ  •  ИРАН  •  АСИММЕТРИЧНЫЙ РУБЕЖ")};
     case ERA4FactionTheme::Chronolegion:
         return {
             FLinearColor(0.66f, 0.20f, 1.0f, 1.0f),
             FLinearColor(0.025f, 0.004f, 0.045f, 0.95f),
             FLinearColor(0.92f, 0.80f, 1.0f, 1.0f),
             TEXT("/Game/RA4UI/Art/T_RA4_Chrono_TemporalCitadel.T_RA4_Chrono_TemporalCitadel"),
-            LOCTEXT("ChronoCommander", "ХРОНОЛЕГИОН  •  ГЛАВНОКОМАНДУЮЩИЙ АЛЕКСЕЙ")};
+            LOCTEXT("ChronoCommander", "ХРОНОЛЕГИОН (LEGACY)  •  ВРЕМЕННОЙ УЗЕЛ")};
     default:
-        checkNoEntry();
-        return ResolveHUDVisualStyle(ERA4FactionTheme::USSR);
+        return ResolveHUDVisualStyle(ERA4FactionTheme::EurasianPact);
     }
 }
 
@@ -203,15 +218,15 @@ const TCHAR* ResolveProductionIconPath(const ERA4FactionTheme Theme, const int32
 
     switch (Theme)
     {
-    case ERA4FactionTheme::USSR:
+    case ERA4FactionTheme::EurasianPact:
         return SovietIcons[Index % UE_ARRAY_COUNT(SovietIcons)];
-    case ERA4FactionTheme::Allies:
+    case ERA4FactionTheme::AtlanticAlliance:
         return AlliedIcons[Index % UE_ARRAY_COUNT(AlliedIcons)];
     case ERA4FactionTheme::EasternCoalition:
+    case ERA4FactionTheme::PacificPact:
+    case ERA4FactionTheme::Independent:
     case ERA4FactionTheme::Chronolegion:
-        return nullptr;
     default:
-        checkNoEntry();
         return nullptr;
     }
 }
@@ -272,22 +287,28 @@ FRA4HUDSnapshotView MakeShowcaseSnapshot(
     Snapshot.SelectionCount = 1;
     switch (Theme)
     {
-    case ERA4FactionTheme::USSR:
+    case ERA4FactionTheme::EurasianPact:
         Snapshot.PrimaryEntityName = Variant == ERA4UIScreenVariant::SovietBattle
-            ? TEXT("ТЯЖЁЛЫЙ ТАНК КВ-3")
+            ? TEXT("ОБТ «ГРАНИТ»")
             : Variant == ERA4UIScreenVariant::SovietAlert
-                ? TEXT("КОМАНДНЫЙ ЦЕНТР")
-                : TEXT("ГЛАВНЫЙ ШТАБ");
+                ? TEXT("КОМПЛЕКС РЭБ «ГРОМОБОЙ»")
+                : TEXT("КОМАНДНЫЙ ЦЕНТР «ЗАСЛОН»");
         break;
-    case ERA4FactionTheme::Allies:
+    case ERA4FactionTheme::AtlanticAlliance:
         Snapshot.PrimaryEntityName = Variant == ERA4UIScreenVariant::AlliesNaval
             ? TEXT("ЭСМИНЕЦ «СВОБОДА»")
             : Variant == ERA4UIScreenVariant::AlliesAir
-                ? TEXT("ИСТРЕБИТЕЛЬ «ОРЁЛ»")
-                : TEXT("АЭРОДРОМ АЛЬЯНСА");
+                ? TEXT("ИСТРЕБИТЕЛЬ F-35C")
+                : TEXT("СЕТЕЦЕНТРИЧЕСКИЙ КП");
         break;
     case ERA4FactionTheme::EasternCoalition:
-        Snapshot.PrimaryEntityName = TEXT("ЦЕНТРАЛЬНЫЙ КОМПЛЕКС");
+        Snapshot.PrimaryEntityName = TEXT("ИНДУСТРИАЛЬНЫЙ ШТАБ «ТИП-99B»");
+        break;
+    case ERA4FactionTheme::PacificPact:
+        Snapshot.PrimaryEntityName = TEXT("ШАГОХОД «КАЙГАН»");
+        break;
+    case ERA4FactionTheme::Independent:
+        Snapshot.PrimaryEntityName = TEXT("МОБИЛЬНЫЙ СПУ «ХЕЙБАР»");
         break;
     case ERA4FactionTheme::Chronolegion:
         Snapshot.PrimaryEntityName = Variant == ERA4UIScreenVariant::ChronoSuperweapon
@@ -295,7 +316,7 @@ FRA4HUDSnapshotView MakeShowcaseSnapshot(
             : TEXT("ГЛАВНЫЙ ХРОНОРЕАКТОР");
         break;
     default:
-        checkNoEntry();
+        Snapshot.PrimaryEntityName = TEXT("КОМАНДНЫЙ ЦЕНТР");
         break;
     }
     Snapshot.SelectionHealthRatio = 1.0f;
@@ -436,20 +457,24 @@ void URA4HUDWidget::ConfigureHUD(
     ERA4UIScreenId HUDScreen = ERA4UIScreenId::SovietHud;
     switch (FactionTheme)
     {
-    case ERA4FactionTheme::USSR:
+    case ERA4FactionTheme::EurasianPact:
         HUDScreen = ERA4UIScreenId::SovietHud;
         break;
-    case ERA4FactionTheme::Allies:
+    case ERA4FactionTheme::AtlanticAlliance:
         HUDScreen = ERA4UIScreenId::AlliesHud;
         break;
     case ERA4FactionTheme::EasternCoalition:
         HUDScreen = ERA4UIScreenId::EasternHud;
         break;
+    case ERA4FactionTheme::PacificPact:
     case ERA4FactionTheme::Chronolegion:
         HUDScreen = ERA4UIScreenId::ChronoHud;
         break;
+    case ERA4FactionTheme::Independent:
+        HUDScreen = ERA4UIScreenId::SovietHud;
+        break;
     default:
-        checkNoEntry();
+        HUDScreen = ERA4UIScreenId::SovietHud;
         break;
     }
     SetScreenIdentity(HUDScreen, HUDVariant);

@@ -106,7 +106,7 @@ private:
     TObjectPtr<UUniformGridPanel> BuildGrid;
 
     TArray<FBox2D> InteractiveRegions;
-    ERA4FactionTheme FactionTheme = ERA4FactionTheme::USSR;
+    ERA4FactionTheme FactionTheme = ERA4FactionTheme::EurasianPact;
     ERA4UIScreenVariant HUDVariant = ERA4UIScreenVariant::Default;
     int32 ActiveProductionTab = 0;
 };
@@ -226,8 +226,23 @@ private:
     /** Rebuilds alert rows from the provider. Called on change, never on tick. */
     void Refresh();
 
+    void TriggerAlertClick(int32 Index);
+
+    UFUNCTION()
+    void OnAlert0Clicked();
+    UFUNCTION()
+    void OnAlert1Clicked();
+    UFUNCTION()
+    void OnAlert2Clicked();
+    UFUNCTION()
+    void OnAlert3Clicked();
+    UFUNCTION()
+    void OnAlert4Clicked();
+
     UPROPERTY(Transient)
     TObjectPtr<class UVerticalBox> FeedBox;
+
+    TArray<FVector2D> AlertLocations;
 
     FDelegateHandle AlertsChangeHandle;
 

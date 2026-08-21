@@ -140,17 +140,20 @@ ERA4FactionTheme ToUnrealTheme(const RA4::UI::FactionTheme Theme)
 {
     switch (Theme)
     {
-    case RA4::UI::FactionTheme::USSR:
-        return ERA4FactionTheme::USSR;
-    case RA4::UI::FactionTheme::Allies:
-        return ERA4FactionTheme::Allies;
+    case RA4::UI::FactionTheme::EurasianPact:
+        return ERA4FactionTheme::EurasianPact;
+    case RA4::UI::FactionTheme::AtlanticAlliance:
+        return ERA4FactionTheme::AtlanticAlliance;
     case RA4::UI::FactionTheme::EasternCoalition:
         return ERA4FactionTheme::EasternCoalition;
+    case RA4::UI::FactionTheme::PacificPact:
+        return ERA4FactionTheme::PacificPact;
+    case RA4::UI::FactionTheme::Independent:
+        return ERA4FactionTheme::Independent;
     case RA4::UI::FactionTheme::Chronolegion:
         return ERA4FactionTheme::Chronolegion;
     default:
-        checkNoEntry();
-        return ERA4FactionTheme::USSR;
+        return ERA4FactionTheme::EurasianPact;
     }
 }
 

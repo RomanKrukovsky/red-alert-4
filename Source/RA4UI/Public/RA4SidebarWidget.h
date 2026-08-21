@@ -134,6 +134,8 @@ private:
  * the sidebar reports intent and does not talk to the simulation itself.
  */
 DECLARE_MULTICAST_DELEGATE_OneParam(FRA4OnBuildCardClicked, int64 /*ContentId*/);
+DECLARE_MULTICAST_DELEGATE_OneParam(FRA4OnInteractionModeChanged, uint8 /*Mode: 0=Normal, 1=Repair, 2=Sell*/);
+DECLARE_MULTICAST_DELEGATE(FRA4OnSuperweaponClicked);
 
 UCLASS()
 class RA4UI_API URA4SidebarWidget : public UUserWidget
@@ -149,7 +151,7 @@ public:
      * ComputeSidebarWidth applies a clamped scale so the column keeps the same visual
      * weight at any resolution.
      */
-    static constexpr float SidebarWidth = 232.0f;
+    static constexpr float SidebarWidth = 268.0f;
 
     /** Scale factor for the viewport the given object lives in. Never returns 0. */
     static float ComputeSidebarScale(const UObject* WorldContextObject);
@@ -179,6 +181,8 @@ public:
     FRA4OnRadarClicked OnRadarClicked;
     /** Forwarded from the radar panel's right button: an order, not a camera move. */
     FRA4OnRadarClicked OnRadarOrdered;
+    FRA4OnInteractionModeChanged OnInteractionModeChanged;
+    FRA4OnSuperweaponClicked OnSuperweaponClicked;
 
     /** Forwards the camera's ground footprint to the radar panel, which outlines it. */
     void SetRadarCameraView(const FVector2D& CentreWorld, const FVector2D& ExtentWorld);
@@ -189,6 +193,12 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "RA4|UI")
     int32 GetActiveCategory() const { return ActiveCategory; }
+
+    UFUNCTION(BlueprintCallable, Category = "RA4|UI")
+    void SetInteractionMode(uint8 InMode);
+
+    UFUNCTION(BlueprintPure, Category = "RA4|UI")
+    uint8 GetInteractionMode() const { return CurrentInteractionMode; }
 
     /**
      * Commits the build card at the given grid index (row-major, matching the hotkey
@@ -285,6 +295,24 @@ private:
     TObjectPtr<URA4RadarWidget> RadarWidget;
 
     UPROPERTY(Transient)
+    TObjectPtr<URA4IndexedButton> RepairButton;
+
+    UPROPERTY(Transient)
+    TObjectPtr<URA4IndexedButton> SellButton;
+
+    UPROPERTY(Transient)
+    TObjectPtr<URA4IndexedButton> SuperweaponButton;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UTextBlock> SuperweaponText;
+
+    uint8 CurrentInteractionMode = 0;
+
+    void HandleRepairClicked(int32 Index);
+    void HandleSellClicked(int32 Index);
+    void HandleSuperweaponClicked(int32 Index);
+
+    UPROPERTY(Transient)
     TArray<TObjectPtr<URA4IndexedButton>> TabButtons;
 
     // Parallel to the buttons in CardGrid, so a click can be resolved back to content
@@ -296,6 +324,26 @@ private:
     // UButton's own render transform is overwritten by its style states.
     UPROPERTY(Transient)
     TArray<TObjectPtr<UWidget>> CardHoverTargets;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<class UImage>> CardRadialOverlays;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<class UTexture2D>> CardRadialTextures;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<class UBorder>> CardReadyBadges;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<class UTextBlock>> CardCenterPctTexts;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<class UBorder>> CardQueueBorders;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<class UTextBlock>> CardQueueTexts;
+
+    TArray<int32> CardLastDrawnPct;
 
     TArray<int64> CardContentIds;
 

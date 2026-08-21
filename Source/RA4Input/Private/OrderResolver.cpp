@@ -157,7 +157,6 @@ std::vector<Command> ResolveOrder(const SimWorld& World, const SelectionModel& S
     const bool bTargetIsResource = bTargetValid && IsResourceNode(World, Context.HoveredEntity);
     const bool bTargetIsOwnRefinery = bTargetValid && IsRefinery(World, Context.HoveredEntity) &&
                                       World.GetCore(Context.HoveredEntity)->Owner == Context.Issuer;
-
     for (const EntityId& Id : Selection.Get())
     {
         if (!IsMobileUnit(World, Id, Context.Issuer))

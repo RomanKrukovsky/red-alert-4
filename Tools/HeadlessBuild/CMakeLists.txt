@@ -92,7 +92,21 @@ add_library(RA4Simulation STATIC
     ${RA4_SOURCE_ROOT}/RA4Simulation/Private/SimWorld.cpp
     ${RA4_SOURCE_ROOT}/RA4Simulation/Private/CommandBus.cpp
     ${RA4_SOURCE_ROOT}/RA4Simulation/Private/LockstepSession.cpp
+    ${RA4_SOURCE_ROOT}/RA4Simulation/Private/RollbackSession.cpp
+    ${RA4_SOURCE_ROOT}/RA4Simulation/Private/ProtocolRuntime.cpp
+    ${RA4_SOURCE_ROOT}/RA4Simulation/Private/NetworkLobby.cpp
+    ${RA4_SOURCE_ROOT}/RA4Simulation/Private/ExoticSuperweaponPhysics.cpp
+    ${RA4_SOURCE_ROOT}/RA4Simulation/Private/ElectronicWarfare.cpp
+    ${RA4_SOURCE_ROOT}/RA4Simulation/Private/GarrisonUrbanCombat.cpp
+    ${RA4_SOURCE_ROOT}/RA4Simulation/Private/OrbitalDebrisPhysics.cpp
 )
+
+
+
+
+
+
+
 target_include_directories(RA4Simulation PUBLIC ${RA4_SOURCE_ROOT}/RA4Simulation/Public)
 target_link_libraries(RA4Simulation PUBLIC RA4Content RA4Navigation RA4FogOfWar RA4Recon)
 
@@ -110,7 +124,22 @@ target_link_libraries(RA4Input PUBLIC RA4Simulation)
 add_library(RA4Presentation STATIC
     ${RA4_SOURCE_ROOT}/RA4Presentation/Private/HudSnapshot.cpp
     ${RA4_SOURCE_ROOT}/RA4Presentation/Private/RA4ArtMapping.cpp
+    ${RA4_SOURCE_ROOT}/RA4Presentation/Private/PresentationInterpolator.cpp
+    ${RA4_SOURCE_ROOT}/RA4Presentation/Private/PresentationTracerFX.cpp
+    ${RA4_SOURCE_ROOT}/RA4Presentation/Private/PresentationAudioManager.cpp
+    ${RA4_SOURCE_ROOT}/RA4Presentation/Private/PresentationAnimationFX.cpp
+    ${RA4_SOURCE_ROOT}/RA4Presentation/Private/PresentationDynamicAudio.cpp
+    ${RA4_SOURCE_ROOT}/RA4Presentation/Private/ProtocolAndSuperweaponUI.cpp
+    ${RA4_SOURCE_ROOT}/RA4Presentation/Private/SpatialAudio3D.cpp
+    ${RA4_SOURCE_ROOT}/RA4Presentation/Private/HydrodynamicsAndWeather.cpp
 )
+
+
+
+
+
+
+
 target_include_directories(RA4Presentation PUBLIC 
     ${RA4_SOURCE_ROOT}/RA4Presentation/Public
     ${CMAKE_CURRENT_SOURCE_DIR}/UnrealStub
@@ -140,19 +169,27 @@ add_library(RA4AI STATIC
     ${RA4_SOURCE_ROOT}/RA4AI/Private/OpponentModel.cpp
     ${RA4_SOURCE_ROOT}/RA4AI/Private/BattlePredictor.cpp
     ${RA4_SOURCE_ROOT}/RA4AI/Private/AILeague.cpp
+    ${RA4_SOURCE_ROOT}/RA4AI/Private/TacticalCombatMicro.cpp
 )
+
 target_include_directories(RA4AI PUBLIC ${RA4_SOURCE_ROOT}/RA4AI/Public)
 target_link_libraries(RA4AI PUBLIC RA4Simulation)
 
 add_library(RA4Replay STATIC
     ${RA4_SOURCE_ROOT}/RA4Replay/Private/Replay.cpp
+    ${RA4_SOURCE_ROOT}/RA4Replay/Private/ReplayPlaybackEngine.cpp
+    ${RA4_SOURCE_ROOT}/RA4Replay/Private/MatchTelemetryTracker.cpp
+    ${RA4_SOURCE_ROOT}/RA4Replay/Private/ReplayFileFormat.cpp
 )
+
+
 target_include_directories(RA4Replay PUBLIC ${RA4_SOURCE_ROOT}/RA4Replay/Public)
 target_link_libraries(RA4Replay PUBLIC RA4Simulation)
 
 add_library(RA4Campaign STATIC
     ${RA4_SOURCE_ROOT}/RA4Campaign/Private/CampaignDatabase.cpp
     ${RA4_SOURCE_ROOT}/RA4Campaign/Private/MissionRuntime.cpp
+    ${RA4_SOURCE_ROOT}/RA4Campaign/Private/MissionScriptRuntime.cpp
     ${RA4_SOURCE_ROOT}/RA4Campaign/Private/CampaignProfile.cpp
 )
 target_include_directories(RA4Campaign PUBLIC ${RA4_SOURCE_ROOT}/RA4Campaign/Public)
@@ -188,7 +225,46 @@ add_executable(RA4Tests
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestFormationMovement.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestCrowdSeparation.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestTankGunnery.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestFoundation.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestRA3Gameplay.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestRollbackNetcode.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestPresentationFX.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestAIStage5.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestReplayAnalytics.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestCampaignStage7.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestSuperweaponsAndProtocols.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestPresentationAnimationFX.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestPresentationDynamicAudio.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestProtocolAndSuperweaponUI.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestNetworkLobbyAndTransport.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestExoticSuperweapons.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestTacticalCombatMicro.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestSpatialAudio3D.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestElectronicWarfare.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestGarrisonUrbanCombat.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestOrbitalDebrisPhysics.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestHydrodynamicsAndWeather.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestReplayFileFormat.cpp
 )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 target_link_libraries(RA4Tests PRIVATE RA4Replay RA4Campaign RA4Input RA4Presentation RA4AI)
 target_include_directories(RA4Tests PRIVATE ${RA4_SOURCE_ROOT}/RA4UI/Public)
@@ -210,7 +286,9 @@ set_tests_properties(input PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_D
 add_executable(RA4PresentationTests
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestMain.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestPresentation.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestPresentationFX.cpp
 )
+
 target_link_libraries(RA4PresentationTests PRIVATE RA4Presentation)
 add_test(NAME presentation COMMAND RA4PresentationTests)
 set_tests_properties(presentation PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../..)
@@ -219,7 +297,9 @@ set_tests_properties(presentation PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_S
 add_executable(RA4AITests
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestMain.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestAI.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestAIStage5.cpp
 )
+
 target_link_libraries(RA4AITests PRIVATE RA4AI)
 add_test(NAME ai COMMAND RA4AITests)
 set_tests_properties(ai PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../..)

@@ -35,7 +35,7 @@ struct FRA4FactionCardView
     FName ContentId;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Campaign")
-    ERA4FactionTheme Theme = ERA4FactionTheme::USSR;
+    ERA4FactionTheme Theme = ERA4FactionTheme::EurasianPact;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Campaign")
     FText DisplayName;
@@ -71,7 +71,7 @@ struct FRA4MissionNodeView
     FName ContentId;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Campaign")
-    ERA4FactionTheme Theme = ERA4FactionTheme::USSR;
+    ERA4FactionTheme Theme = ERA4FactionTheme::EurasianPact;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Campaign")
     FText DisplayName;
@@ -157,7 +157,7 @@ private:
     TArray<FRA4MissionNodeView> MissionNodes;
 
     UPROPERTY(FieldNotify)
-    ERA4FactionTheme SelectedFaction = ERA4FactionTheme::USSR;
+    ERA4FactionTheme SelectedFaction = ERA4FactionTheme::EurasianPact;
 
     UPROPERTY(FieldNotify)
     FName SelectedMissionId;

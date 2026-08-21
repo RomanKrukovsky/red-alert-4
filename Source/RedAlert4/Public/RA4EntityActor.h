@@ -67,11 +67,28 @@ public:
     UFUNCTION(BlueprintCallable, Category = "DirectControl")
     FRotator GetPossessionCameraRotation() const;
 
-    UFUNCTION(BlueprintPure, Category = "DirectControl")
-    class UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
-
     UFUNCTION(BlueprintCallable, Category = "DirectControl")
     void SetupDirectControlView(bool bEnable, float InFov = 90.0f);
+
+    UFUNCTION(BlueprintCallable, Category = "Visuals")
+    void SetSelected(bool bSelected);
+
+    UFUNCTION(BlueprintCallable, Category = "Visuals")
+    void SetNightMode(bool bIsNight);
+
+    UFUNCTION(BlueprintCallable, Category = "Visuals")
+    void TriggerMuzzleFlash();
+
+    UFUNCTION(BlueprintCallable, Category = "Visuals")
+    void SetVeterancyRank(uint8 InRank);
+
+    UFUNCTION(BlueprintCallable, Category = "Visuals")
+    void TriggerConstructionRise(float DurationSeconds = 2.5f);
+
+    UFUNCTION(BlueprintCallable, Category = "Visuals")
+    void SetHarvesterUnloading(bool bUnloading);
+
+    uint8 GetVeterancyRank() const { return VeterancyRank; }
 
 protected:
     virtual void BeginPlay() override;
@@ -98,8 +115,17 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     TObjectPtr<class UDecalComponent> SelectionDecalComponent;
 
-    UFUNCTION(BlueprintCallable, Category = "Visuals")
-    void SetSelected(bool bSelected);
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    TObjectPtr<class USpotLightComponent> HeadlightLeftComponent;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    TObjectPtr<class USpotLightComponent> HeadlightRightComponent;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    TObjectPtr<class UPointLightComponent> BeaconLightComponent;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    TObjectPtr<class UPointLightComponent> MuzzleFlashLightComponent;
 
     UPROPERTY(Transient)
     TObjectPtr<class UAnimSequence> CachedIdleAnim;
@@ -132,6 +158,25 @@ protected:
     // once collapsed to nothing.
     FVector RequestedVisualScale = FVector::OneVector;
     bool bHasRequestedVisualScale = false;
+
+    // Construction rise animation
+    float ConstructionElapsed = 0.0f;
+    float ConstructionDuration = 0.0f;
+    bool bIsConstructing = false;
+
+    // Movement tread tracking
+    FVector LastTreadSpawnPosition = FVector::ZeroVector;
+    bool bIsVehicle = false;
+    bool bIsBuilding = false;
+
+    // Muzzle flash timer
+    float MuzzleFlashRemaining = 0.0f;
+
+    // Veterancy
+    uint8 VeterancyRank = 0; // 0 = Recruit, 1 = Veteran, 2 = Elite
+
+    // Harvester ore unloading effect
+    bool bHarvesterDocked = false;
 
 private:
     uint32 EntityIndex = 0xFFFFFFFFu;

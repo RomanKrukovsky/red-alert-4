@@ -1,6 +1,7 @@
 // Copyright (c) Red Alert 4 project.
 #include "RA4AI/AICommander.h"
 
+#include "RA4Simulation/SimWorld.h"
 #include "RA4Core/SimConfig.h"
 
 #include <algorithm>
@@ -122,6 +123,7 @@ void AICommander::Reset()
     Directors = DirectorBundle();
     BattleForecast = BattleEstimate();
     bHasBattleForecast = false;
+    ActivePing = CoopPingTarget{};
     DecisionLog.clear();
     // The doctrine is the only Reset exception: it depends on the commander's
     // faction, which is world state, so it is re-resolved on the next first Tick.
@@ -130,7 +132,34 @@ void AICommander::Reset()
     bHasHarassRaid = false;
 }
 
+void AICommander::ReceiveCoopPing(PlayerId Sender, CoopPingType Type, const Vec2& Location, TickIndex CurrentTick)
+{
+    ActivePing.bActive = true;
+    ActivePing.Sender = Sender;
+    ActivePing.Type = Type;
+    ActivePing.Location = Location;
+    ActivePing.ExpiryTick = CurrentTick + 600; // 30 seconds
+    const int32_t TX = static_cast<int32_t>(Location.X.ToIntFloor() / MapDescription::kTileSizeUnitsLocal);
+    const int32_t TY = static_cast<int32_t>(Location.Y.ToIntFloor() / MapDescription::kTileSizeUnitsLocal);
+    ActiveOperation.TargetLocation = TileCoord(TX, TY);
+
+    if (Type == CoopPingType::Attack)
+    {
+        ActiveOperation.TransitionTo(OperationState::Advancing, CurrentTick);
+    }
+    else if (Type == CoopPingType::Defend)
+    {
+        ActiveOperation.TransitionTo(OperationState::Staging, CurrentTick);
+    }
+    else if (Type == CoopPingType::Scout)
+    {
+        ActiveOperation.TransitionTo(OperationState::Advancing, CurrentTick);
+    }
+}
+
+
 void AICommander::Log(TickIndex Tick, CommandType Type, ContentId Content, const char* Reason)
+
 {
     AIDecision D;
     D.Tick = Tick;
@@ -958,42 +987,66 @@ AIWorldAssessment AICommander::BuildAssessment(const SimWorld& World) const
 
 bool AICommander::FindPlacementTile(const SimWorld& World, ContentId Structure, TileCoord& OutTile) const
 {
-    const EntityId Yard = FindOwnConstructionYard(World);
-    if (!Yard.IsValid())
-    {
-        return false;
-    }
-    const BuildingComp* YardBuilding = World.GetBuilding(Yard);
-    if (YardBuilding == nullptr)
-    {
-        return false;
-    }
-    const TileCoord Origin = YardBuilding->OriginTile;
+    const std::vector<EntityCore>& Cores = World.GetAllCores();
+    std::vector<TileCoord> Anchors;
 
-    // Expanding rings around the yard, scanned in a fixed order so placement is
-    // reproducible. The server still validates the result; this only avoids
-    // spamming rejected commands.
-    for (int32_t Radius = 2; Radius <= 10; ++Radius)
+    const EntityId Yard = FindOwnConstructionYard(World);
+    if (Yard.IsValid())
     {
-        for (int32_t DY = -Radius; DY <= Radius; ++DY)
+        const BuildingComp* YardB = World.GetBuilding(Yard);
+        if (YardB != nullptr)
         {
-            for (int32_t DX = -Radius; DX <= Radius; ++DX)
+            Anchors.push_back(YardB->OriginTile);
+        }
+    }
+
+    for (uint32_t I = 0; I < uint32_t(Cores.size()); ++I)
+    {
+        if (!Cores[I].bAlive || Cores[I].Owner != Player || Cores[I].Kind != EntityKind::Building)
+        {
+            continue;
+        }
+        const BuildingComp* B = World.GetBuilding(World.MakeId(I));
+        if (B != nullptr && B->State == ConstructionState::Complete)
+        {
+            if (std::find(Anchors.begin(), Anchors.end(), B->OriginTile) == Anchors.end())
             {
-                if (std::max(std::abs(DX), std::abs(DY)) != Radius)
+                Anchors.push_back(B->OriginTile);
+            }
+        }
+    }
+
+    if (Anchors.empty())
+    {
+        return false;
+    }
+
+    // Expanding rings around each anchor
+    for (int32_t Radius = 2; Radius <= 12; ++Radius)
+    {
+        for (const TileCoord& Origin : Anchors)
+        {
+            for (int32_t DY = -Radius; DY <= Radius; ++DY)
+            {
+                for (int32_t DX = -Radius; DX <= Radius; ++DX)
                 {
-                    continue;   // ring only
-                }
-                const TileCoord Candidate(Origin.X + DX, Origin.Y + DY);
-                if (World.IsPlacementValid(Structure, Player, Candidate))
-                {
-                    OutTile = Candidate;
-                    return true;
+                    if (std::max(std::abs(DX), std::abs(DY)) != Radius)
+                    {
+                        continue;   // ring only
+                    }
+                    const TileCoord Candidate(Origin.X + DX, Origin.Y + DY);
+                    if (World.IsPlacementValid(Structure, Player, Candidate))
+                    {
+                        OutTile = Candidate;
+                        return true;
+                    }
                 }
             }
         }
     }
     return false;
 }
+
 
 bool AICommander::QueueProduction(const SimWorld& World, ContentId Content, const char* Reason,
                                   std::vector<Command>& Out)
@@ -1134,6 +1187,14 @@ bool AICommander::TryBuildEconomy(const SimWorld& World, std::vector<Command>& O
     if (CountOwned(World, &IsRefinery) == 0)
     {
         if (QueueProduction(World, FindStructure(World, &IsRefinery), "no refinery: no income", Out))
+        {
+            return true;
+        }
+    }
+    else if (CountOwned(World, &IsRefinery) < 2 && State.Credits > 2200 &&
+             ActiveStrategy != AIStrategy::Recover)
+    {
+        if (QueueProduction(World, FindStructure(World, &IsRefinery), "expanding refinery capacity", Out))
         {
             return true;
         }
@@ -1432,19 +1493,45 @@ bool AICommander::AnySquadNearTarget(const SimWorld& World, const TileCoord& Tar
 void AICommander::IssueSquadAttackMove(const SimWorld& World, const Vec2& Destination,
                                        std::vector<Command>& Out)
 {
-    for (EntityId Id : ActiveOperation.AssignedUnits)
+    const size_t UnitCount = ActiveOperation.AssignedUnits.size();
+    if (UnitCount == 0)
     {
+        return;
+    }
+
+    const EntityId Yard = FindOwnConstructionYard(World);
+    const TransformComp* YardTransform = Yard.IsValid() ? World.GetTransform(Yard) : nullptr;
+    Vec2 AdvanceDir(Fixed::FromInt(1), Fixed::FromInt(0));
+    if (YardTransform != nullptr)
+    {
+        Vec2 Delta = Destination - YardTransform->Position;
+        if (Delta.LengthSquared().Raw > 0)
+        {
+            AdvanceDir = Delta.Normalized();
+        }
+    }
+    const Vec2 Perpendicular(-AdvanceDir.Y, AdvanceDir.X);
+
+    constexpr int32_t kSlotSpacingUnits = 180; // 1.8 metres between unit slots in battle line
+
+    for (size_t I = 0; I < UnitCount; ++I)
+    {
+        const EntityId Id = ActiveOperation.AssignedUnits[I];
         const OrderQueue* Orders = World.GetOrders(Id);
         if (Orders != nullptr && Orders->Count > 0)
         {
             continue;
         }
 
+        const int32_t OffsetIndex = int32_t(I) - int32_t(UnitCount / 2);
+        const Vec2 SlotOffset = Perpendicular * Fixed::FromInt(OffsetIndex * kSlotSpacingUnits);
+        const Vec2 UnitDestination = Destination + SlotOffset;
+
         Command C;
         C.Type = CommandType::AttackMove;
         C.Issuer = Player;
         C.Primary = Id;
-        C.Location = Destination;
+        C.Location = UnitDestination;
         Out.push_back(C);
     }
 }
@@ -1529,7 +1616,11 @@ EntityId AICommander::FindTacticalFocusTarget(const SimWorld& World, EntityId At
             }
         }
 
-        if (HasRole(EnemyDef->Roles, EntityRole::Artillery))
+        if (bIsAir && HasRole(AttackerDef->Roles, EntityRole::AntiAir))
+        {
+            Score += 600;
+        }
+        else if (HasRole(EnemyDef->Roles, EntityRole::Artillery))
         {
             Score += 350;
         }
@@ -1616,14 +1707,35 @@ void AICommander::IssueSquadTacticalCombatOrders(const SimWorld& World, const Ve
             }
         }
 
+        // Tactical F-Ability (Secondary Mode) activation in combat
+        if (UnitDef->Unit.bHasSecondaryAbility)
+        {
+            const CombatComp* Combat = World.GetCombat(Id);
+            if (Combat != nullptr && !Combat->bSecondaryModeActive && Combat->SecondaryAbilityCooldownTicks == 0)
+            {
+                if (!VisibleEnemies.empty())
+                {
+                    Command AbilityCmd;
+                    AbilityCmd.Type = CommandType::ToggleSecondaryAbility;
+                    AbilityCmd.Issuer = Player;
+                    AbilityCmd.Primary = Id;
+                    Out.push_back(AbilityCmd);
+                    Log(World.GetTick(), CommandType::ToggleSecondaryAbility, UnitCore->Def,
+                        "combat micro: activating unit secondary ability");
+                }
+            }
+        }
+
         // Tactical Kiting for fragile ranged units
         if (UnitDef->Weapon.IsValid() && UnitHealth != nullptr && UnitHealth->Max > 0)
         {
             const WeaponDef* Wpn = Content->FindWeapon(UnitDef->Weapon);
             if (Wpn != nullptr && Wpn->MaxRange >= Fixed::FromInt(700))
+
             {
+                const int32_t DangerZoneUnits = (bDoctrineLoaded && Personality.Cautiousness > 60) ? 550 : 400;
                 EntityId NearestThreat = EntityId::Invalid();
-                Fixed MinThreatDistSq = Fixed::FromInt(400 * 400);
+                Fixed MinThreatDistSq = Fixed::FromInt(DangerZoneUnits * DangerZoneUnits);
                 for (EntityId EnemyId : VisibleEnemies)
                 {
                     const TransformComp* EnemyTransform = World.GetTransform(EnemyId);
@@ -2038,6 +2150,45 @@ bool AICommander::TryFireSuperweapons(const SimWorld& World, std::vector<Command
     return false;
 }
 
+bool AICommander::TryRepairDamagedBuildings(const SimWorld& World, std::vector<Command>& Out)
+{
+    const PlayerState& State = World.GetPlayer(Player);
+    if (State.Credits < 150)
+    {
+        return false;
+    }
+
+    const std::vector<EntityCore>& Cores = World.GetAllCores();
+    for (uint32_t I = 0; I < uint32_t(Cores.size()); ++I)
+    {
+        if (!Cores[I].bAlive || Cores[I].Owner != Player || Cores[I].Kind != EntityKind::Building)
+        {
+            continue;
+        }
+
+        const EntityId BldId = World.MakeId(I);
+        const HealthComp* Health = World.GetHealth(BldId);
+        const BuildingComp* Building = World.GetBuilding(BldId);
+        if (Health == nullptr || Building == nullptr || Health->Max <= 0)
+        {
+            continue;
+        }
+
+        if (Health->Current < (Health->Max * 85) / 100 && !Building->bRepairing)
+        {
+            Command Cmd;
+            Cmd.Type = CommandType::RepairBuilding;
+            Cmd.Issuer = Player;
+            Cmd.Primary = BldId;
+            Out.push_back(Cmd);
+            Log(World.GetTick(), CommandType::RepairBuilding, Cores[I].Def, "repairing damaged structure");
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void AICommander::EvaluateDirectors(const SimWorld& World,
                                    const AIWorldAssessment& Assessment)
 {
@@ -2276,11 +2427,16 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
     // If we have a fresh target, update the objective.  Otherwise, keep driving
     // toward the last known location so a squad that has committed does not stop
     // dead the moment fog rolls in.
-    if (bHasTarget)
+    if (ActivePing.bActive)
+    {
+        ActiveOperation.TargetLocation = World.GetMap().WorldToTile(ActivePing.Location);
+    }
+    else if (bHasTarget)
     {
         ActiveOperation.TargetLocation = Target.Tile;
     }
     else if (ActiveOperation.State == OperationState::Proposed ||
+
              ActiveOperation.State == OperationState::Completed ||
              ActiveOperation.State == OperationState::Aborted)
     {
@@ -2573,12 +2729,25 @@ void AICommander::Tick(const SimWorld& World, std::vector<Command>& OutCommands)
     // knowledge -- this is not a fog bypass.
     {
         const std::vector<SimEvent>& Events = World.GetEvents();
+        for (const SimEvent& Ev : Events)
+        {
+            if (Ev.Type == SimEventType::CoopPingEmitted && Ev.Player != Player && !World.IsHostile(Player, Ev.Player))
+            {
+                ReceiveCoopPing(Ev.Player, static_cast<CoopPingType>(Ev.Value), Ev.Location, World.GetTick());
+            }
+        }
         if (!Events.empty())
         {
             Opponents.UpdateFromEvents(Events.data(), int32_t(Events.size()),
                                        Player, World.GetTick());
         }
     }
+
+    if (ActivePing.bActive && ActivePing.ExpiryTick > 0 && World.GetTick() > ActivePing.ExpiryTick)
+    {
+        ActivePing.bActive = false;
+    }
+
 
     // Opening rule: If the commander has no construction yard but holds an MCV, deploy it immediately!
     if (!FindOwnConstructionYard(World).IsValid())
@@ -2643,6 +2812,7 @@ void AICommander::Tick(const SimWorld& World, std::vector<Command>& OutCommands)
 
     CommandArmy(World, OutCommands);
     TryFireSuperweapons(World, OutCommands);
+    TryRepairDamagedBuildings(World, OutCommands);
 
     if (!TryPlaceFinishedStructure(World, OutCommands))
     {

@@ -24,7 +24,7 @@ public:
     ERA4UIScreenId ScreenId = ERA4UIScreenId::Splash;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Screen")
-    ERA4FactionTheme Theme = ERA4FactionTheme::USSR;
+    ERA4FactionTheme Theme = ERA4FactionTheme::EurasianPact;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Screen")
     TSoftClassPtr<UCommonActivatableWidget> WidgetClass;

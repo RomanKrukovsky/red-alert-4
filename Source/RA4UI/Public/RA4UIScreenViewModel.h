@@ -61,7 +61,7 @@ struct FRA4LobbyPlayerSlot
     FText PlayerName;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Lobby")
-    ERA4FactionTheme Faction = ERA4FactionTheme::USSR;
+    ERA4FactionTheme Faction = ERA4FactionTheme::EurasianPact;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Lobby")
     bool bReady = false;
@@ -135,7 +135,7 @@ private:
     ERA4UIScreenId ActiveScreen = ERA4UIScreenId::Splash;
 
     UPROPERTY(FieldNotify, Setter, Getter)
-    ERA4FactionTheme SelectedFaction = ERA4FactionTheme::USSR;
+    ERA4FactionTheme SelectedFaction = ERA4FactionTheme::EurasianPact;
 
     UPROPERTY(FieldNotify, Setter, Getter)
     int32 SelectedMission = 0;

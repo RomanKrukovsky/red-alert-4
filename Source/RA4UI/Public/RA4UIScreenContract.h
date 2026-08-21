@@ -53,7 +53,7 @@ struct RA4UI_API FRA4UIScreenContract
     ERA4UIScreenVariant Variant = ERA4UIScreenVariant::Default;
 
     UPROPERTY(BlueprintReadOnly, Category = "Screen")
-    ERA4FactionTheme Theme = ERA4FactionTheme::USSR;
+    ERA4FactionTheme Theme = ERA4FactionTheme::EurasianPact;
 
     UPROPERTY(BlueprintReadOnly, Category = "Screen")
     ERA4UIScreenFamily Family = ERA4UIScreenFamily::Splash;

@@ -57,13 +57,16 @@ private:
     TObjectPtr<UTextBlock> PlayerText;
 
     UPROPERTY(Transient)
+    TObjectPtr<UTextBlock> TeamText;
+
+    UPROPERTY(Transient)
     TObjectPtr<UTextBlock> FactionText;
 
     UPROPERTY(Transient)
-    TObjectPtr<UTextBlock> ColorText;
+    TObjectPtr<UTextBlock> CountryText;
 
     UPROPERTY(Transient)
-    TObjectPtr<UTextBlock> TeamText;
+    TObjectPtr<UTextBlock> DoctrineText;
 
     UPROPERTY(Transient)
     TObjectPtr<UTextBlock> ReadyText;

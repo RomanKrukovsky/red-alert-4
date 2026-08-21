@@ -14,6 +14,7 @@
 #include "RA4AudioSubsystem.h"
 #include "RA4HoverTooltipWidget.h"
 #include "RA4SidebarWidget.h"
+#include "RA4RtsHud.h"
 #include "RA4CheatConsoleWidget.h"
 #include "RA4DirectControlSubsystem.h"
 #include "RA4UIDataProviderSubsystem.h"
@@ -69,28 +70,22 @@ void ARA4PlayerController::BeginPlay()
         UGameViewportSubsystem* ViewportSubsystem = UGameViewportSubsystem::Get(GetWorld());
 #endif
 
-        ResourceBar = CreateWidget<URA4ResourceBarWidget>(this, URA4ResourceBarWidget::StaticClass());
-        if (ResourceBar != nullptr)
+        // The right command sidebar (URA4SidebarWidget) is the single canonical RTS interface
+        // containing minimap, credits, power, selection info, and production queues.
+        // The top-left debug resource bar is only created if explicitly requested via command-line.
+        const bool bShowDebugResourceBar = FParse::Param(FCommandLine::Get(), TEXT("DebugResourceBar"));
+        if (bShowDebugResourceBar)
         {
-            FGameViewportWidgetSlot Slot;
-            Slot.Anchors = FAnchors(0.0f, 0.0f);
-            Slot.Offsets = FMargin(16.0f, 16.0f, 1400.0f, 46.0f);
-            Slot.Alignment = FVector2D::ZeroVector;
-            Slot.ZOrder = 10;
-            const bool bAdded = ViewportSubsystem != nullptr &&
-                                ViewportSubsystem->AddWidget(ResourceBar, Slot);
-            if (bAdded)
+            ResourceBar = CreateWidget<URA4ResourceBarWidget>(this, URA4ResourceBarWidget::StaticClass());
+            if (ResourceBar != nullptr && ViewportSubsystem != nullptr)
             {
-                UE_LOG(LogTemp, Display, TEXT("RA4 HUD: resource bar added to viewport"));
+                FGameViewportWidgetSlot Slot;
+                Slot.Anchors = FAnchors(0.0f, 0.0f);
+                Slot.Offsets = FMargin(16.0f, 16.0f, 600.0f, 46.0f);
+                Slot.Alignment = FVector2D::ZeroVector;
+                Slot.ZOrder = 10;
+                ViewportSubsystem->AddWidget(ResourceBar, Slot);
             }
-            else
-            {
-                UE_LOG(LogTemp, Error, TEXT("RA4 HUD: resource bar viewport add failed"));
-            }
-        }
-        else
-        {
-            UE_LOG(LogTemp, Error, TEXT("RA4 HUD: failed to create the resource bar"));
         }
 
         Sidebar = CreateWidget<URA4SidebarWidget>(this, URA4SidebarWidget::StaticClass());
@@ -99,6 +94,8 @@ void ARA4PlayerController::BeginPlay()
             Sidebar->OnBuildCardClicked.AddUObject(this, &ARA4PlayerController::HandleBuildCardClicked);
             Sidebar->OnRadarClicked.AddUObject(this, &ARA4PlayerController::HandleRadarClicked);
             Sidebar->OnRadarOrdered.AddUObject(this, &ARA4PlayerController::HandleRadarOrdered);
+            Sidebar->OnInteractionModeChanged.AddUObject(this, &ARA4PlayerController::HandleInteractionModeChanged);
+            Sidebar->OnSuperweaponClicked.AddUObject(this, &ARA4PlayerController::ToggleSuperweaponMode);
             // The reserved strip and the widget's own width come from the same helper. If
             // they ever disagree the world is drawn under the column, or a band of
             // background shows beside it.
@@ -175,6 +172,13 @@ void ARA4PlayerController::BeginPlay()
                 Audio->StartMusic();
             }
         }
+    }
+
+    if (URA4UIDataProviderSubsystem* Provider = GetWorld() != nullptr
+                                                    ? GetWorld()->GetSubsystem<URA4UIDataProviderSubsystem>()
+                                                    : nullptr)
+    {
+        Provider->OnJumpToAlertRequested.AddUObject(this, &ARA4PlayerController::JumpToAlertLocationVoid);
     }
 
     TryInitializeCamera();
@@ -335,6 +339,22 @@ void ARA4PlayerController::SetupInputComponent()
     InputComponent->BindKey(EKeys::J, IE_Pressed, this, &ARA4PlayerController::ToggleDirectControl);
     // 'D' -> Deploy selected MCV (or player's MCV) into Construction Yard
     InputComponent->BindKey(EKeys::D, IE_Pressed, this, &ARA4PlayerController::DeploySelectedMcv);
+    // 'K' -> Toggle Repair Mode (wrench)
+    InputComponent->BindKey(EKeys::K, IE_Pressed, this, &ARA4PlayerController::ToggleRepairMode);
+    // 'L' -> Toggle Sell Mode (refund)
+    InputComponent->BindKey(EKeys::L, IE_Pressed, this, &ARA4PlayerController::ToggleSellMode);
+    // 'U' -> Toggle Superweapon Targeting Mode
+    InputComponent->BindKey(EKeys::U, IE_Pressed, this, &ARA4PlayerController::ToggleSuperweaponMode);
+    // 'S' -> Stop selected units
+    InputComponent->BindKey(EKeys::S, IE_Pressed, this, &ARA4PlayerController::StopSelectedUnits);
+    // 'G' -> Guard / Attack-Move mode
+    InputComponent->BindKey(EKeys::G, IE_Pressed, this, &ARA4PlayerController::ToggleGuardMode);
+    // 'X' -> Scatter selected units in radial directions
+    InputComponent->BindKey(EKeys::X, IE_Pressed, this, &ARA4PlayerController::ScatterSelectedUnits);
+    // 'T' -> Chrono-Shift / Tactical Teleport mode
+    InputComponent->BindKey(EKeys::T, IE_Pressed, this, &ARA4PlayerController::ToggleChronoShiftMode);
+    // SpaceBar -> Snap/focus camera on latest alert/event location (EVA Jump to Alert)
+    InputComponent->BindKey(EKeys::SpaceBar, IE_Pressed, this, &ARA4PlayerController::JumpToLatestAlert);
 }
 
 void ARA4PlayerController::OnBoundKeyPressed(const FKey Key)
@@ -609,6 +629,94 @@ void ARA4PlayerController::PlayerTick(float DeltaTime)
 
         UpdateHoverTooltip(*World);
         UpdateGhostPlacement();
+    }
+
+    if (bSuperweaponArmed)
+    {
+        Vec2 SwGround;
+        if (GetCursorGroundPosition(SwGround))
+        {
+            if (UWorld* UnrealWorld = GetWorld())
+            {
+                FVector ImpactPos = RA4Coords::ToUnreal(SwGround);
+                if (URA4SimWorldSubsystem* SimSub = GetSimSubsystem())
+                {
+                    ImpactPos.Z = SimSub->SampleGroundHeight(ImpactPos.X, ImpactPos.Y) + 12.0f;
+                }
+
+                DrawDebugCircle(UnrealWorld, ImpactPos, 450.0f, 32, FColor(255, 30, 20), false, 0.05f, 0, 3.5f, FVector(1, 0, 0), FVector(0, 1, 0), false);
+                DrawDebugCircle(UnrealWorld, ImpactPos, 220.0f, 24, FColor(255, 190, 30), false, 0.05f, 0, 2.0f, FVector(1, 0, 0), FVector(0, 1, 0), false);
+                DrawDebugLine(UnrealWorld, ImpactPos - FVector(480, 0, 0), ImpactPos + FVector(480, 0, 0), FColor(255, 40, 30), false, 0.05f, 0, 2.5f);
+                DrawDebugLine(UnrealWorld, ImpactPos - FVector(0, 480, 0), ImpactPos + FVector(0, 480, 0), FColor(255, 40, 30), false, 0.05f, 0, 2.5f);
+            }
+        }
+    }
+
+    if (bChronoShiftArmed)
+    {
+        Vec2 ChronoGround;
+        if (GetCursorGroundPosition(ChronoGround))
+        {
+            if (UWorld* UnrealWorld = GetWorld())
+            {
+                FVector ImpactPos = RA4Coords::ToUnreal(ChronoGround);
+                if (URA4SimWorldSubsystem* SimSub = GetSimSubsystem())
+                {
+                    ImpactPos.Z = SimSub->SampleGroundHeight(ImpactPos.X, ImpactPos.Y) + 12.0f;
+                }
+
+                const float Pulse = 0.5f + 0.5f * FMath::Sin(UnrealWorld->GetTimeSeconds() * 8.0f);
+                DrawDebugCircle(UnrealWorld, ImpactPos, 280.0f, 32, FColor(0, 210, 255), false, 0.05f, 0, 3.0f, FVector(1, 0, 0), FVector(0, 1, 0), false);
+                DrawDebugCircle(UnrealWorld, ImpactPos, 140.0f * (0.8f + 0.2f * Pulse), 24, FColor(220, 245, 255), false, 0.05f, 0, 2.0f, FVector(1, 0, 0), FVector(0, 1, 0), false);
+                DrawDebugLine(UnrealWorld, ImpactPos - FVector(300, 0, 0), ImpactPos + FVector(300, 0, 0), FColor(0, 180, 255), false, 0.05f, 0, 2.0f);
+                DrawDebugLine(UnrealWorld, ImpactPos - FVector(0, 300, 0), ImpactPos + FVector(0, 300, 0), FColor(0, 180, 255), false, 0.05f, 0, 2.0f);
+            }
+        }
+    }
+
+    UpdateRallyPointVisualization(*World);
+}
+
+void ARA4PlayerController::UpdateRallyPointVisualization(const RA4::SimWorld& World)
+{
+    UWorld* UnrealWorld = GetWorld();
+    if (UnrealWorld == nullptr || Selection.IsEmpty())
+    {
+        return;
+    }
+
+    const auto& Sel = Selection.Get();
+    const auto& Cores = World.GetAllCores();
+    const auto& Transforms = World.GetAllTransforms();
+
+    for (const auto& Id : Sel)
+    {
+        if (Id.IsValid() && Id.Index < Cores.size() && Cores[Id.Index].bAlive && Cores[Id.Index].Owner == Selection.GetLocalPlayer())
+        {
+            if (Cores[Id.Index].Kind == RA4::EntityKind::Building)
+            {
+                const auto* BuildingComp = World.GetBuilding(Id);
+                if (BuildingComp != nullptr && BuildingComp->bHasRallyPoint && Id.Index < Transforms.size())
+                {
+                    const FVector Start = RA4Coords::ToUnreal(Transforms[Id.Index].Position) + FVector(0, 0, 25.0f);
+                    FVector End = RA4Coords::ToUnreal(BuildingComp->RallyPoint);
+                    if (URA4SimWorldSubsystem* SimSub = GetSimSubsystem())
+                    {
+                        End.Z = SimSub->SampleGroundHeight(End.X, End.Y) + 15.0f;
+                    }
+
+                    // Draw glowing rally line
+                    DrawDebugLine(UnrealWorld, Start, End, FColor(60, 235, 100), false, 0.05f, 0, 2.0f);
+
+                    // Draw animated rally point waypoint flag & ring
+                    DrawDebugCircle(UnrealWorld, End, 45.0f, 16, FColor(60, 235, 100), false, 0.05f, 0, 2.0f, FVector(1, 0, 0), FVector(0, 1, 0), false);
+                    DrawDebugPoint(UnrealWorld, End + FVector(0, 0, 10.0f), 10.0f, FColor(140, 255, 160), false, 0.05f);
+                    DrawDebugLine(UnrealWorld, End, End + FVector(0, 0, 55.0f), FColor(255, 220, 50), false, 0.05f, 0, 2.0f);
+                    DrawDebugLine(UnrealWorld, End + FVector(0, 0, 55.0f), End + FVector(25.0f, 0, 42.0f), FColor(255, 50, 40), false, 0.05f, 0, 2.0f);
+                    DrawDebugLine(UnrealWorld, End + FVector(25.0f, 0, 42.0f), End + FVector(0, 0, 30.0f), FColor(255, 50, 40), false, 0.05f, 0, 2.0f);
+                }
+            }
+        }
     }
 }
 
@@ -1196,6 +1304,185 @@ void ARA4PlayerController::HandleClick(bool bLeftButton, const FVector2D& EndScr
         return;
     }
 
+    // Superweapon Targeting Mode
+    if (bSuperweaponArmed)
+    {
+        if (bLeftButton)
+        {
+            const auto& Cores = World->GetAllCores();
+            const auto* Content = World->GetContent();
+            RA4::EntityId SuperweaponId = RA4::EntityId::Invalid();
+
+            for (size_t i = 0; i < Cores.size(); ++i)
+            {
+                if (!Cores[i].bAlive || Cores[i].Kind != RA4::EntityKind::Building || Cores[i].Owner != Selection.GetLocalPlayer()) continue;
+                const RA4::EntityDef* Def = Content ? Content->FindEntity(Cores[i].Def) : nullptr;
+                if (Def != nullptr && Def->Building.SuperweaponRechargeTicks > 0)
+                {
+                    SuperweaponId = World->MakeId(uint32(i));
+                    break;
+                }
+            }
+
+            if (SuperweaponId.IsValid())
+            {
+                RA4::Command Cmd;
+                Cmd.Type = RA4::CommandType::FireSuperweapon;
+                Cmd.Issuer = Selection.GetLocalPlayer();
+                Cmd.Primary = SuperweaponId;
+                Cmd.Tile = World->GetMap().WorldToTile(EndGround);
+                SubmitOrders({Cmd});
+
+                if (UWorld* UnrealWorld = GetWorld())
+                {
+                    if (URA4AudioSubsystem* Audio = UnrealWorld->GetSubsystem<URA4AudioSubsystem>())
+                    {
+                        Audio->PlayEVA(1, ERA4EVAEvent::BaseUnderAttack);
+                    }
+                    FVector ImpactPos = RA4Coords::ToUnreal(EndGround);
+                    ARA4RtsHud::SpawnFloatingText(UnrealWorld, ImpactPos + FVector(0, 0, 100), TEXT("⚛ ЗАПУСК СУПЕРОРУЖИЯ!"), FLinearColor(1.0f, 0.25f, 0.15f, 1.0f));
+                }
+            }
+            bSuperweaponArmed = false;
+            return;
+        }
+        else
+        {
+            bSuperweaponArmed = false;
+            return;
+        }
+    }
+
+    // Chrono-Shift Teleport Mode
+    if (bChronoShiftArmed)
+    {
+        if (bLeftButton)
+        {
+            if (!Selection.IsEmpty())
+            {
+                std::vector<RA4::Command> Commands;
+                const auto& Selected = Selection.Get();
+                for (size_t i = 0; i < Selected.size(); ++i)
+                {
+                    const RA4::EntityId Id = Selected[i];
+                    if (!World->IsAlive(Id)) continue;
+
+                    const float Angle = (float(i) / float(FMath::Max(size_t(1), Selected.size()))) * 6.28318f;
+                    const float OffsetDist = Selected.size() > 1 ? 80.0f : 0.0f;
+                    const FVector TargetPos = RA4Coords::ToUnreal(EndGround) + FVector(FMath::Cos(Angle) * OffsetDist, FMath::Sin(Angle) * OffsetDist, 0.0f);
+                    const RA4::Vec2 UnitTargetGround = RA4Coords::FromUnreal(TargetPos);
+
+                    RA4::Command Cmd;
+                    Cmd.Type = RA4::CommandType::Move;
+                    Cmd.Issuer = Selection.GetLocalPlayer();
+                    Cmd.Primary = Id;
+                    Cmd.Location = UnitTargetGround;
+                    Commands.push_back(Cmd);
+                }
+                SubmitOrders(Commands);
+
+                if (UWorld* UnrealWorld = GetWorld())
+                {
+                    FVector ImpactPos = RA4Coords::ToUnreal(EndGround);
+                    DrawDebugSphere(UnrealWorld, ImpactPos + FVector(0, 0, 30), 120.0f, 16, FColor(0, 220, 255), false, 0.5f, 0, 3.0f);
+                    DrawDebugSphere(UnrealWorld, ImpactPos + FVector(0, 0, 30), 60.0f, 10, FColor(240, 250, 255), false, 0.35f, 0, 2.0f);
+                    ARA4RtsHud::SpawnFloatingText(UnrealWorld, ImpactPos + FVector(0, 0, 60), TEXT("⚡ ХРОНО-СДВИГ!"), FLinearColor(0.0f, 0.85f, 1.0f, 1.0f));
+                }
+            }
+            bChronoShiftArmed = false;
+            return;
+        }
+        else
+        {
+            bChronoShiftArmed = false;
+            return;
+        }
+    }
+
+    // Base management modes (Repair & Sell)
+    if (CurrentInteractionMode == 1) // Repair Mode
+    {
+        if (bLeftButton)
+        {
+            const RA4::EntityId Target = FindHoveredEntity(EndGround);
+            if (Target.IsValid() && World->IsAlive(Target))
+            {
+                const RA4::EntityCore* Core = World->GetCore(Target);
+                if (Core != nullptr && Core->Owner == Selection.GetLocalPlayer() && Core->Kind == RA4::EntityKind::Building)
+                {
+                    RA4::Command Cmd;
+                    Cmd.Type = RA4::CommandType::RepairBuilding;
+                    Cmd.Issuer = Selection.GetLocalPlayer();
+                    Cmd.Primary = Target;
+                    SubmitOrders({Cmd});
+
+                    if (UWorld* UnrealWorld = GetWorld())
+                    {
+                        const auto& Transforms = World->GetAllTransforms();
+                        if (Target.Index < Transforms.size())
+                        {
+                            FVector Pos = RA4Coords::ToUnreal(Transforms[Target.Index].Position);
+                            DrawDebugCircle(UnrealWorld, Pos + FVector(0, 0, 15), 140.0f, 24, FColor(255, 200, 30), false, 0.45f, 0, 3.0f, FVector(1, 0, 0), FVector(0, 1, 0), false);
+                        }
+                    }
+                    static USoundBase* WrenchSound = LoadObject<USoundBase>(nullptr, TEXT("/Engine/VREditor/Sounds/UI/VR_Teleport_Mode_01.VR_Teleport_Mode_01"));
+                    if (WrenchSound)
+                    {
+                        UGameplayStatics::PlaySound2D(this, WrenchSound, 0.85f, 1.2f);
+                    }
+                    return;
+                }
+            }
+        }
+        else
+        {
+            // Right click cancels repair mode
+            SetInteractionMode(0);
+            return;
+        }
+    }
+    else if (CurrentInteractionMode == 2) // Sell Mode
+    {
+        if (bLeftButton)
+        {
+            const RA4::EntityId Target = FindHoveredEntity(EndGround);
+            if (Target.IsValid() && World->IsAlive(Target))
+            {
+                const RA4::EntityCore* Core = World->GetCore(Target);
+                if (Core != nullptr && Core->Owner == Selection.GetLocalPlayer() && Core->Kind == RA4::EntityKind::Building)
+                {
+                    RA4::Command Cmd;
+                    Cmd.Type = RA4::CommandType::SellBuilding;
+                    Cmd.Issuer = Selection.GetLocalPlayer();
+                    Cmd.Primary = Target;
+                    SubmitOrders({Cmd});
+
+                    if (UWorld* UnrealWorld = GetWorld())
+                    {
+                        if (URA4AudioSubsystem* Audio = UnrealWorld->GetSubsystem<URA4AudioSubsystem>())
+                        {
+                            Audio->PlayEVA(1, ERA4EVAEvent::UnitLost);
+                        }
+                    }
+                    static USoundBase* CashSound = LoadObject<USoundBase>(nullptr, TEXT("/Engine/VREditor/Sounds/UI/VR_Teleport_Mode_01.VR_Teleport_Mode_01"));
+                    if (CashSound)
+                    {
+                        UGameplayStatics::PlaySound2D(this, CashSound, 1.0f, 0.8f);
+                    }
+
+                    SetInteractionMode(0);
+                    return;
+                }
+            }
+        }
+        else
+        {
+            // Right click cancels sell mode
+            SetInteractionMode(0);
+            return;
+        }
+    }
+
     const bool bShift = IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift);
     const bool bCtrl = IsInputKeyDown(EKeys::LeftControl) || IsInputKeyDown(EKeys::RightControl);
     const bool bAlt = IsInputKeyDown(EKeys::LeftAlt) || IsInputKeyDown(EKeys::RightAlt);
@@ -1734,6 +2021,16 @@ void ARA4PlayerController::UpdateGhostPlacement()
     {
         GhostPlacementActor->SetActorLocation(GhostLoc);
         GhostPlacementActor->SetTeamColor(bValid ? FLinearColor(0.1f, 1.0f, 0.35f, 0.65f) : FLinearColor(1.0f, 0.15f, 0.15f, 0.65f));
+    }
+
+    if (CurrentWorld != nullptr && Def->Weapon.IsValid())
+    {
+        const auto* WeaponDef = World->GetContent()->FindWeapon(Def->Weapon);
+        if (WeaponDef != nullptr)
+        {
+            const float RangeUnits = float(WeaponDef->MaxRange.ToIntRound());
+            DrawDebugCircle(CurrentWorld, GhostLoc + FVector(0, 0, 8.0f), RangeUnits, 36, bValid ? FColor(40, 240, 100) : FColor(255, 60, 40), false, 0.05f, 0, 2.5f, FVector(1, 0, 0), FVector(0, 1, 0), false);
+        }
     }
 }
 
@@ -2384,6 +2681,66 @@ void ARA4PlayerController::JumpToHomeBase()
     }
 }
 
+bool ARA4PlayerController::JumpToAlertLocation(FVector2D SimLocation)
+{
+    const URA4SimWorldSubsystem* SimSub = GetSimSubsystem();
+    if (SimSub == nullptr || SimSub->GetSimWorld() == nullptr)
+    {
+        return false;
+    }
+
+    const RA4::SimWorld* Sim = SimSub->GetSimWorld();
+    const RA4::FFogOfWarGrid* Fog = Sim->GetFogGrid();
+    const RA4::PlayerId LocalPlayer = Selection.GetLocalPlayer();
+
+    RA4::Vec2 SimPos{RA4::Fixed::FromRaw(int64_t(SimLocation.X * double(RA4::kFixedOne))),
+                     RA4::Fixed::FromRaw(int64_t(SimLocation.Y * double(RA4::kFixedOne)))};
+    RA4::TileCoord Tile = Sim->GetMap().WorldToTile(SimPos);
+
+    // Fog of War condition: only jump if the tile is explored (not shrouded / NeverSeen)
+    if (Fog != nullptr)
+    {
+        const RA4::VisibilityState Vis = Fog->GetVisibility(int32_t(LocalPlayer), Tile.X, Tile.Y);
+        if (Vis == RA4::VisibilityState::NeverSeen)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("RA4: Alert at tile (%d, %d) is hidden under Fog of War / Shroud. Cannot jump."), Tile.X, Tile.Y);
+            return false;
+        }
+    }
+
+    if (ARA4CameraPawn* Cam = Cast<ARA4CameraPawn>(GetPawn()))
+    {
+        const FVector UnrealPos = RA4Coords::ToUnreal(SimPos);
+        Cam->GetCameraController().FocusOn(RA4::Input::Vec2f(float(UnrealPos.X), float(UnrealPos.Y)), /*bInstant*/ false);
+        UE_LOG(LogTemp, Display, TEXT("RA4: Jumped to alert location (%.1f, %.1f)"), UnrealPos.X, UnrealPos.Y);
+        return true;
+    }
+
+    return false;
+}
+
+void ARA4PlayerController::JumpToLatestAlert()
+{
+    UWorld* World = GetWorld();
+    URA4UIDataProviderSubsystem* Provider = World != nullptr ? World->GetSubsystem<URA4UIDataProviderSubsystem>() : nullptr;
+    if (Provider == nullptr)
+    {
+        return;
+    }
+
+    const TArray<FRA4Alert>& Alerts = Provider->GetAlerts();
+    for (const FRA4Alert& Alert : Alerts)
+    {
+        if (Alert.bHasLocation)
+        {
+            if (JumpToAlertLocation(Alert.WorldLocation))
+            {
+                return;
+            }
+        }
+    }
+}
+
 void ARA4PlayerController::DeploySelectedMcv()
 {
     const URA4SimWorldSubsystem* SimSub = GetSimSubsystem();
@@ -2498,6 +2855,195 @@ void ARA4PlayerController::DeploySelectedMcv()
             }
         }
     }
+}
+
+void ARA4PlayerController::ToggleRepairMode()
+{
+    SetInteractionMode(CurrentInteractionMode == 1 ? 0 : 1);
+}
+
+void ARA4PlayerController::ToggleSellMode()
+{
+    SetInteractionMode(CurrentInteractionMode == 2 ? 0 : 2);
+}
+
+void ARA4PlayerController::ToggleSuperweaponMode()
+{
+    bSuperweaponArmed = !bSuperweaponArmed;
+    if (bSuperweaponArmed)
+    {
+        CurrentInteractionMode = 0;
+        bPlacementArmed = false;
+        bAttackMoveArmed = false;
+        UE_LOG(LogTemp, Display, TEXT("RA4: Superweapon Targeting Mode armed [U]"));
+    }
+    else
+    {
+        UE_LOG(LogTemp, Display, TEXT("RA4: Superweapon Targeting Mode disarmed"));
+    }
+}
+
+void ARA4PlayerController::CancelSuperweaponMode()
+{
+    bSuperweaponArmed = false;
+}
+
+void ARA4PlayerController::StopSelectedUnits()
+{
+    if (Selection.IsEmpty())
+    {
+        return;
+    }
+
+    std::vector<RA4::Command> Commands;
+    for (const RA4::EntityId Id : Selection.Get())
+    {
+        RA4::Command Cmd;
+        Cmd.Type = RA4::CommandType::Stop;
+        Cmd.Issuer = Selection.GetLocalPlayer();
+        Cmd.Primary = Id;
+        Commands.push_back(Cmd);
+    }
+    SubmitOrders(Commands);
+
+    if (UWorld* World = GetWorld())
+    {
+        URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
+        const SimWorld* Sim = Subsystem ? Subsystem->GetSimWorld() : nullptr;
+        if (Sim && Subsystem)
+        {
+            const auto& Transforms = Sim->GetAllTransforms();
+            for (const RA4::EntityId Id : Selection.Get())
+            {
+                if (Id.Index < Transforms.size())
+                {
+                    FVector Pos = RA4Coords::ToUnreal(Transforms[Id.Index].Position);
+                    Pos.Z = Subsystem->SampleGroundHeight(Pos.X, Pos.Y) + 10.0f;
+                    DrawDebugCrosshairs(World, Pos, FRotator::ZeroRotator, 35.0f, FColor(255, 60, 60), false, 0.4f);
+                }
+            }
+        }
+    }
+}
+
+void ARA4PlayerController::ToggleGuardMode()
+{
+    bAttackMoveArmed = !bAttackMoveArmed;
+    if (bAttackMoveArmed)
+    {
+        UE_LOG(LogTemp, Display, TEXT("RA4: Guard / Attack-Move armed [G]"));
+    }
+}
+
+void ARA4PlayerController::ScatterSelectedUnits()
+{
+    if (Selection.IsEmpty())
+    {
+        return;
+    }
+
+    URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
+    const SimWorld* Sim = Subsystem ? Subsystem->GetSimWorld() : nullptr;
+    if (!Sim || !Subsystem)
+    {
+        return;
+    }
+
+    const auto& Transforms = Sim->GetAllTransforms();
+    const auto& Selected = Selection.Get();
+
+    FVector CenterWorld = FVector::ZeroVector;
+    int32 ValidCount = 0;
+    for (const RA4::EntityId Id : Selected)
+    {
+        if (Id.Index < Transforms.size() && Sim->IsAlive(Id))
+        {
+            CenterWorld += RA4Coords::ToUnreal(Transforms[Id.Index].Position);
+            ValidCount++;
+        }
+    }
+
+    if (ValidCount == 0) return;
+    CenterWorld /= float(ValidCount);
+
+    std::vector<RA4::Command> Commands;
+    UWorld* World = GetWorld();
+
+    for (size_t i = 0; i < Selected.size(); ++i)
+    {
+        const RA4::EntityId Id = Selected[i];
+        if (Id.Index >= Transforms.size() || !Sim->IsAlive(Id)) continue;
+
+        const FVector UnitPos = RA4Coords::ToUnreal(Transforms[Id.Index].Position);
+        FVector ScatterDir = (UnitPos - CenterWorld).GetSafeNormal2D();
+        if (ScatterDir.IsNearlyZero())
+        {
+            const float Angle = (float(i) / float(Selected.size())) * 6.28318f;
+            ScatterDir = FVector(FMath::Cos(Angle), FMath::Sin(Angle), 0.0f);
+        }
+
+        const FVector TargetPos = UnitPos + ScatterDir * 280.0f;
+        const RA4::Vec2 TargetGround = RA4Coords::FromUnreal(TargetPos);
+
+        RA4::Command Cmd;
+        Cmd.Type = RA4::CommandType::Move;
+        Cmd.Issuer = Selection.GetLocalPlayer();
+        Cmd.Primary = Id;
+        Cmd.Location = TargetGround;
+        Commands.push_back(Cmd);
+
+        if (World)
+        {
+            DrawDebugDirectionalArrow(World, UnitPos + FVector(0, 0, 15), TargetPos + FVector(0, 0, 15), 45.0f, FColor(80, 240, 90), false, 0.4f, 0, 2.5f);
+        }
+    }
+
+    SubmitOrders(Commands);
+    UE_LOG(LogTemp, Display, TEXT("RA4: Scattered %d units [X]"), ValidCount);
+}
+
+void ARA4PlayerController::ToggleChronoShiftMode()
+{
+    bChronoShiftArmed = !bChronoShiftArmed;
+    if (bChronoShiftArmed)
+    {
+        bSuperweaponArmed = false;
+        bPlacementArmed = false;
+        bAttackMoveArmed = false;
+        CurrentInteractionMode = 0;
+        UE_LOG(LogTemp, Display, TEXT("RA4: Chrono-Shift Teleport Mode armed [T]"));
+    }
+    else
+    {
+        UE_LOG(LogTemp, Display, TEXT("RA4: Chrono-Shift Teleport Mode disarmed"));
+    }
+}
+
+void ARA4PlayerController::SetInteractionMode(uint8 Mode)
+{
+    CurrentInteractionMode = Mode;
+    if (Sidebar != nullptr)
+    {
+        Sidebar->SetInteractionMode(Mode);
+    }
+
+    if (Mode == 1)
+    {
+        UE_LOG(LogTemp, Display, TEXT("RA4: Repair Mode armed [K]"));
+    }
+    else if (Mode == 2)
+    {
+        UE_LOG(LogTemp, Display, TEXT("RA4: Sell Mode armed [L]"));
+    }
+    else
+    {
+        UE_LOG(LogTemp, Display, TEXT("RA4: Normal Mode restored"));
+    }
+}
+
+void ARA4PlayerController::HandleInteractionModeChanged(uint8 Mode)
+{
+    SetInteractionMode(Mode);
 }
 
 void ARA4PlayerController::OnDirectControlTogglePressed()

@@ -30,8 +30,11 @@ enum class CommandType : uint8_t
     Harvest = 6,
     Guard = 7,
     Deploy = 8,
+    ToggleSecondaryAbility = 9,
+    CoopPing = 10,
 
     // Base management
+
     PlaceBuilding = 20,
     StartProduction = 21,
     CancelProduction = 22,
@@ -85,7 +88,17 @@ enum class OrderMode : uint8_t
     Queue = 1,
 };
 
+// Tactical ping types for Co-op AI coordination and allied communication.
+enum class CoopPingType : uint8_t
+{
+    Attack = 0,
+    Defend = 1,
+    Scout = 2,
+    Expand = 3,
+};
+
 // A single validated intent. Kept to a fixed, small footprint (~40 bytes) because at
+
 // 8 players issuing group orders the command stream is the one thing that must stay
 // cheap to broadcast, log and hash.
 struct Command
@@ -214,9 +227,11 @@ enum class CommandReject : uint8_t
     // Superweapon specific
     SuperweaponNotReady,       // still recharging
     SuperweaponUnpowered,      // base is in a power deficit
+    OnCooldown,                // ability is currently on cooldown
 };
 
 const char* ToString(CommandType Type);
+
 const char* ToString(CommandReject Reason);
 
 } // namespace RA4

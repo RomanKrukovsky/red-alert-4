@@ -80,77 +80,272 @@ FText KeyToText(const std::string& Key)
 
     // Russian Localization dictionary for unit & structure IDs
     static const std::unordered_map<std::string, FText> LocMap = {
-        {"faction.soviet.building.construction_yard", NSLOCTEXT("RA4", "headquarters_su", "Сборочный цех СССР")},
-        {"faction.soviet.building.power_plant", NSLOCTEXT("RA4", "power_plant_su", "Электростанция СССР")},
-        {"faction.soviet.building.refinery", NSLOCTEXT("RA4", "refinery_su", "Обогатительный комбинат СССР")},
-        {"faction.soviet.building.barracks", NSLOCTEXT("RA4", "barracks_su", "Казармы СССР")},
-        {"faction.soviet.building.war_factory", NSLOCTEXT("RA4", "war_factory_su", "Военный завод СССР")},
-        {"faction.soviet.building.turret", NSLOCTEXT("RA4", "turret_ai_su", "Пулемётная турель")},
-        {"faction.soviet.unit.mcv", NSLOCTEXT("RA4", "mcv_su", "МСЦ СССР")},
-        {"faction.soviet.unit.harvester", NSLOCTEXT("RA4", "harvester_su", "Рудный комбайн «Богатырь»")},
-        {"faction.soviet.unit.basic_infantry", NSLOCTEXT("RA4", "rubezh_rifleman", "Стрелок «Рубеж»")},
-        {"faction.soviet.unit.antiarmor_infantry", NSLOCTEXT("RA4", "zaslon_aa", "Расчёт «Заслон»")},
-        {"faction.soviet.unit.main_tank", NSLOCTEXT("RA4", "granit_mbt", "Тяжёлый танк «Гранит»")},
+        // ---------------------------------------------------------------
+        // Евразийский пакт — Россия (RU_). Прежние SU_/soviet-ключи
+        // сохранены как LegacyAliases для реплеев, сохранений и тестов,
+        // но показывают только актуальные названия Scarlet Horizon.
+        // ---------------------------------------------------------------
+        {"faction.eurasian.building.construction_yard", NSLOCTEXT("RA4", "hq_ru", "Штаб")},
+        {"faction.eurasian.building.power_plant", NSLOCTEXT("RA4", "power_plant_ru", "Электростанция")},
+        {"faction.eurasian.building.refinery", NSLOCTEXT("RA4", "refinery_ru", "Перерабатывающий комплекс")},
+        {"faction.eurasian.building.barracks", NSLOCTEXT("RA4", "barracks_ru", "Казарма")},
+        {"faction.eurasian.building.war_factory", NSLOCTEXT("RA4", "war_factory_ru", "Завод бронетехники")},
+        {"faction.eurasian.building.radar", NSLOCTEXT("RA4", "radar_ru", "Радарный узел")},
+        {"faction.eurasian.building.turret", NSLOCTEXT("RA4", "turret_ai_ru", "Пулемётный ДОТ")},
+        {"faction.eurasian.building.aa_turret", NSLOCTEXT("RA4", "turret_aa_ru", "Зенитный комплекс")},
+        {"faction.eurasian.building.tech_center", NSLOCTEXT("RA4", "tech_center_ru", "Центр перспективных разработок")},
+        {"faction.eurasian.building.emp_complex", NSLOCTEXT("RA4", "emp_ru", "Комплекс ЭМИ «Перун»")},
 
-        {"faction.alliance.building.construction_yard", NSLOCTEXT("RA4", "headquarters_al", "Штаб строительства Альянса")},
-        {"faction.alliance.building.power_plant", NSLOCTEXT("RA4", "power_plant_al", "Электростанция Альянса")},
-        {"faction.alliance.building.refinery", NSLOCTEXT("RA4", "refinery_al", "Перерабатывающий завод Альянса")},
-        {"faction.alliance.building.barracks", NSLOCTEXT("RA4", "barracks_al", "Казармы Альянса")},
-        {"faction.alliance.building.war_factory", NSLOCTEXT("RA4", "war_factory_al", "Военный завод Альянса")},
-        {"faction.alliance.building.turret", NSLOCTEXT("RA4", "turret_ai_al", "Оборонительный ДОТ")},
-        {"faction.alliance.unit.mcv", NSLOCTEXT("RA4", "mcv_al", "МСЦ Альянса")},
-        {"faction.alliance.unit.harvester", NSLOCTEXT("RA4", "harvester_al", "Сборщик руды «Пионер»")},
-        {"faction.alliance.unit.basic_infantry", NSLOCTEXT("RA4", "sentinel_rifleman", "Пехотинец «Страж»")},
-        {"faction.alliance.unit.antiarmor_infantry", NSLOCTEXT("RA4", "lancer_team", "Ракетчик «Лансер»")},
-        {"faction.alliance.unit.main_tank", NSLOCTEXT("RA4", "bulwark_mbt", "Основной танк «Оплот»")},
+        {"faction.soviet.building.construction_yard", NSLOCTEXT("RA4", "hq_ru", "Штаб")},
+        {"faction.soviet.building.power_plant", NSLOCTEXT("RA4", "power_plant_ru", "Электростанция")},
+        {"faction.soviet.building.refinery", NSLOCTEXT("RA4", "refinery_ru", "Перерабатывающий комплекс")},
+        {"faction.soviet.building.barracks", NSLOCTEXT("RA4", "barracks_ru", "Казарма")},
+        {"faction.soviet.building.war_factory", NSLOCTEXT("RA4", "war_factory_ru", "Завод бронетехники")},
+        {"faction.soviet.building.radar", NSLOCTEXT("RA4", "radar_ru", "Радарный узел")},
+        {"faction.soviet.building.turret", NSLOCTEXT("RA4", "turret_ai_ru", "Пулемётный ДОТ")},
+        {"faction.soviet.building.aa_turret", NSLOCTEXT("RA4", "turret_aa_ru", "Зенитный комплекс")},
+        {"faction.soviet.building.tech_center", NSLOCTEXT("RA4", "tech_center_ru", "Центр перспективных разработок")},
+        {"faction.soviet.building.tesla_coil", NSLOCTEXT("RA4", "emp_ru", "Комплекс ЭМИ «Перун»")},
 
-        {"faction.coalition.building.construction_yard", NSLOCTEXT("RA4", "headquarters_ec", "Командный центр Коалиции")},
-        {"faction.coalition.building.power_plant", NSLOCTEXT("RA4", "power_plant_ec", "Термоядерная станция")},
-        {"faction.coalition.building.refinery", NSLOCTEXT("RA4", "refinery_ec", "Горнорудный комплекс")},
-        {"faction.coalition.building.barracks", NSLOCTEXT("RA4", "barracks_ec", "Учебный центр Коалиции")},
-        {"faction.coalition.building.war_factory", NSLOCTEXT("RA4", "war_factory_ec", "Тяжёлый арсенал")},
-        {"faction.coalition.unit.basic_infantry", NSLOCTEXT("RA4", "dragon_infantry", "Штурмовик «Дракон»")},
-        {"faction.coalition.unit.main_tank", NSLOCTEXT("RA4", "qilin_mbt", "Танк прорыва «Цилинь»")},
+        {"RU_Headquarters", NSLOCTEXT("RA4", "hq_ru", "Штаб")},
+        {"RU_PowerPlant", NSLOCTEXT("RA4", "power_plant_ru", "Электростанция")},
+        {"RU_Refinery", NSLOCTEXT("RA4", "refinery_ru", "Перерабатывающий комплекс")},
+        {"RU_Barracks", NSLOCTEXT("RA4", "barracks_ru", "Казарма")},
+        {"RU_WarFactory", NSLOCTEXT("RA4", "war_factory_ru", "Завод бронетехники")},
+        {"RU_Radar", NSLOCTEXT("RA4", "radar_ru", "Радарный узел")},
+        {"SU_ConYard", NSLOCTEXT("RA4", "hq_ru", "Штаб")},
+        {"SU_PowerPlant", NSLOCTEXT("RA4", "power_plant_ru", "Электростанция")},
+        {"SU_Refinery", NSLOCTEXT("RA4", "refinery_ru", "Перерабатывающий комплекс")},
+        {"SU_Barracks", NSLOCTEXT("RA4", "barracks_ru", "Казарма")},
+        {"SU_WarFactory", NSLOCTEXT("RA4", "war_factory_ru", "Завод бронетехники")},
+        {"SU_Radar", NSLOCTEXT("RA4", "radar_ru", "Радарный узел")},
+        {"SU_SentryTurret", NSLOCTEXT("RA4", "turret_ai_ru", "Пулемётный ДОТ")},
+        {"SU_GunTurret", NSLOCTEXT("RA4", "turret_ai_ru", "Пулемётный ДОТ")},
+        {"SU_FlakTurret", NSLOCTEXT("RA4", "turret_aa_ru", "Зенитный комплекс")},
 
-        {"faction.chronolegion.building.construction_yard", NSLOCTEXT("RA4", "headquarters_cl", "Хроно-узел Легиона")},
-        {"faction.chronolegion.building.power_plant", NSLOCTEXT("RA4", "power_plant_cl", "Квантовый реактор")},
-        {"faction.chronolegion.building.refinery", NSLOCTEXT("RA4", "refinery_cl", "Хроно-экстрактор")},
-        {"faction.chronolegion.unit.main_tank", NSLOCTEXT("RA4", "paradox_mbt", "Хроно-танк «Парадокс»")},
+        {"faction.eurasian.unit.mcv", NSLOCTEXT("RA4", "mcv_ru", "Полевой командный пункт")},
+        {"faction.eurasian.unit.harvester", NSLOCTEXT("RA4", "harvester_ru", "ГРМ-8 «Богатырь»")},
+        {"faction.eurasian.unit.basic_infantry", NSLOCTEXT("RA4", "rubezh_rifleman", "МС-12 «Рубеж»")},
+        {"faction.eurasian.unit.antiarmor_infantry", NSLOCTEXT("RA4", "zaslon_aa", "ПЗК-9 «Заслон»")},
+        {"faction.eurasian.unit.engineer", NSLOCTEXT("RA4", "master_engineer", "ИС-3 «Мастер»")},
+        {"faction.eurasian.unit.shock_trooper", NSLOCTEXT("RA4", "razryad_trooper", "ЭШ-8 «Разряд»")},
+        {"faction.eurasian.unit.officer", NSLOCTEXT("RA4", "vektor_officer", "КС-6 «Вектор»")},
+        {"faction.eurasian.unit.scout", NSLOCTEXT("RA4", "rys_scout", "БРМ-27 «Рысь»")},
+        {"faction.eurasian.unit.main_tank", NSLOCTEXT("RA4", "granit_mbt", "ОБТ-92 «Гранит»")},
+        {"faction.eurasian.unit.artillery", NSLOCTEXT("RA4", "zarevo_mlrs", "ТРС-18 «Зарево»")},
+        {"faction.eurasian.unit.ew_vehicle", NSLOCTEXT("RA4", "gromoboy_ew", "ЭМП-7 «Громобой»")},
+        {"faction.eurasian.unit.heavy_tank", NSLOCTEXT("RA4", "voevoda_heavy", "ТТП-11 «Воевода»")},
 
-        {"unit.sov.headquarters", NSLOCTEXT("RA4", "headquarters_su", "Сборочный цех СССР")},
-        {"unit.sov.power_plant", NSLOCTEXT("RA4", "power_plant_su", "Электростанция СССР")},
-        {"unit.sov.refinery", NSLOCTEXT("RA4", "refinery_su", "Обогатительный комбинат СССР")},
-        {"unit.sov.barracks", NSLOCTEXT("RA4", "barracks_su", "Казармы СССР")},
-        {"unit.sov.war_factory", NSLOCTEXT("RA4", "war_factory_su", "Военный завод СССР")},
-        {"unit.sov.radar", NSLOCTEXT("RA4", "radar_su", "Радарный комплекс СССР")},
-        {"unit.sov.turret_ai", NSLOCTEXT("RA4", "turret_ai_su", "Пулемётная турель")},
-        {"unit.sov.turret_aa", NSLOCTEXT("RA4", "turret_aa_su", "Зенитный комплекс")},
-        {"unit.sov.rubezh_rifleman", NSLOCTEXT("RA4", "rubezh_rifleman", "Стрелок «Рубеж»")},
-        {"unit.sov.zaslon_aa_team", NSLOCTEXT("RA4", "zaslon_aa", "Расчёт «Заслон»")},
-        {"unit.sov.master_engineer", NSLOCTEXT("RA4", "master_engineer", "Главный инженер")},
-        {"unit.sov.rys_scout", NSLOCTEXT("RA4", "rys_scout", "Бронеавтомобиль «Рысь»")},
-        {"unit.sov.granit_mbt", NSLOCTEXT("RA4", "granit_mbt", "Тяжёлый танк «Гранит»")},
-        {"unit.sov.zarevo_mlrs", NSLOCTEXT("RA4", "zarevo_mlrs", "РСЗО «Зарево»")},
+        {"faction.soviet.unit.mcv", NSLOCTEXT("RA4", "mcv_ru", "Полевой командный пункт")},
+        {"faction.soviet.unit.harvester", NSLOCTEXT("RA4", "harvester_ru", "ГРМ-8 «Богатырь»")},
+        {"faction.soviet.unit.basic_infantry", NSLOCTEXT("RA4", "rubezh_rifleman", "МС-12 «Рубеж»")},
+        {"faction.soviet.unit.antiarmor_infantry", NSLOCTEXT("RA4", "zaslon_aa", "ПЗК-9 «Заслон»")},
+        {"faction.soviet.unit.engineer", NSLOCTEXT("RA4", "master_engineer", "ИС-3 «Мастер»")},
+        {"faction.soviet.unit.shock_trooper", NSLOCTEXT("RA4", "razryad_trooper", "ЭШ-8 «Разряд»")},
+        {"faction.soviet.unit.commissar", NSLOCTEXT("RA4", "vektor_officer", "КС-6 «Вектор»")},
+        {"faction.soviet.unit.scout", NSLOCTEXT("RA4", "rys_scout", "БРМ-27 «Рысь»")},
+        {"faction.soviet.unit.main_tank", NSLOCTEXT("RA4", "granit_mbt", "ОБТ-92 «Гранит»")},
+        {"faction.soviet.unit.artillery", NSLOCTEXT("RA4", "zarevo_mlrs", "ТРС-18 «Зарево»")},
+        {"faction.soviet.unit.flak_vehicle", NSLOCTEXT("RA4", "zaslon_aa", "ПЗК-9 «Заслон»")},
 
-        {"unit.al.headquarters", NSLOCTEXT("RA4", "headquarters_al", "Штаб строительства Альянса")},
-        {"unit.al.power_plant", NSLOCTEXT("RA4", "power_plant_al", "Электростанция Альянса")},
-        {"unit.al.refinery", NSLOCTEXT("RA4", "refinery_al", "Перерабатывающий завод Альянса")},
-        {"unit.al.barracks", NSLOCTEXT("RA4", "barracks_al", "Казармы Альянса")},
-        {"unit.al.war_factory", NSLOCTEXT("RA4", "war_factory_al", "Военный завод Альянса")},
-        {"unit.al.radar", NSLOCTEXT("RA4", "radar_al", "Радарный узел Альянса")},
-        {"unit.al.sentinel_rifleman", NSLOCTEXT("RA4", "sentinel_rifleman", "Пехотинец «Страж»")},
-        {"unit.al.lancer_team", NSLOCTEXT("RA4", "lancer_team", "Ракетчик «Лансер»")},
-        {"unit.al.field_engineer", NSLOCTEXT("RA4", "field_engineer", "Полевой инженер")},
-        {"unit.al.kestrel_scout", NSLOCTEXT("RA4", "kestrel_scout", "Разведчик «Пустельга»")},
-        {"unit.al.bulwark_mbt", NSLOCTEXT("RA4", "bulwark_mbt", "Основной танк «Оплот»")},
-        {"unit.al.oracle_artillery", NSLOCTEXT("RA4", "oracle_artillery", "САУ «Оракул»")},
-        
-        {"headquarters", NSLOCTEXT("RA4", "headquarters_generic", "Главный штаб")},
+        {"RU_MCV", NSLOCTEXT("RA4", "mcv_ru", "Полевой командный пункт")},
+        {"RU_BogatyrOreCarrier", NSLOCTEXT("RA4", "harvester_ru", "ГРМ-8 «Богатырь»")},
+        {"RU_RubezhRifleman", NSLOCTEXT("RA4", "rubezh_rifleman", "МС-12 «Рубеж»")},
+        {"RU_ZapalGrenadier", NSLOCTEXT("RA4", "zapal_grenadier", "ОШ-4 «Запал»")},
+        {"RU_ZaslonAATeam", NSLOCTEXT("RA4", "zaslon_aa", "ПЗК-9 «Заслон»")},
+        {"RU_MasterEngineer", NSLOCTEXT("RA4", "master_engineer", "ИС-3 «Мастер»")},
+        {"RU_RazryadTrooper", NSLOCTEXT("RA4", "razryad_trooper", "ЭШ-8 «Разряд»")},
+        {"RU_VektorOfficer", NSLOCTEXT("RA4", "vektor_officer", "КС-6 «Вектор»")},
+        {"RU_RysScout", NSLOCTEXT("RA4", "rys_scout", "БРМ-27 «Рысь»")},
+        {"RU_GranitMBT", NSLOCTEXT("RA4", "granit_mbt", "ОБТ-92 «Гранит»")},
+        {"RU_ZarevoMLRS", NSLOCTEXT("RA4", "zarevo_mlrs", "ТРС-18 «Зарево»")},
+        {"RU_GromoboyRam", NSLOCTEXT("RA4", "gromoboy_ew", "ЭМП-7 «Громобой»")},
+        {"RU_VoevodaHeavyTank", NSLOCTEXT("RA4", "voevoda_heavy", "ТТП-11 «Воевода»")},
+
+        {"SU_MCV", NSLOCTEXT("RA4", "mcv_ru", "Полевой командный пункт")},
+        {"SU_Harvester", NSLOCTEXT("RA4", "harvester_ru", "ГРМ-8 «Богатырь»")},
+        {"SU_BogatyrOreCarrier", NSLOCTEXT("RA4", "harvester_ru", "ГРМ-8 «Богатырь»")},
+        {"SU_Conscript", NSLOCTEXT("RA4", "rubezh_rifleman", "МС-12 «Рубеж»")},
+        {"SU_RubezhRifleman", NSLOCTEXT("RA4", "rubezh_rifleman", "МС-12 «Рубеж»")},
+        {"SU_Flak", NSLOCTEXT("RA4", "zaslon_aa", "ПЗК-9 «Заслон»")},
+        {"SU_ZaslonAATeam", NSLOCTEXT("RA4", "zaslon_aa", "ПЗК-9 «Заслон»")},
+        {"SU_RysScout", NSLOCTEXT("RA4", "rys_scout", "БРМ-27 «Рысь»")},
+        {"SU_GranitMBT", NSLOCTEXT("RA4", "granit_mbt", "ОБТ-92 «Гранит»")},
+        {"SU_HammerTank", NSLOCTEXT("RA4", "granit_mbt", "ОБТ-92 «Гранит»")},
+        {"SU_ZarevoMLRS", NSLOCTEXT("RA4", "zarevo_mlrs", "ТРС-18 «Зарево»")},
+        {"SU_Buratino", NSLOCTEXT("RA4", "zarevo_mlrs", "ТРС-18 «Зарево»")},
+
+        // ---------------------------------------------------------------
+        // Атлантический альянс. Общий арсенал ATL_; прежние AL_-ключи
+        // остаются LegacyAliases.
+        // ---------------------------------------------------------------
+        {"faction.atlantic.building.construction_yard", NSLOCTEXT("RA4", "hq_atl", "Сетевой штаб")},
+        {"faction.atlantic.building.power_plant", NSLOCTEXT("RA4", "power_plant_atl", "Компактный реактор")},
+        {"faction.atlantic.building.refinery", NSLOCTEXT("RA4", "refinery_atl", "Переработчик")},
+        {"faction.atlantic.building.barracks", NSLOCTEXT("RA4", "barracks_atl", "Тактическая казарма")},
+        {"faction.atlantic.building.war_factory", NSLOCTEXT("RA4", "war_factory_atl", "Модульный завод")},
+        {"faction.atlantic.building.radar", NSLOCTEXT("RA4", "radar_atl", "Разведцентр")},
+        {"faction.atlantic.building.turret", NSLOCTEXT("RA4", "turret_ai_atl", "Автопушка")},
+        {"faction.atlantic.building.aa_turret", NSLOCTEXT("RA4", "turret_aa_atl", "Ракетная ПВО")},
+        {"faction.atlantic.building.tech_center", NSLOCTEXT("RA4", "tech_center_atl", "Центр перспективных систем")},
+
+        {"faction.alliance.building.construction_yard", NSLOCTEXT("RA4", "hq_atl", "Сетевой штаб")},
+        {"faction.alliance.building.power_plant", NSLOCTEXT("RA4", "power_plant_atl", "Компактный реактор")},
+        {"faction.alliance.building.refinery", NSLOCTEXT("RA4", "refinery_atl", "Переработчик")},
+        {"faction.alliance.building.barracks", NSLOCTEXT("RA4", "barracks_atl", "Тактическая казарма")},
+        {"faction.alliance.building.war_factory", NSLOCTEXT("RA4", "war_factory_atl", "Модульный завод")},
+        {"faction.alliance.building.radar", NSLOCTEXT("RA4", "radar_atl", "Разведцентр")},
+        {"faction.alliance.building.turret", NSLOCTEXT("RA4", "turret_ai_atl", "Автопушка")},
+        {"faction.alliance.building.aa_turret", NSLOCTEXT("RA4", "turret_aa_atl", "Ракетная ПВО")},
+        {"faction.alliance.building.tech_center", NSLOCTEXT("RA4", "tech_center_atl", "Центр перспективных систем")},
+
+        {"ATL_Headquarters", NSLOCTEXT("RA4", "hq_atl", "Сетевой штаб")},
+        {"ATL_PowerPlant", NSLOCTEXT("RA4", "power_plant_atl", "Компактный реактор")},
+        {"ATL_Refinery", NSLOCTEXT("RA4", "refinery_atl", "Переработчик")},
+        {"ATL_Barracks", NSLOCTEXT("RA4", "barracks_atl", "Тактическая казарма")},
+        {"ATL_WarFactory", NSLOCTEXT("RA4", "war_factory_atl", "Модульный завод")},
+        {"ATL_Radar", NSLOCTEXT("RA4", "radar_atl", "Разведцентр")},
+        {"AL_ConYard", NSLOCTEXT("RA4", "hq_atl", "Сетевой штаб")},
+        {"AL_PowerPlant", NSLOCTEXT("RA4", "power_plant_atl", "Компактный реактор")},
+        {"AL_Refinery", NSLOCTEXT("RA4", "refinery_atl", "Переработчик")},
+        {"AL_Barracks", NSLOCTEXT("RA4", "barracks_atl", "Тактическая казарма")},
+        {"AL_WarFactory", NSLOCTEXT("RA4", "war_factory_atl", "Модульный завод")},
+        {"AL_Radar", NSLOCTEXT("RA4", "radar_atl", "Разведцентр")},
+        {"AL_MultigunTurret", NSLOCTEXT("RA4", "turret_ai_atl", "Автопушка")},
+        {"AL_GunTurret", NSLOCTEXT("RA4", "turret_ai_atl", "Автопушка")},
+
+        {"faction.atlantic.unit.mcv", NSLOCTEXT("RA4", "mcv_atl", "Мобильный узел")},
+        {"faction.atlantic.unit.harvester", NSLOCTEXT("RA4", "harvester_atl", "M88 «Pioneer»")},
+        {"faction.atlantic.unit.basic_infantry", NSLOCTEXT("RA4", "sentinel_rifleman", "M6 «Sentinel»")},
+        {"faction.atlantic.unit.antiarmor_infantry", NSLOCTEXT("RA4", "lancer_team", "Расчёт «Lancer»")},
+        {"faction.atlantic.unit.engineer", NSLOCTEXT("RA4", "field_engineer", "Полевой инженер")},
+        {"faction.atlantic.unit.scout", NSLOCTEXT("RA4", "kestrel_scout", "«Kestrel»")},
+        {"faction.atlantic.unit.main_tank", NSLOCTEXT("RA4", "bulwark_mbt", "ОБТ «Bulwark»")},
+        {"faction.atlantic.unit.artillery", NSLOCTEXT("RA4", "oracle_artillery", "САУ «Oracle»")},
+
+        {"faction.alliance.unit.mcv", NSLOCTEXT("RA4", "mcv_atl", "Мобильный узел")},
+        {"faction.alliance.unit.harvester", NSLOCTEXT("RA4", "harvester_atl", "M88 «Pioneer»")},
+        {"faction.alliance.unit.basic_infantry", NSLOCTEXT("RA4", "sentinel_rifleman", "M6 «Sentinel»")},
+        {"faction.alliance.unit.antiarmor_infantry", NSLOCTEXT("RA4", "lancer_team", "Расчёт «Lancer»")},
+        {"faction.alliance.unit.engineer", NSLOCTEXT("RA4", "field_engineer", "Полевой инженер")},
+        {"faction.alliance.unit.scout", NSLOCTEXT("RA4", "kestrel_scout", "«Kestrel»")},
+        {"faction.alliance.unit.main_tank", NSLOCTEXT("RA4", "bulwark_mbt", "ОБТ «Bulwark»")},
+        {"faction.alliance.unit.artillery", NSLOCTEXT("RA4", "oracle_artillery", "САУ «Oracle»")},
+
+        {"ATL_SentinelRifleman", NSLOCTEXT("RA4", "sentinel_rifleman", "M6 «Sentinel»")},
+        {"ATL_PioneerHarvester", NSLOCTEXT("RA4", "harvester_atl", "M88 «Pioneer»")},
+        {"ATL_KestrelScout", NSLOCTEXT("RA4", "kestrel_scout", "«Kestrel»")},
+        {"ATL_BulwarkMBT", NSLOCTEXT("RA4", "bulwark_mbt", "ОБТ «Bulwark»")},
+        {"ATL_OracleArtillery", NSLOCTEXT("RA4", "oracle_artillery", "САУ «Oracle»")},
+        {"AL_MCV", NSLOCTEXT("RA4", "mcv_atl", "Мобильный узел")},
+        {"AL_Prospector", NSLOCTEXT("RA4", "harvester_atl", "M88 «Pioneer»")},
+        {"AL_PioneerHarvester", NSLOCTEXT("RA4", "harvester_atl", "M88 «Pioneer»")},
+        {"AL_Peacekeeper", NSLOCTEXT("RA4", "sentinel_rifleman", "M6 «Sentinel»")},
+        {"AL_Javelin", NSLOCTEXT("RA4", "lancer_team", "Расчёт «Lancer»")},
+        {"AL_Medic", NSLOCTEXT("RA4", "medic_atl", "Боевой медик")},
+        {"AL_Jackal", NSLOCTEXT("RA4", "kestrel_scout", "«Kestrel»")},
+        {"AL_KestrelScout", NSLOCTEXT("RA4", "kestrel_scout", "«Kestrel»")},
+        {"AL_GuardianTank", NSLOCTEXT("RA4", "bulwark_mbt", "ОБТ «Bulwark»")},
+        {"AL_BulwarkMBT", NSLOCTEXT("RA4", "bulwark_mbt", "ОБТ «Bulwark»")},
+        {"AL_Aegis", NSLOCTEXT("RA4", "ward_shield", "Комплекс «Ward»")},
+        {"AL_Athena", NSLOCTEXT("RA4", "oracle_artillery", "САУ «Oracle»")},
+        {"AL_OracleArtillery", NSLOCTEXT("RA4", "oracle_artillery", "САУ «Oracle»")},
+
+        // ---------------------------------------------------------------
+        // Восточная коалиция — Китай (CN_). Прежние CO_-ключи остаются
+        // LegacyAliases; японские и индийские мотивы вынесены в свои страны.
+        // ---------------------------------------------------------------
+        {"faction.eastern.building.construction_yard", NSLOCTEXT("RA4", "hq_cn", "Командный центр")},
+        {"faction.eastern.building.power_plant", NSLOCTEXT("RA4", "power_plant_cn", "Солнечная электростанция")},
+        {"faction.eastern.building.refinery", NSLOCTEXT("RA4", "refinery_cn", "Переработчик")},
+        {"faction.eastern.building.barracks", NSLOCTEXT("RA4", "barracks_cn", "Учебный центр")},
+        {"faction.eastern.building.war_factory", NSLOCTEXT("RA4", "war_factory_cn", "Завод робототехники")},
+        {"faction.eastern.building.radar", NSLOCTEXT("RA4", "radar_cn", "Центр сетевого управления")},
+        {"faction.eastern.building.turret", NSLOCTEXT("RA4", "turret_ai_cn", "Автотурель")},
+        {"faction.eastern.building.aa_turret", NSLOCTEXT("RA4", "turret_aa_cn", "Зенитный комплекс")},
+        {"faction.eastern.building.tech_center", NSLOCTEXT("RA4", "tech_center_cn", "Центр разработок")},
+
+        {"faction.coalition.building.construction_yard", NSLOCTEXT("RA4", "hq_cn", "Командный центр")},
+        {"faction.coalition.building.power_plant", NSLOCTEXT("RA4", "power_plant_cn", "Солнечная электростанция")},
+        {"faction.coalition.building.refinery", NSLOCTEXT("RA4", "refinery_cn", "Переработчик")},
+        {"faction.coalition.building.barracks", NSLOCTEXT("RA4", "barracks_cn", "Учебный центр")},
+        {"faction.coalition.building.war_factory", NSLOCTEXT("RA4", "war_factory_cn", "Завод робототехники")},
+
+        {"CN_Headquarters", NSLOCTEXT("RA4", "hq_cn", "Командный центр")},
+        {"CN_PowerPlant", NSLOCTEXT("RA4", "power_plant_cn", "Солнечная электростанция")},
+        {"CN_Refinery", NSLOCTEXT("RA4", "refinery_cn", "Переработчик")},
+        {"CN_Barracks", NSLOCTEXT("RA4", "barracks_cn", "Учебный центр")},
+        {"CN_WarFactory", NSLOCTEXT("RA4", "war_factory_cn", "Завод робототехники")},
+        {"CO_ConYard", NSLOCTEXT("RA4", "hq_cn", "Командный центр")},
+        {"CO_PowerPlant", NSLOCTEXT("RA4", "power_plant_cn", "Солнечная электростанция")},
+        {"CO_Refinery", NSLOCTEXT("RA4", "refinery_cn", "Переработчик")},
+        {"CO_Barracks", NSLOCTEXT("RA4", "barracks_cn", "Учебный центр")},
+        {"CO_WarFactory", NSLOCTEXT("RA4", "war_factory_cn", "Завод робототехники")},
+
+        {"faction.eastern.unit.mcv", NSLOCTEXT("RA4", "mcv_cn", "Мобильный узел")},
+        {"faction.eastern.unit.harvester", NSLOCTEXT("RA4", "yuan_collector", "GRP-12 «Юань»")},
+        {"faction.eastern.unit.basic_infantry", NSLOCTEXT("RA4", "qianwei_rifleman", "Тип 21 «Цяньвэй»")},
+        {"faction.eastern.unit.main_tank", NSLOCTEXT("RA4", "qinglong_mbt", "ОБТ «Цинлун»")},
+        {"faction.eastern.unit.artillery", NSLOCTEXT("RA4", "monsoon_artillery", "РСЗО «Муссон»")},
+        {"faction.coalition.unit.basic_infantry", NSLOCTEXT("RA4", "qianwei_rifleman", "Тип 21 «Цяньвэй»")},
+        {"faction.coalition.unit.main_tank", NSLOCTEXT("RA4", "qinglong_mbt", "ОБТ «Цинлун»")},
+        {"CN_QianweiRifleman", NSLOCTEXT("RA4", "qianwei_rifleman", "Тип 21 «Цяньвэй»")},
+        {"CN_YuanCollector", NSLOCTEXT("RA4", "yuan_collector", "GRP-12 «Юань»")},
+        {"CN_QinglongMBT", NSLOCTEXT("RA4", "qinglong_mbt", "ОБТ «Цинлун»")},
+        {"CN_MonsoonArtillery", NSLOCTEXT("RA4", "monsoon_artillery", "РСЗО «Муссон»")},
+        {"CO_YuanCollector", NSLOCTEXT("RA4", "yuan_collector", "GRP-12 «Юань»")},
+        {"CO_QinglongMBT", NSLOCTEXT("RA4", "qinglong_mbt", "ОБТ «Цинлун»")},
+        {"CO_MonsoonArtillery", NSLOCTEXT("RA4", "monsoon_artillery", "РСЗО «Муссон»")},
+        {"CO_Vanguard", NSLOCTEXT("RA4", "qianwei_rifleman", "Тип 21 «Цяньвэй»")},
+
+        // ---------------------------------------------------------------
+        // Тихоокеанский пакт — Япония (JP_).
+        // ---------------------------------------------------------------
+        {"faction.pacific.building.construction_yard", NSLOCTEXT("RA4", "hq_jp", "Островной командный терминал")},
+        {"faction.pacific.building.power_plant", NSLOCTEXT("RA4", "power_plant_jp", "Прибрежная электростанция")},
+        {"faction.pacific.building.refinery", NSLOCTEXT("RA4", "refinery_jp", "Переработчик")},
+        {"faction.pacific.building.barracks", NSLOCTEXT("RA4", "barracks_jp", "Учебный центр")},
+        {"faction.pacific.building.war_factory", NSLOCTEXT("RA4", "war_factory_jp", "Роботический цех")},
+        {"faction.pacific.building.radar", NSLOCTEXT("RA4", "radar_jp", "Береговой радар")},
+        {"faction.pacific.building.aa_turret", NSLOCTEXT("RA4", "turret_aa_jp", "Лазерная батарея перехвата")},
+        {"JP_KamakiriWalker", NSLOCTEXT("RA4", "kamakiri_walker", "Шагоход «Камакири»")},
+        {"JP_KawasemiScout", NSLOCTEXT("RA4", "kawasemi_scout", "«Кавасэми»")},
+        {"CO_KamakiriWalker", NSLOCTEXT("RA4", "kamakiri_walker", "Шагоход «Камакири»")},
+
+        // ---------------------------------------------------------------
+        // Самостоятельные государства. Общей символики и общего блока нет.
+        // ---------------------------------------------------------------
+        {"faction.independent.building.construction_yard", NSLOCTEXT("RA4", "hq_indep", "Мобильный командный узел")},
+        {"IN_VajraLancer", NSLOCTEXT("RA4", "vajra_lancer", "AT-8 «Ваджра»")},
+        {"CO_StormLancer", NSLOCTEXT("RA4", "vajra_lancer", "AT-8 «Ваджра»")},
+
+        // ---------------------------------------------------------------
+        // Experimental / Legacy. В обычном мире недоступно; названия
+        // сохранены только для модов, реплеев и особых режимов.
+        // ---------------------------------------------------------------
+        {"faction.legacy.building.construction_yard", NSLOCTEXT("RA4", "hq_legacy", "Центр причинности (Legacy)")},
+        {"faction.chronolegion.building.construction_yard", NSLOCTEXT("RA4", "hq_legacy", "Центр причинности (Legacy)")},
+        {"faction.chronolegion.building.power_plant", NSLOCTEXT("RA4", "power_plant_legacy", "Реактор замедленного распада (Legacy)")},
+        {"faction.chronolegion.building.refinery", NSLOCTEXT("RA4", "refinery_legacy", "Квантовый переработчик (Legacy)")},
+        {"faction.chronolegion.building.barracks", NSLOCTEXT("RA4", "barracks_legacy", "Казарма эха (Legacy)")},
+        {"faction.chronolegion.building.war_factory", NSLOCTEXT("RA4", "war_factory_legacy", "Фабрика континуума (Legacy)")},
+        {"CH_ConYard", NSLOCTEXT("RA4", "hq_legacy", "Центр причинности (Legacy)")},
+        {"CH_PowerPlant", NSLOCTEXT("RA4", "power_plant_legacy", "Реактор замедленного распада (Legacy)")},
+        {"CH_Refinery", NSLOCTEXT("RA4", "refinery_legacy", "Квантовый переработчик (Legacy)")},
+        {"CH_Barracks", NSLOCTEXT("RA4", "barracks_legacy", "Казарма эха (Legacy)")},
+        {"CH_WarFactory", NSLOCTEXT("RA4", "war_factory_legacy", "Фабрика континуума (Legacy)")},
+        {"CH_ResonanceRifleman", NSLOCTEXT("RA4", "echo_rifleman_legacy", "ECHO-7 «Резонанс» (Legacy)")},
+        {"CH_ProbabilistHarvester", NSLOCTEXT("RA4", "probabilist_legacy", "QH-4 «Вероятник» (Legacy)")},
+
+        // ---------------------------------------------------------------
+        // Нейтральные и общие ключи.
+        // ---------------------------------------------------------------
+        {"headquarters", NSLOCTEXT("RA4", "headquarters_generic", "Штаб")},
         {"power_plant", NSLOCTEXT("RA4", "power_generic", "Электростанция")},
-        {"refinery", NSLOCTEXT("RA4", "refinery_generic", "Обогатительный комбинат")},
-        {"barracks", NSLOCTEXT("RA4", "barracks_generic", "Казармы")},
+        {"refinery", NSLOCTEXT("RA4", "refinery_generic", "Перерабатывающий комплекс")},
+        {"barracks", NSLOCTEXT("RA4", "barracks_generic", "Казарма")},
         {"war_factory", NSLOCTEXT("RA4", "factory_generic", "Военный завод")},
-        {"radar", NSLOCTEXT("RA4", "radar_generic", "Радарная станция")}
+        {"radar", NSLOCTEXT("RA4", "radar_generic", "Радарный узел")}
     };
 
     auto It = LocMap.find(Key);
@@ -159,8 +354,40 @@ FText KeyToText(const std::string& Key)
         return It->second;
     }
 
-    const FString AsString(UTF8_TO_TCHAR(Key.c_str()));
-    return FText::AsCultureInvariant(AsString);
+    // Humanize fallback: Never expose technical ID strings like faction.soviet... to the player
+    FString KeyStr(UTF8_TO_TCHAR(Key.c_str()));
+
+    // Extract last segment after dot or slash
+    int32 LastDot = INDEX_NONE;
+    if (KeyStr.FindLastChar(TEXT('.'), LastDot))
+    {
+        KeyStr = KeyStr.RightChop(LastDot + 1);
+    }
+    if (KeyStr.FindLastChar(TEXT('/'), LastDot))
+    {
+        KeyStr = KeyStr.RightChop(LastDot + 1);
+    }
+
+    // Replace underscores with spaces
+    KeyStr.ReplaceInline(TEXT("_"), TEXT(" "));
+
+    // Map common english terms to clean Russian RTS terminology
+    if (KeyStr.Contains(TEXT("refinery"), ESearchCase::IgnoreCase)) KeyStr = TEXT("Перерабатывающий комплекс");
+    else if (KeyStr.Contains(TEXT("power"), ESearchCase::IgnoreCase)) KeyStr = TEXT("Электростанция");
+    else if (KeyStr.Contains(TEXT("barrack"), ESearchCase::IgnoreCase)) KeyStr = TEXT("Казарма");
+    else if (KeyStr.Contains(TEXT("factory"), ESearchCase::IgnoreCase) || KeyStr.Contains(TEXT("war"), ESearchCase::IgnoreCase)) KeyStr = TEXT("Военный завод");
+    else if (KeyStr.Contains(TEXT("yard"), ESearchCase::IgnoreCase) || KeyStr.Contains(TEXT("conyard"), ESearchCase::IgnoreCase) || KeyStr.Contains(TEXT("hq"), ESearchCase::IgnoreCase)) KeyStr = TEXT("Штаб");
+    else if (KeyStr.Contains(TEXT("radar"), ESearchCase::IgnoreCase)) KeyStr = TEXT("Радарный узел");
+    else if (KeyStr.Contains(TEXT("turret"), ESearchCase::IgnoreCase)) KeyStr = TEXT("Оборонительное орудие");
+    else if (KeyStr.Contains(TEXT("tech"), ESearchCase::IgnoreCase)) KeyStr = TEXT("Центр разработок");
+    else if (KeyStr.Contains(TEXT("harvester"), ESearchCase::IgnoreCase)) KeyStr = TEXT("Горнорудная машина");
+    else if (KeyStr.Contains(TEXT("mcv"), ESearchCase::IgnoreCase)) KeyStr = TEXT("Командный модуль");
+    else if (KeyStr.Contains(TEXT("tank"), ESearchCase::IgnoreCase)) KeyStr = TEXT("Тяжёлый танк");
+    else if (KeyStr.Contains(TEXT("scout"), ESearchCase::IgnoreCase)) KeyStr = TEXT("Разведчик");
+    else if (KeyStr.Contains(TEXT("infantry"), ESearchCase::IgnoreCase)) KeyStr = TEXT("Пехота");
+    else if (KeyStr.Contains(TEXT("artillery"), ESearchCase::IgnoreCase)) KeyStr = TEXT("Артиллерия");
+
+    return FText::FromString(KeyStr);
 }
 
 FText AlertToText(RP::AlertType Type)
@@ -176,8 +403,8 @@ FText AlertToText(RP::AlertType Type)
         case RP::AlertType::ConstructionComplete: return NSLOCTEXT("RA4", "Alert_Built", "Строительство завершено");
         case RP::AlertType::UnitReady: return NSLOCTEXT("RA4", "Alert_UnitReady", "Боевая единица готова");
         case RP::AlertType::ResourcesDepleted: return NSLOCTEXT("RA4", "Alert_NoOre", "Месторождение истощено");
-        case RP::AlertType::MCVDeployed: return NSLOCTEXT("RA4", "Alert_MCVDeployed", "МСЦ развернут");
-        case RP::AlertType::MCVUndeployed: return NSLOCTEXT("RA4", "Alert_MCVUndeployed", "МСЦ свернут");
+        case RP::AlertType::MCVDeployed: return NSLOCTEXT("RA4", "Alert_MCVDeployed", "Командный пункт развёрнут");
+        case RP::AlertType::MCVUndeployed: return NSLOCTEXT("RA4", "Alert_MCVUndeployed", "Командный пункт свёрнут");
         default: return FText::GetEmpty();
     }
 }

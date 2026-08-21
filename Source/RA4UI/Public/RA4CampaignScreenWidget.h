@@ -31,7 +31,7 @@ protected:
     virtual TSharedRef<SWidget> RebuildWidget() override;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "RA4|Campaign")
-    ERA4FactionTheme FactionTheme = ERA4FactionTheme::USSR;
+    ERA4FactionTheme FactionTheme = ERA4FactionTheme::EurasianPact;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "RA4|Campaign")
     ERA4UIScreenVariant CampaignVariant = ERA4UIScreenVariant::Default;

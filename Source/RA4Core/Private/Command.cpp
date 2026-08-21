@@ -30,6 +30,8 @@ const char* ToString(CommandType Type)
         case CommandType::DirectControlDrive: return "DirectControlDrive";
         case CommandType::DirectControlFire: return "DirectControlFire";
         case CommandType::FireSuperweapon: return "FireSuperweapon";
+        case CommandType::ToggleSecondaryAbility: return "ToggleSecondaryAbility";
+        case CommandType::CoopPing: return "CoopPing";
         default: return "Unknown";
     }
 }
@@ -61,8 +63,10 @@ const char* ToString(CommandReject Reason)
         case CommandReject::DirectWeaponEmpty: return "DirectWeaponEmpty";
         case CommandReject::SuperweaponNotReady: return "SuperweaponNotReady";
         case CommandReject::SuperweaponUnpowered: return "SuperweaponUnpowered";
+        case CommandReject::OnCooldown: return "OnCooldown";
         default: return "Unknown";
     }
 }
+
 
 } // namespace RA4

@@ -97,6 +97,14 @@ public:
     UFUNCTION(BlueprintCallable, Category = "RA4|Navigation")
     void JumpToHomeBase();
 
+    UFUNCTION(BlueprintCallable, Category = "RA4|Navigation")
+    bool JumpToAlertLocation(FVector2D SimLocation);
+
+    void JumpToAlertLocationVoid(FVector2D SimLocation) { JumpToAlertLocation(SimLocation); }
+
+    UFUNCTION(BlueprintCallable, Category = "RA4|Navigation")
+    void JumpToLatestAlert();
+
     UFUNCTION(BlueprintCallable, Category = "RA4|Commands")
     void DeploySelectedMcv();
 
@@ -114,6 +122,26 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "RA4|DirectControl")
     bool IsDirectControlActive() const;
+
+    // --- Base Management Modes (Repair & Sell) -------------------------------
+    UFUNCTION(BlueprintCallable, Category = "RA4|Commands")
+    void ToggleRepairMode();
+
+    UFUNCTION(BlueprintCallable, Category = "RA4|Commands")
+    void ToggleSellMode();
+
+    UFUNCTION(BlueprintCallable, Category = "RA4|Commands")
+    void SetInteractionMode(uint8 Mode);
+
+    UFUNCTION(BlueprintPure, Category = "RA4|Commands")
+    uint8 GetInteractionMode() const { return CurrentInteractionMode; }
+
+    void HandleInteractionModeChanged(uint8 Mode);
+
+    void StopSelectedUnits();
+    void ToggleGuardMode();
+    void ScatterSelectedUnits();
+    void ToggleChronoShiftMode();
 
     // --- Cheat Console -------------------------------------------------------
     UFUNCTION(BlueprintCallable, Category = "RA4|CheatConsole")
@@ -305,6 +333,8 @@ private:
 
     bool HasMainMenuMap() const;
 
+    void UpdateRallyPointVisualization(const RA4::SimWorld& World);
+
     // --- state ---------------------------------------------------------------
     RA4::Input::SelectionModel Selection;
     RA4::Input::CursorHint CurrentCursorHint = RA4::Input::CursorHint::Select;
@@ -320,7 +350,13 @@ private:
 
     bool bAttackMoveArmed = false;
     bool bPlacementArmed = false;
+    bool bSuperweaponArmed = false;
+    bool bChronoShiftArmed = false;
+    uint8 CurrentInteractionMode = 0; // 0 = Normal, 1 = Repair, 2 = Sell
     RA4::ContentId PlacementContent;
+
+    void ToggleSuperweaponMode();
+    void CancelSuperweaponMode();
 
     // Space + right-drag spins the view. Space is the modifier so the right button
     // keeps its normal job (deselect, in the classic scheme) when pressed alone.

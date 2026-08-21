@@ -49,6 +49,18 @@ struct Vec2
 inline Fixed DistanceSquared(const Vec2& A, const Vec2& B) { return (A - B).LengthSquared(); }
 inline Fixed Distance(const Vec2& A, const Vec2& B) { return (A - B).Length(); }
 inline Fixed Dot(const Vec2& A, const Vec2& B) { return A.X * B.X + A.Y * B.Y; }
+inline Fixed Cross(const Vec2& A, const Vec2& B) { return A.X * B.Y - A.Y * B.X; }
+
+inline constexpr Vec2 Vec2Lerp(const Vec2& A, const Vec2& B, Fixed Alpha)
+{
+    return Vec2(FxLerp(A.X, B.X, Alpha), FxLerp(A.Y, B.Y, Alpha));
+}
+
+inline Vec2 Vec2Hermite(const Vec2& P0, const Vec2& P1, const Vec2& M0, const Vec2& M1, Fixed Alpha)
+{
+    return Vec2(FxHermiteSpline(P0.X, P1.X, M0.X, M1.X, Alpha),
+                FxHermiteSpline(P0.Y, P1.Y, M0.Y, M1.Y, Alpha));
+}
 
 // Integer tile coordinate. The build grid, navigation grid and fog grid all share
 // this type so a cell index means the same thing in every subsystem.

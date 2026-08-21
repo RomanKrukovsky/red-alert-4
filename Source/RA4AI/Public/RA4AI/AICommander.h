@@ -90,7 +90,23 @@ public:
     const BattleEstimate& GetBattleForecast() const { return BattleForecast; }
     bool HasBattleForecast() const { return bHasBattleForecast; }
 
+    // --- Co-op AI Commander Coordination (RA3 feature) ---
+    struct CoopPingTarget
+    {
+        bool bActive = false;
+        PlayerId Sender = kInvalidPlayer;
+        CoopPingType Type = CoopPingType::Attack;
+        Vec2 Location;
+        TickIndex ExpiryTick = 0;
+    };
+
+    void ReceiveCoopPing(PlayerId Sender, CoopPingType Type, const Vec2& Location, TickIndex CurrentTick = 0);
+    const CoopPingTarget& GetActiveCoopPing() const { return ActivePing; }
+    void ClearActiveCoopPing() { ActivePing.bActive = false; }
+
 private:
+    CoopPingTarget ActivePing;
+
     // --- decision steps, in priority order -------------------------------
     bool TryPlaceFinishedStructure(const SimWorld& World, std::vector<Command>& Out);
     bool TryBuildEconomy(const SimWorld& World, std::vector<Command>& Out);
@@ -126,6 +142,7 @@ private:
     int32_t EffectiveAssaultArmySize() const;
     bool TryHarassRaid(const SimWorld& World, int32_t ArmySize, std::vector<Command>& Out);
     bool TryFireSuperweapons(const SimWorld& World, std::vector<Command>& Out);
+    bool TryRepairDamagedBuildings(const SimWorld& World, std::vector<Command>& Out);
 
     // --- world queries ----------------------------------------------------
     ContentId FindStructure(const SimWorld& World, bool (*Predicate)(const EntityDef&)) const;

@@ -26,36 +26,40 @@ bool URA4FactionHUDWidget::ConfigureReference(const int32 InReferenceNumber)
     switch (InReferenceNumber)
     {
     case 13:
-        SetVariantData(13, ERA4FactionTheme::USSR, ERA4UIScreenVariant::Default,
-            0, TEXT("SovietProduction"));
+        SetVariantData(13, ERA4FactionTheme::EurasianPact, ERA4UIScreenVariant::Default,
+            0, TEXT("EurasianProduction"));
         return true;
     case 14:
-        SetVariantData(14, ERA4FactionTheme::Allies, ERA4UIScreenVariant::Default,
-            3, TEXT("AlliesCombinedArms"));
+        SetVariantData(14, ERA4FactionTheme::AtlanticAlliance, ERA4UIScreenVariant::Default,
+            3, TEXT("AtlanticCombinedArms"));
         return true;
     case 15:
         SetVariantData(15, ERA4FactionTheme::EasternCoalition, ERA4UIScreenVariant::Default,
             0, TEXT("EasternProduction"));
         return true;
     case 16:
-        SetVariantData(16, ERA4FactionTheme::Chronolegion, ERA4UIScreenVariant::Default,
-            0, TEXT("ChronoAbilities"));
+        SetVariantData(16, ERA4FactionTheme::PacificPact, ERA4UIScreenVariant::Default,
+            0, TEXT("PacificRobotics"));
+        return true;
+    case 17:
+        SetVariantData(17, ERA4FactionTheme::Independent, ERA4UIScreenVariant::Default,
+            0, TEXT("IndependentMissiles"));
         return true;
     case 20:
-        SetVariantData(20, ERA4FactionTheme::USSR, ERA4UIScreenVariant::SovietBattle,
-            2, TEXT("SovietArmorBattle"));
+        SetVariantData(20, ERA4FactionTheme::EurasianPact, ERA4UIScreenVariant::SovietBattle,
+            2, TEXT("EurasianArmorBattle"));
         return true;
     case 21:
-        SetVariantData(21, ERA4FactionTheme::USSR, ERA4UIScreenVariant::SovietAlert,
-            0, TEXT("SovietBaseAlert"));
+        SetVariantData(21, ERA4FactionTheme::EurasianPact, ERA4UIScreenVariant::SovietAlert,
+            0, TEXT("EurasianBaseAlert"));
         return true;
     case 22:
-        SetVariantData(22, ERA4FactionTheme::Allies, ERA4UIScreenVariant::AlliesNaval,
-            4, TEXT("AlliesNaval"));
+        SetVariantData(22, ERA4FactionTheme::AtlanticAlliance, ERA4UIScreenVariant::AlliesNaval,
+            4, TEXT("AtlanticNaval"));
         return true;
     case 23:
-        SetVariantData(23, ERA4FactionTheme::Allies, ERA4UIScreenVariant::AlliesAir,
-            3, TEXT("AlliesAir"));
+        SetVariantData(23, ERA4FactionTheme::AtlanticAlliance, ERA4UIScreenVariant::AlliesAir,
+            3, TEXT("AtlanticAir"));
         return true;
     case 24:
         SetVariantData(24, ERA4FactionTheme::Chronolegion, ERA4UIScreenVariant::ChronoSuperweapon,
@@ -85,24 +89,34 @@ void URA4FactionHUDWidget::RebuildTabs()
     ProductionTabs.Reset();
     switch (GetFactionTheme())
     {
-    case ERA4FactionTheme::USSR:
+    case ERA4FactionTheme::EurasianPact:
         ProductionTabs = {
-            LOCTEXT("SovietBuild", "СТРОИТЬ"), LOCTEXT("SovietForces", "ВОЙСКА"),
-            LOCTEXT("SovietUpgrades", "УЛУЧШЕНИЯ"), LOCTEXT("SovietDoctrines", "ДОКТРИНЫ")};
+            LOCTEXT("EurasianBuild", "СТРОИТЬ"), LOCTEXT("EurasianForces", "ВОЙСКА"),
+            LOCTEXT("EurasianUpgrades", "УЛУЧШЕНИЯ"), LOCTEXT("EurasianDoctrines", "ДОКТРИНЫ")};
         break;
-    case ERA4FactionTheme::Allies:
+    case ERA4FactionTheme::AtlanticAlliance:
         ProductionTabs = {
-            LOCTEXT("AlliesStructures", "СТРОЕНИЯ"), LOCTEXT("AlliesInfantry", "ПЕХОТА"),
-            LOCTEXT("AlliesVehicles", "ТЕХНИКА"), LOCTEXT("AlliesAir", "АВИАЦИЯ")};
+            LOCTEXT("AtlanticStructures", "СТРОЕНИЯ"), LOCTEXT("AtlanticInfantry", "ПЕХОТА"),
+            LOCTEXT("AtlanticVehicles", "ТЕХНИКА"), LOCTEXT("AtlanticAir", "АВИАЦИЯ")};
         if (GetHUDVariant() == ERA4UIScreenVariant::AlliesNaval)
         {
-            ProductionTabs.Add(LOCTEXT("AlliesFleet", "ФЛОТ"));
+            ProductionTabs.Add(LOCTEXT("AtlanticFleet", "ФЛОТ"));
         }
         break;
     case ERA4FactionTheme::EasternCoalition:
         ProductionTabs = {
-            LOCTEXT("EasternStructures", "СТРОЕНИЯ"), LOCTEXT("EasternUnits", "БОЕВЫЕ ЕД."),
-            LOCTEXT("EasternUpgrades", "УЛУЧШЕНИЯ"), LOCTEXT("EasternDoctrines", "ДОКТРИНЫ")};
+            LOCTEXT("EasternStructures", "СТРОЕНИЯ"), LOCTEXT("EasternUnits", "ДРОНЫ И ВОЙСКА"),
+            LOCTEXT("EasternUpgrades", "ПРОИЗВОДСТВО"), LOCTEXT("EasternDoctrines", "ДОКТРИНЫ")};
+        break;
+    case ERA4FactionTheme::PacificPact:
+        ProductionTabs = {
+            LOCTEXT("PacificDef", "ОБОРОНА"), LOCTEXT("PacificRobots", "РОБОТОТЕХНИКА"),
+            LOCTEXT("PacificAir", "АВИАЦИЯ"), LOCTEXT("PacificLasers", "ЛАЗЕРЫ")};
+        break;
+    case ERA4FactionTheme::Independent:
+        ProductionTabs = {
+            LOCTEXT("IndepShelter", "УКРЫТИЯ"), LOCTEXT("IndepSPU", "МОБИЛЬНЫЕ СПУ"),
+            LOCTEXT("IndepDrones", "БПЛА «ШАХЕД»"), LOCTEXT("IndepDoctrines", "ДОКТРИНЫ")};
         break;
     case ERA4FactionTheme::Chronolegion:
         ProductionTabs = {
@@ -110,7 +124,6 @@ void URA4FactionHUDWidget::RebuildTabs()
             LOCTEXT("ChronoSupport", "ПОДДЕРЖКА"), LOCTEXT("ChronoSpecial", "ОСОБОЕ")};
         break;
     default:
-        checkNoEntry();
         break;
     }
 }
