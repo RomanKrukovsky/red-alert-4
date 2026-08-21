@@ -639,7 +639,10 @@ TSharedRef<SWidget> URA4LoadingScreenWidget::RebuildWidget()
 
     SetRootBackground(
         this,
-        TEXT("/Game/RA4UI/Art/T_RA4_USSR_LoadingKyiv.T_RA4_USSR_LoadingKyiv"),
+        // The retired loading art was a Soviet star over a burning Moscow. Until a
+        // per-operation illustration exists, the neutral Scarlet Horizon panorama
+        // stands in: wrong world content is worse than a generic backdrop.
+        TEXT("/Game/RA4UI/Art/T_RA4_TitleBackdrop.T_RA4_TitleBackdrop"),
         FLinearColor(0.82f, 0.72f, 0.72f, 1.0f));
     UCanvasPanel* Canvas = AddCanvas(this, WidgetTree, TEXT("LoadingCanvas"));
 

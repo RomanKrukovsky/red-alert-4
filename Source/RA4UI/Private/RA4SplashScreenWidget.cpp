@@ -49,15 +49,15 @@ TSharedRef<SWidget> URA4SplashScreenWidget::RebuildWidget()
 
     if (UTexture2D* BackgroundTexture = LoadObject<UTexture2D>(
         nullptr,
-        TEXT("/Game/RA4UI/Art/T_RA4_USSR_LoadingKyiv.T_RA4_USSR_LoadingKyiv")))
+        TEXT("/Game/RA4UI/Art/T_RA4_TitleBackdrop.T_RA4_TitleBackdrop")))
     {
         GetBackgroundLayer()->SetBrushFromTexture(BackgroundTexture, false);
-        GetBackgroundLayer()->SetColorAndOpacity(FLinearColor(0.62f, 0.54f, 0.54f, 1.0f));
+        GetBackgroundLayer()->SetColorAndOpacity(FLinearColor::White);
     }
 
     UBorder* Vignette = WidgetTree->ConstructWidget<UBorder>(
         UBorder::StaticClass(), TEXT("SplashVignette"));
-    Vignette->SetBrushColor(FLinearColor(0.0f, 0.0f, 0.0f, 0.28f));
+    Vignette->SetBrushColor(FLinearColor(0.0f, 0.0f, 0.0f, 0.16f));
     Vignette->SetVisibility(ESlateVisibility::HitTestInvisible);
     UOverlaySlot* VignetteSlot = GetContentLayer()->AddChildToOverlay(Vignette);
     VignetteSlot->SetHorizontalAlignment(HAlign_Fill);
@@ -83,7 +83,37 @@ TSharedRef<SWidget> URA4SplashScreenWidget::RebuildWidget()
         LogoImage->SetBrushFromTexture(LogoTexture, false);
     }
     LogoImage->SetVisibility(ESlateVisibility::HitTestInvisible);
-    PlaceSplashWidget(Canvas, LogoImage, FVector2D(390.0f, 210.0f), FVector2D(1140.0f, 380.0f), 2);
+    PlaceSplashWidget(Canvas, LogoImage, FVector2D(566.0f, 168.0f), FVector2D(788.0f, 206.0f), 2);
+
+    UTextBlock* Tagline = WidgetTree->ConstructWidget<UTextBlock>(
+        UTextBlock::StaticClass(), TEXT("SplashTagline"));
+    Tagline->SetText(LOCTEXT("SplashTagline", "· АЛЬТЕРНАТИВНАЯ СОВРЕМЕННОСТЬ ·"));
+    Tagline->SetColorAndOpacity(FSlateColor(FLinearColor(0.72f, 0.75f, 0.82f, 1.0f)));
+    Tagline->SetJustification(ETextJustify::Center);
+    Tagline->SetVisibility(ESlateVisibility::HitTestInvisible);
+    if (UObject* TaglineFont = LoadObject<UObject>(
+        nullptr,
+        TEXT("/Game/RA4UI/Fonts/RA4_RobotoCondensedSemiBold_Font.RA4_RobotoCondensedSemiBold_Font")))
+    {
+        FSlateFontInfo Info(TaglineFont, 20);
+        Info.LetterSpacing = 260;
+        Tagline->SetFont(Info);
+    }
+    PlaceSplashWidget(Canvas, Tagline, FVector2D(566.0f, 372.0f), FVector2D(788.0f, 32.0f), 3);
+
+    UTextBlock* BuildLabel = WidgetTree->ConstructWidget<UTextBlock>(
+        UTextBlock::StaticClass(), TEXT("SplashBuildLabel"));
+    BuildLabel->SetText(LOCTEXT("SplashBuild", "ПРЕДВАРИТЕЛЬНАЯ ВЕРСИЯ"));
+    BuildLabel->SetColorAndOpacity(FSlateColor(FLinearColor(0.55f, 0.58f, 0.64f, 1.0f)));
+    BuildLabel->SetJustification(ETextJustify::Right);
+    BuildLabel->SetVisibility(ESlateVisibility::HitTestInvisible);
+    if (UObject* BuildFont = LoadObject<UObject>(
+        nullptr,
+        TEXT("/Game/RA4UI/Fonts/RA4_RobotoCondensedRegular_Font.RA4_RobotoCondensedRegular_Font")))
+    {
+        BuildLabel->SetFont(FSlateFontInfo(BuildFont, 15));
+    }
+    PlaceSplashWidget(Canvas, BuildLabel, FVector2D(1420.0f, 1016.0f), FVector2D(440.0f, 26.0f), 3);
 
     UBorder* PromptFrame = WidgetTree->ConstructWidget<UBorder>(
         UBorder::StaticClass(), TEXT("ContinuePromptFrame"));
