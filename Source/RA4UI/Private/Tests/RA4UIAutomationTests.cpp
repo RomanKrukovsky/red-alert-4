@@ -1,6 +1,8 @@
 // Copyright (c) Red Alert 4 project.
 
 #include "Components/Image.h"
+#include "Components/HorizontalBox.h"
+#include "Components/TextBlock.h"
 #include "Misc/AutomationTest.h"
 #include "RA4AngularPanelWidget.h"
 #include "RA4CampaignScreenWidget.h"
@@ -15,6 +17,7 @@
 #include "RA4MinimapWidget.h"
 #include "RA4MissionFlowWidgets.h"
 #include "RA4ScreenRootWidget.h"
+#include "RA4SkirmishSetupWidget.h"
 #include "RA4SplashScreenWidget.h"
 #include "RA4UIScreenContract.h"
 #include "Slate/SRA4Minimap.h"
@@ -180,6 +183,49 @@ bool FRA4MainMenuCompositionTest::RunTest(const FString& Parameters)
         TEXT("Logo ignores hit tests"),
         MainMenu->GetLogoImage()->GetVisibility(),
         ESlateVisibility::HitTestInvisible);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FRA4SkirmishActionRowAttachedTest,
+    "RA4.UI.Screens.Skirmish.ActionRowIsAttached",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRA4SkirmishActionRowAttachedTest::RunTest(const FString& Parameters)
+{
+    URA4SkirmishSetupWidget* Setup = NewObject<URA4SkirmishSetupWidget>();
+    TestTrue(TEXT("Skirmish setup initializes"), Setup->Initialize());
+    Setup->TakeWidget();
+
+    UHorizontalBox* ActionRow = Cast<UHorizontalBox>(Setup->GetWidgetFromName(TEXT("ActionRow")));
+    TestNotNull(TEXT("Action row exists"), ActionRow);
+    if (ActionRow)
+    {
+        TestNotNull(TEXT("Action row is attached to the visible layout"), ActionRow->GetParent());
+    }
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FRA4SkirmishBackActionLabelTest,
+    "RA4.UI.Screens.Skirmish.BackActionNamesMainMenu",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRA4SkirmishBackActionLabelTest::RunTest(const FString& Parameters)
+{
+    URA4SkirmishSetupWidget* Setup = NewObject<URA4SkirmishSetupWidget>();
+    TestTrue(TEXT("Skirmish setup initializes"), Setup->Initialize());
+    Setup->TakeWidget();
+
+    UTextBlock* BackLabel = Cast<UTextBlock>(Setup->GetWidgetFromName(TEXT("BackLabel")));
+    TestNotNull(TEXT("Back label exists"), BackLabel);
+    if (BackLabel)
+    {
+        TestEqual(
+            TEXT("Back action names its destination"),
+            BackLabel->GetText().ToString(),
+            FString(TEXT("В ГЛАВНОЕ МЕНЮ")));
+    }
     return true;
 }
 

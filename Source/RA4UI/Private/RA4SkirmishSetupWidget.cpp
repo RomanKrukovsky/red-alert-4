@@ -272,15 +272,21 @@ void URA4SkirmishSetupWidget::BuildLayout()
     UHorizontalBox* ActionRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("ActionRow"));
 
     UButton* BackButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("BackButton"));
-    BackButton->AddChild(MakeSetupText(WidgetTree, LOCTEXT("Back", "‹  НАЗАД"), 18, TextColor, TEXT("BackLabel")));
+    StyleSetupButton(BackButton, FLinearColor(0.055f, 0.05f, 0.052f, 1.0f));
+    BackButton->AddChild(MakeSetupText(
+        WidgetTree, LOCTEXT("Back", "В ГЛАВНОЕ МЕНЮ"), 18, TextColor, TEXT("BackLabel")));
     BackButton->OnClicked.AddDynamic(this, &URA4SkirmishSetupWidget::HandleBackClicked);
-    ActionRow->AddChildToHorizontalBox(BackButton)->SetPadding(FMargin(0.0f, 0.0f, 16.0f, 0.0f));
+    UHorizontalBoxSlot* BackSlot = ActionRow->AddChildToHorizontalBox(BackButton);
+    BackSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+    BackSlot->SetPadding(FMargin(0.0f, 0.0f, 16.0f, 0.0f));
 
     StartButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("StartButton"));
-    StartButton->SetBackgroundColor(RedDim);
+    StyleSetupButton(StartButton, RedDim);
     StartButton->AddChild(MakeSetupText(WidgetTree, LOCTEXT("StartMatch", "НАЧАТЬ МАТЧ"), 20, TextColor, TEXT("StartMatchLabel")));
     StartButton->OnClicked.AddDynamic(this, &URA4SkirmishSetupWidget::HandleStartMatchClicked);
-    ActionRow->AddChildToHorizontalBox(StartButton);
+    UHorizontalBoxSlot* StartSlot = ActionRow->AddChildToHorizontalBox(StartButton);
+    StartSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+    BannerStack->AddChildToVerticalBox(ActionRow)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 
     ValidationBanner = MakeFramedSetupPanel(WidgetTree, BannerStack, TEXT("ValidationBanner"), FMargin(16.0f, 12.0f));
     PlaceSetupWidget(MainCanvas, ValidationBanner, FVector2D(80.0f, 680.0f), FVector2D(1080.0f, 140.0f), 2);
