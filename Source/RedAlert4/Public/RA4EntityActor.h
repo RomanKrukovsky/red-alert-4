@@ -93,6 +93,9 @@ protected:
     TObjectPtr<class UNiagaraComponent> VFXComponent;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    TObjectPtr<UStaticMeshComponent> FoundationBibComponent;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     TObjectPtr<class UDecalComponent> SelectionDecalComponent;
 
     UFUNCTION(BlueprintCallable, Category = "Visuals")

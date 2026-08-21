@@ -243,38 +243,64 @@ void URA4AudioSubsystem::PlayEVA(uint8 Faction, ERA4EVAEvent Event, bool bBypass
     }
 }
 
+void URA4AudioSubsystem::InitPlaylist()
+{
+    if (Playlist.Num() > 0)
+    {
+        return;
+    }
+
+    Playlist.Add({
+        TEXT("Steel Horizon Pact"),
+        TEXT("/Game/RA4/Audio/Generated/Music/Steel_Horizon_Pact.Steel_Horizon_Pact"),
+        TEXT("/Game/RA4/Audio/Music/Steel_Horizon_Pact.Steel_Horizon_Pact")
+    });
+    Playlist.Add({
+        TEXT("Iron Parade"),
+        TEXT("/Game/RA4/Audio/Generated/Music/Iron_Parade.Iron_Parade"),
+        TEXT("/Game/RA4/Audio/Music/Iron_Parade.Iron_Parade")
+    });
+    Playlist.Add({
+        TEXT("Command Overdrive"),
+        TEXT("/Game/RA4/Audio/Music/Command_Overdrive.Command_Overdrive"),
+        TEXT("/Game/RA4/Audio/Music/Command_Overdrive.Command_Overdrive")
+    });
+    Playlist.Add({
+        TEXT("March of Steel"),
+        TEXT("/Game/RA4/Audio/Music/March_of_Steel.March_of_Steel"),
+        TEXT("/Game/RA4/Audio/Music/March_of_Steel.March_of_Steel")
+    });
+    Playlist.Add({
+        TEXT("Red Iron March"),
+        TEXT("/Game/RA4/Audio/Music/Red_Iron_March.Red_Iron_March"),
+        TEXT("/Game/RA4/Audio/Music/Red_Iron_March.Red_Iron_March")
+    });
+    Playlist.Add({
+        TEXT("Red Banner Forge"),
+        TEXT("/Game/RA4/Audio/Music/Red_Banner_Forge.Red_Banner_Forge"),
+        TEXT("/Game/RA4/Audio/Music/Red_Banner_Forge.Red_Banner_Forge")
+    });
+    Playlist.Add({
+        TEXT("Tesla Overdrive"),
+        TEXT("/Game/RA4/Audio/Music/Tesla_Overdrive.Tesla_Overdrive"),
+        TEXT("/Game/RA4/Audio/Music/Tesla_Overdrive.Tesla_Overdrive")
+    });
+    Playlist.Add({
+        TEXT("Red Alert 4 Main Theme"),
+        TEXT("/Game/RA4/Audio/Generated/Music/RA4_MainMenu_Theme.RA4_MainMenu_Theme"),
+        TEXT("/Game/RA4/Audio/Generated/Music/RA4_MainMenu_Theme.RA4_MainMenu_Theme")
+    });
+}
+
 void URA4AudioSubsystem::StartMusic()
 {
+    InitPlaylist();
     if (MusicComponent != nullptr && MusicComponent->IsPlaying())
     {
         return;
     }
 
-    UWorld* World = GetWorld();
-    if (World == nullptr)
-    {
-        return;
-    }
-
-    USoundBase* Track = LoadObject<USoundBase>(nullptr, kMusicAsset);
-    if (Track == nullptr)
-    {
-        UE_LOG(LogTemp, Warning,
-               TEXT("RA4 audio: music track not found at %s -- run the RA4AudioImport commandlet"),
-               kMusicAsset);
-        return;
-    }
-
-    MusicComponent = UGameplayStatics::SpawnSound2D(World, Track, /*VolumeMultiplier*/ 0.35f,
-                                                    /*PitchMultiplier*/ 1.0f, /*StartTime*/ 0.0f,
-                                                    /*ConcurrencySettings*/ nullptr,
-                                                    /*bPersistAcrossLevelTransition*/ false,
-                                                    /*bAutoDestroy*/ false);
-    if (MusicComponent != nullptr)
-    {
-        MusicComponent->bIsUISound = true;
-        UE_LOG(LogTemp, Display, TEXT("RA4 audio: music started"));
-    }
+    PlayTrackByIndex(CurrentTrackIndex);
 }
 
 void URA4AudioSubsystem::StopMusic()
@@ -283,5 +309,145 @@ void URA4AudioSubsystem::StopMusic()
     {
         MusicComponent->Stop();
         MusicComponent = nullptr;
+        bMusicPaused = false;
     }
+}
+
+void URA4AudioSubsystem::PlayTrackByIndex(int32 TrackIndex)
+{
+    InitPlaylist();
+    if (Playlist.Num() == 0)
+    {
+        return;
+    }
+
+    CurrentTrackIndex = FMath::Clamp(TrackIndex, 0, Playlist.Num() - 1);
+    const FRA4MusicTrackInfo& TrackInfo = Playlist[CurrentTrackIndex];
+
+    UWorld* World = GetWorld();
+    if (World == nullptr)
+    {
+        return;
+    }
+
+    USoundBase* Track = LoadObject<USoundBase>(nullptr, *TrackInfo.PrimaryAssetPath);
+    if (Track == nullptr && !TrackInfo.FallbackAssetPath.IsEmpty())
+    {
+        Track = LoadObject<USoundBase>(nullptr, *TrackInfo.FallbackAssetPath);
+    }
+
+    if (Track == nullptr)
+    {
+        UE_LOG(LogTemp, Warning,
+               TEXT("RA4 audio: music track '%s' not found at %s"),
+               *TrackInfo.Title, *TrackInfo.PrimaryAssetPath);
+        return;
+    }
+
+    if (MusicComponent != nullptr)
+    {
+        MusicComponent->Stop();
+        MusicComponent = nullptr;
+    }
+
+    MusicComponent = UGameplayStatics::SpawnSound2D(World, Track, CurrentMusicVolume,
+                                                    /*PitchMultiplier*/ 1.0f, /*StartTime*/ 0.0f,
+                                                    /*ConcurrencySettings*/ nullptr,
+                                                    /*bPersistAcrossLevelTransition*/ false,
+                                                    /*bAutoDestroy*/ false);
+    if (MusicComponent != nullptr)
+    {
+        MusicComponent->bIsUISound = true;
+        bMusicPaused = false;
+        UE_LOG(LogTemp, Display, TEXT("RA4 audio: music started [%d/%d]: %s"),
+               CurrentTrackIndex + 1, Playlist.Num(), *TrackInfo.Title);
+    }
+
+    OnMusicTrackChanged.Broadcast(CurrentTrackIndex, TrackInfo.Title, IsMusicPlaying());
+}
+
+void URA4AudioSubsystem::NextTrack()
+{
+    InitPlaylist();
+    if (Playlist.Num() == 0)
+    {
+        return;
+    }
+
+    const int32 NextIdx = (CurrentTrackIndex + 1) % Playlist.Num();
+    PlayTrackByIndex(NextIdx);
+}
+
+void URA4AudioSubsystem::PreviousTrack()
+{
+    InitPlaylist();
+    if (Playlist.Num() == 0)
+    {
+        return;
+    }
+
+    const int32 PrevIdx = (CurrentTrackIndex - 1 + Playlist.Num()) % Playlist.Num();
+    PlayTrackByIndex(PrevIdx);
+}
+
+void URA4AudioSubsystem::ToggleMusicPause()
+{
+    InitPlaylist();
+    if (MusicComponent == nullptr)
+    {
+        StartMusic();
+        return;
+    }
+
+    if (bMusicPaused)
+    {
+        MusicComponent->SetPaused(false);
+        bMusicPaused = false;
+    }
+    else if (MusicComponent->IsPlaying())
+    {
+        MusicComponent->SetPaused(true);
+        bMusicPaused = true;
+    }
+    else
+    {
+        PlayTrackByIndex(CurrentTrackIndex);
+        return;
+    }
+
+    OnMusicTrackChanged.Broadcast(CurrentTrackIndex, GetCurrentTrackTitle(), IsMusicPlaying());
+}
+
+void URA4AudioSubsystem::SetMusicVolume(float Volume)
+{
+    CurrentMusicVolume = FMath::Clamp(Volume, 0.0f, 1.0f);
+    if (MusicComponent != nullptr)
+    {
+        MusicComponent->SetVolumeMultiplier(CurrentMusicVolume);
+    }
+}
+
+bool URA4AudioSubsystem::IsMusicPlaying() const
+{
+    return MusicComponent != nullptr && MusicComponent->IsPlaying() && !bMusicPaused;
+}
+
+FString URA4AudioSubsystem::GetCurrentTrackTitle() const
+{
+    if (Playlist.IsValidIndex(CurrentTrackIndex))
+    {
+        return Playlist[CurrentTrackIndex].Title;
+    }
+    return TEXT("Steel Horizon Pact");
+}
+
+TArray<FString> URA4AudioSubsystem::GetTrackTitles() const
+{
+    const_cast<URA4AudioSubsystem*>(this)->InitPlaylist();
+    TArray<FString> Titles;
+    for (const FRA4MusicTrackInfo& Track : Playlist)
+    {
+        Titles.Add(Track.Title);
+    }
+    return Titles;
 }

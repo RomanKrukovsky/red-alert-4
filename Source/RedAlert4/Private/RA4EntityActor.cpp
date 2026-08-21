@@ -48,6 +48,12 @@ ARA4EntityActor::ARA4EntityActor()
     SkeletalMeshComponent->SetVisibility(false);
     SkeletalMeshComponent->SetAbsolute(false, false, true);
 
+    FoundationBibComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FoundationBibComponent"));
+    FoundationBibComponent->SetupAttachment(MeshComponent);
+    FoundationBibComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    FoundationBibComponent->SetCastShadow(true);
+    FoundationBibComponent->SetVisibility(false);
+
     SelectionDecalComponent = CreateDefaultSubobject<UDecalComponent>(TEXT("SelectionDecalComponent"));
     SelectionDecalComponent->SetupAttachment(MeshComponent);
     SelectionDecalComponent->SetVisibility(false);
@@ -377,6 +383,44 @@ void ARA4EntityActor::SetArtMappingAsset(URA4ArtMappingDataAsset* InArtMapping)
 void ARA4EntityActor::SetEntityId(const FString& InEntityId)
 {
     EntityId = InEntityId;
+
+    const bool bIsBuilding = InEntityId.Contains(TEXT("building"), ESearchCase::IgnoreCase) ||
+                             InEntityId.Contains(TEXT("structure"), ESearchCase::IgnoreCase) ||
+                             InEntityId.Contains(TEXT("conyard"), ESearchCase::IgnoreCase) ||
+                             InEntityId.Contains(TEXT("headquarters"), ESearchCase::IgnoreCase) ||
+                             InEntityId.Contains(TEXT("barracks"), ESearchCase::IgnoreCase) ||
+                             InEntityId.Contains(TEXT("factory"), ESearchCase::IgnoreCase) ||
+                             InEntityId.Contains(TEXT("power"), ESearchCase::IgnoreCase) ||
+                             InEntityId.Contains(TEXT("refinery"), ESearchCase::IgnoreCase) ||
+                             InEntityId.Contains(TEXT("radar"), ESearchCase::IgnoreCase) ||
+                             InEntityId.Contains(TEXT("turret"), ESearchCase::IgnoreCase) ||
+                             InEntityId.Contains(TEXT("techcenter"), ESearchCase::IgnoreCase) ||
+                             InEntityId.Contains(TEXT("silo"), ESearchCase::IgnoreCase) ||
+                             InEntityId.Contains(TEXT("superweapon"), ESearchCase::IgnoreCase);
+
+    if (FoundationBibComponent != nullptr)
+    {
+        if (bIsBuilding)
+        {
+            static UStaticMesh* CubeMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube"));
+            static UMaterialInterface* BibMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Game/ThirdParty/CityPark/Materials/Buildings/MI_Floor01.MI_Floor01"));
+            if (CubeMesh != nullptr)
+            {
+                FoundationBibComponent->SetStaticMesh(CubeMesh);
+            }
+            if (BibMat != nullptr)
+            {
+                FoundationBibComponent->SetMaterial(0, BibMat);
+            }
+            FoundationBibComponent->SetRelativeLocation(FVector(0.0f, 0.0f, -0.45f));
+            FoundationBibComponent->SetRelativeScale3D(FVector(1.25f, 1.25f, 0.08f));
+            FoundationBibComponent->SetVisibility(true);
+        }
+        else
+        {
+            FoundationBibComponent->SetVisibility(false);
+        }
+    }
 }
 
 void ARA4EntityActor::ApplyPrimitiveComposition(const FString& InEntityId)
