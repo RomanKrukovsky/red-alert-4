@@ -332,6 +332,8 @@ void ARA4PlayerController::SetupInputComponent()
     InputComponent->BindKey(EKeys::H, IE_Pressed, this, &ARA4PlayerController::JumpToHomeBase);
     // 'J' -> Toggle First-Person / 3rd-Person Direct Control on selected unit
     InputComponent->BindKey(EKeys::J, IE_Pressed, this, &ARA4PlayerController::ToggleDirectControl);
+    // 'D' -> Deploy selected MCV (or player's MCV) into Construction Yard
+    InputComponent->BindKey(EKeys::D, IE_Pressed, this, &ARA4PlayerController::DeploySelectedMcv);
 }
 
 void ARA4PlayerController::OnBoundKeyPressed(const FKey Key)
@@ -2072,7 +2074,7 @@ void ARA4PlayerController::HandlePauseMenuUnitVoicesChanged(bool bEnabled)
 
 void ARA4PlayerController::HandlePauseMenuControlSchemeChanged(int32 SchemeIndex)
 {
-    Scheme = SchemeIndex == 0 ? RA4::Input::ControlScheme::ClassicRA : RA4::Input::ControlScheme::ModernRTS;
+    Scheme = SchemeIndex == 0 ? RA4::Input::ControlScheme::ClassicRA : RA4::Input::ControlScheme::Modern;
     UE_LOG(LogTemp, Display, TEXT("RA4 Control Scheme changed to %s"), SchemeIndex == 0 ? TEXT("Classic C&C (LMB)") : TEXT("Modern RTS (RMB)"));
 }
 
@@ -2302,6 +2304,90 @@ void ARA4PlayerController::JumpToHomeBase()
         const FVector UnrealPos = RA4Coords::ToUnreal(TargetPos);
         Cam->GetCameraController().FocusOn(RA4::Input::Vec2f(float(UnrealPos.X), float(UnrealPos.Y)), /*bInstant*/ false);
         UE_LOG(LogTemp, Display, TEXT("RA4: Jumped to Home Base at (%.0f, %.0f)"), UnrealPos.X, UnrealPos.Y);
+    }
+}
+
+void ARA4PlayerController::DeploySelectedMcv()
+{
+    const URA4SimWorldSubsystem* SimSub = GetSimSubsystem();
+    if (SimSub == nullptr || SimSub->GetSimWorld() == nullptr)
+    {
+        return;
+    }
+
+    const RA4::SimWorld* Sim = SimSub->GetSimWorld();
+    const RA4::PlayerId LocalPlayer = Selection.GetLocalPlayer();
+    const auto* Content = Sim->GetContent();
+    const auto& Cores = Sim->GetAllCores();
+
+    // 1. Check primary or selected units
+    RA4::EntityId McvTarget = Selection.GetPrimary();
+    if (!McvTarget.IsValid())
+    {
+        const auto& Sel = Selection.Get();
+        for (const auto& Id : Sel)
+        {
+            if (Id.IsValid() && Id.Index < Cores.size() && Cores[Id.Index].bAlive && Cores[Id.Index].Owner == LocalPlayer)
+            {
+                const auto* Def = Content ? Content->FindEntity(Cores[Id.Index].Def) : nullptr;
+                if (Def != nullptr && Def->Unit.bIsBuilder && Def->Unit.DeploysInto.IsValid())
+                {
+                    McvTarget = Id;
+                    break;
+                }
+            }
+        }
+    }
+    else
+    {
+        // Check if primary is builder
+        if (McvTarget.Index < Cores.size() && Cores[McvTarget.Index].bAlive)
+        {
+            const auto* Def = Content ? Content->FindEntity(Cores[McvTarget.Index].Def) : nullptr;
+            if (Def == nullptr || !Def->Unit.bIsBuilder)
+            {
+                McvTarget = RA4::EntityId::Invalid();
+            }
+        }
+    }
+
+    // 2. If no MCV was explicitly selected, fallback to the player's MCV
+    if (!McvTarget.IsValid())
+    {
+        for (size_t I = 0; I < Cores.size(); ++I)
+        {
+            if (Cores[I].bAlive && Cores[I].Owner == LocalPlayer && Cores[I].Kind == RA4::EntityKind::Unit)
+            {
+                const auto* Def = Content ? Content->FindEntity(Cores[I].Def) : nullptr;
+                if (Def != nullptr && Def->Unit.bIsBuilder && Def->Unit.DeploysInto.IsValid())
+                {
+                    McvTarget = Sim->MakeId(uint32_t(I));
+                    break;
+                }
+            }
+        }
+    }
+
+    if (McvTarget.IsValid())
+    {
+        RA4::Command Cmd;
+        Cmd.Type = RA4::CommandType::Deploy;
+        Cmd.Issuer = LocalPlayer;
+        Cmd.Primary = McvTarget;
+
+        URA4SimWorldSubsystem* MutableSim = GetWorld() ? GetWorld()->GetSubsystem<URA4SimWorldSubsystem>() : nullptr;
+        if (MutableSim != nullptr)
+        {
+            MutableSim->EnqueueCommand(Cmd);
+            UE_LOG(LogTemp, Display, TEXT("RA4: Issued Deploy command on MCV (Index=%u)"), McvTarget.Index);
+
+            // Audio feedback
+            static USoundBase* DeploySound = LoadObject<USoundBase>(nullptr, TEXT("/Engine/VREditor/Sounds/UI/VR_Teleport_Mode_01.VR_Teleport_Mode_01"));
+            if (DeploySound)
+            {
+                UGameplayStatics::PlaySound2D(this, DeploySound, 1.0f, 0.9f);
+            }
+        }
     }
 }
 

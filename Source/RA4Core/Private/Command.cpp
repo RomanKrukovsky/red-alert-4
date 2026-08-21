@@ -16,6 +16,7 @@ const char* ToString(CommandType Type)
         case CommandType::SetRallyPoint: return "SetRallyPoint";
         case CommandType::Harvest: return "Harvest";
         case CommandType::Guard: return "Guard";
+        case CommandType::Deploy: return "Deploy";
         case CommandType::PlaceBuilding: return "PlaceBuilding";
         case CommandType::StartProduction: return "StartProduction";
         case CommandType::CancelProduction: return "CancelProduction";

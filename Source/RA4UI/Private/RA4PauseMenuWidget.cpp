@@ -47,6 +47,8 @@ const FLinearColor kBtnMusicPressed(0.08f, 0.10f, 0.14f, 1.0f);
 
 const FLinearColor kBtnActiveTabNormal(0.75f, 0.18f, 0.14f, 1.0f);
 const FLinearColor kBtnActiveTabHover(0.85f, 0.24f, 0.18f, 1.0f);
+const FLinearColor kBtnInactiveTabNormal(0.12f, 0.15f, 0.20f, 1.0f);
+const FLinearColor kBtnInactiveTabHover(0.18f, 0.22f, 0.30f, 1.0f);
 
 UTextBlock* CreateStyledText(UWidgetTree* Tree, FName Name, int32 Size, const FLinearColor& Color, bool bBold)
 {
@@ -100,6 +102,25 @@ UButton* CreateCustomButton(
     }
     return Btn;
 }
+
+void SetButtonActiveStyle(UButton* Btn, bool bActive)
+{
+    if (Btn == nullptr) return;
+    FButtonStyle Style = Btn->GetStyle();
+    if (bActive)
+    {
+        Style.SetNormal(FSlateColorBrush(kBtnActiveTabNormal));
+        Style.SetHovered(FSlateColorBrush(kBtnActiveTabHover));
+        Style.SetPressed(FSlateColorBrush(kBtnActiveTabNormal));
+    }
+    else
+    {
+        Style.SetNormal(FSlateColorBrush(kBtnInactiveTabNormal));
+        Style.SetHovered(FSlateColorBrush(kBtnInactiveTabHover));
+        Style.SetPressed(FSlateColorBrush(kBtnInactiveTabNormal));
+    }
+    Btn->SetStyle(Style);
+}
 } // namespace
 
 TSharedRef<SWidget> URA4PauseMenuWidget::RebuildWidget()
@@ -111,7 +132,7 @@ TSharedRef<SWidget> URA4PauseMenuWidget::RebuildWidget()
 
     UOverlay* Root = WidgetTree->ConstructWidget<UOverlay>(UOverlay::StaticClass(), TEXT("PauseRoot"));
 
-    // Dimmed background blur backdrop
+    // Dimmed backdrop
     UBorder* DimBackdrop = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("DimBackdrop"));
     DimBackdrop->SetBrush(FSlateColorBrush(kBackdropColor));
     Root->AddChildToOverlay(DimBackdrop);
@@ -124,25 +145,33 @@ TSharedRef<SWidget> URA4PauseMenuWidget::RebuildWidget()
     Box->AddChild(CenterOverlay);
 
     // =========================================================================
-    // 1. MAIN PAUSE MENU PANEL
+    // 1. MAIN PAUSE MENU PANEL (Clean, Focused, C&C Style)
     // =========================================================================
     MainPausePanel = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("MainPausePanel"));
     MainPausePanel->SetBrush(FSlateColorBrush(kPanelBg));
-    MainPausePanel->SetPadding(FMargin(24.0f, 20.0f));
+    MainPausePanel->SetPadding(FMargin(28.0f, 24.0f));
 
     UVerticalBox* MainStack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("MainStack"));
 
-    // Title Banner
-    UTextBlock* MainTitle = CreateStyledText(WidgetTree, TEXT("MainTitle"), 20, kHeaderAccent, true);
-    MainTitle->SetText(LOCTEXT("MainPauseTitle", "◄ СИСТЕМА ПРИОСТАНОВЛЕНА ►"));
-    MainTitle->SetJustification(ETextJustify::Center);
-    MainStack->AddChildToVerticalBox(MainTitle)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 14.0f));
+    // Header Title
+    UTextBlock* Title = CreateStyledText(WidgetTree, TEXT("PauseTitle"), 22, kHeaderAccent, true);
+    Title->SetText(LOCTEXT("PauseTitle", "ПАУЗА // ТАКТИЧЕСКОЕ МЕНЮ"));
+    Title->SetJustification(ETextJustify::Center);
+    Title->SetShadowOffset(FVector2D(2.0f, 2.0f));
+    Title->SetShadowColorAndOpacity(FLinearColor::Black);
+    MainStack->AddChildToVerticalBox(Title)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 2.0f));
 
-    // Resume Button
+    // Subtitle
+    UTextBlock* Subtitle = CreateStyledText(WidgetTree, TEXT("PauseSubtitle"), 12, kSubtextColor, false);
+    Subtitle->SetText(LOCTEXT("PauseSubtitle", "СИМУЛЯЦИЯ ПРИОСТАНОВЛЕНА"));
+    Subtitle->SetJustification(ETextJustify::Center);
+    MainStack->AddChildToVerticalBox(Subtitle)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 18.0f));
+
+    // 1. Resume Game
     UButton* ResumeBtn = CreateCustomButton(
         WidgetTree,
         TEXT("ResumeBtn"),
-        LOCTEXT("ResumeBtn", "▶ ПРОДОЛЖИТЬ БОЙ"),
+        LOCTEXT("ResumeBtn", "► ПРОДОЛЖИТЬ ИГРУ"),
         kBtnResumeNormal,
         kBtnResumeHover,
         kBtnResumePressed,
@@ -150,129 +179,61 @@ TSharedRef<SWidget> URA4PauseMenuWidget::RebuildWidget()
         15,
         FMargin(20.0f, 10.0f));
     ResumeBtn->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleResumeClicked);
-    MainStack->AddChildToVerticalBox(ResumeBtn)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 12.0f));
+    MainStack->AddChildToVerticalBox(ResumeBtn)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 10.0f));
 
-    // Soundtrack Player Panel
-    UBorder* MusicPanel = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("MusicPanel"));
-    MusicPanel->SetBrush(FSlateColorBrush(kFrameBg));
-    MusicPanel->SetPadding(FMargin(14.0f, 10.0f));
-
-    UVerticalBox* MusicStack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("MusicStack"));
-
-    UTextBlock* MusicHeader = CreateStyledText(WidgetTree, TEXT("MusicHeader"), 12, kMusicHeaderAccent, true);
-    MusicHeader->SetText(LOCTEXT("MusicHeader", "♫ ТАКТИЧЕСКИЙ АУДИОКОМПЛЕКС // САУНДТРЕК"));
-    MusicHeader->SetJustification(ETextJustify::Center);
-    MusicStack->AddChildToVerticalBox(MusicHeader)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 6.0f));
-
-    CurrentTrackDisplay = CreateStyledText(WidgetTree, TEXT("CurrentTrackDisplay"), 13, kTrackDisplayColor, true);
-    CurrentTrackDisplay->SetText(FText::FromString(TEXT("▶ 01. Steel Horizon Pact")));
-    CurrentTrackDisplay->SetJustification(ETextJustify::Center);
-    MusicStack->AddChildToVerticalBox(CurrentTrackDisplay)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
-
-    TrackSelectorCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("TrackSelectorCombo"));
-    TrackSelectorCombo->OnSelectionChanged.AddDynamic(this, &URA4PauseMenuWidget::HandleTrackSelectionChanged);
-    MusicStack->AddChildToVerticalBox(TrackSelectorCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
-
-    // Playback Controls
-    UHorizontalBox* ControlRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("ControlRow"));
-
-    UButton* PrevBtn = CreateCustomButton(WidgetTree, TEXT("PrevBtn"), LOCTEXT("PrevBtn", "◄◄ ПРЕД"), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 12, FMargin(8.0f, 5.0f));
-    PrevBtn->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandlePrevTrackClicked);
-    UHorizontalBoxSlot* PrevSlot = ControlRow->AddChildToHorizontalBox(PrevBtn);
-    PrevSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-    PrevSlot->SetPadding(FMargin(0.0f, 0.0f, 4.0f, 0.0f));
-
-    UTextBlock* OutMusicLabel = nullptr;
-    PlayPauseButton = CreateCustomButton(WidgetTree, TEXT("PlayPauseBtn"), LOCTEXT("PauseLabel", "⏸ ПАУЗА"), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 12, FMargin(8.0f, 5.0f), &OutMusicLabel);
-    PlayPauseLabel = OutMusicLabel;
-    PlayPauseButton->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleToggleMusicClicked);
-    UHorizontalBoxSlot* PlaySlot = ControlRow->AddChildToHorizontalBox(PlayPauseButton);
-    PlaySlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-    PlaySlot->SetPadding(FMargin(4.0f, 0.0f, 4.0f, 0.0f));
-
-    UButton* NextBtn = CreateCustomButton(WidgetTree, TEXT("NextBtn"), LOCTEXT("NextBtn", "СЛЕД ►►"), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 12, FMargin(8.0f, 5.0f));
-    NextBtn->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleNextTrackClicked);
-    UHorizontalBoxSlot* NextSlot = ControlRow->AddChildToHorizontalBox(NextBtn);
-    NextSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-    NextSlot->SetPadding(FMargin(4.0f, 0.0f, 0.0f, 0.0f));
-
-    MusicStack->AddChildToVerticalBox(ControlRow)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 6.0f));
-
-    // Volume Row
-    UHorizontalBox* VolRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("VolRow"));
-    UButton* VolDownBtn = CreateCustomButton(WidgetTree, TEXT("VolDownBtn"), LOCTEXT("VolDown", "🔉 -"), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 11, FMargin(6.0f, 3.0f));
-    VolDownBtn->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleVolumeDownClicked);
-    VolRow->AddChildToHorizontalBox(VolDownBtn)->SetPadding(FMargin(0.0f, 0.0f, 6.0f, 0.0f));
-
-    VolumeTextDisplay = CreateStyledText(WidgetTree, TEXT("VolumeTextDisplay"), 11, kSubtextColor, true);
-    VolumeTextDisplay->SetText(FText::FromString(TEXT("МУЗЫКА: 35%")));
-    VolumeTextDisplay->SetJustification(ETextJustify::Center);
-    UHorizontalBoxSlot* VTSlot = VolRow->AddChildToHorizontalBox(VolumeTextDisplay);
-    VTSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-    VTSlot->SetHorizontalAlignment(HAlign_Center);
-    VTSlot->SetVerticalAlignment(VAlign_Center);
-
-    UButton* VolUpBtn = CreateCustomButton(WidgetTree, TEXT("VolUpBtn"), LOCTEXT("VolUp", "🔊 +"), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 11, FMargin(6.0f, 3.0f));
-    VolUpBtn->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleVolumeUpClicked);
-    VolRow->AddChildToHorizontalBox(VolUpBtn)->SetPadding(FMargin(6.0f, 0.0f, 0.0f, 0.0f));
-
-    MusicStack->AddChildToVerticalBox(VolRow);
-    MusicPanel->AddChild(MusicStack);
-    MainStack->AddChildToVerticalBox(MusicPanel)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 14.0f));
-
-    // Settings Button
-    UButton* SettingsBtn = CreateCustomButton(
-        WidgetTree,
-        TEXT("SettingsBtn"),
-        LOCTEXT("SettingsBtn", "⚙ НАСТРОЙКИ КОМПЛЕКСА"),
-        kBtnStandardNormal,
-        kBtnStandardHover,
-        kBtnStandardPressed,
-        kTextColor,
-        14,
-        FMargin(20.0f, 8.0f));
-    SettingsBtn->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleSettingsClicked);
-    MainStack->AddChildToVerticalBox(SettingsBtn)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
-
-    // Restart Match
+    // 2. Restart Match
     UButton* RestartBtn = CreateCustomButton(
         WidgetTree,
         TEXT("RestartBtn"),
-        LOCTEXT("RestartBtn", "↺ ПЕРЕЗАПУСТИТЬ МАТЧ"),
+        LOCTEXT("RestartBtn", "↻ ПЕРЕЗАПУСТИТЬ МАТЧ"),
         kBtnStandardNormal,
         kBtnStandardHover,
         kBtnStandardPressed,
         kTextColor,
         14,
-        FMargin(20.0f, 8.0f));
+        FMargin(20.0f, 9.0f));
     RestartBtn->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleRestartClicked);
-    MainStack->AddChildToVerticalBox(RestartBtn)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
+    MainStack->AddChildToVerticalBox(RestartBtn)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 10.0f));
 
-    // Quit to Main Menu
+    // 3. Settings (Opens Tactical Settings Sub-Menu)
+    UButton* SettingsBtn = CreateCustomButton(
+        WidgetTree,
+        TEXT("SettingsBtn"),
+        LOCTEXT("SettingsBtn", "НАСТРОЙКИ"),
+        kBtnStandardNormal,
+        kBtnStandardHover,
+        kBtnStandardPressed,
+        kTextColor,
+        14,
+        FMargin(20.0f, 9.0f));
+    SettingsBtn->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleSettingsClicked);
+    MainStack->AddChildToVerticalBox(SettingsBtn)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 10.0f));
+
+    // 4. Quit to Main Menu
     UButton* QuitMenuBtn = CreateCustomButton(
         WidgetTree,
         TEXT("QuitMenuBtn"),
-        LOCTEXT("QuitMenuBtn", "⎋ В ГЛАВНОЕ МЕНЮ"),
+        LOCTEXT("QuitMenuBtn", "В ГЛАВНОЕ МЕНЮ"),
         kBtnStandardNormal,
         kBtnStandardHover,
         kBtnStandardPressed,
         kTextColor,
         14,
-        FMargin(20.0f, 8.0f));
+        FMargin(20.0f, 9.0f));
     QuitMenuBtn->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleQuitToMenuClicked);
-    MainStack->AddChildToVerticalBox(QuitMenuBtn)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
+    MainStack->AddChildToVerticalBox(QuitMenuBtn)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 10.0f));
 
-    // Quit to Desktop
+    // 5. Quit to Desktop
     UButton* QuitGameBtn = CreateCustomButton(
         WidgetTree,
         TEXT("QuitGameBtn"),
-        LOCTEXT("QuitGameBtn", "✕ ВЫЙТИ НА РАБОЧИЙ СТОЛ"),
+        LOCTEXT("QuitGameBtn", "ВЫЙТИ НА РАБОЧИЙ СТОЛ"),
         kBtnDangerNormal,
         kBtnDangerHover,
         kBtnDangerPressed,
         FLinearColor::White,
         14,
-        FMargin(20.0f, 8.0f));
+        FMargin(20.0f, 9.0f));
     QuitGameBtn->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleQuitToDesktopClicked);
     MainStack->AddChildToVerticalBox(QuitGameBtn);
 
@@ -280,7 +241,7 @@ TSharedRef<SWidget> URA4PauseMenuWidget::RebuildWidget()
     CenterOverlay->AddChildToOverlay(MainPausePanel);
 
     // =========================================================================
-    // 2. EXPANDED TACTICAL SETTINGS PANEL
+    // 2. EXPANDED TACTICAL SETTINGS PANEL (Activated by clicking "НАСТРОЙКИ")
     // =========================================================================
     SettingsPanel = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("SettingsPanel"));
     SettingsPanel->SetBrush(FSlateColorBrush(kPanelBg));
@@ -289,30 +250,32 @@ TSharedRef<SWidget> URA4PauseMenuWidget::RebuildWidget()
 
     UVerticalBox* SettingsStack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("SettingsStack"));
 
-    // Header
+    // Settings Header
     UTextBlock* SetTitle = CreateStyledText(WidgetTree, TEXT("SetTitle"), 18, kMusicHeaderAccent, true);
-    SetTitle->SetText(LOCTEXT("SetTitle", "⚙ ТАКТИЧЕСКИЙ КОМПЛЕКС НАСТРОЕК"));
+    SetTitle->SetText(LOCTEXT("SetTitle", "ТАКТИЧЕСКИЙ КОМПЛЕКС НАСТРОЕК"));
     SetTitle->SetJustification(ETextJustify::Center);
-    SettingsStack->AddChildToVerticalBox(SetTitle)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 10.0f));
+    SettingsStack->AddChildToVerticalBox(SetTitle)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 12.0f));
 
-    // Tab Switcher Row
+    // Tab Switcher Bar
     UHorizontalBox* TabRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("TabRow"));
 
-    UButton* TabGfxBtn = CreateCustomButton(WidgetTree, TEXT("TabGfxBtn"), LOCTEXT("TabGfx", "🖥 ГРАФИКА"), kBtnStandardNormal, kBtnStandardHover, kBtnStandardPressed, kTextColor, 12, FMargin(6.0f, 6.0f));
-    TabGfxBtn->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleTabGraphicsClicked);
-    TabRow->AddChildToHorizontalBox(TabGfxBtn)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+    TabGfxButton = CreateCustomButton(WidgetTree, TEXT("TabGfxBtn"), LOCTEXT("TabGfx", "1. ГРАФИКА / FPS"), kBtnActiveTabNormal, kBtnActiveTabHover, kBtnActiveTabNormal, FLinearColor::White, 12, FMargin(6.0f, 6.0f));
+    TabGfxButton->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleTabGraphicsClicked);
+    TabRow->AddChildToHorizontalBox(TabGfxButton)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 
-    UButton* TabAudBtn = CreateCustomButton(WidgetTree, TEXT("TabAudBtn"), LOCTEXT("TabAud", "🔊 ЗВУК И EVA"), kBtnStandardNormal, kBtnStandardHover, kBtnStandardPressed, kTextColor, 12, FMargin(6.0f, 6.0f));
-    TabAudBtn->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleTabAudioClicked);
-    TabRow->AddChildToHorizontalBox(TabAudBtn)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+    TabAudButton = CreateCustomButton(WidgetTree, TEXT("TabAudBtn"), LOCTEXT("TabAud", "2. ЗВУК И МУЗЫКА"), kBtnInactiveTabNormal, kBtnInactiveTabHover, kBtnInactiveTabNormal, kTextColor, 12, FMargin(6.0f, 6.0f));
+    TabAudButton->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleTabAudioClicked);
+    TabRow->AddChildToHorizontalBox(TabAudButton)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 
-    UButton* TabGameBtn = CreateCustomButton(WidgetTree, TEXT("TabGameBtn"), LOCTEXT("TabGame", "🕹 УПРАВЛЕНИЕ"), kBtnStandardNormal, kBtnStandardHover, kBtnStandardPressed, kTextColor, 12, FMargin(6.0f, 6.0f));
-    TabGameBtn->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleTabGameplayClicked);
-    TabRow->AddChildToHorizontalBox(TabGameBtn)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+    TabGameButton = CreateCustomButton(WidgetTree, TEXT("TabGameBtn"), LOCTEXT("TabGame", "3. УПРАВЛЕНИЕ"), kBtnInactiveTabNormal, kBtnInactiveTabHover, kBtnInactiveTabNormal, kTextColor, 12, FMargin(6.0f, 6.0f));
+    TabGameButton->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleTabGameplayClicked);
+    TabRow->AddChildToHorizontalBox(TabGameButton)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 
-    SettingsStack->AddChildToVerticalBox(TabRow)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 12.0f));
+    SettingsStack->AddChildToVerticalBox(TabRow)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 14.0f));
 
-    // --- Tab 1: Graphics Stack ---
+    // -------------------------------------------------------------------------
+    // TAB 1: GRAPHICS & PERFORMANCE
+    // -------------------------------------------------------------------------
     GraphicsContentStack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("GfxStack"));
 
     // Quality Preset Row
@@ -389,14 +352,18 @@ TSharedRef<SWidget> URA4PauseMenuWidget::RebuildWidget()
     ShakeTitle->SetText(LOCTEXT("ShakeTitle", "Встряска камеры от взрывов:"));
     ShakeRow->AddChildToHorizontalBox(ShakeTitle)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 
-    UButton* ShakeBtn = CreateCustomButton(WidgetTree, TEXT("ShakeBtn"), LOCTEXT("ShakeOn", "[ВКЛ]"), kBtnResumeNormal, kBtnResumeHover, kBtnResumePressed, FLinearColor::White, 11, FMargin(12.0f, 4.0f), &ScreenShakeBtnLabel);
+    UTextBlock* RawShakeLabel = nullptr;
+    UButton* ShakeBtn = CreateCustomButton(WidgetTree, TEXT("ShakeBtn"), LOCTEXT("ShakeOn", "[ВКЛ]"), kBtnResumeNormal, kBtnResumeHover, kBtnResumePressed, FLinearColor::White, 11, FMargin(12.0f, 4.0f), &RawShakeLabel);
+    ScreenShakeBtnLabel = RawShakeLabel;
     ShakeBtn->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleScreenShakeToggled);
     ShakeRow->AddChildToHorizontalBox(ShakeBtn);
 
     GraphicsContentStack->AddChildToVerticalBox(ShakeRow)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
     SettingsStack->AddChildToVerticalBox(GraphicsContentStack);
 
-    // --- Tab 2: Audio Stack ---
+    // -------------------------------------------------------------------------
+    // TAB 2: AUDIO & TACTICAL SOUNDTRACK PLAYER
+    // -------------------------------------------------------------------------
     AudioContentStack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("AudioStack"));
     AudioContentStack->SetVisibility(ESlateVisibility::Collapsed);
 
@@ -406,7 +373,7 @@ TSharedRef<SWidget> URA4PauseMenuWidget::RebuildWidget()
     MVolTitle->SetText(LOCTEXT("MVolTitle", "Общая громкость:"));
     MVolRow->AddChildToHorizontalBox(MVolTitle)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 
-    UButton* MVolDown = CreateCustomButton(WidgetTree, TEXT("MVolDown"), LOCTEXT("MVolDown", "-"), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 12, FMargin(8.0f, 3.0f));
+    UButton* MVolDown = CreateCustomButton(WidgetTree, TEXT("MVolDown"), LOCTEXT("MVolDown", " - "), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 12, FMargin(8.0f, 3.0f));
     MVolDown->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleMasterVolDown);
     MVolRow->AddChildToHorizontalBox(MVolDown);
 
@@ -414,11 +381,11 @@ TSharedRef<SWidget> URA4PauseMenuWidget::RebuildWidget()
     MasterVolLabel->SetText(FText::FromString(TEXT(" 85% ")));
     MVolRow->AddChildToHorizontalBox(MasterVolLabel);
 
-    UButton* MVolUp = CreateCustomButton(WidgetTree, TEXT("MVolUp"), LOCTEXT("MVolUp", "+"), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 12, FMargin(8.0f, 3.0f));
+    UButton* MVolUp = CreateCustomButton(WidgetTree, TEXT("MVolUp"), LOCTEXT("MVolUp", " + "), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 12, FMargin(8.0f, 3.0f));
     MVolUp->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleMasterVolUp);
     MVolRow->AddChildToHorizontalBox(MVolUp);
 
-    AudioContentStack->AddChildToVerticalBox(MVolRow)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
+    AudioContentStack->AddChildToVerticalBox(MVolRow)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 6.0f));
 
     // SFX Volume
     UHorizontalBox* SfxRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("SfxRow"));
@@ -426,7 +393,7 @@ TSharedRef<SWidget> URA4PauseMenuWidget::RebuildWidget()
     SfxTitle->SetText(LOCTEXT("SfxTitle", "Эффекты и взрывы (SFX):"));
     SfxRow->AddChildToHorizontalBox(SfxTitle)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 
-    UButton* SfxDown = CreateCustomButton(WidgetTree, TEXT("SfxDown"), LOCTEXT("SfxDown", "-"), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 12, FMargin(8.0f, 3.0f));
+    UButton* SfxDown = CreateCustomButton(WidgetTree, TEXT("SfxDown"), LOCTEXT("SfxDown", " - "), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 12, FMargin(8.0f, 3.0f));
     SfxDown->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleSfxVolDown);
     SfxRow->AddChildToHorizontalBox(SfxDown);
 
@@ -434,11 +401,11 @@ TSharedRef<SWidget> URA4PauseMenuWidget::RebuildWidget()
     SfxVolLabel->SetText(FText::FromString(TEXT(" 100% ")));
     SfxRow->AddChildToHorizontalBox(SfxVolLabel);
 
-    UButton* SfxUp = CreateCustomButton(WidgetTree, TEXT("SfxUp"), LOCTEXT("SfxUp", "+"), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 12, FMargin(8.0f, 3.0f));
+    UButton* SfxUp = CreateCustomButton(WidgetTree, TEXT("SfxUp"), LOCTEXT("SfxUp", " + "), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 12, FMargin(8.0f, 3.0f));
     SfxUp->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleSfxVolUp);
     SfxRow->AddChildToHorizontalBox(SfxUp);
 
-    AudioContentStack->AddChildToVerticalBox(SfxRow)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
+    AudioContentStack->AddChildToVerticalBox(SfxRow)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 6.0f));
 
     // EVA Announcer Volume
     UHorizontalBox* EvaRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("EvaRow"));
@@ -446,7 +413,7 @@ TSharedRef<SWidget> URA4PauseMenuWidget::RebuildWidget()
     EvaTitle->SetText(LOCTEXT("EvaTitle", "Голосовой ассистент EVA:"));
     EvaRow->AddChildToHorizontalBox(EvaTitle)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 
-    UButton* EvaDown = CreateCustomButton(WidgetTree, TEXT("EvaDown"), LOCTEXT("EvaDown", "-"), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 12, FMargin(8.0f, 3.0f));
+    UButton* EvaDown = CreateCustomButton(WidgetTree, TEXT("EvaDown"), LOCTEXT("EvaDown", " - "), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 12, FMargin(8.0f, 3.0f));
     EvaDown->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleEvaVolDown);
     EvaRow->AddChildToHorizontalBox(EvaDown);
 
@@ -454,11 +421,11 @@ TSharedRef<SWidget> URA4PauseMenuWidget::RebuildWidget()
     EvaVolLabel->SetText(FText::FromString(TEXT(" 100% ")));
     EvaRow->AddChildToHorizontalBox(EvaVolLabel);
 
-    UButton* EvaUp = CreateCustomButton(WidgetTree, TEXT("EvaUp"), LOCTEXT("EvaUp", "+"), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 12, FMargin(8.0f, 3.0f));
+    UButton* EvaUp = CreateCustomButton(WidgetTree, TEXT("EvaUp"), LOCTEXT("EvaUp", " + "), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 12, FMargin(8.0f, 3.0f));
     EvaUp->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleEvaVolUp);
     EvaRow->AddChildToHorizontalBox(EvaUp);
 
-    AudioContentStack->AddChildToVerticalBox(EvaRow)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
+    AudioContentStack->AddChildToVerticalBox(EvaRow)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 6.0f));
 
     // Unit Voices Toggle
     UHorizontalBox* UVRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("UVRow"));
@@ -466,14 +433,87 @@ TSharedRef<SWidget> URA4PauseMenuWidget::RebuildWidget()
     UVTitle->SetText(LOCTEXT("UVTitle", "Радиопереговоры юнитов:"));
     UVRow->AddChildToHorizontalBox(UVTitle)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 
-    UButton* UVBtn = CreateCustomButton(WidgetTree, TEXT("UVBtn"), LOCTEXT("UVOn", "[ВКЛ]"), kBtnResumeNormal, kBtnResumeHover, kBtnResumePressed, FLinearColor::White, 11, FMargin(12.0f, 4.0f), &UnitVoiceBtnLabel);
+    UTextBlock* RawUVLabel = nullptr;
+    UButton* UVBtn = CreateCustomButton(WidgetTree, TEXT("UVBtn"), LOCTEXT("UVOn", "[ВКЛ]"), kBtnResumeNormal, kBtnResumeHover, kBtnResumePressed, FLinearColor::White, 11, FMargin(12.0f, 4.0f), &RawUVLabel);
+    UnitVoiceBtnLabel = RawUVLabel;
     UVBtn->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleUnitVoiceToggled);
     UVRow->AddChildToHorizontalBox(UVBtn);
 
-    AudioContentStack->AddChildToVerticalBox(UVRow)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
+    AudioContentStack->AddChildToVerticalBox(UVRow)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 10.0f));
+
+    // Embedded Tactical Soundtrack Player inside Settings Audio Tab
+    UBorder* MusicFrame = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("MusicFrame"));
+    MusicFrame->SetBrush(FSlateColorBrush(kFrameBg));
+    MusicFrame->SetPadding(FMargin(12.0f, 10.0f));
+
+    UVerticalBox* MusicInnerStack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("MusicInnerStack"));
+
+    UTextBlock* MusicHeader = CreateStyledText(WidgetTree, TEXT("MusicHeader"), 12, kMusicHeaderAccent, true);
+    MusicHeader->SetText(LOCTEXT("MusicHeader", "ТАКТИЧЕСКИЙ АУДИОКОМПЛЕКС // САУНДТРЕК"));
+    MusicHeader->SetJustification(ETextJustify::Center);
+    MusicInnerStack->AddChildToVerticalBox(MusicHeader)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 6.0f));
+
+    CurrentTrackDisplay = CreateStyledText(WidgetTree, TEXT("CurrentTrackDisplay"), 13, kTrackDisplayColor, true);
+    CurrentTrackDisplay->SetText(FText::FromString(TEXT("► 01. Steel Horizon Pact")));
+    CurrentTrackDisplay->SetJustification(ETextJustify::Center);
+    MusicInnerStack->AddChildToVerticalBox(CurrentTrackDisplay)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
+
+    TrackSelectorCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("TrackSelectorCombo"));
+    TrackSelectorCombo->OnSelectionChanged.AddDynamic(this, &URA4PauseMenuWidget::HandleTrackSelectionChanged);
+    MusicInnerStack->AddChildToVerticalBox(TrackSelectorCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
+
+    // Music Controls (Prev / Pause / Next)
+    UHorizontalBox* ControlRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("ControlRow"));
+
+    UButton* PrevBtn = CreateCustomButton(WidgetTree, TEXT("PrevBtn"), LOCTEXT("PrevBtn", "<< ПРЕД"), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 12, FMargin(6.0f, 5.0f));
+    PrevBtn->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandlePrevTrackClicked);
+    UHorizontalBoxSlot* PrevSlot = ControlRow->AddChildToHorizontalBox(PrevBtn);
+    PrevSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+    PrevSlot->SetPadding(FMargin(0.0f, 0.0f, 4.0f, 0.0f));
+
+    UTextBlock* OutMusicLabel = nullptr;
+    PlayPauseButton = CreateCustomButton(WidgetTree, TEXT("PlayPauseBtn"), LOCTEXT("PauseLabel", "ПАУЗА"), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 12, FMargin(6.0f, 5.0f), &OutMusicLabel);
+    PlayPauseLabel = OutMusicLabel;
+    PlayPauseButton->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleToggleMusicClicked);
+    UHorizontalBoxSlot* PlaySlot = ControlRow->AddChildToHorizontalBox(PlayPauseButton);
+    PlaySlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+    PlaySlot->SetPadding(FMargin(4.0f, 0.0f, 4.0f, 0.0f));
+
+    UButton* NextBtn = CreateCustomButton(WidgetTree, TEXT("NextBtn"), LOCTEXT("NextBtn", "СЛЕД >>"), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 12, FMargin(6.0f, 5.0f));
+    NextBtn->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleNextTrackClicked);
+    UHorizontalBoxSlot* NextSlot = ControlRow->AddChildToHorizontalBox(NextBtn);
+    NextSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+    NextSlot->SetPadding(FMargin(4.0f, 0.0f, 0.0f, 0.0f));
+
+    MusicInnerStack->AddChildToVerticalBox(ControlRow)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 6.0f));
+
+    // Music Volume Row
+    UHorizontalBox* VolRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("VolRow"));
+    UButton* VolDownBtn = CreateCustomButton(WidgetTree, TEXT("VolDownBtn"), LOCTEXT("VolDown", " - "), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 11, FMargin(6.0f, 3.0f));
+    VolDownBtn->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleVolumeDownClicked);
+    VolRow->AddChildToHorizontalBox(VolDownBtn)->SetPadding(FMargin(0.0f, 0.0f, 6.0f, 0.0f));
+
+    VolumeTextDisplay = CreateStyledText(WidgetTree, TEXT("VolumeTextDisplay"), 11, kSubtextColor, true);
+    VolumeTextDisplay->SetText(FText::FromString(TEXT("МУЗЫКА: 35%")));
+    VolumeTextDisplay->SetJustification(ETextJustify::Center);
+    UHorizontalBoxSlot* VTSlot = VolRow->AddChildToHorizontalBox(VolumeTextDisplay);
+    VTSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+    VTSlot->SetHorizontalAlignment(HAlign_Center);
+    VTSlot->SetVerticalAlignment(VAlign_Center);
+
+    UButton* VolUpBtn = CreateCustomButton(WidgetTree, TEXT("VolUpBtn"), LOCTEXT("VolUp", " + "), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 11, FMargin(6.0f, 3.0f));
+    VolUpBtn->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleVolumeUpClicked);
+    VolRow->AddChildToHorizontalBox(VolUpBtn)->SetPadding(FMargin(6.0f, 0.0f, 0.0f, 0.0f));
+
+    MusicInnerStack->AddChildToVerticalBox(VolRow);
+    MusicFrame->AddChild(MusicInnerStack);
+    AudioContentStack->AddChildToVerticalBox(MusicFrame);
+
     SettingsStack->AddChildToVerticalBox(AudioContentStack);
 
-    // --- Tab 3: Gameplay Stack ---
+    // -------------------------------------------------------------------------
+    // TAB 3: GAMEPLAY & CONTROLS
+    // -------------------------------------------------------------------------
     GameplayContentStack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("GameplayStack"));
     GameplayContentStack->SetVisibility(ESlateVisibility::Collapsed);
 
@@ -523,26 +563,26 @@ TSharedRef<SWidget> URA4PauseMenuWidget::RebuildWidget()
     GameplayContentStack->AddChildToVerticalBox(FovLabel)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 4.0f));
 
     UHorizontalBox* FovRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("FovRow"));
-    UButton* Fov80 = CreateCustomButton(WidgetTree, TEXT("Fov80"), LOCTEXT("Fov80", "80°"), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 11, FMargin(4.0f, 4.0f));
+    UButton* Fov80 = CreateCustomButton(WidgetTree, TEXT("Fov80"), LOCTEXT("Fov80", "80"), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 11, FMargin(4.0f, 4.0f));
     Fov80->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleDcFov80);
     FovRow->AddChildToHorizontalBox(Fov80)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 
-    UButton* Fov90 = CreateCustomButton(WidgetTree, TEXT("Fov90"), LOCTEXT("Fov90", "90°"), kBtnActiveTabNormal, kBtnActiveTabHover, kBtnActiveTabNormal, FLinearColor::White, 11, FMargin(4.0f, 4.0f));
+    UButton* Fov90 = CreateCustomButton(WidgetTree, TEXT("Fov90"), LOCTEXT("Fov90", "90"), kBtnActiveTabNormal, kBtnActiveTabHover, kBtnActiveTabNormal, FLinearColor::White, 11, FMargin(4.0f, 4.0f));
     Fov90->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleDcFov90);
     FovRow->AddChildToHorizontalBox(Fov90)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 
-    UButton* Fov100 = CreateCustomButton(WidgetTree, TEXT("Fov100"), LOCTEXT("Fov100", "100°"), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 11, FMargin(4.0f, 4.0f));
+    UButton* Fov100 = CreateCustomButton(WidgetTree, TEXT("Fov100"), LOCTEXT("Fov100", "100"), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 11, FMargin(4.0f, 4.0f));
     Fov100->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleDcFov100);
     FovRow->AddChildToHorizontalBox(Fov100)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 
-    UButton* Fov110 = CreateCustomButton(WidgetTree, TEXT("Fov110"), LOCTEXT("Fov110", "110°"), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 11, FMargin(4.0f, 4.0f));
+    UButton* Fov110 = CreateCustomButton(WidgetTree, TEXT("Fov110"), LOCTEXT("Fov110", "110"), kBtnMusicNormal, kBtnMusicHover, kBtnMusicPressed, kTextColor, 11, FMargin(4.0f, 4.0f));
     Fov110->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleDcFov110);
     FovRow->AddChildToHorizontalBox(Fov110)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 
     GameplayContentStack->AddChildToVerticalBox(FovRow)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
     SettingsStack->AddChildToVerticalBox(GameplayContentStack);
 
-    // --- Settings Action Footer (Back & Reset) ---
+    // --- Settings Action Footer (Back to Menu & Reset Defaults) ---
     UHorizontalBox* FooterRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("FooterRow"));
 
     UButton* BackBtn = CreateCustomButton(WidgetTree, TEXT("BackBtn"), LOCTEXT("BackBtn", "◄ НАЗАД В МЕНЮ"), kBtnResumeNormal, kBtnResumeHover, kBtnResumePressed, FLinearColor::White, 13, FMargin(16.0f, 8.0f));
@@ -553,7 +593,7 @@ TSharedRef<SWidget> URA4PauseMenuWidget::RebuildWidget()
     ResetBtn->OnClicked.AddDynamic(this, &URA4PauseMenuWidget::HandleSettingsDefaultsClicked);
     FooterRow->AddChildToHorizontalBox(ResetBtn)->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 
-    SettingsStack->AddChildToVerticalBox(FooterRow)->SetPadding(FMargin(0.0f, 12.0f, 0.0f, 0.0f));
+    SettingsStack->AddChildToVerticalBox(FooterRow)->SetPadding(FMargin(0.0f, 14.0f, 0.0f, 0.0f));
 
     SettingsPanel->AddChild(SettingsStack);
     CenterOverlay->AddChildToOverlay(SettingsPanel);
@@ -616,14 +656,14 @@ void URA4PauseMenuWidget::SetCurrentTrack(int32 InCurrentIndex, const FString& I
 
     if (CurrentTrackDisplay != nullptr)
     {
-        const FString StatusIcon = bIsPlaying ? TEXT("▶") : TEXT("⏸");
+        const FString StatusIcon = bIsPlaying ? TEXT("►") : TEXT("II");
         const FString Display = FString::Printf(TEXT("%s %02d. %s"), *StatusIcon, InCurrentIndex + 1, *InTrackTitle);
         CurrentTrackDisplay->SetText(FText::FromString(Display));
     }
 
     if (PlayPauseLabel != nullptr)
     {
-        PlayPauseLabel->SetText(bIsPlaying ? LOCTEXT("PauseLabel", "⏸ ПАУЗА") : LOCTEXT("PlayLabel", "▶ ПЛЕЙ"));
+        PlayPauseLabel->SetText(bIsPlaying ? LOCTEXT("PauseLabel", "ПАУЗА") : LOCTEXT("PlayLabel", "ПЛЕЙ"));
     }
 
     if (TrackSelectorCombo != nullptr && !bIsInternalTrackSelection)
@@ -759,6 +799,10 @@ void URA4PauseMenuWidget::SetSettingsTab(ERA4PauseSettingsTab Tab)
         AudioContentStack->SetVisibility(Tab == ERA4PauseSettingsTab::Audio ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
         GameplayContentStack->SetVisibility(Tab == ERA4PauseSettingsTab::Gameplay ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
     }
+
+    SetButtonActiveStyle(TabGfxButton, Tab == ERA4PauseSettingsTab::Graphics);
+    SetButtonActiveStyle(TabAudButton, Tab == ERA4PauseSettingsTab::Audio);
+    SetButtonActiveStyle(TabGameButton, Tab == ERA4PauseSettingsTab::Gameplay);
 }
 
 void URA4PauseMenuWidget::HandleTabGraphicsClicked()
@@ -881,4 +925,5 @@ void URA4PauseMenuWidget::HandleDcFov100() { DirectControlFov = 100.0f; OnDirect
 void URA4PauseMenuWidget::HandleDcFov110() { DirectControlFov = 110.0f; OnDirectControlFovChanged.Broadcast(110.0f); }
 
 #undef LOCTEXT_NAMESPACE
+
 

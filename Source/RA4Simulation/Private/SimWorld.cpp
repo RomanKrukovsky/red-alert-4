@@ -1049,6 +1049,21 @@ bool SimWorld::IsPlacementValid(ContentId BuildingDef, PlayerId Owner, const Til
         }
     }
 
+    // If the owner holds no complete building, or is placing a Construction Yard, allow placement on clear ground
+    bool bHasBase = false;
+    for (uint32_t J = 0; J < Core.size(); ++J)
+    {
+        if (Core[J].bAlive && Core[J].Kind == EntityKind::Building && Core[J].Owner == Owner)
+        {
+            bHasBase = true;
+            break;
+        }
+    }
+    if (!bHasBase && D->Building.bProvidesBuildRadius)
+    {
+        return true;
+    }
+
     return false;
 }
 
@@ -1321,6 +1336,40 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
                     QueueItem.bPaused = true;
                 }
             }
+            break;
+        }
+
+        case CommandType::Deploy:
+        {
+            if (Cmd.Primary == EntityId::Invalid() || Cmd.Primary.Index >= Core.size())
+            {
+                return Reject(CommandReject::NoSuchEntity);
+            }
+            const uint32_t I = Cmd.Primary.Index;
+            if (!Core[I].bAlive || Core[I].Owner != Cmd.Issuer || Core[I].Kind != EntityKind::Unit)
+            {
+                return Reject(CommandReject::NotOwner);
+            }
+            const EntityDef* Def = Content ? Content->FindEntity(Core[I].Def) : nullptr;
+            if (Def == nullptr || !Def->Unit.bIsBuilder || !Def->Unit.DeploysInto.IsValid())
+            {
+                return Reject(CommandReject::TargetInvalid);
+            }
+
+            const TileCoord Tile = Map.WorldToTile(Transforms[I].Position);
+            const EntityDef* ConYardDef = Content->FindEntity(Def->Unit.DeploysInto);
+            const int32_t FootX = ConYardDef ? ConYardDef->Building.FootprintX : 3;
+            const int32_t FootY = ConYardDef ? ConYardDef->Building.FootprintY : 3;
+            if (Tile.X < 1 || Tile.Y < 1 || Tile.X + FootX >= Map.Width - 1 || Tile.Y + FootY >= Map.Height - 1)
+            {
+                return Reject(CommandReject::InvalidPlacement);
+            }
+
+            // Despawn the MCV builder unit
+            DestroyEntity(Cmd.Primary, EntityId::Invalid(), false);
+
+            // Spawn the deployed Construction Yard building
+            SpawnBuilding(Def->Unit.DeploysInto, Cmd.Issuer, Tile, /*bInstantComplete*/ true);
             break;
         }
 
@@ -1638,7 +1687,15 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
                 const Vec2 Pos = Transforms[Cmd.Primary.Index].Position;
                 const int32_t Facing = Transforms[Cmd.Primary.Index].Facing;
                 const Vec2 Dir = Vec2::FromAngle(Facing);
-                const Vec2 Dest = Pos + Dir * Fwd * Fixed::FromInt(2);
+                Vec2 Dest = Pos + Dir * Fwd * Fixed::FromInt(2);
+                if (Map.Width > 0 && Map.Height > 0)
+                {
+                    const Fixed MinMargin = Fixed::FromInt(50);
+                    const Fixed MaxX = Fixed::FromInt(int64_t(Map.Width) * MapDescription::kTileSizeUnitsLocal) - MinMargin;
+                    const Fixed MaxY = Fixed::FromInt(int64_t(Map.Height) * MapDescription::kTileSizeUnitsLocal) - MinMargin;
+                    Dest.X = std::clamp(Dest.X, MinMargin, MaxX);
+                    Dest.Y = std::clamp(Dest.Y, MinMargin, MaxY);
+                }
                 Orders[Cmd.Primary.Index].Clear();
                 Order O;
                 O.Type = OrderType::Move;
@@ -1651,7 +1708,15 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
                 const Vec2 Pos = Transforms[Cmd.Primary.Index].Position;
                 const int32_t Facing = Transforms[Cmd.Primary.Index].Facing;
                 const Vec2 Dir = Vec2::FromAngle(Facing);
-                const Vec2 Dest = Pos - Dir * Rev * Fixed::FromInt(2);
+                Vec2 Dest = Pos - Dir * Rev * Fixed::FromInt(2);
+                if (Map.Width > 0 && Map.Height > 0)
+                {
+                    const Fixed MinMargin = Fixed::FromInt(50);
+                    const Fixed MaxX = Fixed::FromInt(int64_t(Map.Width) * MapDescription::kTileSizeUnitsLocal) - MinMargin;
+                    const Fixed MaxY = Fixed::FromInt(int64_t(Map.Height) * MapDescription::kTileSizeUnitsLocal) - MinMargin;
+                    Dest.X = std::clamp(Dest.X, MinMargin, MaxX);
+                    Dest.Y = std::clamp(Dest.Y, MinMargin, MaxY);
+                }
                 Orders[Cmd.Primary.Index].Clear();
                 Order O;
                 O.Type = OrderType::Move;
@@ -3226,6 +3291,18 @@ void SimWorld::SystemMovement()
         {
             M.CurrentSpeed = Fixed::Zero();
             M.BlockedTicks += 1;
+        }
+
+        // Invisible perimeter barrier: units can never cross or be pushed outside the playable map area
+        if (Map.Width > 0 && Map.Height > 0)
+        {
+            const Fixed MinMargin = Fixed::FromInt(50);
+            const Fixed MaxX = Fixed::FromInt(int64_t(Map.Width) * MapDescription::kTileSizeUnitsLocal) - MinMargin;
+            const Fixed MaxY = Fixed::FromInt(int64_t(Map.Height) * MapDescription::kTileSizeUnitsLocal) - MinMargin;
+            if (T.Position.X < MinMargin) { T.Position.X = MinMargin; M.CurrentSpeed = Fixed::Zero(); }
+            else if (T.Position.X > MaxX) { T.Position.X = MaxX; M.CurrentSpeed = Fixed::Zero(); }
+            if (T.Position.Y < MinMargin) { T.Position.Y = MinMargin; M.CurrentSpeed = Fixed::Zero(); }
+            else if (T.Position.Y > MaxY) { T.Position.Y = MaxY; M.CurrentSpeed = Fixed::Zero(); }
         }
     };
 

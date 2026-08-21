@@ -2086,6 +2086,30 @@ void AICommander::Tick(const SimWorld& World, std::vector<Command>& OutCommands)
 
     const size_t CommandCountBefore = OutCommands.size();
 
+    // If the commander has no construction yard but holds an MCV, deploy it immediately
+    if (!FindOwnConstructionYard(World).IsValid())
+    {
+        const auto& Cores = World.GetAllCores();
+        const auto* Content = World.GetContent();
+        for (size_t I = 0; I < Cores.size(); ++I)
+        {
+            if (Cores[I].bAlive && Cores[I].Owner == Player && Cores[I].Kind == EntityKind::Unit)
+            {
+                const auto* Def = Content ? Content->FindEntity(Cores[I].Def) : nullptr;
+                if (Def != nullptr && Def->Unit.bIsBuilder && Def->Unit.DeploysInto.IsValid())
+                {
+                    Command Cmd;
+                    Cmd.Type = CommandType::Deploy;
+                    Cmd.Issuer = Player;
+                    Cmd.Primary = World.MakeId(uint32_t(I));
+                    OutCommands.push_back(Cmd);
+                    Log(World.GetTick(), CommandType::Deploy, Def->Unit.DeploysInto, "deploying starting MCV");
+                    break;
+                }
+            }
+        }
+    }
+
     // Scouting runs before army command: with nothing known there is nothing to
     // attack, and this is what turns an unknown map into a known one.
     TryScout(World, OutCommands);

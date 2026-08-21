@@ -29,6 +29,7 @@ enum class CommandType : uint8_t
     SetRallyPoint = 5,
     Harvest = 6,
     Guard = 7,
+    Deploy = 8,
 
     // Base management
     PlaceBuilding = 20,

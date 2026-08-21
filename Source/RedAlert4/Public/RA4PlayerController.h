@@ -97,6 +97,9 @@ public:
     UFUNCTION(BlueprintCallable, Category = "RA4|Navigation")
     void JumpToHomeBase();
 
+    UFUNCTION(BlueprintCallable, Category = "RA4|Commands")
+    void DeploySelectedMcv();
+
     // --- Direct Control / Possession Mode ------------------------------------
     UFUNCTION(BlueprintCallable, Category = "RA4|DirectControl")
     void ToggleDirectControl();
