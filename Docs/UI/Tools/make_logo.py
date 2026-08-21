@@ -2,7 +2,7 @@
 """Scarlet Horizon wordmark: cold steel letters cut by the scarlet horizon line."""
 from PIL import Image, ImageDraw, ImageFont
 
-W, H = 1024, 320
+W, H = 1024, 268
 FONT = 'Content/RA4UI/Fonts/RA4_RobotoCondensedSemiBold.ttf'
 img = Image.new('RGBA', (W, H), (0, 0, 0, 0))
 d = ImageDraw.Draw(img)
@@ -32,7 +32,6 @@ for i, a in ((0, 210), (1, 150), (2, 90), (3, 45)):
     d.line([(150, 156 - i), (W - 150, 156 - i)], fill=(242, 46, 52, a))
 d.ellipse([W/2 - 90, 150, W/2 + 90, 162], fill=(255, 150, 140, 34))
 
-centred('АЛЬТЕРНАТИВНАЯ СОВРЕМЕННОСТЬ', small, 276, (150, 158, 172, 255), 8)
 
 img.save('/tmp/T_RA4_Logo_source.png')
 print('logo written 1024x320')

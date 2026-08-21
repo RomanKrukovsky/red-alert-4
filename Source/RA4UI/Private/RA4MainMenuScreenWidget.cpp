@@ -31,7 +31,13 @@ namespace
 {
 // The command centre is neutral ground: the frame carries the shared Scarlet
 // horizon line, while bloc colour arrives only with the selected direction.
-const FLinearColor MenuAccent = FRA4FactionDataRegistry::GetHorizonScarletColor();
+// The command centre is neutral ground: cold steel chrome, with scarlet kept for
+// the horizon line under the title and for alarm states only.
+const FLinearColor MenuAccent(0.32f, 0.42f, 0.56f, 1.0f);
+const FLinearColor MenuChromeTint(0.42f, 0.52f, 0.66f, 1.0f);
+const FLinearColor MenuSelectedTint(0.45f, 0.62f, 0.95f, 1.0f);
+const FLinearColor MenuPressedTint(0.65f, 0.80f, 1.00f, 1.0f);
+const FLinearColor MenuHorizon = FRA4FactionDataRegistry::GetHorizonScarletColor();
 constexpr FLinearColor MenuText(0.87f, 0.89f, 0.94f, 1.0f);
 constexpr FLinearColor MutedText(0.55f, 0.58f, 0.64f, 1.0f);
 
@@ -74,39 +80,25 @@ UTextBlock* MakeMenuText(
 
 FButtonStyle MakeMenuButtonStyle(const bool bSelected)
 {
+    // The supplied frame textures are warm red and carry their own pixel size, so
+    // drawing them stretched both fought the palette and made rows overlap. The
+    // menu plate is drawn procedurally instead: it takes the row height exactly,
+    // scales to any resolution and reads its colour from the theme.
     FButtonStyle Style;
-    UTexture2D* NormalTexture = LoadObject<UTexture2D>(
-        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_Frame_ButtonNormalV2.T_RA4_Frame_ButtonNormalV2"));
-    UTexture2D* HoveredTexture = LoadObject<UTexture2D>(
-        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_Frame_ButtonHoveredV2.T_RA4_Frame_ButtonHoveredV2"));
-    UTexture2D* PressedTexture = LoadObject<UTexture2D>(
-        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_UI_ButtonPressed.T_RA4_UI_ButtonPressed"));
-    UTexture2D* DisabledTexture = LoadObject<UTexture2D>(
-        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_UI_ButtonDisabled.T_RA4_UI_ButtonDisabled"));
 
-    if (NormalTexture && HoveredTexture && PressedTexture && DisabledTexture)
-    {
-        FSlateBrush Normal;
-        Normal.SetResourceObject(bSelected ? HoveredTexture : NormalTexture);
-        Normal.DrawAs = ESlateBrushDrawType::Image;
-        FSlateBrush Hovered = Normal;
-        Hovered.SetResourceObject(HoveredTexture);
-        FSlateBrush Pressed = Normal;
-        Pressed.SetResourceObject(PressedTexture);
-        FSlateBrush Disabled = Normal;
-        Disabled.SetResourceObject(DisabledTexture);
-        Style.SetNormal(Normal);
-        Style.SetHovered(Hovered);
-        Style.SetPressed(Pressed);
-        Style.SetDisabled(Disabled);
-    }
-    else
-    {
-        Style.SetNormal(FSlateColorBrush(FLinearColor(0.018f, 0.014f, 0.015f, 0.97f)));
-        Style.SetHovered(FSlateColorBrush(FLinearColor(0.34f, 0.018f, 0.024f, 1.0f)));
-        Style.SetPressed(FSlateColorBrush(FLinearColor(0.62f, 0.025f, 0.03f, 1.0f)));
-        Style.SetDisabled(FSlateColorBrush(FLinearColor(0.01f, 0.01f, 0.01f, 0.42f)));
-    }
+    const FLinearColor Edge = bSelected ? MenuSelectedTint : MenuAccent;
+    Style.SetNormal(FSlateRoundedBoxBrush(
+        bSelected ? FLinearColor(0.055f, 0.105f, 0.200f, 0.98f)
+                  : FLinearColor(0.016f, 0.022f, 0.034f, 0.94f),
+        3.0f, Edge, bSelected ? 2.0f : 1.0f));
+    Style.SetHovered(FSlateRoundedBoxBrush(
+        FLinearColor(0.085f, 0.155f, 0.280f, 0.98f), 3.0f, MenuSelectedTint, 2.0f));
+    Style.SetPressed(FSlateRoundedBoxBrush(
+        FLinearColor(0.140f, 0.245f, 0.420f, 1.0f), 3.0f, MenuPressedTint, 2.0f));
+    Style.SetDisabled(FSlateRoundedBoxBrush(
+        FLinearColor(0.012f, 0.014f, 0.018f, 0.55f), 3.0f,
+        FLinearColor(0.22f, 0.24f, 0.28f, 0.8f), 1.0f));
+
     Style.NormalPadding = FMargin(0.0f);
     Style.PressedPadding = FMargin(2.0f, 2.0f, 0.0f, 0.0f);
     return Style;
@@ -135,12 +127,12 @@ TSharedRef<SWidget> URA4MainMenuScreenWidget::RebuildWidget()
         TEXT("/Game/RA4UI/Art/T_RA4_USSR_MainMenuBackground.T_RA4_USSR_MainMenuBackground")))
     {
         GetBackgroundLayer()->SetBrushFromTexture(BackgroundTexture, false);
-        GetBackgroundLayer()->SetColorAndOpacity(FLinearColor(0.72f, 0.72f, 0.72f, 1.0f));
+        GetBackgroundLayer()->SetColorAndOpacity(FLinearColor(0.20f, 0.34f, 0.60f, 1.0f));
     }
 
     UBorder* Grade = WidgetTree->ConstructWidget<UBorder>(
         UBorder::StaticClass(), TEXT("CommandCentreGrade"));
-    Grade->SetBrushColor(FLinearColor(0.06f, 0.0f, 0.0f, 0.20f));
+    Grade->SetBrushColor(FLinearColor(0.008f, 0.016f, 0.038f, 0.58f));
     Grade->SetVisibility(ESlateVisibility::HitTestInvisible);
     UOverlaySlot* GradeSlot = GetContentLayer()->AddChildToOverlay(Grade);
     GradeSlot->SetHorizontalAlignment(HAlign_Fill);
@@ -170,7 +162,22 @@ TSharedRef<SWidget> URA4MainMenuScreenWidget::RebuildWidget()
         LogoImage->SetBrushFromTexture(LogoTexture, false);
     }
     LogoImage->SetVisibility(ESlateVisibility::HitTestInvisible);
-    PlaceMenuWidget(Canvas, LogoImage, FVector2D(570.0f, 8.0f), FVector2D(840.0f, 280.0f), 4);
+    // Reference 02_main_menu.png: wordmark centred over the holographic table,
+    // with the scarlet horizon line and the screen's own tagline beneath it.
+    PlaceMenuWidget(Canvas, LogoImage, FVector2D(637.0f, 26.0f), FVector2D(718.0f, 188.0f), 4);
+
+    UBorder* HorizonRule = WidgetTree->ConstructWidget<UBorder>(
+        UBorder::StaticClass(), TEXT("MainMenuHorizonRule"));
+    HorizonRule->SetBrushColor(MenuHorizon);
+    HorizonRule->SetVisibility(ESlateVisibility::HitTestInvisible);
+    PlaceMenuWidget(Canvas, HorizonRule, FVector2D(720.0f, 196.0f), FVector2D(552.0f, 2.0f), 5);
+
+    UTextBlock* Tagline = MakeMenuText(
+        WidgetTree, LOCTEXT("MainMenuTagline", "ГЛОБАЛЬНЫЙ КОМАНДНЫЙ ЦЕНТР"), 19,
+        MutedText, TEXT("MainMenuTagline"), true);
+    Tagline->SetJustification(ETextJustify::Center);
+    Tagline->SetVisibility(ESlateVisibility::HitTestInvisible);
+    PlaceMenuWidget(Canvas, Tagline, FVector2D(637.0f, 206.0f), FVector2D(718.0f, 30.0f), 5);
 
     UVerticalBox* MenuList = WidgetTree->ConstructWidget<UVerticalBox>(
         UVerticalBox::StaticClass(), TEXT("MainMenuEntries"));
@@ -186,7 +193,7 @@ TSharedRef<SWidget> URA4MainMenuScreenWidget::RebuildWidget()
     MenuPanel->SetBrush(FSlateRoundedBoxBrush(
         FLinearColor(0.005f, 0.005f, 0.008f, 0.88f), 0.0f, MenuAccent, 1.5f));
     MenuPanel->SetContent(MenuList);
-    PlaceMenuWidget(Canvas, MenuPanel, FVector2D(18.0f, 74.0f), FVector2D(454.0f, 716.0f), 2);
+    PlaceMenuWidget(Canvas, MenuPanel, FVector2D(52.0f, 100.0f), FVector2D(348.0f, 600.0f), 2);
 
     BuildInformationCard(
         Canvas,
@@ -315,9 +322,9 @@ UButton* URA4MainMenuScreenWidget::CreateMenuButton(
 
     USizeBox* ButtonSize = WidgetTree->ConstructWidget<USizeBox>(
         USizeBox::StaticClass(), FName(*FString::Printf(TEXT("MainMenuButtonSize_%d"), Index)));
-    ButtonSize->SetHeightOverride(76.0f);
+    ButtonSize->SetHeightOverride(62.0f);
     ButtonSize->SetContent(Button);
-    Menu->AddChildToVerticalBox(ButtonSize)->SetPadding(FMargin(4.0f, 3.0f));
+    Menu->AddChildToVerticalBox(ButtonSize)->SetPadding(FMargin(4.0f, 4.0f));
     MenuButtons.Add(Button);
     return Button;
 }
