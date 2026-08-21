@@ -120,12 +120,30 @@ URA4AngularPanelWidget* MakeHUDPanel(
     UWidget* Content,
     const FName Name,
     const FLinearColor& PanelColor,
-    const FLinearColor& Accent)
+    const FLinearColor& Accent,
+    const TCHAR* TexturePath = nullptr)
 {
     URA4AngularPanelWidget* Panel = WidgetTree->ConstructWidget<URA4AngularPanelWidget>(
         URA4AngularPanelWidget::StaticClass(), Name);
     Panel->SetPanelRole(ERA4PanelRole::DenseHUD);
-    Panel->SetBrush(FSlateRoundedBoxBrush(PanelColor, 0.0f, Accent, 1.35f));
+    if (TexturePath)
+    {
+        if (UTexture2D* Texture = LoadObject<UTexture2D>(nullptr, TexturePath))
+        {
+            FSlateBrush TextureBrush;
+            TextureBrush.SetResourceObject(Texture);
+            TextureBrush.DrawAs = ESlateBrushDrawType::Image;
+            Panel->SetBrush(TextureBrush);
+        }
+        else
+        {
+            Panel->SetBrush(FSlateRoundedBoxBrush(PanelColor, 0.0f, Accent, 1.35f));
+        }
+    }
+    else
+    {
+        Panel->SetBrush(FSlateRoundedBoxBrush(PanelColor, 0.0f, Accent, 1.35f));
+    }
     Panel->SetContent(Content);
     return Panel;
 }
@@ -486,14 +504,16 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
     const FVector2D ObjectivesPosition(16.0f, 18.0f);
     const FVector2D ObjectivesSize(370.0f, 205.0f);
     PlaceHUDWidget(Canvas, MakeHUDPanel(
-        WidgetTree, Objectives, TEXT("ObjectivesPanel"), ThemeStyle.Panel, ThemeStyle.Accent), ObjectivesPosition, ObjectivesSize, 10);
+        WidgetTree, Objectives, TEXT("ObjectivesPanel"), ThemeStyle.Panel, ThemeStyle.Accent,
+        TEXT("/Game/RA4UI/Art/T_RA4_UI_ObjectivesFrame.T_RA4_UI_ObjectivesFrame")), ObjectivesPosition, ObjectivesSize, 10);
     AddInteractiveRegion(ObjectivesPosition, ObjectivesSize);
 
     ResourceText = MakeHUDText(
         WidgetTree, FText::GetEmpty(), 17, ThemeStyle.Text, TEXT("ResourceText"), true);
     ResourceText->SetJustification(ETextJustify::Center);
     PlaceHUDWidget(Canvas, MakeHUDPanel(
-        WidgetTree, ResourceText, TEXT("ResourceBarPanel"), ThemeStyle.Panel, ThemeStyle.Accent),
+        WidgetTree, ResourceText, TEXT("ResourceBarPanel"), ThemeStyle.Panel, ThemeStyle.Accent,
+        TEXT("/Game/RA4UI/Art/T_RA4_Frame_ResourceBarV2.T_RA4_Frame_ResourceBarV2")),
         FVector2D(1110.0f, 12.0f), FVector2D(790.0f, 55.0f), 10);
 
     URA4MinimapWidget* Minimap = WidgetTree->ConstructWidget<URA4MinimapWidget>(
@@ -503,7 +523,8 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
     const FVector2D MinimapPosition(1590.0f, 80.0f);
     const FVector2D MinimapSize(310.0f, 285.0f);
     PlaceHUDWidget(Canvas, MakeHUDPanel(
-        WidgetTree, Minimap, TEXT("MinimapPanel"), ThemeStyle.Panel, ThemeStyle.Accent), MinimapPosition, MinimapSize, 10);
+        WidgetTree, Minimap, TEXT("MinimapPanel"), ThemeStyle.Panel, ThemeStyle.Accent,
+        TEXT("/Game/RA4UI/Art/T_RA4_Frame_MinimapV2.T_RA4_Frame_MinimapV2")), MinimapPosition, MinimapSize, 10);
     AddInteractiveRegion(MinimapPosition, MinimapSize);
 
     UVerticalBox* Sidebar = WidgetTree->ConstructWidget<UVerticalBox>(
@@ -534,7 +555,8 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
     const FVector2D SidebarPosition(1450.0f, 380.0f);
     const FVector2D SidebarSize(450.0f, 500.0f);
     PlaceHUDWidget(Canvas, MakeHUDPanel(
-        WidgetTree, Sidebar, TEXT("ProductionPanel"), ThemeStyle.Panel, ThemeStyle.Accent), SidebarPosition, SidebarSize, 10);
+        WidgetTree, Sidebar, TEXT("ProductionPanel"), ThemeStyle.Panel, ThemeStyle.Accent,
+        TEXT("/Game/RA4UI/Art/T_RA4_UI_PanelTall.T_RA4_UI_PanelTall")), SidebarPosition, SidebarSize, 10);
     AddInteractiveRegion(SidebarPosition, SidebarSize);
 
     UVerticalBox* Selection = WidgetTree->ConstructWidget<UVerticalBox>(
@@ -548,7 +570,8 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
     const FVector2D SelectionPosition(16.0f, 820.0f);
     const FVector2D SelectionSize(420.0f, 240.0f);
     PlaceHUDWidget(Canvas, MakeHUDPanel(
-        WidgetTree, Selection, TEXT("SelectionPanel"), ThemeStyle.Panel, ThemeStyle.Accent), SelectionPosition, SelectionSize, 10);
+        WidgetTree, Selection, TEXT("SelectionPanel"), ThemeStyle.Panel, ThemeStyle.Accent,
+        TEXT("/Game/RA4UI/Art/T_RA4_Frame_UnitCardV2.T_RA4_Frame_UnitCardV2")), SelectionPosition, SelectionSize, 10);
     AddInteractiveRegion(SelectionPosition, SelectionSize);
 
     UVerticalBox* Queue = WidgetTree->ConstructWidget<UVerticalBox>(
@@ -567,7 +590,8 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
     const FVector2D QueuePosition(455.0f, 875.0f);
     const FVector2D QueueSize(560.0f, 185.0f);
     PlaceHUDWidget(Canvas, MakeHUDPanel(
-        WidgetTree, Queue, TEXT("ProductionQueuePanel"), ThemeStyle.Panel, ThemeStyle.Accent), QueuePosition, QueueSize, 10);
+        WidgetTree, Queue, TEXT("ProductionQueuePanel"), ThemeStyle.Panel, ThemeStyle.Accent,
+        TEXT("/Game/RA4UI/Art/T_RA4_UI_QueueFrame.T_RA4_UI_QueueFrame")), QueuePosition, QueueSize, 10);
     AddInteractiveRegion(QueuePosition, QueueSize);
 
     UVerticalBox* Commands = WidgetTree->ConstructWidget<UVerticalBox>(
@@ -603,7 +627,8 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
     const FVector2D CommandPosition(1450.0f, 900.0f);
     const FVector2D CommandSize(450.0f, 160.0f);
     PlaceHUDWidget(Canvas, MakeHUDPanel(
-        WidgetTree, Commands, TEXT("CommandGridPanel"), ThemeStyle.Panel, ThemeStyle.Accent), CommandPosition, CommandSize, 10);
+        WidgetTree, Commands, TEXT("CommandGridPanel"), ThemeStyle.Panel, ThemeStyle.Accent,
+        TEXT("/Game/RA4UI/Art/T_RA4_UI_CommandBar.T_RA4_UI_CommandBar")), CommandPosition, CommandSize, 10);
     AddInteractiveRegion(CommandPosition, CommandSize);
 
     const bool bProminentAlert = HUDVariant == ERA4UIScreenVariant::SovietAlert ||

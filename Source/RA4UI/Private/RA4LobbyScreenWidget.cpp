@@ -76,12 +76,30 @@ URA4AngularPanelWidget* MakeLobbyPanel(
     UWidgetTree* Tree,
     UWidget* Content,
     const FName Name,
-    const ERA4PanelRole Role = ERA4PanelRole::Standard)
+    const ERA4PanelRole Role = ERA4PanelRole::Standard,
+    const TCHAR* TexturePath = nullptr)
 {
     URA4AngularPanelWidget* Panel = Tree->ConstructWidget<URA4AngularPanelWidget>(
         URA4AngularPanelWidget::StaticClass(), Name);
     Panel->SetPanelRole(Role);
-    Panel->SetBrush(FSlateRoundedBoxBrush(LobbyPanel, 0.0f, LobbyRed, 1.35f));
+    if (TexturePath)
+    {
+        if (UTexture2D* Texture = LoadObject<UTexture2D>(nullptr, TexturePath))
+        {
+            FSlateBrush TextureBrush;
+            TextureBrush.SetResourceObject(Texture);
+            TextureBrush.DrawAs = ESlateBrushDrawType::Image;
+            Panel->SetBrush(TextureBrush);
+        }
+        else
+        {
+            Panel->SetBrush(FSlateRoundedBoxBrush(LobbyPanel, 0.0f, LobbyRed, 1.35f));
+        }
+    }
+    else
+    {
+        Panel->SetBrush(FSlateRoundedBoxBrush(LobbyPanel, 0.0f, LobbyRed, 1.35f));
+    }
     Panel->SetContent(Content);
     return Panel;
 }
@@ -89,12 +107,40 @@ URA4AngularPanelWidget* MakeLobbyPanel(
 FButtonStyle MakeLobbyButtonStyle(const bool bPrimary = false)
 {
     FButtonStyle Style;
-    Style.SetNormal(FSlateColorBrush(bPrimary
-        ? FLinearColor(0.28f, 0.012f, 0.018f, 0.98f)
-        : FLinearColor(0.025f, 0.022f, 0.024f, 0.96f)));
-    Style.SetHovered(FSlateColorBrush(FLinearColor(0.48f, 0.018f, 0.026f, 1.0f)));
-    Style.SetPressed(FSlateColorBrush(LobbyRed));
-    Style.SetDisabled(FSlateColorBrush(FLinearColor(0.02f, 0.02f, 0.022f, 0.45f)));
+    UTexture2D* NormalTexture = LoadObject<UTexture2D>(nullptr, bPrimary
+        ? TEXT("/Game/RA4UI/Art/T_RA4_UI_ButtonPrimary.T_RA4_UI_ButtonPrimary")
+        : TEXT("/Game/RA4UI/Art/T_RA4_UI_ButtonSecondary.T_RA4_UI_ButtonSecondary"));
+    UTexture2D* HoveredTexture = LoadObject<UTexture2D>(
+        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_Frame_ButtonHoveredV2.T_RA4_Frame_ButtonHoveredV2"));
+    UTexture2D* PressedTexture = LoadObject<UTexture2D>(
+        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_UI_ButtonPressed.T_RA4_UI_ButtonPressed"));
+    UTexture2D* DisabledTexture = LoadObject<UTexture2D>(
+        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_UI_ButtonDisabled.T_RA4_UI_ButtonDisabled"));
+    if (NormalTexture && HoveredTexture && PressedTexture && DisabledTexture)
+    {
+        FSlateBrush Normal;
+        Normal.SetResourceObject(NormalTexture);
+        Normal.DrawAs = ESlateBrushDrawType::Image;
+        FSlateBrush Hovered = Normal;
+        Hovered.SetResourceObject(HoveredTexture);
+        FSlateBrush Pressed = Normal;
+        Pressed.SetResourceObject(PressedTexture);
+        FSlateBrush Disabled = Normal;
+        Disabled.SetResourceObject(DisabledTexture);
+        Style.SetNormal(Normal);
+        Style.SetHovered(Hovered);
+        Style.SetPressed(Pressed);
+        Style.SetDisabled(Disabled);
+    }
+    else
+    {
+        Style.SetNormal(FSlateColorBrush(bPrimary
+            ? FLinearColor(0.28f, 0.012f, 0.018f, 0.98f)
+            : FLinearColor(0.025f, 0.022f, 0.024f, 0.96f)));
+        Style.SetHovered(FSlateColorBrush(FLinearColor(0.48f, 0.018f, 0.026f, 1.0f)));
+        Style.SetPressed(FSlateColorBrush(LobbyRed));
+        Style.SetDisabled(FSlateColorBrush(FLinearColor(0.02f, 0.02f, 0.022f, 0.45f)));
+    }
     return Style;
 }
 
@@ -138,7 +184,18 @@ TSharedRef<SWidget> URA4LobbyPlayerRowWidget::RebuildWidget()
     {
         UBorder* Background = WidgetTree->ConstructWidget<UBorder>(
             UBorder::StaticClass(), TEXT("LobbyPlayerRowBackground"));
-        Background->SetBrushColor(FLinearColor(0.018f, 0.016f, 0.018f, 0.96f));
+        if (UTexture2D* SlotTexture = LoadObject<UTexture2D>(
+            nullptr, TEXT("/Game/RA4UI/Art/T_RA4_UI_LobbySlot.T_RA4_UI_LobbySlot")))
+        {
+            FSlateBrush SlotBrush;
+            SlotBrush.SetResourceObject(SlotTexture);
+            SlotBrush.DrawAs = ESlateBrushDrawType::Image;
+            Background->SetBrush(SlotBrush);
+        }
+        else
+        {
+            Background->SetBrushColor(FLinearColor(0.018f, 0.016f, 0.018f, 0.96f));
+        }
         Background->SetPadding(FMargin(8.0f, 6.0f));
         WidgetTree->RootWidget = Background;
 
@@ -273,7 +330,8 @@ TSharedRef<SWidget> URA4LobbyScreenWidget::RebuildWidget()
         WidgetTree, LOCTEXT("GameMode", "РЕЖИМ ИГРЫ\nСХВАТКА\n\nПОБЕДНЫЕ УСЛОВИЯ\nУНИЧТОЖИТЬ ВСЕХ ПРОТИВНИКОВ\n\nНАСТРОЙКИ ЛОББИ\nДРУЖЕСКИЙ ОГОНЬ       ВЫКЛ.\nОГРАНИЧЕНИЕ ВРЕМЕНИ   60 МИН.\nНАБЛЮДАТЕЛИ            ВКЛ."),
         15, LobbyMuted, TEXT("LobbyRules"), false))->SetPadding(FMargin(0.0f, 12.0f));
     PlaceLobbyWidget(Canvas, MakeLobbyPanel(
-        WidgetTree, LobbyInfo, TEXT("LobbyInfoPanel"), ERA4PanelRole::Standard),
+        WidgetTree, LobbyInfo, TEXT("LobbyInfoPanel"), ERA4PanelRole::Standard,
+        TEXT("/Game/RA4UI/Art/T_RA4_UI_PanelTall.T_RA4_UI_PanelTall")),
         FVector2D(18.0f, 28.0f), FVector2D(330.0f, 820.0f), 5);
 
     UHorizontalBox* ListHeader = WidgetTree->ConstructWidget<UHorizontalBox>(
@@ -296,21 +354,12 @@ TSharedRef<SWidget> URA4LobbyScreenWidget::RebuildWidget()
 
     PlayerList = WidgetTree->ConstructWidget<URA4LobbyPlayerListView>(
         URA4LobbyPlayerListView::StaticClass(), TEXT("LobbyPlayerList"));
-    TSubclassOf<UUserWidget> PlayerRowClass = LoadClass<UUserWidget>(
-        nullptr,
-        TEXT("/Game/RA4UI/Widgets/WBP_RA4_LobbyPlayerRow.WBP_RA4_LobbyPlayerRow_C"));
-    if (PlayerRowClass)
-    {
-        PlayerList->ConfigureEntryWidgetClass(PlayerRowClass);
-    }
-    else
-    {
-        PlayerList->ConfigureEntryWidgetClass(URA4LobbyPlayerRowWidget::StaticClass());
-    }
+    PlayerList->ConfigureEntryWidgetClass(URA4LobbyPlayerRowWidget::StaticClass());
     PlayerList->SetSelectionMode(ESelectionMode::Single);
     PlayerList->SetScrollbarVisibility(ESlateVisibility::Collapsed);
     PlaceLobbyWidget(Canvas, MakeLobbyPanel(
-        WidgetTree, PlayerList, TEXT("LobbyPlayerListPanel"), ERA4PanelRole::Compact),
+        WidgetTree, PlayerList, TEXT("LobbyPlayerListPanel"), ERA4PanelRole::Compact,
+        TEXT("/Game/RA4UI/Art/T_RA4_Frame_PanelV2.T_RA4_Frame_PanelV2")),
         FVector2D(365.0f, 175.0f), FVector2D(980.0f, 470.0f), 6);
     PopulatePlayerList();
 
@@ -348,7 +397,8 @@ TSharedRef<SWidget> URA4LobbyScreenWidget::RebuildWidget()
     ChatComposer->AddChildToHorizontalBox(SendButton)->SetPadding(FMargin(8.0f, 0.0f, 0.0f, 0.0f));
     Chat->AddChildToVerticalBox(ChatComposer)->SetPadding(FMargin(0.0f, 8.0f, 0.0f, 0.0f));
     PlaceLobbyWidget(Canvas, MakeLobbyPanel(
-        WidgetTree, Chat, TEXT("LobbyChatPanel"), ERA4PanelRole::Compact),
+        WidgetTree, Chat, TEXT("LobbyChatPanel"), ERA4PanelRole::Compact,
+        TEXT("/Game/RA4UI/Art/T_RA4_UI_ChatFrame.T_RA4_UI_ChatFrame")),
         FVector2D(365.0f, 660.0f), FVector2D(980.0f, 250.0f), 6);
 
     UVerticalBox* MapAndSettings = WidgetTree->ConstructWidget<UVerticalBox>(
@@ -375,7 +425,8 @@ TSharedRef<SWidget> URA4LobbyScreenWidget::RebuildWidget()
         WidgetTree, LOCTEXT("MatchSettings", "\nНАСТРОЙКИ МАТЧА\n\nНАЧАЛЬНЫЕ РЕСУРСЫ       СРЕДНИЕ\nДОХОД                    СРЕДНИЙ\nСКОРОСТЬ ИГРЫ            НОРМАЛЬНО\nТЕХНОЛОГИИ               ВСЕ ВКЛ.\nСУПЕРОРУЖИЕ              ВКЛ.\nРЕЖИМ ИГРЫ               СХВАТКА\n\nНАБЛЮДАТЕЛИ (1)\n●  Observer_01          ПИНГ: 48"),
         15, LobbyText, TEXT("MatchSettings"), false));
     PlaceLobbyWidget(Canvas, MakeLobbyPanel(
-        WidgetTree, MapAndSettings, TEXT("LobbyMapPanel"), ERA4PanelRole::Standard),
+        WidgetTree, MapAndSettings, TEXT("LobbyMapPanel"), ERA4PanelRole::Standard,
+        TEXT("/Game/RA4UI/Art/T_RA4_UI_MapPreviewFrame.T_RA4_UI_MapPreviewFrame")),
         FVector2D(1370.0f, 55.0f), FVector2D(520.0f, 795.0f), 6);
 
     UButton* LeaveButton = WidgetTree->ConstructWidget<UButton>(

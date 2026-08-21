@@ -72,13 +72,13 @@ FButtonStyle MakeMenuButtonStyle(const bool bSelected)
 {
     FButtonStyle Style;
     UTexture2D* NormalTexture = LoadObject<UTexture2D>(
-        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_Button_Normal.T_RA4_Button_Normal"));
+        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_Frame_ButtonNormalV2.T_RA4_Frame_ButtonNormalV2"));
     UTexture2D* HoveredTexture = LoadObject<UTexture2D>(
-        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_Button_Hovered.T_RA4_Button_Hovered"));
+        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_Frame_ButtonHoveredV2.T_RA4_Frame_ButtonHoveredV2"));
     UTexture2D* PressedTexture = LoadObject<UTexture2D>(
-        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_Button_Pressed.T_RA4_Button_Pressed"));
+        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_UI_ButtonPressed.T_RA4_UI_ButtonPressed"));
     UTexture2D* DisabledTexture = LoadObject<UTexture2D>(
-        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_Button_Disabled.T_RA4_Button_Disabled"));
+        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_UI_ButtonDisabled.T_RA4_UI_ButtonDisabled"));
 
     if (NormalTexture && HoveredTexture && PressedTexture && DisabledTexture)
     {
@@ -182,35 +182,35 @@ TSharedRef<SWidget> URA4MainMenuScreenWidget::RebuildWidget()
     MenuPanel->SetBrush(FSlateRoundedBoxBrush(
         FLinearColor(0.005f, 0.005f, 0.008f, 0.88f), 0.0f, MenuRed, 1.5f));
     MenuPanel->SetContent(MenuList);
-    PlaceMenuWidget(Canvas, MenuPanel, FVector2D(18.0f, 74.0f), FVector2D(454.0f, 716.0f), 4);
+    PlaceMenuWidget(Canvas, MenuPanel, FVector2D(18.0f, 74.0f), FVector2D(454.0f, 716.0f), 2);
 
     BuildInformationCard(
         Canvas,
         LOCTEXT("CommanderHeading", "КОМАНДИР  ·  УРОВЕНЬ 25"),
         LOCTEXT("CommanderBody", "РЕЙТИНГ  45 780 / 75 000\nДОПУСК: ВЕРХОВНОЕ КОМАНДОВАНИЕ"),
-        FVector2D(18.0f, 812.0f),
-        FVector2D(500.0f, 184.0f),
+        FVector2D(28.0f, 878.0f),
+        FVector2D(532.0f, 170.0f),
         TEXT("CommanderCard"));
     BuildInformationCard(
         Canvas,
         LOCTEXT("NewsHeading", "НОВОСТИ"),
         LOCTEXT("NewsBody", "Добро пожаловать, командир.\nКрасная угроза возвращается."),
-        FVector2D(534.0f, 812.0f),
-        FVector2D(510.0f, 184.0f),
+        FVector2D(579.0f, 878.0f),
+        FVector2D(496.0f, 170.0f),
         TEXT("NewsCard"));
     BuildInformationCard(
         Canvas,
         LOCTEXT("OperationsHeading", "СВОДКА ОПЕРАЦИЙ"),
         LOCTEXT("OperationsBody", "Глобальная обстановка нестабильна.\nБудьте готовы к любому сценарию."),
-        FVector2D(1060.0f, 812.0f),
-        FVector2D(560.0f, 184.0f),
+        FVector2D(1086.0f, 878.0f),
+        FVector2D(523.0f, 170.0f),
         TEXT("OperationsCard"));
     BuildInformationCard(
         Canvas,
         LOCTEXT("EmblemHeading", "СВЯЗЬ УСТАНОВЛЕНА"),
         LOCTEXT("EmblemBody", "СССР  //  КАНАЛ 04"),
-        FVector2D(1636.0f, 812.0f),
-        FVector2D(266.0f, 184.0f),
+        FVector2D(1620.0f, 878.0f),
+        FVector2D(274.0f, 170.0f),
         TEXT("EmblemCard"));
 
     UHorizontalBox* Footer = WidgetTree->ConstructWidget<UHorizontalBox>(
@@ -221,6 +221,7 @@ TSharedRef<SWidget> URA4MainMenuScreenWidget::RebuildWidget()
         14,
         FLinearColor(0.34f, 0.78f, 0.44f, 1.0f),
         TEXT("ConnectionStatus"));
+    Connection->SetAutoWrapText(false);
     Footer->AddChildToHorizontalBox(Connection)->SetPadding(FMargin(16.0f, 7.0f));
     UTextBlock* Version = MakeMenuText(
         WidgetTree,
@@ -238,7 +239,7 @@ TSharedRef<SWidget> URA4MainMenuScreenWidget::RebuildWidget()
     FooterPanel->SetBrush(FSlateRoundedBoxBrush(
         FLinearColor(0.005f, 0.005f, 0.007f, 0.94f), 0.0f, MenuRed, 1.25f));
     FooterPanel->SetContent(Footer);
-    PlaceMenuWidget(Canvas, FooterPanel, FVector2D(18.0f, 1012.0f), FVector2D(1884.0f, 52.0f), 6);
+    PlaceMenuWidget(Canvas, FooterPanel, FVector2D(18.0f, 1024.0f), FVector2D(1884.0f, 40.0f), 6);
     return RootWidget;
 }
 
@@ -333,13 +334,13 @@ void URA4MainMenuScreenWidget::BuildInformationCard(
         17,
         MenuRed,
         FName(Name.ToString() + TEXT("_Heading")),
-        true))->SetPadding(FMargin(14.0f, 10.0f, 14.0f, 4.0f));
+        true))->SetPadding(FMargin(34.0f, 10.0f, 34.0f, 4.0f));
     Content->AddChildToVerticalBox(MakeMenuText(
         WidgetTree,
         Body,
         14,
         MenuText,
-        FName(Name.ToString() + TEXT("_Body"))))->SetPadding(FMargin(14.0f, 4.0f, 14.0f, 10.0f));
+        FName(Name.ToString() + TEXT("_Body"))))->SetPadding(FMargin(34.0f, 4.0f, 34.0f, 10.0f));
 
     URA4AngularPanelWidget* Panel = WidgetTree->ConstructWidget<URA4AngularPanelWidget>(
         URA4AngularPanelWidget::StaticClass(), Name);
@@ -347,7 +348,7 @@ void URA4MainMenuScreenWidget::BuildInformationCard(
     Panel->SetBrush(FSlateRoundedBoxBrush(
         FLinearColor(0.006f, 0.006f, 0.009f, 0.92f), 0.0f, MenuRed, 1.25f));
     Panel->SetContent(Content);
-    PlaceMenuWidget(Canvas, Panel, Position, Size, 5);
+    PlaceMenuWidget(Canvas, Panel, Position, Size, 2);
 }
 
 int32 URA4MainMenuScreenWidget::GetSelectedMenuIndex() const
