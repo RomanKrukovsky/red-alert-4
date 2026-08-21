@@ -89,12 +89,15 @@ UBorder* MakePanel(
     UWidget* Content,
     const FName Name,
     const FLinearColor& Accent,
-    const FMargin Padding = FMargin(2.0f))
+    const FMargin Padding = FMargin(2.0f),
+    const FMargin Rail = FMargin(1.5f))
 {
     UBorder* Metal = Tree->ConstructWidget<UBorder>(
         UBorder::StaticClass(), FName(Name.ToString() + TEXT("_Metal")));
     Metal->SetBrushColor(PanelMetal);
-    Metal->SetPadding(FMargin(1.5f));
+    // Rail thickness varies per direction, so the silhouette identifies the
+    // bloc before its colour does.
+    Metal->SetPadding(Rail);
 
     UBorder* Edge = Tree->ConstructWidget<UBorder>(
         UBorder::StaticClass(), FName(Name.ToString() + TEXT("_Edge")));
@@ -126,6 +129,26 @@ FButtonStyle MakeCardButtonStyle(const FLinearColor& Accent)
         1.0f)));
     Style.SetDisabled(FSlateColorBrush(FLinearColor(0.005f, 0.005f, 0.008f, 0.65f)));
     return Style;
+}
+
+/** Interior padding for a direction, reusing the shared panel-role scale. */
+FMargin DensityPadding(const ERA4PanelRole Role)
+{
+    switch (Role)
+    {
+    case ERA4PanelRole::Compact:  return FMargin(8.0f);
+    case ERA4PanelRole::DenseHUD: return FMargin(10.0f);
+    case ERA4PanelRole::Hero:     return FMargin(24.0f);
+    default:                      return FMargin(16.0f);
+    }
+}
+
+/** Fill slot carrying an explicit weight; FSlateChildSize sets Value separately. */
+FSlateChildSize FillWeight(const float Weight)
+{
+    FSlateChildSize Size(ESlateSizeRule::Fill);
+    Size.Value = Weight;
+    return Size;
 }
 } // namespace
 
@@ -583,9 +606,13 @@ void URA4CampaignSelectWidget::RefreshBlocCards()
         DescSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
         DescSlot->SetPadding(FMargin(10.0f, 4.0f, 10.0f, 10.0f));
 
-        // Member Countries mini-tags
+        // Member Countries mini-tags. A category is never labelled as a bloc.
         UTextBlock* CountriesHeader = MakeText(
-            WidgetTree, LOCTEXT("CountriesInBloc", "СОСТАВ БЛОКА:"), 11, TextMuted,
+            WidgetTree,
+            Bloc.bIsCategoryOnly
+                ? LOCTEXT("CountriesInCategory", "СТРАНЫ КАТЕГОРИИ:")
+                : LOCTEXT("CountriesInBloc", "СОСТАВ БЛОКА:"),
+            11, TextMuted,
             FName(*FString::Printf(TEXT("BlocCntHeader_%d"), Index)));
         CardContent->AddChildToVerticalBox(CountriesHeader)->SetPadding(FMargin(10.0f, 2.0f, 10.0f, 2.0f));
 
@@ -618,12 +645,18 @@ void URA4CampaignSelectWidget::RefreshBlocCards()
 
         UBorder* CardFrame = MakePanel(
             WidgetTree, CardButton, FName(*FString::Printf(TEXT("BlocFrame_%d"), Index)),
-            bSelected ? Bloc.GlowColor : Bloc.PrimaryColor, FMargin(0.0f));
+            bSelected ? Bloc.GlowColor : Bloc.PrimaryColor,
+            DensityPadding(Bloc.PanelDensity), Bloc.FrameRail);
         BlocCardFrames.Add(CardFrame);
 
+        // One main theatre and several secondary zones: the row is never an
+        // even grid, and the active direction expands further still.
+        const float SlotWeight = Bloc.LayoutWeight * (bSelected ? 1.35f : 1.0f);
+
         UHorizontalBoxSlot* CardSlot = BlocCardsContainer->AddChildToHorizontalBox(CardFrame);
-        CardSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-        CardSlot->SetPadding(FMargin(4.0f, 0.0f));
+        CardSlot->SetSize(FillWeight(SlotWeight));
+        CardSlot->SetPadding(bSelected ? FMargin(4.0f, 0.0f, 4.0f, 0.0f) : FMargin(4.0f, 14.0f));
+        CardSlot->SetVerticalAlignment(bSelected ? VAlign_Fill : VAlign_Fill);
     }
 }
 
@@ -716,14 +749,21 @@ void URA4CampaignSelectWidget::RefreshCountryCards()
         default: break;
         }
 
+        // A category has no shared frame: each independent country keeps its own
+        // accent instead of borrowing a bloc colour it does not belong to.
+        const FLinearColor FrameAccent = bSelected || ActiveBloc.bIsCategoryOnly
+            ? Country.AccentColor
+            : ActiveBloc.PrimaryColor;
+
         UBorder* CardFrame = MakePanel(
             WidgetTree, CardButton, FName(*FString::Printf(TEXT("CountryFrame_%d"), Index)),
-            bSelected ? Country.AccentColor : ActiveBloc.PrimaryColor, FMargin(0.0f));
+            FrameAccent, DensityPadding(ActiveBloc.PanelDensity), ActiveBloc.FrameRail);
         CountryCardFrames.Add(CardFrame);
 
+        // The bloc leader dominates its mosaic; partners read as smaller plates.
         UHorizontalBoxSlot* CardSlot = CountryCardsContainer->AddChildToHorizontalBox(CardFrame);
-        CardSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-        CardSlot->SetPadding(FMargin(4.0f, 0.0f));
+        CardSlot->SetSize(FillWeight(Country.LayoutWeight));
+        CardSlot->SetPadding(bSelected ? FMargin(4.0f, 0.0f) : FMargin(4.0f, 18.0f));
     }
 }
 
@@ -825,12 +865,17 @@ void URA4CampaignSelectWidget::RefreshDoctrineCards()
 
         UBorder* CardFrame = MakePanel(
             WidgetTree, CardButton, FName(*FString::Printf(TEXT("DoctrineFrame_%d"), Index)),
-            bSelected ? FLinearColor(0.88f, 0.72f, 0.22f, 1.0f) : ActiveCountry.AccentColor, FMargin(0.0f));
+            bSelected ? FLinearColor(0.88f, 0.72f, 0.22f, 1.0f) : ActiveCountry.AccentColor,
+            DensityPadding(ActiveBloc.PanelDensity), ActiveBloc.FrameRail);
         DoctrineCardFrames.Add(CardFrame);
 
+        // Doctrines are a stepped ribbon, not three identical tiles: the active
+        // one opens up and the others sit lower.
         UHorizontalBoxSlot* CardSlot = DoctrineCardsContainer->AddChildToHorizontalBox(CardFrame);
-        CardSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-        CardSlot->SetPadding(FMargin(6.0f, 0.0f));
+        CardSlot->SetSize(FillWeight(bSelected ? 1.45f : 1.0f));
+        CardSlot->SetPadding(bSelected
+            ? FMargin(6.0f, 0.0f)
+            : FMargin(6.0f, 16.0f + 6.0f * static_cast<float>(Index), 6.0f, 0.0f));
     }
 }
 

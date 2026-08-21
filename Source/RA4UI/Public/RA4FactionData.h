@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "RA4AngularPanelWidget.h"
 #include "RA4UITheme.h"
 #include "RA4FactionData.generated.h"
 
@@ -86,6 +87,14 @@ struct RA4UI_API FRA4CountryInfo
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Country")
     TArray<FRA4DoctrineInfo> Doctrines;
 
+    /**
+     * Relative share this country takes in its bloc's mosaic. A bloc leader
+     * dominates the layout; partners read as smaller plates, so no screen
+     * degenerates into a row of interchangeable cards.
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Country|Composition", meta = (ClampMin = "0.4", ClampMax = "3.0"))
+    float LayoutWeight = 1.0f;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Country")
     bool bUnlocked = true;
 
@@ -135,6 +144,25 @@ struct RA4UI_API FRA4BlocInfo
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bloc")
     FLinearColor GlowColor = FLinearColor::White;
+
+    /**
+     * Relative share of the direction row. The five directions are deliberately
+     * unequal so the selection screen keeps one main theatre and several
+     * secondary zones instead of an even grid.
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bloc|Composition", meta = (ClampMin = "0.5", ClampMax = "3.0"))
+    float LayoutWeight = 1.0f;
+
+    /** Interior density of this direction's panels. */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bloc|Composition")
+    ERA4PanelRole PanelDensity = ERA4PanelRole::Standard;
+
+    /**
+     * Per-edge frame rail thickness. Each direction gets its own silhouette so
+     * it is recognisable before its colour is even noticed.
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bloc|Composition")
+    FMargin FrameRail = FMargin(1.5f);
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Bloc")
     TArray<FRA4CountryInfo> Countries;

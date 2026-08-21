@@ -82,6 +82,10 @@ void FRA4FactionDataRegistry::PopulateRegistry()
     {
         FRA4BlocInfo Bloc;
         Bloc.BlocId = ERA4FactionTheme::EurasianPact;
+        // Континентальный щит: тяжёлый левый рельс и массивное основание.
+        Bloc.LayoutWeight = 2.30f;
+        Bloc.PanelDensity = ERA4PanelRole::Hero;
+        Bloc.FrameRail = FMargin(6.0f, 1.5f, 1.5f, 4.0f);
         Bloc.DisplayName = LOCTEXT("Bloc_Eurasia", "Евразийский пакт");
         Bloc.Motto = LOCTEXT("Motto_Eurasia", "Единство. Технология. Суверенитет.");
         Bloc.Description = LOCTEXT("Desc_Eurasia", "Континентальный щит и глубинная оборона. Индустриальная мощь, эшелонированная ПВО и контроль ключевых направлений.");
@@ -100,6 +104,7 @@ void FRA4FactionDataRegistry::PopulateRegistry()
         {
             FRA4CountryInfo Country;
             Country.CountryId = TEXT("RU");
+            Country.LayoutWeight = 2.20f;
             Country.DisplayName = LOCTEXT("Country_RU", "Россия");
             Country.Specialization = LOCTEXT("Spec_RU", "Тяжёлая война · РЭБ · ПВО");
             Country.BaseHeadquarters = LOCTEXT("HQ_RU", "Полевой командный пункт «Рубеж-К»");
@@ -156,6 +161,7 @@ void FRA4FactionDataRegistry::PopulateRegistry()
         {
             FRA4CountryInfo Country;
             Country.CountryId = TEXT("BY");
+            Country.LayoutWeight = 1.05f;
             Country.DisplayName = LOCTEXT("Country_BY", "Беларусь");
             Country.Specialization = LOCTEXT("Spec_BY", "Скрытность · ПВО · РЭБ");
             Country.BaseHeadquarters = LOCTEXT("HQ_BY", "Лесной командный узел «Пуща»");
@@ -186,6 +192,7 @@ void FRA4FactionDataRegistry::PopulateRegistry()
         {
             FRA4CountryInfo Country;
             Country.CountryId = TEXT("KZ");
+            Country.LayoutWeight = 1.05f;
             Country.DisplayName = LOCTEXT("Country_KZ", "Казахстан");
             Country.Specialization = LOCTEXT("Spec_KZ", "Ракетные войска · Дальний удар · Мобильность");
             Country.BaseHeadquarters = LOCTEXT("HQ_KZ", "Степной пусковой штаб «Сарыарка»");
@@ -221,6 +228,10 @@ void FRA4FactionDataRegistry::PopulateRegistry()
     {
         FRA4BlocInfo Bloc;
         Bloc.BlocId = ERA4FactionTheme::AtlanticAlliance;
+        // Воздушно-морская сеть: тонкий аэродинамический верхний рельс.
+        Bloc.LayoutWeight = 1.30f;
+        Bloc.PanelDensity = ERA4PanelRole::Standard;
+        Bloc.FrameRail = FMargin(1.0f, 4.0f, 1.0f, 1.0f);
         Bloc.DisplayName = LOCTEXT("Bloc_Atlantic", "Атлантический альянс");
         Bloc.Motto = LOCTEXT("Motto_Atlantic", "Сила закона. Превосходство сети.");
         Bloc.Description = LOCTEXT("Desc_Atlantic", "Воздушно-морское превосходство, глобальное экспедиционное развёртывание и единая информационно-боевая сеть.");
@@ -239,6 +250,7 @@ void FRA4FactionDataRegistry::PopulateRegistry()
         {
             FRA4CountryInfo Country;
             Country.CountryId = TEXT("US");
+            Country.LayoutWeight = 2.20f;
             Country.DisplayName = LOCTEXT("Country_US", "США");
             Country.Specialization = LOCTEXT("Spec_US", "Авиация · Разведка · Точный удар");
             Country.BaseHeadquarters = LOCTEXT("HQ_US", "Мобильный оперативный центр «Vanguard»");
@@ -289,6 +301,7 @@ void FRA4FactionDataRegistry::PopulateRegistry()
         {
             FRA4CountryInfo Country;
             Country.CountryId = TEXT("GB");
+            Country.LayoutWeight = 1.30f;
             Country.DisplayName = LOCTEXT("Country_GB", "Великобритания");
             Country.Specialization = LOCTEXT("Spec_GB", "Морская блокада · Спецоперации");
             Country.BaseHeadquarters = LOCTEXT("HQ_GB", "Флотский штаб «Admiralty»");
@@ -314,6 +327,7 @@ void FRA4FactionDataRegistry::PopulateRegistry()
         {
             FRA4CountryInfo Country;
             Country.CountryId = TEXT("FR");
+            Country.LayoutWeight = 1.30f;
             Country.DisplayName = LOCTEXT("Country_FR", "Франция");
             Country.Specialization = LOCTEXT("Spec_FR", "Быстрое развёртывание · Ракетный щит");
             Country.BaseHeadquarters = LOCTEXT("HQ_FR", "Экспедиционный штаб «Citadelle»");
@@ -339,6 +353,7 @@ void FRA4FactionDataRegistry::PopulateRegistry()
         {
             FRA4CountryInfo Country;
             Country.CountryId = TEXT("DE");
+            Country.LayoutWeight = 1.10f;
             Country.DisplayName = LOCTEXT("Country_DE", "Германия");
             Country.Specialization = LOCTEXT("Spec_DE", "Высокоточная броня · Системная логистика");
             Country.BaseHeadquarters = LOCTEXT("HQ_DE", "Логистический штаб «Bollwerk»");
@@ -364,6 +379,7 @@ void FRA4FactionDataRegistry::PopulateRegistry()
         {
             FRA4CountryInfo Country;
             Country.CountryId = TEXT("PL");
+            Country.LayoutWeight = 0.75f;
             Country.DisplayName = LOCTEXT("Country_PL", "Польша");
             Country.Specialization = LOCTEXT("Spec_PL", "Эшелонированная оборона · БПЛА");
             Country.BaseHeadquarters = LOCTEXT("HQ_PL", "Опорный узел обороны «Wisła»");
@@ -389,6 +405,7 @@ void FRA4FactionDataRegistry::PopulateRegistry()
         {
             FRA4CountryInfo Country;
             Country.CountryId = TEXT("UA");
+            Country.LayoutWeight = 0.75f;
             Country.DisplayName = LOCTEXT("Country_UA", "Украина");
             Country.Specialization = LOCTEXT("Spec_UA", "Роевые дроны · Мобильная оборона");
             Country.BaseHeadquarters = LOCTEXT("HQ_UA", "Сетевой узел управления «Тризуб»");
@@ -420,6 +437,10 @@ void FRA4FactionDataRegistry::PopulateRegistry()
     {
         FRA4BlocInfo Bloc;
         Bloc.BlocId = ERA4FactionTheme::EasternCoalition;
+        // Производственный контур: плотная сетка и промышленное основание.
+        Bloc.LayoutWeight = 1.30f;
+        Bloc.PanelDensity = ERA4PanelRole::DenseHUD;
+        Bloc.FrameRail = FMargin(2.5f, 2.5f, 2.5f, 6.0f);
         Bloc.DisplayName = LOCTEXT("Bloc_Eastern", "Восточная коалиция");
         Bloc.Motto = LOCTEXT("Motto_Eastern", "Великое объединение. Индустрия победы.");
         Bloc.Description = LOCTEXT("Desc_Eastern", "Колоссальные производственные мощности, автоматизация заводов, рои боевых БПЛА и гиперзвуковые ракетные комплексы.");
@@ -438,6 +459,7 @@ void FRA4FactionDataRegistry::PopulateRegistry()
         {
             FRA4CountryInfo Country;
             Country.CountryId = TEXT("CN");
+            Country.LayoutWeight = 2.20f;
             Country.DisplayName = LOCTEXT("Country_CN", "Китай");
             Country.Specialization = LOCTEXT("Spec_CN", "Массовое производство · Ракеты · Дроны");
             Country.BaseHeadquarters = LOCTEXT("HQ_CN", "Умный командный завод «Тяньмэнь»");
@@ -488,6 +510,7 @@ void FRA4FactionDataRegistry::PopulateRegistry()
         {
             FRA4CountryInfo Country;
             Country.CountryId = TEXT("KP");
+            Country.LayoutWeight = 1.10f;
             Country.DisplayName = LOCTEXT("Country_KP", "КНДР");
             Country.Specialization = LOCTEXT("Spec_KP", "Подземные арсеналы · Массовая артиллерия");
             Country.BaseHeadquarters = LOCTEXT("HQ_KP", "Скальный командный бункер «Пэкту»");
@@ -520,6 +543,10 @@ void FRA4FactionDataRegistry::PopulateRegistry()
     {
         FRA4BlocInfo Bloc;
         Bloc.BlocId = ERA4FactionTheme::PacificPact;
+        // Островная оборона: лёгкая рамка со смещением к морскому краю.
+        Bloc.LayoutWeight = 0.95f;
+        Bloc.PanelDensity = ERA4PanelRole::Compact;
+        Bloc.FrameRail = FMargin(1.0f, 1.0f, 3.5f, 1.0f);
         Bloc.DisplayName = LOCTEXT("Bloc_Pacific", "Тихоокеанский пакт");
         Bloc.Motto = LOCTEXT("Motto_Pacific", "Оборона рубежей. Роботизация будущего.");
         Bloc.Description = LOCTEXT("Desc_Pacific", "Морская и островная оборона, передовая автономная робототехника, лазерные комплексы и мобильные экспедиционные группы.");
@@ -538,6 +565,7 @@ void FRA4FactionDataRegistry::PopulateRegistry()
         {
             FRA4CountryInfo Country;
             Country.CountryId = TEXT("JP");
+            Country.LayoutWeight = 2.20f;
             Country.DisplayName = LOCTEXT("Country_JP", "Япония");
             Country.Specialization = LOCTEXT("Spec_JP", "Робототехника · ПВО · Морская война");
             Country.BaseHeadquarters = LOCTEXT("HQ_JP", "Островной командный терминал «Кайган»");
@@ -588,6 +616,7 @@ void FRA4FactionDataRegistry::PopulateRegistry()
         {
             FRA4CountryInfo Country;
             Country.CountryId = TEXT("KR");
+            Country.LayoutWeight = 1.15f;
             Country.DisplayName = LOCTEXT("Country_KR", "Южная Корея");
             Country.Specialization = LOCTEXT("Spec_KR", "Сетевая артиллерия · Экзоскелеты");
             Country.BaseHeadquarters = LOCTEXT("HQ_KR", "Сетевой командный центр «Ханган»");
@@ -614,6 +643,7 @@ void FRA4FactionDataRegistry::PopulateRegistry()
         {
             FRA4CountryInfo Country;
             Country.CountryId = TEXT("AU");
+            Country.LayoutWeight = 1.00f;
             Country.DisplayName = LOCTEXT("Country_AU", "Австралия");
             Country.Specialization = LOCTEXT("Spec_AU", "Дальняя разведка · Океанский флот");
             Country.BaseHeadquarters = LOCTEXT("HQ_AU", "Прибрежная база патрулирования «Reef»");
@@ -646,6 +676,10 @@ void FRA4FactionDataRegistry::PopulateRegistry()
     {
         FRA4BlocInfo Bloc;
         Bloc.BlocId = ERA4FactionTheme::Independent;
+        // Не союз: рамка намеренно разорвана по вертикали, единого щита нет.
+        Bloc.LayoutWeight = 0.95f;
+        Bloc.PanelDensity = ERA4PanelRole::Compact;
+        Bloc.FrameRail = FMargin(3.0f, 1.0f, 3.0f, 1.0f);
         Bloc.DisplayName = LOCTEXT("Bloc_Independent", "Независимые державы");
         Bloc.Motto = LOCTEXT("Motto_Independent", "Категория выбора • Не является союзом");
         Bloc.bIsCategoryOnly = true;
@@ -665,6 +699,7 @@ void FRA4FactionDataRegistry::PopulateRegistry()
         {
             FRA4CountryInfo Country;
             Country.CountryId = TEXT("IR");
+            Country.LayoutWeight = 1.80f;
             Country.DisplayName = LOCTEXT("Country_IR", "Иран");
             Country.Specialization = LOCTEXT("Spec_IR", "Ракеты · БПЛА · Асимметричная война");
             Country.BaseHeadquarters = LOCTEXT("HQ_IR", "Мобильный узел «Мираж»");
@@ -707,6 +742,7 @@ void FRA4FactionDataRegistry::PopulateRegistry()
         {
             FRA4CountryInfo Country;
             Country.CountryId = TEXT("IL");
+            Country.LayoutWeight = 1.10f;
             Country.DisplayName = LOCTEXT("Country_IL", "Израиль");
             Country.Specialization = LOCTEXT("Spec_IL", "Разведка и превентивный удар · ПВО");
             Country.BaseHeadquarters = LOCTEXT("HQ_IL", "Заглублённый центр управления «Мигдаль»");
@@ -737,6 +773,7 @@ void FRA4FactionDataRegistry::PopulateRegistry()
         {
             FRA4CountryInfo Country;
             Country.CountryId = TEXT("SA");
+            Country.LayoutWeight = 1.00f;
             Country.DisplayName = LOCTEXT("Country_SA", "Саудовская Аравия");
             Country.Specialization = LOCTEXT("Spec_SA", "Тяжёлая экспедиционная техника · Защита инфраструктуры");
             Country.BaseHeadquarters = LOCTEXT("HQ_SA", "Пустынный командный комплекс «Наджд»");
@@ -763,6 +800,7 @@ void FRA4FactionDataRegistry::PopulateRegistry()
         {
             FRA4CountryInfo Country;
             Country.CountryId = TEXT("BR");
+            Country.LayoutWeight = 1.00f;
             Country.DisplayName = LOCTEXT("Country_BR", "Бразилия");
             Country.Specialization = LOCTEXT("Spec_BR", "Речная маневренность · Региональный доминион");
             Country.BaseHeadquarters = LOCTEXT("HQ_BR", "Речной командный понтон «Амазонас»");
@@ -789,6 +827,7 @@ void FRA4FactionDataRegistry::PopulateRegistry()
         {
             FRA4CountryInfo Country;
             Country.CountryId = TEXT("IN");
+            Country.LayoutWeight = 1.15f;
             Country.DisplayName = LOCTEXT("Country_IN", "Индия");
             Country.Specialization = LOCTEXT("Spec_IN", "Горная оборона · Комбинированный арсенал");
             Country.BaseHeadquarters = LOCTEXT("HQ_IN", "Горный командный комплекс «Гималай»");
