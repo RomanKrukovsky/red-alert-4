@@ -61,6 +61,10 @@ public:
     AIProfile GetProfile() const { return Profile; }
     AIStrategy GetActiveStrategy() const { return ActiveStrategy; }
     const TacticalOperation& GetActiveOperation() const { return ActiveOperation; }
+    TileCoord GetLastKnownEnemyBaseTile() const { return LastKnownEnemyBaseTile; }
+    TickIndex GetLastKnownEnemyBaseTick() const { return LastKnownEnemyBaseTick; }
+    size_t GetKnownEnemyCount() const { return Knowledge ? Knowledge->GetKnownEnemies().size() : 0; }
+    EntityId GetScoutUnit() const { return ScoutUnit; }
 
     // Call once per simulation tick. Appends any commands for this tick; the caller
     // merges them into the CommandFrame alongside player and other AI commands.
@@ -125,7 +129,9 @@ private:
     bool AnySquadNearTarget(const SimWorld& World, const TileCoord& TargetTile) const;
     void IssueSquadAttackMove(const SimWorld& World, const Vec2& Destination,
                               std::vector<Command>& Out);
-    EntityId FindTacticalFocusTarget(const SimWorld& World, EntityId AttackerId, const std::vector<EntityId>& CandidateEnemies) const;
+    EntityId FindTacticalFocusTarget(const SimWorld& World, EntityId AttackerId,
+                                     const std::vector<EntityId>& CandidateEnemies,
+                                     const std::vector<EntityId>& ReturnFireTargets) const;
     void IssueSquadTacticalCombatOrders(const SimWorld& World, const Vec2& Destination,
                                         std::vector<Command>& Out);
     void IssueSquadRetreat(const SimWorld& World, std::vector<Command>& Out);
@@ -230,6 +236,14 @@ private:
     int32_t ScoutWaypointIndex = 0;
     TickIndex LastScoutOrderTick = 0;
     bool bHasScoutOrder = false;
+
+    // Last place an enemy base structure was observed. Buildings do not move, so
+    // this stays worth returning to long after the raw sighting has decayed out of
+    // Knowledge: an army that arrives at an expired target must come back here to
+    // look, not wander the scout circuit while the enemy base sits unattacked.
+    TileCoord LastKnownEnemyBaseTile{0, 0};
+    TickIndex LastKnownEnemyBaseTick = 0;
+    ContentId LastKnownEnemyBaseDefId;
 
 private:
     std::vector<AIDecision> DecisionLog;

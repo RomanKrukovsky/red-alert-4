@@ -63,6 +63,19 @@ bool IsCombatUnitDef(const EntityDef* Def)
     return Def->Weapon.IsValid() && !Def->Unit.bIsHarvester && !Def->Unit.bIsBuilder;
 }
 
+// A base structure in the enemy-economy sense: the yard itself, its producers or
+// its refineries. Used to rank same-tick sightings when picking the tile an army
+// should return to; a lone turret still counts as enemy territory, just weaker.
+bool IsBaseStructureId(const ContentDatabase* Content, ContentId Id)
+{
+    const EntityDef* Def = Content != nullptr ? Content->FindEntity(Id) : nullptr;
+    return Def != nullptr &&
+           (Def->Building.bIsConstructionYard ||
+            HasRole(Def->Roles, EntityRole::BaseBuilding) ||
+            HasRole(Def->Roles, EntityRole::Production) ||
+            HasRole(Def->Roles, EntityRole::Refinery));
+}
+
 bool IsWounded(const SimWorld& World, EntityId Id)
 {
     const HealthComp* Health = World.GetHealth(Id);
@@ -116,6 +129,9 @@ void AICommander::Reset()
     ScoutWaypointIndex = 0;
     LastScoutOrderTick = 0;
     bHasScoutOrder = false;
+    LastKnownEnemyBaseTile = TileCoord{0, 0};
+    LastKnownEnemyBaseTick = 0;
+    LastKnownEnemyBaseDefId = ContentId();
     ActiveOperation = TacticalOperation();
     Threats.Clear();
     Values.Clear();
@@ -410,8 +426,15 @@ ContentId AICommander::FindCombatUnit(const SimWorld& World) const
         // here, so "most expensive affordable unit" never once chose it, and the
         // Turtle profile stayed at ~80% through two balance passes. The bonus
         // scales with how much defence we have actually seen, so it cannot make
-        // the AI build artillery against an undefended opponent.
-        if (EnemyDefenceCount > 0 && HasRole(Def.Roles, EntityRole::Artillery))
+        // the AI build artillery against an undefended opponent -- and it is
+        // bounded so the answer to turrets stays combined arms. An all-artillery
+        // army loses its screen, loses every skirmish against anything fast, and
+        // still fails to crack the base, which league telemetry caught as
+        // 40-unit artillery balls orbiting a five-turret turtle for minutes.
+        const int32_t ArtilleryShare =
+            TotalCombatUnits > 0 ? (CountArtillery * 100) / TotalCombatUnits : 0;
+        if (EnemyDefenceCount > 0 && HasRole(Def.Roles, EntityRole::Artillery) &&
+            ArtilleryShare < 40)
         {
             Score += 200 + std::min(EnemyDefenceCount, 4) * 120;
         }
@@ -636,8 +659,37 @@ void AICommander::UpdateKnowledge(const SimWorld& World)
     TicksSinceMemoryUpdate = 0;
     Knowledge->UpdateMemory(TickIndex(std::max(0, Config.MemoryRetentionTicks)));
 
-    // Recompute spatial awareness maps from fog-limited memory.
+    // Track the most recent sighting of any enemy structure. Memory entries expire
+    // after MemoryRetentionTicks, but a remembered building position stays the
+    // single most valuable place to send an army that has lost the thread: buildings
+    // do not move, and even an outlying turret marks where the enemy's territory
+    // begins. Without this, armies that arrive at an expired target wander the map
+    // while the base they saw two minutes ago sits unattacked. The def may be
+    // unidentified under the belief/recon knowledge path; a building sighting still
+    // proves enemy territory regardless of how sure we are of its class.
     const ContentDatabase* Content = World.GetContent();
+    for (const EnemyMemory& Mem : Knowledge->GetKnownEnemies())
+    {
+        if (Mem.Kind != EntityKind::Building)
+        {
+            continue;
+        }
+        const bool bNewIsBase = IsBaseStructureId(Content, Mem.DefId);
+        const bool bCurIsBase = IsBaseStructureId(Content, LastKnownEnemyBaseDefId);
+        const bool bBeatsCurrent = Mem.LastSeenTick > LastKnownEnemyBaseTick ||
+            // Same-tick sightings prefer a base structure over an outlying turret,
+            // then keep the first seen -- deterministic: KnownEnemies is an ordered
+            // vector and the comparison never falls back to anything unstable.
+            (Mem.LastSeenTick == LastKnownEnemyBaseTick && bNewIsBase && !bCurIsBase);
+        if (bBeatsCurrent)
+        {
+            LastKnownEnemyBaseTick = Mem.LastSeenTick;
+            LastKnownEnemyBaseTile = Mem.Position;
+            LastKnownEnemyBaseDefId = Mem.DefId;
+        }
+    }
+
+    // Recompute spatial awareness maps from fog-limited memory.
     Threats.UpdateFromMemory(Knowledge->GetKnownEnemies(), Content,
                              World.GetMap(), World.GetTick());
     Values.UpdateFromWorld(World, Player, Knowledge->GetKnownEnemies(),
@@ -646,20 +698,37 @@ void AICommander::UpdateKnowledge(const SimWorld& World)
 
 TileCoord AICommander::NextScoutWaypoint(const SimWorld& World) const
 {
-    // A fixed ring of candidate locations derived from the map size: the far corner
-    // first, because in a symmetric skirmish that is where the opponent starts, then
-    // the remaining quadrants. Deterministic by construction -- index driven, no RNG,
-    // so two replays of the same seed scout in the same order.
+    // A ring of candidate locations anchored on the point-mirror of our own
+    // construction yard: in a symmetric skirmish that is where the opponent starts.
+    // The old static ring hard-coded the far bottom-right corner as "the likely
+    // enemy base", which is only true for the top-left player -- a commander
+    // starting anywhere else toured its own corner forever while the actual enemy
+    // sat unscouted in the one quadrant the ring never visited. Deterministic by
+    // construction -- index driven, no RNG -- so two replays of the same seed scout
+    // in the same order.
     const MapDescription& Map = World.GetMap();
     const int32_t W = Map.Width;
     const int32_t H = Map.Height;
+    TileCoord EnemyCorner(W - W / 8, H - H / 8);
+    const EntityId Yard = FindOwnConstructionYard(World);
+    if (Yard.IsValid())
+    {
+        const TransformComp* YardTransform = World.GetTransform(Yard);
+        if (YardTransform != nullptr)
+        {
+            const TileCoord YardTile = World.GetMap().WorldToTile(YardTransform->Position);
+            EnemyCorner = TileCoord(W - 1 - YardTile.X, H - 1 - YardTile.Y);
+            EnemyCorner.X = std::max(0, std::min(EnemyCorner.X, W - 1));
+            EnemyCorner.Y = std::max(0, std::min(EnemyCorner.Y, H - 1));
+        }
+    }
     const TileCoord Candidates[6] = {
-        TileCoord(W - W / 8, H - H / 8),     // opposite corner: the likely enemy base
+        EnemyCorner,                         // the likely enemy base
         TileCoord(W / 2, H / 2),             // centre
-        TileCoord(W - W / 8, H / 8),
-        TileCoord(W / 8, H - H / 8),
-        TileCoord(W / 2, H - H / 8),
-        TileCoord(W - W / 8, H / 2),
+        TileCoord(EnemyCorner.X, H / 2),
+        TileCoord(W / 2, EnemyCorner.Y),
+        TileCoord((W / 2 + EnemyCorner.X) / 2, H / 2),
+        TileCoord(W / 2, (H / 2 + EnemyCorner.Y) / 2),
     };
     const int32_t Count = int32_t(sizeof(Candidates) / sizeof(Candidates[0]));
     return Candidates[((ScoutWaypointIndex % Count) + Count) % Count];
@@ -1517,6 +1586,13 @@ void AICommander::IssueSquadAttackMove(const SimWorld& World, const Vec2& Destin
     for (size_t I = 0; I < UnitCount; ++I)
     {
         const EntityId Id = ActiveOperation.AssignedUnits[I];
+        // Ordering a destroyed unit is refused by the sim as NoSuchEntity -- and the
+        // refusal still consumes this player's per-tick command budget, so a squad
+        // full of ghosts would silently starve the live units of their orders.
+        if (!World.IsAlive(Id))
+        {
+            continue;
+        }
         const OrderQueue* Orders = World.GetOrders(Id);
         if (Orders != nullptr && Orders->Count > 0)
         {
@@ -1537,7 +1613,8 @@ void AICommander::IssueSquadAttackMove(const SimWorld& World, const Vec2& Destin
 }
 
 EntityId AICommander::FindTacticalFocusTarget(const SimWorld& World, EntityId AttackerId,
-                                             const std::vector<EntityId>& CandidateEnemies) const
+                                              const std::vector<EntityId>& CandidateEnemies,
+                                              const std::vector<EntityId>& ReturnFireTargets) const
 {
     const ContentDatabase* Content = World.GetContent();
     const TransformComp* AttackerTransform = World.GetTransform(AttackerId);
@@ -1602,6 +1679,19 @@ EntityId AICommander::FindTacticalFocusTarget(const SimWorld& World, EntityId At
         }
 
         int32_t Score = EnemyDef->Production.Cost / 2;
+
+        // Return fire: whatever shot one of ours this tick is shooting from inside
+        // its own range, so killing it stops ongoing damage. Without this a squad
+        // walked into a turret line and kept chasing harvesters behind it while
+        // the turrets ground the push down -- the classic never-finishes siege.
+        for (const EntityId& ShooterId : ReturnFireTargets)
+        {
+            if (ShooterId == EnemyId)
+            {
+                Score += 700;
+                break;
+            }
+        }
 
         if (EnemyHealth->Max > 0)
         {
@@ -1670,6 +1760,39 @@ void AICommander::IssueSquadTacticalCombatOrders(const SimWorld& World, const Ve
         if (World.IsEntityVisibleTo(Player, I))
         {
             VisibleEnemies.push_back(World.MakeId(I));
+        }
+    }
+
+    // Enemies that hit one of our units this tick. The damage event is the record
+    // of what was done to us -- the same legitimate knowledge IsUnderAttack reads --
+    // and focus fire on the shooter is what a human commander orders in a siege.
+    // Only a force at operational strength earns that priority: a probe or raid
+    // below its required size must stay on economy targets, because trading
+    // raiders into a turret they cannot crack is how a rush turns into a
+    // twelve-minute draw.
+    std::vector<EntityId> ReturnFireTargets;
+    const bool bCommittedPush =
+        ActiveOperation.AssignedUnits.size() >=
+        size_t(std::max(1, ActiveOperation.RequiredCombatUnits));
+    if (bCommittedPush)
+    {
+        for (const SimEvent& Ev : World.GetEvents())
+        {
+            if (Ev.Type != SimEventType::DamageApplied || !Ev.Other.IsValid())
+            {
+                continue;
+            }
+            const EntityCore* Victim = World.GetCore(Ev.Entity);
+            if (Victim == nullptr || Victim->Owner != Player || Victim->Kind != EntityKind::Unit)
+            {
+                continue;
+            }
+            const EntityCore* Shooter = World.GetCore(Ev.Other);
+            if (Shooter == nullptr || Shooter->Owner == Player || Shooter->Owner >= kMaxPlayers)
+            {
+                continue;
+            }
+            ReturnFireTargets.push_back(Ev.Other);
         }
     }
 
@@ -1814,7 +1937,7 @@ void AICommander::IssueSquadTacticalCombatOrders(const SimWorld& World, const Ve
             }
         }
 
-        EntityId FocusTarget = FindTacticalFocusTarget(World, Id, VisibleEnemies);
+        EntityId FocusTarget = FindTacticalFocusTarget(World, Id, VisibleEnemies, ReturnFireTargets);
 
         // Artillery standoff positioning
         if (HasRole(UnitDef->Roles, EntityRole::Artillery) && UnitDef->Weapon.IsValid() && FocusTarget.IsValid())
@@ -1875,6 +1998,11 @@ void AICommander::IssueSquadRetreat(const SimWorld& World, std::vector<Command>&
     const Vec2 Destination = YardTransform->Position;
     for (EntityId Id : ActiveOperation.AssignedUnits)
     {
+        // Same budget rule as IssueSquadAttackMove: dead units burn command slots.
+        if (!World.IsAlive(Id))
+        {
+            continue;
+        }
         const OrderQueue* Orders = World.GetOrders(Id);
         if (Orders != nullptr && Orders->Count > 0)
         {
@@ -2018,6 +2146,11 @@ bool AICommander::TryHarassRaid(const SimWorld& World, int32_t ArmySize,
             (I + Rng.NextBelow(uint32_t(ActiveOperation.AssignedUnits.size()))) %
             ActiveOperation.AssignedUnits.size();
         const EntityId Id = ActiveOperation.AssignedUnits[Index];
+        // Ordering a destroyed unit burns command budget on a NoSuchEntity refusal.
+        if (!World.IsAlive(Id))
+        {
+            continue;
+        }
         const OrderQueue* Orders = World.GetOrders(Id);
         if (Orders != nullptr && Orders->Count > 0)
         {
@@ -2368,6 +2501,8 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
     // gathering toward the most likely enemy base corner.  This prevents economic or
     // defensive profiles from turtling forever; once they arrive they will sight the
     // real enemy and the target updates to the observed position.
+    // A previously seen enemy base outranks the generic scout circuit: buildings do
+    // not move, so going back to look there is strictly better than touring corners.
     if (!bHasTarget &&
         (ActiveOperation.State == OperationState::Proposed ||
          ActiveOperation.State == OperationState::Completed ||
@@ -2376,7 +2511,9 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
         const int32_t IdleCombat = CountIdleCombatUnits(World);
         if (IdleCombat >= ActiveOperation.MinRetreatUnits)
         {
-            ActiveOperation.TargetLocation = GetAndAdvanceScoutWaypoint(World);
+            ActiveOperation.TargetLocation =
+                LastKnownEnemyBaseTick > 0 ? LastKnownEnemyBaseTile
+                                           : GetAndAdvanceScoutWaypoint(World);
             ActiveOperation.StartTick = World.GetTick();
             ActiveOperation.TransitionTo(OperationState::Gathering, World.GetTick());
         }
@@ -2447,11 +2584,17 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
              ActiveOperation.State == OperationState::Engaging)
     {
         // The squad arrived at a stale target and saw nothing: there may be a real
-        // base just over the fog edge. Pivot to the next scout waypoint instead of
-        // idling at an empty tile until MemoryRetentionTicks expire.
+        // base just over the fog edge. Return to the last place an enemy base was
+        // actually observed before falling back to the generic scout circuit --
+        // touring corners while a known base position goes unchecked is how matches
+        // previously stalled into draws.
         if (AnySquadNearTarget(World, ActiveOperation.TargetLocation))
         {
-            ActiveOperation.TargetLocation = GetAndAdvanceScoutWaypoint(World);
+            ActiveOperation.TargetLocation =
+                LastKnownEnemyBaseTick > 0 &&
+                        !(ActiveOperation.TargetLocation == LastKnownEnemyBaseTile)
+                    ? LastKnownEnemyBaseTile
+                    : GetAndAdvanceScoutWaypoint(World);
         }
     }
 
@@ -2494,9 +2637,26 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
                         ActiveOperation.AssignedUnits.size() <
                             size_t(ActiveOperation.RequiredCombatUnits))
                     {
-                        bCommit = false;
-                        Log(World.GetTick(), CommandType::None, ContentId(),
-                            "assault delayed: forecast unfavourable");
+                        // Waiting is only right while it can still change the outcome.
+                        // A commander whose economy cannot grow into RequiredCombatUnits
+                        // (or whose forecast never improves against a turtle) used to sit
+                        // in Gathering until the match clock ran out; after a minute of
+                        // stale gathering it must attack with what it has instead.
+                        const TickIndex GatheredFor =
+                            World.GetTick() >= ActiveOperation.LastStateChangeTick
+                                ? World.GetTick() - ActiveOperation.LastStateChangeTick
+                                : 0;
+                        if (GatheredFor < TickIndex(kTicksPerSecond * 60))
+                        {
+                            bCommit = false;
+                            Log(World.GetTick(), CommandType::None, ContentId(),
+                                "assault delayed: forecast unfavourable");
+                        }
+                        else
+                        {
+                            Log(World.GetTick(), CommandType::None, ContentId(),
+                                "assault escalated: gathering stalled past its window");
+                        }
                     }
                 }
 
