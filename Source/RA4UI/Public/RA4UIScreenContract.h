@@ -28,14 +28,11 @@ UENUM(BlueprintType)
 enum class ERA4UIScreenVariant : uint8
 {
     Default,
-    AlliesAlternate,
-    LoadingBriefing,
-    EasternDetail,
-    SovietBattle,
-    SovietAlert,
-    AlliesNaval,
-    AlliesAir,
-    ChronoSuperweapon
+    GroundAssault,
+    NavalWarfare,
+    BaseDefense,
+    AirWarfare,
+    InsurgentFront
 };
 
 USTRUCT(BlueprintType)

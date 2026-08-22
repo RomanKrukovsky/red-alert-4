@@ -7,14 +7,14 @@
 URA4FactionHUDWidget::URA4FactionHUDWidget(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
 {
-    ConfigureReference(13);
+    ConfigureReference(12);
 }
 
 void URA4FactionHUDWidget::NativePreConstruct()
 {
     // A placed WBP uses its configured reference, while the showcase game mode can
     // still override the C++ default before the widget reaches the viewport.
-    if (InitialReferenceNumber != 13 || ReferenceNumber == 13)
+    if (InitialReferenceNumber != 12 || ReferenceNumber == 12)
     {
         ConfigureReference(InitialReferenceNumber);
     }
@@ -25,45 +25,33 @@ bool URA4FactionHUDWidget::ConfigureReference(const int32 InReferenceNumber)
 {
     switch (InReferenceNumber)
     {
+    case 12:
+        SetVariantData(12, ERA4FactionTheme::EurasianPact, ERA4UIScreenVariant::GroundAssault,
+            1, TEXT("EurasianArmorPush"));
+        return true;
     case 13:
-        SetVariantData(13, ERA4FactionTheme::EurasianPact, ERA4UIScreenVariant::Default,
-            0, TEXT("EurasianProduction"));
+        SetVariantData(13, ERA4FactionTheme::AtlanticAlliance, ERA4UIScreenVariant::NavalWarfare,
+            4, TEXT("AtlanticCarrierGroup"));
         return true;
     case 14:
-        SetVariantData(14, ERA4FactionTheme::AtlanticAlliance, ERA4UIScreenVariant::Default,
-            3, TEXT("AtlanticCombinedArms"));
+        SetVariantData(14, ERA4FactionTheme::EasternCoalition, ERA4UIScreenVariant::BaseDefense,
+            0, TEXT("EasternIndustrialSiege"));
         return true;
     case 15:
-        SetVariantData(15, ERA4FactionTheme::EasternCoalition, ERA4UIScreenVariant::Default,
-            0, TEXT("EasternProduction"));
+        SetVariantData(15, ERA4FactionTheme::PacificPact, ERA4UIScreenVariant::AirWarfare,
+            2, TEXT("PacificAirCampaign"));
         return true;
     case 16:
-        SetVariantData(16, ERA4FactionTheme::PacificPact, ERA4UIScreenVariant::Default,
-            0, TEXT("PacificRobotics"));
+        SetVariantData(16, ERA4FactionTheme::Independent, ERA4UIScreenVariant::InsurgentFront,
+            2, TEXT("IndependentSaturationStrike"));
         return true;
     case 17:
-        SetVariantData(17, ERA4FactionTheme::Independent, ERA4UIScreenVariant::Default,
-            0, TEXT("IndependentMissiles"));
+        SetVariantData(17, ERA4FactionTheme::EurasianPact, ERA4UIScreenVariant::BaseDefense,
+            0, TEXT("EurasianBaseDefense"));
         return true;
-    case 20:
-        SetVariantData(20, ERA4FactionTheme::EurasianPact, ERA4UIScreenVariant::SovietBattle,
-            2, TEXT("EurasianArmorBattle"));
-        return true;
-    case 21:
-        SetVariantData(21, ERA4FactionTheme::EurasianPact, ERA4UIScreenVariant::SovietAlert,
-            0, TEXT("EurasianBaseAlert"));
-        return true;
-    case 22:
-        SetVariantData(22, ERA4FactionTheme::AtlanticAlliance, ERA4UIScreenVariant::AlliesNaval,
-            4, TEXT("AtlanticNaval"));
-        return true;
-    case 23:
-        SetVariantData(23, ERA4FactionTheme::AtlanticAlliance, ERA4UIScreenVariant::AlliesAir,
-            3, TEXT("AtlanticAir"));
-        return true;
-    case 24:
-        SetVariantData(24, ERA4FactionTheme::Chronolegion, ERA4UIScreenVariant::ChronoSuperweapon,
-            3, TEXT("ChronoSuperweapon"));
+    case 18:
+        SetVariantData(18, ERA4FactionTheme::PacificPact, ERA4UIScreenVariant::BaseDefense,
+            0, TEXT("PacificIslandDefense"));
         return true;
     default:
         return false;
@@ -79,7 +67,7 @@ void URA4FactionHUDWidget::SetVariantData(
 {
     ReferenceNumber = InReferenceNumber;
     SpecializedPanelId = InSpecializedPanelId;
-    bShowSuperweaponPanel = Variant == ERA4UIScreenVariant::ChronoSuperweapon;
+    bShowSuperweaponPanel = Variant == ERA4UIScreenVariant::InsurgentFront;
     ConfigureHUD(Theme, Variant, ActiveTab);
     RebuildTabs();
 }
@@ -98,7 +86,7 @@ void URA4FactionHUDWidget::RebuildTabs()
         ProductionTabs = {
             LOCTEXT("AtlanticStructures", "СТРОЕНИЯ"), LOCTEXT("AtlanticInfantry", "ПЕХОТА"),
             LOCTEXT("AtlanticVehicles", "ТЕХНИКА"), LOCTEXT("AtlanticAir", "АВИАЦИЯ")};
-        if (GetHUDVariant() == ERA4UIScreenVariant::AlliesNaval)
+        if (GetHUDVariant() == ERA4UIScreenVariant::NavalWarfare)
         {
             ProductionTabs.Add(LOCTEXT("AtlanticFleet", "ФЛОТ"));
         }

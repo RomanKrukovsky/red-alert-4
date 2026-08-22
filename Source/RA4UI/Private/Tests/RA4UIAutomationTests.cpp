@@ -33,19 +33,17 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FRA4ScreenContractReferenceVariantTest::RunTest(const FString& Parameters)
 {
-    const FRA4UIScreenContract AlliesAir = ResolveScreenContract(
-        ERA4UIScreenId::AlliesHud,
-        ERA4UIScreenVariant::AlliesAir);
-    const FRA4UIScreenContract LoadingBriefing = ResolveScreenContract(
-        ERA4UIScreenId::Loading,
-        ERA4UIScreenVariant::LoadingBriefing);
+    const FRA4UIScreenContract AtlanticNaval = ResolveScreenContract(
+        ERA4UIScreenId::AtlanticHud,
+        ERA4UIScreenVariant::NavalWarfare);
+    const FRA4UIScreenContract Loading = ResolveScreenContract(ERA4UIScreenId::Loading);
 
-    TestEqual(TEXT("Allies air reference"), AlliesAir.ReferenceNumber, 23);
-    TestEqual(TEXT("Allies air theme"), AlliesAir.Theme, ERA4FactionTheme::Allies);
-    TestEqual(TEXT("Allies air family"), AlliesAir.Family, ERA4UIScreenFamily::InGameHud);
-    TestEqual(TEXT("Allies air input"), AlliesAir.InputMode, ERA4UIInputMode::GameAndUI);
-    TestEqual(TEXT("Loading briefing reference"), LoadingBriefing.ReferenceNumber, 19);
-    TestEqual(TEXT("Loading input"), LoadingBriefing.InputMode, ERA4UIInputMode::UIOnly);
+    TestEqual(TEXT("Atlantic naval reference"), AtlanticNaval.ReferenceNumber, 13);
+    TestEqual(TEXT("Atlantic naval theme"), AtlanticNaval.Theme, ERA4FactionTheme::AtlanticAlliance);
+    TestEqual(TEXT("Atlantic naval family"), AtlanticNaval.Family, ERA4UIScreenFamily::InGameHud);
+    TestEqual(TEXT("Atlantic naval input"), AtlanticNaval.InputMode, ERA4UIInputMode::GameAndUI);
+    TestEqual(TEXT("Loading reference"), Loading.ReferenceNumber, 10);
+    TestEqual(TEXT("Loading input"), Loading.InputMode, ERA4UIInputMode::UIOnly);
     return true;
 }
 
@@ -58,11 +56,17 @@ bool FRA4ScreenContractUnsupportedVariantTest::RunTest(const FString& Parameters
 {
     const FRA4UIScreenContract MainMenu = ResolveScreenContract(
         ERA4UIScreenId::MainMenu,
-        ERA4UIScreenVariant::ChronoSuperweapon);
+        ERA4UIScreenVariant::GroundAssault);
 
     TestEqual(TEXT("Main menu reference"), MainMenu.ReferenceNumber, 2);
     TestEqual(TEXT("Main menu variant"), MainMenu.Variant, ERA4UIScreenVariant::Default);
     TestEqual(TEXT("Main menu input"), MainMenu.InputMode, ERA4UIInputMode::UIOnly);
+
+    // A HUD requested without a combat flavour resolves to its signature
+    // reference so every playable route lands on a real screenshot.
+    const FRA4UIScreenContract PacificSignature =
+        ResolveScreenContract(ERA4UIScreenId::PacificHud);
+    TestEqual(TEXT("Pacific signature reference"), PacificSignature.ReferenceNumber, 15);
     return true;
 }
 
@@ -124,8 +128,8 @@ bool FRA4ActivatableInputContractTest::RunTest(const FString& Parameters)
         ECommonInputMode::Menu);
 
     ScreenRoot->SetScreenIdentity(
-        ERA4UIScreenId::AlliesHud,
-        ERA4UIScreenVariant::AlliesAir);
+        ERA4UIScreenId::AtlanticHud,
+        ERA4UIScreenVariant::NavalWarfare);
     TestEqual(
         TEXT("HUD input"),
         ScreenRoot->GetDesiredInputConfig().GetValue().GetInputMode(),
@@ -272,17 +276,17 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FRA4CampaignReferenceVariantsTest::RunTest(const FString& Parameters)
 {
-    const FRA4UIScreenContract AlliesDefault = ResolveScreenContract(ERA4UIScreenId::AlliesCampaign);
-    const FRA4UIScreenContract AlliesAlternate = ResolveScreenContract(
-        ERA4UIScreenId::AlliesCampaign, ERA4UIScreenVariant::AlliesAlternate);
-    const FRA4UIScreenContract LoadingDefault = ResolveScreenContract(ERA4UIScreenId::Loading);
-    const FRA4UIScreenContract LoadingBriefing = ResolveScreenContract(
-        ERA4UIScreenId::Loading, ERA4UIScreenVariant::LoadingBriefing);
+    const FRA4UIScreenContract EurasianGround = ResolveScreenContract(ERA4UIScreenId::EurasianHud);
+    const FRA4UIScreenContract EurasianBase = ResolveScreenContract(
+        ERA4UIScreenId::EurasianHud, ERA4UIScreenVariant::BaseDefense);
+    const FRA4UIScreenContract PacificAir = ResolveScreenContract(ERA4UIScreenId::PacificHud);
+    const FRA4UIScreenContract PacificBase = ResolveScreenContract(
+        ERA4UIScreenId::PacificHud, ERA4UIScreenVariant::BaseDefense);
 
-    TestEqual(TEXT("Allies default reference"), AlliesDefault.ReferenceNumber, 5);
-    TestEqual(TEXT("Allies alternate reference"), AlliesAlternate.ReferenceNumber, 11);
-    TestEqual(TEXT("Loading default reference"), LoadingDefault.ReferenceNumber, 12);
-    TestEqual(TEXT("Loading briefing reference"), LoadingBriefing.ReferenceNumber, 19);
+    TestEqual(TEXT("Eurasian ground reference"), EurasianGround.ReferenceNumber, 12);
+    TestEqual(TEXT("Eurasian base reference"), EurasianBase.ReferenceNumber, 17);
+    TestEqual(TEXT("Pacific air reference"), PacificAir.ReferenceNumber, 15);
+    TestEqual(TEXT("Pacific base reference"), PacificBase.ReferenceNumber, 18);
     return true;
 }
 
@@ -294,12 +298,12 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FRA4CampaignScreenCompositionTest::RunTest(const FString& Parameters)
 {
     URA4CampaignScreenWidget* Screen = NewObject<URA4CampaignScreenWidget>();
-    Screen->ConfigureCampaign(ERA4FactionTheme::EasternCoalition, ERA4UIScreenVariant::EasternDetail);
+    Screen->ConfigureCampaign(ERA4FactionTheme::EasternCoalition);
     TestTrue(TEXT("Campaign screen initializes"), Screen->Initialize());
     Screen->TakeWidget();
 
     TestEqual(TEXT("Configured faction"), Screen->GetFactionTheme(), ERA4FactionTheme::EasternCoalition);
-    TestEqual(TEXT("Configured variant"), Screen->GetScreenVariant(), ERA4UIScreenVariant::EasternDetail);
+    TestEqual(TEXT("Configured variant"), Screen->GetScreenVariant(), ERA4UIScreenVariant::Default);
     TestEqual(TEXT("Primary campaign actions"), Screen->GetActionButtons().Num(), 3);
     return true;
 }
@@ -565,12 +569,12 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FRA4FactionHUDVariantContractTest::RunTest(const FString& Parameters)
 {
-    const int32 References[] = {13, 14, 15, 16, 17, 20, 21, 22, 23, 24};
+    const int32 References[] = {12, 13, 14, 15, 16, 17, 18};
     const FName Specializations[] = {
-        TEXT("EurasianProduction"), TEXT("AtlanticCombinedArms"), TEXT("EasternProduction"),
-        TEXT("PacificRobotics"), TEXT("IndependentMissiles"), TEXT("EurasianArmorBattle"),
-        TEXT("EurasianBaseAlert"), TEXT("AtlanticNaval"), TEXT("AtlanticAir"),
-        TEXT("ChronoSuperweapon")
+        TEXT("EurasianArmorPush"), TEXT("AtlanticCarrierGroup"),
+        TEXT("EasternIndustrialSiege"), TEXT("PacificAirCampaign"),
+        TEXT("IndependentSaturationStrike"), TEXT("EurasianBaseDefense"),
+        TEXT("PacificIslandDefense")
     };
 
     for (int32 Index = 0; Index < UE_ARRAY_COUNT(References); ++Index)
@@ -595,18 +599,19 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FRA4FactionHUDCompositionTest::RunTest(const FString& Parameters)
 {
-    URA4FactionHUDWidget* AlliesAir = NewObject<URA4FactionHUDWidget>();
-    TestTrue(TEXT("Allies air configures"), AlliesAir->ConfigureReference(23));
-    TestTrue(TEXT("Allies air initializes"), AlliesAir->Initialize());
-    AlliesAir->TakeWidget();
-    TestEqual(TEXT("Allies theme"), AlliesAir->GetFactionTheme(), ERA4FactionTheme::Allies);
-    TestEqual(TEXT("Allies air variant"), AlliesAir->GetHUDVariant(), ERA4UIScreenVariant::AlliesAir);
-    TestEqual(TEXT("Air tab active"), AlliesAir->GetActiveProductionTab(), 3);
+    URA4FactionHUDWidget* AtlanticNaval = NewObject<URA4FactionHUDWidget>();
+    TestTrue(TEXT("Atlantic naval configures"), AtlanticNaval->ConfigureReference(13));
+    TestTrue(TEXT("Atlantic naval initializes"), AtlanticNaval->Initialize());
+    AtlanticNaval->TakeWidget();
+    TestEqual(TEXT("Atlantic theme"), AtlanticNaval->GetFactionTheme(), ERA4FactionTheme::AtlanticAlliance);
+    TestEqual(TEXT("Atlantic naval variant"), AtlanticNaval->GetHUDVariant(), ERA4UIScreenVariant::NavalWarfare);
+    TestEqual(TEXT("Fleet tab active"), AtlanticNaval->GetActiveProductionTab(), 4);
+    TestEqual(TEXT("Fleet adds a fifth tab"), AtlanticNaval->GetProductionTabs().Num(), 5);
 
-    URA4FactionHUDWidget* ChronoWeapon = NewObject<URA4FactionHUDWidget>();
-    TestTrue(TEXT("Chrono weapon configures"), ChronoWeapon->ConfigureReference(24));
-    TestEqual(TEXT("Chrono theme"), ChronoWeapon->GetFactionTheme(), ERA4FactionTheme::Chronolegion);
-    TestTrue(TEXT("Superweapon panel visible"), ChronoWeapon->ShouldShowSuperweaponPanel());
+    URA4FactionHUDWidget* IndependentFront = NewObject<URA4FactionHUDWidget>();
+    TestTrue(TEXT("Independent front configures"), IndependentFront->ConfigureReference(16));
+    TestEqual(TEXT("Independent theme"), IndependentFront->GetFactionTheme(), ERA4FactionTheme::Independent);
+    TestTrue(TEXT("Saturation strike panel visible"), IndependentFront->ShouldShowSuperweaponPanel());
     return true;
 }
 
@@ -620,7 +625,7 @@ bool FRA4HUDBattlefieldBudgetTest::RunTest(const FString& Parameters)
 {
     // Every faction profile shares one shell, so each one must respect the same
     // budget: panels may differ in rhythm, never in how much fight they hide.
-    const int32 CombatReferences[] = {13, 14, 15, 16, 17, 20, 21, 22, 23, 24};
+    const int32 CombatReferences[] = {12, 13, 14, 15, 16, 17, 18};
 
     for (const int32 Reference : CombatReferences)
     {

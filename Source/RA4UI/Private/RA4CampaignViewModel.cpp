@@ -204,19 +204,18 @@ ERA4UIScreenId URA4CampaignViewModel::GetSelectedCampaignScreen() const
 {
     switch (SelectedFaction)
     {
-    case ERA4FactionTheme::EurasianPact:
-        return ERA4UIScreenId::SovietCampaign;
     case ERA4FactionTheme::AtlanticAlliance:
-        return ERA4UIScreenId::AlliesCampaign;
+        return ERA4UIScreenId::AtlanticCampaign;
     case ERA4FactionTheme::EasternCoalition:
         return ERA4UIScreenId::EasternCampaign;
     case ERA4FactionTheme::PacificPact:
-    case ERA4FactionTheme::Chronolegion:
-        return ERA4UIScreenId::ChronoCampaign;
+        return ERA4UIScreenId::PacificCampaign;
     case ERA4FactionTheme::Independent:
-        return ERA4UIScreenId::CampaignSelect;
+        return ERA4UIScreenId::IndependentCampaign;
+    case ERA4FactionTheme::EurasianPact:
     default:
-        return ERA4UIScreenId::SovietCampaign;
+        // Retired directions fall back to the shared Eurasian campaign.
+        return ERA4UIScreenId::EurasianCampaign;
     }
 }
 

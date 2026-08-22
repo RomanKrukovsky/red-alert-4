@@ -143,7 +143,7 @@ class RA4UI_API URA4SovietCampaignWidget : public URA4RoutedMenuScreenWidget
     GENERATED_BODY()
 
 protected:
-    virtual ERA4UIScreenId GetScreenId() const override { return ERA4UIScreenId::SovietCampaign; }
+    virtual ERA4UIScreenId GetScreenId() const override { return ERA4UIScreenId::EurasianCampaign; }
 };
 
 UCLASS(Abstract)
@@ -152,7 +152,7 @@ class RA4UI_API URA4AlliesCampaignWidget : public URA4RoutedMenuScreenWidget
     GENERATED_BODY()
 
 protected:
-    virtual ERA4UIScreenId GetScreenId() const override { return ERA4UIScreenId::AlliesCampaign; }
+    virtual ERA4UIScreenId GetScreenId() const override { return ERA4UIScreenId::AtlanticCampaign; }
 };
 
 UCLASS(Abstract)
@@ -165,12 +165,21 @@ protected:
 };
 
 UCLASS(Abstract)
-class RA4UI_API URA4ChronoCampaignWidget : public URA4RoutedMenuScreenWidget
+class RA4UI_API URA4PacificCampaignWidget : public URA4RoutedMenuScreenWidget
 {
     GENERATED_BODY()
 
 protected:
-    virtual ERA4UIScreenId GetScreenId() const override { return ERA4UIScreenId::ChronoCampaign; }
+    virtual ERA4UIScreenId GetScreenId() const override { return ERA4UIScreenId::PacificCampaign; }
+};
+
+UCLASS(Abstract)
+class RA4UI_API URA4IndependentCampaignWidget : public URA4RoutedMenuScreenWidget
+{
+    GENERATED_BODY()
+
+protected:
+    virtual ERA4UIScreenId GetScreenId() const override { return ERA4UIScreenId::IndependentCampaign; }
 };
 
 

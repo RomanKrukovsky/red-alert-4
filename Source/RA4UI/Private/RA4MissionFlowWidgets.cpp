@@ -601,7 +601,6 @@ void URA4VideoCommsScreenWidget::EndSession()
         if (URA4LoadingScreenWidget* Loading = CreateWidget<URA4LoadingScreenWidget>(
             PlayerController, URA4LoadingScreenWidget::StaticClass()))
         {
-            Loading->SetLoadingVariant(ERA4UIScreenVariant::Default);
             Loading->AddToViewport(0);
             RemoveFromParent();
         }
@@ -620,17 +619,9 @@ void URA4LoadingScreenWidget::SetLoadingProgress(const float InProgress)
     RefreshProgressVisuals();
 }
 
-void URA4LoadingScreenWidget::SetLoadingVariant(const ERA4UIScreenVariant InVariant)
-{
-    LoadingVariant = InVariant == ERA4UIScreenVariant::LoadingBriefing
-        ? InVariant
-        : ERA4UIScreenVariant::Default;
-    SetScreenIdentity(ERA4UIScreenId::Loading, LoadingVariant);
-}
-
 TSharedRef<SWidget> URA4LoadingScreenWidget::RebuildWidget()
 {
-    SetScreenIdentity(ERA4UIScreenId::Loading, LoadingVariant);
+    SetScreenIdentity(ERA4UIScreenId::Loading);
     const TSharedRef<SWidget> RootWidget = Super::RebuildWidget();
     if (!WidgetTree || !GetContentLayer())
     {
@@ -650,12 +641,8 @@ TSharedRef<SWidget> URA4LoadingScreenWidget::RebuildWidget()
         WidgetTree, TEXT("/Game/RA4UI/Art/T_RA4_Logo.T_RA4_Logo"), TEXT("LoadingLogo"));
     PlaceMissionWidget(
         Canvas, Logo,
-        LoadingVariant == ERA4UIScreenVariant::LoadingBriefing
-            ? FVector2D(35.0f, 12.0f)
-            : FVector2D(670.0f, 20.0f),
-        LoadingVariant == ERA4UIScreenVariant::LoadingBriefing
-            ? FVector2D(520.0f, 150.0f)
-            : FVector2D(580.0f, 170.0f), 3);
+        FVector2D(670.0f, 20.0f),
+        FVector2D(580.0f, 170.0f), 3);
 
     UTextBlock* LoadingTitle = MakeMissionText(
         WidgetTree, LOCTEXT("LoadingMission", "ЗАГРУЗКА МИССИИ"), 38,
@@ -663,12 +650,8 @@ TSharedRef<SWidget> URA4LoadingScreenWidget::RebuildWidget()
     LoadingTitle->SetJustification(ETextJustify::Center);
     PlaceMissionWidget(
         Canvas, LoadingTitle,
-        LoadingVariant == ERA4UIScreenVariant::LoadingBriefing
-            ? FVector2D(1390.0f, 34.0f)
-            : FVector2D(600.0f, 164.0f),
-        LoadingVariant == ERA4UIScreenVariant::LoadingBriefing
-            ? FVector2D(450.0f, 56.0f)
-            : FVector2D(720.0f, 62.0f), 4);
+        FVector2D(600.0f, 164.0f),
+        FVector2D(720.0f, 62.0f), 4);
 
     UTextBlock* OperationTitle = MakeMissionText(
         WidgetTree, LOCTEXT("LoadingOperation", "ОПЕРАЦИЯ «ТИХИЙ РЕЛЕЙ»"), 24,
@@ -676,35 +659,8 @@ TSharedRef<SWidget> URA4LoadingScreenWidget::RebuildWidget()
     OperationTitle->SetJustification(ETextJustify::Center);
     PlaceMissionWidget(
         Canvas, OperationTitle,
-        LoadingVariant == ERA4UIScreenVariant::LoadingBriefing
-            ? FVector2D(1390.0f, 94.0f)
-            : FVector2D(660.0f, 226.0f),
-        LoadingVariant == ERA4UIScreenVariant::LoadingBriefing
-            ? FVector2D(450.0f, 42.0f)
-            : FVector2D(600.0f, 48.0f), 4);
-
-    if (LoadingVariant == ERA4UIScreenVariant::LoadingBriefing)
-    {
-        UVerticalBox* Summary = WidgetTree->ConstructWidget<UVerticalBox>(
-            UVerticalBox::StaticClass(), TEXT("LoadingBriefingSummary"));
-        Summary->AddChildToVerticalBox(MakeMissionText(
-            WidgetTree, LOCTEXT("SummaryHeading", "СВОДКА"), 18,
-            MissionAccent, TEXT("SummaryHeading")));
-        Summary->AddChildToVerticalBox(MakeMissionText(
-            WidgetTree,
-            LOCTEXT("SummaryText", "Горный коридор закрывается. Подавите сеть наведения и проведите бронегруппу до рассвета."),
-            19, MissionText, TEXT("SummaryText"), false))->SetPadding(FMargin(0.0f, 14.0f, 0.0f, 34.0f));
-        Summary->AddChildToVerticalBox(MakeMissionText(
-            WidgetTree, LOCTEXT("GoalsHeading", "ЦЕЛИ"), 18,
-            MissionAccent, TEXT("GoalsHeading")));
-        Summary->AddChildToVerticalBox(MakeMissionText(
-            WidgetTree,
-            LOCTEXT("LoadingGoals", "☆  Подавить 3 узла связи\n☆  Провести бронегруппу через перевал\n☆  Сохранить мобильный комплекс РЭБ\n☆  Обеспечить проход колонны до рассвета"),
-            17, MissionText, TEXT("LoadingGoals"), false))->SetPadding(FMargin(0.0f, 14.0f));
-        PlaceMissionWidget(Canvas, MakeMissionPanel(
-            WidgetTree, Summary, TEXT("LoadingBriefingPanel"), MissionPanel, ERA4PanelRole::Hero),
-            FVector2D(38.0f, 190.0f), FVector2D(430.0f, 665.0f), 6);
-    }
+        FVector2D(660.0f, 226.0f),
+        FVector2D(600.0f, 48.0f), 4);
 
     LoadingProgressBar = WidgetTree->ConstructWidget<UProgressBar>(
         UProgressBar::StaticClass(), TEXT("LoadingProgressBar"));
@@ -720,9 +676,7 @@ TSharedRef<SWidget> URA4LoadingScreenWidget::RebuildWidget()
 
     UTextBlock* Tip = MakeMissionText(
         WidgetTree,
-        LoadingVariant == ERA4UIScreenVariant::LoadingBriefing
-            ? LOCTEXT("LoadingBriefingTip", "Подсказка: Используйте инженеров для захвата вражеских зданий.")
-            : LOCTEXT("LoadingTip", "Совет: РЭБ снижает дальность обнаружения, но требует устойчивой линии снабжения."),
+        LOCTEXT("LoadingTip", "Совет: РЭБ снижает дальность обнаружения, но требует устойчивой линии снабжения."),
         17, MissionText, TEXT("LoadingTip"), false);
     Tip->SetJustification(ETextJustify::Center);
     PlaceMissionWidget(Canvas, Tip, FVector2D(350.0f, 980.0f), FVector2D(1360.0f, 42.0f), 8);

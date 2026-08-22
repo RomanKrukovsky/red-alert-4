@@ -12,55 +12,55 @@ using namespace RA4::Input;
 using namespace RA4::Presentation;
 using namespace RA4Test;
 
-RA4_TEST(UI, ReferenceCatalogCoversAllTwentyFourScreenshots)
+RA4_TEST(UI, ReferenceCatalogCoversAllNineteenScreenshots)
 {
-    for (int ReferenceNumber = 1; ReferenceNumber <= 24; ++ReferenceNumber)
+    for (int ReferenceNumber = 1; ReferenceNumber <= 19; ++ReferenceNumber)
     {
         RA4_EXPECT(RA4::UI::FindScreenByReference(ReferenceNumber) != nullptr);
     }
 
     RA4_EXPECT(RA4::UI::FindScreenByReference(0) == nullptr);
-    RA4_EXPECT(RA4::UI::FindScreenByReference(25) == nullptr);
+    RA4_EXPECT(RA4::UI::FindScreenByReference(20) == nullptr);
 }
 
 RA4_TEST(UI, RepeatedReferencesReuseTheirRealScreen)
 {
-    const RA4::UI::ScreenReferenceDefinition* AlliesCampaign =
-        RA4::UI::FindScreenByReference(5);
-    const RA4::UI::ScreenReferenceDefinition* AlliesCampaignAlternate =
-        RA4::UI::FindScreenByReference(11);
-    const RA4::UI::ScreenReferenceDefinition* SovietLoading =
+    const RA4::UI::ScreenReferenceDefinition* EurasianGround =
         RA4::UI::FindScreenByReference(12);
-    const RA4::UI::ScreenReferenceDefinition* SovietLoadingAlternate =
-        RA4::UI::FindScreenByReference(19);
+    const RA4::UI::ScreenReferenceDefinition* EurasianBase =
+        RA4::UI::FindScreenByReference(17);
+    const RA4::UI::ScreenReferenceDefinition* PacificAir =
+        RA4::UI::FindScreenByReference(15);
+    const RA4::UI::ScreenReferenceDefinition* PacificBase =
+        RA4::UI::FindScreenByReference(18);
 
-    RA4_EXPECT(AlliesCampaign != nullptr);
-    RA4_EXPECT(AlliesCampaignAlternate != nullptr);
-    RA4_EXPECT(SovietLoading != nullptr);
-    RA4_EXPECT(SovietLoadingAlternate != nullptr);
-    RA4_EXPECT(AlliesCampaign->Id == AlliesCampaignAlternate->Id);
-    RA4_EXPECT(AlliesCampaign->Variant != AlliesCampaignAlternate->Variant);
-    RA4_EXPECT(SovietLoading->Id == SovietLoadingAlternate->Id);
-    RA4_EXPECT(SovietLoading->Variant != SovietLoadingAlternate->Variant);
+    RA4_EXPECT(EurasianGround != nullptr);
+    RA4_EXPECT(EurasianBase != nullptr);
+    RA4_EXPECT(PacificAir != nullptr);
+    RA4_EXPECT(PacificBase != nullptr);
+    RA4_EXPECT(EurasianGround->Id == EurasianBase->Id);
+    RA4_EXPECT(EurasianGround->Variant != EurasianBase->Variant);
+    RA4_EXPECT(PacificAir->Id == PacificBase->Id);
+    RA4_EXPECT(PacificAir->Variant != PacificBase->Variant);
 }
 
 RA4_TEST(UI, ScreenContractSeparatesMenuAndHudInteraction)
 {
     const RA4::UI::ScreenDefinition* MainMenu =
         RA4::UI::FindScreen(RA4::UI::ScreenId::MainMenu);
-    const RA4::UI::ScreenDefinition* AlliesAirHud =
-        RA4::UI::FindScreen(RA4::UI::ScreenId::AlliesAirHud);
-    const RA4::UI::ScreenReferenceDefinition* AlliesAirReference =
-        RA4::UI::FindScreenByReference(23);
+    const RA4::UI::ScreenDefinition* PacificHud =
+        RA4::UI::FindScreen(RA4::UI::ScreenId::PacificHud);
+    const RA4::UI::ScreenReferenceDefinition* PacificAirReference =
+        RA4::UI::FindScreenByReference(15);
 
     RA4_EXPECT(MainMenu != nullptr);
-    RA4_EXPECT(AlliesAirHud != nullptr);
-    RA4_EXPECT(AlliesAirReference != nullptr);
+    RA4_EXPECT(PacificHud != nullptr);
+    RA4_EXPECT(PacificAirReference != nullptr);
     RA4_EXPECT(MainMenu->Family == RA4::UI::ScreenFamily::MainMenu);
     RA4_EXPECT(MainMenu->Input == RA4::UI::InputPolicy::MenuOnly);
-    RA4_EXPECT(AlliesAirHud->Family == RA4::UI::ScreenFamily::InGameHud);
-    RA4_EXPECT(AlliesAirReference->Variant == RA4::UI::ScreenVariant::AlliesAir);
-    RA4_EXPECT(AlliesAirHud->Input == RA4::UI::InputPolicy::GameAndUI);
+    RA4_EXPECT(PacificHud->Family == RA4::UI::ScreenFamily::InGameHud);
+    RA4_EXPECT(PacificAirReference->Variant == RA4::UI::ScreenVariant::AirWarfare);
+    RA4_EXPECT(PacificHud->Input == RA4::UI::InputPolicy::GameAndUI);
 }
 
 RA4_TEST(UI, WASDCameraPanningAndBoundsClamping)

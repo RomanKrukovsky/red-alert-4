@@ -44,7 +44,7 @@ FFactionVisual ResolveFactionVisual(const ERA4FactionTheme Faction)
     {
     case ERA4FactionTheme::EurasianPact:
         return {
-            ERA4UIScreenId::SovietCampaign,
+            ERA4UIScreenId::EurasianCampaign,
             FLinearColor(0.68f, 0.28f, 0.88f, 1.0f),
             FLinearColor(0.04f, 0.015f, 0.06f, 0.96f),
             TEXT("/Game/RA4UI/Art/T_RA4_Commander_Eurasian.T_RA4_Commander_Eurasian"),
@@ -54,7 +54,7 @@ FFactionVisual ResolveFactionVisual(const ERA4FactionTheme Faction)
         };
     case ERA4FactionTheme::AtlanticAlliance:
         return {
-            ERA4UIScreenId::AlliesCampaign,
+            ERA4UIScreenId::AtlanticCampaign,
             FLinearColor(0.35f, 0.70f, 0.98f, 1.0f),
             FLinearColor(0.015f, 0.05f, 0.12f, 0.96f),
             TEXT("/Game/RA4UI/Art/T_RA4_Commander_Atlantic.T_RA4_Commander_Atlantic"),
@@ -74,30 +74,32 @@ FFactionVisual ResolveFactionVisual(const ERA4FactionTheme Faction)
         };
     case ERA4FactionTheme::PacificPact:
         return {
-            ERA4UIScreenId::ChronoCampaign,
+            ERA4UIScreenId::PacificCampaign,
             FLinearColor(0.20f, 0.80f, 0.90f, 1.0f),
             FLinearColor(0.01f, 0.06f, 0.08f, 0.96f),
-            TEXT("/Game/RA4UI/Art/T_RA4_Commander_Pacific.T_RA4_Commander_Pacific"),
+            TEXT("/Game/RA4UI/Art/T_RA4_Theatre_Pacific.T_RA4_Theatre_Pacific"),
             LOCTEXT("PacificHeading", "КАМПАНИЯ ТИХООКЕАНСКОГО ПАКТА"),
             LOCTEXT("PacificChapter", "ЯПОНИЯ: ДУГА ШТОРМА"),
             LOCTEXT("PacificEvent", "ОБОРОНА ОСТРОВОВ: БЕРЕГОВОЙ ЛАЗЕРНЫЙ КОМПЛЕКС «КАГАМИ» АКТИВИРОВАН.")
         };
     case ERA4FactionTheme::Independent:
         return {
-            ERA4UIScreenId::CampaignSelect,
+            ERA4UIScreenId::IndependentCampaign,
             FLinearColor(0.78f, 0.52f, 0.18f, 1.0f),
             FLinearColor(0.08f, 0.05f, 0.02f, 0.96f),
-            TEXT("/Game/RA4UI/Art/T_RA4_Commander_Eurasian.T_RA4_Commander_Eurasian"),
+            TEXT("/Game/RA4UI/Art/T_RA4_Theatre_Independent.T_RA4_Theatre_Independent"),
             LOCTEXT("IndepHeading", "НЕЗАВИСИМЫЕ ДЕРЖАВЫ"),
             LOCTEXT("IndepChapter", "ИРАН: ТЕНЬ НАД ХРЕБТОМ"),
             LOCTEXT("IndepEvent", "АСИММЕТРИЧНЫЙ УДАР: МОБИЛЬНЫЕ РАКЕТНЫЕ ПУСКОВЫЕ «ХЕЙБАР» ВЫШЛИ НА МАРШ.")
         };
     case ERA4FactionTheme::Chronolegion:
+        // Retired direction: keep it navigable through the Eurasian campaign
+        // shell so legacy content never dead-ends.
         return {
-            ERA4UIScreenId::ChronoCampaign,
+            ERA4UIScreenId::EurasianCampaign,
             FLinearColor(0.70f, 0.30f, 1.0f, 1.0f),
             FLinearColor(0.10f, 0.025f, 0.16f, 0.96f),
-            TEXT("/Game/RA4UI/Art/T_RA4_Commander_Pacific.T_RA4_Commander_Pacific"),
+            TEXT("/Game/RA4UI/Art/T_RA4_Commander_Eurasian.T_RA4_Commander_Eurasian"),
             LOCTEXT("ChronoHeading", "ХРОНОЛЕГИОН (LEGACY)"),
             LOCTEXT("ChronoChapter", "ГЛАВА 1: ВРЕМЕННАЯ АНОМАЛИЯ"),
             LOCTEXT("ChronoEvent", "ХРОНОПРОТОКОЛ АКТИВЕН: АНОМАЛИЯ ЗАФИКСИРОВАНА.")
@@ -182,7 +184,7 @@ FButtonStyle MakeCampaignButtonStyle(const FLinearColor& Accent, const FLinearCo
 URA4CampaignScreenWidget::URA4CampaignScreenWidget(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
 {
-    SetScreenIdentity(ERA4UIScreenId::SovietCampaign);
+    SetScreenIdentity(ERA4UIScreenId::EurasianCampaign);
 }
 
 void URA4CampaignScreenWidget::ConfigureCampaign(
@@ -298,12 +300,10 @@ TSharedRef<SWidget> URA4CampaignScreenWidget::RebuildWidget()
         WidgetTree, LeftRail, TEXT("CampaignLeftRailPanel"), Visual.DarkAccent, ERA4PanelRole::Compact),
         FVector2D(24.0f, 132.0f), FVector2D(430.0f, 650.0f), 5);
 
-    const bool bEasternDetail = CampaignVariant == ERA4UIScreenVariant::EasternDetail;
-
     UVerticalBox* Details = WidgetTree->ConstructWidget<UVerticalBox>(
         UVerticalBox::StaticClass(), TEXT("CampaignDetails"));
     UTextBlock* Heading = MakeCampaignText(
-        WidgetTree, Visual.Heading, bEasternDetail ? 42 : 50,
+        WidgetTree, Visual.Heading, 50,
         FLinearColor(0.91f, 0.86f, 0.77f, 1.0f), TEXT("FactionHeading"));
     Heading->SetJustification(ETextJustify::Center);
     Details->AddChildToVerticalBox(Heading)->SetPadding(FMargin(8.0f, 8.0f, 8.0f, 2.0f));
@@ -342,7 +342,7 @@ TSharedRef<SWidget> URA4CampaignScreenWidget::RebuildWidget()
         UHorizontalBox::StaticClass(), TEXT("CampaignChapters"));
     for (int32 Index = 1; Index <= 8; ++Index)
     {
-        const bool bActive = Index == 3 || (bEasternDetail && Index == 2);
+        const bool bActive = Index == 3;
         UBorder* Chapter = WidgetTree->ConstructWidget<UBorder>(
             UBorder::StaticClass(), FName(*FString::Printf(TEXT("Chapter_%d"), Index)));
         Chapter->SetBrushColor(bActive
@@ -362,9 +362,7 @@ TSharedRef<SWidget> URA4CampaignScreenWidget::RebuildWidget()
 
     Details->AddChildToVerticalBox(MakeCampaignText(
         WidgetTree,
-        bEasternDetail
-            ? LOCTEXT("EasternFeatures", "ГАРМОНИЯ РЕСУРСОВ  •  ДРОН-СЕТИ  •  РАСПРЕДЕЛЁННОЕ ПРОИЗВОДСТВО  •  ТЕХНОЛОГИИ БУДУЩЕГО")
-            : LOCTEXT("Difficulty", "УРОВЕНЬ СЛОЖНОСТИ     ВЕТЕРАН"),
+        LOCTEXT("Difficulty", "УРОВЕНЬ СЛОЖНОСТИ     ВЕТЕРАН"),
         16, Visual.Accent, TEXT("CampaignDifficulty"), false))
         ->SetPadding(FMargin(28.0f, 8.0f, 28.0f, 8.0f));
 

@@ -43,10 +43,10 @@ private:
     void RebuildTabs();
 
     UPROPERTY(Transient)
-    int32 ReferenceNumber = 13;
+    int32 ReferenceNumber = 12;
 
     UPROPERTY(Transient)
-    FName SpecializedPanelId = TEXT("SovietProduction");
+    FName SpecializedPanelId = TEXT("EurasianArmorPush");
 
     UPROPERTY(Transient)
     TArray<FText> ProductionTabs;
@@ -54,6 +54,6 @@ private:
     UPROPERTY(Transient)
     bool bShowSuperweaponPanel = false;
 
-    UPROPERTY(EditDefaultsOnly, Category = "RA4|HUD", meta = (ClampMin = "13", ClampMax = "24"))
-    int32 InitialReferenceNumber = 13;
+    UPROPERTY(EditDefaultsOnly, Category = "RA4|HUD", meta = (ClampMin = "12", ClampMax = "18"))
+    int32 InitialReferenceNumber = 12;
 };

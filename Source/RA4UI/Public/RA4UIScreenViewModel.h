@@ -13,25 +13,33 @@ enum class ERA4UIScreenId : uint8
     Splash,
     MainMenu,
     CampaignSelect,
-    SovietCampaign,
-    AlliesCampaign,
+    EurasianCampaign,
+    AtlanticCampaign,
     EasternCampaign,
-    ChronoCampaign,
+    PacificCampaign,
+    IndependentCampaign,
     MissionMap,
     Briefing,
     VideoComms,
     Loading,
-    SovietHud,
-    AlliesHud,
+    EurasianHud,
+    AtlanticHud,
     EasternHud,
-    ChronoHud,
+    PacificHud,
+    IndependentHud,
     Pause,
     Victory,
     MultiplayerLobby,
     Encyclopedia,
     TechTree,
     Mods,
-    Settings
+    Settings,
+
+    // Legacy aliases for content authored before the Scarlet Horizon rename.
+    SovietCampaign = EurasianCampaign,
+    AlliesCampaign = AtlanticCampaign,
+    SovietHud = EurasianHud,
+    AlliesHud = AtlanticHud
 };
 
 USTRUCT(BlueprintType)

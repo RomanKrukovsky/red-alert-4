@@ -76,75 +76,59 @@ void ARA4UIShowcaseGameMode::ShowInterface(APlayerController* PlayerController)
             RootWidget = Select;
         }
     }
-    else if (RequestedScreen >= 4 && RequestedScreen <= 7)
+    else if (RequestedScreen >= 4 && RequestedScreen <= 6)
     {
         if (URA4CampaignScreenWidget* Campaign = CreateWidget<URA4CampaignScreenWidget>(
             PlayerController, URA4CampaignScreenWidget::StaticClass()))
         {
             const ERA4FactionTheme Factions[] = {
-                ERA4FactionTheme::USSR,
-                ERA4FactionTheme::Allies,
-                ERA4FactionTheme::EasternCoalition,
-                ERA4FactionTheme::Chronolegion
+                ERA4FactionTheme::EurasianPact,
+                ERA4FactionTheme::AtlanticAlliance,
+                ERA4FactionTheme::EasternCoalition
             };
             Campaign->ConfigureCampaign(Factions[RequestedScreen - 4]);
             RootWidget = Campaign;
         }
     }
-    else if (RequestedScreen == 8)
+    else if (RequestedScreen == 19)
+    {
+        if (URA4CampaignScreenWidget* Campaign = CreateWidget<URA4CampaignScreenWidget>(
+            PlayerController, URA4CampaignScreenWidget::StaticClass()))
+        {
+            Campaign->ConfigureCampaign(ERA4FactionTheme::Independent);
+            RootWidget = Campaign;
+        }
+    }
+    else if (RequestedScreen == 7)
     {
         RootWidget = CreateWidget<URA4MissionMapScreenWidget>(
             PlayerController, URA4MissionMapScreenWidget::StaticClass());
     }
-    else if (RequestedScreen == 9)
+    else if (RequestedScreen == 8)
     {
         RootWidget = CreateWidget<URA4BriefingScreenWidget>(
             PlayerController, URA4BriefingScreenWidget::StaticClass());
     }
-    else if (RequestedScreen == 10)
+    else if (RequestedScreen == 9)
     {
         RootWidget = CreateWidget<URA4VideoCommsScreenWidget>(
             PlayerController, URA4VideoCommsScreenWidget::StaticClass());
     }
-    else if (RequestedScreen == 11)
-    {
-        if (URA4CampaignScreenWidget* Campaign = CreateWidget<URA4CampaignScreenWidget>(
-            PlayerController, URA4CampaignScreenWidget::StaticClass()))
-        {
-            Campaign->ConfigureCampaign(
-                ERA4FactionTheme::Allies, ERA4UIScreenVariant::AlliesAlternate);
-            RootWidget = Campaign;
-        }
-    }
-    else if (RequestedScreen == 12 || RequestedScreen == 19)
+    else if (RequestedScreen == 10)
     {
         if (URA4LoadingScreenWidget* Loading = CreateWidget<URA4LoadingScreenWidget>(
             PlayerController, URA4LoadingScreenWidget::StaticClass()))
         {
-            Loading->SetLoadingVariant(RequestedScreen == 19
-                ? ERA4UIScreenVariant::LoadingBriefing
-                : ERA4UIScreenVariant::Default);
             Loading->SetLoadingProgress(0.72f);
             RootWidget = Loading;
         }
     }
-    else if (RequestedScreen == 18)
-    {
-        if (URA4CampaignScreenWidget* Campaign = CreateWidget<URA4CampaignScreenWidget>(
-            PlayerController, URA4CampaignScreenWidget::StaticClass()))
-        {
-            Campaign->ConfigureCampaign(
-                ERA4FactionTheme::EasternCoalition, ERA4UIScreenVariant::EasternDetail);
-            RootWidget = Campaign;
-        }
-    }
-    else if (RequestedScreen == 17)
+    else if (RequestedScreen == 11)
     {
         RootWidget = CreateWidget<URA4LobbyScreenWidget>(
             PlayerController, URA4LobbyScreenWidget::StaticClass());
     }
-    else if ((RequestedScreen >= 13 && RequestedScreen <= 16) ||
-             (RequestedScreen >= 20 && RequestedScreen <= 24))
+    else if (RequestedScreen >= 12 && RequestedScreen <= 18)
     {
         if (URA4FactionHUDWidget* HUD = CreateWidget<URA4FactionHUDWidget>(
             PlayerController, URA4FactionHUDWidget::StaticClass()))

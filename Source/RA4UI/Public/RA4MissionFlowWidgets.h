@@ -111,7 +111,7 @@ private:
     TObjectPtr<UButton> EndSessionButton;
 };
 
-/** Native loading screen for references 12 and 19. */
+/** Native loading screen matching reference 10. */
 UCLASS(BlueprintType, Blueprintable)
 class RA4UI_API URA4LoadingScreenWidget : public URA4ScreenRootWidget
 {
@@ -123,11 +123,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "RA4|Loading")
     void SetLoadingProgress(float InProgress);
 
-    UFUNCTION(BlueprintCallable, Category = "RA4|Loading")
-    void SetLoadingVariant(ERA4UIScreenVariant InVariant);
-
     float GetLoadingProgress() const { return LoadingProgress; }
-    ERA4UIScreenVariant GetLoadingVariant() const { return LoadingVariant; }
 
 protected:
     virtual TSharedRef<SWidget> RebuildWidget() override;
@@ -135,9 +131,6 @@ protected:
 
 private:
     void RefreshProgressVisuals();
-
-    UPROPERTY(EditDefaultsOnly, Category = "RA4|Loading")
-    ERA4UIScreenVariant LoadingVariant = ERA4UIScreenVariant::Default;
 
     UPROPERTY(Transient)
     TObjectPtr<UProgressBar> LoadingProgressBar;

@@ -12,23 +12,45 @@ bool IsVariantSupported(const ERA4UIScreenId Screen, const ERA4UIScreenVariant V
     {
     case ERA4UIScreenVariant::Default:
         return true;
-    case ERA4UIScreenVariant::AlliesAlternate:
-        return Screen == ERA4UIScreenId::AlliesCampaign;
-    case ERA4UIScreenVariant::LoadingBriefing:
-        return Screen == ERA4UIScreenId::Loading;
-    case ERA4UIScreenVariant::EasternDetail:
-        return Screen == ERA4UIScreenId::EasternCampaign;
-    case ERA4UIScreenVariant::SovietBattle:
-    case ERA4UIScreenVariant::SovietAlert:
-        return Screen == ERA4UIScreenId::SovietHud;
-    case ERA4UIScreenVariant::AlliesNaval:
-    case ERA4UIScreenVariant::AlliesAir:
-        return Screen == ERA4UIScreenId::AlliesHud;
-    case ERA4UIScreenVariant::ChronoSuperweapon:
-        return Screen == ERA4UIScreenId::ChronoHud;
+    case ERA4UIScreenVariant::GroundAssault:
+        return Screen == ERA4UIScreenId::EurasianHud;
+    case ERA4UIScreenVariant::NavalWarfare:
+        return Screen == ERA4UIScreenId::AtlanticHud;
+    case ERA4UIScreenVariant::BaseDefense:
+        return Screen == ERA4UIScreenId::EasternHud
+            || Screen == ERA4UIScreenId::EurasianHud
+            || Screen == ERA4UIScreenId::PacificHud;
+    case ERA4UIScreenVariant::AirWarfare:
+        return Screen == ERA4UIScreenId::PacificHud;
+    case ERA4UIScreenVariant::InsurgentFront:
+        return Screen == ERA4UIScreenId::IndependentHud;
     default:
         checkNoEntry();
         return false;
+    }
+}
+
+/**
+ * A faction HUD requested without a combat flavour still resolves to the
+ * direction's signature reference, so every playable route lands on a real
+ * screenshot instead of an unnamed screen.
+ */
+ERA4UIScreenVariant ResolveSignatureVariant(const ERA4UIScreenId Screen)
+{
+    switch (Screen)
+    {
+    case ERA4UIScreenId::EurasianHud:
+        return ERA4UIScreenVariant::GroundAssault;
+    case ERA4UIScreenId::AtlanticHud:
+        return ERA4UIScreenVariant::NavalWarfare;
+    case ERA4UIScreenId::EasternHud:
+        return ERA4UIScreenVariant::BaseDefense;
+    case ERA4UIScreenId::PacificHud:
+        return ERA4UIScreenVariant::AirWarfare;
+    case ERA4UIScreenId::IndependentHud:
+        return ERA4UIScreenVariant::InsurgentFront;
+    default:
+        return ERA4UIScreenVariant::Default;
     }
 }
 
@@ -38,55 +60,24 @@ RA4::UI::ScreenVariant ToCatalogVariant(const ERA4UIScreenVariant Variant)
     {
     case ERA4UIScreenVariant::Default:
         return RA4::UI::ScreenVariant::Default;
-    case ERA4UIScreenVariant::AlliesAlternate:
-        return RA4::UI::ScreenVariant::AlliesAlternate;
-    case ERA4UIScreenVariant::LoadingBriefing:
-        return RA4::UI::ScreenVariant::LoadingBriefing;
-    case ERA4UIScreenVariant::EasternDetail:
-        return RA4::UI::ScreenVariant::EasternDetail;
-    case ERA4UIScreenVariant::SovietBattle:
-        return RA4::UI::ScreenVariant::SovietBattle;
-    case ERA4UIScreenVariant::SovietAlert:
-        return RA4::UI::ScreenVariant::SovietAlert;
-    case ERA4UIScreenVariant::AlliesNaval:
-        return RA4::UI::ScreenVariant::AlliesNaval;
-    case ERA4UIScreenVariant::AlliesAir:
-        return RA4::UI::ScreenVariant::AlliesAir;
-    case ERA4UIScreenVariant::ChronoSuperweapon:
-        return RA4::UI::ScreenVariant::ChronoSuperweapon;
+    case ERA4UIScreenVariant::GroundAssault:
+        return RA4::UI::ScreenVariant::GroundAssault;
+    case ERA4UIScreenVariant::NavalWarfare:
+        return RA4::UI::ScreenVariant::NavalWarfare;
+    case ERA4UIScreenVariant::BaseDefense:
+        return RA4::UI::ScreenVariant::BaseDefense;
+    case ERA4UIScreenVariant::AirWarfare:
+        return RA4::UI::ScreenVariant::AirWarfare;
+    case ERA4UIScreenVariant::InsurgentFront:
+        return RA4::UI::ScreenVariant::InsurgentFront;
     default:
         checkNoEntry();
         return RA4::UI::ScreenVariant::Default;
     }
 }
 
-TOptional<RA4::UI::ScreenId> ResolveCatalogScreenId(
-    const ERA4UIScreenId Screen,
-    const ERA4UIScreenVariant Variant)
+TOptional<RA4::UI::ScreenId> ResolveCatalogScreenId(const ERA4UIScreenId Screen)
 {
-    switch (Variant)
-    {
-    case ERA4UIScreenVariant::EasternDetail:
-        return RA4::UI::ScreenId::EasternCampaignDetail;
-    case ERA4UIScreenVariant::SovietBattle:
-        return RA4::UI::ScreenId::SovietBattleHud;
-    case ERA4UIScreenVariant::SovietAlert:
-        return RA4::UI::ScreenId::SovietAlertHud;
-    case ERA4UIScreenVariant::AlliesNaval:
-        return RA4::UI::ScreenId::AlliesNavalHud;
-    case ERA4UIScreenVariant::AlliesAir:
-        return RA4::UI::ScreenId::AlliesAirHud;
-    case ERA4UIScreenVariant::ChronoSuperweapon:
-        return RA4::UI::ScreenId::ChronoSuperweaponHud;
-    case ERA4UIScreenVariant::Default:
-    case ERA4UIScreenVariant::AlliesAlternate:
-    case ERA4UIScreenVariant::LoadingBriefing:
-        break;
-    default:
-        checkNoEntry();
-        return {};
-    }
-
     switch (Screen)
     {
     case ERA4UIScreenId::Splash:
@@ -95,36 +86,40 @@ TOptional<RA4::UI::ScreenId> ResolveCatalogScreenId(
         return RA4::UI::ScreenId::MainMenu;
     case ERA4UIScreenId::CampaignSelect:
         return RA4::UI::ScreenId::CampaignSelect;
-    case ERA4UIScreenId::SovietCampaign:
-        return RA4::UI::ScreenId::SovietCampaign;
-    case ERA4UIScreenId::AlliesCampaign:
-        return RA4::UI::ScreenId::AlliesCampaign;
+    case ERA4UIScreenId::EurasianCampaign:
+        return RA4::UI::ScreenId::EurasianCampaign;
+    case ERA4UIScreenId::AtlanticCampaign:
+        return RA4::UI::ScreenId::AtlanticCampaign;
     case ERA4UIScreenId::EasternCampaign:
         return RA4::UI::ScreenId::EasternCampaign;
-    case ERA4UIScreenId::ChronoCampaign:
-        return RA4::UI::ScreenId::ChronoCampaign;
+    case ERA4UIScreenId::PacificCampaign:
+        return RA4::UI::ScreenId::PacificCampaign;
+    case ERA4UIScreenId::IndependentCampaign:
+        return RA4::UI::ScreenId::IndependentCampaign;
     case ERA4UIScreenId::MissionMap:
-        return RA4::UI::ScreenId::SovietMissionMap;
+        return RA4::UI::ScreenId::MissionMap;
     case ERA4UIScreenId::Briefing:
-        return RA4::UI::ScreenId::SovietBriefing;
+        return RA4::UI::ScreenId::Briefing;
     case ERA4UIScreenId::VideoComms:
         return RA4::UI::ScreenId::VideoComms;
     case ERA4UIScreenId::Loading:
-        return RA4::UI::ScreenId::SovietLoading;
-    case ERA4UIScreenId::SovietHud:
-        return RA4::UI::ScreenId::SovietHud;
-    case ERA4UIScreenId::AlliesHud:
-        return RA4::UI::ScreenId::AlliesHud;
+        return RA4::UI::ScreenId::Loading;
+    case ERA4UIScreenId::MultiplayerLobby:
+        return RA4::UI::ScreenId::MultiplayerLobby;
+    case ERA4UIScreenId::EurasianHud:
+        return RA4::UI::ScreenId::EurasianHud;
+    case ERA4UIScreenId::AtlanticHud:
+        return RA4::UI::ScreenId::AtlanticHud;
     case ERA4UIScreenId::EasternHud:
         return RA4::UI::ScreenId::EasternHud;
-    case ERA4UIScreenId::ChronoHud:
-        return RA4::UI::ScreenId::ChronoHud;
+    case ERA4UIScreenId::PacificHud:
+        return RA4::UI::ScreenId::PacificHud;
+    case ERA4UIScreenId::IndependentHud:
+        return RA4::UI::ScreenId::IndependentHud;
     case ERA4UIScreenId::Pause:
         return RA4::UI::ScreenId::PauseMenu;
     case ERA4UIScreenId::Victory:
         return RA4::UI::ScreenId::Victory;
-    case ERA4UIScreenId::MultiplayerLobby:
-        return RA4::UI::ScreenId::MultiplayerLobby;
     case ERA4UIScreenId::Encyclopedia:
     case ERA4UIScreenId::TechTree:
     case ERA4UIScreenId::Mods:
@@ -226,15 +221,17 @@ FRA4UIScreenContract ResolveScreenContract(
     const ERA4UIScreenId Screen,
     const ERA4UIScreenVariant Variant)
 {
-    const ERA4UIScreenVariant NormalizedVariant =
+    const ERA4UIScreenVariant RequestedVariant =
         IsVariantSupported(Screen, Variant) ? Variant : ERA4UIScreenVariant::Default;
+    const ERA4UIScreenVariant NormalizedVariant = RequestedVariant == ERA4UIScreenVariant::Default
+        ? ResolveSignatureVariant(Screen)
+        : RequestedVariant;
 
     FRA4UIScreenContract Contract;
     Contract.ScreenId = Screen;
-    Contract.Variant = NormalizedVariant;
+    Contract.Variant = RequestedVariant;
 
-    const TOptional<RA4::UI::ScreenId> CatalogId =
-        ResolveCatalogScreenId(Screen, NormalizedVariant);
+    const TOptional<RA4::UI::ScreenId> CatalogId = ResolveCatalogScreenId(Screen);
     if (!CatalogId.IsSet())
     {
         Contract.Family = ERA4UIScreenFamily::MainMenu;

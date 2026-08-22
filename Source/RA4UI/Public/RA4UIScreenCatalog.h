@@ -1,6 +1,11 @@
-// Copyright (c) Red Alert 4 project.
+// Copyright (c) Scarlet Horizon project.
 // Pure C++ catalog intentionally kept independent of Unreal so CI can verify
 // that every supplied visual reference has a navigable UI counterpart.
+//
+// The catalog mirrors the ScarletHorizonRemaster reference set: nineteen
+// screenshots covering five playable directions. Faction HUDs are one logical
+// screen per direction; combat references inside one direction differ only by
+// ScreenVariant, never by identity.
 
 #pragma once
 
@@ -17,6 +22,8 @@ enum class FactionTheme : unsigned char
     EasternCoalition = 2,
     PacificPact = 3,
     Independent = 4,
+
+    // Retired direction kept so legacy art lookups keep resolving.
     Chronolegion = 5,
 
     // Aliases
@@ -26,28 +33,24 @@ enum class FactionTheme : unsigned char
 
 enum class ScreenId : unsigned char
 {
-    Splash,
+    Splash = 0,
     MainMenu,
     CampaignSelect,
-    SovietCampaign,
-    AlliesCampaign,
+    EurasianCampaign,
+    AtlanticCampaign,
     EasternCampaign,
-    ChronoCampaign,
-    SovietMissionMap,
-    SovietBriefing,
+    PacificCampaign,
+    IndependentCampaign,
+    MissionMap,
+    Briefing,
     VideoComms,
-    SovietLoading,
-    SovietHud,
-    AlliesHud,
-    EasternHud,
-    ChronoHud,
+    Loading,
     MultiplayerLobby,
-    EasternCampaignDetail,
-    SovietBattleHud,
-    SovietAlertHud,
-    AlliesNavalHud,
-    AlliesAirHud,
-    ChronoSuperweaponHud,
+    EurasianHud,
+    AtlanticHud,
+    EasternHud,
+    PacificHud,
+    IndependentHud,
     PauseMenu,
     Victory
 };
@@ -71,14 +74,11 @@ enum class ScreenFamily : unsigned char
 enum class ScreenVariant : unsigned char
 {
     Default,
-    AlliesAlternate,
-    LoadingBriefing,
-    EasternDetail,
-    SovietBattle,
-    SovietAlert,
-    AlliesNaval,
-    AlliesAir,
-    ChronoSuperweapon
+    GroundAssault,
+    NavalWarfare,
+    BaseDefense,
+    AirWarfare,
+    InsurgentFront
 };
 
 enum class InputPolicy : unsigned char
@@ -105,66 +105,57 @@ struct ScreenReferenceDefinition
     ScreenVariant Variant;
 };
 
-inline constexpr std::array<ScreenDefinition, 24> ScreenCatalog = {{
-    {ScreenId::Splash,                 "/ui/splash",                   "ui.splash.press_any_key",             FactionTheme::USSR,              ScreenFamily::Splash,             InputPolicy::MenuOnly,  false},
-    {ScreenId::MainMenu,               "/ui/main-menu",                "ui.main_menu.title",                  FactionTheme::USSR,              ScreenFamily::MainMenu,           InputPolicy::MenuOnly,  false},
-    {ScreenId::CampaignSelect,         "/ui/campaign-select",          "ui.campaign.select_faction",          FactionTheme::USSR,              ScreenFamily::CampaignSelect,     InputPolicy::MenuOnly,  false},
-    {ScreenId::SovietCampaign,         "/ui/campaign/ussr",            "ui.campaign.ussr.title",              FactionTheme::USSR,              ScreenFamily::FactionCampaign,    InputPolicy::MenuOnly,  false},
-    {ScreenId::AlliesCampaign,         "/ui/campaign/allies",          "ui.campaign.allies.title",            FactionTheme::Allies,            ScreenFamily::FactionCampaign,    InputPolicy::MenuOnly,  false},
-    {ScreenId::EasternCampaign,        "/ui/campaign/eastern",         "ui.campaign.eastern.title",           FactionTheme::EasternCoalition,  ScreenFamily::FactionCampaign,    InputPolicy::MenuOnly,  false},
-    {ScreenId::ChronoCampaign,         "/ui/campaign/chronolegion",    "ui.campaign.chrono.title",            FactionTheme::Chronolegion,      ScreenFamily::FactionCampaign,    InputPolicy::MenuOnly,  false},
-    {ScreenId::SovietMissionMap,       "/ui/mission-map/ussr",         "ui.mission_map.title",                FactionTheme::USSR,              ScreenFamily::MissionMap,         InputPolicy::MenuOnly,  false},
-    {ScreenId::SovietBriefing,         "/ui/briefing/ussr",            "ui.briefing.operation_data",          FactionTheme::USSR,              ScreenFamily::Briefing,           InputPolicy::MenuOnly,  false},
-    {ScreenId::VideoComms,             "/ui/video-comms",              "ui.video_comms.secure_channel",       FactionTheme::USSR,              ScreenFamily::VideoComms,         InputPolicy::MenuOnly,  false},
-    {ScreenId::SovietLoading,          "/ui/loading/ussr",             "ui.loading.initializing",             FactionTheme::USSR,              ScreenFamily::Loading,            InputPolicy::MenuOnly,  false},
-    {ScreenId::SovietHud,              "/ui/hud/ussr",                 "ui.hud.soviet.command",               FactionTheme::USSR,              ScreenFamily::InGameHud,          InputPolicy::GameAndUI, true},
-    {ScreenId::AlliesHud,              "/ui/hud/allies",               "ui.hud.allies.command",               FactionTheme::Allies,            ScreenFamily::InGameHud,          InputPolicy::GameAndUI, true},
-    {ScreenId::EasternHud,             "/ui/hud/eastern",              "ui.hud.eastern.command",              FactionTheme::EasternCoalition,  ScreenFamily::InGameHud,          InputPolicy::GameAndUI, true},
-    {ScreenId::ChronoHud,              "/ui/hud/chronolegion",         "ui.hud.chrono.command",               FactionTheme::Chronolegion,      ScreenFamily::InGameHud,          InputPolicy::GameAndUI, true},
-    {ScreenId::MultiplayerLobby,       "/ui/multiplayer/lobby",        "ui.lobby.title",                      FactionTheme::Allies,            ScreenFamily::MultiplayerLobby,   InputPolicy::MenuOnly,  false},
-    {ScreenId::EasternCampaignDetail,  "/ui/campaign/eastern/detail",  "ui.campaign.eastern.commander",       FactionTheme::EasternCoalition,  ScreenFamily::FactionCampaign,    InputPolicy::MenuOnly,  false},
-    {ScreenId::SovietBattleHud,        "/ui/hud/ussr/battle",          "ui.hud.battle",                       FactionTheme::USSR,              ScreenFamily::InGameHud,          InputPolicy::GameAndUI, true},
-    {ScreenId::SovietAlertHud,         "/ui/hud/ussr/alert",           "ui.hud.alert",                        FactionTheme::USSR,              ScreenFamily::InGameHud,          InputPolicy::GameAndUI, true},
-    {ScreenId::AlliesNavalHud,         "/ui/hud/allies/naval",         "ui.hud.allies.naval",                 FactionTheme::Allies,            ScreenFamily::InGameHud,          InputPolicy::GameAndUI, true},
-    {ScreenId::AlliesAirHud,           "/ui/hud/allies/air",           "ui.hud.allies.air",                   FactionTheme::Allies,            ScreenFamily::InGameHud,          InputPolicy::GameAndUI, true},
-    {ScreenId::ChronoSuperweaponHud,   "/ui/hud/chronolegion/weapon",  "ui.hud.chrono.superweapon",           FactionTheme::Chronolegion,      ScreenFamily::InGameHud,          InputPolicy::GameAndUI, true},
-    {ScreenId::PauseMenu,              "/ui/pause",                    "ui.pause.title",                      FactionTheme::USSR,              ScreenFamily::PauseMenu,          InputPolicy::MenuOnly,  false},
-    {ScreenId::Victory,                "/ui/victory",                  "ui.result.victory",                   FactionTheme::USSR,              ScreenFamily::Victory,            InputPolicy::MenuOnly,  false},
+inline constexpr std::array<ScreenDefinition, 20> ScreenCatalog = {{
+    {ScreenId::Splash,                 "/ui/splash",                      "ui.splash.press_any_key",        FactionTheme::EurasianPact,      ScreenFamily::Splash,           InputPolicy::MenuOnly,  false},
+    {ScreenId::MainMenu,               "/ui/main-menu",                   "ui.main_menu.title",             FactionTheme::EurasianPact,      ScreenFamily::MainMenu,         InputPolicy::MenuOnly,  false},
+    {ScreenId::CampaignSelect,         "/ui/campaign-select",             "ui.campaign.select_faction",     FactionTheme::EurasianPact,      ScreenFamily::CampaignSelect,   InputPolicy::MenuOnly,  false},
+    {ScreenId::EurasianCampaign,       "/ui/campaign/eurasian-pact",      "ui.campaign.eurasian.title",     FactionTheme::EurasianPact,      ScreenFamily::FactionCampaign,  InputPolicy::MenuOnly,  false},
+    {ScreenId::AtlanticCampaign,       "/ui/campaign/atlantic-alliance",  "ui.campaign.atlantic.title",     FactionTheme::AtlanticAlliance,  ScreenFamily::FactionCampaign,  InputPolicy::MenuOnly,  false},
+    {ScreenId::EasternCampaign,        "/ui/campaign/eastern-coalition",  "ui.campaign.eastern.title",      FactionTheme::EasternCoalition,  ScreenFamily::FactionCampaign,  InputPolicy::MenuOnly,  false},
+    {ScreenId::PacificCampaign,        "/ui/campaign/pacific-pact",       "ui.campaign.pacific.title",      FactionTheme::PacificPact,       ScreenFamily::FactionCampaign,  InputPolicy::MenuOnly,  false},
+    {ScreenId::IndependentCampaign,    "/ui/campaign/independent",        "ui.campaign.independent.title",  FactionTheme::Independent,       ScreenFamily::FactionCampaign,  InputPolicy::MenuOnly,  false},
+    {ScreenId::MissionMap,             "/ui/mission-map/eurasian-pact",   "ui.mission_map.title",           FactionTheme::EurasianPact,      ScreenFamily::MissionMap,       InputPolicy::MenuOnly,  false},
+    {ScreenId::Briefing,               "/ui/briefing/quiet-relay",        "ui.briefing.operation_data",     FactionTheme::EurasianPact,      ScreenFamily::Briefing,         InputPolicy::MenuOnly,  false},
+    {ScreenId::VideoComms,             "/ui/video-comms/secure-channel",  "ui.video_comms.secure_channel",  FactionTheme::EurasianPact,      ScreenFamily::VideoComms,       InputPolicy::MenuOnly,  false},
+    {ScreenId::Loading,                "/ui/loading/bars",                "ui.loading.initializing",        FactionTheme::EurasianPact,      ScreenFamily::Loading,          InputPolicy::MenuOnly,  false},
+    {ScreenId::MultiplayerLobby,       "/ui/multiplayer/lobby",           "ui.lobby.title",                 FactionTheme::EurasianPact,      ScreenFamily::MultiplayerLobby, InputPolicy::MenuOnly,  false},
+    {ScreenId::EurasianHud,            "/ui/hud/eurasian-pact",           "ui.hud.eurasian.command",        FactionTheme::EurasianPact,      ScreenFamily::InGameHud,        InputPolicy::GameAndUI, true},
+    {ScreenId::AtlanticHud,            "/ui/hud/atlantic-alliance",       "ui.hud.atlantic.command",        FactionTheme::AtlanticAlliance,  ScreenFamily::InGameHud,        InputPolicy::GameAndUI, true},
+    {ScreenId::EasternHud,             "/ui/hud/eastern-coalition",       "ui.hud.eastern.command",         FactionTheme::EasternCoalition,  ScreenFamily::InGameHud,        InputPolicy::GameAndUI, true},
+    {ScreenId::PacificHud,             "/ui/hud/pacific-pact",            "ui.hud.pacific.command",         FactionTheme::PacificPact,       ScreenFamily::InGameHud,        InputPolicy::GameAndUI, true},
+    {ScreenId::IndependentHud,         "/ui/hud/independent",             "ui.hud.independent.command",     FactionTheme::Independent,       ScreenFamily::InGameHud,        InputPolicy::GameAndUI, true},
+    {ScreenId::PauseMenu,              "/ui/pause",                       "ui.pause.title",                 FactionTheme::EurasianPact,      ScreenFamily::PauseMenu,        InputPolicy::MenuOnly,  false},
+    {ScreenId::Victory,                "/ui/victory",                     "ui.result.victory",              FactionTheme::EurasianPact,      ScreenFamily::Victory,          InputPolicy::MenuOnly,  false}
 }};
 
-inline constexpr std::array<ScreenReferenceDefinition, 24> ScreenReferenceCatalog = {{
-    {1,  ScreenId::Splash,                ScreenVariant::Default},
-    {2,  ScreenId::MainMenu,              ScreenVariant::Default},
-    {3,  ScreenId::CampaignSelect,        ScreenVariant::Default},
-    {4,  ScreenId::SovietCampaign,        ScreenVariant::Default},
-    {5,  ScreenId::AlliesCampaign,        ScreenVariant::Default},
-    {6,  ScreenId::EasternCampaign,       ScreenVariant::Default},
-    {7,  ScreenId::ChronoCampaign,        ScreenVariant::Default},
-    {8,  ScreenId::SovietMissionMap,      ScreenVariant::Default},
-    {9,  ScreenId::SovietBriefing,        ScreenVariant::Default},
-    {10, ScreenId::VideoComms,            ScreenVariant::Default},
-    {11, ScreenId::AlliesCampaign,        ScreenVariant::AlliesAlternate},
-    {12, ScreenId::SovietLoading,         ScreenVariant::Default},
-    {13, ScreenId::SovietHud,             ScreenVariant::Default},
-    {14, ScreenId::AlliesHud,             ScreenVariant::Default},
-    {15, ScreenId::EasternHud,            ScreenVariant::Default},
-    {16, ScreenId::ChronoHud,             ScreenVariant::Default},
-    {17, ScreenId::MultiplayerLobby,      ScreenVariant::Default},
-    {18, ScreenId::EasternCampaignDetail, ScreenVariant::EasternDetail},
-    {19, ScreenId::SovietLoading,         ScreenVariant::LoadingBriefing},
-    {20, ScreenId::SovietBattleHud,       ScreenVariant::SovietBattle},
-    {21, ScreenId::SovietAlertHud,        ScreenVariant::SovietAlert},
-    {22, ScreenId::AlliesNavalHud,        ScreenVariant::AlliesNaval},
-    {23, ScreenId::AlliesAirHud,          ScreenVariant::AlliesAir},
-    {24, ScreenId::ChronoSuperweaponHud,  ScreenVariant::ChronoSuperweapon},
+inline constexpr std::array<ScreenReferenceDefinition, 19> ScreenReferenceCatalog = {{
+    {1,  ScreenId::Splash,             ScreenVariant::Default},
+    {2,  ScreenId::MainMenu,           ScreenVariant::Default},
+    {3,  ScreenId::CampaignSelect,     ScreenVariant::Default},
+    {4,  ScreenId::EurasianCampaign,   ScreenVariant::Default},
+    {5,  ScreenId::AtlanticCampaign,   ScreenVariant::Default},
+    {6,  ScreenId::EasternCampaign,    ScreenVariant::Default},
+    {7,  ScreenId::MissionMap,         ScreenVariant::Default},
+    {8,  ScreenId::Briefing,           ScreenVariant::Default},
+    {9,  ScreenId::VideoComms,         ScreenVariant::Default},
+    {10, ScreenId::Loading,            ScreenVariant::Default},
+    {11, ScreenId::MultiplayerLobby,   ScreenVariant::Default},
+    {12, ScreenId::EurasianHud,        ScreenVariant::GroundAssault},
+    {13, ScreenId::AtlanticHud,        ScreenVariant::NavalWarfare},
+    {14, ScreenId::EasternHud,         ScreenVariant::BaseDefense},
+    {15, ScreenId::PacificHud,         ScreenVariant::AirWarfare},
+    {16, ScreenId::IndependentHud,     ScreenVariant::InsurgentFront},
+    {17, ScreenId::EurasianHud,        ScreenVariant::BaseDefense},
+    {18, ScreenId::PacificHud,         ScreenVariant::BaseDefense},
+    {19, ScreenId::IndependentCampaign, ScreenVariant::Default}
 }};
 
-inline constexpr const std::array<ScreenDefinition, 24>& GetScreenCatalog()
+inline constexpr const std::array<ScreenDefinition, 20>& GetScreenCatalog()
 {
     return ScreenCatalog;
 }
 
-inline constexpr const std::array<ScreenReferenceDefinition, 24>& GetScreenReferenceCatalog()
+inline constexpr const std::array<ScreenReferenceDefinition, 19>& GetScreenReferenceCatalog()
 {
     return ScreenReferenceCatalog;
 }

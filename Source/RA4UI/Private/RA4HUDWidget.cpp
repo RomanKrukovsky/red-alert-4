@@ -285,16 +285,16 @@ FRA4HUDSnapshotView MakeShowcaseSnapshot(
     switch (Theme)
     {
     case ERA4FactionTheme::EurasianPact:
-        Snapshot.PrimaryEntityName = Variant == ERA4UIScreenVariant::SovietBattle
+        Snapshot.PrimaryEntityName = Variant == ERA4UIScreenVariant::GroundAssault
             ? TEXT("ОБТ «ГРАНИТ»")
-            : Variant == ERA4UIScreenVariant::SovietAlert
+            : Variant == ERA4UIScreenVariant::BaseDefense
                 ? TEXT("КОМПЛЕКС РЭБ «ГРОМОБОЙ»")
                 : TEXT("КОМАНДНЫЙ ЦЕНТР «ЗАСЛОН»");
         break;
     case ERA4FactionTheme::AtlanticAlliance:
-        Snapshot.PrimaryEntityName = Variant == ERA4UIScreenVariant::AlliesNaval
+        Snapshot.PrimaryEntityName = Variant == ERA4UIScreenVariant::NavalWarfare
             ? TEXT("ЭСМИНЕЦ «СВОБОДА»")
-            : Variant == ERA4UIScreenVariant::AlliesAir
+            : Variant == ERA4UIScreenVariant::AirWarfare
                 ? TEXT("ИСТРЕБИТЕЛЬ F-35C")
                 : TEXT("СЕТЕЦЕНТРИЧЕСКИЙ КП");
         break;
@@ -302,15 +302,15 @@ FRA4HUDSnapshotView MakeShowcaseSnapshot(
         Snapshot.PrimaryEntityName = TEXT("ИНДУСТРИАЛЬНЫЙ ШТАБ «ТИП-99B»");
         break;
     case ERA4FactionTheme::PacificPact:
-        Snapshot.PrimaryEntityName = TEXT("ШАГОХОД «КАЙГАН»");
+        Snapshot.PrimaryEntityName = Variant == ERA4UIScreenVariant::AirWarfare
+            ? TEXT("ИСТРЕБИТЕЛЬ «СУСАНОО»")
+            : TEXT("ШАГОХОД «КАЙГАН»");
         break;
     case ERA4FactionTheme::Independent:
         Snapshot.PrimaryEntityName = TEXT("МОБИЛЬНЫЙ СПУ «ХЕЙБАР»");
         break;
     case ERA4FactionTheme::Chronolegion:
-        Snapshot.PrimaryEntityName = Variant == ERA4UIScreenVariant::ChronoSuperweapon
-            ? TEXT("ХРОНОКОЛЛАПС «ВЕЧНОСТЬ»")
-            : TEXT("ГЛАВНЫЙ ХРОНОРЕАКТОР");
+        Snapshot.PrimaryEntityName = TEXT("ГЛАВНЫЙ ХРОНОРЕАКТОР");
         break;
     default:
         Snapshot.PrimaryEntityName = TEXT("КОМАНДНЫЙ ЦЕНТР");
@@ -320,12 +320,12 @@ FRA4HUDSnapshotView MakeShowcaseSnapshot(
     Snapshot.bPrimaryOwned = true;
 
     FRA4HUDObjective Primary;
-    Primary.Label = Variant == ERA4UIScreenVariant::AlliesNaval
+    Primary.Label = Variant == ERA4UIScreenVariant::NavalWarfare
         ? LOCTEXT("ObjectiveNaval", "Уничтожить вражеский флот")
-        : Variant == ERA4UIScreenVariant::AlliesAir
+        : Variant == ERA4UIScreenVariant::AirWarfare
             ? LOCTEXT("ObjectiveAir", "Захватить передовые аэродромы")
-            : Variant == ERA4UIScreenVariant::ChronoSuperweapon
-                ? LOCTEXT("ObjectiveChrono", "Уничтожить командный центр противника")
+            : Variant == ERA4UIScreenVariant::InsurgentFront
+                ? LOCTEXT("ObjectiveInsurgent", "Продержаться до завершения насыщающего удара")
                 : LOCTEXT("ShowcaseObjectivePrimary", "Уничтожить базу противника");
     Snapshot.Objectives.Add(Primary);
     FRA4HUDObjective Secondary;
@@ -345,7 +345,7 @@ FRA4HUDSnapshotView MakeShowcaseSnapshot(
     };
     TArray<FShowcaseBuildEntry> BuildEntries;
 
-    if (Variant == ERA4UIScreenVariant::AlliesNaval)
+    if (Variant == ERA4UIScreenVariant::NavalWarfare)
     {
         BuildEntries = {
             {LOCTEXT("NavalDock", "ОКЕАНИЧЕСКИЙ ДОК"), 2100},
@@ -357,7 +357,7 @@ FRA4HUDSnapshotView MakeShowcaseSnapshot(
             {LOCTEXT("NavalHarvester", "M88 «PIONEER»"), 1200},
             {LOCTEXT("NavalShield", "АКТИВНАЯ ЗАЩИТА"), 1800}};
     }
-    else if (Variant == ERA4UIScreenVariant::AlliesAir || Theme == ERA4FactionTheme::AtlanticAlliance)
+    else if (Variant == ERA4UIScreenVariant::AirWarfare || Theme == ERA4FactionTheme::AtlanticAlliance)
     {
         BuildEntries = {
             {LOCTEXT("AtlHQ", "СЕТЕВОЙ ШТАБ"), 5000},
@@ -458,9 +458,9 @@ FRA4HUDSnapshotView MakeShowcaseSnapshot(
     Snapshot.ProductionQueue.Add(Infantry);
 
     FRA4Alert Alert;
-    Alert.Message = Variant == ERA4UIScreenVariant::ChronoSuperweapon
-        ? LOCTEXT("ChronoWeaponAlert", "СУПЕРОРУЖИЕ АКТИВИРОВАНО — ЦЕЛЬ ПОРАЖЕНА")
-        : Variant == ERA4UIScreenVariant::SovietAlert
+    Alert.Message = Variant == ERA4UIScreenVariant::InsurgentFront
+        ? LOCTEXT("SaturationStrikeAlert", "САТУРАЦИОННЫЙ УДАР НАЧАТ — УКРЫТИЯ ЗАЩИЩЕНЫ")
+        : Variant == ERA4UIScreenVariant::BaseDefense
             ? LOCTEXT("BaseAlert", "ТРЕВОГА! БАЗА ПОДВЕРГАЕТСЯ АТАКЕ!")
             : LOCTEXT("ShowcaseAlert", "НАША БАЗА АТАКОВАНА!");
     Alert.Severity = ERA4AlertSeverity::Critical;
@@ -494,7 +494,7 @@ TArray<FRA4RadarMarker> MakeShowcaseRadarMarkers()
 URA4HUDWidget::URA4HUDWidget(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
 {
-    SetScreenIdentity(ERA4UIScreenId::SovietHud);
+    SetScreenIdentity(ERA4UIScreenId::EurasianHud);
 }
 
 void URA4HUDWidget::ConfigureHUD(
@@ -506,27 +506,27 @@ void URA4HUDWidget::ConfigureHUD(
     HUDVariant = InVariant;
     ActiveProductionTab = FMath::Clamp(InActiveProductionTab, 0, 4);
 
-    ERA4UIScreenId HUDScreen = ERA4UIScreenId::SovietHud;
+    ERA4UIScreenId HUDScreen = ERA4UIScreenId::EurasianHud;
     switch (FactionTheme)
     {
     case ERA4FactionTheme::EurasianPact:
-        HUDScreen = ERA4UIScreenId::SovietHud;
+        HUDScreen = ERA4UIScreenId::EurasianHud;
         break;
     case ERA4FactionTheme::AtlanticAlliance:
-        HUDScreen = ERA4UIScreenId::AlliesHud;
+        HUDScreen = ERA4UIScreenId::AtlanticHud;
         break;
     case ERA4FactionTheme::EasternCoalition:
         HUDScreen = ERA4UIScreenId::EasternHud;
         break;
     case ERA4FactionTheme::PacificPact:
-    case ERA4FactionTheme::Chronolegion:
-        HUDScreen = ERA4UIScreenId::ChronoHud;
+        HUDScreen = ERA4UIScreenId::PacificHud;
         break;
     case ERA4FactionTheme::Independent:
-        HUDScreen = ERA4UIScreenId::SovietHud;
+        HUDScreen = ERA4UIScreenId::IndependentHud;
         break;
     default:
-        HUDScreen = ERA4UIScreenId::SovietHud;
+        // Retired directions fall back to the shared Eurasian shell.
+        HUDScreen = ERA4UIScreenId::EurasianHud;
         break;
     }
     SetScreenIdentity(HUDScreen, HUDVariant);
@@ -543,7 +543,7 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
     const FRA4HUDVisualStyle ThemeStyle = ResolveHUDVisualStyle(FactionTheme);
     int32 ShowcaseScreen = 0;
     const bool bShowcaseMode = FParse::Value(
-        FCommandLine::Get(), TEXT("RA4Screen="), ShowcaseScreen) && ShowcaseScreen >= 13;
+        FCommandLine::Get(), TEXT("RA4Screen="), ShowcaseScreen) && ShowcaseScreen >= 12;
     if (bShowcaseMode)
     {
         if (UTexture2D* Background = LoadObject<UTexture2D>(
@@ -607,9 +607,9 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
     // both ends. The reference has separate tabs, so each category gets its own
     // button and the row divides the width between them.
     TArray<FText> TabCaptions;
-    if (FactionTheme == ERA4FactionTheme::Allies)
+    if (FactionTheme == ERA4FactionTheme::AtlanticAlliance)
     {
-        TabCaptions = HUDVariant == ERA4UIScreenVariant::AlliesNaval
+        TabCaptions = HUDVariant == ERA4UIScreenVariant::NavalWarfare
             ? TArray<FText>{LOCTEXT("Tab_Str", "СТРОИТЬ"), LOCTEXT("Tab_Inf", "ПЕХОТА"),
                             LOCTEXT("Tab_Veh", "ТЕХНИКА"), LOCTEXT("Tab_Air", "АВИАЦИЯ"),
                             LOCTEXT("Tab_Sea", "ФЛОТ")}
@@ -711,9 +711,9 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
 
     UVerticalBox* Queue = WidgetTree->ConstructWidget<UVerticalBox>(
         UVerticalBox::StaticClass(), TEXT("ProductionQueueContent"));
-    const FText QueueHeading = HUDVariant == ERA4UIScreenVariant::ChronoSuperweapon
-        ? LOCTEXT("SuperweaponHeading", "СУПЕРОРУЖИЕ: ХРОНОКОЛЛАПС")
-        : HUDVariant == ERA4UIScreenVariant::AlliesNaval
+    const FText QueueHeading = HUDVariant == ERA4UIScreenVariant::InsurgentFront
+        ? LOCTEXT("LauncherQueueHeading", "ОЧЕРЕДЬ ПУСКОВЫХ")
+        : HUDVariant == ERA4UIScreenVariant::NavalWarfare
             ? LOCTEXT("FleetQueueHeading", "ОЧЕРЕДЬ ВЕРФИ")
             : LOCTEXT("QueueHeading", "ОЧЕРЕДЬ ПОСТРОЙКИ");
     Queue->AddChildToVerticalBox(MakeHUDText(
@@ -749,10 +749,10 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
         CommandSlot->SetPadding(FMargin(2.0f));
     }
     Commands->AddChildToVerticalBox(CommandButtons);
-    const FText InitialCommandStatus = HUDVariant == ERA4UIScreenVariant::ChronoSuperweapon
-        ? LOCTEXT("ChronoTargetLocked", "ЦЕЛЬ ЗАФИКСИРОВАНА  •  СИНХРОНИЗАЦИЯ 100%")
-        : HUDVariant == ERA4UIScreenVariant::SovietAlert
-            ? LOCTEXT("SovietDefenceActive", "ПРОТОКОЛ ОБОРОНЫ БАЗЫ АКТИВЕН")
+    const FText InitialCommandStatus = HUDVariant == ERA4UIScreenVariant::InsurgentFront
+        ? LOCTEXT("SaturationStrikeActive", "САТУРАЦИОННЫЙ УДАР НАЧАТ  •  УКРЫТИЯ ЗАЩИЩЕНЫ")
+        : HUDVariant == ERA4UIScreenVariant::BaseDefense
+            ? LOCTEXT("BaseDefenceActive", "ПРОТОКОЛ ОБОРОНЫ БАЗЫ АКТИВЕН")
             : LOCTEXT("CommandReady", "КОМАНДНАЯ СЕТЬ ГОТОВА");
     CommandStatusText = MakeHUDText(
         WidgetTree, InitialCommandStatus,
@@ -764,8 +764,8 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
         WidgetTree, Commands, TEXT("CommandGridPanel"), ThemeStyle.Panel, ThemeStyle.Accent), CommandPosition, CommandSize, 10);
     AddInteractiveRegion(CommandPosition, CommandSize);
 
-    const bool bProminentAlert = HUDVariant == ERA4UIScreenVariant::SovietAlert ||
-        HUDVariant == ERA4UIScreenVariant::ChronoSuperweapon;
+    const bool bProminentAlert = HUDVariant == ERA4UIScreenVariant::BaseDefense ||
+        HUDVariant == ERA4UIScreenVariant::InsurgentFront;
     const FVector2D AlertPosition = bProminentAlert
         ? FVector2D(555.0f, 92.0f)
         : FVector2D(16.0f, 250.0f);
@@ -788,7 +788,7 @@ void URA4HUDWidget::NativeConstruct()
 {
     Super::NativeConstruct();
     int32 ShowcaseScreen = 0;
-    if (FParse::Value(FCommandLine::Get(), TEXT("RA4Screen="), ShowcaseScreen) && ShowcaseScreen >= 13)
+    if (FParse::Value(FCommandLine::Get(), TEXT("RA4Screen="), ShowcaseScreen) && ShowcaseScreen >= 12)
     {
         return;
     }
@@ -1019,10 +1019,10 @@ bool URA4HUDWidget::IsWorldInputBlockedAtReferencePoint(const FVector2D Point) c
 
 void URA4HUDWidget::CycleProductionTab()
 {
-    const int32 TabCount = HUDVariant == ERA4UIScreenVariant::AlliesNaval ? 5 : 4;
+    const int32 TabCount = HUDVariant == ERA4UIScreenVariant::NavalWarfare ? 5 : 4;
     ActiveProductionTab = (ActiveProductionTab + 1) % TabCount;
     int32 ShowcaseScreen = 0;
-    if (FParse::Value(FCommandLine::Get(), TEXT("RA4Screen="), ShowcaseScreen) && ShowcaseScreen >= 13)
+    if (FParse::Value(FCommandLine::Get(), TEXT("RA4Screen="), ShowcaseScreen) && ShowcaseScreen >= 12)
     {
         HUDViewModel->ApplySnapshot(MakeShowcaseSnapshot(
             FactionTheme, HUDVariant, ActiveProductionTab));
