@@ -559,7 +559,7 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
         GetBackgroundLayer()->SetColorAndOpacity(FLinearColor::Transparent);
     }
     HUDViewModel = NewObject<URA4HUDViewModel>(this);
-    InteractiveRegions.Reset();
+    Occlusion.Reset();
 
     UCanvasPanel* Canvas = WidgetTree->ConstructWidget<UCanvasPanel>(
         UCanvasPanel::StaticClass(), TEXT("HUDCanvas"));
@@ -1004,52 +1004,17 @@ void URA4HUDWidget::RefreshAlerts()
 
 void URA4HUDWidget::AddInteractiveRegion(const FVector2D Position, const FVector2D Size)
 {
-    InteractiveRegions.Emplace(Position, Position + Size);
+    Occlusion.Add(Position, Size);
 }
 
 float URA4HUDWidget::GetBattlefieldViewFraction() const
 {
-    if (InteractiveRegions.Num() == 0)
-    {
-        return 1.0f;
-    }
-
-    // Panels overlap, so summing their areas would over-count. Sampling a coarse
-    // grid gives the union directly and stays exact enough for a layout budget.
-    constexpr int32 SampleColumns = 192;
-    constexpr int32 SampleRows = 108;
-    const FVector2D CellSize(
-        ReferenceCanvasWidth / float(SampleColumns),
-        ReferenceCanvasHeight / float(SampleRows));
-
-    int32 FreeCells = 0;
-    for (int32 Row = 0; Row < SampleRows; ++Row)
-    {
-        for (int32 Column = 0; Column < SampleColumns; ++Column)
-        {
-            const FVector2D Centre(
-                (float(Column) + 0.5f) * CellSize.X,
-                (float(Row) + 0.5f) * CellSize.Y);
-            if (!IsWorldInputBlockedAtReferencePoint(Centre))
-            {
-                ++FreeCells;
-            }
-        }
-    }
-
-    return float(FreeCells) / float(SampleColumns * SampleRows);
+    return Occlusion.BattlefieldShare();
 }
 
 bool URA4HUDWidget::IsWorldInputBlockedAtReferencePoint(const FVector2D Point) const
 {
-    for (const FBox2D& Region : InteractiveRegions)
-    {
-        if (Region.IsInside(Point))
-        {
-            return true;
-        }
-    }
-    return false;
+    return Occlusion.IsBlocked(Point);
 }
 
 void URA4HUDWidget::CycleProductionTab()

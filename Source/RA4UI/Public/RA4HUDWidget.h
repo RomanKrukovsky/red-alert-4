@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "RA4HUDOcclusion.h"
 #include "RA4HUDTypes.h"
 #include "RA4ScreenRootWidget.h"
 #include "RA4HUDWidget.generated.h"
@@ -53,7 +54,7 @@ public:
     bool IsWorldInputBlockedAtReferencePoint(FVector2D Point) const;
 
     UFUNCTION(BlueprintPure, Category = "RA4|HUD|Input")
-    int32 GetInteractiveRegionCount() const { return InteractiveRegions.Num(); }
+    int32 GetInteractiveRegionCount() const { return Occlusion.Num(); }
 
     /**
      * Share of the reference canvas the player can still see the battle through,
@@ -64,9 +65,9 @@ public:
     UFUNCTION(BlueprintPure, Category = "RA4|HUD|Layout")
     float GetBattlefieldViewFraction() const;
 
-    /** Canvas the HUD panels are authored against. */
-    static constexpr float ReferenceCanvasWidth = 1920.0f;
-    static constexpr float ReferenceCanvasHeight = 1080.0f;
+    /** Canvas the HUD panels are authored against. See FRA4HUDOcclusion. */
+    static constexpr float ReferenceCanvasWidth = FRA4HUDOcclusion::ReferenceCanvasWidth;
+    static constexpr float ReferenceCanvasHeight = FRA4HUDOcclusion::ReferenceCanvasHeight;
 
 protected:
     virtual TSharedRef<SWidget> RebuildWidget() override;
@@ -125,7 +126,7 @@ private:
     UPROPERTY(Transient)
     TObjectPtr<UUniformGridPanel> BuildGrid;
 
-    TArray<FBox2D> InteractiveRegions;
+    FRA4HUDOcclusion Occlusion;
     ERA4FactionTheme FactionTheme = ERA4FactionTheme::EurasianPact;
     ERA4UIScreenVariant HUDVariant = ERA4UIScreenVariant::Default;
     int32 ActiveProductionTab = 0;

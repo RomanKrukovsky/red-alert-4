@@ -10,6 +10,7 @@
 #include "RA4FactionHUDWidget.h"
 #include "RA4HUDViewModel.h"
 #include "RA4HUDWidget.h"
+#include "RA4SidebarWidget.h"
 #include "RA4MainMenuScreenWidget.h"
 #include "RA4MainMenuViewModel.h"
 #include "RA4LobbyScreenWidget.h"
@@ -642,6 +643,43 @@ bool FRA4HUDBattlefieldBudgetTest::RunTest(const FString& Parameters)
                 Reference, Fraction * 100.0f),
             Fraction <= 0.72f);
     }
+    return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FRA4PlayableHUDBudgetTest,
+    "RA4.UI.HUD.Layout.PlayableHUDKeepsItsShareOfTheScreen",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FRA4PlayableHUDBudgetTest::RunTest(const FString& Parameters)
+{
+    // ADR-0013: the HUD the player actually gets is held to the same budget as
+    // the reference viewer. Before this the playable column was never measured,
+    // so nothing stopped it from growing over the battlefield.
+    URA4SidebarWidget* Sidebar = NewObject<URA4SidebarWidget>();
+    TestTrue(TEXT("Sidebar initializes"), Sidebar->Initialize());
+    Sidebar->TakeWidget();
+    Sidebar->RefreshOcclusion();
+
+    const float Share = Sidebar->GetBattlefieldViewFraction();
+    AddInfo(*FString::Printf(TEXT("Playable HUD battlefield share: %.1f%%"), Share * 100.0f));
+
+    TestTrue(
+        *FString::Printf(TEXT("Playable HUD keeps at least 65%% battlefield (got %.1f%%)"), Share * 100.0f),
+        Share >= FRA4HUDOcclusion::MinBattlefieldShare);
+    TestTrue(
+        *FString::Printf(TEXT("Playable HUD covers something at all (got %.1f%%)"), Share * 100.0f),
+        Share < 1.0f);
+
+    // The column blocks world input; the open field must not.
+    TestTrue(
+        TEXT("A point inside the column blocks world input"),
+        Sidebar->IsWorldInputBlockedAtReferencePoint(
+            FVector2D(FRA4HUDOcclusion::ReferenceCanvasWidth - 20.0f, 400.0f)));
+    TestFalse(
+        TEXT("A point in the open field does not block world input"),
+        Sidebar->IsWorldInputBlockedAtReferencePoint(FVector2D(400.0f, 400.0f)));
     return true;
 }
 

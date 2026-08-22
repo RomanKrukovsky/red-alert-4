@@ -855,6 +855,37 @@ float URA4SidebarWidget::ComputeSidebarScale(const UObject* WorldContextObject)
     return FMath::Clamp(LogicalHeight / kReferenceViewportHeight, kMinSidebarScale, kMaxSidebarScale);
 }
 
+void URA4SidebarWidget::RefreshOcclusion()
+{
+    Occlusion.Reset();
+
+    // The column is anchored to the right edge and spans the full height, so on
+    // the shared reference canvas it is one rectangle whose width scales with the
+    // viewport exactly as the widget does. ADR-0013 step 2 replaces this single
+    // rectangle with per-panel ones once the layout moves.
+    const float Scale = ComputeSidebarScale(this);
+    const float ColumnWidth = SidebarWidth * Scale;
+    const float ViewportWidth = FMath::Max(1.0f, GetCachedGeometry().GetLocalSize().X);
+    const float CanvasWidth = FRA4HUDOcclusion::ReferenceCanvasWidth;
+    const float ColumnOnCanvas = ViewportWidth > 1.0f
+        ? ColumnWidth / ViewportWidth * CanvasWidth
+        : SidebarWidth / 1920.0f * CanvasWidth;
+
+    Occlusion.Add(
+        FVector2D(CanvasWidth - ColumnOnCanvas, 0.0f),
+        FVector2D(ColumnOnCanvas, FRA4HUDOcclusion::ReferenceCanvasHeight));
+}
+
+bool URA4SidebarWidget::IsWorldInputBlockedAtReferencePoint(const FVector2D Point) const
+{
+    return Occlusion.IsBlocked(Point);
+}
+
+float URA4SidebarWidget::GetBattlefieldViewFraction() const
+{
+    return Occlusion.BattlefieldShare();
+}
+
 float URA4SidebarWidget::ComputeSidebarWidth(const UObject* WorldContextObject)
 {
     return kSidebarWidth * ComputeSidebarScale(WorldContextObject);
@@ -1233,6 +1264,7 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
     WidthBox = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("SidebarWidth"));
     AppliedSidebarWidth = ComputeSidebarWidth(this);
     WidthBox->SetWidthOverride(AppliedSidebarWidth);
+    RefreshOcclusion();
     WidthBox->AddChild(Background);
 
     WidgetTree->RootWidget = WidthBox;
@@ -1300,6 +1332,7 @@ void URA4SidebarWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTim
         {
             AppliedSidebarWidth = DesiredWidth;
             WidthBox->SetWidthOverride(DesiredWidth);
+            RefreshOcclusion();
         }
     }
 

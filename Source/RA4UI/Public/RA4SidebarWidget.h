@@ -14,6 +14,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "RA4HUDOcclusion.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/Button.h"
 
@@ -155,6 +156,21 @@ public:
 
     /** Scale factor for the viewport the given object lives in. Never returns 0. */
     static float ComputeSidebarScale(const UObject* WorldContextObject);
+
+    /**
+     * What this HUD covers, expressed on the shared reference canvas. Step 1 of
+     * ADR-0013: the playable HUD starts reporting the same thing the reference
+     * viewer does, so both can be held to one battlefield budget before the
+     * layout itself moves.
+     */
+    UFUNCTION(BlueprintPure, Category = "RA4|HUD|Layout")
+    bool IsWorldInputBlockedAtReferencePoint(FVector2D Point) const;
+
+    UFUNCTION(BlueprintPure, Category = "RA4|HUD|Layout")
+    float GetBattlefieldViewFraction() const;
+
+    /** Recomputes the covered rectangles from the current column width. */
+    void RefreshOcclusion();
 
     /**
      * Actual column width for this viewport. The player controller reserves the same
@@ -362,6 +378,8 @@ private:
     // Last width pushed into WidthBox, so the override is only written when the
     // viewport actually changed size.
     float AppliedSidebarWidth = 0.0f;
+
+    FRA4HUDOcclusion Occlusion;
 
     FDelegateHandle ResourceChangeHandle;
     FDelegateHandle ProductionChangeHandle;
