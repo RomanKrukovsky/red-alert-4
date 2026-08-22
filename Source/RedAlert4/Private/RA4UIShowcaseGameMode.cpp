@@ -56,13 +56,15 @@ void ARA4UIShowcaseGameMode::ShowInterface(APlayerController* PlayerController)
         RootWidget = CreateWidget<URA4MainMenuScreenWidget>(
             PlayerController, URA4MainMenuScreenWidget::StaticClass());
     }
-    else if (RequestedScreen == 3)
+    else if (RequestedScreen == 30)
     {
         if (URA4CampaignSelectWidget* Select = CreateWidget<URA4CampaignSelectWidget>(
             PlayerController, URA4CampaignSelectWidget::StaticClass()))
         {
             // Each step of the selection path has its own reference frame, so QA
             // capture must be able to open the screen directly on a given step.
+            // The wizard lives outside the 1..19 plate range: references 3..6
+            // belong to the faction campaign screens.
             int32 RequestedStep = 0;
             FParse::Value(FCommandLine::Get(), TEXT("RA4Step="), RequestedStep);
             Select->SetInitialStep(static_cast<ERA4CampaignSelectStep>(
@@ -76,7 +78,7 @@ void ARA4UIShowcaseGameMode::ShowInterface(APlayerController* PlayerController)
             RootWidget = Select;
         }
     }
-    else if (RequestedScreen >= 4 && RequestedScreen <= 6)
+    else if (RequestedScreen >= 3 && RequestedScreen <= 6)
     {
         if (URA4CampaignScreenWidget* Campaign = CreateWidget<URA4CampaignScreenWidget>(
             PlayerController, URA4CampaignScreenWidget::StaticClass()))
@@ -84,9 +86,10 @@ void ARA4UIShowcaseGameMode::ShowInterface(APlayerController* PlayerController)
             const ERA4FactionTheme Factions[] = {
                 ERA4FactionTheme::EurasianPact,
                 ERA4FactionTheme::AtlanticAlliance,
-                ERA4FactionTheme::EasternCoalition
+                ERA4FactionTheme::EasternCoalition,
+                ERA4FactionTheme::PacificPact
             };
-            Campaign->ConfigureCampaign(Factions[RequestedScreen - 4]);
+            Campaign->ConfigureCampaign(Factions[RequestedScreen - 3]);
             RootWidget = Campaign;
         }
     }

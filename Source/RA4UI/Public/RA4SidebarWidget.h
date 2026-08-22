@@ -22,6 +22,7 @@
 
 #include "RA4SidebarWidget.generated.h"
 
+class UCanvasPanel;
 class UProgressBar;
 class USizeBox;
 class UTextBlock;
@@ -385,6 +386,10 @@ private:
     // Last width pushed into WidthBox, so the override is only written when the
     // viewport actually changed size.
     float AppliedSidebarWidth = 0.0f;
+
+    /** Full-screen canvas the HUD panels sit on. See ADR-0013. */
+    UPROPERTY(Transient)
+    TObjectPtr<UCanvasPanel> HudRoot;
 
     FRA4HUDOcclusion Occlusion;
 

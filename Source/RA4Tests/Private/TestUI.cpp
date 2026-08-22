@@ -21,6 +21,19 @@ RA4_TEST(UI, ReferenceCatalogCoversAllNineteenScreenshots)
 
     RA4_EXPECT(RA4::UI::FindScreenByReference(0) == nullptr);
     RA4_EXPECT(RA4::UI::FindScreenByReference(20) == nullptr);
+
+    // References 3..6 are the faction campaign detail plates, in the same
+    // order as the remaster shot files; the selection wizard lives outside
+    // the plate range.
+    RA4_EXPECT(RA4::UI::FindScreenByReference(3)->Id == RA4::UI::ScreenId::EurasianCampaign);
+    RA4_EXPECT(RA4::UI::FindScreenByReference(4)->Id == RA4::UI::ScreenId::AtlanticCampaign);
+    RA4_EXPECT(RA4::UI::FindScreenByReference(5)->Id == RA4::UI::ScreenId::EasternCampaign);
+    RA4_EXPECT(RA4::UI::FindScreenByReference(6)->Id == RA4::UI::ScreenId::PacificCampaign);
+    RA4_EXPECT(RA4::UI::FindScreenByReference(19)->Id == RA4::UI::ScreenId::IndependentCampaign);
+    for (const RA4::UI::ScreenReferenceDefinition& Reference : RA4::UI::GetScreenReferenceCatalog())
+    {
+        RA4_EXPECT(Reference.Id != RA4::UI::ScreenId::CampaignSelect);
+    }
 }
 
 RA4_TEST(UI, RepeatedReferencesReuseTheirRealScreen)

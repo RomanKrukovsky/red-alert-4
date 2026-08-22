@@ -47,7 +47,7 @@ FFactionVisual ResolveFactionVisual(const ERA4FactionTheme Faction)
             ERA4UIScreenId::EurasianCampaign,
             FLinearColor(0.68f, 0.28f, 0.88f, 1.0f),
             FLinearColor(0.04f, 0.015f, 0.06f, 0.96f),
-            TEXT("/Game/RA4UI/Art/T_RA4_Commander_Eurasian.T_RA4_Commander_Eurasian"),
+            TEXT("/Game/RA4UI/Art/Remaster/T_SH_03_CampaignEurasian.T_SH_03_CampaignEurasian"),
             LOCTEXT("EurasianHeading", "КАМПАНИЯ ЕВРАЗИЙСКОГО ПАКТА"),
             LOCTEXT("EurasianChapter", "РОССИЯ: ЛИНИЯ РАЗЛОМА"),
             LOCTEXT("EurasianEvent", "ФРОНТОВАЯ СВОДКА: ГРУППИРОВКА РЭБ «СЕВЕР» РАЗВЁРНУТА НА ПОЗИЦИЯХ.")
@@ -57,7 +57,7 @@ FFactionVisual ResolveFactionVisual(const ERA4FactionTheme Faction)
             ERA4UIScreenId::AtlanticCampaign,
             FLinearColor(0.35f, 0.70f, 0.98f, 1.0f),
             FLinearColor(0.015f, 0.05f, 0.12f, 0.96f),
-            TEXT("/Game/RA4UI/Art/T_RA4_Commander_Atlantic.T_RA4_Commander_Atlantic"),
+            TEXT("/Game/RA4UI/Art/Remaster/T_SH_04_CampaignAtlantic.T_SH_04_CampaignAtlantic"),
             LOCTEXT("AtlanticHeading", "КАМПАНИЯ АТЛАНТИЧЕСКОГО АЛЬЯНСА"),
             LOCTEXT("AtlanticChapter", "США: ДАЛЬНИЙ РУБЕЖ"),
             LOCTEXT("AtlanticEvent", "ОПЕРАТИВНАЯ СВОДКА: АВИАНОСНАЯ ГРУППА ВЫШЛА НА ПЕРЕДОВОЙ РУБЕЖ.")
@@ -67,7 +67,7 @@ FFactionVisual ResolveFactionVisual(const ERA4FactionTheme Faction)
             ERA4UIScreenId::EasternCampaign,
             FLinearColor(0.88f, 0.72f, 0.22f, 1.0f),
             FLinearColor(0.02f, 0.08f, 0.04f, 0.96f),
-            TEXT("/Game/RA4UI/Art/T_RA4_Commander_Eastern.T_RA4_Commander_Eastern"),
+            TEXT("/Game/RA4UI/Art/Remaster/T_SH_05_CampaignEastern.T_SH_05_CampaignEastern"),
             LOCTEXT("EasternHeading", "КАМПАНИЯ ВОСТОЧНОЙ КОАЛИЦИИ"),
             LOCTEXT("EasternChapter", "КИТАЙ: НЕФРИТОВАЯ СЕТЬ"),
             LOCTEXT("EasternEvent", "СВОДКА КОАЛИЦИИ: АВТОМАТИЗИРОВАННЫЙ ЗАВОД ВЫПУСТИЛ ПЕРВУЮ СЕРИЮ БПЛА.")
@@ -77,7 +77,7 @@ FFactionVisual ResolveFactionVisual(const ERA4FactionTheme Faction)
             ERA4UIScreenId::PacificCampaign,
             FLinearColor(0.20f, 0.80f, 0.90f, 1.0f),
             FLinearColor(0.01f, 0.06f, 0.08f, 0.96f),
-            TEXT("/Game/RA4UI/Art/T_RA4_Theatre_Pacific.T_RA4_Theatre_Pacific"),
+            TEXT("/Game/RA4UI/Art/Remaster/T_SH_06_CampaignPacific.T_SH_06_CampaignPacific"),
             LOCTEXT("PacificHeading", "КАМПАНИЯ ТИХООКЕАНСКОГО ПАКТА"),
             LOCTEXT("PacificChapter", "ЯПОНИЯ: ДУГА ШТОРМА"),
             LOCTEXT("PacificEvent", "ОБОРОНА ОСТРОВОВ: БЕРЕГОВОЙ ЛАЗЕРНЫЙ КОМПЛЕКС «КАГАМИ» АКТИВИРОВАН.")
@@ -87,7 +87,7 @@ FFactionVisual ResolveFactionVisual(const ERA4FactionTheme Faction)
             ERA4UIScreenId::IndependentCampaign,
             FLinearColor(0.78f, 0.52f, 0.18f, 1.0f),
             FLinearColor(0.08f, 0.05f, 0.02f, 0.96f),
-            TEXT("/Game/RA4UI/Art/T_RA4_Theatre_Independent.T_RA4_Theatre_Independent"),
+            TEXT("/Game/RA4UI/Art/Remaster/T_SH_19_CampaignIndependent.T_SH_19_CampaignIndependent"),
             LOCTEXT("IndepHeading", "НЕЗАВИСИМЫЕ ДЕРЖАВЫ"),
             LOCTEXT("IndepChapter", "ИРАН: ТЕНЬ НАД ХРЕБТОМ"),
             LOCTEXT("IndepEvent", "АСИММЕТРИЧНЫЙ УДАР: МОБИЛЬНЫЕ РАКЕТНЫЕ ПУСКОВЫЕ «ХЕЙБАР» ВЫШЛИ НА МАРШ.")
@@ -99,7 +99,7 @@ FFactionVisual ResolveFactionVisual(const ERA4FactionTheme Faction)
             ERA4UIScreenId::EurasianCampaign,
             FLinearColor(0.70f, 0.30f, 1.0f, 1.0f),
             FLinearColor(0.10f, 0.025f, 0.16f, 0.96f),
-            TEXT("/Game/RA4UI/Art/T_RA4_Commander_Eurasian.T_RA4_Commander_Eurasian"),
+            TEXT("/Game/RA4UI/Art/Remaster/T_SH_03_CampaignEurasian.T_SH_03_CampaignEurasian"),
             LOCTEXT("ChronoHeading", "ХРОНОЛЕГИОН (LEGACY)"),
             LOCTEXT("ChronoChapter", "ГЛАВА 1: ВРЕМЕННАЯ АНОМАЛИЯ"),
             LOCTEXT("ChronoEvent", "ХРОНОПРОТОКОЛ АКТИВЕН: АНОМАЛИЯ ЗАФИКСИРОВАНА.")
@@ -213,12 +213,13 @@ TSharedRef<SWidget> URA4CampaignScreenWidget::RebuildWidget()
 
     if (UTexture2D* BackgroundTexture = LoadObject<UTexture2D>(nullptr, Visual.BackgroundPath))
     {
+        // The remaster plates bake their own command chrome; dim them so the
+        // live dossier panels read on top without ghost doubling.
         GetBackgroundLayer()->SetBrushFromTexture(BackgroundTexture, false);
-        GetBackgroundLayer()->SetColorAndOpacity(FLinearColor(0.72f, 0.72f, 0.72f, 1.0f));
+        GetBackgroundLayer()->SetColorAndOpacity(FLinearColor(0.50f, 0.52f, 0.58f, 1.0f));
     }
-
     UBorder* Shade = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("CampaignShade"));
-    Shade->SetBrushColor(FLinearColor(0.0f, 0.0f, 0.0f, 0.34f));
+    Shade->SetBrush(FSlateColorBrush(FLinearColor(0.006f, 0.008f, 0.018f, 0.62f)));
     Shade->SetVisibility(ESlateVisibility::HitTestInvisible);
     UOverlaySlot* ShadeSlot = GetContentLayer()->AddChildToOverlay(Shade);
     ShadeSlot->SetHorizontalAlignment(HAlign_Fill);

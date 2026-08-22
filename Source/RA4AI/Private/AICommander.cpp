@@ -834,6 +834,12 @@ bool AICommander::TryScout(const SimWorld& World, std::vector<Command>& Out)
                 {
                     continue;
                 }
+                // A wounded scout dies on the road and buys no sightings; units do
+                // not heal, so a wounded pick is a permanently wasted draft.
+                if (IsWounded(World, World.MakeId(I)))
+                {
+                    continue;
+                }
                 ScoutUnit = World.MakeId(I);
                 break;
             }

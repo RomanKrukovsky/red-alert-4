@@ -261,18 +261,26 @@ void URA4CampaignSelectWidget::BuildLayout()
     WidgetTree->RootWidget = Root;
 
     UImage* Background = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("CampaignBackground"));
+    // Reference 03_campaign_eurasian_russia.png: the remaster plate carries its
+    // own painted selection chrome, so it is dimmed hard and covered by a real
+    // filled scrim — the default border brush draws nothing, which used to let
+    // the painted cards double the live ones.
     if (UTexture2D* BackgroundTexture = LoadObject<UTexture2D>(
-        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_USSR_CommandCenter.T_RA4_USSR_CommandCenter")))
+        nullptr, TEXT("/Game/RA4UI/Art/Remaster/T_SH_03_CampaignEurasian.T_SH_03_CampaignEurasian")))
     {
         Background->SetBrushFromTexture(BackgroundTexture, false);
+        Background->SetColorAndOpacity(FLinearColor(0.45f, 0.47f, 0.54f, 1.0f));
     }
-    Background->SetColorAndOpacity(FLinearColor(0.20f, 0.22f, 0.25f, 1.0f));
+    else
+    {
+        Background->SetColorAndOpacity(FLinearColor(0.20f, 0.22f, 0.25f, 1.0f));
+    }
     UOverlaySlot* BackgroundSlot = Root->AddChildToOverlay(Background);
     BackgroundSlot->SetHorizontalAlignment(HAlign_Fill);
     BackgroundSlot->SetVerticalAlignment(VAlign_Fill);
 
     UBorder* Shade = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("CampaignShade"));
-    Shade->SetBrushColor(FLinearColor(0.005f, 0.007f, 0.012f, 0.72f));
+    Shade->SetBrush(FSlateColorBrush(FLinearColor(0.008f, 0.010f, 0.022f, 0.78f)));
     UOverlaySlot* ShadeSlot = Root->AddChildToOverlay(Shade);
     ShadeSlot->SetHorizontalAlignment(HAlign_Fill);
     ShadeSlot->SetVerticalAlignment(VAlign_Fill);
@@ -297,14 +305,16 @@ void URA4CampaignSelectWidget::BuildLayout()
     HorizonLine->SetBrushColor(ScarletHorizon);
     Place(MainCanvas, HorizonLine, FVector2D(0.0f, 0.0f), FVector2D(1920.0f, 3.0f), 10);
 
-    // Top Brand Logo / Title
-    UImage* Logo = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("CampaignLogo"));
-    if (UTexture2D* LogoTexture = LoadObject<UTexture2D>(
-        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_Logo.T_RA4_Logo")))
-    {
-        Logo->SetBrushFromTexture(LogoTexture, false);
-    }
-    Place(MainCanvas, Logo, FVector2D(35.0f, 12.0f), FVector2D(360.0f, 75.0f), 4);
+    // Top Brand: procedural wordmark — the retired logo texture carries a
+    // double exposure and is no longer used anywhere new.
+    UTextBlock* Wordmark = MakeText(
+        WidgetTree, LOCTEXT("CampaignWordmark", "SCARLET HORIZON"), 27,
+        FLinearColor(0.88f, 0.91f, 0.95f, 1.0f), TEXT("CampaignWordmark"), true, false);
+    Place(MainCanvas, Wordmark, FVector2D(35.0f, 16.0f), FVector2D(360.0f, 36.0f), 4);
+    UBorder* WordmarkRule = WidgetTree->ConstructWidget<UBorder>(
+        UBorder::StaticClass(), TEXT("CampaignWordmarkRule"));
+    WordmarkRule->SetBrushColor(ScarletHorizon);
+    Place(MainCanvas, WordmarkRule, FVector2D(37.0f, 58.0f), FVector2D(230.0f, 2.0f), 5);
 
     // Top Navigation Bar
     UHorizontalBox* Navigation = WidgetTree->ConstructWidget<UHorizontalBox>(
