@@ -1244,18 +1244,13 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
 
         // Queue header
         QueueHeader = MakeLabel(WidgetTree, TEXT("QueueHeader"), kTextDim, 9, true);
-        QueueHeader->SetText(NSLOCTEXT("RA4", "Sidebar_QueueHeader", "ОЧЕРЕДЬ ПРОИЗВОДСТВА"));
+        // Refresh immediately replaces this with "ПРОИЗВОДСТВО" or "ПРОИЗВОДСТВО (N)",
+        // so the initial value has to be the same string under the same key.
+        QueueHeader->SetText(NSLOCTEXT("RA4", "Sidebar_QueueHeader", "ПРОИЗВОДСТВО"));
         Frame->AddChild(QueueHeader);
 
         UVerticalBox* Stack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(),
                                                                         TEXT("QueueStack"));
-
-        UTextBlock* QueueSubHeader = MakeLabel(WidgetTree, TEXT("QueueSubHeader"), kTextFaint, 9, true);
-        QueueSubHeader->SetText(NSLOCTEXT("RA4", "Sidebar_QueueHeader", "ПРОИЗВОДСТВО"));
-        if (UVerticalBoxSlot* Slot = Stack->AddChildToVerticalBox(QueueSubHeader))
-        {
-            Slot->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 3.0f));
-        }
 
         QueueBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("QueueBox"));
         Stack->AddChildToVerticalBox(QueueBox);

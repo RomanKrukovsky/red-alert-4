@@ -269,9 +269,9 @@ void URA4ShowcaseWidget::BuildLayout()
             UHorizontalBox::StaticClass(), TEXT("SettingsTabs"));
         const FText TabLabels[] = {
             LOCTEXT("VideoTab", "ИЗОБРАЖЕНИЕ"),
-            LOCTEXT("AudioTab", "ZVUK"),
-            LOCTEXT("ControlsTab", "UPRAVLENIE"),
-            LOCTEXT("GameTab", "IGRA")
+            LOCTEXT("AudioTab", "ЗВУК"),
+            LOCTEXT("ControlsTab", "УПРАВЛЕНИЕ"),
+            LOCTEXT("GameTab", "ИГРА")
         };
         for (int32 Index = 0; Index < UE_ARRAY_COUNT(TabLabels); ++Index)
         {
@@ -315,9 +315,9 @@ void URA4ShowcaseWidget::BuildLayout()
             ContentColumn->AddChildToVerticalBox(Row)->SetPadding(FMargin(34.0f, 7.0f));
         };
         AddSlider(LOCTEXT("Brightness", "ЯРКОСТЬ  54%"), 0.54f, TEXT("BrightnessSlider"));
-        AddSlider(LOCTEXT("InterfaceScale", "MASHQ INTERFEYSA  100%"), 0.50f, TEXT("InterfaceScaleSlider"));
-        AddSlider(LOCTEXT("MusicVolume", "MUZYKA  80%"), 0.80f, TEXT("MusicVolumeSlider"));
-        AddSlider(LOCTEXT("EffectsVolume", "EFFEKTY  90%"), 0.90f, TEXT("EffectsVolumeSlider"));
+        AddSlider(LOCTEXT("InterfaceScale", "МАСШТАБ ИНТЕРФЕЙСА  100%"), 0.50f, TEXT("InterfaceScaleSlider"));
+        AddSlider(LOCTEXT("MusicVolume", "МУЗЫКА  80%"), 0.80f, TEXT("MusicVolumeSlider"));
+        AddSlider(LOCTEXT("EffectsVolume", "ЭФФЕКТЫ  90%"), 0.90f, TEXT("EffectsVolumeSlider"));
     }
 
     ProgressBar = WidgetTree->ConstructWidget<UProgressBar>(
@@ -347,7 +347,7 @@ void URA4ShowcaseWidget::BuildLayout()
     UVerticalBox* StatusColumn = WidgetTree->ConstructWidget<UVerticalBox>(
         UVerticalBox::StaticClass(), TEXT("StatusColumn"));
     UTextBlock* StatusHeader = CreateText(
-        LOCTEXT("StatusHeader", "OPERATIVNYE DANNYE"), 16.0f, TextWhite, TEXT("StatusHeader"));
+        LOCTEXT("StatusHeader", "ОПЕРАТИВНЫЕ ДАННЫЕ"), 16.0f, TextWhite, TEXT("StatusHeader"));
     StatusColumn->AddChildToVerticalBox(StatusHeader)->SetPadding(FMargin(24.0f, 24.0f, 24.0f, 12.0f));
     UTextBlock* StatusRule = CreateText(
         LOCTEXT("StatusRule", "================"), 11.0f, EurasianPlum, TEXT("StatusRule"));
@@ -410,7 +410,7 @@ void URA4ShowcaseWidget::BuildHudLayout()
     ResourceStrip->SetContent(ResourceRow);
     TitleText = CreateText(LOCTEXT("HudTitle", "ЕВРАЗИЙСКИЙ ПАКТ // ОПЕРАЦИЯ"), 25.0f, EurasianPlum, TEXT("HudTitleText"));
     ResourceRow->AddChildToHorizontalBox(TitleText)->SetPadding(FMargin(18.0f, 11.0f));
-    UTextBlock* Credits = CreateText(LOCTEXT("HudCredits", "KREDITY  12 450"), 18.0f, TextWhite, TEXT("HudCredits"));
+    UTextBlock* Credits = CreateText(LOCTEXT("HudCredits", "КРЕДИТЫ  23 450"), 18.0f, TextWhite, TEXT("HudCredits"));
     ResourceRow->AddChildToHorizontalBox(Credits)->SetPadding(FMargin(28.0f, 14.0f));
     UTextBlock* Power = CreateText(LOCTEXT("HudPower", "ЭНЕРГИЯ  780 / 920"), 18.0f, TextWhite, TEXT("HudPower"));
     ResourceRow->AddChildToHorizontalBox(Power)->SetPadding(FMargin(20.0f, 14.0f));
@@ -467,9 +467,9 @@ void URA4ShowcaseWidget::BuildHudLayout()
     AccentPanel = ProductionPanel;
     UVerticalBox* ProductionColumn = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("ProductionColumn"));
     ProductionPanel->SetContent(ProductionColumn);
-    UTextBlock* ProductionHeader = CreateText(LOCTEXT("ProductionHeader", "PROIZVODSTVO"), 22.0f, TextWhite, TEXT("ProductionHeader"));
+    UTextBlock* ProductionHeader = CreateText(LOCTEXT("ProductionHeader", "ПРОИЗВОДСТВО"), 22.0f, TextWhite, TEXT("ProductionHeader"));
     ProductionColumn->AddChildToVerticalBox(ProductionHeader)->SetPadding(FMargin(18.0f, 16.0f, 18.0f, 8.0f));
-    UTextBlock* QueueOne = CreateText(LOCTEXT("QueueOne", "TESLA-TANK\nTyazhyolaya bronya  ·  ochered 01"), 16.0f, TextWhite, TEXT("QueueOne"));
+    UTextBlock* QueueOne = CreateText(LOCTEXT("QueueOne", "ОБТ-92 «ГРАНИТ»\nТяжёлая броня  ·  очередь 01"), 16.0f, TextWhite, TEXT("QueueOne"));
     ProductionColumn->AddChildToVerticalBox(QueueOne)->SetPadding(FMargin(18.0f, 12.0f));
     ProgressBar = WidgetTree->ConstructWidget<UProgressBar>(UProgressBar::StaticClass(), TEXT("ProductionProgress"));
     ProgressBar->SetPercent(0.72f);
