@@ -205,36 +205,26 @@ UButton* MakeHUDButton(
 
 const TCHAR* ResolveProductionIconPath(const ERA4FactionTheme Theme, const int32 Index)
 {
-    static const TCHAR* SovietIcons[] = {
-        TEXT("/Game/RA4UI/Art/T_RA4_SU_Conscript.T_RA4_SU_Conscript"),
-        TEXT("/Game/RA4UI/Art/T_RA4_SU_FlakTrooper.T_RA4_SU_FlakTrooper"),
-        TEXT("/Game/RA4UI/Art/T_RA4_SU_HammerTank.T_RA4_SU_HammerTank"),
-        TEXT("/Game/RA4UI/Art/T_RA4_SU_SickleScout.T_RA4_SU_SickleScout"),
-        TEXT("/Game/RA4UI/Art/T_RA4_SU_MiG41.T_RA4_SU_MiG41"),
-        TEXT("/Game/RA4UI/Art/T_RA4_SU_TyphoonSub.T_RA4_SU_TyphoonSub")
-    };
-    static const TCHAR* AlliedIcons[] = {
-        TEXT("/Game/RA4UI/Art/T_RA4_AL_Peacekeeper.T_RA4_AL_Peacekeeper"),
-        TEXT("/Game/RA4UI/Art/T_RA4_AL_Javelin.T_RA4_AL_Javelin"),
-        TEXT("/Game/RA4UI/Art/T_RA4_AL_Guardian.T_RA4_AL_Guardian"),
-        TEXT("/Game/RA4UI/Art/T_RA4_AL_Mirage.T_RA4_AL_Mirage"),
-        TEXT("/Game/RA4UI/Art/T_RA4_AL_Harrier.T_RA4_AL_Harrier"),
-        TEXT("/Game/RA4UI/Art/T_RA4_AL_Poseidon.T_RA4_AL_Poseidon")
+    // The cards used photoreal renders from the retired roster, so a barracks
+    // card showed a rifleman and a refinery card showed a tank. Schematic icons
+    // match the reference, read at card size and describe the structure that the
+    // card actually builds. The order follows the build list of every direction:
+    // headquarters, power, refinery, barracks, factory, radar, special, strategic.
+    static const TCHAR* StructureIcons[] = {
+        TEXT("/Game/RA4UI/Art/T_RA4_Icon_HQ.T_RA4_Icon_HQ"),
+        TEXT("/Game/RA4UI/Art/T_RA4_Icon_Power.T_RA4_Icon_Power"),
+        TEXT("/Game/RA4UI/Art/T_RA4_Icon_Refinery.T_RA4_Icon_Refinery"),
+        TEXT("/Game/RA4UI/Art/T_RA4_Icon_Barracks.T_RA4_Icon_Barracks"),
+        TEXT("/Game/RA4UI/Art/T_RA4_Icon_Factory.T_RA4_Icon_Factory"),
+        TEXT("/Game/RA4UI/Art/T_RA4_Icon_Radar.T_RA4_Icon_Radar"),
+        TEXT("/Game/RA4UI/Art/T_RA4_Icon_Emp.T_RA4_Icon_Emp"),
+        TEXT("/Game/RA4UI/Art/T_RA4_Icon_Silo.T_RA4_Icon_Silo")
     };
 
-    switch (Theme)
-    {
-    case ERA4FactionTheme::EurasianPact:
-        return SovietIcons[Index % UE_ARRAY_COUNT(SovietIcons)];
-    case ERA4FactionTheme::AtlanticAlliance:
-        return AlliedIcons[Index % UE_ARRAY_COUNT(AlliedIcons)];
-    case ERA4FactionTheme::EasternCoalition:
-    case ERA4FactionTheme::PacificPact:
-    case ERA4FactionTheme::Independent:
-    case ERA4FactionTheme::Chronolegion:
-    default:
-        return nullptr;
-    }
+    // Every direction builds the same kinds of structure, so one neutral sheet
+    // serves all of them; the accent tint carries the identity.
+    (void)Theme;
+    return StructureIcons[FMath::Clamp(Index, 0, int32(UE_ARRAY_COUNT(StructureIcons)) - 1)];
 }
 
 UButton* MakeHUDProductionCard(
@@ -257,18 +247,19 @@ UButton* MakeHUDProductionCard(
         UVerticalBox::StaticClass(), FName(Name.ToString() + TEXT("_Content")));
     USizeBox* IconBox = WidgetTree->ConstructWidget<USizeBox>(
         USizeBox::StaticClass(), FName(Name.ToString() + TEXT("_IconBox")));
-    IconBox->SetHeightOverride(82.0f);
+    IconBox->SetHeightOverride(64.0f);
     UImage* Icon = WidgetTree->ConstructWidget<UImage>(
         UImage::StaticClass(), FName(Name.ToString() + TEXT("_Icon")));
     if (UTexture2D* IconTexture = LoadObject<UTexture2D>(nullptr, IconPath))
     {
         Icon->SetBrushFromTexture(IconTexture, false);
     }
+    Icon->SetColorAndOpacity(Accent);
     Icon->SetVisibility(ESlateVisibility::HitTestInvisible);
     IconBox->SetContent(Icon);
     Content->AddChildToVerticalBox(IconBox);
     UTextBlock* Text = MakeHUDText(
-        WidgetTree, Label, 11, HUDText,
+        WidgetTree, Label, 10, HUDText,
         FName(Name.ToString() + TEXT("_Label")), true);
     Text->SetJustification(ETextJustify::Center);
     Content->AddChildToVerticalBox(Text)->SetPadding(FMargin(2.0f, 1.0f, 2.0f, 3.0f));
@@ -364,7 +355,7 @@ FRA4HUDSnapshotView MakeShowcaseSnapshot(
             {LOCTEXT("NavalMissile", "РАКЕТНЫЙ КАТЕР"), 700},
             {LOCTEXT("NavalSub", "ПОДЛОДКА"), 1600},
             {LOCTEXT("NavalHarvester", "M88 «PIONEER»"), 1200},
-            {LOCTEXT("NavalShield", "КОМПЛЕКС АКТИВНОЙ ЗАЩИТЫ"), 1800}};
+            {LOCTEXT("NavalShield", "АКТИВНАЯ ЗАЩИТА"), 1800}};
     }
     else if (Variant == ERA4UIScreenVariant::AlliesAir || Theme == ERA4FactionTheme::AtlanticAlliance)
     {
@@ -376,30 +367,30 @@ FRA4HUDSnapshotView MakeShowcaseSnapshot(
             {LOCTEXT("AtlFactory", "МОДУЛЬНЫЙ ЗАВОД"), 2200},
             {LOCTEXT("AtlAirbase", "АВИАБАЗА"), 1850},
             {LOCTEXT("AtlRecon", "РАЗВЕДЦЕНТР"), 1450},
-            {LOCTEXT("AtlStrike", "ГИПЕРЗВУКОВОЙ УДАРНЫЙ КОМПЛЕКС"), 7200}};
+            {LOCTEXT("AtlStrike", "ГИПЕРЗВУКОВОЙ КОМПЛЕКС"), 7200}};
     }
     else if (Theme == ERA4FactionTheme::EasternCoalition)
     {
         BuildEntries = {
             {LOCTEXT("CnHQ", "КОМАНДНЫЙ ЦЕНТР"), 5000},
-            {LOCTEXT("CnSolar", "СОЛНЕЧНАЯ ЭЛЕКТРОСТАНЦИЯ"), 850},
+            {LOCTEXT("CnSolar", "СОЛНЕЧНАЯ СТАНЦИЯ"), 850},
             {LOCTEXT("CnRefinery", "ПЕРЕРАБОТЧИК"), 2450},
             {LOCTEXT("CnTraining", "УЧЕБНЫЙ ЦЕНТР"), 720},
             {LOCTEXT("CnRobotics", "ЗАВОД РОБОТОТЕХНИКИ"), 2250},
             {LOCTEXT("CnDroneBase", "АВИАБАЗА БПЛА"), 1900},
-            {LOCTEXT("CnNetwork", "ЦЕНТР СЕТЕВОГО УПРАВЛЕНИЯ"), 1500},
+            {LOCTEXT("CnNetwork", "ЦЕНТР УПРАВЛЕНИЯ"), 1500},
             {LOCTEXT("CnSeismic", "СЕЙСМИЧЕСКИЙ КОМПЛЕКС"), 7000}};
     }
     else if (Theme == ERA4FactionTheme::PacificPact)
     {
         BuildEntries = {
-            {LOCTEXT("JpHQ", "ОСТРОВНОЙ КОМАНДНЫЙ ТЕРМИНАЛ"), 5000},
-            {LOCTEXT("JpPower", "ПРИБРЕЖНАЯ ЭЛЕКТРОСТАНЦИЯ"), 880},
+            {LOCTEXT("JpHQ", "КОМАНДНЫЙ ТЕРМИНАЛ"), 5000},
+            {LOCTEXT("JpPower", "ЭЛЕКТРОСТАНЦИЯ"), 880},
             {LOCTEXT("JpRefinery", "ПЕРЕРАБОТЧИК"), 2450},
             {LOCTEXT("JpTraining", "УЧЕБНЫЙ ЦЕНТР"), 740},
-            {LOCTEXT("JpRobotics", "РОБОТИЧЕСКИЙ ЦЕХ «КАЙГАН»"), 2300},
+            {LOCTEXT("JpRobotics", "ЦЕХ «КАЙГАН»"), 2300},
             {LOCTEXT("JpRadar", "БЕРЕГОВОЙ РАДАР"), 1500},
-            {LOCTEXT("JpLaser", "ЛАЗЕРНАЯ БАТАРЕЯ ПЕРЕХВАТА"), 1050},
+            {LOCTEXT("JpLaser", "ЛАЗЕРНЫЙ ПЕРЕХВАТ"), 1050},
             {LOCTEXT("JpMatrix", "МАТРИЦА ПЕРЕХВАТА"), 6100}};
     }
     else if (Theme == ERA4FactionTheme::Independent)
@@ -407,9 +398,9 @@ FRA4HUDSnapshotView MakeShowcaseSnapshot(
         BuildEntries = {
             {LOCTEXT("IrHQ", "МОБИЛЬНЫЙ УЗЕЛ «МИРАЖ»"), 5000},
             {LOCTEXT("IrPower", "ЭЛЕКТРОСТАНЦИЯ"), 820},
-            {LOCTEXT("IrRefinery", "ПЕРЕРАБАТЫВАЮЩИЙ КОМПЛЕКС"), 2400},
+            {LOCTEXT("IrRefinery", "ПЕРЕРАБОТЧИК"), 2400},
             {LOCTEXT("IrBarracks", "КАЗАРМА"), 700},
-            {LOCTEXT("IrLaunchers", "МОБИЛЬНЫЕ ПУСКОВЫЕ"), 1600},
+            {LOCTEXT("IrLaunchers", "ПУСКОВЫЕ УСТАНОВКИ"), 1600},
             {LOCTEXT("IrDrones", "АНГАР БПЛА"), 1450},
             {LOCTEXT("IrJammer", "КОМПЛЕКС РЭБ"), 1900},
             {LOCTEXT("IrDecoy", "ЛОЖНЫЕ ПОЗИЦИИ"), 600}};
@@ -417,12 +408,12 @@ FRA4HUDSnapshotView MakeShowcaseSnapshot(
     else if (Theme == ERA4FactionTheme::Chronolegion)
     {
         BuildEntries = {
-            {LOCTEXT("ChCausality", "ЦЕНТР ПРИЧИННОСТИ (LEGACY)"), 5200},
-            {LOCTEXT("ChReactor", "РЕАКТОР ЗАМЕДЛЕННОГО РАСПАДА"), 950},
+            {LOCTEXT("ChCausality", "ЦЕНТР ПРИЧИННОСТИ"), 5200},
+            {LOCTEXT("ChReactor", "РЕАКТОР РАСПАДА"), 950},
             {LOCTEXT("ChRefinery", "КВАНТОВЫЙ ПЕРЕРАБОТЧИК"), 2600},
             {LOCTEXT("ChBarracks", "КАЗАРМА ЭХА"), 800},
             {LOCTEXT("ChFactory", "ФАБРИКА КОНТИНУУМА"), 2400},
-            {LOCTEXT("ChObserver", "НАБЛЮДАТЕЛЬ ВЕРОЯТНОСТЕЙ"), 1650},
+            {LOCTEXT("ChObserver", "НАБЛЮДАТЕЛЬ"), 1650},
             {LOCTEXT("ChArchive", "АРХИВ БУДУЩЕГО"), 3900},
             {LOCTEXT("ChCollapser", "СИНГУЛЯРНЫЙ КОЛЛАПСЕР"), 7500}};
     }
@@ -431,7 +422,7 @@ FRA4HUDSnapshotView MakeShowcaseSnapshot(
         BuildEntries = {
             {LOCTEXT("RuHQ", "ШТАБ"), 5000},
             {LOCTEXT("RuPower", "ЭЛЕКТРОСТАНЦИЯ"), 800},
-            {LOCTEXT("RuRefinery", "ПЕРЕРАБАТЫВАЮЩИЙ КОМПЛЕКС"), 2400},
+            {LOCTEXT("RuRefinery", "ПЕРЕРАБОТЧИК"), 2400},
             {LOCTEXT("RuBarracks", "КАЗАРМА"), 700},
             {LOCTEXT("RuFactory", "ЗАВОД БРОНЕТЕХНИКИ"), 2300},
             {LOCTEXT("RuRadar", "РАДАРНЫЙ УЗЕЛ"), 1500},
