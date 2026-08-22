@@ -7,6 +7,7 @@
 #include "RA4ScreenRootWidget.h"
 #include "RA4HUDWidget.generated.h"
 
+class UProgressBar;
 class UButton;
 class UCanvasPanel;
 class UTextBlock;
@@ -102,6 +103,12 @@ private:
 
     UPROPERTY(Transient)
     TObjectPtr<UTextBlock> SelectionDetailText;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UProgressBar> SelectionArmourBar;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UProgressBar> SelectionHealthBar;
 
     UPROPERTY(Transient)
     TObjectPtr<UTextBlock> AlertText;

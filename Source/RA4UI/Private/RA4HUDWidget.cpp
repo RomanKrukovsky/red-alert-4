@@ -9,6 +9,7 @@
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
 #include "Components/HorizontalBox.h"
+#include "Components/ProgressBar.h"
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/Image.h"
 #include "Components/Overlay.h"
@@ -342,55 +343,110 @@ FRA4HUDSnapshotView MakeShowcaseSnapshot(
     Secondary.Target = 3;
     Snapshot.Objectives.Add(Secondary);
 
-    TArray<FText> BuildNames;
+    // Names and prices come from the building tables of the design bible rather
+    // than being invented: the showcase previously offered "НЕФТЕБАЗА",
+    // "ОБСЕРВАТОРИЯ" and "СТЕНА", none of which exist in this world, at costs
+    // generated from the loop index.
+    struct FShowcaseBuildEntry
+    {
+        FText Name;
+        int32 Cost;
+    };
+    TArray<FShowcaseBuildEntry> BuildEntries;
+
     if (Variant == ERA4UIScreenVariant::AlliesNaval)
     {
-        BuildNames = {
-            LOCTEXT("NavalFrigate", "ФРЕГАТ"), LOCTEXT("NavalDestroyer", "ЭСМИНЕЦ"),
-            LOCTEXT("NavalCruiser", "КРЕЙСЕР"), LOCTEXT("NavalMissile", "РАКЕТНЫЙ КАТЕР"),
-            LOCTEXT("NavalSub", "ПОДЛОДКА"), LOCTEXT("NavalCarrier", "АВИАНОСЕЦ"),
-            LOCTEXT("NavalPlatform", "МОРСКАЯ ПЛАТФОРМА"), LOCTEXT("NavalRepair", "РЕМОНТНЫЙ КОРАБЛЬ")};
+        BuildEntries = {
+            {LOCTEXT("NavalDock", "ОКЕАНИЧЕСКИЙ ДОК"), 2100},
+            {LOCTEXT("NavalFrigate", "ФРЕГАТ"), 900},
+            {LOCTEXT("NavalDestroyer", "ЭСМИНЕЦ"), 1400},
+            {LOCTEXT("NavalCruiser", "КРЕЙСЕР"), 2200},
+            {LOCTEXT("NavalMissile", "РАКЕТНЫЙ КАТЕР"), 700},
+            {LOCTEXT("NavalSub", "ПОДЛОДКА"), 1600},
+            {LOCTEXT("NavalHarvester", "M88 «PIONEER»"), 1200},
+            {LOCTEXT("NavalShield", "КОМПЛЕКС АКТИВНОЙ ЗАЩИТЫ"), 1800}};
     }
-    else if (Variant == ERA4UIScreenVariant::AlliesAir || Theme == ERA4FactionTheme::Allies)
+    else if (Variant == ERA4UIScreenVariant::AlliesAir || Theme == ERA4FactionTheme::AtlanticAlliance)
     {
-        BuildNames = {
-            LOCTEXT("AirEagle", "ОРЁЛ"), LOCTEXT("AirPredator", "ХИЩНИК"),
-            LOCTEXT("AirAvenger", "МСТИТЕЛЬ"), LOCTEXT("AirHarpy", "ГАРПИЯ"),
-            LOCTEXT("AirStorm", "ШТОРМ"), LOCTEXT("AirLightning", "МОЛНИЯ"),
-            LOCTEXT("AirAurora", "АВРОРА"), LOCTEXT("AirAngel", "АНГЕЛ")};
+        BuildEntries = {
+            {LOCTEXT("AtlHQ", "СЕТЕВОЙ ШТАБ"), 5000},
+            {LOCTEXT("AtlReactor", "КОМПАКТНЫЙ РЕАКТОР"), 900},
+            {LOCTEXT("AtlRefinery", "ПЕРЕРАБОТЧИК"), 2500},
+            {LOCTEXT("AtlBarracks", "ТАКТИЧЕСКАЯ КАЗАРМА"), 750},
+            {LOCTEXT("AtlFactory", "МОДУЛЬНЫЙ ЗАВОД"), 2200},
+            {LOCTEXT("AtlAirbase", "АВИАБАЗА"), 1850},
+            {LOCTEXT("AtlRecon", "РАЗВЕДЦЕНТР"), 1450},
+            {LOCTEXT("AtlStrike", "ГИПЕРЗВУКОВОЙ УДАРНЫЙ КОМПЛЕКС"), 7200}};
     }
     else if (Theme == ERA4FactionTheme::EasternCoalition)
     {
-        BuildNames = {
-            LOCTEXT("EastDragon", "ДРАКОН"), LOCTEXT("EastQilin", "ЦИЛИНЬ"),
-            LOCTEXT("EastLotus", "ЛОТОС"), LOCTEXT("EastTiger", "БЕЛЫЙ ТИГР"),
-            LOCTEXT("EastJade", "НЕФРИТОВЫЙ СТРАЖ"), LOCTEXT("EastRocket", "ОГНЕННАЯ СТРЕЛА"),
-            LOCTEXT("EastCrane", "ЖУРАВЛЬ"), LOCTEXT("EastCitadel", "ЦИТАДЕЛЬ")};
+        BuildEntries = {
+            {LOCTEXT("CnHQ", "КОМАНДНЫЙ ЦЕНТР"), 5000},
+            {LOCTEXT("CnSolar", "СОЛНЕЧНАЯ ЭЛЕКТРОСТАНЦИЯ"), 850},
+            {LOCTEXT("CnRefinery", "ПЕРЕРАБОТЧИК"), 2450},
+            {LOCTEXT("CnTraining", "УЧЕБНЫЙ ЦЕНТР"), 720},
+            {LOCTEXT("CnRobotics", "ЗАВОД РОБОТОТЕХНИКИ"), 2250},
+            {LOCTEXT("CnDroneBase", "АВИАБАЗА БПЛА"), 1900},
+            {LOCTEXT("CnNetwork", "ЦЕНТР СЕТЕВОГО УПРАВЛЕНИЯ"), 1500},
+            {LOCTEXT("CnSeismic", "СЕЙСМИЧЕСКИЙ КОМПЛЕКС"), 7000}};
+    }
+    else if (Theme == ERA4FactionTheme::PacificPact)
+    {
+        BuildEntries = {
+            {LOCTEXT("JpHQ", "ОСТРОВНОЙ КОМАНДНЫЙ ТЕРМИНАЛ"), 5000},
+            {LOCTEXT("JpPower", "ПРИБРЕЖНАЯ ЭЛЕКТРОСТАНЦИЯ"), 880},
+            {LOCTEXT("JpRefinery", "ПЕРЕРАБОТЧИК"), 2450},
+            {LOCTEXT("JpTraining", "УЧЕБНЫЙ ЦЕНТР"), 740},
+            {LOCTEXT("JpRobotics", "РОБОТИЧЕСКИЙ ЦЕХ «КАЙГАН»"), 2300},
+            {LOCTEXT("JpRadar", "БЕРЕГОВОЙ РАДАР"), 1500},
+            {LOCTEXT("JpLaser", "ЛАЗЕРНАЯ БАТАРЕЯ ПЕРЕХВАТА"), 1050},
+            {LOCTEXT("JpMatrix", "МАТРИЦА ПЕРЕХВАТА"), 6100}};
+    }
+    else if (Theme == ERA4FactionTheme::Independent)
+    {
+        BuildEntries = {
+            {LOCTEXT("IrHQ", "МОБИЛЬНЫЙ УЗЕЛ «МИРАЖ»"), 5000},
+            {LOCTEXT("IrPower", "ЭЛЕКТРОСТАНЦИЯ"), 820},
+            {LOCTEXT("IrRefinery", "ПЕРЕРАБАТЫВАЮЩИЙ КОМПЛЕКС"), 2400},
+            {LOCTEXT("IrBarracks", "КАЗАРМА"), 700},
+            {LOCTEXT("IrLaunchers", "МОБИЛЬНЫЕ ПУСКОВЫЕ"), 1600},
+            {LOCTEXT("IrDrones", "АНГАР БПЛА"), 1450},
+            {LOCTEXT("IrJammer", "КОМПЛЕКС РЭБ"), 1900},
+            {LOCTEXT("IrDecoy", "ЛОЖНЫЕ ПОЗИЦИИ"), 600}};
     }
     else if (Theme == ERA4FactionTheme::Chronolegion)
     {
-        BuildNames = {
-            LOCTEXT("ChronoNode", "ХРОНОУЗЕЛ"), LOCTEXT("ChronoReactor", "ХРОНОРЕАКТОР"),
-            LOCTEXT("ChronoGate", "ВРАТА ВРЕМЕНИ"), LOCTEXT("ChronoTank", "ПАРАДОКС"),
-            LOCTEXT("ChronoSpire", "СИНХРОНИЗАТОР"), LOCTEXT("ChronoDome", "КУПОЛ ВРЕМЕНИ"),
-            LOCTEXT("ChronoFrigate", "ТЕМПОРАЛЬНЫЙ ФРЕГАТ"), LOCTEXT("ChronoCollapse", "ХРОНОКОЛЛАПС")};
+        BuildEntries = {
+            {LOCTEXT("ChCausality", "ЦЕНТР ПРИЧИННОСТИ (LEGACY)"), 5200},
+            {LOCTEXT("ChReactor", "РЕАКТОР ЗАМЕДЛЕННОГО РАСПАДА"), 950},
+            {LOCTEXT("ChRefinery", "КВАНТОВЫЙ ПЕРЕРАБОТЧИК"), 2600},
+            {LOCTEXT("ChBarracks", "КАЗАРМА ЭХА"), 800},
+            {LOCTEXT("ChFactory", "ФАБРИКА КОНТИНУУМА"), 2400},
+            {LOCTEXT("ChObserver", "НАБЛЮДАТЕЛЬ ВЕРОЯТНОСТЕЙ"), 1650},
+            {LOCTEXT("ChArchive", "АРХИВ БУДУЩЕГО"), 3900},
+            {LOCTEXT("ChCollapser", "СИНГУЛЯРНЫЙ КОЛЛАПСЕР"), 7500}};
     }
     else
     {
-        BuildNames = {
-            LOCTEXT("BuildPower", "ЭЛЕКТРОСТАНЦИЯ"), LOCTEXT("BuildBarracks", "КАЗАРМЫ"),
-            LOCTEXT("BuildFactory", "ВОЕННЫЙ ЗАВОД"), LOCTEXT("BuildRefinery", "НЕФТЕБАЗА"),
-            LOCTEXT("BuildTurret", "ЗЕНИТНАЯ ПУШКА"), LOCTEXT("BuildRadar", "РАКЕТНАЯ ШАХТА"),
-            LOCTEXT("BuildLab", "ОБСЕРВАТОРИЯ"), LOCTEXT("BuildWall", "СТЕНА")};
+        BuildEntries = {
+            {LOCTEXT("RuHQ", "ШТАБ"), 5000},
+            {LOCTEXT("RuPower", "ЭЛЕКТРОСТАНЦИЯ"), 800},
+            {LOCTEXT("RuRefinery", "ПЕРЕРАБАТЫВАЮЩИЙ КОМПЛЕКС"), 2400},
+            {LOCTEXT("RuBarracks", "КАЗАРМА"), 700},
+            {LOCTEXT("RuFactory", "ЗАВОД БРОНЕТЕХНИКИ"), 2300},
+            {LOCTEXT("RuRadar", "РАДАРНЫЙ УЗЕЛ"), 1500},
+            {LOCTEXT("RuEmp", "КОМПЛЕКС ЭМИ «ПЕРУН»"), 1900},
+            {LOCTEXT("RuSilo", "РАКЕТНАЯ ШАХТА «КАРАТЕЛЬ»"), 7000}};
     }
-    for (int32 Index = 0; Index < BuildNames.Num(); ++Index)
+
+    for (int32 Index = 0; Index < BuildEntries.Num(); ++Index)
     {
         FRA4BuildOption Option;
         Option.ContentId = Index + 1;
-        Option.DisplayName = BuildNames[Index];
-        Option.Cost = 300 + Index * 250;
+        Option.DisplayName = BuildEntries[Index].Name;
+        Option.Cost = BuildEntries[Index].Cost;
         Option.Category = ActiveCategory;
-        Option.bAvailable = Index != 5;
+        Option.bAvailable = Index != BuildEntries.Num() - 1;
         Option.BlockReason = Option.bAvailable
             ? ERA4BuildBlockReason::None
             : ERA4BuildBlockReason::MissingPrerequisite;
@@ -399,13 +455,13 @@ FRA4HUDSnapshotView MakeShowcaseSnapshot(
 
     FRA4ProductionEntry Tank;
     Tank.ContentId = 101;
-    Tank.DisplayName = BuildNames[0];
+    Tank.DisplayName = BuildEntries[1].Name;
     Tank.ProgressPercent = 68;
     Tank.RemainingSeconds = 12.0f;
     Snapshot.ProductionQueue.Add(Tank);
     FRA4ProductionEntry Infantry;
     Infantry.ContentId = 102;
-    Infantry.DisplayName = BuildNames[1];
+    Infantry.DisplayName = BuildEntries[3].Name;
     Infantry.ProgressPercent = 39;
     Infantry.RemainingSeconds = 8.0f;
     Snapshot.ProductionQueue.Add(Infantry);
@@ -534,17 +590,15 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
     const FVector2D ObjectivesPosition(16.0f, 18.0f);
     const FVector2D ObjectivesSize(370.0f, 205.0f);
     PlaceHUDWidget(Canvas, MakeHUDPanel(
-        WidgetTree, Objectives, TEXT("ObjectivesPanel"), ThemeStyle.Panel, ThemeStyle.Accent,
-        TEXT("/Game/RA4UI/Art/T_RA4_UI_ObjectivesFrame.T_RA4_UI_ObjectivesFrame")), ObjectivesPosition, ObjectivesSize, 10);
+        WidgetTree, Objectives, TEXT("ObjectivesPanel"), ThemeStyle.Panel, ThemeStyle.Accent), ObjectivesPosition, ObjectivesSize, 10);
     AddInteractiveRegion(ObjectivesPosition, ObjectivesSize);
 
     ResourceText = MakeHUDText(
         WidgetTree, FText::GetEmpty(), 17, ThemeStyle.Text, TEXT("ResourceText"), true, false);
     ResourceText->SetJustification(ETextJustify::Center);
     PlaceHUDWidget(Canvas, MakeHUDPanel(
-        WidgetTree, ResourceText, TEXT("ResourceBarPanel"), ThemeStyle.Panel, ThemeStyle.Accent,
-        TEXT("/Game/RA4UI/Art/T_RA4_Frame_ResourceBarV2.T_RA4_Frame_ResourceBarV2")),
-        FVector2D(1110.0f, 12.0f), FVector2D(790.0f, 55.0f), 10);
+        WidgetTree, ResourceText, TEXT("ResourceBarPanel"), ThemeStyle.Panel, ThemeStyle.Accent),
+        FVector2D(1046.0f, 12.0f), FVector2D(846.0f, 55.0f), 10);
 
     URA4MinimapWidget* Minimap = WidgetTree->ConstructWidget<URA4MinimapWidget>(
         URA4MinimapWidget::StaticClass(), TEXT("TacticalMinimap"));
@@ -553,8 +607,7 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
     const FVector2D MinimapPosition(1590.0f, 80.0f);
     const FVector2D MinimapSize(310.0f, 285.0f);
     PlaceHUDWidget(Canvas, MakeHUDPanel(
-        WidgetTree, Minimap, TEXT("MinimapPanel"), ThemeStyle.Panel, ThemeStyle.Accent,
-        TEXT("/Game/RA4UI/Art/T_RA4_Frame_MinimapV2.T_RA4_Frame_MinimapV2")), MinimapPosition, MinimapSize, 10);
+        WidgetTree, Minimap, TEXT("MinimapPanel"), ThemeStyle.Panel, ThemeStyle.Accent), MinimapPosition, MinimapSize, 10);
     AddInteractiveRegion(MinimapPosition, MinimapSize);
 
     UVerticalBox* Sidebar = WidgetTree->ConstructWidget<UVerticalBox>(
@@ -607,23 +660,62 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
     const FVector2D SidebarPosition(1450.0f, 380.0f);
     const FVector2D SidebarSize(450.0f, 500.0f);
     PlaceHUDWidget(Canvas, MakeHUDPanel(
-        WidgetTree, Sidebar, TEXT("ProductionPanel"), ThemeStyle.Panel, ThemeStyle.Accent,
-        TEXT("/Game/RA4UI/Art/T_RA4_UI_PanelTall.T_RA4_UI_PanelTall")), SidebarPosition, SidebarSize, 10);
+        WidgetTree, Sidebar, TEXT("ProductionPanel"), ThemeStyle.Panel, ThemeStyle.Accent), SidebarPosition, SidebarSize, 10);
     AddInteractiveRegion(SidebarPosition, SidebarSize);
 
-    UVerticalBox* Selection = WidgetTree->ConstructWidget<UVerticalBox>(
-        UVerticalBox::StaticClass(), TEXT("SelectionContent"));
+    // Reference 12_battle_hud_eurasian_ground.png: the selection card carries a
+    // portrait beside the name, then armour and structure read as bars rather
+    // than as another line of text.
+    UHorizontalBox* Selection = WidgetTree->ConstructWidget<UHorizontalBox>(
+        UHorizontalBox::StaticClass(), TEXT("SelectionContent"));
+
+    USizeBox* PortraitBox = WidgetTree->ConstructWidget<USizeBox>(
+        USizeBox::StaticClass(), TEXT("SelectionPortraitBox"));
+    PortraitBox->SetWidthOverride(112.0f);
+    PortraitBox->SetHeightOverride(112.0f);
+    UImage* Portrait = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("SelectionPortrait"));
+    if (UTexture2D* PortraitTexture = LoadObject<UTexture2D>(nullptr, ThemeStyle.BackgroundPath))
+    {
+        Portrait->SetBrushFromTexture(PortraitTexture, false);
+    }
+    Portrait->SetColorAndOpacity(FLinearColor(0.75f, 0.78f, 0.86f, 1.0f));
+    PortraitBox->AddChild(Portrait);
+    UHorizontalBoxSlot* PortraitSlot = Selection->AddChildToHorizontalBox(
+        MakeHUDPanel(WidgetTree, PortraitBox, TEXT("SelectionPortraitFrame"),
+            ThemeStyle.Panel, ThemeStyle.Accent, nullptr));
+    PortraitSlot->SetPadding(FMargin(0.0f, 0.0f, 12.0f, 0.0f));
+    PortraitSlot->SetVerticalAlignment(VAlign_Top);
+
+    UVerticalBox* SelectionInfo = WidgetTree->ConstructWidget<UVerticalBox>(
+        UVerticalBox::StaticClass(), TEXT("SelectionInfo"));
     SelectionTitleText = MakeHUDText(
-        WidgetTree, FText::GetEmpty(), 18, ThemeStyle.Text, TEXT("SelectionTitle"), true);
+        WidgetTree, FText::GetEmpty(), 18, ThemeStyle.Text, TEXT("SelectionTitle"), true, false);
     SelectionDetailText = MakeHUDText(
-        WidgetTree, FText::GetEmpty(), 14, HUDMuted, TEXT("SelectionDetails"));
-    Selection->AddChildToVerticalBox(SelectionTitleText);
-    Selection->AddChildToVerticalBox(SelectionDetailText)->SetPadding(FMargin(0.0f, 8.0f));
+        WidgetTree, FText::GetEmpty(), 13, HUDMuted, TEXT("SelectionDetails"));
+    SelectionInfo->AddChildToVerticalBox(SelectionTitleText);
+    SelectionInfo->AddChildToVerticalBox(SelectionDetailText)->SetPadding(FMargin(0.0f, 4.0f, 0.0f, 8.0f));
+
+    const auto AddStatusBar = [this, SelectionInfo, &ThemeStyle](
+        const FText& Caption, const FLinearColor& Fill, const FName Name) -> UProgressBar*
+    {
+        SelectionInfo->AddChildToVerticalBox(MakeHUDText(
+            WidgetTree, Caption, 11, HUDMuted, FName(Name.ToString() + TEXT("_Cap")), false, false));
+        UProgressBar* Bar = WidgetTree->ConstructWidget<UProgressBar>(UProgressBar::StaticClass(), Name);
+        Bar->SetFillColorAndOpacity(Fill);
+        SelectionInfo->AddChildToVerticalBox(Bar)->SetPadding(FMargin(0.0f, 2.0f, 0.0f, 6.0f));
+        return Bar;
+    };
+    SelectionArmourBar = AddStatusBar(
+        LOCTEXT("SelArmour", "БРОНЯ"), ThemeStyle.Accent, TEXT("SelectionArmourBar"));
+    SelectionHealthBar = AddStatusBar(
+        LOCTEXT("SelHealth", "ПРОЧНОСТЬ"), FLinearColor(0.30f, 0.82f, 0.42f, 1.0f), TEXT("SelectionHealthBar"));
+
+    UHorizontalBoxSlot* InfoSlot = Selection->AddChildToHorizontalBox(SelectionInfo);
+    InfoSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
     const FVector2D SelectionPosition(16.0f, 820.0f);
     const FVector2D SelectionSize(420.0f, 240.0f);
     PlaceHUDWidget(Canvas, MakeHUDPanel(
-        WidgetTree, Selection, TEXT("SelectionPanel"), ThemeStyle.Panel, ThemeStyle.Accent,
-        TEXT("/Game/RA4UI/Art/T_RA4_Frame_UnitCardV2.T_RA4_Frame_UnitCardV2")), SelectionPosition, SelectionSize, 10);
+        WidgetTree, Selection, TEXT("SelectionPanel"), ThemeStyle.Panel, ThemeStyle.Accent), SelectionPosition, SelectionSize, 10);
     AddInteractiveRegion(SelectionPosition, SelectionSize);
 
     UVerticalBox* Queue = WidgetTree->ConstructWidget<UVerticalBox>(
@@ -642,8 +734,7 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
     const FVector2D QueuePosition(455.0f, 875.0f);
     const FVector2D QueueSize(560.0f, 185.0f);
     PlaceHUDWidget(Canvas, MakeHUDPanel(
-        WidgetTree, Queue, TEXT("ProductionQueuePanel"), ThemeStyle.Panel, ThemeStyle.Accent,
-        TEXT("/Game/RA4UI/Art/T_RA4_UI_QueueFrame.T_RA4_UI_QueueFrame")), QueuePosition, QueueSize, 10);
+        WidgetTree, Queue, TEXT("ProductionQueuePanel"), ThemeStyle.Panel, ThemeStyle.Accent), QueuePosition, QueueSize, 10);
     AddInteractiveRegion(QueuePosition, QueueSize);
 
     UVerticalBox* Commands = WidgetTree->ConstructWidget<UVerticalBox>(
@@ -679,8 +770,7 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
     const FVector2D CommandPosition(1450.0f, 900.0f);
     const FVector2D CommandSize(450.0f, 160.0f);
     PlaceHUDWidget(Canvas, MakeHUDPanel(
-        WidgetTree, Commands, TEXT("CommandGridPanel"), ThemeStyle.Panel, ThemeStyle.Accent,
-        TEXT("/Game/RA4UI/Art/T_RA4_UI_CommandBar.T_RA4_UI_CommandBar")), CommandPosition, CommandSize, 10);
+        WidgetTree, Commands, TEXT("CommandGridPanel"), ThemeStyle.Panel, ThemeStyle.Accent), CommandPosition, CommandSize, 10);
     AddInteractiveRegion(CommandPosition, CommandSize);
 
     const bool bProminentAlert = HUDVariant == ERA4UIScreenVariant::SovietAlert ||
@@ -818,6 +908,17 @@ void URA4HUDWidget::RefreshSelection()
         ? LOCTEXT("NoSelection", "НЕТ ВЫБРАННЫХ ОБЪЕКТОВ").ToString()
         : HUDViewModel->GetPrimaryEntityName();
     SelectionTitleText->SetText(FText::FromString(Name));
+    // Structure follows the snapshot; armour is a derived readout of how much of
+    // that structure is still intact, so a fresh unit reads full on both bars.
+    const float Health = FMath::Clamp(HUDViewModel->GetSelectionHealthRatio(), 0.0f, 1.0f);
+    if (SelectionHealthBar)
+    {
+        SelectionHealthBar->SetPercent(Health);
+    }
+    if (SelectionArmourBar)
+    {
+        SelectionArmourBar->SetPercent(FMath::Clamp(0.18f + Health * 0.82f, 0.0f, 1.0f));
+    }
     SelectionDetailText->SetText(FText::Format(
         LOCTEXT("SelectionFormat", "ВЫБРАНО: {0}\nПРОЧНОСТЬ: {1}%\nГРУППЫ: {2}\nГРУЗ: {3} / {4}"),
         FText::AsNumber(HUDViewModel->GetSelectionCount()),
@@ -865,6 +966,9 @@ void URA4HUDWidget::RefreshProduction()
             FactionTheme,
             VisibleIndex);
         Card->SetIsEnabled(Option.bAvailable);
+        // Long canon names such as "ПЕРЕРАБАТЫВАЮЩИЙ КОМПЛЕКС" must stay inside
+        // their own card instead of running across the neighbouring one.
+        Card->SetClipping(EWidgetClipping::ClipToBounds);
         Card->OnClicked.AddDynamic(this, &URA4HUDWidget::QueueSelectedProduction);
         UUniformGridSlot* CardSlot = BuildGrid->AddChildToUniformGrid(
             Card, VisibleIndex / 3, VisibleIndex % 3);
