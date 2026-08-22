@@ -173,6 +173,13 @@ public:
     void RefreshOcclusion();
 
     /**
+     * Fraction of the viewport width still showing the world at mid height.
+     * The minimap frame uses it instead of assuming the HUD is a right column.
+     */
+    UFUNCTION(BlueprintPure, Category = "RA4|HUD|Layout")
+    float GetVisibleWorldWidthRatio() const;
+
+    /**
      * Actual column width for this viewport. The player controller reserves the same
      * width in its viewport slot, so both sides must go through this one function or
      * the world will be drawn under the sidebar.

@@ -672,6 +672,18 @@ bool FRA4PlayableHUDBudgetTest::RunTest(const FString& Parameters)
         *FString::Printf(TEXT("Playable HUD covers something at all (got %.1f%%)"), Share * 100.0f),
         Share < 1.0f);
 
+    // The minimap frame asks the HUD where the world stops instead of assuming a
+    // column, so that query must agree with the occlusion it is derived from.
+    const float VisibleRatio = Sidebar->GetVisibleWorldWidthRatio();
+    AddInfo(*FString::Printf(TEXT("Visible world width ratio: %.3f"), VisibleRatio));
+    TestTrue(TEXT("Visible world is narrower than the viewport"), VisibleRatio < 1.0f);
+    TestTrue(TEXT("Visible world is most of the viewport"), VisibleRatio > 0.5f);
+    TestFalse(
+        TEXT("The reported world edge is not itself covered"),
+        Sidebar->IsWorldInputBlockedAtReferencePoint(FVector2D(
+            VisibleRatio * FRA4HUDOcclusion::ReferenceCanvasWidth - 4.0f,
+            FRA4HUDOcclusion::ReferenceCanvasHeight * 0.5f)));
+
     // The column blocks world input; the open field must not.
     TestTrue(
         TEXT("A point inside the column blocks world input"),

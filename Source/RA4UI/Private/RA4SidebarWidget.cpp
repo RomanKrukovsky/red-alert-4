@@ -886,6 +886,12 @@ float URA4SidebarWidget::GetBattlefieldViewFraction() const
     return Occlusion.BattlefieldShare();
 }
 
+float URA4SidebarWidget::GetVisibleWorldWidthRatio() const
+{
+    const float Edge = Occlusion.FreeRightEdge(FRA4HUDOcclusion::ReferenceCanvasHeight * 0.5f);
+    return FMath::Clamp(Edge / FRA4HUDOcclusion::ReferenceCanvasWidth, 0.05f, 1.0f);
+}
+
 float URA4SidebarWidget::ComputeSidebarWidth(const UObject* WorldContextObject)
 {
     return kSidebarWidth * ComputeSidebarScale(WorldContextObject);

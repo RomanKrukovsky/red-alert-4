@@ -2523,10 +2523,14 @@ void ARA4PlayerController::UpdateRadarCameraView()
     }
 
     // Deprojected from the actual viewport corners rather than derived from the camera
-    // height, so the outline matches what is really on screen at any pitch or zoom. The
-    // sidebar covers the right-hand strip, so the visible world stops short of the full
-    // width -- using the whole viewport would draw a frame wider than the player can see.
-    const float RightEdge = FMath::Max(1.0f, float(ViewportX) - AppliedSidebarReservedWidth);
+    // height, so the outline matches what is really on screen at any pitch or zoom.
+    //
+    // Where the visible world ends comes from the HUD itself rather than from a
+    // stored column width. While the HUD is one opaque column the two agree, but
+    // once ADR-0013 moves the panels the world shows between them and "viewport
+    // minus column" would draw a frame narrower than the player can see.
+    const float VisibleRatio = Sidebar->GetVisibleWorldWidthRatio();
+    const float RightEdge = FMath::Max(1.0f, float(ViewportX) * VisibleRatio);
     const FVector2D Corners[4] = {
         FVector2D(0.0f, 0.0f),
         FVector2D(RightEdge, 0.0f),

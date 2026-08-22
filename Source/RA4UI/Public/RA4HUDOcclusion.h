@@ -85,6 +85,29 @@ public:
         return float(FreeCells) / float(SampleColumns * SampleRows);
     }
 
+    /**
+     * Right-most x on the given row that the player can still see the world
+     * through, in canvas units.
+     *
+     * The minimap frame needs to know where the visible battlefield ends. While
+     * the HUD is one opaque right column that is simply "width minus column",
+     * but once panels float over the field the world is visible between them and
+     * that arithmetic stops being true. Asking the occlusion directly keeps the
+     * frame correct through the layout move of ADR-0013.
+     */
+    float FreeRightEdge(const float Y) const
+    {
+        constexpr float Step = ReferenceCanvasWidth / 192.0f;
+        for (float X = ReferenceCanvasWidth - Step * 0.5f; X > 0.0f; X -= Step)
+        {
+            if (!IsBlocked(FVector2D(X, Y)))
+            {
+                return FMath::Min(X + Step * 0.5f, ReferenceCanvasWidth);
+            }
+        }
+        return 0.0f;
+    }
+
     bool IsWithinBudget() const
     {
         const float Share = BattlefieldShare();
