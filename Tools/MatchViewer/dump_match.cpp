@@ -58,13 +58,15 @@ int main(int argc, char** argv)
     SimWorld World;
     World.Initialize(&Content, Setup);
     World.SpawnBuilding(SovYard, 0, TileCoord(10, 10), true);
-    World.SpawnBuilding(AllYard, 1, TileCoord(48, 48), true);
+    // Point-mirror of player 0's base about the map centre, matching the league
+    // harness so neither start spot is structurally advantaged.
+    World.SpawnBuilding(AllYard, 1, TileCoord(53, 53), true);
     for (int32_t X = 0; X < 3; ++X)
     {
         for (int32_t Y = 0; Y < 3; ++Y)
         {
             World.SpawnResourceNode(Ore, TileCoord(6 + X, 15 + Y), 4000);
-            World.SpawnResourceNode(Ore, TileCoord(53 + X, 43 + Y), 4000);
+            World.SpawnResourceNode(Ore, TileCoord(57 - X, 48 - Y), 4000);
         }
     }
     World.ClearEvents();
