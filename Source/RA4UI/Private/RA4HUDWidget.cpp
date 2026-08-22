@@ -55,35 +55,35 @@ FRA4HUDVisualStyle ResolveHUDVisualStyle(const ERA4FactionTheme Theme)
             FLinearColor(0.68f, 0.28f, 0.88f, 1.0f),
             FLinearColor(0.016f, 0.008f, 0.024f, 0.95f),
             FLinearColor(0.92f, 0.86f, 0.96f, 1.0f),
-            TEXT("/Game/RA4UI/Art/T_RA4_USSR_CommandCenter.T_RA4_USSR_CommandCenter"),
+            TEXT("/Game/RA4UI/Art/T_RA4_Theatre_Eurasian.T_RA4_Theatre_Eurasian"),
             LOCTEXT("EurasianCommander", "ЕВРАЗИЙСКИЙ ПАКТ  •  РОССИЯ  •  РЭБ И БРОНЕГРУППА")};
     case ERA4FactionTheme::AtlanticAlliance:
         return {
             FLinearColor(0.35f, 0.70f, 0.98f, 1.0f),
             FLinearColor(0.006f, 0.018f, 0.038f, 0.95f),
             FLinearColor(0.85f, 0.93f, 1.0f, 1.0f),
-            TEXT("/Game/RA4UI/Art/T_RA4_Allies_ArcticFleet.T_RA4_Allies_ArcticFleet"),
+            TEXT("/Game/RA4UI/Art/T_RA4_Theatre_Atlantic.T_RA4_Theatre_Atlantic"),
             LOCTEXT("AtlanticCommander", "АТЛАНТИЧЕСКИЙ АЛЬЯНС  •  США  •  СЕТЕЦЕНТРИЧЕСКИЙ ШТАБ")};
     case ERA4FactionTheme::EasternCoalition:
         return {
             FLinearColor(0.88f, 0.72f, 0.22f, 1.0f),
             FLinearColor(0.008f, 0.028f, 0.016f, 0.95f),
             FLinearColor(0.95f, 0.92f, 0.80f, 1.0f),
-            TEXT("/Game/RA4UI/Art/T_RA4_Eastern_CommandFortress.T_RA4_Eastern_CommandFortress"),
+            TEXT("/Game/RA4UI/Art/T_RA4_Theatre_Eastern.T_RA4_Theatre_Eastern"),
             LOCTEXT("EasternCommander", "ВОСТОЧНАЯ КОАЛИЦИЯ  •  КИТАЙ  •  ИНДУСТРИАЛЬНЫЙ КОМПЛЕКС")};
     case ERA4FactionTheme::PacificPact:
         return {
             FLinearColor(0.20f, 0.80f, 0.90f, 1.0f),
             FLinearColor(0.005f, 0.022f, 0.032f, 0.95f),
             FLinearColor(0.80f, 0.96f, 1.0f, 1.0f),
-            TEXT("/Game/RA4UI/Art/T_RA4_Chrono_TemporalCitadel.T_RA4_Chrono_TemporalCitadel"),
+            TEXT("/Game/RA4UI/Art/T_RA4_Theatre_Pacific.T_RA4_Theatre_Pacific"),
             LOCTEXT("PacificCommander", "ТИХООКЕАНСКИЙ ПАКТ  •  ЯПОНИЯ  •  РОБОТИЗИРОВАННЫЙ КОРПУС")};
     case ERA4FactionTheme::Independent:
         return {
             FLinearColor(0.78f, 0.52f, 0.18f, 1.0f),
             FLinearColor(0.024f, 0.016f, 0.008f, 0.95f),
             FLinearColor(0.95f, 0.90f, 0.80f, 1.0f),
-            TEXT("/Game/RA4UI/Art/T_RA4_USSR_CommandCenter.T_RA4_USSR_CommandCenter"),
+            TEXT("/Game/RA4UI/Art/T_RA4_Theatre_Independent.T_RA4_Theatre_Independent"),
             LOCTEXT("IndepCommander", "НЕЗАВИСИМЫЕ ДЕРЖАВЫ  •  ИРАН  •  АСИММЕТРИЧНЫЙ РУБЕЖ")};
     case ERA4FactionTheme::Chronolegion:
         return {
@@ -116,12 +116,15 @@ UTextBlock* MakeHUDText(
     const int32 Size,
     const FLinearColor& Color,
     const FName Name,
-    const bool bBold = false)
+    const bool bBold = false,
+    const bool bWrap = true)
 {
     UTextBlock* Label = WidgetTree->ConstructWidget<UTextBlock>(UTextBlock::StaticClass(), Name);
     Label->SetText(Text);
     Label->SetColorAndOpacity(FSlateColor(Color));
-    Label->SetAutoWrapText(true);
+    // Wrapping suits multi-line panels but breaks one-line chrome: the tab strip
+    // and the resource strip folded onto a second line.
+    Label->SetAutoWrapText(bWrap);
     FSlateFontInfo Font = Label->GetFont();
     Font.Size = Size;
     Font.OutlineSettings.OutlineSize = bBold ? 1 : 0;
@@ -147,7 +150,8 @@ URA4AngularPanelWidget* MakeHUDPanel(
         {
             FSlateBrush TextureBrush;
             TextureBrush.SetResourceObject(Texture);
-            TextureBrush.DrawAs = ESlateBrushDrawType::Image;
+            TextureBrush.DrawAs = ESlateBrushDrawType::Box;
+            TextureBrush.Margin = FMargin(0.26f);
             Panel->SetBrush(TextureBrush);
         }
         else
@@ -190,9 +194,10 @@ UButton* MakeHUDButton(
     UButton* Button = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), Name);
     Button->SetStyle(MakeHUDButtonStyle(Accent, bSelected));
     UTextBlock* Text = MakeHUDText(
-        WidgetTree, Label, 14, bSelected ? FLinearColor::White : HUDText,
-        FName(*FString::Printf(TEXT("%s_Label"), *Name.ToString())), bSelected);
+        WidgetTree, Label, 12, bSelected ? FLinearColor::White : HUDText,
+        FName(*FString::Printf(TEXT("%s_Label"), *Name.ToString())), bSelected, false);
     Text->SetJustification(ETextJustify::Center);
+    Text->SetMinDesiredWidth(0.0f);
     Button->AddChild(Text);
     return Button;
 }
@@ -519,7 +524,7 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
         UVerticalBox::StaticClass(), TEXT("ObjectivesPanelContent"));
     Objectives->AddChildToVerticalBox(MakeHUDText(
         WidgetTree, ThemeStyle.Commander,
-        16, ThemeStyle.Text, TEXT("CommanderTitle"), true));
+        16, ThemeStyle.Text, TEXT("CommanderTitle"), true, false));
     Objectives->AddChildToVerticalBox(MakeHUDText(
         WidgetTree, LOCTEXT("ObjectivesHeading", "ОСНОВНЫЕ ЗАДАЧИ"),
         15, ThemeStyle.Accent, TEXT("ObjectivesHeading"), true))->SetPadding(FMargin(0.0f, 12.0f, 0.0f, 5.0f));
@@ -534,7 +539,7 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
     AddInteractiveRegion(ObjectivesPosition, ObjectivesSize);
 
     ResourceText = MakeHUDText(
-        WidgetTree, FText::GetEmpty(), 17, ThemeStyle.Text, TEXT("ResourceText"), true);
+        WidgetTree, FText::GetEmpty(), 17, ThemeStyle.Text, TEXT("ResourceText"), true, false);
     ResourceText->SetJustification(ETextJustify::Center);
     PlaceHUDWidget(Canvas, MakeHUDPanel(
         WidgetTree, ResourceText, TEXT("ResourceBarPanel"), ThemeStyle.Panel, ThemeStyle.Accent,
@@ -554,25 +559,47 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
 
     UVerticalBox* Sidebar = WidgetTree->ConstructWidget<UVerticalBox>(
         UVerticalBox::StaticClass(), TEXT("ProductionSidebar"));
-    FText TabLabel = LOCTEXT("ProductionTabs", "СТРОИТЬ   |   ВОЙСКА   |   УЛУЧШЕНИЯ   |   ДОКТРИНЫ");
+    // One button carrying every caption could not fit the sidebar and clipped at
+    // both ends. The reference has separate tabs, so each category gets its own
+    // button and the row divides the width between them.
+    TArray<FText> TabCaptions;
     if (FactionTheme == ERA4FactionTheme::Allies)
     {
-        TabLabel = HUDVariant == ERA4UIScreenVariant::AlliesNaval
-            ? LOCTEXT("AlliesNavalTabs", "СТРОЕНИЯ   |   ПЕХОТА   |   ТЕХНИКА   |   АВИАЦИЯ   |   ФЛОТ")
-            : LOCTEXT("AlliesTabs", "СТРОЕНИЯ   |   ПЕХОТА   |   ТЕХНИКА   |   АВИАЦИЯ");
+        TabCaptions = HUDVariant == ERA4UIScreenVariant::AlliesNaval
+            ? TArray<FText>{LOCTEXT("Tab_Str", "СТРОИТЬ"), LOCTEXT("Tab_Inf", "ПЕХОТА"),
+                            LOCTEXT("Tab_Veh", "ТЕХНИКА"), LOCTEXT("Tab_Air", "АВИАЦИЯ"),
+                            LOCTEXT("Tab_Sea", "ФЛОТ")}
+            : TArray<FText>{LOCTEXT("Tab_Str", "СТРОИТЬ"), LOCTEXT("Tab_Inf", "ПЕХОТА"),
+                            LOCTEXT("Tab_Veh", "ТЕХНИКА"), LOCTEXT("Tab_Air", "АВИАЦИЯ")};
     }
     else if (FactionTheme == ERA4FactionTheme::Chronolegion)
     {
-        TabLabel = LOCTEXT("ChronoTabs", "СТРОЕНИЯ   |   БОЕВЫЕ ЕДИНИЦЫ   |   ПОДДЕРЖКА   |   ОСОБОЕ");
+        TabCaptions = {LOCTEXT("Tab_Str", "СТРОИТЬ"), LOCTEXT("Tab_Units", "ВОЙСКА"),
+                       LOCTEXT("Tab_Support", "ПОДДЕРЖКА"), LOCTEXT("Tab_Special", "ОСОБОЕ")};
     }
-    else if (FactionTheme == ERA4FactionTheme::EasternCoalition)
+    else
     {
-        TabLabel = LOCTEXT("EasternTabs", "СТРОЕНИЯ   |   БОЕВЫЕ ЕД.   |   УЛУЧШЕНИЯ   |   ДОКТРИНЫ");
+        TabCaptions = {LOCTEXT("Tab_Str", "СТРОИТЬ"), LOCTEXT("Tab_Units", "ВОЙСКА"),
+                       LOCTEXT("Tab_Upg", "УЛУЧШЕНИЯ"), LOCTEXT("Tab_Doc", "ДОКТРИНА")};
     }
-    UButton* TabButton = MakeHUDButton(
-        WidgetTree, TabLabel, TEXT("ProductionTabButton"), ThemeStyle.Accent, true);
-    TabButton->OnClicked.AddDynamic(this, &URA4HUDWidget::CycleProductionTab);
-    Sidebar->AddChildToVerticalBox(TabButton)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
+
+    UHorizontalBox* TabRow = WidgetTree->ConstructWidget<UHorizontalBox>(
+        UHorizontalBox::StaticClass(), TEXT("ProductionTabRow"));
+    for (int32 TabIndex = 0; TabIndex < TabCaptions.Num(); ++TabIndex)
+    {
+        UButton* Tab = MakeHUDButton(
+            WidgetTree, TabCaptions[TabIndex],
+            FName(*FString::Printf(TEXT("ProductionTab_%d"), TabIndex)),
+            ThemeStyle.Accent, TabIndex == ActiveProductionTab);
+        Tab->SetClipping(EWidgetClipping::ClipToBounds);
+        Tab->OnClicked.AddDynamic(this, &URA4HUDWidget::CycleProductionTab);
+        if (UHorizontalBoxSlot* TabSlot = TabRow->AddChildToHorizontalBox(Tab))
+        {
+            TabSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+            TabSlot->SetPadding(FMargin(0.0f, 0.0f, 3.0f, 0.0f));
+        }
+    }
+    Sidebar->AddChildToVerticalBox(TabRow)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
     BuildGrid = WidgetTree->ConstructWidget<UUniformGridPanel>(
         UUniformGridPanel::StaticClass(), TEXT("BuildGrid"));
     UVerticalBoxSlot* BuildGridSlot = Sidebar->AddChildToVerticalBox(BuildGrid);
