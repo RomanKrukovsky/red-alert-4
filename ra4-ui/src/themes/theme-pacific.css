@@ -1,0 +1,31 @@
+/* Scarlet Horizon — Тихоокеанский пакт: turquoise, sea blue, white, coral warnings */
+.theme-pacific {
+  --faction-primary: #12666c;
+  --faction-secondary: #2fd4c8;
+  --faction-dark: #04110f;
+  --faction-glow: rgba(47, 212, 200, 0.6);
+  --faction-text: #def8f6;
+  --faction-text-muted: #84c2c0;
+
+  --faction-panel: rgba(6, 24, 28, 0.88);
+  --faction-border: rgba(47, 212, 200, 0.5);
+  --faction-accent: #52e2d6;
+  --faction-text-highlight: #ff7a5c; /* coral warnings */
+
+  --faction-clip-path: polygon(0 4px, 4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px));
+
+  --faction-border-style: 1px solid var(--faction-border);
+  --faction-box-shadow: inset 0 0 15px rgba(47, 212, 200, 0.1), 0 4px 6px rgba(0, 0, 0, 0.8);
+}
+
+.theme-pacific ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.theme-pacific ::-webkit-scrollbar-track {
+  background: rgba(6, 24, 28, 0.5);
+}
+.theme-pacific ::-webkit-scrollbar-thumb {
+  background: var(--faction-secondary);
+  border: 1px solid var(--faction-dark);
+}

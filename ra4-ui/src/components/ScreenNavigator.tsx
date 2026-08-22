@@ -5,33 +5,31 @@ interface ScreenOption {
   id: string;
   name: string;
   path: string;
-  screenshotNum: number;
+  screenshot: string;
   category: 'Меню' | 'Кампания' | 'Брифинг' | 'Бой' | 'Сетевая';
 }
 
 const SCREENS: ScreenOption[] = [
-  { id: 'splash', name: '01. Заставка (Splash)', path: '/', screenshotNum: 1, category: 'Меню' },
-  { id: 'main-menu', name: '02. Главное меню (War Room)', path: '/menu', screenshotNum: 2, category: 'Меню' },
-  { id: 'campaign-select', name: '03. Выбор кампании (4 фракции)', path: '/campaign-select', screenshotNum: 3, category: 'Кампания' },
-  { id: 'campaign-ussr', name: '04. Кампания СССР (Соколов)', path: '/campaign/ussr', screenshotNum: 4, category: 'Кампания' },
-  { id: 'campaign-allies', name: '05. Кампания Альянса (Уорд)', path: '/campaign/allies', screenshotNum: 5, category: 'Кампания' },
-  { id: 'campaign-ec', name: '06. Кампания Вост. Коалиции', path: '/campaign/ec', screenshotNum: 6, category: 'Кампания' },
-  { id: 'campaign-chrono', name: '07. Кампания Хронолегиона', path: '/campaign/chrono', screenshotNum: 7, category: 'Кампания' },
-  { id: 'strategic-map', name: '08. Тактическая карта (Евразия)', path: '/strategic-map', screenshotNum: 8, category: 'Кампания' },
-  { id: 'briefing-ussr', name: '09. Брифинг «Красный рассвет»', path: '/briefing', screenshotNum: 9, category: 'Брифинг' },
-  { id: 'video-comms', name: '10. Видеосвязь (Соколов vs Уорд)', path: '/video-comms', screenshotNum: 10, category: 'Брифинг' },
-  { id: 'loading-kiev', name: '12/19. Загрузка миссии (Киев-86)', path: '/loading', screenshotNum: 12, category: 'Брифинг' },
-  { id: 'hud-ussr-base', name: '13. HUD СССР (Строительство базы)', path: '/hud?mode=ussr-base', screenshotNum: 13, category: 'Бой' },
-  { id: 'hud-allies-airfield', name: '14. HUD Альянса (Аэродром)', path: '/hud?mode=allies-airfield', screenshotNum: 14, category: 'Бой' },
-  { id: 'hud-ec-base', name: '15. HUD Вост. Коалиции (База)', path: '/hud?mode=ec-base', screenshotNum: 15, category: 'Бой' },
-  { id: 'hud-chrono-base', name: '16. HUD Хронолегиона (База)', path: '/hud?mode=chrono-base', screenshotNum: 16, category: 'Бой' },
-  { id: 'skirmish-lobby', name: '17. Сетевое лобби (8 игроков)', path: '/skirmish', screenshotNum: 17, category: 'Сетевая' },
-  { id: 'campaign-ec-detail', name: '18. Досье Вост. Коалиции (Гао)', path: '/campaign/ec?view=detail', screenshotNum: 18, category: 'Кампания' },
-  { id: 'hud-ussr-tank-assault', name: '20. HUD СССР (Танковый штурм КВ-3)', path: '/hud?mode=ussr-tank-assault', screenshotNum: 20, category: 'Бой' },
-  { id: 'hud-ussr-base-defense', name: '21. HUD СССР (Оборона / Тревога)', path: '/hud?mode=ussr-base-defense', screenshotNum: 21, category: 'Бой' },
-  { id: 'hud-allies-naval', name: '22. HUD Альянса (Морской флот)', path: '/hud?mode=allies-naval', screenshotNum: 22, category: 'Бой' },
-  { id: 'hud-allies-air-battle', name: '23. HUD Альянса (Воздушная битва)', path: '/hud?mode=allies-air-battle', screenshotNum: 23, category: 'Бой' },
-  { id: 'hud-chrono-superweapon', name: '24. HUD Хроно (Супероружие)', path: '/hud?mode=chrono-superweapon', screenshotNum: 24, category: 'Бой' }
+  { id: 'title', name: '01. Заставка (SCARLET HORIZON)', path: '/', screenshot: '01', category: 'Меню' },
+  { id: 'main-menu', name: '02. Главное меню (Командный центр)', path: '/menu', screenshot: '02', category: 'Меню' },
+  { id: 'campaign-select', name: '03-06. Выбор кампании (5 блоков)', path: '/campaign-select', screenshot: '03-06', category: 'Кампания' },
+  { id: 'campaign-eurasian', name: '03. Кампания Евразийского пакта (Россия)', path: '/campaign/eurasian', screenshot: '03', category: 'Кампания' },
+  { id: 'campaign-atlantic', name: '04. Кампания Атлантического альянса (США)', path: '/campaign/atlantic', screenshot: '04', category: 'Кампания' },
+  { id: 'campaign-eastern', name: '05. Кампания Восточной коалиции (Китай)', path: '/campaign/eastern', screenshot: '05', category: 'Кампания' },
+  { id: 'campaign-pacific', name: '06. Кампания Тихоокеанского пакта (Япония)', path: '/campaign/pacific', screenshot: '06', category: 'Кампания' },
+  { id: 'strategic-map', name: '07. Карта кампании (Тихий релей)', path: '/strategic-map', screenshot: '07', category: 'Кампания' },
+  { id: 'briefing', name: '08. Брифинг операции', path: '/briefing', screenshot: '08', category: 'Брифинг' },
+  { id: 'video-comms', name: '09. Защищённый канал связи', path: '/video-comms', screenshot: '09', category: 'Брифинг' },
+  { id: 'loading', name: '10. Загрузка миссии', path: '/loading', screenshot: '10', category: 'Брифинг' },
+  { id: 'skirmish-lobby', name: '11. Сетевое лобби (8 игроков)', path: '/skirmish', screenshot: '11', category: 'Сетевая' },
+  { id: 'hud-eurasian-ground', name: '12. HUD Пакта (Прорыв обороны)', path: '/hud?mode=eurasian-ground', screenshot: '12', category: 'Бой' },
+  { id: 'hud-atlantic-naval', name: '13. HUD Альянса (Морская операция)', path: '/hud?mode=atlantic-naval', screenshot: '13', category: 'Бой' },
+  { id: 'hud-eastern-base', name: '14. HUD Коалиции (Умный автозавод)', path: '/hud?mode=eastern-base', screenshot: '14', category: 'Бой' },
+  { id: 'hud-pacific-air', name: '15. HUD Пакта (Воздушный бой)', path: '/hud?mode=pacific-air', screenshot: '15', category: 'Бой' },
+  { id: 'hud-independent-iran', name: '16. HUD Держав (Иран • Сатурационный удар)', path: '/hud?mode=independent-iran', screenshot: '16', category: 'Бой' },
+  { id: 'hud-eurasian-base', name: '17. HUD Пакта (База «Белый шум»)', path: '/hud?mode=eurasian-base', screenshot: '17', category: 'Бой' },
+  { id: 'hud-pacific-base', name: '18. HUD Пакта (База «Айланд»)', path: '/hud?mode=pacific-base', screenshot: '18', category: 'Бой' },
+  { id: 'campaign-independent', name: '19. Кампания Независимых держав (Иран)', path: '/campaign/independent', screenshot: '19', category: 'Кампания' }
 ];
 
 export const ScreenNavigator: React.FC = () => {
@@ -40,7 +38,8 @@ export const ScreenNavigator: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   const currentPath = location.pathname + location.search;
-  const currentScreen = SCREENS.find(s => s.path === currentPath) ||
+  const currentScreen =
+    SCREENS.find(s => s.path === currentPath) ||
     SCREENS.find(s => location.pathname === s.path.split('?')[0]) ||
     SCREENS[0];
 
@@ -51,31 +50,31 @@ export const ScreenNavigator: React.FC = () => {
       left: '50%',
       transform: 'translateX(-50%)',
       zIndex: 9999,
-      fontFamily: "'Oswald', sans-serif"
+      fontFamily: "'Jura', sans-serif"
     }}>
       {/* Toggle Button */}
       <div
         onClick={() => setIsOpen(!isOpen)}
         style={{
-          background: 'linear-gradient(180deg, rgba(30,10,10,0.92) 0%, rgba(10,5,5,0.96) 100%)',
-          border: '1px solid rgba(255, 60, 60, 0.6)',
+          background: 'linear-gradient(180deg, rgba(14,10,22,0.92) 0%, rgba(6,5,10,0.96) 100%)',
+          border: '1px solid rgba(176,108,255,0.6)',
           borderTop: 'none',
           padding: '4px 18px',
           borderRadius: '0 0 8px 8px',
-          color: '#ffcc00',
+          color: '#d8b4ff',
           fontSize: '12px',
           letterSpacing: '1.5px',
           cursor: 'pointer',
-          boxShadow: '0 4px 14px rgba(0,0,0,0.8), 0 0 10px rgba(255,50,50,0.4)',
+          boxShadow: '0 4px 14px rgba(0,0,0,0.85), 0 0 10px rgba(176,108,255,0.35)',
           display: 'flex',
           alignItems: 'center',
           gap: '10px'
         }}
       >
-        <span style={{ color: '#ff3333' }}>★ RA4 SCREEN NAVIGATOR</span>
-        <span style={{ color: '#aaa' }}>|</span>
+        <span style={{ color: '#b06cff' }}>❖ SH SCREEN NAVIGATOR</span>
+        <span style={{ color: '#555c68' }}>|</span>
         <span style={{ color: '#ffffff' }}>{currentScreen.name}</span>
-        <span style={{ fontSize: '10px', color: '#ffcc00' }}>{isOpen ? '▲ СВЕРНУТЬ' : '▼ ВЫБРАТЬ ЭКРАН (1-24)'}</span>
+        <span style={{ fontSize: '10px', color: '#d8b4ff' }}>{isOpen ? '▲ СВЕРНУТЬ' : '▼ ВЫБРАТЬ ЭКРАН (01-19)'}</span>
       </div>
 
       {/* Screen Selection Dropdown Modal */}
@@ -85,20 +84,27 @@ export const ScreenNavigator: React.FC = () => {
           top: '100%',
           left: '50%',
           transform: 'translateX(-50%)',
-          width: '940px',
+          width: '960px',
           maxHeight: '80vh',
           overflowY: 'auto',
-          background: 'rgba(8, 6, 10, 0.98)',
-          border: '1px solid #ff3333',
-          boxShadow: '0 12px 40px rgba(0,0,0,0.95), 0 0 25px rgba(255,0,0,0.4)',
+          background: 'rgba(8, 6, 12, 0.98)',
+          border: '1px solid #b06cff',
+          boxShadow: '0 12px 40px rgba(0,0,0,0.95), 0 0 25px rgba(176,108,255,0.35)',
           borderRadius: '8px',
           padding: '16px',
           backdropFilter: 'blur(12px)',
           marginTop: '6px'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '1px solid rgba(255,50,50,0.3)', paddingBottom: '8px' }}>
-            <div style={{ color: '#ff3333', fontSize: '15px', fontWeight: 700, letterSpacing: '2px' }}>
-              РЕЕСТР ВСЕХ 24 ЭКРАНОВ И БОЕВЫХ HUD RED ALERT 4
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '12px',
+            borderBottom: '1px solid rgba(176,108,255,0.3)',
+            paddingBottom: '8px'
+          }}>
+            <div style={{ color: '#d8b4ff', fontSize: '15px', fontWeight: 700, letterSpacing: '2px' }}>
+              РЕЕСТР ЭКРАНОВ SCARLET HORIZON (REMASTER)
             </div>
             <button
               onClick={() => setIsOpen(false)}
@@ -115,13 +121,9 @@ export const ScreenNavigator: React.FC = () => {
             </button>
           </div>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '10px'
-          }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
             {SCREENS.map(screen => {
-              const isActive = (location.pathname + location.search) === screen.path;
+              const isActive = currentPath === screen.path;
               return (
                 <div
                   key={screen.id}
@@ -131,33 +133,35 @@ export const ScreenNavigator: React.FC = () => {
                   }}
                   style={{
                     background: isActive
-                      ? 'linear-gradient(180deg, rgba(140, 20, 20, 0.9) 0%, rgba(60, 5, 5, 0.95) 100%)'
-                      : 'linear-gradient(180deg, rgba(25, 20, 25, 0.8) 0%, rgba(12, 10, 15, 0.9) 100%)',
-                    border: `1px solid ${isActive ? '#ff4d4d' : 'rgba(255,255,255,0.15)'}`,
+                      ? 'linear-gradient(180deg, rgba(106,63,160,0.9) 0%, rgba(30,18,50,0.95) 100%)'
+                      : 'linear-gradient(180deg, rgba(25, 20, 30, 0.8) 0%, rgba(12, 10, 16, 0.9) 100%)',
+                    border: `1px solid ${isActive ? '#b06cff' : 'rgba(255,255,255,0.15)'}`,
                     borderRadius: '4px',
                     padding: '8px 10px',
                     cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '4px',
-                    boxShadow: isActive ? '0 0 12px rgba(255,50,50,0.6)' : 'none',
+                    boxShadow: isActive ? '0 0 12px rgba(176,108,255,0.55)' : 'none',
                     transition: 'all 0.15s ease'
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{
                       fontSize: '10px',
-                      color: screen.category === 'Бой' ? '#ff8800' : (screen.category === 'Кампания' ? '#00ccff' : '#ffcc00'),
+                      color:
+                        screen.category === 'Бой' ? '#ff8a75' :
+                        screen.category === 'Кампания' ? '#7fb2ff' : '#ffd76a',
                       textTransform: 'uppercase'
                     }}>
                       [{screen.category}]
                     </span>
                     <span style={{ fontSize: '10px', color: '#888' }}>
-                      СКРИНШОТ #{screen.screenshotNum}
+                      РЕФЕРЕНС №{screen.screenshot}
                     </span>
                   </div>
                   <div style={{
-                    color: isActive ? '#ffffff' : '#e0e0e0',
+                    color: isActive ? '#ffffff' : '#e0e0e6',
                     fontSize: '13px',
                     fontWeight: 600,
                     whiteSpace: 'nowrap',

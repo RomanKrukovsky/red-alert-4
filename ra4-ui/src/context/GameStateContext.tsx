@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 
-export type Faction = 'ussr' | 'allies' | 'ec' | 'chrono';
+export type Faction = 'eurasian' | 'atlantic' | 'eastern' | 'pacific' | 'independent';
 
 interface GameState {
   currentFaction: Faction;
@@ -13,19 +13,19 @@ interface GameState {
 }
 
 const defaultState: GameState = {
-  currentFaction: 'ussr',
+  currentFaction: 'eurasian',
   setFaction: () => {},
   resources: {
-    credits: 15000,
-    power: 100,
-    intel: 50,
+    credits: 23450,
+    power: 17820,
+    intel: 9680,
   }
 };
 
 const GameStateContext = createContext<GameState>(defaultState);
 
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentFaction, setFaction] = useState<Faction>('ussr');
+  const [currentFaction, setFaction] = useState<Faction>('eurasian');
   const [resources] = useState(defaultState.resources);
 
   return (

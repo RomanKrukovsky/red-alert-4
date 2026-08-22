@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BrandLogo } from '../components/Brand';
 
 export const LoadingScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -11,7 +12,7 @@ export const LoadingScreen: React.FC = () => {
         if (p >= 100) {
           clearInterval(timer);
           setTimeout(() => {
-            navigate('/hud?mode=ussr-base');
+            navigate('/hud?mode=eurasian-ground');
           }, 400);
           return 100;
         }
@@ -23,149 +24,167 @@ export const LoadingScreen: React.FC = () => {
 
   return (
     <div
-      onClick={() => navigate('/hud?mode=ussr-base')}
+      onClick={() => navigate('/hud?mode=eurasian-ground')}
       style={{
         width: '100vw',
         height: '100vh',
         position: 'relative',
-        background: `url('/screenshots/19.png') no-repeat center center`,
+        background: `url('/remaster/10_mission_loading_eurasian.png') no-repeat center center`,
         backgroundSize: 'cover',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        padding: '24px 40px',
+        padding: '26px 40px 20px 40px',
         boxSizing: 'border-box',
         overflow: 'hidden',
-        fontFamily: "'Oswald', sans-serif",
+        fontFamily: "'Jura', sans-serif",
         cursor: 'pointer'
       }}
     >
-      {/* Top Header */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderBottom: '1px solid rgba(255,50,50,0.3)',
-        paddingBottom: '10px',
-        zIndex: 10
-      }}>
-        <div>
-          <div style={{ color: '#888', fontSize: '10px', letterSpacing: '3px' }}>COMMAND & CONQUER™</div>
-          <div style={{ color: '#ff2222', fontSize: '24px', fontWeight: 800, letterSpacing: '2px', lineHeight: 1 }}>
-            RED ALERT 4
-          </div>
+      {/* Top Centered Title */}
+      <div style={{ textAlign: 'center', zIndex: 10 }}>
+        <div style={{ transform: 'scale(0.55)', transformOrigin: 'top center' }}>
+          <BrandLogo />
         </div>
-
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ color: '#ff3333', fontSize: '13px', letterSpacing: '2px', fontWeight: 700 }}>
-            ЗАГРУЗКА МИССИИ
-          </div>
-          <div style={{ color: '#ffffff', fontSize: '18px', fontWeight: 800 }}>
-            ОПЕРАЦИЯ «КИЕВ-86» ★
-          </div>
-        </div>
-      </div>
-
-      {/* Main Body with Left Intel Overlay */}
-      <div style={{
-        display: 'flex',
-        flex: 1,
-        alignItems: 'center',
-        zIndex: 5,
-        margin: '20px 0'
-      }}>
-        <div className="ra4-panel clip-bevel-md" style={{
-          width: '380px',
-          padding: '20px',
-          border: '1px solid #ff3333',
-          background: 'rgba(15, 8, 10, 0.92)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '14px'
+        <div style={{
+          fontFamily: "'Oswald', sans-serif",
+          color: '#ffffff',
+          fontSize: '2.9rem',
+          fontWeight: 900,
+          letterSpacing: '10px',
+          marginTop: '-8px',
+          textShadow: '0 4px 24px rgba(0,0,0,0.95), 0 0 40px rgba(176,108,255,0.35)'
         }}>
-          {/* Summary */}
-          <div>
-            <div style={{ color: '#ff3333', fontSize: '12px', fontWeight: 700, letterSpacing: '1.5px', marginBottom: '4px' }}>
-              СВОДКА:
-            </div>
-            <p style={{ color: '#ccc', fontSize: '12px', lineHeight: 1.5, fontFamily: "'Inter', sans-serif", margin: 0 }}>
-              Американцы укрепили позиции в Киеве, превратив город в плацдарм для дальнейшего наступления вглубь территории СССР. Наша цель — выбить противника, уничтожить их командный центр и восстановить контроль.
-            </p>
-          </div>
+          ЗАГРУЗКА МИССИИ
+        </div>
+        <div style={{ color: '#cdd3dd', fontSize: '15px', letterSpacing: '6px', marginTop: '6px' }}>
+          ОПЕРАЦИЯ «ТИХИЙ РЕЛЕЙ»
+        </div>
+      </div>
 
-          {/* Objectives */}
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
-            <div style={{ color: '#ff3333', fontSize: '12px', fontWeight: 700, letterSpacing: '1.5px', marginBottom: '6px' }}>
-              ЦЕЛИ:
-            </div>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', fontFamily: "'Inter', sans-serif", color: '#ddd' }}>
-              <li>★ Уничтожить командный центр США</li>
-              <li>★ Ликвидировать генерала Хейса</li>
-              <li>★ Захватить центральный район Киева</li>
-              <li>★ Эвакуировать инженеров</li>
-            </ul>
+      {/* Middle: left summary panel */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+        <div style={{
+          width: '360px',
+          padding: '18px 20px',
+          background: 'linear-gradient(180deg, rgba(10,8,16,0.93), rgba(6,5,10,0.97))',
+          border: '1px solid rgba(176,108,255,0.66)',
+          borderRadius: '6px'
+        }}>
+          <div style={{ color: '#b06cff', fontSize: '12px', fontWeight: 700, letterSpacing: '2px', marginBottom: '6px' }}>
+            СВОДКА
           </div>
+          <p style={{ color: '#c3c8d2', fontSize: '12px', lineHeight: 1.6, margin: '0 0 14px 0' }}>
+            Передовой отряд «Комета» выдвигается к горному коридору. Противник удерживает узлы связи и контролирует перевал. Проведите броне группу и подавите ретрансляцию.
+          </p>
 
-          {/* Tactical Advice Box */}
-          <div style={{
-            borderTop: '1px solid rgba(255,255,255,0.1)',
-            paddingTop: '10px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            background: 'rgba(40, 10, 10, 0.5)',
-            padding: '8px',
-            borderRadius: '4px',
-            border: '1px solid rgba(255,50,50,0.3)'
-          }}>
-            <span style={{ color: '#ff2222', fontSize: '20px' }}>★</span>
-            <div>
-              <div style={{ color: '#ff3333', fontSize: '11px', fontWeight: 700 }}>СОВЕТ:</div>
-              <div style={{ color: '#aaa', fontSize: '11px', fontFamily: "'Inter', sans-serif" }}>
-                Используйте штурмовых инженеров для захвата вражеских построек и техники.
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '12px' }}>
+            <div style={{ color: '#b06cff', fontSize: '12px', fontWeight: 700, letterSpacing: '2px', marginBottom: '8px' }}>
+              ЦЕЛИ
+            </div>
+            {[
+              { icon: '🛡', label: 'Удержать 3 узла связи' },
+              { icon: '📡', label: 'Сохранить мобильный комплекс РЭБ' },
+              { icon: '🚚', label: 'Обеспечить проход колонны' }
+            ].map(o => (
+              <div key={o.label} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '7px', fontSize: '12px', color: '#c3c8d2' }}>
+                <span style={{
+                  width: '22px', height: '22px', flexShrink: 0,
+                  clipPath: 'polygon(50% 0, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%)',
+                  background: 'rgba(176,108,255,0.18)',
+                  border: '1px solid rgba(176,108,255,0.6)',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '11px'
+                }}>{o.icon}</span>
+                {o.label}
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Bottom Loading Progress Bar */}
+      {/* Bottom right checklist */}
       <div style={{
+        position: 'absolute',
+        right: '40px',
+        bottom: '110px',
+        width: '250px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '8px',
+        gap: '7px',
         zIndex: 10
       }}>
-        {/* Bar */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '16px'
-        }}>
+        {[
+          { label: 'КАРТА ЗАГРУЖЕНА', done: true },
+          { label: 'БОЕВЫЕ ГРУППЫ: ГОТОВЫ', done: true },
+          { label: 'СВЯЗЬ: ШИФРУЕТСЯ', done: false }
+        ].map(item => (
+          <div key={item.label} style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '9px',
+            padding: '7px 12px',
+            background: 'rgba(6,5,12,0.88)',
+            border: '1px solid rgba(255,255,255,0.14)',
+            borderRadius: '3px',
+            fontSize: '11px',
+            letterSpacing: '1px',
+            color: item.done ? '#57e89a' : '#e0c25c'
+          }}>
+            <span>{item.done ? '✓' : '◌'}</span>
+            {item.label}
+          </div>
+        ))}
+      </div>
+
+      {/* Progress Bar */}
+      <div style={{ zIndex: 10, display: 'flex', flexDirection: 'column', gap: '9px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
           <div style={{
             flex: 1,
-            height: '10px',
-            background: 'rgba(0,0,0,0.85)',
-            borderRadius: '4px',
+            height: '14px',
+            background: 'rgba(4,4,8,0.9)',
+            border: '1px solid rgba(176,108,255,0.7)',
+            borderRadius: '3px',
             overflow: 'hidden',
-            border: '1px solid #ff3333',
-            boxShadow: '0 0 10px rgba(255,0,0,0.4)'
+            boxShadow: '0 0 16px rgba(176,108,255,0.4), inset 0 0 8px rgba(0,0,0,0.9)'
           }}>
             <div style={{
               width: `${progress}%`,
               height: '100%',
-              background: 'linear-gradient(90deg, #ff2222, #ff8800, #ffdd00)',
-              boxShadow: '0 0 15px #ff2222'
+              background: 'linear-gradient(90deg, #6a3fa0, #b06cff, #d8b4ff)',
+              boxShadow: '0 0 14px #b06cff'
             }} />
           </div>
-          <span style={{ color: '#ffffff', fontSize: '20px', fontWeight: 800, width: '60px', textAlign: 'right' }}>
+          <span style={{
+            fontFamily: "'Orbitron', sans-serif",
+            color: '#ffffff',
+            fontSize: '22px',
+            fontWeight: 800,
+            width: '70px',
+            textAlign: 'right',
+            textShadow: '0 0 14px rgba(176,108,255,0.9)'
+          }}>
             {progress}%
           </span>
         </div>
+        <div style={{ textAlign: 'center', color: '#aab0ba', fontSize: '11px', letterSpacing: '4px' }}>
+          СИНХРОНИЗАЦИЯ ТАКТОВ
+        </div>
 
-        {/* Tip Text */}
-        <div style={{ textAlign: 'center', color: '#ff4444', fontSize: '13px', letterSpacing: '1px' }}>
-          <strong>Подсказка:</strong> Используйте инженеров для захвата вражеских зданий. (Кликните для пропуска)
+        {/* Tip */}
+        <div style={{
+          alignSelf: 'center',
+          maxWidth: '760px',
+          padding: '7px 18px',
+          background: 'rgba(6,5,12,0.85)',
+          border: '1px solid rgba(255,255,255,0.14)',
+          borderRadius: '3px',
+          textAlign: 'center',
+          fontSize: '12px',
+          color: '#c3c8d2'
+        }}>
+          💡 СОВЕТ: РЭБ снижает дальность обнаружения противника, но требует устойчивой линии снабжения.
         </div>
       </div>
     </div>

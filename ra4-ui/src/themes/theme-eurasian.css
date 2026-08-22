@@ -1,0 +1,31 @@
+/* Scarlet Horizon — Евразийский пакт: deep purple / plum, cold metal, snow. NOT red. */
+.theme-eurasian {
+  --faction-primary: #6a3fa0;
+  --faction-secondary: #b06cff;
+  --faction-dark: #170d26;
+  --faction-glow: rgba(176, 108, 255, 0.65);
+  --faction-text: #e8dcf8;
+  --faction-text-muted: #a894c4;
+
+  --faction-panel: rgba(16, 10, 24, 0.88);
+  --faction-border: rgba(176, 108, 255, 0.55);
+  --faction-accent: #c08cff;
+  --faction-text-highlight: #e2ccff;
+
+  --faction-clip-path: polygon(0 4px, 4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px));
+
+  --faction-border-style: 1px solid var(--faction-border);
+  --faction-box-shadow: inset 0 0 15px rgba(176, 108, 255, 0.12), 0 4px 6px rgba(0, 0, 0, 0.8);
+}
+
+.theme-eurasian ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.theme-eurasian ::-webkit-scrollbar-track {
+  background: rgba(16, 10, 24, 0.5);
+}
+.theme-eurasian ::-webkit-scrollbar-thumb {
+  background: var(--faction-secondary);
+  border: 1px solid var(--faction-dark);
+}

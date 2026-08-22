@@ -1,0 +1,31 @@
+/* Scarlet Horizon — Атлантический альянс: saturated cobalt, icy blue, ocean, aviation */
+.theme-atlantic {
+  --faction-primary: #1648a0;
+  --faction-secondary: #3f8dff;
+  --faction-dark: #050d1c;
+  --faction-glow: rgba(63, 141, 255, 0.65);
+  --faction-text: #dceaff;
+  --faction-text-muted: #8fb4d8;
+
+  --faction-panel: rgba(8, 18, 36, 0.88);
+  --faction-border: rgba(63, 141, 255, 0.55);
+  --faction-accent: #5ea2ff;
+  --faction-text-highlight: #bfe0ff;
+
+  --faction-clip-path: polygon(0 4px, 4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px));
+
+  --faction-border-style: 1px solid var(--faction-border);
+  --faction-box-shadow: inset 0 0 15px rgba(63, 141, 255, 0.12), 0 4px 6px rgba(0, 0, 0, 0.8);
+}
+
+.theme-atlantic ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.theme-atlantic ::-webkit-scrollbar-track {
+  background: rgba(8, 18, 36, 0.5);
+}
+.theme-atlantic ::-webkit-scrollbar-thumb {
+  background: var(--faction-secondary);
+  border: 1px solid var(--faction-dark);
+}

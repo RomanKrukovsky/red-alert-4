@@ -1,18 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BrandLogo } from '../components/Brand';
+import { FACTIONS } from '../data/factions';
 
 export const VideoCommsScreen: React.FC = () => {
   const navigate = useNavigate();
+  const eurasian = FACTIONS.eurasian;
+  const atlantic = FACTIONS.atlantic;
   const [isMicMuted, setIsMicMuted] = useState(false);
   const [isVideoDisabled, setIsVideoDisabled] = useState(false);
-  const [seconds, setSeconds] = useState(167); // 00:02:47
+  const [seconds, setSeconds] = useState(167);
   const [dialogueIndex, setDialogueIndex] = useState(0);
 
   const dialogues = [
-    { speaker: 'СОКОЛОВ', text: 'Госпожа президент... у вас есть один шанс избежать войны.', color: '#ff2222' },
-    { speaker: 'УОРД', text: 'Маршал, ваши войска пересекли демилитаризованную зону. Отзовите бронеколонны немедленно.', color: '#0088ff' },
-    { speaker: 'СОКОЛОВ', text: 'Эта земля принадлежит трудовому народу. Мы не отступим.', color: '#ff2222' },
-    { speaker: 'УОРД', text: 'Тогда пусть история рассудит нас. Альянс объявляет полную боевую готовность.', color: '#0088ff' }
+    { speaker: 'ВОЛКОВА', text: 'Рид. У нас десять минут до горного коридора. Решение нужно сейчас.', color: eurasian.color },
+    { speaker: 'РИД', text: 'Волкова, ваши колонны пересекли демилитаризованную зону.', color: atlantic.color },
+    { speaker: 'ВОЛКОВА', text: 'Мы не отступим. Эта земля — под нами.', color: eurasian.color },
+    { speaker: 'РИД', text: 'Тогда пусть история рассудит нас. Атлантический альянс объявляет полную готовность.', color: atlantic.color }
   ];
 
   useEffect(() => {
@@ -28,278 +32,325 @@ export const VideoCommsScreen: React.FC = () => {
     return `00:${m}:${s}`;
   };
 
-  const handleNextDialogue = () => {
-    setDialogueIndex((prev) => (prev + 1) % dialogues.length);
-  };
-
   return (
     <div
       style={{
         width: '100vw',
         height: '100vh',
         position: 'relative',
-        background: `url('/screenshots/10.png') no-repeat center center`,
+        background: `url('/remaster/09_secure_channel_eurasian_atlantic.png') no-repeat center center`,
         backgroundSize: 'cover',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        padding: '16px 36px',
+        padding: '16px 30px',
         boxSizing: 'border-box',
         overflow: 'hidden',
-        fontFamily: "'Oswald', sans-serif"
+        fontFamily: "'Jura', sans-serif"
       }}
     >
-      {/* Top Header Strip */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderBottom: '1px solid rgba(255,255,255,0.15)',
-        paddingBottom: '10px',
-        zIndex: 10
-      }}>
-        {/* Left Profile */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
-            width: '28px',
-            height: '28px',
-            borderRadius: '50%',
-            background: '#3a0808',
-            border: '1px solid #ff3333',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#ff2222',
-            fontSize: '14px'
-          }}>
-            ★
-          </div>
-          <div>
-            <div style={{ color: '#fff', fontSize: '12px', fontWeight: 700 }}>ТОВАРИЩ КОМАНДИР</div>
-            <div style={{ color: '#ff4444', fontSize: '10px' }}>УРОВЕНЬ 45 ★</div>
-          </div>
+      {/* ===== Top Header ===== */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'start', zIndex: 10 }}>
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '6px 12px',
+          background: 'rgba(8,7,14,0.85)',
+          border: '1px solid rgba(255,255,255,0.2)',
+          borderRadius: '3px',
+          fontSize: '11px',
+          color: '#aab0ba',
+          letterSpacing: '2px',
+          justifySelf: 'start'
+        }}>
+          🔒 ШИФРОВАНИЕ AES-4
         </div>
 
-        {/* Center Title & Hotline Security Banner */}
         <div style={{ textAlign: 'center' }}>
-          <div style={{ color: '#ff2222', fontSize: '20px', fontWeight: 800, letterSpacing: '3px', lineHeight: 1 }}>
-            COMMAND & CONQUER RED ALERT 4
-          </div>
-          <div style={{ color: '#ffdd00', fontSize: '12px', letterSpacing: '2px', marginTop: '4px' }}>
-            🔒 ЗАЩИЩЁННАЯ ЛИНИЯ СВЯЗИ (ШИФРОВАНИЕ: КРАСНАЯ ЗВЕЗДА • ПРОТОКОЛ: РА-4)
-          </div>
+          <BrandLogo scale={0.5} subtitle="ЗАЩИЩЁННЫЙ КАНАЛ СВЯЗИ" />
         </div>
 
-        {/* Right Currencies */}
-        <div style={{ display: 'flex', gap: '14px', color: '#ccc', fontSize: '12px' }}>
-          <span style={{ color: '#ffdd00' }}>💰 23 450</span>
-          <span style={{ color: '#00ffcc' }}>⚡ 17 820</span>
-          <span style={{ color: '#00ccff' }}>⚛ 9 680</span>
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '6px 12px',
+            background: 'rgba(8,7,14,0.85)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            borderRadius: '3px',
+            fontSize: '11px',
+            color: '#57e89a',
+            letterSpacing: '2px'
+          }}>
+            📶 СПУТНИК СТАБИЛЕН
+          </div>
         </div>
       </div>
 
-      {/* Main Split Video Calling Space */}
+      {/* Session banner */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: '18px',
+        fontSize: '11px',
+        letterSpacing: '3px',
+        color: '#9aa2ae',
+        zIndex: 10,
+        margin: '-6px 0'
+      }}>
+        <span>ПРЯМОЕ СОЕДИНЕНИЕ • БЕЗ ЗАПИСИ</span>
+        <span style={{ color: '#e8ebf0', fontFamily: "'Orbitron', sans-serif" }}>⏱ {formatTime(seconds)}</span>
+      </div>
+
+      {/* ===== Split Call ===== */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '24px',
+        gridTemplateColumns: '1fr auto 1fr',
         flex: 1,
-        margin: '16px 0',
-        zIndex: 5,
-        alignItems: 'stretch'
+        minHeight: 0,
+        alignItems: 'stretch',
+        gap: 0,
+        position: 'relative',
+        zIndex: 5
       }}>
-        {/* Left Side: Marshal Viktor Sokolov (USSR) */}
+        {/* Left: Волкова / Евразийский пакт */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          padding: '12px',
-          border: '1px solid rgba(255, 34, 34, 0.4)',
-          borderRadius: '6px',
-          background: 'linear-gradient(180deg, rgba(30, 8, 8, 0.5) 0%, rgba(10, 3, 3, 0.7) 100%)'
+          padding: '12px 14px',
+          borderRight: '1px solid rgba(176,108,255,0.55)',
+          background: 'linear-gradient(90deg, rgba(20,10,40,0.45), rgba(10,6,20,0.15))'
         }}>
-          {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ color: '#ff2222', fontSize: '22px' }}>★</span>
+          <div style={{
+            alignSelf: 'flex-start',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '7px 14px',
+            background: 'rgba(8,7,14,0.88)',
+            border: `1px solid ${eurasian.color}88`,
+            borderRadius: '4px'
+          }}>
+            <span style={{ fontSize: '22px', color: eurasian.color }}>❖</span>
             <div>
-              <div style={{ color: '#ff2222', fontSize: '16px', fontWeight: 800 }}>МАРШАЛ ВИКТОР СОКОЛОВ</div>
-              <div style={{ color: '#aaa', fontSize: '11px' }}>ВЕРХОВНОЕ КОМАНДОВАНИЕ СССР</div>
+              <div style={{ fontFamily: "'Oswald', sans-serif", color: '#ffffff', fontSize: '15px', fontWeight: 800 }}>ИРИНА ВОЛКОВА</div>
+              <div style={{ color: '#9aa2b0', fontSize: '10px', letterSpacing: '1px' }}>ЕВРАЗИЙСКИЙ ПАКТ</div>
             </div>
           </div>
 
-          {/* Connection Stats Left */}
           <div style={{
-            background: 'rgba(0,0,0,0.6)',
-            padding: '8px 12px',
+            width: '210px',
+            padding: '9px 13px',
+            background: 'rgba(6,5,12,0.9)',
+            border: '1px solid rgba(255,255,255,0.14)',
             borderRadius: '4px',
-            border: '1px solid rgba(255,50,50,0.2)',
-            fontSize: '11px',
-            color: '#aaa',
-            width: '200px',
-            fontFamily: "'Inter', sans-serif"
+            fontSize: '10.5px',
+            color: '#98a0aa'
           }}>
-            <div style={{ color: '#ff4444', fontWeight: 700, marginBottom: '2px' }}>КАНАЛ ЗАЩИЩЁН</div>
-            <div>Статус: <strong style={{ color: '#00ff66' }}>ОТЛИЧНО</strong></div>
-            <div>Задержка: <strong>17 мс</strong></div>
-            <div>Потеря пакетов: <strong>0.0%</strong></div>
-            <div style={{ marginTop: '4px', color: '#fff', fontSize: '10px' }}>
-              МОСКВА • ЦК КПСС СЕКРЕТНО
-            </div>
+            <div style={{ color: eurasian.color, fontWeight: 700, marginBottom: '3px', letterSpacing: '1px' }}>КАНАЛ ЗАЩИЩЁН</div>
+            <div>Задержка: <strong style={{ color: '#57e89a' }}>42 мс</strong></div>
+            <div>Потери пакетов: <strong style={{ color: '#57e89a' }}>низкие</strong></div>
           </div>
         </div>
 
-        {/* Right Side: President Eleanor Ward (USA/Alliance) */}
+        {/* Center divider glow */}
+        <div style={{
+          width: '2px',
+          background: 'linear-gradient(180deg, transparent, #ff3c28 35%, #ff3c28 65%, transparent)',
+          boxShadow: '0 0 18px rgba(255,60,40,0.85)'
+        }} />
+
+        {/* Right: Рид / Атлантический альянс */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
           alignItems: 'flex-end',
-          padding: '12px',
-          border: '1px solid rgba(0, 136, 255, 0.4)',
-          borderRadius: '6px',
-          background: 'linear-gradient(180deg, rgba(8, 20, 35, 0.5) 0%, rgba(3, 8, 15, 0.7) 100%)'
+          padding: '12px 14px',
+          background: 'linear-gradient(270deg, rgba(8,18,44,0.45), rgba(5,8,20,0.15))'
         }}>
-          {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ color: '#0088ff', fontSize: '16px', fontWeight: 800 }}>ПРЕЗИДЕНТ ЭЛЕАНОР УОРД</div>
-              <div style={{ color: '#aaa', fontSize: '11px' }}>СОЕДИНЁННЫЕ ШТАТЫ АМЕРИКИ</div>
-            </div>
-            <span style={{ color: '#0088ff', fontSize: '22px' }}>🦅</span>
-          </div>
-
-          {/* Connection Stats Right */}
           <div style={{
-            background: 'rgba(0,0,0,0.6)',
-            padding: '8px 12px',
-            borderRadius: '4px',
-            border: '1px solid rgba(0,136,255,0.2)',
-            fontSize: '11px',
-            color: '#aaa',
-            width: '200px',
-            textAlign: 'left',
-            fontFamily: "'Inter', sans-serif"
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '7px 14px',
+            background: 'rgba(6,8,16,0.88)',
+            border: `1px solid ${atlantic.color}88`,
+            borderRadius: '4px'
           }}>
-            <div style={{ color: '#0088ff', fontWeight: 700, marginBottom: '2px' }}>КАНАЛ ЗАЩИЩЁН</div>
-            <div>Статус: <strong style={{ color: '#00ff66' }}>ОТЛИЧНО</strong></div>
-            <div>Задержка: <strong>18 мс</strong></div>
-            <div>Потеря пакетов: <strong>0.0%</strong></div>
-            <div style={{ marginTop: '4px', color: '#fff', fontSize: '10px' }}>
-              ВАШИНГТОН • БЕЛЫЙ ДОМ СЕКРЕТНО
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontFamily: "'Oswald', sans-serif", color: '#ffffff', fontSize: '15px', fontWeight: 800 }}>МАРКУС РИД</div>
+              <div style={{ color: '#8fa4b8', fontSize: '10px', letterSpacing: '1px' }}>АТЛАНТИЧЕСКИЙ АЛЬЯНС</div>
             </div>
+            <span style={{ fontSize: '22px', color: atlantic.color }}>⬢</span>
+          </div>
+
+          <div style={{
+            width: '210px',
+            padding: '9px 13px',
+            background: 'rgba(4,7,14,0.9)',
+            border: '1px solid rgba(255,255,255,0.14)',
+            borderRadius: '4px',
+            fontSize: '10.5px',
+            color: '#8a94a8'
+          }}>
+            <div style={{ color: atlantic.color, fontWeight: 700, marginBottom: '3px', letterSpacing: '1px' }}>КАНАЛ ЗАЩИЩЁН</div>
+            <div>Задержка: <strong style={{ color: '#57b8ff' }}>41 мс</strong></div>
+            <div>Потери пакетов: <strong style={{ color: '#57b8ff' }}>низкие</strong></div>
           </div>
         </div>
       </div>
 
-      {/* Session Metadata & Subtitles Bar */}
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '6px',
-        zIndex: 10,
-        marginBottom: '8px'
-      }}>
-        {/* Session Code */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          color: '#888',
-          fontSize: '11px',
-          letterSpacing: '2px'
-        }}>
-          <span>КОД СЕССИИ: RA4-CC-1987-7A</span>
-          <span>ПРЯМОЕ СОЕДИНЕНИЕ • БЕЗ ЗАПИСИ</span>
-          <span>ДЛИТЕЛЬНОСТЬ: {formatTime(seconds)}</span>
-        </div>
-
-        {/* Subtitles Area (Interactive Dialogue) */}
-        <div
-          onClick={handleNextDialogue}
-          style={{
-            background: 'rgba(0,0,0,0.85)',
-            border: '1px solid rgba(255,255,255,0.15)',
-            borderRadius: '4px',
-            padding: '12px 20px',
-            textAlign: 'center',
-            cursor: 'pointer',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.8)'
-          }}
-        >
-          <span style={{ color: dialogues[dialogueIndex].color, fontWeight: 800, fontSize: '16px', letterSpacing: '1px' }}>
-            {dialogues[dialogueIndex].speaker}:&nbsp;
-          </span>
-          <span style={{ color: '#ffffff', fontSize: '16px', fontFamily: "'Inter', sans-serif" }}>
-            {dialogues[dialogueIndex].text}
-          </span>
-          <span style={{ color: '#ffdd00', fontSize: '12px', marginLeft: '12px' }}>
-            (Клик для продолжения реплики)
-          </span>
-        </div>
+      {/* ===== Subtitle Bar ===== */}
+      <div
+        onClick={() => setDialogueIndex(i => (i + 1) % dialogues.length)}
+        style={{
+          zIndex: 10,
+          maxWidth: '900px',
+          margin: '10px auto 0',
+          background: 'rgba(4,4,8,0.88)',
+          border: '1px solid rgba(255,255,255,0.16)',
+          borderRadius: '4px',
+          padding: '11px 22px',
+          textAlign: 'center',
+          cursor: 'pointer',
+          boxShadow: '0 6px 24px rgba(0,0,0,0.85)'
+        }}
+      >
+        <span style={{ color: dialogues[dialogueIndex].color, fontFamily: "'Oswald', sans-serif", fontWeight: 800, fontSize: '14px', letterSpacing: '1px' }}>
+          «{dialogues[dialogueIndex].speaker}:&nbsp;
+        </span>
+        <span style={{ color: '#f2f4f8', fontSize: '14.5px' }}>{dialogues[dialogueIndex].text}</span>
       </div>
 
-      {/* Bottom Video Calling Controls */}
+      {/* ===== Bottom Controls ===== */}
       <div style={{
         display: 'flex',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         alignItems: 'center',
-        borderTop: '1px solid rgba(255,255,255,0.1)',
-        paddingTop: '8px',
+        gap: '14px',
+        padding: '14px 0 6px 0',
         zIndex: 10
       }}>
-        {/* Left Security State */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ff4444', fontSize: '13px' }}>
-          <span>★ ЗАЩИТА СЕТИ:</span>
-          <strong>УРОВЕНЬ КРАСНЫЙ</strong>
-        </div>
+        <button
+          onClick={() => setIsMicMuted(m => !m)}
+          className="clip-bevel-sm"
+          style={{
+            height: '46px',
+            padding: '0 18px',
+            background: 'rgba(8,7,14,0.88)',
+            border: '1px solid rgba(255,255,255,0.25)',
+            borderRadius: '4px',
+            color: isMicMuted ? '#777' : '#e8ebf0',
+            fontFamily: "'Oswald', sans-serif",
+            fontSize: '12px',
+            fontWeight: 600,
+            letterSpacing: '1.5px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '9px'
+          }}
+        >
+          <span style={{ fontSize: '16px' }}>{isMicMuted ? '🔇' : '🎙'}</span> МИКРОФОН
+        </button>
 
-        {/* Center Calling Buttons */}
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button
-            onClick={() => setIsMicMuted(!isMicMuted)}
-            className="ra4-btn-ussr clip-bevel-sm"
-            style={{ padding: '8px 16px', fontSize: '13px', background: isMicMuted ? '#660000' : undefined }}
-          >
-            {isMicMuted ? '🔇 ВКЛ. МИКРОФОН' : '🎤 ОТКЛ. МИКРОФОН'}
-          </button>
+        <button
+          onClick={() => setIsVideoDisabled(v => !v)}
+          className="clip-bevel-sm"
+          style={{
+            height: '46px',
+            padding: '0 18px',
+            background: 'rgba(8,7,14,0.88)',
+            border: '1px solid rgba(255,255,255,0.25)',
+            borderRadius: '4px',
+            color: isVideoDisabled ? '#777' : '#e8ebf0',
+            fontFamily: "'Oswald', sans-serif",
+            fontSize: '12px',
+            fontWeight: 600,
+            letterSpacing: '1.5px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '9px'
+          }}
+        >
+          <span style={{ fontSize: '16px' }}>{isVideoDisabled ? '📵' : '📷'}</span> КАМЕРА
+        </button>
 
-          <button
-            onClick={() => setIsVideoDisabled(!isVideoDisabled)}
-            className="ra4-btn-ussr clip-bevel-sm"
-            style={{ padding: '8px 16px', fontSize: '13px', background: isVideoDisabled ? '#660000' : undefined }}
-          >
-            {isVideoDisabled ? '📹 ВКЛ. ВИДЕО' : '📷 ОТКЛ. ВИДЕО'}
-          </button>
+        <button
+          onClick={() => navigate('/briefing')}
+          className="clip-bevel-sm"
+          style={{
+            height: '52px',
+            padding: '0 34px',
+            background: 'linear-gradient(180deg, #ff3c28 0%, #8a1408 100%)',
+            border: '1px solid #ff5c47',
+            borderRadius: '4px',
+            color: '#ffffff',
+            fontFamily: "'Oswald', sans-serif",
+            fontSize: '14px',
+            fontWeight: 800,
+            letterSpacing: '2px',
+            cursor: 'pointer',
+            boxShadow: '0 0 24px rgba(255,60,40,0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px'
+          }}
+        >
+          ⮎&nbsp;&nbsp;ЗАВЕРШИТЬ СЕАНС
+        </button>
 
-          <button
-            onClick={() => navigate('/briefing')}
-            className="clip-bevel-sm"
-            style={{
-              background: 'linear-gradient(180deg, #dd1111 0%, #880000 100%)',
-              border: '1px solid #ff4444',
-              color: '#ffffff',
-              padding: '8px 24px',
-              fontSize: '14px',
-              fontWeight: 800,
-              cursor: 'pointer',
-              boxShadow: '0 0 15px rgba(255,0,0,0.7)'
-            }}
-          >
-            ⮌ ЗАВЕРШИТЬ СЕАНС
-          </button>
+        <button
+          onClick={() => navigate('/strategic-map')}
+          className="clip-bevel-sm"
+          style={{
+            height: '46px',
+            padding: '0 18px',
+            background: 'rgba(8,7,14,0.88)',
+            border: '1px solid rgba(255,255,255,0.25)',
+            borderRadius: '4px',
+            color: '#e8ebf0',
+            fontFamily: "'Oswald', sans-serif",
+            fontSize: '12px',
+            fontWeight: 600,
+            letterSpacing: '1.5px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '9px'
+          }}
+        >
+          🗺 КАРТА ОПЕРАЦИИ
+        </button>
 
-          <button
-            onClick={() => navigate('/hud?mode=ussr-tank-assault')}
-            className="ra4-btn-ussr clip-bevel-sm"
-            style={{ padding: '8px 16px', fontSize: '13px' }}
-          >
-            📊 ПОДЕЛИТЬСЯ ДАННЫМИ
-          </button>
-        </div>
-
-        {/* Right Signal Status */}
-        <div style={{ color: '#00ff66', fontSize: '12px' }}>
-          СИГНАЛ СТАБИЛЕН • СПУТНИК К-07 📡
-        </div>
+        <button
+          onClick={() => navigate('/briefing')}
+          className="clip-bevel-sm"
+          style={{
+            height: '46px',
+            padding: '0 18px',
+            background: 'rgba(8,7,14,0.88)',
+            border: '1px solid rgba(255,255,255,0.25)',
+            borderRadius: '4px',
+            color: '#e8ebf0',
+            fontFamily: "'Oswald', sans-serif",
+            fontSize: '12px',
+            fontWeight: 600,
+            letterSpacing: '1.5px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '9px'
+          }}
+        >
+          ⛶ ПОЛНЫЙ ЭКРАН
+        </button>
       </div>
     </div>
   );

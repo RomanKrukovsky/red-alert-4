@@ -11,6 +11,12 @@
 @import './themes/theme-allies.css';
 @import './themes/theme-eastern-coalition.css';
 @import './themes/theme-chronolegion.css';
+/* Scarlet Horizon remaster themes */
+@import './themes/theme-eurasian.css';
+@import './themes/theme-atlantic.css';
+@import './themes/theme-eastern.css';
+@import './themes/theme-pacific.css';
+@import './themes/theme-independent.css';
 
 :root {
   /* Global Typography */
@@ -81,6 +87,73 @@
   --theme-border: #4a156a;
   --theme-text-main: #ffffff;
   --theme-text-muted: #b090c0;
+}
+
+/* ===== Scarlet Horizon Remaster Themes ===== */
+
+/* Евразийский пакт: deep purple / plum, cold metal, snow. NOT red. */
+.theme-eurasian {
+  --theme-primary: #b06cff;
+  --theme-primary-glow: rgba(176, 108, 255, 0.65);
+  --theme-primary-dim: rgba(176, 108, 255, 0.18);
+  --theme-secondary: #d8c8f0;
+  --theme-bg-dark: #0b0712;
+  --theme-bg-panel: rgba(16, 10, 24, 0.88);
+  --theme-border: #4a3070;
+  --theme-text-main: #ffffff;
+  --theme-text-muted: #a894c4;
+}
+
+/* Атлантический альянс: saturated cobalt, icy blue, ocean, aviation */
+.theme-atlantic {
+  --theme-primary: #3f8dff;
+  --theme-primary-glow: rgba(63, 141, 255, 0.65);
+  --theme-primary-dim: rgba(63, 141, 255, 0.18);
+  --theme-secondary: #bfe0ff;
+  --theme-bg-dark: #050a16;
+  --theme-bg-panel: rgba(8, 18, 36, 0.88);
+  --theme-border: #1c4478;
+  --theme-text-main: #ffffff;
+  --theme-text-muted: #8fb4d8;
+}
+
+/* Восточная коалиция: emerald, jade, warm gold */
+.theme-eastern {
+  --theme-primary: #2fd98a;
+  --theme-primary-glow: rgba(47, 217, 138, 0.6);
+  --theme-primary-dim: rgba(47, 217, 138, 0.16);
+  --theme-secondary: #ffd76a;
+  --theme-bg-dark: #06110b;
+  --theme-bg-panel: rgba(8, 26, 16, 0.88);
+  --theme-border: #1a5c38;
+  --theme-text-main: #ffffff;
+  --theme-text-muted: #86c4a2;
+}
+
+/* Тихоокеанский пакт: turquoise, sea blue, white, coral warnings */
+.theme-pacific {
+  --theme-primary: #2fd4c8;
+  --theme-primary-glow: rgba(47, 212, 200, 0.6);
+  --theme-primary-dim: rgba(47, 212, 200, 0.16);
+  --theme-secondary: #bdf3ee;
+  --theme-bg-dark: #041012;
+  --theme-bg-panel: rgba(6, 24, 28, 0.88);
+  --theme-border: #14545c;
+  --theme-text-main: #ffffff;
+  --theme-text-muted: #84c2c0;
+}
+
+/* Независимые державы: desert amber / gunmetal */
+.theme-independent {
+  --theme-primary: #e8a13d;
+  --theme-primary-glow: rgba(232, 161, 61, 0.6);
+  --theme-primary-dim: rgba(232, 161, 61, 0.16);
+  --theme-secondary: #ffd9a0;
+  --theme-bg-dark: #100d08;
+  --theme-bg-panel: rgba(24, 18, 10, 0.88);
+  --theme-border: #6a4c20;
+  --theme-text-main: #ffffff;
+  --theme-text-muted: #c4ac86;
 }
 
 /* Global Reset & Base Styles */

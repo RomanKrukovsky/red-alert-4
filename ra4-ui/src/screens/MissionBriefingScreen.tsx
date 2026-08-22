@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BrandLogo } from '../components/Brand';
+import { FACTIONS } from '../data/factions';
 
 export const MissionBriefingScreen: React.FC = () => {
   const navigate = useNavigate();
-  const [checkedObjectives, setCheckedObjectives] = useState([true, false, false, false]);
+  const fac = FACTIONS.eurasian;
+  const [checkedObjectives, setCheckedObjectives] = useState([true, false, false]);
 
   const toggleObjective = (index: number) => {
     const next = [...checkedObjectives];
@@ -11,339 +14,346 @@ export const MissionBriefingScreen: React.FC = () => {
     setCheckedObjectives(next);
   };
 
-  const handleLaunch = () => {
-    navigate('/loading');
-  };
-
   return (
     <div
+      className={fac.themeClass}
       style={{
         width: '100vw',
         height: '100vh',
         position: 'relative',
-        background: `url('/screenshots/9.png') no-repeat center center`,
+        background: `url('/remaster/08_operation_briefing_eurasian.png') no-repeat center center`,
         backgroundSize: 'cover',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        padding: '16px 36px',
+        padding: '16px 30px',
         boxSizing: 'border-box',
         overflow: 'hidden',
-        fontFamily: "'Oswald', sans-serif"
+        fontFamily: "'Jura', sans-serif"
       }}
     >
-      {/* Top Header */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderBottom: '1px solid rgba(255,50,50,0.3)',
-        paddingBottom: '10px',
-        zIndex: 10
-      }}>
+      {/* ===== Top Header ===== */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'start', zIndex: 10 }}>
         <div>
-          <div style={{ color: '#888', fontSize: '10px', letterSpacing: '3px' }}>COMMAND & CONQUER™</div>
-          <div style={{ color: '#ff2222', fontSize: '22px', fontWeight: 800, letterSpacing: '2px', lineHeight: 1 }}>
-            RED ALERT 4
-          </div>
+          <BrandLogo scale={0.44} />
         </div>
 
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ color: '#ffffff', fontSize: '18px', fontWeight: 800, letterSpacing: '4px' }}>
-            БРИФИНГ ОПЕРАЦИИ
-          </div>
-          <div style={{ color: '#ff2222', fontSize: '14px' }}>★</div>
+        <div style={{
+          fontFamily: "'Oswald', sans-serif",
+          color: '#ffffff',
+          fontSize: '19px',
+          fontWeight: 800,
+          letterSpacing: '6px',
+          textShadow: `0 0 18px ${fac.color}88`
+        }}>
+          БРИФИНГ ОПЕРАЦИИ
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {/* Commander Card */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <div style={{
-            width: '28px',
-            height: '28px',
-            borderRadius: '50%',
-            background: '#3a0808',
-            border: '1px solid #ff3333',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            color: '#ff2222',
-            fontSize: '14px'
+            gap: '10px',
+            padding: '7px 14px',
+            background: 'rgba(8,7,14,0.85)',
+            border: '1px solid rgba(255,255,255,0.18)',
+            borderRadius: '4px'
           }}>
-            ★
-          </div>
-          <div>
-            <div style={{ color: '#fff', fontSize: '12px', fontWeight: 700 }}>ТОВАРИЩ КОМАНДИР</div>
-            <div style={{ color: '#ff4444', fontSize: '10px' }}>УРОВЕНЬ 45 ★</div>
+            <div style={{
+              width: '38px', height: '44px', borderRadius: '3px',
+              border: `1px solid ${fac.color}66`,
+              background: 'linear-gradient(180deg,#2a2038,#0d0a16)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '18px', color: fac.color
+            }}>⚔</div>
+            <div>
+              <div style={{ color: '#fff', fontSize: '12px', fontWeight: 700 }}>КОМАНДИР ИРИНА ВОЛКОВА</div>
+              <div style={{ color: '#9aa2b0', fontSize: '10px' }}>ОПЕРАТИВНАЯ ГРУППА «СЕВЕР»</div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Main 3-Column Briefing Room */}
+      {/* ===== Main 3-Column Grid ===== */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '400px 1fr 340px',
-        gap: '24px',
+        gridTemplateColumns: '330px 1fr 330px',
+        gap: '20px',
         flex: 1,
-        alignItems: 'stretch',
+        margin: '14px 0',
         zIndex: 5,
-        margin: '12px 0'
+        alignItems: 'stretch'
       }}>
-        {/* Left Intel & Objectives Column */}
-        <div className="ra4-panel clip-bevel-md" style={{
+        {/* Left Operation Panel */}
+        <div style={{
+          alignSelf: 'stretch',
+          maxHeight: '100%',
+          overflow: 'hidden auto',
           padding: '18px',
-          border: '1px solid #ff3333',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          background: 'rgba(12, 6, 8, 0.92)'
+          background: 'linear-gradient(180deg, rgba(10,8,16,0.93), rgba(6,5,10,0.97))',
+          border: `1px solid ${fac.color}66`,
+          borderRadius: '6px',
+          boxShadow: 'inset 0 0 24px rgba(176,108,255,0.08)'
         }}>
-          <div>
-            <div style={{ color: '#ff4444', fontSize: '11px', letterSpacing: '2px', fontWeight: 700 }}>
-              ОПЕРАЦИЯ
-            </div>
-            <h2 style={{ color: '#ff2222', fontSize: '26px', fontWeight: 800, margin: '2px 0 8px 0', letterSpacing: '1px' }}>
-              КРАСНЫЙ РАССВЕТ
-            </h2>
-            <p style={{ color: '#ccc', fontSize: '12px', lineHeight: 1.5, fontFamily: "'Inter', sans-serif", marginBottom: '14px' }}>
-              Альянс стягивает войска к нашим границам, маскируя подготовку к полномасштабному вторжению. Нанесите упреждающий удар и сломайте волю врага, пока он не укрепился.
-            </p>
-
-            {/* Objectives */}
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
-              <div style={{ color: '#ff3333', fontSize: '12px', fontWeight: 700, letterSpacing: '1.5px', marginBottom: '8px' }}>
-                ЦЕЛИ ОПЕРАЦИИ:
-              </div>
-              {[
-                'Уничтожить командный центр Альянса',
-                'Вывести из строя спутниковую связь врага',
-                'Обеспечить контроль над стратегическим мостом',
-                'Эвакуировать наши войска в зону сбора'
-              ].map((obj, i) => (
-                <div
-                  key={i}
-                  onClick={() => toggleObjective(i)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    fontSize: '12px',
-                    color: checkedObjectives[i] ? '#ffffff' : '#aaa',
-                    marginBottom: '6px',
-                    cursor: 'pointer',
-                    fontFamily: "'Inter', sans-serif"
-                  }}
-                >
-                  <span style={{ color: checkedObjectives[i] ? '#ff2222' : '#555', fontSize: '14px' }}>
-                    ★
-                  </span>
-                  <span>{obj}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Reconnaissance Data */}
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px', marginTop: '10px' }}>
-              <div style={{ color: '#ff3333', fontSize: '12px', fontWeight: 700, letterSpacing: '1.5px', marginBottom: '6px' }}>
-                ДАННЫЕ РАЗВЕДКИ:
-              </div>
-              <ul style={{ color: '#aaa', fontSize: '11px', lineHeight: 1.5, paddingLeft: '14px', fontFamily: "'Inter', sans-serif" }}>
-                <li>Альянс сосредоточил силы у переправы через реку.</li>
-                <li>Замечена активность тяжёлой техники и авиации.</li>
-                <li>Спутниковая связь обеспечивает координацию действий.</li>
-                <li>Местность благоприятна для скрытного наступления.</li>
-              </ul>
-            </div>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'baseline' }}>
+            <span style={{ color: fac.color, fontSize: '11px', letterSpacing: '3px', fontWeight: 700 }}>ОПЕРАЦИЯ</span>
+          </div>
+          <h2 style={{ fontFamily: "'Oswald', sans-serif", color: '#ffffff', fontSize: '27px', fontWeight: 800, margin: '3px 0 5px 0', letterSpacing: '1px' }}>
+            ТИХИЙ РЕЛЕЙ
+          </h2>
+          <div style={{ color: '#aab0bc', fontSize: '12px', marginBottom: '12px', letterSpacing: '1px' }}>
+            СЕКТОР: ГОРНЫЙ КОРИДОР
           </div>
 
-          {/* Bottom Thumbnails & Risk Forecast */}
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
-            <div style={{ color: '#888', fontSize: '10px', letterSpacing: '1.5px', marginBottom: '6px' }}>
-              СВОДКА РАЙОНА БОЕВЫХ ДЕЙСТВИЙ:
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px', marginBottom: '10px' }}>
+            <div style={{ color: fac.color, fontSize: '12px', fontWeight: 700, letterSpacing: '1.5px', marginBottom: '8px' }}>
+              ЦЕЛИ ОПЕРАЦИИ
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '10px' }}>
-              {['МОСТ', 'БАЗА', 'ПЕРЕВАЛ'].map((label, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    height: '48px',
-                    background: 'rgba(30,10,10,0.8)',
-                    border: '1px solid rgba(255,50,50,0.3)',
-                    borderRadius: '2px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#888',
-                    fontSize: '9px'
-                  }}
-                >
-                  {label}
-                </div>
-              ))}
-            </div>
+            {['Пробиться к узлу связи', 'Подавить противника', 'Обеспечить мобильный комплекс РЭБ'].map((obj, i) => (
+              <div key={i} onClick={() => toggleObjective(i)} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '9px',
+                fontSize: '12px',
+                color: checkedObjectives[i] ? '#ffffff' : '#a8aeb8',
+                cursor: 'pointer',
+                marginBottom: '7px'
+              }}>
+                <span style={{
+                  width: '13px', height: '13px',
+                  clipPath: 'polygon(50% 0, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%)',
+                  background: checkedObjectives[i] ? `${fac.color}55` : 'rgba(255,255,255,0.07)',
+                  border: `1px solid ${fac.color}`,
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '8px', color: '#fff', flexShrink: 0
+                }}>{checkedObjectives[i] ? '✓' : ''}</span>
+                {obj}
+              </div>
+            ))}
+          </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
-              <span>СЛОЖНОСТЬ: <strong style={{ color: '#ff2222' }}>ВЕТЕРАН</strong></span>
-              <span>ПРОГНОЗ: <strong style={{ color: '#ff4444' }}>ПОТЕРИ ВЫСОКИЕ</strong></span>
+          <div style={{
+            marginTop: 'auto',
+            borderTop: '1px solid rgba(255,255,255,0.1)',
+            paddingTop: '12px'
+          }}>
+            <div style={{ color: fac.color, fontSize: '12px', fontWeight: 700, letterSpacing: '1.5px', marginBottom: '8px' }}>
+              ПОДКРЕПЛЕНИЯ
             </div>
+            {[
+              { icon: '🛰', label: 'СПУТНИКОВЫЙ ПРОЛЁТ', count: '3' },
+              { icon: '🌫', label: 'ДЫМОВАЯ ЗАВЕСА', count: '2' },
+              { icon: '🎖', label: 'РЕЗЕРВНАЯ БРИГАДА', count: '2' }
+            ].map(r => (
+              <div key={r.label} style={{
+                height: '46px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '0 10px',
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: '3px',
+                marginBottom: '6px',
+                fontSize: '11px',
+                color: '#b0b6c0'
+              }}>
+                <span style={{ fontSize: '17px' }}>{r.icon}</span>
+                <span style={{ flex: 1 }}>{r.label}</span>
+                <strong style={{ color: '#fff' }}>✕{r.count}</strong>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Center Marshal Viktor Sokolov Space */}
+        {/* Center Video Feed */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'flex-end',
-          alignItems: 'center',
-          paddingBottom: '20px'
+          minHeight: 0,
+          position: 'relative'
         }}>
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '4px 14px',
+            background: 'rgba(8,7,14,0.85)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            borderRadius: '3px',
+            fontSize: '10px',
+            color: '#aab0ba',
+            letterSpacing: '2px'
+          }}>
+            <span style={{ color: '#57e89a' }}>◉</span> ПРЯМОЙ ЭФИР / ЗАПИСЬ
+            <span style={{ color: fac.color, fontWeight: 700 }}>КАНАЛ 7/12</span>
+          </div>
+
           {/* Commander Nameplate */}
-          <div className="clip-bevel-sm" style={{
-            background: 'linear-gradient(180deg, rgba(30,5,5,0.95) 0%, rgba(10,2,2,0.98) 100%)',
-            border: '1px solid #ff2222',
-            padding: '8px 28px',
+          <div style={{
+            alignSelf: 'center',
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
-            boxShadow: '0 0 20px rgba(255,0,0,0.6)'
+            padding: '8px 26px',
+            background: 'linear-gradient(180deg, rgba(12,9,22,0.95), rgba(7,5,12,0.98))',
+            border: `1px solid ${fac.color}88`,
+            borderRadius: '4px',
+            boxShadow: `0 0 22px ${fac.color}66`,
+            marginBottom: '14px'
           }}>
-            <span style={{ color: '#ff2222', fontSize: '20px' }}>★</span>
+            <span style={{ fontSize: '20px', color: fac.color }}>⚔</span>
             <div>
-              <div style={{ color: '#ff3333', fontSize: '11px', letterSpacing: '2px' }}>МАРШАЛ</div>
-              <div style={{ color: '#ffffff', fontSize: '18px', fontWeight: 800, letterSpacing: '1px' }}>
-                ВИКТОР СОКОЛОВ
-              </div>
+              <div style={{ color: '#9aa2b0', fontSize: '10px', letterSpacing: '2px' }}>КОМАНДИР ГРУППЫ «СЕВЕР»</div>
+              <div style={{ color: '#ffffff', fontFamily: "'Oswald', sans-serif", fontSize: '16px', fontWeight: 800, letterSpacing: '1px' }}>ИРИНА ВОЛКОВА</div>
             </div>
           </div>
         </div>
 
-        {/* Right Tactical Signal & Code Word Column */}
-        <div className="ra4-panel clip-bevel-md" style={{
+        {/* Right Intel Panel */}
+        <div style={{
+          alignSelf: 'stretch',
           padding: '18px',
-          border: '1px solid #ff3333',
+          background: 'linear-gradient(180deg, rgba(10,8,16,0.93), rgba(6,5,10,0.97))',
+          border: `1px solid ${fac.color}66`,
+          borderRadius: '6px',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'space-between',
-          background: 'rgba(12, 6, 8, 0.92)'
+          gap: '12px'
         }}>
           <div>
-            <div style={{ color: '#ff4444', fontSize: '11px', letterSpacing: '2px', fontWeight: 700 }}>
-              РАССТАНОВКА СИЛ ПРОТИВНИКА
-            </div>
+            <div style={{ color: fac.color, fontSize: '11px', letterSpacing: '3px', fontWeight: 700, marginBottom: '8px' }}>РАЗВЕДДАННЫЕ</div>
             <div style={{
               height: '110px',
-              background: 'rgba(20,10,12,0.8)',
-              border: '1px solid rgba(255,50,50,0.3)',
-              borderRadius: '4px',
-              marginTop: '6px',
+              borderRadius: '3px',
+              border: '1px solid rgba(255,255,255,0.14)',
+              background:
+                'radial-gradient(circle at 25% 35%, rgba(176,108,255,0.25), transparent 45%), radial-gradient(circle at 70% 65%, rgba(63,141,255,0.18), transparent 40%), rgba(8,7,14,0.9)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#ff3333',
-              fontSize: '11px'
+              fontSize: '10px',
+              color: '#8b93a2'
             }}>
-              [ТАКТИЧЕСКИЙ РАДАР СЕКТОРА]
-            </div>
-
-            {/* Intercepted Radio Signals */}
-            <div style={{ marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
-              <div style={{ color: '#ff4444', fontSize: '11px', letterSpacing: '2px', fontWeight: 700, marginBottom: '6px' }}>
-                ПЕРЕХВАЧЕННЫЕ ПЕРЕГОВОРЫ
-              </div>
-
-              {/* Audio waveform */}
-              <div style={{ display: 'flex', gap: '3px', alignItems: 'center', height: '24px', margin: '8px 0' }}>
-                {[4, 12, 22, 16, 8, 20, 24, 10, 18, 24, 14, 6, 18, 22, 10, 15, 20, 8].map((h, i) => (
-                  <div
-                    key={i}
-                    className="audio-bar"
-                    style={{
-                      width: '4px',
-                      height: `${h}px`,
-                      background: '#ff2222',
-                      borderRadius: '1px',
-                      animationDelay: `${i * 0.05}s`
-                    }}
-                  />
-                ))}
-              </div>
-
-              <div style={{
-                color: '#bbb',
-                fontSize: '11px',
-                fontStyle: 'italic',
-                lineHeight: 1.4,
-                fontFamily: "'Inter', sans-serif",
-                background: 'rgba(0,0,0,0.5)',
-                padding: '8px',
-                borderRadius: '3px',
-                borderLeft: '2px solid #ff2222'
-              }}>
-                «...полный ввод сил по сигналу. Кодовое слово: „Свобода“... ожидаем подтверждения...»
-              </div>
+              [ТАКТКАРТА СЕКТОРА]
             </div>
           </div>
 
-          {/* Operation Code Word */}
+          {/* Enemy Assessment */}
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '12px' }}>
-            <div style={{ color: '#888', fontSize: '10px', letterSpacing: '2px' }}>
-              КОДОВОЕ СЛОВО ОПЕРАЦИИ:
-            </div>
+            <div style={{ color: fac.color, fontSize: '11px', letterSpacing: '3px', fontWeight: 700, marginBottom: '4px' }}>ОЦЕНКА ПРОТИВНИКА</div>
             <div style={{
-              color: '#ff2222',
-              fontSize: '36px',
+              fontFamily: "'Oswald', sans-serif",
+              color: '#ff5c47',
+              fontSize: '34px',
               fontWeight: 900,
-              letterSpacing: '8px',
-              textShadow: '0 0 20px rgba(255,0,0,0.8)',
-              marginTop: '4px'
-            }}>
-              ГРОМ
+              letterSpacing: '4px',
+              textShadow: '0 0 18px rgba(255,60,40,0.75)'
+            }}>ВЫСОКАЯ</div>
+            <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              {[
+                { label: 'РЭБ', value: 72 },
+                { label: 'БРОНЯ', value: 58 },
+                { label: 'ПЕХОТА', value: 64 },
+                { label: 'АВИАЦИЯ', value: 42 }
+              ].map(s => (
+                <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ width: '52px', color: '#98a0ac', fontSize: '9px', letterSpacing: '1px' }}>{s.label}</span>
+                  <div style={{ flex: 1, height: '5px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden' }}>
+                    <div style={{ width: `${s.value}%`, height: '100%', background: `linear-gradient(90deg, ${fac.dimColor}, #ff5c47)` }} />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
+
+          <button
+            onClick={() => navigate('/loading')}
+            className="clip-bevel-sm"
+            style={{
+              marginTop: 'auto',
+              width: '100%',
+              height: '54px',
+              background: `linear-gradient(180deg, ${fac.color}, ${fac.dimColor})`,
+              border: `1px solid ${fac.color}`,
+              borderRadius: '4px',
+              color: '#0b0712',
+              fontFamily: "'Oswald', sans-serif",
+              fontSize: '19px',
+              fontWeight: 800,
+              letterSpacing: '3px',
+              cursor: 'pointer',
+              boxShadow: `0 0 26px ${fac.color}99`,
+              clipPath: 'polygon(0 9px, 11px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 11px) 100%, 0 100%)'
+            }}
+          >
+            ПРОДОЛЖИТЬ&nbsp;&nbsp;≫
+          </button>
         </div>
       </div>
 
-      {/* Bottom Action Strip */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderTop: '1px solid rgba(255,255,255,0.1)',
-        paddingTop: '8px',
-        zIndex: 10
-      }}>
+      {/* ===== Bottom Bar ===== */}
+      <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr auto auto', gap: '14px', alignItems: 'center', zIndex: 10 }}>
         <button
           onClick={() => navigate('/strategic-map')}
-          className="ra4-btn-ussr clip-bevel-sm"
-          style={{ padding: '8px 24px', fontSize: '14px' }}
-        >
-          ‹ НАЗАД
-        </button>
-
-        <button
-          onClick={handleLaunch}
-          className="clip-bevel-sm"
           style={{
-            background: 'linear-gradient(180deg, #ff2222 0%, #7a0b0b 100%)',
-            border: '1px solid #ff4444',
-            color: '#ffffff',
-            padding: '12px 60px',
-            fontSize: '18px',
-            fontWeight: 800,
-            letterSpacing: '3px',
-            cursor: 'pointer',
-            boxShadow: '0 0 25px rgba(255,0,0,0.8)'
+            height: '42px',
+            background: 'rgba(8,7,14,0.85)',
+            border: '1px solid rgba(255,255,255,0.25)',
+            borderRadius: '4px',
+            color: '#e8ebf0',
+            fontFamily: "'Oswald', sans-serif",
+            fontSize: '14px',
+            fontWeight: 600,
+            letterSpacing: '2px',
+            cursor: 'pointer'
           }}
         >
-          ★ ПРОДОЛЖИТЬ
+          ‹&nbsp;&nbsp;НАЗАД
         </button>
-
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <button onClick={() => navigate('/video-comms')} className="ra4-btn-ussr clip-bevel-sm" style={{ padding: '6px 16px', fontSize: '12px' }}>
-            ⚙ НАСТРОЙКИ
-          </button>
-          <span style={{ color: '#ff4444', fontSize: '12px', letterSpacing: '1px' }}>
-            БОЕВАЯ ГОТОВНОСТЬ: <strong>ВЫСОКАЯ</strong>
-          </span>
-        </div>
+        <div />
+        <button
+          onClick={() => navigate('/video-comms')}
+          style={{
+            height: '42px',
+            padding: '0 22px',
+            background: 'rgba(8,7,14,0.85)',
+            border: '1px solid rgba(255,255,255,0.25)',
+            borderRadius: '4px',
+            color: '#e8ebf0',
+            fontFamily: "'Oswald', sans-serif",
+            fontSize: '13px',
+            fontWeight: 600,
+            letterSpacing: '2px',
+            cursor: 'pointer'
+          }}
+        >
+          ⚙&nbsp;&nbsp;СНАРЯЖЕНИЕ
+        </button>
+        <button
+          onClick={() => navigate('/menu')}
+          style={{
+            height: '42px',
+            padding: '0 22px',
+            background: 'rgba(8,7,14,0.85)',
+            border: '1px solid rgba(255,255,255,0.25)',
+            borderRadius: '4px',
+            color: '#e8ebf0',
+            fontFamily: "'Oswald', sans-serif",
+            fontSize: '13px',
+            fontWeight: 600,
+            letterSpacing: '2px',
+            cursor: 'pointer'
+          }}
+        >
+          ⚙&nbsp;&nbsp;НАСТРОЙКИ
+        </button>
       </div>
     </div>
   );

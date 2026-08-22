@@ -1,140 +1,14 @@
-import React, { useState } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-
-interface FactionConfig {
-  name: string;
-  subname: string;
-  tagline: string;
-  commander: string;
-  quote: string;
-  bgScreenshot: string;
-  themeClass: string;
-  accentColor: string;
-  progressPercent: number;
-  missionsCompleted: string;
-  currentMissionName: string;
-  difficulty: string;
-  lore: string;
-  chapters: { num: string; name: string; completed: boolean; current?: boolean }[];
-  traits?: { title: string; desc: string }[];
-  urgentMsg: string;
-}
-
-const FACTION_DATA: Record<string, FactionConfig> = {
-  ussr: {
-    name: 'СССР',
-    subname: 'СОВЕТСКИЙ СОЮЗ',
-    tagline: 'СЛАВА СОВЕТСКОМУ СОЮЗУ!',
-    commander: 'МАРШАЛ ВИКТОР СОКОЛОВ',
-    quote: '«ПОБЕДА БУДЕТ ЗА НАМИ!»',
-    bgScreenshot: '/screenshots/4.png',
-    themeClass: 'theme-ussr',
-    accentColor: '#ff2222',
-    progressPercent: 58,
-    missionsCompleted: '14 / 24',
-    currentMissionName: 'МИССИЯ 15: ЛЕДЯНОЙ ШТОРМ',
-    difficulty: 'ВЕТЕРАН',
-    lore: 'Враг у наших границ. Империалисты и предатели стремятся задушить нашу Родину в огне и лжи. Только дисциплина, сталь и вера в дело Ленина приведут нас к окончательной победе. Товарищ, судьба мира в твоих приказах!',
-    chapters: [
-      { num: 'I', name: 'Красный рассвет', completed: true },
-      { num: 'II', name: 'Берлинский рубеж', completed: true },
-      { num: 'III', name: 'Ледяной шторм', completed: false, current: true },
-      { num: 'IV', name: 'Пепел Атлантики', completed: false },
-      { num: 'V', name: 'Окончательный ответ', completed: false }
-    ],
-    urgentMsg: 'РАЗВЕДКА СООБЩАЕТ: СИЛЫ АЛЬЯНСА КОНЦЕНТРИРУЮТСЯ НА СЕВЕРЕ.'
-  },
-  allies: {
-    name: 'АЛЬЯНС',
-    subname: 'СОЕДИНЁННЫЕ ШТАТЫ И СОЮЗНИКИ',
-    tagline: 'ВЕРНОСТЬ. ЕДИНСТВО. ПОБЕДА.',
-    commander: 'ПРЕЗИДЕНТ ЭЛЕАНОР УОРД',
-    quote: '«СВОБОДА НЕ ДАЁТСЯ ДАРОМ — МЫ ЕЁ ЗАЩИТИМ.»',
-    bgScreenshot: '/screenshots/5.png',
-    themeClass: 'theme-allies',
-    accentColor: '#0088ff',
-    progressPercent: 37,
-    missionsCompleted: '06 / 16',
-    currentMissionName: 'ГЛАВА 3: ЛЕДЯНОЙ РАССВЕТ',
-    difficulty: 'НОРМАЛЬНО',
-    lore: 'Альянс стоит на страже свободы и процветания. Перед лицом новой угрозы мы объединяем нации, передовые технологии и волю, чтобы обеспечить мир и стабильность в неопределённом мире.',
-    chapters: [
-      { num: 'I', name: 'Первый контакт', completed: true },
-      { num: 'II', name: 'Щит свободы', completed: true },
-      { num: 'III', name: 'Ледяной рассвет', completed: false, current: true },
-      { num: 'IV', name: 'Операция «Буря»', completed: false },
-      { num: 'V', name: 'Морской бастион', completed: false },
-      { num: 'VI', name: 'Освобождение', completed: false },
-      { num: 'VII', name: 'Железный занавес', completed: false },
-      { num: 'VIII', name: 'Мировой мир', completed: false }
-    ],
-    urgentMsg: 'РАЗВЕДКА СООБЩАЕТ О НОВЫХ ПЕРЕДВИЖЕНИЯХ ПРОТИВНИКА В АРКТИЧЕСКОМ РЕГИОНЕ.'
-  },
-  ec: {
-    name: 'ВОСТОЧНАЯ КОАЛИЦИЯ',
-    subname: 'ИМПЕРИЯ ВОСТОКА',
-    tagline: 'МУДРОСТЬ ДРАКОНА. СИЛА ПРОГРЕССА.',
-    commander: 'ВЕРХОВНЫЙ ГЕНЕРАЛ ГАО',
-    quote: '«БУДУЩЕЕ ПРИНАДЛЕЖИТ ТЕМ, КТО ЕГО СОЗДАЁТ.»',
-    bgScreenshot: '/screenshots/6.png',
-    themeClass: 'theme-ec',
-    accentColor: '#00ff66',
-    progressPercent: 63,
-    missionsCompleted: '17 / 27',
-    currentMissionName: 'МИССИЯ 18: НЕБЕСНЫЙ ЩИТ',
-    difficulty: 'ВЕТЕРАН',
-    lore: 'Восточная коалиция объединяет передовые нации Азии для защиты суверенитета и построения справедливого многополярного мира. Дисциплина, инновации и единство — ключ к будущему без войны и угнетения.',
-    chapters: [
-      { num: 'I', name: 'Пробуждение', completed: true },
-      { num: 'II', name: 'Шёлковый путь', completed: true },
-      { num: 'III', name: 'Восход дракона', completed: false, current: true },
-      { num: 'IV', name: 'Небесный щит', completed: false },
-      { num: 'V', name: 'Гармония огня', completed: false },
-      { num: 'VI', name: 'Нефритовый триумф', completed: false }
-    ],
-    traits: [
-      { title: 'ГАРМОНИЯ РЕСУРСОВ', desc: 'Все здания получают бонус при сочетании разных построек.' },
-      { title: 'ДРОН-СЕТИ', desc: 'Уникальные боевые дроны и разведывательные рои.' },
-      { title: 'РАСПРЕДЕЛЁННОЕ ПРОИЗВОДСТВО', desc: 'Фабрики возле ресурсов приносят дополнительный доход.' },
-      { title: 'ТЕХНОЛОГИИ БУДУЩЕГО', desc: 'Передовые разработки и энергетическое нанооружие.' }
-    ],
-    urgentMsg: 'КОАЛИЦИОННЫЕ СИЛЫ УСПЕШНО ИСПЫТАЛИ ПРОТОТИП ЭНЕРГЕТИЧЕСКОГО ЩИТА.'
-  },
-  chrono: {
-    name: 'ХРОНОЛЕГИОН',
-    subname: 'ПОВЕЛИТЕЛИ ТЕМПОРАЛЬНОСТИ',
-    tagline: 'ВЛАСТЬ НАД ВРЕМЕНЕМ. ГОСПОДСТВО НАД ВСЕЛЕННОЙ.',
-    commander: 'ВЕСТНИК ВРЕМЕНИ / АРХОНТ',
-    quote: '«ВРЕМЯ НЕ ЖДЁТ — ОНО ПОДЧИНЯЕТСЯ.»',
-    bgScreenshot: '/screenshots/7.png',
-    themeClass: 'theme-chrono',
-    accentColor: '#aa00ff',
-    progressPercent: 25,
-    missionsCompleted: '04 / 16',
-    currentMissionName: 'ГЛАВА 1: РАЗЛОМ ВРЕМЕНИ',
-    difficulty: 'ВЕТЕРАН',
-    lore: 'Они пришли не из этого времени. Хронолегион существует вне линейности, наблюдая за историей и вмешиваясь в неё. Их цель — не завоевание, а исправление. Те, кто стоит на их пути, будут стёрты из всех времён.',
-    chapters: [
-      { num: 'I', name: 'Разлом времени', completed: false, current: true },
-      { num: 'II', name: 'Темпоральный якорь', completed: false },
-      { num: 'III', name: 'Хроношторм', completed: false },
-      { num: 'IV', name: 'Парадокс прошлого', completed: false },
-      { num: 'V', name: 'Вечность', completed: false }
-    ],
-    urgentMsg: 'ХРОНОПРОТОКОЛ АКТИВЕН: ВРЕМЕННЫЕ АНОМАЛИИ ЗАФИКСИРОВАНЫ ПО ВСЕМУ МИРУ.'
-  }
-};
+import React from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { BrandLogo } from '../components/Brand';
+import { FACTIONS, FACTION_ORDER } from '../data/factions';
 
 export const FactionCampaignScreen: React.FC = () => {
   const { faction } = useParams<{ faction: string }>();
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const currentFactionKey = faction && FACTION_DATA[faction] ? faction : 'ussr';
-  const isDetailView = searchParams.get('view') === 'detail';
-  const config = FACTION_DATA[currentFactionKey];
-
-  const [selectedDifficulty, setSelectedDifficulty] = useState(config.difficulty);
+  const currentFactionKey = faction && FACTIONS[faction] ? faction : 'eurasian';
+  const config = FACTIONS[currentFactionKey];
 
   const handleLaunchMission = () => {
     navigate('/strategic-map');
@@ -147,325 +21,337 @@ export const FactionCampaignScreen: React.FC = () => {
         width: '100vw',
         height: '100vh',
         position: 'relative',
-        background: `url('${isDetailView ? '/screenshots/18.png' : config.bgScreenshot}') no-repeat center center`,
+        background: `url('${config.bgScreenshot}') no-repeat center center`,
         backgroundSize: 'cover',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        padding: '20px 40px',
+        padding: '18px 30px 20px 30px',
         boxSizing: 'border-box',
         overflow: 'hidden',
-        fontFamily: "'Oswald', sans-serif"
+        fontFamily: "'Jura', sans-serif"
       }}
     >
       {/* Top Header Strip */}
       <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderBottom: `1px solid rgba(255,255,255,0.15)`,
-        paddingBottom: '12px',
+        display: 'grid',
+        gridTemplateColumns: '300px 1fr 220px',
+        alignItems: 'start',
         zIndex: 10
       }}>
-        {/* Left Profile */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '4px',
-            background: 'rgba(0,0,0,0.7)',
-            border: `1px solid ${config.accentColor}`,
+        {/* Left Hex Emblem */}
+        <div
+          onClick={() => navigate('/menu')}
+          style={{
+            width: '86px',
+            height: '96px',
+            clipPath: 'polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%)',
+            background: `linear-gradient(180deg, ${config.color}44, rgba(8,6,14,0.95))`,
+            border: `1px solid ${config.color}`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: config.accentColor,
-            fontSize: '20px'
-          }}>
-            ★
-          </div>
-          <div>
-            <div style={{ color: config.accentColor, fontSize: '15px', fontWeight: 700 }}>
-              {config.commander}
-            </div>
-            <div style={{ color: '#aaa', fontSize: '11px' }}>
-              УРОВЕНЬ 45 ★ ВЕТЕРАН
-            </div>
-          </div>
+            fontSize: '40px',
+            color: config.color,
+            textShadow: `0 0 16px ${config.color}`,
+            cursor: 'pointer'
+          }}
+        >
+          {config.crest}
         </div>
 
-        {/* Center Title */}
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ color: '#aaa', fontSize: '11px', letterSpacing: '4px' }}>COMMAND & CONQUER™</div>
-          <div style={{ color: config.accentColor, fontSize: '24px', fontWeight: 800, letterSpacing: '2px', lineHeight: 1 }}>
-            RED ALERT 4
-          </div>
+        {/* Center Brand */}
+        <div>
+          <BrandLogo scale={0.62} subtitle={`КАМПАНИЯ ${config.name}`} />
         </div>
 
-        {/* Right Tools */}
-        <div style={{ display: 'flex', gap: '10px' }}>
-          {['⚙', '👥', '🛡', '🏆', '⏻'].map((icon, i) => (
+        {/* Right Tool Buttons */}
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+          {[
+            { icon: '⚙', to: '/video-comms' },
+            { icon: '📊', to: '/strategic-map' },
+            { icon: '🛡', to: '/briefing' },
+            { icon: '⏻', to: '/menu' }
+          ].map((btn, i) => (
             <button
               key={i}
-              onClick={() => {
-                if (i === 4) navigate('/menu');
-                if (i === 0) navigate('/video-comms');
-              }}
+              onClick={() => navigate(btn.to)}
               style={{
-                width: '36px',
-                height: '36px',
-                background: 'rgba(0,0,0,0.6)',
-                border: '1px solid rgba(255,255,255,0.15)',
+                width: '44px',
+                height: '44px',
+                background: 'rgba(8,7,14,0.82)',
+                border: '1px solid rgba(255,255,255,0.22)',
                 borderRadius: '4px',
-                color: '#ddd',
-                cursor: 'pointer'
+                color: '#dfe3ea',
+                fontSize: '17px',
+                cursor: 'pointer',
+                clipPath: 'polygon(0 6px, 6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%)'
               }}
             >
-              {icon}
+              {btn.icon}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Main Content Area */}
+      {/* Middle Band: Sidebar + Content */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '260px 1fr 420px',
-        gap: '30px',
+        gridTemplateColumns: '280px minmax(430px, 560px) 1fr',
         flex: 1,
         alignItems: 'center',
         zIndex: 5,
-        margin: '20px 0'
+        marginTop: '-14px'
       }}>
-        {/* Left Faction Selector Strip */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <div style={{ color: '#aaa', fontSize: '12px', letterSpacing: '2px', marginBottom: '4px' }}>
-            ВЫБОР КАМПАНИИ:
+        {/* Left Campaigns Sidebar */}
+        <div style={{ alignSelf: 'start', marginTop: '26px' }}>
+          <div style={{
+            fontFamily: "'Oswald', sans-serif",
+            color: '#c9cfda',
+            fontSize: '13px',
+            letterSpacing: '4px',
+            padding: '8px 14px',
+            marginBottom: '12px',
+            background: 'rgba(8,7,14,0.85)',
+            border: '1px solid rgba(255,255,255,0.16)',
+            borderRadius: '4px'
+          }}>
+            КАМПАНИИ
           </div>
-          {Object.keys(FACTION_DATA).map(key => {
-            const fac = FACTION_DATA[key];
-            const isSelected = key === currentFactionKey;
-            return (
-              <button
-                key={key}
-                onClick={() => navigate(`/campaign/${key}`)}
-                className="clip-bevel-sm"
-                style={{
-                  height: '52px',
-                  background: isSelected
-                    ? `linear-gradient(90deg, ${fac.accentColor} 0%, rgba(0,0,0,0.9) 100%)`
-                    : 'rgba(15,10,12,0.85)',
-                  border: `1px solid ${isSelected ? fac.accentColor : 'rgba(255,255,255,0.15)'}`,
-                  color: isSelected ? '#ffffff' : '#bbb',
-                  padding: '0 16px',
-                  fontSize: '15px',
-                  fontWeight: 700,
-                  letterSpacing: '1.5px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  cursor: 'pointer',
-                  boxShadow: isSelected ? `0 0 15px ${fac.accentColor}` : 'none'
-                }}
-              >
-                <span>★</span>
-                <span>{fac.name}</span>
-              </button>
-            );
-          })}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {FACTION_ORDER.map(key => {
+              const fac = FACTIONS[key];
+              const isSelected = key === currentFactionKey;
+              return (
+                <button
+                  key={key}
+                  onClick={() => navigate(`/campaign/${key}`)}
+                  style={{
+                    minHeight: '64px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '14px',
+                    padding: '8px 16px',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    fontFamily: "'Oswald', sans-serif",
+                    fontSize: '15px',
+                    letterSpacing: '2px',
+                    fontWeight: 600,
+                    lineHeight: 1.25,
+                    color: isSelected ? '#ffffff' : '#b9bfca',
+                    background: isSelected
+                      ? `linear-gradient(90deg, ${fac.dimColor}cc 0%, rgba(10,8,16,0.92) 70%)`
+                      : 'rgba(8,7,14,0.85)',
+                    border: `1px solid ${isSelected ? fac.color : 'rgba(255,255,255,0.18)'}`,
+                    boxShadow: isSelected ? `0 0 18px ${fac.color}88` : 'none',
+                    borderRadius: '4px',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <span style={{
+                    fontSize: '24px',
+                    color: fac.color,
+                    filter: `drop-shadow(0 0 8px ${fac.color})`
+                  }}>
+                    {fac.crest}
+                  </span>
+                  <span>{fac.nameLines[0]}<br />{fac.nameLines[1]}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Center Main Narrative & Stats Area */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '640px' }}>
-          <div>
-            <div style={{ color: config.accentColor, fontSize: '15px', letterSpacing: '3px', fontWeight: 700 }}>
-              ★ КАМПАНИЯ ★
-            </div>
-            <h1 style={{
-              color: config.accentColor,
-              fontSize: '4.5rem',
-              fontWeight: 900,
-              margin: '0 0 4px 0',
-              lineHeight: 1,
-              textShadow: `0 0 30px ${config.accentColor}`
-            }}>
-              {config.name}
-            </h1>
-            <div style={{ color: '#ffdd00', fontSize: '15px', fontWeight: 700, letterSpacing: '2px', marginBottom: '10px' }}>
-              {config.tagline}
-            </div>
-            <p style={{
-              color: '#d0d0d0',
-              fontSize: '14px',
-              lineHeight: 1.6,
-              fontFamily: "'Inter', sans-serif",
-              background: 'rgba(0,0,0,0.6)',
-              padding: '14px',
-              borderRadius: '4px',
-              borderLeft: `4px solid ${config.accentColor}`
-            }}>
-              {config.lore}
-            </p>
+        {/* Center Content Column */}
+        <div style={{ alignSelf: 'start', marginTop: '26px', paddingRight: '20px' }}>
+          <h1 style={{
+            margin: 0,
+            fontFamily: "'Oswald', sans-serif",
+            fontWeight: 800,
+            fontSize: '3.4rem',
+            letterSpacing: '2px',
+            lineHeight: 1.02,
+            color: '#f2f4f8',
+            textShadow: '0 4px 22px rgba(0,0,0,0.95)'
+          }}>
+            {config.country}: {config.campaignTitle.split(': ')[1]}
+          </h1>
+          <div style={{
+            fontFamily: "'Oswald', sans-serif",
+            color: config.color,
+            fontSize: '15px',
+            fontWeight: 700,
+            letterSpacing: '2.5px',
+            margin: '8px 0 12px 0',
+            textShadow: `0 0 12px ${config.color}66`
+          }}>
+            {config.doctrine}
           </div>
+          <p style={{
+            color: '#c9cdd6',
+            fontSize: '13.5px',
+            lineHeight: 1.65,
+            maxWidth: '520px',
+            textShadow: '0 2px 6px rgba(0,0,0,0.9)'
+          }}>
+            {config.description}
+          </p>
 
-          {/* Progress Bar & Difficulty */}
-          <div className="ra4-panel clip-bevel-sm" style={{ padding: '14px 18px', border: `1px solid ${config.accentColor}` }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-              <span style={{ color: '#aaa', fontSize: '12px', letterSpacing: '1px' }}>ПРОГРЕСС КАМПАНИИ:</span>
-              <strong style={{ color: config.accentColor, fontSize: '14px' }}>{config.progressPercent}% ({config.missionsCompleted})</strong>
+          {/* Progress Panel */}
+          <div style={{
+            marginTop: '26px',
+            minWidth: '380px',
+            maxWidth: '480px',
+            padding: '16px 20px',
+            background: 'linear-gradient(180deg, rgba(10,8,16,0.92), rgba(6,5,10,0.96))',
+            border: `1px solid ${config.color}88`,
+            borderRadius: '6px',
+            boxShadow: `inset 0 0 24px ${config.color}14, 0 8px 24px rgba(0,0,0,0.7)`
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
+              <span style={{
+                fontFamily: "'Oswald', sans-serif",
+                color: config.color,
+                fontSize: '14px',
+                fontWeight: 700,
+                letterSpacing: '2px'
+              }}>
+                ПРОГРЕСС КАМПАНИИ
+              </span>
+              <strong style={{ color: '#ffffff', fontSize: '15px' }}>{config.progressPercent}%</strong>
             </div>
             <div style={{
               width: '100%',
-              height: '8px',
+              height: '9px',
               background: 'rgba(0,0,0,0.8)',
-              borderRadius: '4px',
+              border: '1px solid rgba(255,255,255,0.14)',
+              borderRadius: '3px',
               overflow: 'hidden',
-              border: '1px solid rgba(255,255,255,0.1)'
+              marginBottom: '14px'
             }}>
               <div style={{
                 width: `${config.progressPercent}%`,
                 height: '100%',
-                background: `linear-gradient(90deg, ${config.accentColor}, #ffdd00)`
+                background: `linear-gradient(90deg, ${config.dimColor}, ${config.color})`,
+                boxShadow: `0 0 10px ${config.color}`
               }} />
             </div>
-          </div>
-        </div>
 
-        {/* Right Action & Chapter Tracker Panel */}
-        <div className="ra4-panel clip-bevel-md" style={{
-          padding: '24px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          border: `1px solid ${config.accentColor}`
-        }}>
-          <div>
-            <div style={{ color: config.accentColor, fontSize: '13px', fontWeight: 700, letterSpacing: '2px' }}>
-              ГЛАВЫ КАМПАНИИ
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#aeb4c0', padding: '5px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+              <span>МИССИЙ ЗАВЕРШЕНО</span>
+              <strong style={{ color: '#fff' }}>{config.missionsCompleted}</strong>
             </div>
-            <div style={{
-              display: 'flex',
-              gap: '6px',
-              margin: '14px 0 20px 0',
-              flexWrap: 'wrap'
-            }}>
-              {config.chapters.map((ch, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '4px',
-                    background: ch.current
-                      ? config.accentColor
-                      : (ch.completed ? 'rgba(50,50,50,0.8)' : 'rgba(15,10,15,0.7)'),
-                    border: `1px solid ${ch.current ? '#ffffff' : (ch.completed ? config.accentColor : 'rgba(255,255,255,0.15)')}`,
-                    color: ch.current ? '#ffffff' : (ch.completed ? config.accentColor : '#666'),
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 700,
-                    fontSize: '13px',
-                    boxShadow: ch.current ? `0 0 12px ${config.accentColor}` : 'none'
-                  }}
-                >
-                  {ch.num}
-                </div>
-              ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#aeb4c0', padding: '5px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+              <span>СЛОЖНОСТЬ</span>
+              <strong style={{ color: '#fff', letterSpacing: '1px' }}>{config.difficulty}</strong>
             </div>
-
-            <div style={{ color: '#fff', fontSize: '15px', fontWeight: 700, marginBottom: '6px' }}>
-              {config.currentMissionName}
-            </div>
-
-            {/* Faction traits (if present) */}
-            {config.traits && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '14px' }}>
-                {config.traits.map((t, idx) => (
-                  <div key={idx} style={{ fontSize: '12px', borderLeft: `2px solid ${config.accentColor}`, paddingLeft: '8px' }}>
-                    <div style={{ color: config.accentColor, fontWeight: 700 }}>{t.title}</div>
-                    <div style={{ color: '#aaa' }}>{t.desc}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
-            <button
-              onClick={handleLaunchMission}
-              className="clip-bevel-sm"
+            <div
+              onClick={() => navigate('/strategic-map')}
               style={{
-                background: `linear-gradient(180deg, ${config.accentColor} 0%, rgba(30,5,5,0.9) 100%)`,
-                border: `1px solid ${config.accentColor}`,
-                color: '#ffffff',
-                padding: '14px',
-                fontSize: '18px',
-                fontWeight: 800,
-                letterSpacing: '2px',
-                cursor: 'pointer',
-                boxShadow: `0 0 20px ${config.accentColor}`
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                fontSize: '13px',
+                color: config.color,
+                fontWeight: 700,
+                letterSpacing: '1.5px',
+                padding: '9px 0 2px 0',
+                borderTop: '1px solid rgba(255,255,255,0.08)',
+                cursor: 'pointer'
               }}
             >
-              ★ ПРОДОЛЖИТЬ
-            </button>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <button
-                onClick={handleLaunchMission}
-                style={{
-                  background: 'rgba(20,10,10,0.8)',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  color: '#fff',
-                  padding: '10px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
-              >
-                НОВАЯ ИГРА
-              </button>
-              <button
-                onClick={() => navigate('/briefing')}
-                style={{
-                  background: 'rgba(20,10,10,0.8)',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  color: '#fff',
-                  padding: '10px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
-              >
-                БРИФИНГ
-              </button>
+              <span>{config.currentChapter}</span>
+              <span>›</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Bottom Ticker & Navigation */}
+      {/* Bottom Action Row */}
       <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
+        display: 'grid',
+        gridTemplateColumns: '150px 1fr 1.3fr 1fr',
+        gap: '18px',
         alignItems: 'center',
-        borderTop: '1px solid rgba(255,255,255,0.15)',
-        paddingTop: '8px',
         zIndex: 10
       }}>
         <button
           onClick={() => navigate('/campaign-select')}
-          className="ra4-btn-ussr clip-bevel-sm"
-          style={{ padding: '8px 24px', fontSize: '14px' }}
+          style={{
+            height: '52px',
+            background: 'rgba(8,7,14,0.85)',
+            border: '1px solid rgba(255,255,255,0.25)',
+            borderRadius: '4px',
+            color: '#e8ebf0',
+            fontFamily: "'Oswald', sans-serif",
+            fontSize: '15px',
+            fontWeight: 600,
+            letterSpacing: '2px',
+            cursor: 'pointer',
+            clipPath: 'polygon(0 8px, 10px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 10px) 100%, 0 100%)'
+          }}
         >
-          ‹ НАЗАД
+          ‹&nbsp;&nbsp;НАЗАД
         </button>
 
-        <div style={{ color: config.accentColor, fontSize: '12px', letterSpacing: '2px' }}>
-          {config.urgentMsg}
-        </div>
+        <button
+          onClick={() => navigate(`/campaign/${currentFactionKey}`)}
+          style={{
+            height: '52px',
+            background: 'rgba(8,7,14,0.85)',
+            border: `1px solid ${config.color}77`,
+            borderRadius: '4px',
+            color: '#e8ebf0',
+            fontFamily: "'Oswald', sans-serif",
+            fontSize: '15px',
+            fontWeight: 600,
+            letterSpacing: '2px',
+            cursor: 'pointer',
+            clipPath: 'polygon(0 8px, 10px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 10px) 100%, 0 100%)'
+          }}
+        >
+          НОВАЯ КАМПАНИЯ
+        </button>
 
-        <div style={{ color: '#00ff66', fontSize: '12px' }}>
-          СЕТЬ: СОЕДИНЕНО ●
-        </div>
+        <button
+          onClick={handleLaunchMission}
+          style={{
+            height: '58px',
+            background: `linear-gradient(180deg, ${config.color} 0%, ${config.dimColor} 100%)`,
+            border: `1px solid ${config.color}`,
+            borderRadius: '4px',
+            color: '#0b0712',
+            fontFamily: "'Oswald', sans-serif",
+            fontSize: '19px',
+            fontWeight: 800,
+            letterSpacing: '3px',
+            cursor: 'pointer',
+            boxShadow: `0 0 28px ${config.color}aa, inset 0 1px 0 rgba(255,255,255,0.35)`,
+            clipPath: 'polygon(0 10px, 12px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 12px) 100%, 0 100%)'
+          }}
+        >
+          ПРОДОЛЖИТЬ&nbsp;&nbsp;≫
+        </button>
+
+        <button
+          onClick={() => navigate('/strategic-map')}
+          style={{
+            height: '52px',
+            background: 'rgba(8,7,14,0.85)',
+            border: '1px solid rgba(255,255,255,0.25)',
+            borderRadius: '4px',
+            color: '#e8ebf0',
+            fontFamily: "'Oswald', sans-serif",
+            fontSize: '15px',
+            fontWeight: 600,
+            letterSpacing: '2px',
+            cursor: 'pointer',
+            clipPath: 'polygon(0 8px, 10px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 10px) 100%, 0 100%)'
+          }}
+        >
+          ВЫБОР ГЛАВЫ
+        </button>
       </div>
     </div>
   );

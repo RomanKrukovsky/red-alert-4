@@ -1,394 +1,569 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BrandLogo } from '../components/Brand';
+import { FACTIONS } from '../data/factions';
 
 interface MapNode {
   id: string;
   num: string;
   name: string;
-  x: number; // percentage
-  y: number; // percentage
-  stars: number;
+  x: number;
+  y: number;
+  icon: string;
   status: 'completed' | 'active' | 'locked';
-  description: string;
-  rewards: { xp: number; credits: number; tech?: string };
 }
 
 const NODES: MapNode[] = [
-  { id: 'warsaw', num: '01', name: 'ВАРШАВА', x: 12, y: 37, stars: 3, status: 'completed', description: 'Захват передового командного пункта Альянса в Польше.', rewards: { xp: 500, credits: 3000 } },
-  { id: 'berlin', num: '02', name: 'БЕРЛИН', x: 15, y: 51, stars: 3, status: 'completed', description: 'Разгром бронетанкового клина Бундесвера.', rewards: { xp: 800, credits: 5000 } },
-  { id: 'baltic', num: '03', name: 'ПРИБАЛТИКА', x: 29, y: 31, stars: 3, status: 'completed', description: 'Освобождение Рижского залива и береговых батарей.', rewards: { xp: 900, credits: 6000 } },
-  { id: 'kiev', num: '04', name: 'КИЕВ', x: 30, y: 46, stars: 3, status: 'completed', description: 'Операция «Киев-86»: уничтожение экспедиционного корпуса.', rewards: { xp: 1100, credits: 7500 } },
-  { id: 'leningrad', num: '05', name: 'ЛЕНИНГРАД', x: 44, y: 26, stars: 3, status: 'completed', description: 'Снятие блокады Финского залива и запуск верфей.', rewards: { xp: 1200, credits: 8000 } },
-  { id: 'stalingrad', num: '06', name: 'СТАЛИНГРАД', x: 55, y: 43, stars: 3, status: 'completed', description: 'Оборона волжского логистического узла.', rewards: { xp: 1300, credits: 9000 } },
-  { id: 'caucasus', num: '07', name: 'КАВКАЗ', x: 51, y: 58, stars: 3, status: 'completed', description: 'Зачистка горных перевалов и нефтяных скважин Баку.', rewards: { xp: 1400, credits: 9500 } },
-  { id: 'tehran', num: '08', name: 'ТЕГЕРАН', x: 48, y: 78, stars: 2, status: 'completed', description: 'Подавление южного плацдарма коалиции.', rewards: { xp: 1450, credits: 9800 } },
-  {
-    id: 'hammer',
-    num: '09',
-    name: 'ОПЕРАЦИЯ «МОЛОТ»',
-    x: 37,
-    y: 60,
-    stars: 0,
-    status: 'active',
-    description: 'Прорвите оборону NATO и захватите секретный исследовательский комплекс в Новосибирске. Уничтожьте все силы противника в регионе.',
-    rewards: { xp: 1500, credits: 10000, tech: 'НОВАЯ ТЕХНОЛОГИЯ «ТЕСЛА-БАШНЯ»' }
-  }
+  { id: 'n1', num: '01', name: 'ПОЛЯРНЫЙ ЭХО', x: 19, y: 33, icon: '🛡', status: 'completed' },
+  { id: 'n2', num: '02', name: 'БАЗА «КАРГАЛЫ»', x: 11, y: 52, icon: '🛡', status: 'completed' },
+  { id: 'n3', num: '03', name: 'УЗЕЛ «СЕВЕР»', x: 32, y: 26, icon: '👁', status: 'completed' },
+  { id: 'n4', num: '04', name: 'ЖЕЛЕЗНЫЙ ЗУБ', x: 35, y: 43, icon: '⚔', status: 'completed' },
+  { id: 'n5', num: '05', name: 'РЕЛЕЙНАЯ СТАНЦИЯ', x: 57, y: 31, icon: '📦', status: 'completed' },
+  { id: 'n6', num: '06', name: 'ГЛУБОКИЙ СИГНАЛ', x: 51, y: 52, icon: '👁', status: 'completed' },
+  { id: 'n7', num: '07', name: 'ТИХИЙ РЕЛЕЙ', x: 38, y: 71, icon: '⚔', status: 'active' },
+  { id: 'n8', num: '08', name: 'ЧИСТЫЙ КЛЮЧ', x: 59, y: 84, icon: '🛡', status: 'locked' }
+];
+
+const ROUTES: [number, number][][] = [
+  [[19, 33], [32, 26]],
+  [[19, 33], [35, 43]],
+  [[11, 52], [35, 43]],
+  [[32, 26], [57, 31]],
+  [[35, 43], [38, 71]],
+  [[57, 31], [51, 52]],
+  [[51, 52], [59, 84]],
+  [[38, 71], [59, 84]]
 ];
 
 export const StrategicMapScreen: React.FC = () => {
   const navigate = useNavigate();
-  const [selectedNodeId, setSelectedNodeId] = useState('hammer');
+  const fac = FACTIONS.eurasian;
+  const [selectedNodeId, setSelectedNodeId] = useState('n7');
+  const [objectives, setObjectives] = useState([false, false]);
 
-  const selectedNode = NODES.find(n => n.id === selectedNodeId) || NODES[8];
-
-  const handleStartMission = () => {
-    navigate('/briefing');
+  const toggleObjective = (i: number) => {
+    const next = [...objectives];
+    next[i] = !next[i];
+    setObjectives(next);
   };
 
   return (
     <div
+      className={fac.themeClass}
       style={{
         width: '100vw',
         height: '100vh',
         position: 'relative',
-        background: `url('/screenshots/8.png') no-repeat center center`,
+        background: `url('/remaster/07_campaign_map_eurasian.png') no-repeat center center`,
         backgroundSize: 'cover',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        padding: '16px 36px',
         boxSizing: 'border-box',
         overflow: 'hidden',
-        fontFamily: "'Oswald', sans-serif"
+        fontFamily: "'Jura', sans-serif"
       }}
     >
-      {/* Top Resource & Command Strip */}
+      {/* ===== Top Command Strip ===== */}
       <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderBottom: '1px solid rgba(255,50,50,0.3)',
-        paddingBottom: '10px',
-        zIndex: 10
+        display: 'grid',
+        gridTemplateColumns: '120px 1fr 620px',
+        alignItems: 'start',
+        padding: '10px 24px',
+        zIndex: 10,
+        gap: '12px'
       }}>
-        {/* Left Faction Title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{
-            fontSize: '26px',
-            color: '#ff2222',
-            filter: 'drop-shadow(0 0 8px rgba(255,0,0,0.8))'
-          }}>
-            ★
-          </div>
-          <div>
-            <div style={{ color: '#ff2222', fontSize: '18px', fontWeight: 800, letterSpacing: '2px', lineHeight: 1 }}>
-              СССР
-            </div>
-            <div style={{ color: '#aaa', fontSize: '10px', letterSpacing: '1px' }}>
-              СЛАВА СОВЕТСКОМУ СОЮЗУ!
-            </div>
-          </div>
+        {/* Hex Emblem */}
+        <div
+          onClick={() => navigate(`/campaign/${fac.id}`)}
+          style={{
+            width: '78px',
+            height: '88px',
+            clipPath: 'polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%)',
+            background: `linear-gradient(180deg, ${fac.color}44, rgba(8,6,14,0.95))`,
+            border: `1px solid ${fac.color}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '34px',
+            color: fac.color,
+            cursor: 'pointer'
+          }}
+        >
+          {fac.crest}
         </div>
 
-        {/* Center Game Title */}
+        {/* Center Title */}
         <div style={{ textAlign: 'center' }}>
-          <div style={{ color: '#888', fontSize: '10px', letterSpacing: '3px' }}>COMMAND & CONQUER™</div>
-          <div style={{ color: '#ff2222', fontSize: '22px', fontWeight: 800, letterSpacing: '2px', lineHeight: 1 }}>
-            RED ALERT 4
+          <BrandLogo scale={0.56} />
+          <div style={{
+            fontFamily: "'Oswald', sans-serif",
+            color: fac.color,
+            fontSize: '15px',
+            fontWeight: 700,
+            letterSpacing: '4px',
+            marginTop: '4px'
+          }}>
+            КАМПАНИЯ: ЕВРАЗИЙСКИЙ ПАКТ
+          </div>
+          <div style={{ color: '#c9cfda', fontSize: '12px', letterSpacing: '5px', marginTop: '3px' }}>
+            ГЛАВА 4: БЕЛЫЙ ШУМ
           </div>
         </div>
 
-        {/* Right Player Stats & Currencies */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Commander + Resources */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-start', gap: '14px' }}>
+          <div style={{
+            display: 'flex',
+            gap: '12px',
+            padding: '8px 14px',
+            background: 'rgba(8,7,14,0.85)',
+            border: '1px solid rgba(255,255,255,0.18)',
+            borderRadius: '4px',
+            minWidth: '230px'
+          }}>
             <div style={{
-              width: '28px',
-              height: '28px',
-              borderRadius: '50%',
-              background: '#3a0808',
-              border: '1px solid #ff3333',
+              width: '46px',
+              height: '54px',
+              borderRadius: '3px',
+              border: `1px solid ${fac.color}66`,
+              background: 'linear-gradient(180deg, #2a2038, #0d0a16)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#ff2222',
-              fontSize: '14px'
+              fontSize: '22px',
+              color: fac.color
             }}>
-              ★
+              ⚔
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: '#fff', fontSize: '13px', fontWeight: 700 }}>КОМАНДИР</div>
+              <div style={{ color: '#9aa2b0', fontSize: '11px' }}>РАНГ: ПОЛКОВНИК • УРОВЕНЬ 45</div>
+              <div style={{ marginTop: '5px', height: '4px', background: 'rgba(0,0,0,0.8)', borderRadius: '2px', overflow: 'hidden' }}>
+                <div style={{ width: '68%', height: '100%', background: fac.color }} />
+              </div>
+            </div>
+          </div>
+
+          <div style={{
+            display: 'flex',
+            gap: '18px',
+            padding: '8px 16px',
+            background: 'rgba(8,7,14,0.85)',
+            border: '1px solid rgba(255,255,255,0.18)',
+            borderRadius: '4px'
+          }}>
+            <div>
+              <div style={{ color: '#e8ecf2', fontSize: '14px', fontWeight: 800 }}>125 840</div>
+              <div style={{ color: '#8b93a2', fontSize: '9px', letterSpacing: '1px' }}>ОПЕРАЦИОННЫЕ СРЕДСТВА</div>
             </div>
             <div>
-              <div style={{ color: '#fff', fontSize: '12px', fontWeight: 700 }}>ТОВАРИЩ КОМАНДИР</div>
-              <div style={{ color: '#ff4444', fontSize: '10px' }}>УРОВЕНЬ 45 ★</div>
+              <div style={{ color: '#e8ecf2', fontSize: '14px', fontWeight: 800 }}>8 450</div>
+              <div style={{ color: '#8b93a2', fontSize: '9px', letterSpacing: '1px' }}>РЕСУРСЫ РЭБ</div>
             </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '16px', borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '16px' }}>
-            <div style={{ color: '#ffdd00', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span>💰</span> 125 840
+            <div>
+              <div style={{ color: '#e8ecf2', fontSize: '14px', fontWeight: 800 }}>1 250</div>
+              <div style={{ color: '#8b93a2', fontSize: '9px', letterSpacing: '1px' }}>ДАННЫЕ</div>
             </div>
-            <div style={{ color: '#ff4444', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span>★</span> 8 450
-            </div>
-            <div style={{ color: '#00ccff', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span>📦</span> 1 250
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {['✉', '👥', '⚙'].map((ic, i) => (
+                <button key={i} onClick={() => navigate('/video-comms')} style={{
+                  width: '30px', height: '30px',
+                  background: 'rgba(20,18,30,0.9)', border: '1px solid rgba(255,255,255,0.2)',
+                  borderRadius: '3px', color: '#cfd4dd', cursor: 'pointer'
+                }}>{ic}</button>
+              ))}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Chapter Subtitle Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '8px 0', zIndex: 10 }}>
-        <div>
-          <div style={{ color: '#ff3333', fontSize: '14px', fontWeight: 700, letterSpacing: '2px' }}>
-            ★ КАМПАНИЯ: СССР
-          </div>
-          <div style={{ color: '#fff', fontSize: '18px', fontWeight: 800 }}>
-            ГЛАВА 3: КРАСНЫЙ ШТОРМ
-          </div>
-        </div>
-      </div>
-
-      {/* Tactical Map Overlay Area with Connected Mission Nodes */}
-      <div style={{
-        position: 'relative',
-        flex: 1,
-        zIndex: 5,
-        display: 'flex',
-        alignItems: 'stretch'
-      }}>
-        {/* SVG connection lines between mission nodes */}
-        <svg style={{
+      {/* ===== Middle: Map + Panels ===== */}
+      <div style={{ flex: 1, position: 'relative', zIndex: 5 }}>
+        {/* Left Operations Menu */}
+        <div style={{
           position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '68%',
-          height: '100%',
-          pointerEvents: 'none',
-          zIndex: 1
+          top: '30px',
+          left: '24px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '6px',
+          padding: '12px',
+          background: 'rgba(8,7,14,0.82)',
+          border: '1px solid rgba(255,255,255,0.16)',
+          borderRadius: '6px',
+          minWidth: '170px'
         }}>
-          {/* Connecting lines matching screenshot 8 */}
-          <line x1="12%" y1="37%" x2="15%" y2="51%" stroke="#ff2222" strokeWidth="2" strokeDasharray="4 2" opacity="0.7" />
-          <line x1="12%" y1="37%" x2="29%" y2="31%" stroke="#ff2222" strokeWidth="2" opacity="0.8" />
-          <line x1="15%" y1="51%" x2="30%" y2="46%" stroke="#ff2222" strokeWidth="2" opacity="0.8" />
-          <line x1="29%" y1="31%" x2="44%" y2="26%" stroke="#ff2222" strokeWidth="2" opacity="0.8" />
-          <line x1="30%" y1="46%" x2="44%" y2="26%" stroke="#ff2222" strokeWidth="1.5" strokeDasharray="3 3" opacity="0.6" />
-          <line x1="44%" y1="26%" x2="55%" y2="43%" stroke="#ff2222" strokeWidth="2" opacity="0.8" />
-          <line x1="30%" y1="46%" x2="37%" y2="60%" stroke="#ff3333" strokeWidth="2.5" />
-          <line x1="55%" y1="43%" x2="51%" y2="58%" stroke="#ff2222" strokeWidth="2" opacity="0.8" />
-          <line x1="51%" y1="58%" x2="48%" y2="78%" stroke="#ff2222" strokeWidth="2" strokeDasharray="4 2" opacity="0.8" />
-          <line x1="48%" y1="78%" x2="37%" y2="60%" stroke="#ff3333" strokeWidth="2.5" strokeDasharray="3 2" />
+          {[
+            { icon: '🛡', label: 'ОБОРОНА' },
+            { icon: '👁', label: 'РАЗВЕДКА' },
+            { icon: '⚔', label: 'УДАР' },
+            { icon: '📦', label: 'ЛОГИСТИКА' },
+            { icon: '✪', label: 'ОСОБАЯ ОПЕРАЦИЯ' }
+          ].map(item => (
+            <button
+              key={item.label}
+              onClick={() => navigate('/briefing')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '7px 10px',
+                background: 'transparent',
+                border: 'none',
+                borderRadius: '4px',
+                color: '#cdd3dd',
+                fontFamily: "'Oswald', sans-serif",
+                fontSize: '13px',
+                letterSpacing: '1.5px',
+                textAlign: 'left',
+                cursor: 'pointer'
+              }}
+            >
+              <span style={{ fontSize: '15px', filter: 'drop-shadow(0 0 5px rgba(176,108,255,0.7))' }}>{item.icon}</span>
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Interactive Route Lines */}
+        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+          {ROUTES.map(([a, b], i) => (
+            <line
+              key={i}
+              x1={`${a[0]}%`} y1={`${a[1]}%`}
+              x2={`${b[0]}%`} y2={`${b[1]}%`}
+              stroke="#b06cff"
+              strokeWidth="2.5"
+              strokeDasharray="8 6"
+              opacity="0.55"
+            />
+          ))}
         </svg>
 
-        {/* Map Mission Node Markers */}
-        <div style={{ position: 'relative', width: '68%', height: '100%', zIndex: 2 }}>
-          {NODES.map(node => {
-            const isSelected = selectedNodeId === node.id;
-            return (
-              <div
-                key={node.id}
-                onClick={() => setSelectedNodeId(node.id)}
-                style={{
-                  position: 'absolute',
-                  left: `${node.x}%`,
-                  top: `${node.y}%`,
-                  transform: 'translate(-50%, -50%)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '4px',
-                  zIndex: isSelected ? 10 : 3
-                }}
-              >
-                {/* Glowing Outer Ring for Active Node */}
+        {/* Mission Nodes */}
+        {NODES.map(node => {
+          const isActive = node.id === selectedNodeId;
+          const size = node.status === 'active' ? 64 : 44;
+          return (
+            <div
+              key={node.id}
+              onClick={() => setSelectedNodeId(node.id)}
+              style={{
+                position: 'absolute',
+                left: `${node.x}%`,
+                top: `${node.y}%`,
+                transform: 'translate(-50%, -50%)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                zIndex: node.status === 'active' ? 12 : 6
+              }}
+            >
+              <div style={{
+                width: `${size}px`,
+                height: `${size}px`,
+                clipPath: 'polygon(50% 0, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%)',
+                background: node.status === 'active'
+                  ? 'radial-gradient(circle, #d8b4ff 0%, #8b4fe0 60%, #3a1f66 100%)'
+                  : 'linear-gradient(180deg, rgba(30,22,48,0.95), rgba(10,7,18,0.95))',
+                border: `1px solid ${isActive || node.status === 'active' ? '#e2ccff' : 'rgba(176,108,255,0.5)'}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: node.status === 'active' ? '24px' : '17px',
+                color: node.status === 'locked' ? '#777' : '#fff',
+                boxShadow: node.status === 'active' ? '0 0 30px rgba(176,108,255,0.95)' : 'none',
+                animation: isActive ? 'alert-flash 1.8s infinite' : undefined,
+                flexShrink: 0
+              }}>
+                {node.icon}
+              </div>
+              <div style={{
+                background: 'rgba(6,5,10,0.88)',
+                border: '1px solid rgba(176,108,255,0.4)',
+                borderRadius: '3px',
+                padding: '3px 9px',
+                whiteSpace: 'nowrap'
+              }}>
+                <span style={{ color: '#fff', fontSize: '12px', fontWeight: 700, letterSpacing: '1px' }}>
+                  {node.num}. {node.name}
+                </span>
+                <div style={{ color: fac.color, fontSize: '10px', letterSpacing: '3px' }}>
+                  ◆ ◆ ◆
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Bottom-left Chapter Progress Panel */}
+        <div style={{
+          position: 'absolute',
+          bottom: '24px',
+          left: '24px',
+          width: '330px',
+          padding: '16px 18px',
+          background: 'linear-gradient(180deg, rgba(10,8,16,0.94), rgba(6,5,10,0.97))',
+          border: `1px solid ${fac.color}66`,
+          borderRadius: '6px'
+        }}>
+          <div style={{ fontFamily: "'Oswald', sans-serif", color: fac.color, fontSize: '14px', fontWeight: 700, letterSpacing: '2px', marginBottom: '10px' }}>
+            ПРОГРЕСС ГЛАВЫ
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#aeb4c0', marginBottom: '8px' }}>
+            <span>Выполнено миссий</span>
+            <strong style={{ color: '#fff' }}>6 / 12</strong>
+          </div>
+          <div style={{ display: 'flex', gap: '5px', marginBottom: '14px' }}>
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} style={{
+                flex: 1,
+                height: '8px',
+                borderRadius: '2px',
+                background: i < 6 ? fac.color : 'rgba(255,255,255,0.12)'
+              }} />
+            ))}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+            {[
+              { label: '4 МИССИИ', done: true, icon: '🎖' },
+              { label: '8 МИССИЙ', done: true, icon: '🏅' },
+              { label: '12 МИССИЙ', done: false, icon: '🚀' }
+            ].map(m => (
+              <div key={m.label} style={{ position: 'relative', textAlign: 'center' }}>
+                <div style={{ color: '#98a0ac', fontSize: '10px', letterSpacing: '1px', marginBottom: '4px' }}>{m.label}</div>
                 <div style={{
-                  width: isSelected ? '46px' : '32px',
-                  height: isSelected ? '46px' : '32px',
-                  borderRadius: '50%',
-                  background: isSelected ? 'rgba(255, 0, 0, 0.4)' : 'rgba(30, 10, 10, 0.85)',
-                  border: `2px solid ${isSelected ? '#ff3333' : '#aa2222'}`,
-                  boxShadow: isSelected ? '0 0 25px #ff2222, inset 0 0 15px #ff0000' : '0 0 8px rgba(255,0,0,0.4)',
+                  height: '40px',
+                  borderRadius: '3px',
+                  border: '1px solid rgba(255,255,255,0.14)',
+                  background: m.done ? `${fac.color}22` : 'rgba(255,255,255,0.05)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: isSelected ? '#ffff00' : '#ff4444',
-                  fontSize: isSelected ? '20px' : '14px',
-                  transition: 'all 0.2s ease',
-                  animation: isSelected ? 'alert-flash 1.5s infinite' : 'none'
+                  fontSize: '18px',
+                  filter: m.done ? 'grayscale(0)' : 'grayscale(1) opacity(0.5)'
                 }}>
-                  ★
-                </div>
-
-                {/* Node Label & Stars */}
-                <div style={{
-                  background: 'rgba(0,0,0,0.85)',
-                  padding: '2px 8px',
-                  borderRadius: '3px',
-                  border: `1px solid ${isSelected ? '#ff3333' : 'rgba(255,50,50,0.3)'}`,
-                  textAlign: 'center',
-                  whiteSpace: 'nowrap'
-                }}>
-                  <div style={{ color: isSelected ? '#ffffff' : '#ccc', fontSize: '11px', fontWeight: 700 }}>
-                    {node.num}. {node.name}
-                  </div>
-                  {node.stars > 0 && (
-                    <div style={{ color: '#ffdd00', fontSize: '10px', letterSpacing: '2px' }}>
-                      {'★'.repeat(node.stars)}
-                    </div>
+                  {m.icon}
+                  {m.done && (
+                    <span style={{
+                      position: 'absolute',
+                      bottom: '-6px',
+                      right: '-4px',
+                      width: '18px',
+                      height: '18px',
+                      borderRadius: '50%',
+                      background: fac.color,
+                      color: '#0b0712',
+                      fontSize: '11px',
+                      fontWeight: 900,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>✓</span>
                   )}
                 </div>
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
 
-        {/* Right Mission Detail Card Panel */}
+        {/* Right Mission Detail Card */}
         <div style={{
-          width: '32%',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          zIndex: 10
+          position: 'absolute',
+          top: '10px',
+          right: '24px',
+          width: '400px',
+          padding: '18px 20px',
+          background: 'linear-gradient(180deg, rgba(10,8,16,0.94), rgba(6,5,10,0.97))',
+          border: `1px solid ${fac.color}88`,
+          borderRadius: '6px',
+          boxShadow: `inset 0 0 30px ${fac.color}10`
         }}>
-          <div className="ra4-panel clip-bevel-md" style={{
-            padding: '20px',
-            border: '1px solid #ff2222',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '14px',
-            flex: 1
-          }}>
-            {/* Header */}
-            <div style={{ color: '#ff2222', fontSize: '18px', fontWeight: 800, letterSpacing: '1px' }}>
-              {selectedNode.num}. {selectedNode.name}
-            </div>
+          <div style={{ fontFamily: "'Oswald', sans-serif", color: '#ffffff', fontSize: '19px', fontWeight: 800, letterSpacing: '1px', marginBottom: '12px' }}>
+            07. ОПЕРАЦИЯ «ТИХИЙ РЕЛЕЙ»
+          </div>
 
-            {/* Mission Image Thumbnail */}
-            <div style={{
-              width: '100%',
-              height: '130px',
-              borderRadius: '4px',
-              border: '1px solid rgba(255,50,50,0.4)',
-              background: 'rgba(20,10,10,0.8)',
-              overflow: 'hidden',
+          {/* Thumbnail */}
+          <div style={{
+            height: '130px',
+            borderRadius: '4px',
+            border: '1px solid rgba(255,255,255,0.16)',
+            background: 'linear-gradient(160deg, #241a38 0%, #120c20 55%, #090613 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: '14px',
+            position: 'relative'
+          }}>
+            <span style={{ fontSize: '40px', filter: 'drop-shadow(0 0 12px rgba(176,108,255,0.8))' }}>⚔</span>
+            <span style={{ position: 'absolute', bottom: '6px', right: '8px', color: '#8b93a2', fontSize: '9px', letterSpacing: '1px' }}>
+              РАЙОН ОПЕРАЦИИ • ГОРНЫЙ КОРИДОР
+            </span>
+          </div>
+
+          <div style={{ color: fac.color, fontSize: '12px', fontWeight: 700, letterSpacing: '2px', marginBottom: '4px' }}>ЦЕЛЬ МИССИИ</div>
+          <p style={{ color: '#c3c8d2', fontSize: '12px', lineHeight: 1.5, margin: '0 0 12px 0' }}>
+            Нарушить сеть наведения противника и провести броне группу через горный коридор.
+          </p>
+
+          <div style={{ color: fac.color, fontSize: '12px', fontWeight: 700, letterSpacing: '2px', marginBottom: '6px' }}>ЗАДАЧИ</div>
+          {['Подавить 3 узла связи', 'Сохранить мобильный комплекс РЭБ'].map((t, i) => (
+            <div key={i} onClick={() => toggleObjective(i)} style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative'
+              gap: '9px',
+              fontSize: '12px',
+              color: objectives[i] ? '#fff' : '#aab0bc',
+              cursor: 'pointer',
+              marginBottom: '5px'
             }}>
-              <div style={{ color: '#ff4444', fontSize: '32px' }}>★</div>
-              <div style={{
-                position: 'absolute',
-                bottom: '6px',
-                right: '8px',
-                background: 'rgba(0,0,0,0.8)',
-                padding: '2px 6px',
-                fontSize: '10px',
-                color: '#aaa',
-                borderRadius: '2px'
+              <span style={{
+                width: '13px', height: '13px',
+                border: `1px solid ${fac.color}`,
+                borderRadius: '2px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '9px',
+                color: fac.color,
+                background: objectives[i] ? `${fac.color}33` : 'transparent'
               }}>
-                РАЙОН БОЕВЫХ ДЕЙСТВИЙ
-              </div>
+                {objectives[i] ? '✓' : ''}
+              </span>
+              {t}
             </div>
+          ))}
 
-            {/* Objective */}
-            <div>
-              <div style={{ color: '#ff3333', fontSize: '12px', fontWeight: 700, letterSpacing: '1px' }}>
-                ЦЕЛЬ МИССИИ:
-              </div>
-              <div style={{ color: '#d0d0d0', fontSize: '12px', lineHeight: 1.5, marginTop: '4px', fontFamily: "'Inter', sans-serif" }}>
-                {selectedNode.description}
-              </div>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '12px 0 10px 0' }} />
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ color: fac.color, fontSize: '12px', fontWeight: 700, letterSpacing: '2px' }}>НАГРАДЫ</div>
+            <div style={{ display: 'flex', gap: '18px' }}>
+              <span style={{ color: '#ffd76a', fontSize: '12px' }}>★ ОПЫТ <strong>1 500</strong></span>
+              <span style={{ color: '#8fd4ff', fontSize: '12px' }}>▦ ДАННЫЕ <strong>800</strong></span>
             </div>
-
-            {/* Rewards */}
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
-              <div style={{ color: '#ff3333', fontSize: '12px', fontWeight: 700, letterSpacing: '1px', marginBottom: '6px' }}>
-                НАГРАДЫ:
-              </div>
-              <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ffdd00', fontSize: '12px' }}>
-                  <span>★</span> {selectedNode.rewards.xp} XP
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ffdd00', fontSize: '12px' }}>
-                  <span>💰</span> {selectedNode.rewards.credits}
-                </div>
-              </div>
-              {selectedNode.rewards.tech && (
-                <div style={{ color: '#00ffcc', fontSize: '11px', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span>⚛</span> {selectedNode.rewards.tech}
-                </div>
-              )}
-            </div>
-
-            {/* Difficulty Selector */}
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#aaa', fontSize: '12px' }}>СЛОЖНОСТЬ:</span>
-                <span style={{ color: '#ff2222', fontWeight: 700, fontSize: '13px' }}>ВЕТЕРАН ★</span>
-              </div>
-            </div>
-
-            {/* Launch Button */}
-            <button
-              onClick={handleStartMission}
-              className="clip-bevel-sm"
-              style={{
-                background: 'linear-gradient(180deg, #ff2222 0%, #7a0b0b 100%)',
-                border: '1px solid #ff4444',
-                color: '#ffffff',
-                padding: '12px',
-                fontSize: '16px',
-                fontWeight: 800,
-                letterSpacing: '2px',
-                cursor: 'pointer',
-                boxShadow: '0 0 18px rgba(255,0,0,0.8)',
-                marginTop: 'auto'
-              }}
-            >
-              ★ НАЧАТЬ МИССИЮ
-            </button>
           </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', padding: '7px 10px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px' }}>
+            <span style={{ color: '#98a0ac', fontSize: '11px', letterSpacing: '1px' }}>СЛОЖНОСТЬ</span>
+            <span style={{ color: '#fff', fontSize: '12px', fontWeight: 700 }}>ВЕТЕРАН ❖ ▾</span>
+          </div>
+
+          <button
+            onClick={() => navigate('/briefing')}
+            style={{
+              width: '100%',
+              marginTop: '14px',
+              height: '50px',
+              background: `linear-gradient(180deg, ${fac.color}, ${fac.dimColor})`,
+              border: `1px solid ${fac.color}`,
+              borderRadius: '4px',
+              color: '#0b0712',
+              fontFamily: "'Oswald', sans-serif",
+              fontSize: '17px',
+              fontWeight: 800,
+              letterSpacing: '2px',
+              cursor: 'pointer',
+              boxShadow: `0 0 22px ${fac.color}88`,
+              clipPath: 'polygon(0 8px, 10px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 10px) 100%, 0 100%)'
+            }}
+          >
+            ❖&nbsp;&nbsp;НАЧАТЬ МИССИЮ
+          </button>
+
+          <button
+            onClick={() => navigate('/briefing')}
+            style={{
+              width: '100%',
+              marginTop: '8px',
+              height: '38px',
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              borderRadius: '4px',
+              color: '#cdd3dd',
+              fontFamily: "'Oswald', sans-serif",
+              fontSize: '13px',
+              letterSpacing: '2px',
+              cursor: 'pointer'
+            }}
+          >
+            ИНФОРМАЦИЯ О МИССИИ
+          </button>
         </div>
       </div>
 
-      {/* Bottom Progress Milestones & Navigation */}
+      {/* ===== Bottom Bar ===== */}
       <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
+        display: 'grid',
+        gridTemplateColumns: '150px 1fr auto auto',
+        gap: '14px',
         alignItems: 'center',
-        borderTop: '1px solid rgba(255,255,255,0.1)',
-        paddingTop: '8px',
+        padding: '10px 24px 14px 24px',
         zIndex: 10
       }}>
-        {/* Left Navigation */}
         <button
-          onClick={() => navigate('/campaign/ussr')}
-          className="ra4-btn-ussr clip-bevel-sm"
-          style={{ padding: '8px 24px', fontSize: '14px' }}
+          onClick={() => navigate(`/campaign/${fac.id}`)}
+          style={{
+            height: '42px',
+            background: 'rgba(8,7,14,0.85)',
+            border: '1px solid rgba(255,255,255,0.25)',
+            borderRadius: '4px',
+            color: '#e8ebf0',
+            fontFamily: "'Oswald', sans-serif",
+            fontSize: '14px',
+            fontWeight: 600,
+            letterSpacing: '2px',
+            cursor: 'pointer'
+          }}
         >
-          ‹ НАЗАД
+          ‹&nbsp;&nbsp;НАЗАД
         </button>
 
-        {/* Center Progress Milestones */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <span style={{ color: '#aaa', fontSize: '12px' }}>ПРОГРЕСС ГЛАВЫ: <strong>8 / 12</strong> МИССИЙ</span>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <span style={{ color: '#ffdd00', fontSize: '12px' }}>📦 4 МИССИИ [✓]</span>
-            <span style={{ color: '#ffdd00', fontSize: '12px' }}>🎖 8 МИССИЙ [✓]</span>
-            <span style={{ color: '#666', fontSize: '12px' }}>🚜 12 МИССИЙ [ ]</span>
-          </div>
-        </div>
+        <div />{/* spacer under map emblem */}
 
-        {/* Right Tools */}
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button onClick={() => navigate('/briefing')} className="ra4-btn-ussr clip-bevel-sm" style={{ padding: '6px 14px', fontSize: '12px' }}>
-            МИРОВАЯ ОБСТАНОВКА
-          </button>
-          <button onClick={() => navigate('/video-comms')} className="ra4-btn-ussr clip-bevel-sm" style={{ padding: '6px 14px', fontSize: '12px' }}>
-            АРХИВ БРИФИНГОВ
-          </button>
-        </div>
+        <button
+          onClick={() => navigate('/menu')}
+          style={{
+            height: '42px',
+            padding: '0 22px',
+            background: 'rgba(8,7,14,0.85)',
+            border: '1px solid rgba(255,255,255,0.25)',
+            borderRadius: '4px',
+            color: '#e8ebf0',
+            fontFamily: "'Oswald', sans-serif",
+            fontSize: '13px',
+            letterSpacing: '2px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px'
+          }}
+        >
+          🌐 МИРОВАЯ ОБСТАНОВКА
+        </button>
+
+        <button
+          onClick={() => navigate('/briefing')}
+          style={{
+            height: '42px',
+            padding: '0 22px',
+            background: 'rgba(8,7,14,0.85)',
+            border: '1px solid rgba(255,255,255,0.25)',
+            borderRadius: '4px',
+            color: '#e8ebf0',
+            fontFamily: "'Oswald', sans-serif",
+            fontSize: '13px',
+            letterSpacing: '2px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px'
+          }}
+        >
+          🗀 АРХИВ БРИФИНГОВ
+        </button>
       </div>
     </div>
   );
