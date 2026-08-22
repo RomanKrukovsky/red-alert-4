@@ -96,21 +96,21 @@ void ARA4PlayerController::BeginPlay()
             Sidebar->OnRadarOrdered.AddUObject(this, &ARA4PlayerController::HandleRadarOrdered);
             Sidebar->OnInteractionModeChanged.AddUObject(this, &ARA4PlayerController::HandleInteractionModeChanged);
             Sidebar->OnSuperweaponClicked.AddUObject(this, &ARA4PlayerController::ToggleSuperweaponMode);
-            // The reserved strip and the widget's own width come from the same helper. If
-            // they ever disagree the world is drawn under the column, or a band of
-            // background shows beside it.
-            const float ReservedWidth = URA4SidebarWidget::ComputeSidebarWidth(this);
-            AppliedSidebarReservedWidth = ReservedWidth;
+            // ADR-0013 step 3: the HUD occupies the whole viewport and places its
+            // own panels. Its root canvas is SelfHitTestInvisible, so the empty
+            // space between panels still passes clicks to the world. Reserving a
+            // right-hand strip here would clip the canvas back into a column and
+            // make it impossible to put a panel anywhere else.
             FGameViewportWidgetSlot Slot;
-            Slot.Anchors = FAnchors(1.0f, 0.0f, 1.0f, 1.0f);
-            Slot.Offsets = FMargin(0.0f, 0.0f, ReservedWidth, 0.0f);
-            Slot.Alignment = FVector2D(1.0f, 0.0f);
+            Slot.Anchors = FAnchors(0.0f, 0.0f, 1.0f, 1.0f);
+            Slot.Offsets = FMargin(0.0f);
+            Slot.Alignment = FVector2D::ZeroVector;
             Slot.ZOrder = 10;
             const bool bAdded = ViewportSubsystem != nullptr &&
                                 ViewportSubsystem->AddWidget(Sidebar, Slot);
             UE_LOG(LogTemp, Display,
-                   TEXT("RA4 HUD: production sidebar viewport add=%d width=%.0f"),
-                   bAdded ? 1 : 0, ReservedWidth);
+                   TEXT("RA4 HUD: battle HUD viewport add=%d (full screen canvas)"),
+                   bAdded ? 1 : 0);
         }
         else
         {
@@ -479,53 +479,10 @@ void ARA4PlayerController::OnDummyPanKey()
 // Frame update
 // ---------------------------------------------------------------------------
 
-void ARA4PlayerController::SyncSidebarReservedWidth()
-{
-    if (Sidebar == nullptr)
-    {
-        return;
-    }
-
-    // The width the sidebar will actually draw itself at. Both sides deliberately go
-    // through the same helper; the problem this function solves is not disagreement about
-    // the formula but disagreement in *time*. BeginPlay runs before the viewport reports
-    // a size, so the first evaluation returns the documented 1.0 fallback. The widget
-    // corrects itself on its own tick, and without this the reserved strip would stay at
-    // the fallback width forever -- leaving a band of world visible beside the column at
-    // any viewport height other than the 1080p reference.
-    const float DesiredWidth = URA4SidebarWidget::ComputeSidebarWidth(this);
-
-    // Half a unit of slack: the width is a float derived from a viewport ratio, and
-    // rewriting the slot every frame over rounding noise would invalidate Slate's layout
-    // for no visible change.
-    if (FMath::IsNearlyEqual(DesiredWidth, AppliedSidebarReservedWidth, 0.5f))
-    {
-        return;
-    }
-
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8
-    UGameViewportSubsystem* ViewportSubsystem = UGameViewportSubsystem::Get();
-#else
-    UGameViewportSubsystem* ViewportSubsystem = UGameViewportSubsystem::Get(GetWorld());
-#endif
-    if (ViewportSubsystem == nullptr)
-    {
-        return;
-    }
-
-    // Read-modify-write rather than rebuilding the slot: anchors, alignment and ZOrder
-    // were set once in BeginPlay and are none of this function's business.
-    FGameViewportWidgetSlot Slot = ViewportSubsystem->GetWidgetSlot(Sidebar);
-    Slot.Offsets = FMargin(0.0f, 0.0f, DesiredWidth, 0.0f);
-    ViewportSubsystem->SetWidgetSlot(Sidebar, Slot);
-
-    AppliedSidebarReservedWidth = DesiredWidth;
-
-    // Logged because the width that matters is not the one BeginPlay computed. That
-    // first value is necessarily the pre-viewport fallback, so a log line showing only
-    // it cannot tell anyone whether this correction happened at all.
-    UE_LOG(LogTemp, Display, TEXT("RA4 HUD: sidebar reserved width synced to %.0f"), DesiredWidth);
-}
+// SyncSidebarReservedWidth is gone with ADR-0013 step 3. It existed to keep a
+// reserved viewport strip in step with the column width, but the HUD now owns a
+// full-screen canvas and positions the column itself, so a controller that also
+// rewrote the slot would fight it and clip the canvas back into a column.
 
 void ARA4PlayerController::PlayerTick(float DeltaTime)
 {
@@ -541,7 +498,6 @@ void ARA4PlayerController::PlayerTick(float DeltaTime)
         TryInitializeCamera();
     }
 
-    SyncSidebarReservedWidth();
 
     // The viewport is still 0x0 during possession in a standalone launch. Wait
     // until it has a real size, then place the inherited system cursor away from

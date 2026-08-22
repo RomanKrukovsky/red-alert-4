@@ -131,6 +131,49 @@ void SetRootBackground(URA4ScreenRootWidget* Screen, const TCHAR* TexturePath, c
     }
 }
 
+/**
+ * Procedural brand lockup: steel letters over a scarlet horizon rule. The
+ * retired logo texture carries a double exposure and is no longer placed.
+ */
+void PlaceWordmark(
+    UCanvasPanel* Canvas,
+    UWidgetTree* Tree,
+    const FVector2D Position,
+    const FVector2D Size,
+    const int32 ZOrder,
+    const FName BaseName)
+{
+    UTextBlock* Wordmark = MakeMissionText(
+        Tree, LOCTEXT("Wordmark", "SCARLET HORIZON"),
+        FMath::Max(18, FMath::RoundToInt(Size.Y * 0.40f)),
+        FLinearColor(0.88f, 0.91f, 0.95f, 1.0f),
+        FName(BaseName.ToString() + TEXT("_Text")));
+    Wordmark->SetJustification(ETextJustify::Center);
+    PlaceMissionWidget(Canvas, Wordmark, Position, Size, ZOrder);
+
+    UBorder* Rule = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), FName(BaseName.ToString() + TEXT("_Rule")));
+    Rule->SetBrushColor(FLinearColor(0.78f, 0.11f, 0.15f, 1.0f));
+    const float RuleWidth = Size.X * 0.52f;
+    PlaceMissionWidget(
+        Canvas,
+        Rule,
+        FVector2D(Position.X + (Size.X - RuleWidth) * 0.5f, Position.Y + Size.Y * 1.02f),
+        FVector2D(RuleWidth, FMath::Max(2.0f, Size.Y * 0.06f)),
+        ZOrder);
+}
+
+void PlaceRootScrim(URA4ScreenRootWidget* Screen, UWidgetTree* Tree, const FLinearColor Color)
+{
+    // A default border brush draws nothing, so scrims must be explicit filled
+    // brushes — otherwise the plate's painted chrome doubles the live widgets.
+    UBorder* Scrim = Tree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("PlateScrim"));
+    Scrim->SetBrush(FSlateColorBrush(Color));
+    Scrim->SetVisibility(ESlateVisibility::HitTestInvisible);
+    UOverlaySlot* ScrimSlot = Screen->GetContentLayer()->AddChildToOverlay(Scrim);
+    ScrimSlot->SetHorizontalAlignment(HAlign_Fill);
+    ScrimSlot->SetVerticalAlignment(VAlign_Fill);
+}
+
 UCanvasPanel* AddCanvas(URA4ScreenRootWidget* Screen, UWidgetTree* Tree, const FName Name)
 {
     UCanvasPanel* Canvas = Tree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), Name);
@@ -179,14 +222,13 @@ TSharedRef<SWidget> URA4MissionMapScreenWidget::RebuildWidget()
     MissionButtons.Reset();
     SetRootBackground(
         this,
-        TEXT("/Game/RA4UI/Art/T_RA4_USSR_MissionMap.T_RA4_USSR_MissionMap"),
-        FLinearColor(0.42f, 0.30f, 0.72f, 1.0f));
+        TEXT("/Game/RA4UI/Art/Remaster/T_SH_07_MissionMap.T_SH_07_MissionMap"),
+        FLinearColor(0.50f, 0.52f, 0.58f, 1.0f));
+    PlaceRootScrim(this, WidgetTree, FLinearColor(0.006f, 0.008f, 0.018f, 0.60f));
 
     UCanvasPanel* Canvas = AddCanvas(this, WidgetTree, TEXT("MissionMapCanvas"));
 
-    UImage* Logo = MakeImage(
-        WidgetTree, TEXT("/Game/RA4UI/Art/T_RA4_Logo.T_RA4_Logo"), TEXT("MissionMapLogo"));
-    PlaceMissionWidget(Canvas, Logo, FVector2D(610.0f, 4.0f), FVector2D(700.0f, 180.0f), 3);
+    PlaceWordmark(Canvas, WidgetTree, FVector2D(560.0f, 14.0f), FVector2D(800.0f, 64.0f), 3, TEXT("MissionMapWordmark"));
 
     UVerticalBox* CampaignTitle = WidgetTree->ConstructWidget<UVerticalBox>(
         UVerticalBox::StaticClass(), TEXT("MissionCampaignTitle"));
@@ -378,13 +420,12 @@ TSharedRef<SWidget> URA4BriefingScreenWidget::RebuildWidget()
     }
     SetRootBackground(
         this,
-        TEXT("/Game/RA4UI/Art/T_RA4_Commander_Eurasian.T_RA4_Commander_Eurasian"),
-        FLinearColor(0.64f, 0.56f, 0.56f, 1.0f));
+        TEXT("/Game/RA4UI/Art/Remaster/T_SH_08_Briefing.T_SH_08_Briefing"),
+        FLinearColor(0.50f, 0.52f, 0.58f, 1.0f));
+    PlaceRootScrim(this, WidgetTree, FLinearColor(0.006f, 0.008f, 0.018f, 0.62f));
     UCanvasPanel* Canvas = AddCanvas(this, WidgetTree, TEXT("BriefingCanvas"));
 
-    UImage* Logo = MakeImage(
-        WidgetTree, TEXT("/Game/RA4UI/Art/T_RA4_Logo.T_RA4_Logo"), TEXT("BriefingLogo"));
-    PlaceMissionWidget(Canvas, Logo, FVector2D(20.0f, 8.0f), FVector2D(430.0f, 125.0f), 3);
+    PlaceWordmark(Canvas, WidgetTree, FVector2D(35.0f, 16.0f), FVector2D(360.0f, 40.0f), 3, TEXT("BriefingWordmark"));
     UTextBlock* Header = MakeMissionText(
         WidgetTree, LOCTEXT("BriefingHeader", "БРИФИНГ ОПЕРАЦИИ"), 27,
         MissionText, TEXT("BriefingHeader"));
@@ -518,11 +559,15 @@ TSharedRef<SWidget> URA4VideoCommsScreenWidget::RebuildWidget()
         return RootWidget;
     }
 
-    GetBackgroundLayer()->SetColorAndOpacity(FLinearColor(0.005f, 0.007f, 0.012f, 1.0f));
+    SetRootBackground(
+        this,
+        // The comms plate bakes its own channel composition; keep it deep in
+        // the background so the live channel panels stay the focus.
+        TEXT("/Game/RA4UI/Art/Remaster/T_SH_09_VideoComms.T_SH_09_VideoComms"),
+        FLinearColor(0.38f, 0.40f, 0.46f, 1.0f));
+    PlaceRootScrim(this, WidgetTree, FLinearColor(0.005f, 0.007f, 0.012f, 0.74f));
     UCanvasPanel* Canvas = AddCanvas(this, WidgetTree, TEXT("VideoCommsCanvas"));
-    UImage* Logo = MakeImage(
-        WidgetTree, TEXT("/Game/RA4UI/Art/T_RA4_Logo.T_RA4_Logo"), TEXT("VideoCommsLogo"));
-    PlaceMissionWidget(Canvas, Logo, FVector2D(680.0f, 0.0f), FVector2D(560.0f, 150.0f), 3);
+    PlaceWordmark(Canvas, WidgetTree, FVector2D(610.0f, 12.0f), FVector2D(700.0f, 52.0f), 3, TEXT("VideoCommsWordmark"));
 
     UTextBlock* SecureHeader = MakeMissionText(
         WidgetTree, LOCTEXT("SecureLine", "▣  ЗАЩИЩЁННАЯ ЛИНИЯ СВЯЗИ"), 27,

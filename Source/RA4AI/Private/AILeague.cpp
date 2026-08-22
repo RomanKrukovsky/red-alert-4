@@ -171,13 +171,17 @@ LeagueMatchRecord AILeague::PlayMatch(AIProfile ProfileA, AIProfile ProfileB,
     SimWorld World;
     World.Initialize(&Content, MakeLeagueSetup(Seed, bSwapFactions));
     World.SpawnBuilding(bSwapFactions ? kAllYard : kSovYard, 0, TileCoord(10, 10), true);
-    World.SpawnBuilding(bSwapFactions ? kSovYard : kAllYard, 1, TileCoord(48, 48), true);
+    // Player 1's base is the exact point-mirror of player 0's about the map centre
+    // ((x,y) -> (63-x,63-y) on this 64x64 board). The old coordinates sat five
+    // tiles off true symmetry, which handed one start spot measurably better ore
+    // and centre proximity -- league rows then flipped with the slots.
+    World.SpawnBuilding(bSwapFactions ? kSovYard : kAllYard, 1, TileCoord(53, 53), true);
     for (int32_t X = 0; X < 3; ++X)
     {
         for (int32_t Y = 0; Y < 3; ++Y)
         {
             World.SpawnResourceNode(kOreField, TileCoord(6 + X, 15 + Y), 4000);
-            World.SpawnResourceNode(kOreField, TileCoord(53 + X, 43 + Y), 4000);
+            World.SpawnResourceNode(kOreField, TileCoord(57 - X, 48 - Y), 4000);
         }
     }
     World.ClearEvents();
@@ -193,9 +197,14 @@ LeagueMatchRecord AILeague::PlayMatch(AIProfile ProfileA, AIProfile ProfileB,
     {
         CommandFrame Frame;
         Frame.Tick = World.GetTick();
-        for (PlayerId P = 0; P < 2; ++P)
+        // Alternate which commander decides first each tick. A fixed order hands
+        // one slot a permanent first-strike advantage at every engagement boundary
+        // (its attack lands a frame before the opponent can respond); parity keeps
+        // that bias from contaminating the ladder while staying deterministic.
+        const int First = Tick % 2;
+        for (int I = 0; I < 2; ++I)
         {
-            Commanders[P].Tick(World, Frame.Commands);
+            Commanders[(First + I) % 2].Tick(World, Frame.Commands);
         }
         // Commanders consume the previous tick's events (opponent modelling);
         // telemetry reads the same batch, then it is cleared. Same contract as

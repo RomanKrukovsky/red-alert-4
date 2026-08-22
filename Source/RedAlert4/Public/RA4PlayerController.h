@@ -238,7 +238,6 @@ private:
      * actually draws. Called every tick because the first evaluation, in BeginPlay,
      * necessarily predates the viewport having a size.
      */
-    void SyncSidebarReservedWidth();
 
     // Shared by both buttons: the scheme decides which one gets here.
     void HandleClick(bool bLeftButton, const FVector2D& EndScreen, bool bWasDrag);
@@ -285,7 +284,6 @@ private:
 
     // Width currently reserved for the sidebar in its viewport slot. Compared against
     // the widget's own computed width each tick; see SyncSidebarReservedWidth.
-    float AppliedSidebarReservedWidth = 0.0f;
 
     UPROPERTY(Transient)
     TObjectPtr<class URA4NotificationFeedWidget> NotificationFeed;

@@ -40,3 +40,117 @@ Build and run the full test suite:
 cmake -B build/hb-ue58 -S Tools/HeadlessBuild && cmake --build build/hb-ue58 --target RA4Tests
 ./build/hb-ue58/RA4Tests --gtest_filter="AI*"
 ```
+
+---
+
+# Update — Gameplay-Strength Pass (branch `agents/ai-gameplay-strength-v2`, 2026-08-22)
+
+Measured the AI with the self-play league (224 matches, 8 profiles, seed 20260805),
+found why games stalled, and fixed four defects plus one content bug. All work
+verified against the headless suite: 153 AI tests, 676 core tests, 60 presentation,
+67 input -- all passing.
+
+## Defects Fixed
+
+1. **Perspective-broken scout ring** (`AICommander.cpp` `NextScoutWaypoint`): the
+   "likely enemy base" waypoint was hardcoded to the bottom-right corner, correct
+   only for the top-left player. A bottom-right commander toured its own half
+   forever; its armies then chased expired memories between scout waypoints while
+   the enemy base sat unattacked. The ring is now anchored on the point-mirror of
+   the commander's own construction yard.
+2. **Forgotten bases** (`AICommander.cpp` `UpdateKnowledge`): building memories
+   expire after `MemoryRetentionTicks` (30 s) and nothing outlived them. The
+   commander now tracks the last observed enemy structure (`LastKnownEnemyBaseTile`,
+   public getters added) and returns there whenever target memory goes dark.
+3. **Unbounded stall** (`CommandArmy` gathering state): an unfavourable forecast
+   blocked commitment until the full required army existed; economies that could
+   never get there waited until the match clock died. Sixty seconds of stale
+   gathering now escalates into a committed assault.
+4. **Ghost orders burning command budget** (`IssueSquadAttackMove/Retreat/TryHarassRaid`):
+   dead squad members kept receiving Move/AttackMove commands; each refusal still
+   consumes the 64-command-per-tick budget (SimWorld increments before validating),
+   starving live units. Issuance now skips destroyed entities.
+
+## Content Fix
+
+`ContentDatabase::DeriveEntityRoles`: artillery role now requires indirect fire
+(`MinRange > 0` or Siege warhead). The old `MaxRange >= 700` clause flagged every
+main battle tank (8-9 m cannon) and rocket infantry as artillery, so doctrine ratio
+balancing always saw a 100% artillery army and production collapsed into fragile
+siege stacks that could neither screen themselves nor finish sieges. Tanks keep
+Combat/AntiArmor via warhead derivation.
+
+## Measurement Fairness
+
+All three harnesses (AILeague, AISelfPlayLeague, dump_match viewer) now spawn
+point-mirror bases about the map centre (P1 was five tiles off), and commanders
+alternate deciding order per tick so neither slot owns a first-strike advantage.
+Same-seed runs remain byte-identical.
+
+## League Effect (224 matches, seed 20260805)
+
+- Timed-out draws: 117 -> 108 of 224 (52% -> 48%), with turtling now *punishable*
+  instead of drawing by default.
+- Building-damage share of total damage rose from ~25% to ~50% league-wide:
+  armies bring AP tanks and actually dismantle bases.
+- Ladder spread tightened: worst profile 18% -> 25%, no profile below 26%.
+
+## Known Follow-Ups
+
+- Remaining draws concentrate in passive pairings (Economic/Turtle banking behind
+  defences; Rush lacking a mid-game plan after a failed opening). Profile-balance
+  tuning, separate package.
+- Guerrilla currently leads the ladder (~77%) on fast raids vs combined arms;
+  revisit if defender-side raid response gets smarter.
+- Independent review flagged that `bCommittedPush` should stay size-based only;
+  comment and code now agree.
+
+---
+
+# Update — Anti-Passivity Investigation (branch `agents/ai-gameplay-strength-v2`, 2026-08-22, second pass)
+
+Attacked the remaining ~108/224 league draws. No net-positive balance delta shipped;
+three important findings and one small fix landed instead.
+
+## Shipped
+
+`AICommander::TryScout` no longer drafts wounded units as scouts (units never heal;
+a wounded draft dies on the road and buys nothing). Draw-neutral across seeds
+20260805/777/424242 (108/108/107 vs HEAD), strictly better play. NOTE: this hunk
+landed inside commit `3d737d2` ("33") alongside concurrent UI work.
+
+## Finding 1 — Ghost squad members were accidental aggression padding
+
+`ActiveOperation.AssignedUnits` retains destroyed EntityIds between doctrine regroup
+cycles. Honest cleanup (prune dead immediately) is *mechanically correct but cost
++26 draws*: ghosts inflated every size gate -- commit threshold (`>= MinRetreatUnits`),
+the forecast-veto bypass (`size < RequiredCombatUnits`), and the retreat trigger
+(`< MinRetreatUnits`). Ghost-padded squads therefore committed earlier, skipped bad
+forecasts and fought longer than honest rosters do. The disease is gate
+conservatism in long matches; the ghosts were an unearned cure. **Follow-up package:
+gate redesign** -- count alive members everywhere and re-tune profile thresholds
+with explicit multi-seed measurement before shipping any prune.
+
+## Finding 2 — "Obviously correct" fixes move the league ±10 either way
+
+Aiming objectives at passable tiles (never into remembered building footprints --
+a real stall mechanism: AttackMove has no give-up path, unlike Move) measured +10
+draws alone. The league is chaotic: any behavioural perturbation reshuffles all
+224 outcomes. **Methodology going forward**: never judge a change on one seed or
+one metric; measure >= 3 base seeds and watch draw count AND ladder spread AND
+building-damage share together.
+
+## Finding 3 — Tooling harness divergence
+
+Throwaway diagnostic tools must consume events exactly like the production loop:
+commanders read the PREVIOUS tick's event batch (clear before World.Tick). An early
+diag variant cleared events before commanders saw them, silently disabling
+return-fire and under-attack responses and producing confidently wrong timelines.
+The league harness (`AILeague::PlayMatch`) is the reference implementation.
+
+## Verified non-changes
+
+Engaging-timeout (30 s), retreat-timeout, stale-gather escalation (120 s), and a
+squad-stall watchdog each measured neutral-to-worse on draws; none shipped. The
+endgame stalls they targeted are real (documented above) but require the gate
+redesign first, not timers bolted on top.

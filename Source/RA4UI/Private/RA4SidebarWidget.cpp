@@ -8,6 +8,8 @@
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/ProgressBar.h"
+#include "Components/CanvasPanel.h"
+#include "Components/CanvasPanelSlot.h"
 #include "Components/SizeBox.h"
 #include "Components/Spacer.h"
 #include "Components/TextBlock.h"
@@ -1270,10 +1272,30 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
     WidthBox = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass(), TEXT("SidebarWidth"));
     AppliedSidebarWidth = ComputeSidebarWidth(this);
     WidthBox->SetWidthOverride(AppliedSidebarWidth);
-    RefreshOcclusion();
     WidthBox->AddChild(Background);
 
-    WidgetTree->RootWidget = WidthBox;
+    // ADR-0013 step 3. The HUD stops being a single column widget and becomes a
+    // full-screen canvas that panels are placed on. Nothing moves yet: the
+    // production column keeps its old right-edge position, so this change can be
+    // verified on its own before any panel is relocated.
+    //
+    // The canvas is SelfHitTestInvisible, so it never swallows a world click by
+    // itself; only the panels placed on it are hit-testable. That is what lets
+    // the battlefield stay clickable between panels once they spread out.
+    HudRoot = WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), TEXT("HudRoot"));
+    HudRoot->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+
+    if (UCanvasPanelSlot* ColumnSlot = HudRoot->AddChildToCanvas(WidthBox))
+    {
+        // Same convention the player controller used for its viewport slot: right
+        // anchor, stretched vertically, width carried by the fourth offset.
+        ColumnSlot->SetAnchors(FAnchors(1.0f, 0.0f, 1.0f, 1.0f));
+        ColumnSlot->SetAlignment(FVector2D(1.0f, 0.0f));
+        ColumnSlot->SetOffsets(FMargin(0.0f, 0.0f, AppliedSidebarWidth, 0.0f));
+    }
+
+    RefreshOcclusion();
+    WidgetTree->RootWidget = HudRoot;
     return Super::RebuildWidget();
 }
 
@@ -1338,6 +1360,10 @@ void URA4SidebarWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTim
         {
             AppliedSidebarWidth = DesiredWidth;
             WidthBox->SetWidthOverride(DesiredWidth);
+            if (UCanvasPanelSlot* ColumnSlot = Cast<UCanvasPanelSlot>(WidthBox->Slot))
+            {
+                ColumnSlot->SetOffsets(FMargin(0.0f, 0.0f, DesiredWidth, 0.0f));
+            }
             RefreshOcclusion();
         }
     }

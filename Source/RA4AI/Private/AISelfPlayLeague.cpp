@@ -76,14 +76,16 @@ LeagueSummary AISelfPlayLeague::RunTournament(uint32_t MatchCount, AIProfile Pro
         World.Initialize(&Content, Setup);
 
         World.SpawnBuilding(bSwap ? kAllYard : kSovYard, 0, TileCoord(10, 10), true);
-        World.SpawnBuilding(bSwap ? kSovYard : kAllYard, 1, TileCoord(48, 48), true);
+        // Point-mirror of player 0's base about the map centre, matching the league
+        // and viewer bootstraps so neither start spot is structurally advantaged.
+        World.SpawnBuilding(bSwap ? kSovYard : kAllYard, 1, TileCoord(53, 53), true);
 
         for (int32_t X = 0; X < 3; ++X)
         {
             for (int32_t Y = 0; Y < 3; ++Y)
             {
                 World.SpawnResourceNode(kOreField, TileCoord(6 + X, 15 + Y), 4000);
-                World.SpawnResourceNode(kOreField, TileCoord(53 + X, 43 + Y), 4000);
+                World.SpawnResourceNode(kOreField, TileCoord(57 - X, 48 - Y), 4000);
             }
         }
         World.ClearEvents();
@@ -99,8 +101,19 @@ LeagueSummary AISelfPlayLeague::RunTournament(uint32_t MatchCount, AIProfile Pro
             CommandFrame Frame;
             Frame.Tick = World.GetTick();
 
-            Cmd0.Tick(World, Frame.Commands);
-            Cmd1.Tick(World, Frame.Commands);
+            // Alternate the deciding order each tick: a fixed order hands one slot a
+            // permanent first-strike advantage at every engagement boundary.
+            const bool bFirst = (Tick % 2) == 0;
+            if (bFirst)
+            {
+                Cmd0.Tick(World, Frame.Commands);
+                Cmd1.Tick(World, Frame.Commands);
+            }
+            else
+            {
+                Cmd1.Tick(World, Frame.Commands);
+                Cmd0.Tick(World, Frame.Commands);
+            }
 
             World.ClearEvents();
             World.Tick(Frame.Commands.empty() ? nullptr : &Frame);
