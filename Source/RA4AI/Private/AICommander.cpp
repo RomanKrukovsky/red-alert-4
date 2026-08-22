@@ -1427,27 +1427,43 @@ void AICommander::ReconcileSquad(const SimWorld& World)
     const int32_t RegroupGap = bDoctrineLoaded && Personality.RegroupFrequencyTicks > 0
         ? Personality.RegroupFrequencyTicks : 1;
 
-    // Drop destroyed, non-combat or wounded units from the assigned squad.  The
-    // order of the remaining units is preserved so that assignment is stable.
-    if (World.GetTick() % TickIndex(RegroupGap) == 0)
+    // Drop destroyed units immediately and unconditionally: ghosts in the roster
+    // inflate every size gate for as long as the regroup cadence leaves them in
+    // place, so commit decisions get made against a strength the squad does not
+    // have. Dropping *wounded* members stays on the doctrine regroup cadence --
+    // that is a judgement call; deleting the dead is bookkeeping.
     {
-    std::vector<EntityId> Kept;
-    Kept.reserve(ActiveOperation.AssignedUnits.size());
-    for (EntityId Id : ActiveOperation.AssignedUnits)
-    {
-        const EntityCore* Core = World.GetCore(Id);
-        if (Core == nullptr || !Core->bAlive || Core->Owner != Player)
+        const size_t SizeBeforePrune = ActiveOperation.AssignedUnits.size();
+        const bool bRegroupCycle = World.GetTick() % TickIndex(RegroupGap) == 0;
+        std::vector<EntityId> Kept;
+        Kept.reserve(SizeBeforePrune);
+        for (EntityId Id : ActiveOperation.AssignedUnits)
         {
-            continue;
+            const EntityCore* Core = World.GetCore(Id);
+            if (Core == nullptr || !Core->bAlive || Core->Owner != Player)
+            {
+                continue;
+            }
+            const EntityDef* Def = Content->FindEntity(Core->Def);
+            if (!IsCombatUnitDef(Def))
+            {
+                continue;
+            }
+            if (IsWounded(World, Id) && bRegroupCycle)
+            {
+                continue;
+            }
+            Kept.push_back(Id);
         }
-        const EntityDef* Def = Content->FindEntity(Core->Def);
-        if (!IsCombatUnitDef(Def) || IsWounded(World, Id))
+        ActiveOperation.AssignedUnits.swap(Kept);
+
+        // A prune that removed casualties must not look like stalled growth: the
+        // stale-gather clock measures reinforcement arrivals, not roster noise.
+        if (ActiveOperation.AssignedUnits.size() < SizeBeforePrune &&
+            ActiveOperation.LastSquadGrowthTick > 0)
         {
-            continue;
+            ActiveOperation.LastSquadGrowthTick = World.GetTick();
         }
-        Kept.push_back(Id);
-    }
-    ActiveOperation.AssignedUnits.swap(Kept);
     }
 
     // Recruit every idle, non-wounded combat unit into an active operation.  Once a
@@ -1492,6 +1508,7 @@ void AICommander::ReconcileSquad(const SimWorld& World)
                 continue;
             }
             ActiveOperation.AssignedUnits.push_back(Id);
+            ActiveOperation.LastSquadGrowthTick = World.GetTick();
         }
     }
 }
@@ -2498,6 +2515,12 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
 
     ActiveOperation.RequiredCombatUnits = std::max(EffectiveAssaultArmySize(), Config.AttackArmySize);
     ActiveOperation.MinRetreatUnits = Config.MinimumAttackSize;
+    // The retreat line sits at half the commit size: a push that has engaged
+    // should press its attack down to half strength before breaking off. Retreating
+    // at the first dip below the full minimum used to end fights the moment a
+    // couple of units died -- trading away every close siege into a stalemate.
+    ActiveOperation.RetreatFloorUnits =
+        std::max(1, ActiveOperation.MinRetreatUnits / 2);
 
     const int32_t ArmySize = CountOwnedUnits(World, /*bCombatOnly*/ true);
     KnownTarget Target;
@@ -2522,6 +2545,7 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
                                            : GetAndAdvanceScoutWaypoint(World);
             ActiveOperation.StartTick = World.GetTick();
             ActiveOperation.TransitionTo(OperationState::Gathering, World.GetTick());
+            ActiveOperation.LastSquadGrowthTick = World.GetTick();
         }
         else
         {
@@ -2618,16 +2642,24 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
             // Start gathering whenever we know where the enemy is.
             ActiveOperation.StartTick = World.GetTick();
             ActiveOperation.TransitionTo(OperationState::Gathering, World.GetTick());
+            ActiveOperation.LastSquadGrowthTick = World.GetTick();
             // Fall through to gather/stage logic on the same decision tick.
         }
         [[fallthrough]];
         case OperationState::Gathering:
         {
-            // Commit once the squad reaches the minimum attack size.  Waiting for the
+            // Commit once the squad reaches the minimum attack size. Waiting for the
             // full attack size made the AI too passive in skirmishes where vision was
-            // limited or the opponent turtled.
-            if (ActiveOperation.AssignedUnits.size() >=
-                size_t(ActiveOperation.MinRetreatUnits))
+            // limited or the opponent turtled -- and a gather that has stopped
+            // growing entirely is waiting on reinforcements that are not coming.
+            const TickIndex SinceLastGrowth =
+                ActiveOperation.LastSquadGrowthTick > 0 &&
+                        World.GetTick() > ActiveOperation.LastSquadGrowthTick
+                    ? World.GetTick() - ActiveOperation.LastSquadGrowthTick
+                    : 0;
+            if (ShouldCommitStaleGather(ActiveOperation.AssignedUnits.size(),
+                                        ActiveOperation.MinRetreatUnits,
+                                        SinceLastGrowth))
             {
                 // Before spending the army, forecast the engagement. A confident
                 // prediction of defeat means keep gathering rather than feeding units
@@ -2641,7 +2673,8 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
                     if (BattleForecast.Confidence >= 50 &&
                         BattleForecast.WinProbability < Threshold &&
                         ActiveOperation.AssignedUnits.size() <
-                            size_t(ActiveOperation.RequiredCombatUnits))
+                            size_t(ActiveOperation.RequiredCombatUnits) &&
+                        SinceLastGrowth < TickIndex(kTicksPerSecond * 60))
                     {
                         // Waiting is only right while it can still change the outcome.
                         // A commander whose economy cannot grow into RequiredCombatUnits
@@ -2712,7 +2745,8 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
                 World.GetMap().TileCenterToWorld(ActiveOperation.TargetLocation);
             IssueSquadTacticalCombatOrders(World, TargetWorld, Out);
 
-            if (ActiveOperation.AssignedUnits.size() < size_t(ActiveOperation.MinRetreatUnits))
+            if (ActiveOperation.AssignedUnits.size() <
+                size_t(std::max(1, ActiveOperation.RetreatFloorUnits)))
             {
                 ActiveOperation.TransitionTo(OperationState::Retreating, World.GetTick());
                 IssueSquadRetreat(World, Out);
@@ -2723,8 +2757,8 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
                      int64_t(Personality.AcceptableLossesPercent) * 2 < 100)
             {
                 // A personality that hates accepting losses breaks off once roughly
-                // AcceptableLossesPercent of the required force is gone; the default
-                // (no doctrine) keeps the original single MinRetreatUnits rule.
+                // AcceptableLossesPercent of the required force is gone; otherwise
+                // the squad fights down to its half-strength retreat floor.
                 ActiveOperation.TransitionTo(OperationState::Retreating, World.GetTick());
                 IssueSquadRetreat(World, Out);
             }

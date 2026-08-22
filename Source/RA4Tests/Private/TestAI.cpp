@@ -877,6 +877,26 @@ RA4_TEST(AI, RemembersWhereTheEnemyBaseWasAfterMemoryDecays)
     RA4_EXPECT(BaseTile.Y < 32);
 }
 
+RA4_TEST(AI, StaleGatherCommitsWhenReinforcementsStop)
+{
+    const TickIndex Fresh = 0;
+    const TickIndex Stale = kTicksPerSecond * 31;
+
+    // At strength: commit regardless of growth age.
+    RA4_EXPECT(ShouldCommitStaleGather(6, 6, Fresh));
+    RA4_EXPECT(ShouldCommitStaleGather(9, 6, Fresh));
+    // Below minimum with fresh growth: keep gathering.
+    RA4_EXPECT(!ShouldCommitStaleGather(5, 6, Fresh));
+    RA4_EXPECT(!ShouldCommitStaleGather(3, 6, kTicksPerSecond * 30));
+    RA4_EXPECT(ShouldCommitStaleGather(3, 6, kTicksPerSecond * 30 + 1));
+    // Below minimum, growth stopped: attack with what exists.
+    RA4_EXPECT(ShouldCommitStaleGather(5, 6, Stale));
+    RA4_EXPECT(ShouldCommitStaleGather(2, 8, Stale));
+    // A lone unit never auto-commits; nothing to commit at all never does either.
+    RA4_EXPECT(!ShouldCommitStaleGather(1, 8, Stale));
+    RA4_EXPECT(!ShouldCommitStaleGather(0, 8, Stale));
+}
+
 RA4_TEST(AI, SiegeRoleStaysDistinctFromDirectFire)
 {
     // Role derivation used to flag any weapon with range over 7 m as artillery,

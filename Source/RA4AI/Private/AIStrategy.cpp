@@ -1,6 +1,8 @@
 // Copyright (c) Red Alert 4 project.
 #include "RA4AI/AIStrategy.h"
 
+#include "RA4Core/SimConfig.h"
+
 #include <algorithm>
 
 namespace RA4
@@ -403,6 +405,23 @@ AIStrategy SelectStrategy(const std::vector<AIStrategyScore>& Scores,
 int32_t RequiredCreditReserve(AIStrategy Strategy, const AIConfig& Config)
 {
     return Strategy == AIStrategy::Recover ? 0 : Config.CreditReserve;
+}
+
+bool ShouldCommitStaleGather(size_t AliveCount, int32_t MinCommitUnits,
+                             TickIndex SinceLastRosterChangeTicks)
+{
+    const int32_t Floor = std::max(1, MinCommitUnits);
+    if (AliveCount >= size_t(Floor))
+    {
+        return true;
+    }
+    // Below minimum: waiting is right only while the roster is still changing. An
+    // economy that has neither reinforced nor lost anyone for thirty seconds will
+    // not fill the gap -- attacking with what exists strictly beats standing at
+    // base until the clock runs out. One unit alone never auto-commits; a pair can
+    // at least screen each other.
+    return AliveCount >= 2 &&
+           SinceLastRosterChangeTicks > TickIndex(kTicksPerSecond * 30);
 }
 
 } // namespace AI

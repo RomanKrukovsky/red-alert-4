@@ -39,9 +39,16 @@ struct RA4AI_API TacticalOperation
     TileCoord StagingPoint{0, 0};
     int32_t RequiredCombatUnits = 3;
     int32_t MinRetreatUnits = 1;
+    // Alive-strength at which an engaged squad breaks off: half the commit size,
+    // so a push presses its attack instead of retreating on the first losses.
+    int32_t RetreatFloorUnits = 1;
     std::vector<EntityId> AssignedUnits;
     TickIndex StartTick = 0;
     TickIndex LastStateChangeTick = 0;
+    // Last tick the squad roster changed -- a recruit joined or a casualty was
+    // pruned. A gather whose roster has been stable below minimum for a long while
+    // is waiting on reinforcements that are not coming.
+    TickIndex LastSquadGrowthTick = 0;
 
     void TransitionTo(OperationState NewState, TickIndex CurrentTick)
     {

@@ -2,6 +2,7 @@
 #pragma once
 
 #include <cstdint>
+#include "RA4Core/Ids.h"
 #include <vector>
 
 #ifndef RA4AI_API
@@ -124,6 +125,12 @@ RA4AI_API AIStrategy SelectStrategy(const std::vector<AIStrategyScore>& Scores,
                                     const AIConfig& Config);
 RA4AI_API int32_t FindStrategyScore(const std::vector<AIStrategyScore>& Scores,
                                     AIStrategy Strategy);
+/// Commitment test for a squad still gathering below its minimum size. Returns
+/// true when the squad is at strength, or when its roster has been stable below
+/// minimum for long enough that reinforcements are not coming and attacking with
+/// what exists beats idling.
+RA4AI_API bool ShouldCommitStaleGather(size_t AliveCount, int32_t MinCommitUnits,
+                                       TickIndex SinceLastRosterChangeTicks);
 RA4AI_API int32_t RequiredCreditReserve(AIStrategy Strategy,
                                         const AIConfig& Config);
 const char* RA4AI_API ToString(AIStrategy Strategy);
