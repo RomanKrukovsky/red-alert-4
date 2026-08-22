@@ -104,3 +104,53 @@ Same-seed runs remain byte-identical.
   revisit if defender-side raid response gets smarter.
 - Independent review flagged that `bCommittedPush` should stay size-based only;
   comment and code now agree.
+
+---
+
+# Update — Anti-Passivity Investigation (branch `agents/ai-gameplay-strength-v2`, 2026-08-22, second pass)
+
+Attacked the remaining ~108/224 league draws. No net-positive balance delta shipped;
+three important findings and one small fix landed instead.
+
+## Shipped
+
+`AICommander::TryScout` no longer drafts wounded units as scouts (units never heal;
+a wounded draft dies on the road and buys nothing). Draw-neutral across seeds
+20260805/777/424242 (108/108/107 vs HEAD), strictly better play. NOTE: this hunk
+landed inside commit `3d737d2` ("33") alongside concurrent UI work.
+
+## Finding 1 — Ghost squad members were accidental aggression padding
+
+`ActiveOperation.AssignedUnits` retains destroyed EntityIds between doctrine regroup
+cycles. Honest cleanup (prune dead immediately) is *mechanically correct but cost
++26 draws*: ghosts inflated every size gate -- commit threshold (`>= MinRetreatUnits`),
+the forecast-veto bypass (`size < RequiredCombatUnits`), and the retreat trigger
+(`< MinRetreatUnits`). Ghost-padded squads therefore committed earlier, skipped bad
+forecasts and fought longer than honest rosters do. The disease is gate
+conservatism in long matches; the ghosts were an unearned cure. **Follow-up package:
+gate redesign** -- count alive members everywhere and re-tune profile thresholds
+with explicit multi-seed measurement before shipping any prune.
+
+## Finding 2 — "Obviously correct" fixes move the league ±10 either way
+
+Aiming objectives at passable tiles (never into remembered building footprints --
+a real stall mechanism: AttackMove has no give-up path, unlike Move) measured +10
+draws alone. The league is chaotic: any behavioural perturbation reshuffles all
+224 outcomes. **Methodology going forward**: never judge a change on one seed or
+one metric; measure >= 3 base seeds and watch draw count AND ladder spread AND
+building-damage share together.
+
+## Finding 3 — Tooling harness divergence
+
+Throwaway diagnostic tools must consume events exactly like the production loop:
+commanders read the PREVIOUS tick's event batch (clear before World.Tick). An early
+diag variant cleared events before commanders saw them, silently disabling
+return-fire and under-attack responses and producing confidently wrong timelines.
+The league harness (`AILeague::PlayMatch`) is the reference implementation.
+
+## Verified non-changes
+
+Engaging-timeout (30 s), retreat-timeout, stale-gather escalation (120 s), and a
+squad-stall watchdog each measured neutral-to-worse on draws; none shipped. The
+endgame stalls they targeted are real (documented above) but require the gate
+redesign first, not timers bolted on top.
