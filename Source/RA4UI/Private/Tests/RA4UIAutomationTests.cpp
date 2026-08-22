@@ -37,6 +37,8 @@ bool FRA4ScreenContractReferenceVariantTest::RunTest(const FString& Parameters)
         ERA4UIScreenId::AtlanticHud,
         ERA4UIScreenVariant::NavalWarfare);
     const FRA4UIScreenContract Loading = ResolveScreenContract(ERA4UIScreenId::Loading);
+    const FRA4UIScreenContract EurasianCampaign = ResolveScreenContract(ERA4UIScreenId::EurasianCampaign);
+    const FRA4UIScreenContract PacificCampaign = ResolveScreenContract(ERA4UIScreenId::PacificCampaign);
 
     TestEqual(TEXT("Atlantic naval reference"), AtlanticNaval.ReferenceNumber, 13);
     TestEqual(TEXT("Atlantic naval theme"), AtlanticNaval.Theme, ERA4FactionTheme::AtlanticAlliance);
@@ -44,6 +46,10 @@ bool FRA4ScreenContractReferenceVariantTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Atlantic naval input"), AtlanticNaval.InputMode, ERA4UIInputMode::GameAndUI);
     TestEqual(TEXT("Loading reference"), Loading.ReferenceNumber, 10);
     TestEqual(TEXT("Loading input"), Loading.InputMode, ERA4UIInputMode::UIOnly);
+    // Faction campaign plates keep the remaster shot order: eurasian, atlantic,
+    // eastern, pacific; independent closes the set at 19.
+    TestEqual(TEXT("Eurasian campaign reference"), EurasianCampaign.ReferenceNumber, 3);
+    TestEqual(TEXT("Pacific campaign reference"), PacificCampaign.ReferenceNumber, 6);
     return true;
 }
 
