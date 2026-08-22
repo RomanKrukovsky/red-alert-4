@@ -47,15 +47,17 @@ struct AIMatch
         BuildDefaultContent(Content);
         World.Initialize(&Content, MakeTestSetup(Seed));
         // Both sides start with a headquarters and ore, exactly as the skirmish
-        // bootstrap seeds a real match.
+        // bootstrap seeds a real match. Player 1's base is the point-mirror of
+        // player 0's about the map centre -- the same symmetric layout the league
+        // and viewer use, so no start spot is structurally advantaged.
         World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
-        World.SpawnBuilding(Ids::AllConYard, 1, TileCoord(48, 48), true);
+        World.SpawnBuilding(Ids::AllConYard, 1, TileCoord(53, 53), true);
         for (int32_t X = 0; X < 3; ++X)
         {
             for (int32_t Y = 0; Y < 3; ++Y)
             {
                 World.SpawnResourceNode(Ids::OreField, TileCoord(6 + X, 15 + Y), 4000);
-                World.SpawnResourceNode(Ids::OreField, TileCoord(53 + X, 43 + Y), 4000);
+                World.SpawnResourceNode(Ids::OreField, TileCoord(57 - X, 48 - Y), 4000);
             }
         }
         World.ClearEvents();
@@ -815,6 +817,93 @@ RA4_TEST(AI, DispatchesScoutWhenNoTargetsAreKnown)
         }
     }
     RA4_EXPECT(bSawScoutMove);
+}
+
+RA4_TEST(AI, BottomRightCommanderScoutsItsActualMirrorCorner)
+{
+    // The old scout ring hardcoded the bottom-right corner as "the likely enemy
+    // base", which is only true for the top-left player: a commander starting
+    // anywhere else toured its own half while the real enemy corner was never
+    // visited. Player 1's yard sits at (53,53), so its first waypoint must point
+    // into the top-left quadrant.
+    AIMatch M;
+    M.Enable(1, AIProfile::Balanced);
+
+    bool bScoutedTowardMirror = false;
+    for (int Chunk = 0; Chunk < SecondsToTicks(240) / 10 && !bScoutedTowardMirror; ++Chunk)
+    {
+        M.Run(10);
+        const EntityId Scout = M.Commanders[1].GetScoutUnit();
+        if (!Scout.IsValid())
+        {
+            continue;
+        }
+        const OrderQueue* Orders = M.World.GetOrders(Scout);
+        if (Orders == nullptr || Orders->Count == 0)
+        {
+            continue;
+        }
+        const TileCoord Target = M.World.GetMap().WorldToTile(Orders->Front().Location);
+        if (Target.X < 32 && Target.Y < 32)
+        {
+            bScoutedTowardMirror = true;
+        }
+    }
+    RA4_EXPECT(bScoutedTowardMirror);
+}
+
+RA4_TEST(AI, RemembersWhereTheEnemyBaseWasAfterMemoryDecays)
+{
+    // Building sightings expire from Knowledge after MemoryRetentionTicks, but the
+    // commander must keep the last known enemy base position: an army arriving at
+    // an expired target has to return there instead of wandering the map while the
+    // base it once saw sits unattacked -- the exact mechanism that used to stall
+    // half of all league matches into draws.
+    AIMatch M;
+    M.Enable(0, AIProfile::Adaptive);
+    M.Enable(1, AIProfile::Turtle);
+    // Long enough for the opening economy, the scout ride and first contact:
+    // in this pairing Adaptive stalls early while Turtle's counterattack reaches
+    // the Adaptive base around the three-minute mark and starts seeing structures.
+    M.Run(SecondsToTicks(480));
+
+    // Player 1 (Turtle) marches on player 0's base and sights its buildings.
+    const TickIndex BaseTick = M.Commanders[1].GetLastKnownEnemyBaseTick();
+    RA4_REQUIRE(BaseTick > 0);
+    const TileCoord BaseTile = M.Commanders[1].GetLastKnownEnemyBaseTile();
+    // Player 1 starts south-east, so every enemy structure it can ever see lies
+    // in the north-west half of this symmetric map.
+    RA4_EXPECT(BaseTile.X < 32);
+    RA4_EXPECT(BaseTile.Y < 32);
+}
+
+RA4_TEST(AI, SiegeRoleStaysDistinctFromDirectFire)
+{
+    // Role derivation used to flag any weapon with range over 7 m as artillery,
+    // which made every main battle tank and rocket infantry "artillery" in the
+    // doctrine ratios: composition balancing then saw a 100% artillery army no
+    // matter what was actually built, and the siege counter-bonus stacked on top.
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+
+    const EntityDef* HeavyTank = Content.FindEntity(MakeContentId("unit.sov.heavy_tank"));
+    const EntityDef* LightTank = Content.FindEntity(MakeContentId("unit.all.light_tank"));
+    const EntityDef* Rocketeer = Content.FindEntity(MakeContentId("unit.sov.rocket_trooper"));
+    const EntityDef* Zarevo = Content.FindEntity(MakeContentId("unit.sov.zarevo_mlrs"));
+    const EntityDef* Oracle = Content.FindEntity(MakeContentId("unit.all.oracle_artillery"));
+    RA4_REQUIRE(HeavyTank != nullptr);
+    RA4_REQUIRE(LightTank != nullptr);
+    RA4_REQUIRE(Rocketeer != nullptr);
+    RA4_REQUIRE(Zarevo != nullptr);
+    RA4_REQUIRE(Oracle != nullptr);
+
+    // Direct fire is never artillery, whatever its range.
+    RA4_EXPECT(!HasRole(HeavyTank->Roles, EntityRole::Artillery));
+    RA4_EXPECT(!HasRole(LightTank->Roles, EntityRole::Artillery));
+    RA4_EXPECT(!HasRole(Rocketeer->Roles, EntityRole::Artillery));
+    // Indirect fire (minimum range or siege warhead) is.
+    RA4_EXPECT(HasRole(Zarevo->Roles, EntityRole::Artillery));
+    RA4_EXPECT(HasRole(Oracle->Roles, EntityRole::Artillery));
 }
 
 RA4_TEST(AI, ArmyGroupManagerLifecycle)
