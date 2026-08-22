@@ -97,8 +97,7 @@ EntityRole ContentDatabase::DeriveEntityRoles(const EntityDef& Def) const
             {
                 Roles |= EntityRole::AntiArmor;
             }
-            if (Wpn->MinRange > Fixed::Zero() || Wpn->MaxRange >= Fixed::FromInt(700) ||
-                Wpn->Warhead == WarheadClass::Siege)
+            if (Wpn->MinRange > Fixed::Zero() || Wpn->Warhead == WarheadClass::Siege)
             {
                 Roles |= EntityRole::Artillery;
             }
