@@ -180,7 +180,7 @@ TSharedRef<SWidget> URA4MissionMapScreenWidget::RebuildWidget()
     SetRootBackground(
         this,
         TEXT("/Game/RA4UI/Art/T_RA4_USSR_MissionMap.T_RA4_USSR_MissionMap"),
-        FLinearColor(0.82f, 0.82f, 0.82f, 1.0f));
+        FLinearColor(0.42f, 0.30f, 0.72f, 1.0f));
 
     UCanvasPanel* Canvas = AddCanvas(this, WidgetTree, TEXT("MissionMapCanvas"));
 
@@ -378,7 +378,7 @@ TSharedRef<SWidget> URA4BriefingScreenWidget::RebuildWidget()
     }
     SetRootBackground(
         this,
-        TEXT("/Game/RA4UI/Art/T_RA4_USSR_CampaignCommander.T_RA4_USSR_CampaignCommander"),
+        TEXT("/Game/RA4UI/Art/T_RA4_Commander_Eurasian.T_RA4_Commander_Eurasian"),
         FLinearColor(0.64f, 0.56f, 0.56f, 1.0f));
     UCanvasPanel* Canvas = AddCanvas(this, WidgetTree, TEXT("BriefingCanvas"));
 
@@ -427,7 +427,7 @@ TSharedRef<SWidget> URA4BriefingScreenWidget::RebuildWidget()
         MissionAccent, TEXT("BlocLabel")));
     UImage* CommanderImage = MakeImage(
         WidgetTree,
-        TEXT("/Game/RA4UI/Art/T_RA4_USSR_CampaignCommander.T_RA4_USSR_CampaignCommander"),
+        TEXT("/Game/RA4UI/Art/T_RA4_Commander_Eurasian.T_RA4_Commander_Eurasian"),
         TEXT("BriefingCommanderImage"));
     UVerticalBoxSlot* CommanderImageSlot = Commander->AddChildToVerticalBox(CommanderImage);
     CommanderImageSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
@@ -537,7 +537,7 @@ TSharedRef<SWidget> URA4VideoCommsScreenWidget::RebuildWidget()
         19, MissionAccent, TEXT("MarshalChannel")));
     UImage* EurasianImage = MakeImage(
         WidgetTree,
-        TEXT("/Game/RA4UI/Art/T_RA4_USSR_CampaignCommander.T_RA4_USSR_CampaignCommander"),
+        TEXT("/Game/RA4UI/Art/T_RA4_Commander_Eurasian.T_RA4_Commander_Eurasian"),
         TEXT("EurasianChannelImage"));
     UVerticalBoxSlot* EurasianImageSlot = EurasianChannel->AddChildToVerticalBox(EurasianImage);
     EurasianImageSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
@@ -559,7 +559,7 @@ TSharedRef<SWidget> URA4VideoCommsScreenWidget::RebuildWidget()
     AtlanticChannelBox->AddChildToVerticalBox(AtlanticHeading);
     UImage* AtlanticImage = MakeImage(
         WidgetTree,
-        TEXT("/Game/RA4UI/Art/T_RA4_Allies_CampaignCommander.T_RA4_Allies_CampaignCommander"),
+        TEXT("/Game/RA4UI/Art/T_RA4_Commander_Atlantic.T_RA4_Commander_Atlantic"),
         TEXT("AtlanticChannelBoxImage"));
     UVerticalBoxSlot* AtlanticImageSlot = AtlanticChannelBox->AddChildToVerticalBox(AtlanticImage);
     AtlanticImageSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
@@ -671,7 +671,7 @@ TSharedRef<SWidget> URA4LoadingScreenWidget::RebuildWidget()
             : FVector2D(720.0f, 62.0f), 4);
 
     UTextBlock* OperationTitle = MakeMissionText(
-        WidgetTree, LOCTEXT("LoadingOperation", "ОПЕРАЦИЯ «КИЕВ-86»"), 24,
+        WidgetTree, LOCTEXT("LoadingOperation", "ОПЕРАЦИЯ «ТИХИЙ РЕЛЕЙ»"), 24,
         MissionAccent, TEXT("LoadingOperation"));
     OperationTitle->SetJustification(ETextJustify::Center);
     PlaceMissionWidget(
@@ -692,14 +692,14 @@ TSharedRef<SWidget> URA4LoadingScreenWidget::RebuildWidget()
             MissionAccent, TEXT("SummaryHeading")));
         Summary->AddChildToVerticalBox(MakeMissionText(
             WidgetTree,
-            LOCTEXT("SummaryText", "Американцы укрепили позиции в Киеве. Подготовьте город к наступлению и уничтожьте командный центр противника."),
+            LOCTEXT("SummaryText", "Горный коридор закрывается. Подавите сеть наведения и проведите бронегруппу до рассвета."),
             19, MissionText, TEXT("SummaryText"), false))->SetPadding(FMargin(0.0f, 14.0f, 0.0f, 34.0f));
         Summary->AddChildToVerticalBox(MakeMissionText(
             WidgetTree, LOCTEXT("GoalsHeading", "ЦЕЛИ"), 18,
             MissionAccent, TEXT("GoalsHeading")));
         Summary->AddChildToVerticalBox(MakeMissionText(
             WidgetTree,
-            LOCTEXT("LoadingGoals", "☆  Уничтожить командный центр США\n☆  Ликвидировать генерала Хейса\n☆  Захватить центральный район Киева\n☆  Эвакуировать инженеров"),
+            LOCTEXT("LoadingGoals", "☆  Подавить 3 узла связи\n☆  Провести бронегруппу через перевал\n☆  Сохранить мобильный комплекс РЭБ\n☆  Обеспечить проход колонны до рассвета"),
             17, MissionText, TEXT("LoadingGoals"), false))->SetPadding(FMargin(0.0f, 14.0f));
         PlaceMissionWidget(Canvas, MakeMissionPanel(
             WidgetTree, Summary, TEXT("LoadingBriefingPanel"), MissionPanel, ERA4PanelRole::Hero),

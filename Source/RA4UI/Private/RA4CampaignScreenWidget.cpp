@@ -47,7 +47,7 @@ FFactionVisual ResolveFactionVisual(const ERA4FactionTheme Faction)
             ERA4UIScreenId::SovietCampaign,
             FLinearColor(0.68f, 0.28f, 0.88f, 1.0f),
             FLinearColor(0.04f, 0.015f, 0.06f, 0.96f),
-            TEXT("/Game/RA4UI/Art/T_RA4_USSR_CampaignCommander.T_RA4_USSR_CampaignCommander"),
+            TEXT("/Game/RA4UI/Art/T_RA4_Commander_Eurasian.T_RA4_Commander_Eurasian"),
             LOCTEXT("EurasianHeading", "КАМПАНИЯ ЕВРАЗИЙСКОГО ПАКТА"),
             LOCTEXT("EurasianChapter", "РОССИЯ: ЛИНИЯ РАЗЛОМА"),
             LOCTEXT("EurasianEvent", "ФРОНТОВАЯ СВОДКА: ГРУППИРОВКА РЭБ «СЕВЕР» РАЗВЁРНУТА НА ПОЗИЦИЯХ.")
@@ -57,7 +57,7 @@ FFactionVisual ResolveFactionVisual(const ERA4FactionTheme Faction)
             ERA4UIScreenId::AlliesCampaign,
             FLinearColor(0.35f, 0.70f, 0.98f, 1.0f),
             FLinearColor(0.015f, 0.05f, 0.12f, 0.96f),
-            TEXT("/Game/RA4UI/Art/T_RA4_Allies_CampaignCommander.T_RA4_Allies_CampaignCommander"),
+            TEXT("/Game/RA4UI/Art/T_RA4_Commander_Atlantic.T_RA4_Commander_Atlantic"),
             LOCTEXT("AtlanticHeading", "КАМПАНИЯ АТЛАНТИЧЕСКОГО АЛЬЯНСА"),
             LOCTEXT("AtlanticChapter", "США: ДАЛЬНИЙ РУБЕЖ"),
             LOCTEXT("AtlanticEvent", "ОПЕРАТИВНАЯ СВОДКА: АВИАНОСНАЯ ГРУППА ВЫШЛА НА ПЕРЕДОВОЙ РУБЕЖ.")
@@ -67,7 +67,7 @@ FFactionVisual ResolveFactionVisual(const ERA4FactionTheme Faction)
             ERA4UIScreenId::EasternCampaign,
             FLinearColor(0.88f, 0.72f, 0.22f, 1.0f),
             FLinearColor(0.02f, 0.08f, 0.04f, 0.96f),
-            TEXT("/Game/RA4UI/Art/T_RA4_Eastern_CampaignCommander.T_RA4_Eastern_CampaignCommander"),
+            TEXT("/Game/RA4UI/Art/T_RA4_Commander_Eastern.T_RA4_Commander_Eastern"),
             LOCTEXT("EasternHeading", "КАМПАНИЯ ВОСТОЧНОЙ КОАЛИЦИИ"),
             LOCTEXT("EasternChapter", "КИТАЙ: НЕФРИТОВАЯ СЕТЬ"),
             LOCTEXT("EasternEvent", "СВОДКА КОАЛИЦИИ: АВТОМАТИЗИРОВАННЫЙ ЗАВОД ВЫПУСТИЛ ПЕРВУЮ СЕРИЮ БПЛА.")
@@ -77,7 +77,7 @@ FFactionVisual ResolveFactionVisual(const ERA4FactionTheme Faction)
             ERA4UIScreenId::ChronoCampaign,
             FLinearColor(0.20f, 0.80f, 0.90f, 1.0f),
             FLinearColor(0.01f, 0.06f, 0.08f, 0.96f),
-            TEXT("/Game/RA4UI/Art/T_RA4_Chrono_CampaignCommander.T_RA4_Chrono_CampaignCommander"),
+            TEXT("/Game/RA4UI/Art/T_RA4_Commander_Pacific.T_RA4_Commander_Pacific"),
             LOCTEXT("PacificHeading", "КАМПАНИЯ ТИХООКЕАНСКОГО ПАКТА"),
             LOCTEXT("PacificChapter", "ЯПОНИЯ: ДУГА ШТОРМА"),
             LOCTEXT("PacificEvent", "ОБОРОНА ОСТРОВОВ: БЕРЕГОВОЙ ЛАЗЕРНЫЙ КОМПЛЕКС «КАГАМИ» АКТИВИРОВАН.")
@@ -87,7 +87,7 @@ FFactionVisual ResolveFactionVisual(const ERA4FactionTheme Faction)
             ERA4UIScreenId::CampaignSelect,
             FLinearColor(0.78f, 0.52f, 0.18f, 1.0f),
             FLinearColor(0.08f, 0.05f, 0.02f, 0.96f),
-            TEXT("/Game/RA4UI/Art/T_RA4_USSR_CampaignCommander.T_RA4_USSR_CampaignCommander"),
+            TEXT("/Game/RA4UI/Art/T_RA4_Commander_Eurasian.T_RA4_Commander_Eurasian"),
             LOCTEXT("IndepHeading", "НЕЗАВИСИМЫЕ ДЕРЖАВЫ"),
             LOCTEXT("IndepChapter", "ИРАН: ТЕНЬ НАД ХРЕБТОМ"),
             LOCTEXT("IndepEvent", "АСИММЕТРИЧНЫЙ УДАР: МОБИЛЬНЫЕ РАКЕТНЫЕ ПУСКОВЫЕ «ХЕЙБАР» ВЫШЛИ НА МАРШ.")
@@ -97,7 +97,7 @@ FFactionVisual ResolveFactionVisual(const ERA4FactionTheme Faction)
             ERA4UIScreenId::ChronoCampaign,
             FLinearColor(0.70f, 0.30f, 1.0f, 1.0f),
             FLinearColor(0.10f, 0.025f, 0.16f, 0.96f),
-            TEXT("/Game/RA4UI/Art/T_RA4_Chrono_CampaignCommander.T_RA4_Chrono_CampaignCommander"),
+            TEXT("/Game/RA4UI/Art/T_RA4_Commander_Pacific.T_RA4_Commander_Pacific"),
             LOCTEXT("ChronoHeading", "ХРОНОЛЕГИОН (LEGACY)"),
             LOCTEXT("ChronoChapter", "ГЛАВА 1: ВРЕМЕННАЯ АНОМАЛИЯ"),
             LOCTEXT("ChronoEvent", "ХРОНОПРОТОКОЛ АКТИВЕН: АНОМАЛИЯ ЗАФИКСИРОВАНА.")
