@@ -128,12 +128,10 @@ private:
     bool AllSquadAtStaging(const SimWorld& World) const;
     bool AnySquadNearTarget(const SimWorld& World, const TileCoord& TargetTile) const;
     void IssueSquadAttackMove(const SimWorld& World, const Vec2& Destination,
-                              std::vector<Command>& Out, bool bAssaultColumns = false);
-    bool EnemyHasSiegeKnown() const;
+                              std::vector<Command>& Out);
     EntityId FindTacticalFocusTarget(const SimWorld& World, EntityId AttackerId,
                                      const std::vector<EntityId>& CandidateEnemies,
-                                     const std::vector<EntityId>& ReturnFireTargets,
-                                     const std::vector<EntityId>& ClaimedTargets) const;
+                                     const std::vector<EntityId>& ReturnFireTargets) const;
     void IssueSquadTacticalCombatOrders(const SimWorld& World, const Vec2& Destination,
                                         std::vector<Command>& Out);
     void IssueSquadRetreat(const SimWorld& World, std::vector<Command>& Out);
@@ -161,7 +159,6 @@ private:
     int32_t CountOwned(const SimWorld& World, bool (*Predicate)(const EntityDef&)) const;
     int32_t CountOwnedUnits(const SimWorld& World, bool bCombatOnly) const;
     int32_t CountIdleCombatUnits(const SimWorld& World) const;
-    EntityId FindIdleUnassignedUnit(const SimWorld& World, uint32_t Skip) const;
     int32_t CountQueued(const SimWorld& World, ContentId Content) const;
     EntityId FindOwnConstructionYard(const SimWorld& World) const;
 
