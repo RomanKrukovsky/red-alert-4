@@ -124,15 +124,21 @@ TSharedRef<SWidget> URA4MainMenuScreenWidget::RebuildWidget()
 
     if (UTexture2D* BackgroundTexture = LoadObject<UTexture2D>(
         nullptr,
-        TEXT("/Game/RA4UI/Art/T_RA4_USSR_MainMenuBackground.T_RA4_USSR_MainMenuBackground")))
+        // Reference 02_main_menu.png: the remaster plate already carries the
+        // painted command centre, so it is dimmed hard instead of recoloured —
+        // the panels above it must own every readable pixel.
+        TEXT("/Game/RA4UI/Art/Remaster/T_SH_02_MainMenu.T_SH_02_MainMenu")))
     {
         GetBackgroundLayer()->SetBrushFromTexture(BackgroundTexture, false);
-        GetBackgroundLayer()->SetColorAndOpacity(FLinearColor(0.20f, 0.34f, 0.60f, 1.0f));
+        GetBackgroundLayer()->SetColorAndOpacity(FLinearColor(0.45f, 0.47f, 0.54f, 1.0f));
     }
 
     UBorder* Grade = WidgetTree->ConstructWidget<UBorder>(
         UBorder::StaticClass(), TEXT("CommandCentreGrade"));
-    Grade->SetBrushColor(FLinearColor(0.008f, 0.016f, 0.038f, 0.58f));
+    // The remaster plate bakes its own menu chrome into the art. A real filled
+    // scrim (the default border brush draws nothing) is what keeps those ghosts
+    // below the living widgets instead of doubling them.
+    Grade->SetBrush(FSlateColorBrush(FLinearColor(0.008f, 0.010f, 0.022f, 0.82f)));
     Grade->SetVisibility(ESlateVisibility::HitTestInvisible);
     UOverlaySlot* GradeSlot = GetContentLayer()->AddChildToOverlay(Grade);
     GradeSlot->SetHorizontalAlignment(HAlign_Fill);
@@ -144,40 +150,32 @@ TSharedRef<SWidget> URA4MainMenuScreenWidget::RebuildWidget()
     CanvasSlot->SetHorizontalAlignment(HAlign_Fill);
     CanvasSlot->SetVerticalAlignment(VAlign_Fill);
 
-    UImage* MechanicalChrome = WidgetTree->ConstructWidget<UImage>(
-        UImage::StaticClass(), TEXT("MainMenuMechanicalChrome"));
-    if (UTexture2D* ChromeTexture = LoadObject<UTexture2D>(
-        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_USSR_MainMenuChrome.T_RA4_USSR_MainMenuChrome")))
-    {
-        MechanicalChrome->SetBrushFromTexture(ChromeTexture, false);
-    }
-    MechanicalChrome->SetVisibility(ESlateVisibility::HitTestInvisible);
-    PlaceMenuWidget(Canvas, MechanicalChrome, FVector2D::ZeroVector, FVector2D(1920.0f, 1080.0f), 3);
-
-    LogoImage = WidgetTree->ConstructWidget<UImage>(
-        UImage::StaticClass(), TEXT("MainMenuLogo"));
-    if (UTexture2D* LogoTexture = LoadObject<UTexture2D>(
-        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_Logo.T_RA4_Logo")))
-    {
-        LogoImage->SetBrushFromTexture(LogoTexture, false);
-    }
-    LogoImage->SetVisibility(ESlateVisibility::HitTestInvisible);
-    // Reference 02_main_menu.png: wordmark centred over the holographic table,
-    // with the scarlet horizon line and the screen's own tagline beneath it.
-    PlaceMenuWidget(Canvas, LogoImage, FVector2D(637.0f, 26.0f), FVector2D(718.0f, 188.0f), 4);
+    // Reference 02_main_menu.png: the wordmark is drawn procedurally — steel
+    // letters, scarlet horizon rule, tagline beneath. The retired logo texture
+    // carried a double exposure and is no longer used here.
+    UTextBlock* Wordmark = MakeMenuText(
+        WidgetTree,
+        LOCTEXT("MainMenuWordmark", "SCARLET HORIZON"), 58,
+        FLinearColor(0.88f, 0.91f, 0.95f, 1.0f),
+        TEXT("MainMenuWordmark"), true);
+    Wordmark->SetAutoWrapText(false);
+    Wordmark->SetJustification(ETextJustify::Center);
+    Wordmark->SetVisibility(ESlateVisibility::HitTestInvisible);
+    WordmarkText = Wordmark;
+    PlaceMenuWidget(Canvas, Wordmark, FVector2D(460.0f, 30.0f), FVector2D(1000.0f, 90.0f), 4);
 
     UBorder* HorizonRule = WidgetTree->ConstructWidget<UBorder>(
         UBorder::StaticClass(), TEXT("MainMenuHorizonRule"));
     HorizonRule->SetBrushColor(MenuHorizon);
     HorizonRule->SetVisibility(ESlateVisibility::HitTestInvisible);
-    PlaceMenuWidget(Canvas, HorizonRule, FVector2D(720.0f, 196.0f), FVector2D(552.0f, 2.0f), 5);
+    PlaceMenuWidget(Canvas, HorizonRule, FVector2D(684.0f, 128.0f), FVector2D(552.0f, 3.0f), 5);
 
     UTextBlock* Tagline = MakeMenuText(
         WidgetTree, LOCTEXT("MainMenuTagline", "ГЛОБАЛЬНЫЙ КОМАНДНЫЙ ЦЕНТР"), 19,
         MutedText, TEXT("MainMenuTagline"), true);
     Tagline->SetJustification(ETextJustify::Center);
     Tagline->SetVisibility(ESlateVisibility::HitTestInvisible);
-    PlaceMenuWidget(Canvas, Tagline, FVector2D(637.0f, 206.0f), FVector2D(718.0f, 30.0f), 5);
+    PlaceMenuWidget(Canvas, Tagline, FVector2D(637.0f, 138.0f), FVector2D(718.0f, 30.0f), 5);
 
     UVerticalBox* MenuList = WidgetTree->ConstructWidget<UVerticalBox>(
         UVerticalBox::StaticClass(), TEXT("MainMenuEntries"));
@@ -240,6 +238,7 @@ TSharedRef<SWidget> URA4MainMenuScreenWidget::RebuildWidget()
         13,
         MutedText,
         TEXT("VersionText"));
+    Version->SetAutoWrapText(false);
     UHorizontalBoxSlot* VersionSlot = Footer->AddChildToHorizontalBox(Version);
     VersionSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
     VersionSlot->SetHorizontalAlignment(HAlign_Right);
