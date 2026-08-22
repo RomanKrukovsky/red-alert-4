@@ -45,9 +45,18 @@ __pycache__/
 /Content/RA4/Audio/Generated/
 /Content/RA4/Generated/
 
-# Ignore binary asset files (.uasset, .umap)
+# Ignore binary asset files (.uasset, .umap) by default: generated and imported
+# content should not bloat history.
 *.uasset
 *.umap
+
+# UI art and widgets are hand-authored and the interface breaks without them, so
+# they are versioned. Without this exception every newly imported texture was
+# silently dropped from its commit and only surfaced as a missing background on
+# a fresh clone.
+!/Content/RA4UI/Art/**/*.uasset
+!/Content/RA4UI/Widgets/**/*.uasset
+!/Content/RA4UI/Fonts/**/*.uasset
 
 
 # Kimi work-state reports must persist between iterations
