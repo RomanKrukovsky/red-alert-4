@@ -614,6 +614,54 @@ int32_t AICommander::CountQueued(const SimWorld& World, ContentId Content) const
     return Count;
 }
 
+EntityId AICommander::FindIdleUnassignedUnit(const SimWorld& World, uint32_t Skip) const
+{
+    const ContentDatabase* Content = World.GetContent();
+    if (Content == nullptr)
+    {
+        return EntityId::Invalid();
+    }
+    std::vector<EntityId> Candidates;
+    const std::vector<EntityCore>& Cores = World.GetAllCores();
+    for (uint32_t I = 0; I < uint32_t(Cores.size()); ++I)
+    {
+        const EntityCore& Core = Cores[I];
+        if (!Core.bAlive || Core.Owner != Player || Core.Kind != EntityKind::Unit)
+        {
+            continue;
+        }
+        const EntityDef* Def = Content->FindEntity(Core.Def);
+        if (!IsCombatUnitDef(Def))
+        {
+            continue;
+        }
+        const EntityId Id = World.MakeId(I);
+        if (Id == ScoutUnit || IsWounded(World, Id))
+        {
+            continue;
+        }
+        const bool bAssigned =
+            std::find(ActiveOperation.AssignedUnits.begin(),
+                      ActiveOperation.AssignedUnits.end(), Id) !=
+            ActiveOperation.AssignedUnits.end();
+        if (bAssigned)
+        {
+            continue;
+        }
+        const OrderQueue* Orders = World.GetOrders(Id);
+        if (Orders != nullptr && Orders->Count > 0)
+        {
+            continue;
+        }
+        Candidates.push_back(Id);
+    }
+    if (Candidates.empty())
+    {
+        return EntityId::Invalid();
+    }
+    return Candidates[Skip % Candidates.size()];
+}
+
 EntityId AICommander::FindOwnConstructionYard(const SimWorld& World) const
 {
     const ContentDatabase* Content = World.GetContent();
@@ -1582,8 +1630,28 @@ bool AICommander::AnySquadNearTarget(const SimWorld& World, const TileCoord& Tar
     return false;
 }
 
+bool AICommander::EnemyHasSiegeKnown() const
+{
+    // Splash weapons punish dense formations; the counter is width. The check is
+    // memory-driven -- remembered artillery roles only, no hidden reads.
+    if (Knowledge == nullptr)
+    {
+        return false;
+    }
+    const ContentDatabase* Content = Knowledge->GetContent();
+    for (const EnemyMemory& Mem : Knowledge->GetKnownEnemies())
+    {
+        const EntityDef* Def = Content != nullptr ? Content->FindEntity(Mem.DefId) : nullptr;
+        if (Def != nullptr && HasRole(Def->Roles, EntityRole::Artillery))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 void AICommander::IssueSquadAttackMove(const SimWorld& World, const Vec2& Destination,
-                                       std::vector<Command>& Out)
+                                       std::vector<Command>& Out, bool bAssaultColumns)
 {
     const size_t UnitCount = ActiveOperation.AssignedUnits.size();
     if (UnitCount == 0)
@@ -1604,7 +1672,17 @@ void AICommander::IssueSquadAttackMove(const SimWorld& World, const Vec2& Destin
     }
     const Vec2 Perpendicular(-AdvanceDir.Y, AdvanceDir.X);
 
-    constexpr int32_t kSlotSpacingUnits = 180; // 1.8 metres between unit slots in battle line
+    // Known enemy splash weapons demand width: a tight battle line under
+    // artillery eats full-splash hits on every member at once.
+    const int32_t kSlotSpacingUnits =
+        EnemyHasSiegeKnown() ? 360 : 180; // metres x100 between unit slots
+
+    // Assault columns converge as pincers once the force is big enough: half the
+    // squad swings left of the objective, half right. Defender fire is front-loaded,
+    // so two narrow columns present fewer simultaneous targets than one wide line.
+    const Vec2 ColumnOffset = bAssaultColumns && UnitCount >= 6
+                                  ? Perpendicular * Fixed::FromInt(1000)   // 10 m
+                                  : Perpendicular * Fixed::FromInt(0);
 
     for (size_t I = 0; I < UnitCount; ++I)
     {
@@ -1622,9 +1700,21 @@ void AICommander::IssueSquadAttackMove(const SimWorld& World, const Vec2& Destin
             continue;
         }
 
-        const int32_t OffsetIndex = int32_t(I) - int32_t(UnitCount / 2);
+        Vec2 ColumnDestination = Destination;
+        int32_t RowIndex = int32_t(I);
+        if (ColumnOffset.X.Raw != 0 || ColumnOffset.Y.Raw != 0)
+        {
+            // Alternate flanks by parity so both columns advance together.
+            const bool bLeft = (I % 2) == 0;
+            const int32_t ColumnRow = int32_t(I / 2);
+            ColumnDestination = bLeft ? Destination + ColumnOffset
+                                      : Destination - ColumnOffset;
+            RowIndex = bLeft ? ColumnRow : -ColumnRow - 1;
+        }
+
+        const int32_t OffsetIndex = RowIndex - int32_t((UnitCount + 1) / 2);
         const Vec2 SlotOffset = Perpendicular * Fixed::FromInt(OffsetIndex * kSlotSpacingUnits);
-        const Vec2 UnitDestination = Destination + SlotOffset;
+        const Vec2 UnitDestination = ColumnDestination + SlotOffset;
 
         Command C;
         C.Type = CommandType::AttackMove;
@@ -1637,7 +1727,8 @@ void AICommander::IssueSquadAttackMove(const SimWorld& World, const Vec2& Destin
 
 EntityId AICommander::FindTacticalFocusTarget(const SimWorld& World, EntityId AttackerId,
                                               const std::vector<EntityId>& CandidateEnemies,
-                                              const std::vector<EntityId>& ReturnFireTargets) const
+                                              const std::vector<EntityId>& ReturnFireTargets,
+                                              const std::vector<EntityId>& ClaimedTargets) const
 {
     const ContentDatabase* Content = World.GetContent();
     const TransformComp* AttackerTransform = World.GetTransform(AttackerId);
@@ -1716,6 +1807,20 @@ EntityId AICommander::FindTacticalFocusTarget(const SimWorld& World, EntityId At
             }
         }
 
+        // Squad fire discipline: every earlier squadmate already engaging this
+        // enemy makes it less attractive. Five units reloading into one corpse
+        // while three full-health enemies shoot freely is classic overkill waste;
+        // the penalty spreads fire across the whole engagement.
+        int32_t Claims = 0;
+        for (const EntityId& Claimed : ClaimedTargets)
+        {
+            if (Claimed == EnemyId)
+            {
+                ++Claims;
+            }
+        }
+        Score -= Claims * 600;
+
         if (EnemyHealth->Max > 0)
         {
             const int32_t HpPct = int32_t((int64_t(EnemyHealth->Current) * 100) / EnemyHealth->Max);
@@ -1793,6 +1898,8 @@ void AICommander::IssueSquadTacticalCombatOrders(const SimWorld& World, const Ve
     // below its required size must stay on economy targets, because trading
     // raiders into a turret they cannot crack is how a rush turns into a
     // twelve-minute draw.
+    std::vector<EntityId> TargetClaims;
+    TargetClaims.reserve(ActiveOperation.AssignedUnits.size());
     std::vector<EntityId> ReturnFireTargets;
     const bool bCommittedPush =
         ActiveOperation.AssignedUnits.size() >=
@@ -1960,7 +2067,12 @@ void AICommander::IssueSquadTacticalCombatOrders(const SimWorld& World, const Ve
             }
         }
 
-        EntityId FocusTarget = FindTacticalFocusTarget(World, Id, VisibleEnemies, ReturnFireTargets);
+        EntityId FocusTarget = FindTacticalFocusTarget(World, Id, VisibleEnemies,
+                                                       ReturnFireTargets, TargetClaims);
+        if (FocusTarget.IsValid())
+        {
+            TargetClaims.push_back(FocusTarget);
+        }
 
         // Artillery standoff positioning
         if (HasRole(UnitDef->Roles, EntityRole::Artillery) && UnitDef->Weapon.IsValid() && FocusTarget.IsValid())
@@ -2082,19 +2194,31 @@ bool AICommander::TryHarassRaid(const SimWorld& World, int32_t ArmySize,
         return false;
     }
 
+    // Two modes, one raid:
+    //  * idle operation -- the raid IS the pressure while the real force builds; or
+    //  * committed push (staging/advancing) -- a second fist of surplus home units
+    //    harasses the enemy economy so defenders must split. The push itself is
+    //    never stripped: raiders are drawn only from idle unassigned units.
     const bool bOperationIdle =
         ActiveOperation.State == OperationState::Proposed ||
         ActiveOperation.State == OperationState::Completed ||
         ActiveOperation.State == OperationState::Aborted;
-    if (!bOperationIdle)
-    {
-        return false;
-    }
+    const bool bPushCommitted =
+        ActiveOperation.State == OperationState::Staging ||
+        ActiveOperation.State == OperationState::Advancing;
+    const int32_t IdleHomeUnits = CountIdleCombatUnits(World);
 
-    // Enough force for a probe, but not the full push -- that is the push's job.
-    const int32_t RaidThreshold = std::max(Config.MinimumAttackSize,
-                                           EffectiveAssaultArmySize() / 2);
-    if (ArmySize < RaidThreshold || ArmySize >= EffectiveAssaultArmySize())
+    if (bOperationIdle)
+    {
+        // Enough force for a probe, but not the full push -- that is the push's job.
+        const int32_t RaidThreshold = std::max(Config.MinimumAttackSize,
+                                               EffectiveAssaultArmySize() / 2);
+        if (ArmySize < RaidThreshold || ArmySize >= EffectiveAssaultArmySize())
+        {
+            return false;
+        }
+    }
+    else if (!bPushCommitted || IdleHomeUnits < 1)
     {
         return false;
     }
@@ -2105,15 +2229,6 @@ bool AICommander::TryHarassRaid(const SimWorld& World, int32_t ArmySize,
     const TickIndex Now = World.GetTick();
     if (bHasHarassRaid && Now >= LastHarassRaidTick &&
         Now - LastHarassRaidTick < TickIndex(Gap))
-    {
-        return false;
-    }
-
-    // Raids are an alternative to the big push only while the operation is idle;
-    // once the squad is gathering/staging/advancing, harass must not steal ticks.
-    if (ActiveOperation.State == OperationState::Gathering ||
-        ActiveOperation.State == OperationState::Staging ||
-        ActiveOperation.State == OperationState::Advancing)
     {
         return false;
     }
@@ -2157,18 +2272,36 @@ bool AICommander::TryHarassRaid(const SimWorld& World, int32_t ArmySize,
         return false;
     }
 
-    // Send half the idle squad through the standard AttackMove path. Which half is
-    // chosen from the seeded stream so a replay picks the same raiders.
+    // Raiders: half the idle squad when idle-mode; surplus idle HOME units
+    // (unassigned to the marching push) in committed-push mode. The seeded stream
+    // keeps replay picks deterministic.
     ReconcileSquad(World);
-    const size_t RaidCount = std::max<size_t>(1, ActiveOperation.AssignedUnits.size() / 2);
+    const bool bSurplusMode = !bOperationIdle;
+    const size_t PoolSize = bSurplusMode
+                                ? size_t(std::max(1, CountIdleCombatUnits(World)))
+                                : ActiveOperation.AssignedUnits.size();
+    const size_t RaidCount = std::max<size_t>(1, PoolSize / 2);
     const Vec2 Destination = World.GetMap().TileCenterToWorld(Best->Position);
     size_t Issued = 0;
-    for (size_t I = 0; I < ActiveOperation.AssignedUnits.size() && Issued < RaidCount; ++I)
+    for (size_t Attempt = 0; Attempt < PoolSize * 2u && Issued < RaidCount; ++Attempt)
     {
-        const size_t Index =
-            (I + Rng.NextBelow(uint32_t(ActiveOperation.AssignedUnits.size()))) %
-            ActiveOperation.AssignedUnits.size();
-        const EntityId Id = ActiveOperation.AssignedUnits[Index];
+        EntityId Id;
+        if (bSurplusMode)
+        {
+            Id = FindIdleUnassignedUnit(World, Rng.NextBelow(uint32_t(PoolSize)) +
+                                                uint32_t(Attempt));
+        }
+        else
+        {
+            const size_t Index =
+                (Attempt + Rng.NextBelow(uint32_t(ActiveOperation.AssignedUnits.size()))) %
+                ActiveOperation.AssignedUnits.size();
+            Id = ActiveOperation.AssignedUnits[Index];
+        }
+        if (!Id.IsValid())
+        {
+            continue;
+        }
         // Ordering a destroyed unit burns command budget on a NoSuchEntity refusal.
         if (!World.IsAlive(Id))
         {
@@ -2731,7 +2864,7 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
         {
             const Vec2 TargetWorld =
                 World.GetMap().TileCenterToWorld(ActiveOperation.TargetLocation);
-            IssueSquadAttackMove(World, TargetWorld, Out);
+            IssueSquadAttackMove(World, TargetWorld, Out, /*bAssaultColumns*/ true);
             if (AnySquadNearTarget(World, ActiveOperation.TargetLocation))
             {
                 ActiveOperation.TransitionTo(OperationState::Engaging, World.GetTick());
