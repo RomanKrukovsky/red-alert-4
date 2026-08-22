@@ -9,7 +9,7 @@
 
 class UButton;
 class UCanvasPanel;
-class UImage;
+class UTextBlock;
 class UVerticalBox;
 
 /** Native command-centre main menu matching reference 2. */
@@ -23,7 +23,7 @@ public:
 
     const TArray<TObjectPtr<UButton>>& GetMenuButtons() const { return MenuButtons; }
     int32 GetSelectedMenuIndex() const;
-    UImage* GetLogoImage() const { return LogoImage; }
+    UTextBlock* GetWordmarkText() const { return WordmarkText; }
 
 protected:
     virtual TSharedRef<SWidget> RebuildWidget() override;
@@ -72,5 +72,5 @@ private:
     TArray<TObjectPtr<UButton>> MenuButtons;
 
     UPROPERTY(Transient)
-    TObjectPtr<UImage> LogoImage;
+    TObjectPtr<UTextBlock> WordmarkText;
 };

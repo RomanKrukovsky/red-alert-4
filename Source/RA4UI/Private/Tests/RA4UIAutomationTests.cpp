@@ -183,11 +183,14 @@ bool FRA4MainMenuCompositionTest::RunTest(const FString& Parameters)
 
     TestEqual(TEXT("Interactive buttons"), MainMenu->GetMenuButtons().Num(), 8);
     TestEqual(TEXT("Selected entry"), MainMenu->GetSelectedMenuIndex(), 0);
-    TestNotNull(TEXT("Separate logo widget"), MainMenu->GetLogoImage());
-    TestEqual(
-        TEXT("Logo ignores hit tests"),
-        MainMenu->GetLogoImage()->GetVisibility(),
-        ESlateVisibility::HitTestInvisible);
+    TestNotNull(TEXT("Procedural wordmark"), MainMenu->GetWordmarkText());
+    if (UTextBlock* Wordmark = MainMenu->GetWordmarkText())
+    {
+        TestEqual(
+            TEXT("Wordmark ignores hit tests"),
+            Wordmark->GetVisibility(),
+            ESlateVisibility::HitTestInvisible);
+    }
     return true;
 }
 
