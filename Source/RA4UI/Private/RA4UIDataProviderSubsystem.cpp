@@ -345,7 +345,20 @@ FText KeyToText(const std::string& Key)
         {"refinery", NSLOCTEXT("RA4", "refinery_generic", "Перерабатывающий комплекс")},
         {"barracks", NSLOCTEXT("RA4", "barracks_generic", "Казарма")},
         {"war_factory", NSLOCTEXT("RA4", "factory_generic", "Военный завод")},
-        {"radar", NSLOCTEXT("RA4", "radar_generic", "Радарный узел")}
+        {"radar", NSLOCTEXT("RA4", "radar_generic", "Радарный узел")},
+
+        // Content keys that reach the HUD through DefaultContent. Without these
+        // the humaniser fell through and printed the raw id, so a build card
+        // read "superweapon" in a Russian interface.
+        {"building.superweapon", NSLOCTEXT("RA4", "superweapon_generic", "Ракетная шахта")},
+        {"superweapon", NSLOCTEXT("RA4", "superweapon_generic", "Ракетная шахта")},
+        {"faction.eurasian.building.superweapon", NSLOCTEXT("RA4", "superweapon_ru", "Ракетная шахта «Каратель»")},
+        {"faction.soviet.building.superweapon", NSLOCTEXT("RA4", "superweapon_ru", "Ракетная шахта «Каратель»")},
+        {"faction.atlantic.building.superweapon", NSLOCTEXT("RA4", "superweapon_atl", "Гиперзвуковой ударный комплекс")},
+        {"faction.alliance.building.superweapon", NSLOCTEXT("RA4", "superweapon_atl", "Гиперзвуковой ударный комплекс")},
+        {"faction.eastern.building.superweapon", NSLOCTEXT("RA4", "superweapon_cn", "Сейсмический комплекс")},
+        {"faction.coalition.building.superweapon", NSLOCTEXT("RA4", "superweapon_cn", "Сейсмический комплекс")},
+        {"faction.pacific.building.superweapon", NSLOCTEXT("RA4", "superweapon_jp", "Матрица перехвата")}
     };
 
     auto It = LocMap.find(Key);
@@ -386,6 +399,9 @@ FText KeyToText(const std::string& Key)
     else if (KeyStr.Contains(TEXT("scout"), ESearchCase::IgnoreCase)) KeyStr = TEXT("Разведчик");
     else if (KeyStr.Contains(TEXT("infantry"), ESearchCase::IgnoreCase)) KeyStr = TEXT("Пехота");
     else if (KeyStr.Contains(TEXT("artillery"), ESearchCase::IgnoreCase)) KeyStr = TEXT("Артиллерия");
+    else if (KeyStr.Contains(TEXT("superweapon"), ESearchCase::IgnoreCase)) KeyStr = TEXT("Стратегический комплекс");
+    else if (KeyStr.Contains(TEXT("wall"), ESearchCase::IgnoreCase)) KeyStr = TEXT("Стена");
+    else if (KeyStr.Contains(TEXT("defense"), ESearchCase::IgnoreCase)) KeyStr = TEXT("Оборонительный комплекс");
 
     return FText::FromString(KeyStr);
 }
