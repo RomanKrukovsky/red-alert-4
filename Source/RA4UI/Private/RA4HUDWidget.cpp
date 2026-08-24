@@ -98,6 +98,41 @@ FRA4HUDVisualStyle ResolveHUDVisualStyle(const ERA4FactionTheme Theme)
     }
 }
 
+/**
+ * Remaster reference plates 12–18 are keyed by faction AND combat variant.
+ * The one-faction-per-HUD shells (Eurasian/Atlantic/Eastern/Pacific/Independent)
+ * each have a signature reference; Eurasian and Pacific also have a secondary
+ * base-defence plate (17 and 18). Default variants fall back to the signature.
+ */
+const TCHAR* ResolveRemasterHudPlate(
+    const ERA4FactionTheme Theme,
+    const ERA4UIScreenVariant Variant)
+{
+    switch (Theme)
+    {
+    case ERA4FactionTheme::EurasianPact:
+        if (Variant == ERA4UIScreenVariant::BaseDefense)
+        {
+            return TEXT("/Game/RA4UI/Art/Remaster/T_SH_17_HudEurasianBase.T_SH_17_HudEurasianBase");
+        }
+        return TEXT("/Game/RA4UI/Art/Remaster/T_SH_12_HudEurasianGround.T_SH_12_HudEurasianGround");
+    case ERA4FactionTheme::AtlanticAlliance:
+        return TEXT("/Game/RA4UI/Art/Remaster/T_SH_13_HudAtlanticNaval.T_SH_13_HudAtlanticNaval");
+    case ERA4FactionTheme::EasternCoalition:
+        return TEXT("/Game/RA4UI/Art/Remaster/T_SH_14_HudEasternBase.T_SH_14_HudEasternBase");
+    case ERA4FactionTheme::PacificPact:
+        if (Variant == ERA4UIScreenVariant::BaseDefense)
+        {
+            return TEXT("/Game/RA4UI/Art/Remaster/T_SH_18_HudPacificBase.T_SH_18_HudPacificBase");
+        }
+        return TEXT("/Game/RA4UI/Art/Remaster/T_SH_15_HudPacificAir.T_SH_15_HudPacificAir");
+    case ERA4FactionTheme::Independent:
+        return TEXT("/Game/RA4UI/Art/Remaster/T_SH_16_HudIndependentFront.T_SH_16_HudIndependentFront");
+    default:
+        return TEXT("/Game/RA4UI/Art/Remaster/T_SH_12_HudEurasianGround.T_SH_12_HudEurasianGround");
+    }
+}
+
 void PlaceHUDWidget(
     UCanvasPanel* Canvas,
     UWidget* Widget,
@@ -546,10 +581,21 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
         FCommandLine::Get(), TEXT("RA4Screen="), ShowcaseScreen) && ShowcaseScreen >= 12;
     if (bShowcaseMode)
     {
-        if (UTexture2D* Background = LoadObject<UTexture2D>(
-            nullptr, ThemeStyle.BackgroundPath))
+        // Showcase mode (RA4Screen=12..18) renders the canonical remaster HUD
+        // plate as the backdrop so the live HUD chrome can be reviewed against
+        // its reference composition. The plate is selected by faction AND
+        // variant, matching the 12–18 reference set one-to-one.
+        const TCHAR* RemasterPlate = ResolveRemasterHudPlate(FactionTheme, HUDVariant);
+        if (UTexture2D* Background = LoadObject<UTexture2D>(nullptr, RemasterPlate))
         {
             GetBackgroundLayer()->SetBrushFromTexture(Background, false);
+            // Light tint keeps the painted HUD plate readable while the live
+            // chrome above it owns the readable pixels.
+            GetBackgroundLayer()->SetColorAndOpacity(FLinearColor(0.84f, 0.86f, 0.90f, 1.0f));
+        }
+        else if (UTexture2D* Fallback = LoadObject<UTexture2D>(nullptr, ThemeStyle.BackgroundPath))
+        {
+            GetBackgroundLayer()->SetBrushFromTexture(Fallback, false);
             GetBackgroundLayer()->SetColorAndOpacity(FLinearColor(0.72f, 0.72f, 0.72f, 1.0f));
         }
     }

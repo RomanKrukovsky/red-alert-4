@@ -223,8 +223,8 @@ TSharedRef<SWidget> URA4MissionMapScreenWidget::RebuildWidget()
     SetRootBackground(
         this,
         TEXT("/Game/RA4UI/Art/Remaster/T_SH_07_MissionMap.T_SH_07_MissionMap"),
-        FLinearColor(0.50f, 0.52f, 0.58f, 1.0f));
-    PlaceRootScrim(this, WidgetTree, FLinearColor(0.006f, 0.008f, 0.018f, 0.60f));
+        FLinearColor(0.84f, 0.86f, 0.90f, 1.0f));
+    PlaceRootScrim(this, WidgetTree, FLinearColor(0.004f, 0.006f, 0.012f, 0.34f));
 
     UCanvasPanel* Canvas = AddCanvas(this, WidgetTree, TEXT("MissionMapCanvas"));
 
@@ -379,29 +379,14 @@ void URA4MissionMapScreenWidget::StartSelectedMission()
     {
         return;
     }
-    if (APlayerController* PlayerController = GetOwningPlayer())
-    {
-        if (URA4BriefingScreenWidget* Briefing = CreateWidget<URA4BriefingScreenWidget>(
-            PlayerController, URA4BriefingScreenWidget::StaticClass()))
-        {
-            Briefing->AddToViewport(0);
-            RemoveFromParent();
-        }
-    }
+    // Route through the screen host so it owns the widget swap.
+    NavigateToScreen(ERA4UIScreenId::Briefing);
 }
 
 void URA4MissionMapScreenWidget::GoBack()
 {
-    if (APlayerController* PlayerController = GetOwningPlayer())
-    {
-        if (URA4CampaignScreenWidget* Campaign = CreateWidget<URA4CampaignScreenWidget>(
-            PlayerController, URA4CampaignScreenWidget::StaticClass()))
-        {
-            Campaign->ConfigureCampaign(ERA4FactionTheme::EurasianPact);
-            Campaign->AddToViewport(0);
-            RemoveFromParent();
-        }
-    }
+    // Back to the Eurasian campaign dossier.
+    NavigateToScreen(ERA4UIScreenId::EurasianCampaign);
 }
 
 URA4BriefingScreenWidget::URA4BriefingScreenWidget(const FObjectInitializer& ObjectInitializer)
@@ -420,9 +405,11 @@ TSharedRef<SWidget> URA4BriefingScreenWidget::RebuildWidget()
     }
     SetRootBackground(
         this,
+        // The comms plate bakes its own channel composition; keep it legible so
+        // the live channel panels stay the focus.
         TEXT("/Game/RA4UI/Art/Remaster/T_SH_08_Briefing.T_SH_08_Briefing"),
-        FLinearColor(0.50f, 0.52f, 0.58f, 1.0f));
-    PlaceRootScrim(this, WidgetTree, FLinearColor(0.006f, 0.008f, 0.018f, 0.62f));
+        FLinearColor(0.84f, 0.86f, 0.90f, 1.0f));
+    PlaceRootScrim(this, WidgetTree, FLinearColor(0.004f, 0.006f, 0.012f, 0.34f));
     UCanvasPanel* Canvas = AddCanvas(this, WidgetTree, TEXT("BriefingCanvas"));
 
     PlaceWordmark(Canvas, WidgetTree, FVector2D(35.0f, 16.0f), FVector2D(360.0f, 40.0f), 3, TEXT("BriefingWordmark"));
@@ -520,28 +507,12 @@ TSharedRef<SWidget> URA4BriefingScreenWidget::RebuildWidget()
 
 void URA4BriefingScreenWidget::ContinueToComms()
 {
-    if (APlayerController* PlayerController = GetOwningPlayer())
-    {
-        if (URA4VideoCommsScreenWidget* Comms = CreateWidget<URA4VideoCommsScreenWidget>(
-            PlayerController, URA4VideoCommsScreenWidget::StaticClass()))
-        {
-            Comms->AddToViewport(0);
-            RemoveFromParent();
-        }
-    }
+    NavigateToScreen(ERA4UIScreenId::VideoComms);
 }
 
 void URA4BriefingScreenWidget::GoBack()
 {
-    if (APlayerController* PlayerController = GetOwningPlayer())
-    {
-        if (URA4MissionMapScreenWidget* MissionMap = CreateWidget<URA4MissionMapScreenWidget>(
-            PlayerController, URA4MissionMapScreenWidget::StaticClass()))
-        {
-            MissionMap->AddToViewport(0);
-            RemoveFromParent();
-        }
-    }
+    NavigateToScreen(ERA4UIScreenId::MissionMap);
 }
 
 URA4VideoCommsScreenWidget::URA4VideoCommsScreenWidget(const FObjectInitializer& ObjectInitializer)
@@ -561,11 +532,11 @@ TSharedRef<SWidget> URA4VideoCommsScreenWidget::RebuildWidget()
 
     SetRootBackground(
         this,
-        // The comms plate bakes its own channel composition; keep it deep in
-        // the background so the live channel panels stay the focus.
+        // The comms plate bakes its own channel composition; keep it legible so
+        // the live channel panels stay the focus.
         TEXT("/Game/RA4UI/Art/Remaster/T_SH_09_VideoComms.T_SH_09_VideoComms"),
-        FLinearColor(0.38f, 0.40f, 0.46f, 1.0f));
-    PlaceRootScrim(this, WidgetTree, FLinearColor(0.005f, 0.007f, 0.012f, 0.74f));
+        FLinearColor(0.84f, 0.86f, 0.90f, 1.0f));
+    PlaceRootScrim(this, WidgetTree, FLinearColor(0.004f, 0.006f, 0.012f, 0.34f));
     UCanvasPanel* Canvas = AddCanvas(this, WidgetTree, TEXT("VideoCommsCanvas"));
     PlaceWordmark(Canvas, WidgetTree, FVector2D(610.0f, 12.0f), FVector2D(700.0f, 52.0f), 3, TEXT("VideoCommsWordmark"));
 
@@ -641,15 +612,7 @@ TSharedRef<SWidget> URA4VideoCommsScreenWidget::RebuildWidget()
 
 void URA4VideoCommsScreenWidget::EndSession()
 {
-    if (APlayerController* PlayerController = GetOwningPlayer())
-    {
-        if (URA4LoadingScreenWidget* Loading = CreateWidget<URA4LoadingScreenWidget>(
-            PlayerController, URA4LoadingScreenWidget::StaticClass()))
-        {
-            Loading->AddToViewport(0);
-            RemoveFromParent();
-        }
-    }
+    NavigateToScreen(ERA4UIScreenId::Loading);
 }
 
 URA4LoadingScreenWidget::URA4LoadingScreenWidget(const FObjectInitializer& ObjectInitializer)
@@ -675,56 +638,107 @@ TSharedRef<SWidget> URA4LoadingScreenWidget::RebuildWidget()
 
     SetRootBackground(
         this,
-        // The retired loading art was a Soviet star over a burning Moscow. Until a
-        // per-operation illustration exists, the neutral Scarlet Horizon panorama
-        // stands in: wrong world content is worse than a generic backdrop.
-        TEXT("/Game/RA4UI/Art/T_RA4_TitleBackdrop.T_RA4_TitleBackdrop"),
-        FLinearColor(0.82f, 0.72f, 0.72f, 1.0f));
+        // Remaster screen 10 bakes the Eurasian pact loading composition; the
+        // live overlay layers the operation summary, objectives, sync checklist
+        // and progress readout on top of that plate.
+        TEXT("/Game/RA4UI/Art/Remaster/T_SH_10_Loading.T_SH_10_Loading"),
+        FLinearColor(0.82f, 0.80f, 0.82f, 1.0f));
+    PlaceRootScrim(this, WidgetTree, FLinearColor(0.004f, 0.006f, 0.012f, 0.34f));
     UCanvasPanel* Canvas = AddCanvas(this, WidgetTree, TEXT("LoadingCanvas"));
 
-    UImage* Logo = MakeImage(
-        WidgetTree, TEXT("/Game/RA4UI/Art/T_RA4_Logo.T_RA4_Logo"), TEXT("LoadingLogo"));
-    PlaceMissionWidget(
-        Canvas, Logo,
-        FVector2D(670.0f, 20.0f),
-        FVector2D(580.0f, 170.0f), 3);
+    PlaceWordmark(Canvas, WidgetTree, FVector2D(610.0f, 26.0f), FVector2D(700.0f, 56.0f), 4, TEXT("LoadingWordmark"));
 
     UTextBlock* LoadingTitle = MakeMissionText(
-        WidgetTree, LOCTEXT("LoadingMission", "ЗАГРУЗКА МИССИИ"), 38,
+        WidgetTree, LOCTEXT("LoadingMission", "ЗАГРУЗКА МИССИИ"), 40,
         MissionText, TEXT("LoadingMission"));
     LoadingTitle->SetJustification(ETextJustify::Center);
     PlaceMissionWidget(
         Canvas, LoadingTitle,
-        FVector2D(600.0f, 164.0f),
-        FVector2D(720.0f, 62.0f), 4);
+        FVector2D(460.0f, 156.0f),
+        FVector2D(1000.0f, 64.0f), 5);
 
     UTextBlock* OperationTitle = MakeMissionText(
-        WidgetTree, LOCTEXT("LoadingOperation", "ОПЕРАЦИЯ «ТИХИЙ РЕЛЕЙ»"), 24,
+        WidgetTree, LOCTEXT("LoadingOperation", "ОПЕРАЦИЯ «ТИХИЙ РЕЛЕЙ»"), 22,
         MissionAccent, TEXT("LoadingOperation"));
     OperationTitle->SetJustification(ETextJustify::Center);
     PlaceMissionWidget(
         Canvas, OperationTitle,
-        FVector2D(660.0f, 226.0f),
-        FVector2D(600.0f, 48.0f), 4);
+        FVector2D(560.0f, 224.0f),
+        FVector2D(800.0f, 44.0f), 5);
 
+    // Left summary panel: operation summary + objectives.
+    UVerticalBox* Summary = WidgetTree->ConstructWidget<UVerticalBox>(
+        UVerticalBox::StaticClass(), TEXT("LoadingSummary"));
+    Summary->AddChildToVerticalBox(MakeMissionText(
+        WidgetTree, LOCTEXT("LoadingSummaryHeading", "СВОДКА"), 16,
+        MissionAccent, TEXT("LoadingSummaryHeading")));
+    Summary->AddChildToVerticalBox(MakeMissionText(
+        WidgetTree,
+        LOCTEXT("LoadingSummaryText",
+            "Передовой отряд «Комета» выдвигается к горному коридору. "
+            "Противник удерживает узлы связи и контролирует перевал. "
+            "Проведите бронегруппу и подавите ретрансляцию."),
+        16, MissionText, TEXT("LoadingSummaryText"), false))
+        ->SetPadding(FMargin(0.0f, 8.0f, 0.0f, 16.0f));
+    Summary->AddChildToVerticalBox(MakeMissionText(
+        WidgetTree, LOCTEXT("LoadingObjectivesHeading", "ЦЕЛИ"), 16,
+        MissionAccent, TEXT("LoadingObjectivesHeading")));
+    Summary->AddChildToVerticalBox(MakeMissionText(
+        WidgetTree,
+        LOCTEXT("LoadingObjectives",
+            "★  Удержать 3 узла связи\n★  Сохранить мобильный комплекс РЭБ\n★  Обеспечить проход колонны"),
+        16, MissionText, TEXT("LoadingObjectives"), false))
+        ->SetPadding(FMargin(0.0f, 8.0f, 0.0f, 0.0f));
+    PlaceMissionWidget(Canvas, MakeMissionPanel(
+        WidgetTree, Summary, TEXT("LoadingSummaryPanel"),
+        FLinearColor(0.038f, 0.028f, 0.060f, 0.94f), ERA4PanelRole::Hero),
+        FVector2D(40.0f, 300.0f), FVector2D(360.0f, 460.0f), 6);
+
+    // Right checklist: sync status rows.
+    UVerticalBox* Checklist = WidgetTree->ConstructWidget<UVerticalBox>(
+        UVerticalBox::StaticClass(), TEXT("LoadingChecklist"));
+    Checklist->AddChildToVerticalBox(MakeMissionText(
+        WidgetTree, LOCTEXT("LoadingChecklistDone1", "✓   КАРТА ЗАГРУЖЕНА"), 16,
+        FLinearColor(0.34f, 0.91f, 0.60f, 1.0f), TEXT("LoadingCheckDone1")))
+        ->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
+    Checklist->AddChildToVerticalBox(MakeMissionText(
+        WidgetTree, LOCTEXT("LoadingChecklistDone2", "✓   БОЕВЫЕ ГРУППЫ: ГОТОВЫ"), 16,
+        FLinearColor(0.34f, 0.91f, 0.60f, 1.0f), TEXT("LoadingCheckDone2")))
+        ->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
+    Checklist->AddChildToVerticalBox(MakeMissionText(
+        WidgetTree, LOCTEXT("LoadingChecklistPending", "◌   СВЯЗЬ: ШИФРУЕТСЯ"), 16,
+        FLinearColor(0.88f, 0.76f, 0.36f, 1.0f), TEXT("LoadingCheckPending")));
+    PlaceMissionWidget(Canvas, MakeMissionPanel(
+        WidgetTree, Checklist, TEXT("LoadingChecklistPanel"),
+        FLinearColor(0.028f, 0.020f, 0.046f, 0.92f), ERA4PanelRole::Compact),
+        FVector2D(1540.0f, 300.0f), FVector2D(340.0f, 260.0f), 6);
+
+    // Progress bar + percent readout.
     LoadingProgressBar = WidgetTree->ConstructWidget<UProgressBar>(
         UProgressBar::StaticClass(), TEXT("LoadingProgressBar"));
     LoadingProgressBar->SetFillColorAndOpacity(MissionAccent);
     PlaceMissionWidget(Canvas, MakeMissionPanel(
-        WidgetTree, LoadingProgressBar, TEXT("LoadingProgressPanel"), MissionPanel, ERA4PanelRole::Compact),
-        FVector2D(350.0f, 900.0f), FVector2D(1220.0f, 58.0f), 7);
+        WidgetTree, LoadingProgressBar, TEXT("LoadingProgressPanel"),
+        FLinearColor(0.016f, 0.012f, 0.032f, 0.96f), ERA4PanelRole::Compact),
+        FVector2D(40.0f, 912.0f), FVector2D(1480.0f, 44.0f), 7);
 
     LoadingPercentText = MakeMissionText(
-        WidgetTree, FText::GetEmpty(), 28, FLinearColor::White, TEXT("LoadingPercent"));
-    LoadingPercentText->SetJustification(ETextJustify::Center);
-    PlaceMissionWidget(Canvas, LoadingPercentText, FVector2D(1560.0f, 900.0f), FVector2D(150.0f, 58.0f), 8);
+        WidgetTree, FText::GetEmpty(), 26, FLinearColor::White, TEXT("LoadingPercent"));
+    LoadingPercentText->SetJustification(ETextJustify::Right);
+    PlaceMissionWidget(Canvas, LoadingPercentText, FVector2D(1540.0f, 912.0f), FVector2D(340.0f, 44.0f), 8);
+
+    UTextBlock* SyncCaption = MakeMissionText(
+        WidgetTree, LOCTEXT("LoadingSyncCaption", "СИНХРОНИЗАЦИЯ ТАКТОВ"), 14,
+        MissionMuted, TEXT("LoadingSyncCaption"));
+    SyncCaption->SetJustification(ETextJustify::Center);
+    PlaceMissionWidget(Canvas, SyncCaption, FVector2D(560.0f, 966.0f), FVector2D(800.0f, 30.0f), 8);
 
     UTextBlock* Tip = MakeMissionText(
         WidgetTree,
-        LOCTEXT("LoadingTip", "Совет: РЭБ снижает дальность обнаружения, но требует устойчивой линии снабжения."),
-        17, MissionText, TEXT("LoadingTip"), false);
+        LOCTEXT("LoadingTip", "СОВЕТ: РЭБ снижает дальность обнаружения противника, но требует устойчивой линии снабжения."),
+        16, MissionText, TEXT("LoadingTip"), false);
     Tip->SetJustification(ETextJustify::Center);
-    PlaceMissionWidget(Canvas, Tip, FVector2D(350.0f, 980.0f), FVector2D(1360.0f, 42.0f), 8);
+    PlaceMissionWidget(Canvas, Tip, FVector2D(280.0f, 1008.0f), FVector2D(1360.0f, 40.0f), 8);
     RefreshProgressVisuals();
     return RootWidget;
 }

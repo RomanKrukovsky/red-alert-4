@@ -33,13 +33,23 @@ private:
         UVerticalBox* Menu,
         const FRA4MainMenuEntry& Entry,
         int32 Index);
-    void BuildInformationCard(
+
+    void BuildCommanderCard(
         UCanvasPanel* Canvas,
-        const FText& Heading,
-        const FText& Body,
-        const FVector2D& Position,
-        const FVector2D& Size,
-        FName Name);
+        const FVector2D Position,
+        const FVector2D Size);
+    void BuildFrontsCard(
+        UCanvasPanel* Canvas,
+        const FVector2D Position,
+        const FVector2D Size);
+    void BuildOperationCard(
+        UCanvasPanel* Canvas,
+        const FVector2D Position,
+        const FVector2D Size);
+    void BuildNetworkCard(
+        UCanvasPanel* Canvas,
+        const FVector2D Position,
+        const FVector2D Size);
 
     UFUNCTION()
     void OpenCampaign();

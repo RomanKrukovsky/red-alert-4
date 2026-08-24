@@ -292,11 +292,14 @@ TSharedRef<SWidget> URA4LobbyScreenWidget::RebuildWidget()
     }
 
     LobbyViewModel = NewObject<URA4LobbyViewModel>(this);
+    // Remaster screen 11 is the canonical multiplayer lobby reference; its
+    // composition (eight-slot roster, match parameters, map preview, chat) is
+    // baked into the plate, with the live widgets layered on top.
     if (UTexture2D* Background = LoadObject<UTexture2D>(
-        nullptr, TEXT("/Game/RA4UI/Art/T_RA4_USSR_MainMenuBackground.T_RA4_USSR_MainMenuBackground")))
+        nullptr, TEXT("/Game/RA4UI/Art/Remaster/T_SH_11_MultiplayerLobby.T_SH_11_MultiplayerLobby")))
     {
         GetBackgroundLayer()->SetBrushFromTexture(Background, false);
-        GetBackgroundLayer()->SetColorAndOpacity(FLinearColor(0.14f, 0.22f, 0.38f, 1.0f));
+        GetBackgroundLayer()->SetColorAndOpacity(FLinearColor(0.78f, 0.80f, 0.84f, 1.0f));
     }
 
     UCanvasPanel* Canvas = WidgetTree->ConstructWidget<UCanvasPanel>(

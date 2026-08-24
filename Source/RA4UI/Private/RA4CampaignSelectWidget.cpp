@@ -7,6 +7,7 @@
 #include "RA4CampaignViewModel.h"
 #include "RA4FactionData.h"
 #include "RA4ShowcaseWidget.h"
+#include "RA4UIRouterSubsystem.h"
 #include "Blueprint/WidgetTree.h"
 #include "Brushes/SlateColorBrush.h"
 #include "Brushes/SlateRoundedBoxBrush.h"
@@ -170,6 +171,146 @@ FSlateChildSize FillWeight(const float Weight)
     Size.Value = Weight;
     return Size;
 }
+
+// Remaster reference 03 ships a 5+1 grid: five equal faction cards on the left
+// (crest, two-line name, country, progress) and a right dossier panel. The
+// bloc registry predates that reference, so the crest glyph, the two-line
+// split, and the campaign progress are resolved here from the BlocId.
+const TCHAR* BlocCrestGlyph(const ERA4FactionTheme Theme)
+{
+    switch (Theme)
+    {
+    case ERA4FactionTheme::EurasianPact:      return TEXT("❖");
+    case ERA4FactionTheme::AtlanticAlliance:  return TEXT("⬢");
+    case ERA4FactionTheme::EasternCoalition:  return TEXT("✦");
+    case ERA4FactionTheme::PacificPact:       return TEXT("◈");
+    case ERA4FactionTheme::Independent:       return TEXT("◉");
+    default:                                  return TEXT("◆");
+    }
+}
+
+void BlocNameLines(const ERA4FactionTheme Theme, FString& OutLine1, FString& OutLine2)
+{
+    switch (Theme)
+    {
+    case ERA4FactionTheme::EurasianPact:      OutLine1 = TEXT("ЕВРАЗИЙСКИЙ"); OutLine2 = TEXT("ПАКТ"); break;
+    case ERA4FactionTheme::AtlanticAlliance:  OutLine1 = TEXT("АТЛАНТИЧЕСКИЙ"); OutLine2 = TEXT("АЛЬЯНС"); break;
+    case ERA4FactionTheme::EasternCoalition:  OutLine1 = TEXT("ВОСТОЧНАЯ"); OutLine2 = TEXT("КОАЛИЦИЯ"); break;
+    case ERA4FactionTheme::PacificPact:       OutLine1 = TEXT("ТИХООКЕАНСКИЙ"); OutLine2 = TEXT("ПАКТ"); break;
+    case ERA4FactionTheme::Independent:       OutLine1 = TEXT("НЕЗАВИСИМЫЕ"); OutLine2 = TEXT("ДЕРЖАВЫ"); break;
+    default:                                  OutLine1 = TEXT("BLOC"); OutLine2 = TEXT(""); break;
+    }
+}
+
+const TCHAR* BlocCountryShort(const ERA4FactionTheme Theme)
+{
+    switch (Theme)
+    {
+    case ERA4FactionTheme::EurasianPact:      return TEXT("РОССИЯ");
+    case ERA4FactionTheme::AtlanticAlliance:  return TEXT("США");
+    case ERA4FactionTheme::EasternCoalition:  return TEXT("КИТАЙ");
+    case ERA4FactionTheme::PacificPact:       return TEXT("ЯПОНИЯ");
+    case ERA4FactionTheme::Independent:       return TEXT("ИРАН");
+    default:                                  return TEXT("");
+    }
+}
+
+int32 BlocCampaignProgress(const ERA4FactionTheme Theme)
+{
+    switch (Theme)
+    {
+    case ERA4FactionTheme::EurasianPact:      return 58;
+    case ERA4FactionTheme::AtlanticAlliance:  return 42;
+    case ERA4FactionTheme::EasternCoalition:  return 63;
+    case ERA4FactionTheme::PacificPact:       return 37;
+    case ERA4FactionTheme::Independent:       return 24;
+    default:                                  return 0;
+    }
+}
+
+const TCHAR* BlocCampaignTitle(const ERA4FactionTheme Theme)
+{
+    switch (Theme)
+    {
+    case ERA4FactionTheme::EurasianPact:      return TEXT("РОССИЯ: ЛИНИЯ РАЗЛОМА");
+    case ERA4FactionTheme::AtlanticAlliance:  return TEXT("США: ДАЛЬНИЙ РУБЕЖ");
+    case ERA4FactionTheme::EasternCoalition:  return TEXT("КИТАЙ: НЕФТЯНАЯ СЕТЬ");
+    case ERA4FactionTheme::PacificPact:       return TEXT("ЯПОНИЯ: ДУГА ШТОРМА");
+    case ERA4FactionTheme::Independent:       return TEXT("ИРАН: БРОНЯ И АСИММЕТРИЧНАЯ ВОЙНА");
+    default:                                  return TEXT("");
+    }
+}
+
+const TCHAR* BlocDoctrine(const ERA4FactionTheme Theme)
+{
+    switch (Theme)
+    {
+    case ERA4FactionTheme::EurasianPact:      return TEXT("РЭБ • РАКЕТНЫЕ ВОЙСКА • ТЯЖЁЛАЯ ОБОРОНА");
+    case ERA4FactionTheme::AtlanticAlliance:  return TEXT("ЭКСПЕДИЦИЯ • АВИАЦИЯ • ЦЕНТР КООРДИНАЦИИ");
+    case ERA4FactionTheme::EasternCoalition:  return TEXT("ДРОНЫ • АВТОМАТИЗАЦИЯ • МАССОВОЕ ПРОИЗВОДСТВО");
+    case ERA4FactionTheme::PacificPact:       return TEXT("БЕРЕГОВАЯ ОБОРОНА • ПВО • РОБОТЕХНИКА");
+    case ERA4FactionTheme::Independent:       return TEXT("ГОРНАЯ ВОЙНА • АСИММЕТРИЧНЫЙ ОТВЕТ • МОБИЛЬНЫЕ УЗЛЫ");
+    default:                                  return TEXT("");
+    }
+}
+
+const TCHAR* BlocCampaignDesc(const ERA4FactionTheme Theme)
+{
+    switch (Theme)
+    {
+    case ERA4FactionTheme::EurasianPact:
+        return TEXT("Когда небо глохнет от помех, а даль бьёт без предупреждения, победа достаётся тем, кто видит сквозь туман войны. Россия строит непроницаемую оборону, ломает сети противника и наносит ответный удар, когда он меньше всего этого ждёт.");
+    case ERA4FactionTheme::AtlanticAlliance:
+        return TEXT("На далёком рубеже решается исход противостояния. Мы проецируем силу, поддерживаем союзников и обеспечиваем свободу морских путей в эпоху нестабильного мира.");
+    case ERA4FactionTheme::EasternCoalition:
+        return TEXT("Нефтяная артерия империи должна биться ровно. Автоматизированные производства и рои дронов гарантируют, что экономика коалиции не остановится ни на минуту.");
+    case ERA4FactionTheme::PacificPact:
+        return TEXT("Островная держава превращает береговую линию в неприступную дугу. Роботехника и системы ПВО нового поколения встретят любую волну шторма.");
+    case ERA4FactionTheme::Independent:
+        return TEXT("Иран делает ставку на асимметричную войну: горные укрепления, мобильные ракетные комплексы и сеть автономных узлов, которые невозможно вычислить с первого удара.");
+    default:
+        return TEXT("");
+    }
+}
+
+const TCHAR* BlocMissionsCompleted(const ERA4FactionTheme Theme)
+{
+    switch (Theme)
+    {
+    case ERA4FactionTheme::EurasianPact:      return TEXT("7 / 12");
+    case ERA4FactionTheme::AtlanticAlliance:  return TEXT("5 / 12");
+    case ERA4FactionTheme::EasternCoalition:  return TEXT("8 / 12");
+    case ERA4FactionTheme::PacificPact:       return TEXT("4 / 12");
+    case ERA4FactionTheme::Independent:       return TEXT("3 / 10");
+    default:                                  return TEXT("0 / 12");
+    }
+}
+
+const TCHAR* BlocDifficulty(const ERA4FactionTheme Theme)
+{
+    switch (Theme)
+    {
+    case ERA4FactionTheme::EurasianPact:      return TEXT("ВЕТЕРАН");
+    case ERA4FactionTheme::AtlanticAlliance:  return TEXT("НОРМАЛЬНО");
+    case ERA4FactionTheme::EasternCoalition:  return TEXT("ВЕТЕРАН");
+    case ERA4FactionTheme::PacificPact:       return TEXT("НОРМАЛЬНО");
+    case ERA4FactionTheme::Independent:       return TEXT("СЛОЖНО");
+    default:                                  return TEXT("НОРМАЛЬНО");
+    }
+}
+
+const TCHAR* BlocCurrentChapter(const ERA4FactionTheme Theme)
+{
+    switch (Theme)
+    {
+    case ERA4FactionTheme::EurasianPact:      return TEXT("ГЛАВА 4: БЕЛЫЙ ШУМ");
+    case ERA4FactionTheme::AtlanticAlliance:  return TEXT("ГЛАВА 3: ЛИНИЯ ПРИЛИВОВ");
+    case ERA4FactionTheme::EasternCoalition:  return TEXT("ГЛАВА 5: РОЙ НАД ДЕЛЬТОЙ");
+    case ERA4FactionTheme::PacificPact:       return TEXT("ГЛАВА 3: ПЕРВАЯ ВОЛНА");
+    case ERA4FactionTheme::Independent:       return TEXT("ОПЕРАЦИЯ «САТУРАЦИОННЫЙ УДАР»");
+    default:                                  return TEXT("");
+    }
+}
 } // namespace
 
 TSharedRef<SWidget> URA4CampaignSelectWidget::RebuildWidget()
@@ -179,6 +320,17 @@ TSharedRef<SWidget> URA4CampaignSelectWidget::RebuildWidget()
         BuildLayout();
     }
     return Super::RebuildWidget();
+}
+
+void URA4CampaignSelectWidget::RouteToScreen(const ERA4UIScreenId ScreenId)
+{
+    if (UGameInstance* GI = GetGameInstance())
+    {
+        if (URA4UIRouterSubsystem* Router = GI->GetSubsystem<URA4UIRouterSubsystem>())
+        {
+            Router->NavigateTo(ScreenId);
+        }
+    }
 }
 
 void URA4CampaignSelectWidget::NativeConstruct()
@@ -269,7 +421,9 @@ void URA4CampaignSelectWidget::BuildLayout()
         nullptr, TEXT("/Game/RA4UI/Art/Remaster/T_SH_03_CampaignEurasian.T_SH_03_CampaignEurasian")))
     {
         Background->SetBrushFromTexture(BackgroundTexture, false);
-        Background->SetColorAndOpacity(FLinearColor(0.45f, 0.47f, 0.54f, 1.0f));
+        // Light tint keeps the painted campaign plate readable while the live
+        // selection chrome owns the readable pixels above it.
+        Background->SetColorAndOpacity(FLinearColor(0.86f, 0.88f, 0.92f, 1.0f));
     }
     else
     {
@@ -280,7 +434,7 @@ void URA4CampaignSelectWidget::BuildLayout()
     BackgroundSlot->SetVerticalAlignment(VAlign_Fill);
 
     UBorder* Shade = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("CampaignShade"));
-    Shade->SetBrush(FSlateColorBrush(FLinearColor(0.008f, 0.010f, 0.022f, 0.78f)));
+    Shade->SetBrush(FSlateColorBrush(FLinearColor(0.004f, 0.006f, 0.012f, 0.42f)));
     UOverlaySlot* ShadeSlot = Root->AddChildToOverlay(Shade);
     ShadeSlot->SetHorizontalAlignment(HAlign_Fill);
     ShadeSlot->SetVerticalAlignment(VAlign_Fill);
@@ -617,198 +771,168 @@ void URA4CampaignSelectWidget::RefreshBlocCards()
     const FRA4FactionDataRegistry& Registry = FRA4FactionDataRegistry::Get();
     const TArray<FRA4BlocInfo>& Blocs = Registry.GetAllBlocs();
 
-    // Geometry read off 05_block_overview_cinematic_vivid.png. The reference is a
-    // 1672x941 frame while this screen is authored at ReferenceSize, so every
-    // measurement is carried across by ReferenceSize.X / 1672.
-    const float ToAuthoring = ReferenceSize.X / 1672.0f;
-    const auto Ref = [ToAuthoring](const float X, const float Y, const float W, const float H)
-    {
-        return FBox2D(
-            FVector2D(X * ToAuthoring, Y * ToAuthoring),
-            FVector2D((X + W) * ToAuthoring, (Y + H) * ToAuthoring));
-    };
+    // Remaster reference 03 ships a 5+1 grid: five equal faction cards on the
+    // left and a right dossier panel. Geometry is authored at ReferenceSize
+    // (1920x1080): left padding 36, right panel 340 wide, 14px gaps, 5 cards
+    // share the remaining width.
+    constexpr float GridTop = 96.0f;
+    constexpr float GridHeight = 760.0f;
+    constexpr float LeftPad = 36.0f;
+    constexpr float RightPad = 36.0f;
+    constexpr float DetailWidth = 340.0f;
+    constexpr float Gap = 14.0f;
+    const float CardsWidth = ReferenceSize.X - LeftPad - RightPad - DetailWidth - Gap;
+    const float CardWidth = (CardsWidth - Gap * 4.0f) / 5.0f;
 
-    // One main theatre and four secondary zones of deliberately unequal size.
-    const FBox2D HeroRect = Ref(28.0f, 88.0f, 762.0f, 632.0f);
-    const FBox2D PlateRects[4] = {
-        Ref(935.0f, 88.0f, 710.0f, 202.0f),   // wide and short, top right
-        Ref(800.0f, 300.0f, 845.0f, 200.0f),  // the widest band, reaching furthest left
-        Ref(800.0f, 505.0f, 400.0f, 210.0f),  // bottom left of the mosaic
-        Ref(1210.0f, 505.0f, 435.0f, 210.0f)  // bottom right of the mosaic
-    };
-
-    // Bottom summary strip: operational figures, the direction's doctrine line and
-    // its combat profile. Reference bands y 735..865 and the "next step" action.
+    // Right dossier panel: campaign title, doctrine, description, stats, and
+    // the "ВОЙТИ В КАМПАНИЮ" action — matching the remaster reference's right
+    // column for the selected faction.
     if (Blocs.IsValidIndex(SelectedBlocIndex))
     {
         const FRA4BlocInfo& Active = Blocs[SelectedBlocIndex];
+        const ERA4FactionTheme Theme = Active.BlocId;
 
-        UVerticalBox* Summary = WidgetTree->ConstructWidget<UVerticalBox>(
-            UVerticalBox::StaticClass(), TEXT("BlocSummaryBox"));
-        Summary->AddChildToVerticalBox(MakeText(
-            WidgetTree, LOCTEXT("OpsSummary", "ОПЕРАЦИОННАЯ СВОДКА"), 12, Active.GlowColor,
-            TEXT("OpsSummaryHeader"), true, false))->SetPadding(FMargin(14.0f, 10.0f, 14.0f, 8.0f));
+        UVerticalBox* Detail = WidgetTree->ConstructWidget<UVerticalBox>(
+            UVerticalBox::StaticClass(), TEXT("BlocDetailBox"));
+        Detail->AddChildToVerticalBox(MakeText(
+            WidgetTree, LOCTEXT("AboutCampaign", "О ВЫБРАННОЙ КАМПАНИИ"), 12, Active.GlowColor,
+            TEXT("BlocDetailTag"), true, false))->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
+        Detail->AddChildToVerticalBox(MakeText(
+            WidgetTree, FText::FromString(BlocCampaignTitle(Theme)), 24, TextHighlight,
+            TEXT("BlocDetailTitle"), true, true))->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 4.0f));
+        Detail->AddChildToVerticalBox(MakeText(
+            WidgetTree, FText::FromString(BlocDoctrine(Theme)), 11, Active.GlowColor,
+            TEXT("BlocDetailDoctrine"), true, false))->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 12.0f));
+        Detail->AddChildToVerticalBox(MakeText(
+            WidgetTree, FText::FromString(BlocCampaignDesc(Theme)), 12,
+            FLinearColor(0.73f, 0.75f, 0.78f, 1.0f),
+            TEXT("BlocDetailDesc"), false, true))->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 18.0f));
 
-        UHorizontalBox* Figures = WidgetTree->ConstructWidget<UHorizontalBox>(
-            UHorizontalBox::StaticClass(), TEXT("BlocSummaryFigures"));
-        const auto AddFigure = [this, Figures](const FText& Caption, const FText& Value, const FName Name)
+        // Stats separator + rows.
+        UVerticalBox* Stats = WidgetTree->ConstructWidget<UVerticalBox>(
+            UVerticalBox::StaticClass(), TEXT("BlocDetailStats"));
+        const auto AddStatRow = [this, Stats](
+            const FText& Label, const FText& Value, const FLinearColor& ValueColor, const FName Name)
         {
-            UVerticalBox* Cell = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), Name);
-            Cell->AddChildToVerticalBox(MakeText(
-                WidgetTree, Caption, 10, TextMuted, FName(Name.ToString() + TEXT("_Cap")), false));
-            Cell->AddChildToVerticalBox(MakeText(
-                WidgetTree, Value, 22, TextHighlight, FName(Name.ToString() + TEXT("_Val")), true, false))
-                ->SetPadding(FMargin(0.0f, 2.0f, 0.0f, 0.0f));
-            UHorizontalBoxSlot* Slot = Figures->AddChildToHorizontalBox(Cell);
-            Slot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-            Slot->SetPadding(FMargin(14.0f, 0.0f, 14.0f, 0.0f));
+            UHorizontalBox* Row = WidgetTree->ConstructWidget<UHorizontalBox>(
+                UHorizontalBox::StaticClass(), Name);
+            UTextBlock* Lbl = MakeText(WidgetTree, Label, 13,
+                FLinearColor(0.73f, 0.75f, 0.78f, 1.0f), FName(Name.ToString() + TEXT("_L")), false, false);
+            UHorizontalBoxSlot* LSlot = Row->AddChildToHorizontalBox(Lbl);
+            LSlot->SetSize(FillWeight(1.0f));
+            UTextBlock* Val = MakeText(WidgetTree, Value, 13, ValueColor,
+                FName(Name.ToString() + TEXT("_V")), true, false);
+            Val->SetJustification(ETextJustify::Right);
+            Row->AddChildToHorizontalBox(Val);
+            Stats->AddChildToVerticalBox(Row)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 7.0f));
         };
-        AddFigure(LOCTEXT("Fig_Regions", "РЕГИОНОВ ПОД КОНТРОЛЕМ"),
-            FText::AsNumber(Active.ControlledRegions), TEXT("FigRegions"));
-        AddFigure(LOCTEXT("Fig_Personnel", "АКТИВНЫХ ПОДРАЗДЕЛЕНИЙ"),
-            FText::AsNumber(Active.ActivePersonnel), TEXT("FigPersonnel"));
-        AddFigure(LOCTEXT("Fig_Readiness", "УРОВЕНЬ ГОТОВНОСТИ"),
-            FText::Format(LOCTEXT("PercentFmt", "{0}%"),
-                FText::AsNumber(FMath::RoundToInt(Active.ReadinessRatio * 100.0f))),
-            TEXT("FigReadiness"));
-        Summary->AddChildToVerticalBox(Figures)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 12.0f));
+        AddStatRow(LOCTEXT("MissionsDone", "МИССИЙ ЗАВЕРШЕНО:"),
+            FText::FromString(BlocMissionsCompleted(Theme)), TextHighlight, TEXT("StatMissions"));
+        AddStatRow(LOCTEXT("Difficulty", "СЛОЖНОСТЬ:"),
+            FText::FromString(BlocDifficulty(Theme)), Active.GlowColor, TEXT("StatDifficulty"));
+        AddStatRow(LOCTEXT("CurrentChapter", "ТЕКУЩАЯ ГЛАВА:"),
+            FText::FromString(BlocCurrentChapter(Theme)), TextHighlight, TEXT("StatChapter"));
+        Detail->AddChildToVerticalBox(Stats)->SetPadding(FMargin(0.0f, 14.0f, 0.0f, 0.0f));
 
+        // "ВОЙТИ В КАМПАНИЮ" action button at the bottom of the dossier.
+        UButton* EnterButton = WidgetTree->ConstructWidget<UButton>(
+            UButton::StaticClass(), TEXT("BlocEnterButton"));
+        EnterButton->SetStyle(MakeCardButtonStyle(Active.GlowColor));
+        UTextBlock* EnterLabel = MakeText(
+            WidgetTree, LOCTEXT("EnterCampaign", "ВОЙТИ В КАМПАНИЮ  ≫"), 17,
+            FLinearColor(0.04f, 0.03f, 0.07f, 1.0f), TEXT("BlocEnterLabel"), true, false);
+        EnterLabel->SetJustification(ETextJustify::Center);
+        EnterButton->AddChild(EnterLabel);
+        EnterButton->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::ContinueCampaign);
+        Detail->AddChildToVerticalBox(EnterButton)->SetPadding(FMargin(0.0f, 16.0f, 0.0f, 0.0f));
+
+        const FVector2D DetailPos(ReferenceSize.X - RightPad - DetailWidth, GridTop);
         Place(BlocCardsContainer,
-            MakePanel(WidgetTree, Summary, TEXT("BlocSummaryFrame"), Active.PrimaryColor,
-                DensityPadding(Active.PanelDensity), Active.FrameRail),
-            Ref(28.0f, 735.0f, 612.0f, 122.0f).Min,
-            Ref(28.0f, 735.0f, 612.0f, 122.0f).GetSize(), 2);
-
-        // Combat profile of the direction, mirroring the reference's right block.
-        UVerticalBox* Profile = WidgetTree->ConstructWidget<UVerticalBox>(
-            UVerticalBox::StaticClass(), TEXT("BlocProfileBox"));
-        Profile->AddChildToVerticalBox(MakeText(
-            WidgetTree, LOCTEXT("CombatProfile", "БОЕВАЯ ХАРАКТЕРИСТИКА"), 12, Active.GlowColor,
-            TEXT("BlocProfileHeader"), true, false))->SetPadding(FMargin(14.0f, 7.0f, 14.0f, 5.0f));
-
-        const FRA4CountryInfo* Lead = Active.Countries.Num() > 0 ? &Active.Countries[0] : nullptr;
-        const auto AddProfileRow = [this, Profile](const FText& Label, const float Value, const FName Name)
-        {
-            UHorizontalBox* Row = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), Name);
-            UTextBlock* Caption = MakeText(
-                WidgetTree, Label, 11, TextPrimary, FName(Name.ToString() + TEXT("_Lbl")), false, false);
-            Row->AddChildToHorizontalBox(Caption)->SetSize(FillWeight(1.0f));
-            UProgressBar* Bar = WidgetTree->ConstructWidget<UProgressBar>(
-                UProgressBar::StaticClass(), FName(Name.ToString() + TEXT("_Bar")));
-            Bar->SetPercent(Value);
-            UHorizontalBoxSlot* BarSlot = Row->AddChildToHorizontalBox(Bar);
-            BarSlot->SetSize(FillWeight(2.0f));
-            BarSlot->SetVerticalAlignment(VAlign_Center);
-            BarSlot->SetPadding(FMargin(10.0f, 0.0f, 0.0f, 0.0f));
-            Profile->AddChildToVerticalBox(Row)->SetPadding(FMargin(14.0f, 0.0f, 14.0f, 3.0f));
-        };
-        AddProfileRow(LOCTEXT("P_Fire", "ОГНЕВАЯ МОЩЬ"), Lead ? Lead->FirepowerRating : 0.8f, TEXT("PFire"));
-        AddProfileRow(LOCTEXT("P_Armor", "ЗАЩИТА"), Lead ? Lead->ArmorRating : 0.8f, TEXT("PArmor"));
-        AddProfileRow(LOCTEXT("P_Mob", "МОБИЛЬНОСТЬ"), Lead ? Lead->MobilityRating : 0.8f, TEXT("PMob"));
-        AddProfileRow(LOCTEXT("P_Tech", "ТЕХНОЛОГИИ"), Lead ? Lead->TechRating : 0.8f, TEXT("PTech"));
-
-        Place(BlocCardsContainer,
-            MakePanel(WidgetTree, Profile, TEXT("BlocProfileFrame"), Active.PrimaryColor,
-                DensityPadding(Active.PanelDensity), Active.FrameRail),
-            Ref(655.0f, 735.0f, 990.0f, 122.0f).Min,
-            Ref(655.0f, 735.0f, 990.0f, 122.0f).GetSize(), 2);
-
-        // "Next step" action sits bottom right in the reference.
-        UButton* NextButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("BlocNextButton"));
-        NextButton->SetStyle(MakeCardButtonStyle(Active.GlowColor));
-        UTextBlock* NextLabel = MakeText(
-            WidgetTree, LOCTEXT("NextCountry", "ДАЛЕЕ: СТРАНА  ›"), 16, TextHighlight,
-            TEXT("BlocNextLabel"), true, false);
-        NextLabel->SetJustification(ETextJustify::Center);
-        NextButton->AddChild(NextLabel);
-        NextButton->OnClicked.AddDynamic(this, &URA4CampaignSelectWidget::GotoCountryStep);
-        Place(BlocCardsContainer, NextButton,
-            Ref(1390.0f, 875.0f, 255.0f, 50.0f).Min,
-            Ref(1390.0f, 875.0f, 255.0f, 50.0f).GetSize(), 3);
+            MakePanel(WidgetTree, Detail, TEXT("BlocDetailFrame"), Active.GlowColor,
+                DensityPadding(ERA4PanelRole::Hero), Active.FrameRail),
+            DetailPos, FVector2D(DetailWidth, GridHeight), 3);
     }
 
-    int32 PlateIndex = 0;
+    // Five equal faction cards across the left region.
     for (int32 Index = 0; Index < Blocs.Num(); ++Index)
     {
         const FRA4BlocInfo& Bloc = Blocs[Index];
-        const bool bHero = (Index == SelectedBlocIndex);
-        const FBox2D Rect = bHero
-            ? HeroRect
-            : PlateRects[FMath::Min(PlateIndex++, 3)];
-        const FVector2D Size = Rect.GetSize();
+        const ERA4FactionTheme Theme = Bloc.BlocId;
+        const bool bSelected = (Index == SelectedBlocIndex);
+        const FVector2D CardPos(LeftPad + Index * (CardWidth + Gap), GridTop);
+        const FVector2D CardSize(CardWidth, GridHeight);
 
         UVerticalBox* CardContent = WidgetTree->ConstructWidget<UVerticalBox>(
             UVerticalBox::StaticClass(), FName(*FString::Printf(TEXT("BlocContent_%d"), Index)));
 
-        UTextBlock* Numeral = MakeText(
-            WidgetTree, FText::Format(LOCTEXT("BlocNum", "0{0}"), FText::AsNumber(Index + 1)),
-            bHero ? 15 : 12, Bloc.GlowColor,
-            FName(*FString::Printf(TEXT("BlocNum_%d"), Index)), true, false);
-        CardContent->AddChildToVerticalBox(Numeral)->SetPadding(FMargin(14.0f, 12.0f, 14.0f, 2.0f));
+        // Crest glyph in a clipped hexagon-like plate, centred at the top.
+        UBorder* CrestPlate = WidgetTree->ConstructWidget<UBorder>(
+            UBorder::StaticClass(), FName(*FString::Printf(TEXT("BlocCrest_%d"), Index)));
+        CrestPlate->SetBrushColor(FLinearColor(
+            Bloc.GlowColor.R * 0.20f, Bloc.GlowColor.G * 0.20f, Bloc.GlowColor.B * 0.20f, 0.96f));
+        CrestPlate->SetPadding(FMargin(0.0f));
+        CrestPlate->SetHorizontalAlignment(HAlign_Center);
+        CrestPlate->SetVerticalAlignment(VAlign_Center);
+        UTextBlock* Crest = MakeText(
+            WidgetTree, FText::FromString(BlocCrestGlyph(Theme)), 44, Bloc.GlowColor,
+            FName(*FString::Printf(TEXT("BlocCrestGlyph_%d"), Index)), true, false);
+        Crest->SetJustification(ETextJustify::Center);
+        CrestPlate->SetContent(Crest);
+        UVerticalBoxSlot* CrestSlot = CardContent->AddChildToVerticalBox(CrestPlate);
+        CrestSlot->SetSize(FSlateChildSize(ESlateSizeRule::Automatic));
+        CrestSlot->SetPadding(FMargin(0.0f, 26.0f, 0.0f, 14.0f));
 
-        UTextBlock* Title = MakeText(
-            WidgetTree, Bloc.DisplayName, bHero ? 34 : 19, TextHighlight,
-            FName(*FString::Printf(TEXT("BlocTitle_%d"), Index)));
-        CardContent->AddChildToVerticalBox(Title)->SetPadding(FMargin(14.0f, 0.0f, 14.0f, 4.0f));
+        // Two-line faction name.
+        FString Line1, Line2;
+        BlocNameLines(Theme, Line1, Line2);
+        CardContent->AddChildToVerticalBox(MakeText(
+            WidgetTree, FText::FromString(Line1), 19,
+            bSelected ? TextHighlight : FLinearColor(0.76f, 0.79f, 0.83f, 1.0f),
+            FName(*FString::Printf(TEXT("BlocName1_%d"), Index)), true, false))
+            ->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 0.0f));
+        CardContent->AddChildToVerticalBox(MakeText(
+            WidgetTree, FText::FromString(Line2), 19,
+            bSelected ? TextHighlight : FLinearColor(0.76f, 0.79f, 0.83f, 1.0f),
+            FName(*FString::Printf(TEXT("BlocName2_%d"), Index)), true, false));
 
-        if (Bloc.bIsCategoryOnly)
-        {
-            UTextBlock* Badge = MakeText(
-                WidgetTree, LOCTEXT("CatBadge", "[ КАТЕГОРИЯ ВЫБОРА ]"), 11,
-                FLinearColor(0.95f, 0.75f, 0.30f, 1.0f),
-                FName(*FString::Printf(TEXT("CatBadge_%d"), Index)), true, false);
-            CardContent->AddChildToVerticalBox(Badge)->SetPadding(FMargin(14.0f, 0.0f, 14.0f, 4.0f));
-        }
+        // Country label.
+        CardContent->AddChildToVerticalBox(MakeText(
+            WidgetTree, FText::FromString(BlocCountryShort(Theme)), 11, Bloc.GlowColor,
+            FName(*FString::Printf(TEXT("BlocCountry_%d"), Index)), true, false))
+            ->SetPadding(FMargin(0.0f, 8.0f, 0.0f, 0.0f));
 
-        UTextBlock* Motto = MakeText(
-            WidgetTree, Bloc.Motto, bHero ? 13 : 11, Bloc.GlowColor,
-            FName(*FString::Printf(TEXT("BlocMotto_%d"), Index)), false);
-        CardContent->AddChildToVerticalBox(Motto)->SetPadding(FMargin(14.0f, 0.0f, 14.0f, 10.0f));
+        // Progress footer (pinned to the bottom of the card via a fill spacer).
+        UVerticalBoxSlot* SpacerSlot = CardContent->AddChildToVerticalBox(
+            WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(),
+                FName(*FString::Printf(TEXT("BlocSpacer_%d"), Index))));
+        SpacerSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
 
-        // Only the hero has the height for the full dossier. A secondary plate
-        // that tried to carry it would just clip its own text.
-        if (bHero)
-        {
-            UTextBlock* Desc = MakeText(
-                WidgetTree, Bloc.Description, 14, TextPrimary,
-                FName(*FString::Printf(TEXT("BlocDesc_%d"), Index)), false);
-            CardContent->AddChildToVerticalBox(Desc)->SetPadding(FMargin(14.0f, 4.0f, 14.0f, 14.0f));
+        UVerticalBox* Progress = WidgetTree->ConstructWidget<UVerticalBox>(
+            UVerticalBox::StaticClass(), FName(*FString::Printf(TEXT("BlocProgress_%d"), Index)));
+        UHorizontalBox* ProgressHeader = WidgetTree->ConstructWidget<UHorizontalBox>(
+            UHorizontalBox::StaticClass(), FName(*FString::Printf(TEXT("BlocProgressH_%d"), Index)));
+        UTextBlock* ProgressLabel = MakeText(
+            WidgetTree, LOCTEXT("Progress", "ПРОГРЕСС"), 11,
+            FLinearColor(0.60f, 0.63f, 0.68f, 1.0f),
+            FName(*FString::Printf(TEXT("BlocProgressLbl_%d"), Index)), false, false);
+        UHorizontalBoxSlot* PLSlot = ProgressHeader->AddChildToHorizontalBox(ProgressLabel);
+        PLSlot->SetSize(FillWeight(1.0f));
+        UTextBlock* ProgressValue = MakeText(
+            WidgetTree, FText::Format(LOCTEXT("ProgressPct", "{0}%"),
+                FText::AsNumber(BlocCampaignProgress(Theme))), 11, TextHighlight,
+            FName(*FString::Printf(TEXT("BlocProgressVal_%d"), Index)), true, false);
+        ProgressValue->SetJustification(ETextJustify::Right);
+        ProgressHeader->AddChildToHorizontalBox(ProgressValue);
+        Progress->AddChildToVerticalBox(ProgressHeader)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 4.0f));
+        UProgressBar* ProgressBar = WidgetTree->ConstructWidget<UProgressBar>(
+            UProgressBar::StaticClass(), FName(*FString::Printf(TEXT("BlocProgressBar_%d"), Index)));
+        ProgressBar->SetFillColorAndOpacity(Bloc.GlowColor);
+        ProgressBar->SetPercent(BlocCampaignProgress(Theme) / 100.0f);
+        Progress->AddChildToVerticalBox(ProgressBar);
+        CardContent->AddChildToVerticalBox(Progress)->SetPadding(FMargin(0.0f, 18.0f, 0.0f, 0.0f));
 
-            UTextBlock* AdvHeader = MakeText(
-                WidgetTree, LOCTEXT("KeyAdvantages", "КЛЮЧЕВЫЕ ПРЕИМУЩЕСТВА"), 12, Bloc.GlowColor,
-                FName(*FString::Printf(TEXT("BlocAdvHdr_%d"), Index)), true, false);
-            CardContent->AddChildToVerticalBox(AdvHeader)->SetPadding(FMargin(14.0f, 0.0f, 14.0f, 8.0f));
-
-            for (int32 A = 0; A < Bloc.KeyAdvantages.Num(); ++A)
-            {
-                UTextBlock* Row = MakeText(
-                    WidgetTree, Bloc.KeyAdvantages[A], 12, TextPrimary,
-                    FName(*FString::Printf(TEXT("BlocAdv_%d_%d"), Index, A)), false);
-                CardContent->AddChildToVerticalBox(Row)->SetPadding(FMargin(22.0f, 0.0f, 14.0f, 6.0f));
-            }
-        }
-
-        UTextBlock* CountriesHeader = MakeText(
-            WidgetTree,
-            Bloc.bIsCategoryOnly
-                ? LOCTEXT("CountriesInCategory", "СТРАНЫ КАТЕГОРИИ:")
-                : LOCTEXT("CountriesInBloc", "СОСТАВ БЛОКА:"),
-            11, TextMuted,
-            FName(*FString::Printf(TEXT("BlocCntHeader_%d"), Index)), true, false);
-        UVerticalBoxSlot* HeaderSlot = CardContent->AddChildToVerticalBox(CountriesHeader);
-        HeaderSlot->SetPadding(FMargin(14.0f, 6.0f, 14.0f, 2.0f));
-        HeaderSlot->SetVerticalAlignment(VAlign_Bottom);
-
-        FString CountryNamesList;
-        for (int32 CIdx = 0; CIdx < Bloc.Countries.Num(); ++CIdx)
-        {
-            CountryNamesList += (CIdx > 0 ? TEXT(" • ") : TEXT("")) + Bloc.Countries[CIdx].DisplayName.ToString();
-        }
-        UTextBlock* CountriesList = MakeText(
-            WidgetTree, FText::FromString(CountryNamesList), 11, TextHighlight,
-            FName(*FString::Printf(TEXT("BlocCntList_%d"), Index)), false);
-        CardContent->AddChildToVerticalBox(CountriesList)->SetPadding(FMargin(14.0f, 0.0f, 14.0f, 12.0f));
-
+        // Card is a clickable button carrying the content; selection is handled
+        // via the existing OnBloc0..4 routes.
         UButton* CardButton = WidgetTree->ConstructWidget<UButton>(
             UButton::StaticClass(), FName(*FString::Printf(TEXT("BlocBtn_%d"), Index)));
         CardButton->SetStyle(MakeCardButtonStyle(Bloc.PrimaryColor));
@@ -826,11 +950,11 @@ void URA4CampaignSelectWidget::RefreshBlocCards()
 
         UBorder* CardFrame = MakePanel(
             WidgetTree, CardButton, FName(*FString::Printf(TEXT("BlocFrame_%d"), Index)),
-            bHero ? Bloc.GlowColor : Bloc.PrimaryColor,
-            DensityPadding(Bloc.PanelDensity), Bloc.FrameRail);
+            bSelected ? Bloc.GlowColor : Bloc.PrimaryColor,
+            FMargin(16.0f), Bloc.FrameRail);
         BlocCardFrames.Add(CardFrame);
 
-        Place(BlocCardsContainer, CardFrame, Rect.Min, Size, bHero ? 3 : 2);
+        Place(BlocCardsContainer, CardFrame, CardPos, CardSize, bSelected ? 3 : 2);
     }
 }
 
@@ -1491,44 +1615,27 @@ void URA4CampaignSelectWidget::ContinueCampaign()
         return;
     }
 
-    // Step 3: Launch Campaign for the selected faction
-    if (APlayerController* PlayerController = GetOwningPlayer())
+    // Step 3: Launch Campaign for the selected faction. Route through the
+    // screen host so it owns the widget swap (no orphaned duplicates).
+    switch (static_cast<ERA4FactionTheme>(SelectedBlocIndex))
     {
-        if (URA4CampaignScreenWidget* Campaign = CreateWidget<URA4CampaignScreenWidget>(
-            PlayerController, URA4CampaignScreenWidget::StaticClass()))
-        {
-            Campaign->ConfigureCampaign(static_cast<ERA4FactionTheme>(SelectedBlocIndex));
-            Campaign->AddToViewport(0);
-            RemoveFromParent();
-        }
+    case ERA4FactionTheme::EurasianPact:      RouteToScreen(ERA4UIScreenId::EurasianCampaign); break;
+    case ERA4FactionTheme::AtlanticAlliance:  RouteToScreen(ERA4UIScreenId::AtlanticCampaign); break;
+    case ERA4FactionTheme::EasternCoalition:  RouteToScreen(ERA4UIScreenId::EasternCampaign); break;
+    case ERA4FactionTheme::PacificPact:       RouteToScreen(ERA4UIScreenId::PacificCampaign); break;
+    case ERA4FactionTheme::Independent:       RouteToScreen(ERA4UIScreenId::IndependentCampaign); break;
+    default: break;
     }
 }
 
 void URA4CampaignSelectWidget::OpenMainMenu()
 {
-    if (APlayerController* PlayerController = GetOwningPlayer())
-    {
-        if (URA4MainMenuScreenWidget* MainMenu = CreateWidget<URA4MainMenuScreenWidget>(
-            PlayerController, URA4MainMenuScreenWidget::StaticClass()))
-        {
-            MainMenu->AddToViewport(0);
-            RemoveFromParent();
-        }
-    }
+    RouteToScreen(ERA4UIScreenId::MainMenu);
 }
 
 void URA4CampaignSelectWidget::OpenMultiplayer()
 {
-    if (APlayerController* PlayerController = GetOwningPlayer())
-    {
-        if (URA4ShowcaseWidget* Screen = CreateWidget<URA4ShowcaseWidget>(
-            PlayerController, URA4ShowcaseWidget::StaticClass()))
-        {
-            Screen->SetInitialScreenForPresentation(3); // Multiplayer lobby
-            Screen->AddToViewport(0);
-            RemoveFromParent();
-        }
-    }
+    RouteToScreen(ERA4UIScreenId::MultiplayerLobby);
 }
 
 void URA4CampaignSelectWidget::OpenChallenges()

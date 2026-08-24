@@ -45,6 +45,7 @@ namespace
 	bool bGuardOrdered = false;
 	int32 RefineryDiagPolls = 0;
 	int32 QueueDiagPolls = 0;
+	int32 RequeueCooldown = 0;
 	int32 LastLoggedStep = -1;
 
 	constexpr float kPollInterval = 0.5f;      // poll the world twice a second
@@ -178,6 +179,14 @@ namespace
 		}
 		if (!bQueued)
 		{
+			// Backoff: a rejected StartProduction (prerequisites still building,
+			// queue full) stays rejected for a while; re-issuing every poll
+			// spams the log and the command bus for nothing.
+			if (++RequeueCooldown < 4)
+			{
+				return false;
+			}
+			RequeueCooldown = 0;
 			RA4::Command C;
 			C.Type = RA4::CommandType::StartProduction;
 			C.Issuer = Issuer;

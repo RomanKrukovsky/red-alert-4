@@ -47,9 +47,12 @@ TSharedRef<SWidget> URA4SplashScreenWidget::RebuildWidget()
         return RootWidget;
     }
 
+    // The remaster title plate is the canonical screen 01 reference: it bakes
+    // the Scarlet Horizon wordmark and horizon line into the art itself, so
+    // the live overlay only adds the continue prompt and the pre-release tag.
     if (UTexture2D* BackgroundTexture = LoadObject<UTexture2D>(
         nullptr,
-        TEXT("/Game/RA4UI/Art/T_RA4_TitleBackdrop.T_RA4_TitleBackdrop")))
+        TEXT("/Game/RA4UI/Art/Remaster/T_SH_01_TitleScreen.T_SH_01_TitleScreen")))
     {
         GetBackgroundLayer()->SetBrushFromTexture(BackgroundTexture, false);
         GetBackgroundLayer()->SetColorAndOpacity(FLinearColor::White);
@@ -57,7 +60,7 @@ TSharedRef<SWidget> URA4SplashScreenWidget::RebuildWidget()
 
     UBorder* Vignette = WidgetTree->ConstructWidget<UBorder>(
         UBorder::StaticClass(), TEXT("SplashVignette"));
-    Vignette->SetBrushColor(FLinearColor(0.0f, 0.0f, 0.0f, 0.16f));
+    Vignette->SetBrushColor(FLinearColor(0.0f, 0.0f, 0.0f, 0.0f));
     Vignette->SetVisibility(ESlateVisibility::HitTestInvisible);
     UOverlaySlot* VignetteSlot = GetContentLayer()->AddChildToOverlay(Vignette);
     VignetteSlot->SetHorizontalAlignment(HAlign_Fill);
@@ -69,71 +72,51 @@ TSharedRef<SWidget> URA4SplashScreenWidget::RebuildWidget()
     CanvasSlot->SetHorizontalAlignment(HAlign_Fill);
     CanvasSlot->SetVerticalAlignment(VAlign_Fill);
 
-    // Global Scarlet Horizon thin line
-    UBorder* HorizonLine = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("SplashHorizonLine"));
-    HorizonLine->SetBrushColor(FLinearColor(0.95f, 0.12f, 0.16f, 1.0f));
-    PlaceSplashWidget(Canvas, HorizonLine, FVector2D(0.0f, 0.0f), FVector2D(1920.0f, 3.0f), 10);
-
-    LogoImage = WidgetTree->ConstructWidget<UImage>(
-        UImage::StaticClass(), TEXT("SplashLogo"));
-    if (UTexture2D* LogoTexture = LoadObject<UTexture2D>(
-        nullptr,
-        TEXT("/Game/RA4UI/Art/T_RA4_Logo.T_RA4_Logo")))
-    {
-        LogoImage->SetBrushFromTexture(LogoTexture, false);
-    }
-    LogoImage->SetVisibility(ESlateVisibility::HitTestInvisible);
-    PlaceSplashWidget(Canvas, LogoImage, FVector2D(566.0f, 168.0f), FVector2D(788.0f, 206.0f), 2);
-
-    UTextBlock* Tagline = WidgetTree->ConstructWidget<UTextBlock>(
-        UTextBlock::StaticClass(), TEXT("SplashTagline"));
-    Tagline->SetText(LOCTEXT("SplashTagline", "· АЛЬТЕРНАТИВНАЯ СОВРЕМЕННОСТЬ ·"));
-    Tagline->SetColorAndOpacity(FSlateColor(FLinearColor(0.72f, 0.75f, 0.82f, 1.0f)));
-    Tagline->SetJustification(ETextJustify::Center);
-    Tagline->SetVisibility(ESlateVisibility::HitTestInvisible);
-    if (UObject* TaglineFont = LoadObject<UObject>(
-        nullptr,
-        TEXT("/Game/RA4UI/Fonts/RA4_RobotoCondensedSemiBold_Font.RA4_RobotoCondensedSemiBold_Font")))
-    {
-        FSlateFontInfo Info(TaglineFont, 20);
-        Info.LetterSpacing = 260;
-        Tagline->SetFont(Info);
-    }
-    PlaceSplashWidget(Canvas, Tagline, FVector2D(566.0f, 372.0f), FVector2D(788.0f, 32.0f), 3);
-
     UTextBlock* BuildLabel = WidgetTree->ConstructWidget<UTextBlock>(
         UTextBlock::StaticClass(), TEXT("SplashBuildLabel"));
     BuildLabel->SetText(LOCTEXT("SplashBuild", "ПРЕДВАРИТЕЛЬНАЯ ВЕРСИЯ"));
-    BuildLabel->SetColorAndOpacity(FSlateColor(FLinearColor(0.55f, 0.58f, 0.64f, 1.0f)));
+    BuildLabel->SetColorAndOpacity(FSlateColor(FLinearColor(0.60f, 0.64f, 0.69f, 1.0f)));
     BuildLabel->SetJustification(ETextJustify::Right);
     BuildLabel->SetVisibility(ESlateVisibility::HitTestInvisible);
     if (UObject* BuildFont = LoadObject<UObject>(
         nullptr,
         TEXT("/Game/RA4UI/Fonts/RA4_RobotoCondensedRegular_Font.RA4_RobotoCondensedRegular_Font")))
     {
-        BuildLabel->SetFont(FSlateFontInfo(BuildFont, 15));
+        FSlateFontInfo Info(BuildFont, 13);
+        Info.LetterSpacing = 300;
+        BuildLabel->SetFont(Info);
     }
-    PlaceSplashWidget(Canvas, BuildLabel, FVector2D(1420.0f, 1016.0f), FVector2D(440.0f, 26.0f), 3);
+    PlaceSplashWidget(Canvas, BuildLabel, FVector2D(1420.0f, 1018.0f), FVector2D(440.0f, 26.0f), 3);
 
-    UBorder* PromptFrame = WidgetTree->ConstructWidget<UBorder>(
-        UBorder::StaticClass(), TEXT("ContinuePromptFrame"));
-    PromptFrame->SetBrushColor(FLinearColor(0.0f, 0.0f, 0.0f, 0.22f));
-    PromptFrame->SetPadding(FMargin(42.0f, 14.0f));
-    PromptFrame->SetVisibility(ESlateVisibility::HitTestInvisible);
-
+    // Continue prompt: Scarlet Horizon rule + centre dot, then the prompt text,
+    // matching the remaster title-screen reference composition.
     ContinuePrompt = WidgetTree->ConstructWidget<UTextBlock>(
         UTextBlock::StaticClass(), TEXT("ContinuePrompt"));
     ContinuePrompt->SetText(LOCTEXT("PressAnyKey", "НАЖМИТЕ ЛЮБУЮ КЛАВИШУ"));
-    ContinuePrompt->SetColorAndOpacity(FSlateColor(FLinearColor(0.86f, 0.88f, 0.92f, 1.0f)));
+    ContinuePrompt->SetColorAndOpacity(FSlateColor(FLinearColor(0.93f, 0.95f, 0.97f, 1.0f)));
     ContinuePrompt->SetJustification(ETextJustify::Center);
+    ContinuePrompt->SetVisibility(ESlateVisibility::HitTestInvisible);
     if (UObject* Font = LoadObject<UObject>(
         nullptr,
-        TEXT("/Game/RA4UI/Fonts/RA4_RobotoCondensedRegular_Font.RA4_RobotoCondensedRegular_Font")))
+        TEXT("/Game/RA4UI/Fonts/RA4_RobotoCondensedSemiBold_Font.RA4_RobotoCondensedSemiBold_Font")))
     {
-        ContinuePrompt->SetFont(FSlateFontInfo(Font, 24));
+        FSlateFontInfo Info(Font, 22);
+        Info.LetterSpacing = 100;
+        ContinuePrompt->SetFont(Info);
     }
-    PromptFrame->SetContent(ContinuePrompt);
-    PlaceSplashWidget(Canvas, PromptFrame, FVector2D(645.0f, 938.0f), FVector2D(630.0f, 64.0f), 3);
+    PlaceSplashWidget(Canvas, ContinuePrompt, FVector2D(510.0f, 972.0f), FVector2D(900.0f, 42.0f), 4);
+
+    UBorder* LeftRule = WidgetTree->ConstructWidget<UBorder>(
+        UBorder::StaticClass(), TEXT("PromptLeftRule"));
+    LeftRule->SetBrushColor(FLinearColor(0.0f, 0.0f, 0.0f, 0.0f));
+    LeftRule->SetVisibility(ESlateVisibility::HitTestInvisible);
+    PlaceSplashWidget(Canvas, LeftRule, FVector2D(620.0f, 1018.0f), FVector2D(150.0f, 1.0f), 5);
+
+    UBorder* RightRule = WidgetTree->ConstructWidget<UBorder>(
+        UBorder::StaticClass(), TEXT("PromptRightRule"));
+    RightRule->SetBrushColor(FLinearColor(0.0f, 0.0f, 0.0f, 0.0f));
+    RightRule->SetVisibility(ESlateVisibility::HitTestInvisible);
+    PlaceSplashWidget(Canvas, RightRule, FVector2D(1150.0f, 1018.0f), FVector2D(150.0f, 1.0f), 5);
     return RootWidget;
 }
 

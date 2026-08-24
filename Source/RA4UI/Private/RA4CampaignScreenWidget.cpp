@@ -213,13 +213,13 @@ TSharedRef<SWidget> URA4CampaignScreenWidget::RebuildWidget()
 
     if (UTexture2D* BackgroundTexture = LoadObject<UTexture2D>(nullptr, Visual.BackgroundPath))
     {
-        // The remaster plates bake their own command chrome; dim them so the
-        // live dossier panels read on top without ghost doubling.
+        // Light tint keeps the painted campaign plate readable while the live
+        // dossier panels own the readable pixels above it.
         GetBackgroundLayer()->SetBrushFromTexture(BackgroundTexture, false);
-        GetBackgroundLayer()->SetColorAndOpacity(FLinearColor(0.50f, 0.52f, 0.58f, 1.0f));
+        GetBackgroundLayer()->SetColorAndOpacity(FLinearColor(0.84f, 0.86f, 0.90f, 1.0f));
     }
     UBorder* Shade = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass(), TEXT("CampaignShade"));
-    Shade->SetBrush(FSlateColorBrush(FLinearColor(0.006f, 0.008f, 0.018f, 0.62f)));
+    Shade->SetBrush(FSlateColorBrush(FLinearColor(0.004f, 0.006f, 0.012f, 0.34f)));
     Shade->SetVisibility(ESlateVisibility::HitTestInvisible);
     UOverlaySlot* ShadeSlot = GetContentLayer()->AddChildToOverlay(Shade);
     ShadeSlot->SetHorizontalAlignment(HAlign_Fill);

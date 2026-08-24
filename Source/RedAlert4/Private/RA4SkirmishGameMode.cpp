@@ -24,12 +24,28 @@
 #include "RA4NetworkChannel.h"
 #include "Kismet/GameplayStatics.h"
 
+#include "RA4UIScreenHost.h"
+#include "RA4UIRouterSubsystem.h"
+
 #include "RA4Content/ContentTypes.h"
 
 namespace
 {
 constexpr uint8 SovietFaction = static_cast<uint8>(RA4::FactionId::Soviet);
 constexpr uint8 AllianceFaction = static_cast<uint8>(RA4::FactionId::Alliance);
+
+// The Main Menu map is backed by the skirmish game mode so it shares world
+// composition with the art lab, but it must not start a match: it shows the
+// menu flow (Splash -> MainMenu -> Campaign -> ...) instead.
+bool IsMainMenuMap(const UWorld* World)
+{
+    if (!World)
+    {
+        return false;
+    }
+    static const FName MainMenuPackage(TEXT("/Game/Maps/RA4_MainMenu"));
+    return World->GetPackage()->GetFName() == MainMenuPackage;
+}
 }
 
 ARA4SkirmishGameMode::ARA4SkirmishGameMode()
@@ -47,6 +63,21 @@ ARA4SkirmishGameMode::ARA4SkirmishGameMode()
 void ARA4SkirmishGameMode::BeginPlay()
 {
     Super::BeginPlay();
+
+    // The Main Menu map rides on the skirmish game mode for world composition
+    // but shows the menu flow instead of a match. The screen host listens to
+    // the router and swaps widgets on every NavigateToScreen call.
+    if (IsMainMenuMap(GetWorld()))
+    {
+        if (APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr)
+        {
+            if (URA4UIScreenHost* Host = GetGameInstance()->GetSubsystem<URA4UIScreenHost>())
+            {
+                Host->ShowInitialScreen(PC);
+            }
+        }
+        return;
+    }
 
     StartSimulationMatch();
     ApplySceneDressing();

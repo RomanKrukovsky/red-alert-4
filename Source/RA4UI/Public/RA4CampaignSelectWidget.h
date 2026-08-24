@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "RA4FactionData.h"
+#include "RA4UIScreenViewModel.h"
 #include "RA4CampaignSelectWidget.generated.h"
 
 class UBorder;
@@ -119,6 +120,9 @@ protected:
     void OpenSettings();
 
     void BuildLayout();
+
+    /** Routes a screen change through the UI router (host owns the swap). */
+    void RouteToScreen(ERA4UIScreenId ScreenId);
 
     /**
      * Bottom-left action pair, chosen-country summary and the doctrine preview
