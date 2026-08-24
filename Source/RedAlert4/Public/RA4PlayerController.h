@@ -414,5 +414,12 @@ private:
 
     RA4::EntityId PendingMcvDeployEntity;
 
+    // Indices of MCV entities that already have a Deploy command queued but
+    // have not yet been removed by the simulation. Prevents the player from
+    // issuing Deploy again on the same MCV (which would spawn a second
+    // Construction Yard from "thin air"). Cleared when the entity is removed
+    // or found dead on the next Deploy attempt.
+    TSet<uint32> PendingDeployMcvIndices;
+
     FDelegateHandle MatchEndedHandle;
 };

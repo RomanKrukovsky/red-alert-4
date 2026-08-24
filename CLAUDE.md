@@ -250,3 +250,53 @@
 12. Следующий разрешённый этап.
 
 Не переходи к расширению масштаба, пока фундаментальная система нестабильна.
+
+## НЕМЕНЯЕМЫЕ ПРАВИЛА: туман войны и материал земли
+
+### Запрещено менять landscape-материал на сторонний без поддержки fog-of-war
+
+Туман войны (fog of war) — неотъемлемая часть геймплея. Система
+`RA4SimWorldSubsystem::PublishFogParametersToTerrain` каждую кадр создаёт
+MaterialInstanceDynamic от текущего landscape-материала и задаёт ему текстурный
+параметр `RA4FogVisibility` и скаляры `RA4FogWorldWidth/Height`,
+`RA4FogStrength`, `RA4FogHighContrast`.
+
+**Если назначить на ландшафт материал, у которого НЕТ этих параметров**
+(например любой CityPark `MI_Ground01`/`MI_Landscape`, IndustryPropsPack6
+или любой произвольный store-материал) — fog-multiply применится к
+несуществующим параметрам, материал сломается, и **земля станет чёрной**.
+
+### Разрешённые landscape-материалы
+
+ТОЛЬКО материалы, имеющие ноды для `RA4FogVisibility`, `RA4FogWorldWidth`,
+`RA4FogWorldHeight`, `RA4FogStrength`, `RA4FogHighContrast`:
+- `/Game/RA4/Generated/Terrain/M_RA4_TerrainLayered` (основной, создан
+  commandlet-ом `RA4LayeredTerrainSetup`, имеет fog-логику)
+- `/Game/RA4/Generated/Terrain/M_RA4_Terrain`
+- `/Game/RA4/Generated/Terrain/M_RA4_Ground_Bulletproof`
+
+**Запрещено** назначать: CityPark `MI_Ground01/02/03`, `MI_Landscape`,
+любой `MI_*` из ThirdParty, или любой материал без fog-параметров.
+
+### Если земля чёрная — это НЕ баг текстуры, это fog-of-war
+
+Чёрная земля после смены материала = fog-система умножает на материал без
+fog-нодов. Лекарство одно: вернуть `M_RA4_TerrainLayered`. Не пытайтесь
+«починить текстуру» — почините выбор материала.
+
+### Camera post-process fog
+
+Включён cvar `ra4.Fog.PostProcess=1` (по умолчанию). Материал
+`/Game/RA4/Generated/Terrain/M_RA4_FogPostProcess` — единственный
+blendable, который кладёт fog поверх пропсов/воды/зданий через камеру.
+Не удалять, не заменять. Если `ra4.Fog.PostProcess=0` — туман будет только
+на ландшафте, но не на пропсах.
+
+### Чек-лист перед любым изменением ландшафта/материала
+
+1. НЕ назначать сторонний store-материал на `LandscapeMaterial`.
+2. Любой новый landscape-материал ДОЛЖЕН иметь fog-ноды (см. ADR-0030).
+3. Если «земля чёрная» — проверить какой материал на ландшафте, вернуть
+   `M_RA4_TerrainLayered`.
+4. Если «тумана нет» — проверить `ra4.Fog.PostProcess=1` и что
+   `M_RA4_FogPostProcess` существует и привязан к камере.

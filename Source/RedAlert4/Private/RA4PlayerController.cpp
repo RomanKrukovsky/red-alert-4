@@ -1454,6 +1454,19 @@ void ARA4PlayerController::HandleClick(bool bLeftButton, const FVector2D& EndScr
     {
         if (bPlacementArmed && PendingMcvDeployEntity.IsValid())
         {
+            // Reject a second placement click on an MCV that already has a
+            // deploy in flight (e.g. player clicked twice fast). This is the
+            // server side of the dup-MCV guard: even though placement was
+            // reset on the first click, the MCV has not been removed yet.
+            if (PendingDeployMcvIndices.Contains(PendingMcvDeployEntity.Index))
+            {
+                UE_LOG(LogTemp, Warning, TEXT("RA4: duplicate MCV placement click ignored (Entity %u already deploying)"), PendingMcvDeployEntity.Index);
+                bPlacementArmed = false;
+                PlacementContent = ContentId();
+                PendingMcvDeployEntity = RA4::EntityId::Invalid();
+                break;
+            }
+
             // MCV deployment at clicked location: move MCV to location and deploy into Construction Yard
             RA4::Command MoveCmd;
             MoveCmd.Type = RA4::CommandType::Move;
@@ -1468,6 +1481,7 @@ void ARA4PlayerController::HandleClick(bool bLeftButton, const FVector2D& EndScr
             DeployCmd.Tile = World->GetMap().WorldToTile(EndGround);
 
             SubmitOrders({MoveCmd, DeployCmd});
+            PendingDeployMcvIndices.Add(PendingMcvDeployEntity.Index);
 
             bAttackMoveArmed = false;
             bPlacementArmed = false;
@@ -2706,6 +2720,7 @@ void ARA4PlayerController::DeploySelectedMcv()
     const URA4SimWorldSubsystem* SimSub = GetSimSubsystem();
     if (SimSub == nullptr || SimSub->GetSimWorld() == nullptr)
     {
+        UE_LOG(LogTemp, Warning, TEXT("RA4 Deploy: ABORT - SimSub or SimWorld null"));
         return;
     }
 
@@ -2718,6 +2733,18 @@ void ARA4PlayerController::DeploySelectedMcv()
 
     // 1. Check selected entities first (MCV or Construction Yard)
     const auto& Sel = Selection.Get();
+    UE_LOG(LogTemp, Display, TEXT("RA4 Deploy: called. LocalPlayer=%d, selection=%d"), (int32)LocalPlayer, (int32)Sel.size());
+    // Prune stale entries: any index we tracked that is no longer a live MCV
+    // (deployed, destroyed, or converted) can be released.
+    for (auto It = PendingDeployMcvIndices.CreateIterator(); It; ++It)
+    {
+        const uint32 Idx = *It;
+        if (Idx >= Cores.size() || !Cores[Idx].bAlive ||
+            Cores[Idx].Kind != RA4::EntityKind::Unit)
+        {
+            It.RemoveCurrent();
+        }
+    }
     for (const auto& Id : Sel)
     {
         if (Id.IsValid() && Id.Index < Cores.size() && Cores[Id.Index].bAlive && Cores[Id.Index].Owner == LocalPlayer)
@@ -2725,9 +2752,14 @@ void ARA4PlayerController::DeploySelectedMcv()
             const auto* Def = Content ? Content->FindEntity(Cores[Id.Index].Def) : nullptr;
             if (Def != nullptr)
             {
-                // MCV builder unit
+                // MCV builder unit -- but only if it is not already deploying
                 if (Cores[Id.Index].Kind == RA4::EntityKind::Unit && Def->Unit.bIsBuilder && Def->Unit.DeploysInto.IsValid())
                 {
+                    if (PendingDeployMcvIndices.Contains(Id.Index))
+                    {
+                        UE_LOG(LogTemp, Display, TEXT("RA4 Deploy: MCV %u already has a deploy queued; ignoring duplicate"), Id.Index);
+                        return;
+                    }
                     TargetEntity = Id;
                     break;
                 }
@@ -2741,8 +2773,11 @@ void ARA4PlayerController::DeploySelectedMcv()
         }
     }
 
-    // 2. If nothing selected and player has 0 buildings, allow D to deploy starting MCV
-    if (!TargetEntity.IsValid() && Sel.empty())
+    // 2. If no MCV found in selection and player has 0 buildings, auto-deploy
+    // the player's starting MCV. This also fires when the selection is non-empty
+    // but holds a non-MCV unit (e.g. a soldier) -- previously D did nothing in
+    // that case, which read as "deploy is broken".
+    if (!TargetEntity.IsValid())
     {
         bool bHasAnyBuilding = false;
         RA4::EntityId McvCandidate = RA4::EntityId::Invalid();
@@ -2760,7 +2795,11 @@ void ARA4PlayerController::DeploySelectedMcv()
                     const auto* Def = Content ? Content->FindEntity(Cores[I].Def) : nullptr;
                     if (Def != nullptr && Def->Unit.bIsBuilder && Def->Unit.DeploysInto.IsValid())
                     {
-                        McvCandidate = Sim->MakeId(uint32_t(I));
+                        // Skip an MCV that already has a deploy queued.
+                        if (!PendingDeployMcvIndices.Contains(uint32_t(I)))
+                        {
+                            McvCandidate = Sim->MakeId(uint32_t(I));
+                        }
                     }
                 }
             }
@@ -2768,7 +2807,17 @@ void ARA4PlayerController::DeploySelectedMcv()
         if (!bHasAnyBuilding && McvCandidate.IsValid())
         {
             TargetEntity = McvCandidate;
+            UE_LOG(LogTemp, Display, TEXT("RA4 Deploy: auto-selected starting MCV (Entity %u) since player has no buildings"), TargetEntity.Index);
         }
+        else if (bHasAnyBuilding)
+        {
+            UE_LOG(LogTemp, Display, TEXT("RA4 Deploy: player already has a building; not auto-deploying"));
+        }
+    }
+
+    if (!TargetEntity.IsValid())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("RA4 Deploy: no MCV target found (nothing selected, no starting MCV)"));
     }
 
     if (TargetEntity.IsValid())
@@ -2805,6 +2854,13 @@ void ARA4PlayerController::DeploySelectedMcv()
         if (MutableSim != nullptr)
         {
             MutableSim->EnqueueCommand(Cmd);
+            // Record this MCV as "deploy in flight" so a second D press or
+            // placement click cannot queue another Deploy on the same entity
+            // before the simulation removes it.
+            if (bIsMcv)
+            {
+                PendingDeployMcvIndices.Add(TargetEntity.Index);
+            }
             UE_LOG(LogTemp, Display, TEXT("RA4: Issued Deploy/Pack command on Entity (Index=%u)"), TargetEntity.Index);
 
             // Audio feedback

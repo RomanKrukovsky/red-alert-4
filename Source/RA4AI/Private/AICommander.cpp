@@ -2474,6 +2474,22 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
         return;
     }
 
+    // RA3 pacing: the opening minutes belong to building, not rushing. An AI
+    // that beelines with its starting army kills an economy player at 0:40,
+    // which reads as a bug rather than as a challenge -- the originals give the
+    // player time to get a refinery and a couple of units out first. Offense
+    // (raids and pushes) unlocks per difficulty below; defensive response is
+    // unaffected, because IsUnderAttack handling runs in Tick, not here.
+    TickIndex OpeningGraceTicks = 3000;   // Normal: ~2:30 at 20 Hz
+    switch (Config.Difficulty)
+    {
+    case AIDifficulty::Easy:   OpeningGraceTicks = 4500; break;  // ~3:45
+    case AIDifficulty::Normal: OpeningGraceTicks = 3000; break;  // ~2:30
+    case AIDifficulty::Hard:   OpeningGraceTicks = 2400; break;  // ~2:00
+    case AIDifficulty::Expert: OpeningGraceTicks = 1800; break;  // ~1:30
+    }
+    const bool bOffenseUnlocked = World.GetTick() >= OpeningGraceTicks;
+
     // Retreat is an emergency unit action, not an army-level strategy. It must run
     // even while the force is still smaller than the profile's attack threshold.
     const EntityId Yard = FindOwnConstructionYard(World);
@@ -2557,7 +2573,9 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
     // Small raids keep pressure on between big operations, but only when a target
     // is actually known: with nothing in memory the scouting/gathering fallback
     // above must run, otherwise one turtle steals every decision tick forever.
-    if (bHasTarget && TryHarassRaid(World, ArmySize, Out))
+    // Gated behind the opening grace: no raids while the player is still getting
+    // their first refinery up.
+    if (bOffenseUnlocked && bHasTarget && TryHarassRaid(World, ArmySize, Out))
     {
         return;
     }
@@ -2648,6 +2666,13 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
         [[fallthrough]];
         case OperationState::Gathering:
         {
+            // Opening grace, part 2: an operation that gathered during the grace
+            // must not commit the moment the clock crosses the threshold either.
+            // The push waits for the grace to elapse; gathering continues.
+            if (!bOffenseUnlocked)
+            {
+                break;
+            }
             // Commit once the squad reaches the minimum attack size. Waiting for the
             // full attack size made the AI too passive in skirmishes where vision was
             // limited or the opponent turtled -- and a gather that has stopped

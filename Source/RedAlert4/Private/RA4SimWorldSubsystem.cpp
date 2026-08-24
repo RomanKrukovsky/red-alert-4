@@ -14,6 +14,7 @@
 #include "MissionRuntime.h"
 #include "RA4Presentation/HudSnapshot.h"
 #include "RA4Presentation/FogVisibilityTexture.h"
+#include "RA4AutoPlayDriver.h"
 #include "RA4Core/Command.h"
 #include "RA4Core/SimConfig.h"
 #include "RA4MatchBootstrap.h"
@@ -230,6 +231,9 @@ void URA4SimWorldSubsystem::StartSkirmishMatch(uint8 PlayerFaction, uint8 EnemyF
 
     UE_LOG(LogTemp, Display, TEXT("RA4 skirmish initialized with %llu simulation entities"),
            static_cast<uint64>(SimWorld->GetAllCores().size()));
+
+    // A fresh match re-arms the scripted driver (it idles unless ra4.AutoPlay=1).
+    RA4AutoPlay::Reset();
 }
 
 bool URA4SimWorldSubsystem::StartCampaignMission(const FString& MissionId, int32 Difficulty)
@@ -464,9 +468,23 @@ static TAutoConsoleVariable<float> CVarAutoShot(
     TEXT("Exists because -ExecCmds HighResShot captures the loading screen."),
     ECVF_Default);
 
+// Scripted full-match driver behind `ra4.AutoPlay 1` (or -ExecCmds="ra4.AutoPlay 1"):
+// the automated playtest that proves the skirmish loop end to end.
+static TAutoConsoleVariable<int32> CVarAutoPlay(
+    TEXT("ra4.AutoPlay"),
+    0,
+    TEXT("1 = script a full skirmish (deploy MCV -> economy -> army -> attack) through\n")
+    TEXT("the normal command bus and log every step as RA4AutoPlay."),
+    ECVF_Default);
+
 void URA4SimWorldSubsystem::Tick(float DeltaTime)
 {
     if (!SimWorld) return;
+
+    if (CVarAutoPlay.GetValueOnGameThread() != 0)
+    {
+        RA4AutoPlay::Tick(*this, DeltaTime);
+    }
 
     // Command line wins over the console variable. -ExecCmds runs early enough
     // that setting this variable there did not stick, and a switch that silently
@@ -912,6 +930,22 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
                 const RA4::EntityCore* Core = SimWorld->GetCore(Event.Entity);
                 if (Core != nullptr && Core->Owner == LocalPlayer)
                 {
+                    // Auto-play diagnostics: who is hitting what, with what, for how much.
+                    if (CVarAutoPlay.GetValueOnGameThread() != 0)
+                    {
+                        const RA4::EntityCore* AttackerCore =
+                            Event.Other.IsValid() ? SimWorld->GetCore(Event.Other) : nullptr;
+                        const RA4::EntityDef* VictimDef = Content ? Content->FindEntity(Core->Def) : nullptr;
+                        const RA4::EntityDef* AttackerDef =
+                            (AttackerCore != nullptr && Content) ? Content->FindEntity(AttackerCore->Def) : nullptr;
+                        UE_LOG(LogTemp, Display,
+                            TEXT("RA4AutoPlay: DAMAGE %s (owner %d) hit by %s (owner %d) for %d"),
+                            VictimDef ? UTF8_TO_TCHAR(VictimDef->Name.c_str()) : TEXT("?"),
+                            (int32)Core->Owner,
+                            AttackerDef ? UTF8_TO_TCHAR(AttackerDef->Name.c_str()) : TEXT("?"),
+                            AttackerCore ? (int32)AttackerCore->Owner : -1,
+                            Event.Value);
+                    }
                     PlayVoiceForContent(Core->Def, ERA4VoiceEvent::Damaged, false);
                     if (Core->Kind == RA4::EntityKind::Building)
                     {
@@ -1018,6 +1052,14 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
                 Event.Value == int32(RA4::CommandReject::InsufficientCredits))
             {
                 PlayEVA(ERA4EVAEvent::InsufficientFunds);
+            }
+            // Auto-play diagnostics: a rejected command is a silent hole in the
+            // scripted match -- the driver waits on a step that never advanced.
+            if (CVarAutoPlay.GetValueOnGameThread() != 0 && Event.Player == LocalPlayer)
+            {
+                UE_LOG(LogTemp, Warning,
+                    TEXT("RA4AutoPlay: command REJECTED reason=%d entity=%u"),
+                    Event.Value, Event.Entity.Index);
             }
             break;
 
@@ -1432,9 +1474,9 @@ namespace
 {
 // Floor from ADR-0030 section 4: fog strength may be reduced for readability but
 // never to where unexplored and currently-visible ground are indistinguishable.
-// 0.35 still leaves an unmistakable difference; below that the signal stops
-// carrying the rule.
-constexpr float kMinFogStrength = 0.35f;
+// 0.15 still leaves an unmistakable difference while letting the terrain show
+// through as a soft haze rather than a flat black void.
+constexpr float kMinFogStrength = 0.15f;
 constexpr const TCHAR* kFogPostProcessPath =
     TEXT("/Game/RA4/Generated/Terrain/M_RA4_FogPostProcess.M_RA4_FogPostProcess");
 }

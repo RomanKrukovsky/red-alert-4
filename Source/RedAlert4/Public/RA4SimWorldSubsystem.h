@@ -231,7 +231,7 @@ private:
     UMaterialInstanceDynamic* CameraFogMaterial = nullptr;
     // 1.0 is the ADR's intended look; kMinFogStrength is the floor below which
     // fog stops doing its job. Enforced in SetFogStrength, not documented and hoped for.
-    float FogStrength = 1.0f;
+    float FogStrength = 0.35f;
     bool bHighContrastFog = false;
     int32 FogTextureWidth = 0;
     int32 FogTextureHeight = 0;

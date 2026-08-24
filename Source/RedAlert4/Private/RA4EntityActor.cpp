@@ -47,6 +47,27 @@ ARA4EntityActor::ARA4EntityActor()
     FirstPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCameraComponent"));
     FirstPersonCameraComponent->SetupAttachment(DirectControlSpringArm, USpringArmComponent::SocketName);
     FirstPersonCameraComponent->bUsePawnControlRotation = false;
+    // The map's sun is ~75,000 lux; with auto exposure the first-person view
+    // blows out to a white screen. Lock a fixed EV100 and override the post
+    // process so the direct-control view is always exposed correctly.
+    FirstPersonCameraComponent->PostProcessSettings.bOverride_AutoExposureMethod = true;
+    FirstPersonCameraComponent->PostProcessSettings.AutoExposureMethod = EAutoExposureMethod::AEM_Manual;
+    FirstPersonCameraComponent->PostProcessSettings.bOverride_AutoExposureBias = true;
+    FirstPersonCameraComponent->PostProcessSettings.AutoExposureBias = 9.5f;
+    FirstPersonCameraComponent->PostProcessSettings.bOverride_AutoExposureMinBrightness = true;
+    FirstPersonCameraComponent->PostProcessSettings.AutoExposureMinBrightness = 0.1f;
+    FirstPersonCameraComponent->PostProcessSettings.bOverride_AutoExposureMaxBrightness = true;
+    FirstPersonCameraComponent->PostProcessSettings.AutoExposureMaxBrightness = 20.0f;
+    FirstPersonCameraComponent->PostProcessSettings.bOverride_WhiteTemp = true;
+    FirstPersonCameraComponent->PostProcessSettings.WhiteTemp = 6500.0f;
+    FirstPersonCameraComponent->PostProcessSettings.bOverride_BloomIntensity = true;
+    FirstPersonCameraComponent->PostProcessSettings.BloomIntensity = 0.6f;
+    FirstPersonCameraComponent->PostProcessSettings.bOverride_MotionBlurAmount = true;
+    FirstPersonCameraComponent->PostProcessSettings.MotionBlurAmount = 0.0f;
+    // Make sure the camera actually APPLIES these overrides: without a non-zero
+    // blend weight a UCameraComponent's post-process settings are inert, which
+    // left the direct-control view blowing out to white at 75k lux.
+    FirstPersonCameraComponent->PostProcessBlendWeight = 1.0f;
 
     SkeletalMeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalMeshComponent"));
     SkeletalMeshComponent->SetupAttachment(MeshComponent);
