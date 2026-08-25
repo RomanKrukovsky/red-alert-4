@@ -29,7 +29,7 @@ public:
     /** Finds a registered protocol definition, or nullptr. */
     const ProtocolPowerDef* FindProtocol(const std::string& ProtocolId) const;
 
-    /** Populates the standard RA3-style protocol tech tree. */
+    /** Populates the standard protocol tech tree. */
     void RegisterDefaultProtocols();
 
     /** Resets runtime state for all players. */
@@ -37,6 +37,12 @@ public:
 
     /** Ingests SimEvents to automatically award protocol experience for combat. */
     void ProcessSimEvents(const std::vector<SimEvent>& Events);
+
+    // World-aware variant: additionally resolves passive protocol effects that
+    // need attribution and treasury access (currently SalvageBounty credits).
+    // Kept as an overload rather than a changed signature so existing callers
+    // keep compiling; XP-only behaviour of the base version is unchanged.
+    void ProcessSimEvents(const std::vector<SimEvent>& Events, SimWorld& World);
 
     /** Manually awards protocol XP to a player. */
     void AwardExperience(PlayerId Player, uint32_t Exp);
@@ -67,6 +73,21 @@ public:
 
 private:
     void ExecutePowerEffect(const ProtocolPowerDef& Def, PlayerId Player, const Vec2& Location, SimWorld& World);
+    // Orbital reinforcement: scatters DeployUnitId copies around Location using
+    // the world RNG (fixed draw order -> deterministic across peers).
+    void ExecuteTroopDrop(const ProtocolPowerDef& Def, PlayerId Player, const Vec2& Location, SimWorld& World);
+    // N-warhead instant strike; per-target damage falls off linearly to zero at
+    // the edge of Radius.
+    void ExecuteKamikazeStrike(const ProtocolPowerDef& Def, PlayerId Player, const Vec2& Location, SimWorld& World);
+    // Mirrors SimWorld::ApplyStatusInRadius semantics (keep-larger countdowns,
+    // units only, boarded units skipped). Reimplemented here because that seam
+    // is private to SimWorld and ProtocolRuntime is not a friend of it.
+    void ApplyRadiusStatus(PlayerId Caster, const Vec2& Center, Fixed Radius,
+                           const StatusComp& Template, bool bEnemiesOnly, SimWorld& World);
+    // SalvageBounty passives: pays KillerOwner a percentage of each destroyed
+    // hostile's Production.Cost. Reads the victim def from the event payload
+    // (Ev.Content), which DestroyEntity fills before the slot can be recycled.
+    void AwardSalvageBounties(const std::vector<SimEvent>& Events, SimWorld& World);
 
     std::map<std::string, ProtocolPowerDef> ProtocolCatalog;
     PlayerProtocolState PlayerStates[kMaxPlayers];

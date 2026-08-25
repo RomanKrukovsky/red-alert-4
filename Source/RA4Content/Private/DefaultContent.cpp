@@ -1,8 +1,9 @@
 // Copyright (c) Red Alert 4 project.
 //
-// Milestone content set: Soviet and Alliance base tech, enough to play the full
-// economy -> production -> combat -> victory loop. Eastern Coalition and Chrono
-// Legion are not defined yet (see Docs/Roadmap.md).
+// Milestone content set: all four factions' base tech plus the tactical roster --
+// transports, multigunner IFV, status-effect units (EMP / cryo / infection),
+// combat engineers and commandos -- enough to play the full
+// economy -> production -> combat -> victory loop.
 //
 // Every player-facing string is a localization key. No display text is authored in
 // C++, which is the requirement that makes the Licensed / Clean-Room content
@@ -27,6 +28,19 @@ constexpr ContentId WpnAircraftBomb = MakeContentId("weapon.aircraft_bomb");
 constexpr ContentId WpnFlakCannon = MakeContentId("weapon.flak_cannon");
 constexpr ContentId WpnTurretMachineGun = MakeContentId("weapon.turret_machinegun");
 constexpr ContentId WpnPrismBeam = MakeContentId("weapon.prism_beam");
+
+// --- Tactical status payloads ---------------------------------------------
+constexpr ContentId WpnEmpDisruptor = MakeContentId("weapon.emp_disruptor");
+constexpr ContentId WpnCryoPulse = MakeContentId("weapon.cryo_pulse");
+constexpr ContentId WpnInfestationSpore = MakeContentId("weapon.infestation_spore");
+constexpr ContentId WpnIfvAutocannon = MakeContentId("weapon.ifv_autocannon");
+constexpr ContentId WpnHeavyBomb = MakeContentId("weapon.heavy_bomb");
+
+// --- Commando-grade sidearms ----------------------------------------------
+constexpr ContentId WpnIskraGun = MakeContentId("weapon.iskra_lightning_gun");
+constexpr ContentId WpnWardenRailgun = MakeContentId("weapon.warden_railgun");
+constexpr ContentId WpnBaihuGlaive = MakeContentId("weapon.baihu_glaive");
+constexpr ContentId WpnRequiemBlade = MakeContentId("weapon.requiem_blade");
 
 // --- Building ids ---------------------------------------------------------
 constexpr ContentId BldSovConYard = MakeContentId("building.sov.construction_yard");
@@ -101,6 +115,18 @@ constexpr ContentId UnitClLancer = MakeContentId("unit.cl.paradox_lancer");
 constexpr ContentId UnitClMainTank = MakeContentId("unit.cl.timeline_tank");
 constexpr ContentId UnitClArtillery = MakeContentId("unit.cl.entropy_mortar");
 constexpr ContentId UnitClAircraft = MakeContentId("unit.cl.phase_striker");
+
+// --- Tactical roster: support, transports, commandos ----------------------
+constexpr ContentId UnitSovGromTrooper = MakeContentId("unit.sov.grom_trooper");
+constexpr ContentId UnitSovAmphTransport = MakeContentId("unit.sov.amphibious_transport");
+constexpr ContentId UnitSovIskraCommando = MakeContentId("unit.sov.iskra_commando");
+constexpr ContentId UnitSovStrategicBomber = MakeContentId("unit.sov.strategic_bomber");
+constexpr ContentId UnitAllFrostwingDrone = MakeContentId("unit.all.frostwing_drone");
+constexpr ContentId UnitAllMultigunnerIfv = MakeContentId("unit.all.multigunner_ifv");
+constexpr ContentId UnitAllWardenCommando = MakeContentId("unit.all.warden_commando");
+constexpr ContentId UnitEcSwarmInfector = MakeContentId("unit.ec.swarm_infector");
+constexpr ContentId UnitEcBaihuCommando = MakeContentId("unit.ec.baihu_commando");
+constexpr ContentId UnitClRequiemCommando = MakeContentId("unit.cl.requiem_commando");
 
 constexpr ContentId ResOreField = MakeContentId("resource.ore_field");
 
@@ -246,6 +272,143 @@ void BuildWeapons(ContentDatabase& Db)
         W.MaxRange = Metres(12);
         W.CooldownTicks = 35;
         Db.AddWeapon(W);
+    }
+    {
+        // EMP disruptor: the Soviet answer to armour that is not simply more
+        // armour. The shot barely scratches paint; the payload is the point.
+        // A vehicle locks up for three seconds per hit and a 30-tick reload keeps
+        // the lock continuous, but infantry is immune (StatusTargetsVehiclesOnly)
+        // so this stays a counter-vehicle tool rather than a universal crowd stun.
+        WeaponDef W;
+        W.Id = WpnEmpDisruptor;
+        W.Name = "weapon.emp_disruptor";
+        W.Damage = 8;
+        W.Warhead = WarheadClass::Electric;
+        W.MaxRange = Metres(7);
+        W.CooldownTicks = 30;
+        W.StunTicksOnHit = 60;
+        W.StatusTargetsVehiclesOnly = 1;
+        W.bCanTargetAir = false;
+        W.bRequiresTurretAligned = false;
+        Db.AddWeapon(W);
+    }
+    {
+        // Cryo pulse: freeze plus shrink. Either effect alone doubles incoming
+        // damage and they stack to x4 (see ApplyDamage), so a tagged target melts
+        // to follow-up fire from anything. The pulse itself is nearly harmless --
+        // the drone is a spotter for the kill team, never the killer.
+        WeaponDef W;
+        W.Id = WpnCryoPulse;
+        W.Name = "weapon.cryo_pulse";
+        W.Damage = 6;
+        W.Warhead = WarheadClass::Cryogenic;
+        W.MaxRange = Metres(6);
+        W.CooldownTicks = 25;
+        W.FreezeTicksOnHit = 90;
+        W.ShrinkTicksOnHit = 120;
+        W.bCanTargetAir = false;
+        W.bRequiresTurretAligned = false;
+        Db.AddWeapon(W);
+    }
+    {
+        // Infestation spore: a bite that keeps chewing. Two hundred ticks of
+        // one-damage-per-turn kills any basic infantry twice over from a single
+        // connect, so the infector hits once and moves on -- harassment by
+        // infection, not by damage.
+        WeaponDef W;
+        W.Id = WpnInfestationSpore;
+        W.Name = "weapon.infestation_spore";
+        W.Damage = 4;
+        W.Warhead = WarheadClass::Fragmentation;
+        W.MaxRange = Metres(2);      // a bite: closes inside everything else's range
+        W.CooldownTicks = 40;
+        W.InfectionTicksOnHit = 200;
+        W.bRequiresTurretAligned = false;
+        Db.AddWeapon(W);
+    }
+    {
+        // IFV autocannon: deliberately weak. The hull's own gun exists so an empty
+        // IFV is not free XP, but every passenger in the game out-guns it -- the
+        // multigunner rule makes what you load into the bay the real weapon choice.
+        WeaponDef W;
+        W.Id = WpnIfvAutocannon;
+        W.Name = "weapon.ifv_autocannon";
+        W.Damage = 12;
+        W.Warhead = WarheadClass::Ballistic;
+        W.MaxRange = Metres(8);
+        W.CooldownTicks = 15;
+        W.bRequiresTurretAligned = false;
+        Db.AddWeapon(W);
+    }
+    {
+        // Heavy bomb: the strategic bomber's payload. Twice the strike aircraft's
+        // throw weight on a slower, tougher airframe -- flak still out-ranges it,
+        // so it punishes undefended bases rather than defended ones.
+        WeaponDef W;
+        W.Id = WpnHeavyBomb;
+        W.Name = "weapon.heavy_bomb";
+        W.Damage = 140;
+        W.Warhead = WarheadClass::Siege;
+        W.MaxRange = Metres(3);
+        W.CooldownTicks = 70;
+        W.ProjectileSpeed = Metres(50);
+        W.SplashRadius = Metres(3);
+        W.bCanTargetGround = true;
+        W.bCanTargetAir = false;
+        W.bRequiresTurretAligned = false;
+        Db.AddWeapon(W);
+    }
+    {
+        // Commando sidearms: each hero carries a faction-flavoured weapon with a
+        // shared profile -- roughly a main battle tank's punch on an infantry
+        // trigger, expensive enough that one commando never replaces an army.
+        {
+            WeaponDef W;
+            W.Id = WpnIskraGun;
+            W.Name = "weapon.iskra_lightning_gun";
+            W.Damage = 65;
+            W.Warhead = WarheadClass::Electric;
+            W.MaxRange = Metres(8);
+            W.CooldownTicks = 22;
+            W.bCanTargetAir = true;   // a commando shoots down what it can see
+            W.bRequiresTurretAligned = false;
+            Db.AddWeapon(W);
+        }
+        {
+            WeaponDef W;
+            W.Id = WpnWardenRailgun;
+            W.Name = "weapon.warden_railgun";
+            W.Damage = 75;
+            W.Warhead = WarheadClass::ArmorPiercing;
+            W.MaxRange = Metres(10);
+            W.CooldownTicks = 28;
+            W.ProjectileSpeed = Metres(140);
+            W.bRequiresTurretAligned = false;
+            Db.AddWeapon(W);
+        }
+        {
+            WeaponDef W;
+            W.Id = WpnBaihuGlaive;
+            W.Name = "weapon.baihu_glaive";
+            W.Damage = 60;
+            W.Warhead = WarheadClass::Plasma;
+            W.MaxRange = Metres(7);
+            W.CooldownTicks = 18;
+            W.bRequiresTurretAligned = false;
+            Db.AddWeapon(W);
+        }
+        {
+            WeaponDef W;
+            W.Id = WpnRequiemBlade;
+            W.Name = "weapon.requiem_blade";
+            W.Damage = 70;
+            W.Warhead = WarheadClass::Temporal;
+            W.MaxRange = Metres(9);
+            W.CooldownTicks = 26;
+            W.ProjectileSpeed = Metres(120);
+            W.bRequiresTurretAligned = false;
+            Db.AddWeapon(W);
+        }
     }
 }
 
@@ -942,6 +1105,469 @@ void BuildDefaultContent(ContentDatabase& Db)
     Chrono.TurretWeapon = WpnPrismBeam;
     BuildFactionSet(Db, Chrono);
 
+    // --- Defensive walls (fortification line) -------------------------------
+    // Pure content: a wall is just a cheap blocking structure. Footprint tiles
+    // already forbid movement and placement through OccupyTiles.
+    {
+        EntityDef E;
+        E.Id = MakeContentId("building.sov.wall");
+        E.Name = "building.sov.wall";
+        E.DisplayNameKey = "soviet.building.wall";
+        E.Kind = EntityKind::Building;
+        E.Faction = FactionId::Soviet;
+        E.Roles = EntityRole::Defense | EntityRole::BaseBuilding;
+        E.MaxHealth = 800;
+        E.Armor = ArmorClass::Defense;
+        E.VisionRange = Fixed::FromInt(100);
+        E.Building.FootprintX = 1;
+        E.Building.FootprintY = 1;
+        E.Production.Cost = 50;
+        E.Production.BuildTimeTicks = SecondsToTicks(2);
+        E.Production.Category = ProductionCategory::Defense;
+        E.Production.Tier = TechTier::T0;
+        E.Production.ProducedBy = {BldSovConYard};
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = MakeContentId("building.all.wall");
+        E.Name = "building.all.wall";
+        E.DisplayNameKey = "alliance.building.wall";
+        E.Kind = EntityKind::Building;
+        E.Faction = FactionId::Alliance;
+        E.Roles = EntityRole::Defense | EntityRole::BaseBuilding;
+        E.MaxHealth = 800;
+        E.Armor = ArmorClass::Defense;
+        E.VisionRange = Fixed::FromInt(100);
+        E.Building.FootprintX = 1;
+        E.Building.FootprintY = 1;
+        E.Production.Cost = 50;
+        E.Production.BuildTimeTicks = SecondsToTicks(2);
+        E.Production.Category = ProductionCategory::Defense;
+        E.Production.Tier = TechTier::T0;
+        E.Production.ProducedBy = {BldAllConYard};
+        Db.AddEntity(E);
+    }
+
+    // --- Combat engineer (capture specialist) -------------------------------
+    {
+        EntityDef E;
+        E.Id = MakeContentId("unit.sov.combat_engineer");
+        E.Name = "unit.sov.combat_engineer";
+        E.DisplayNameKey = "soviet.unit.combat_engineer";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::Soviet;
+        E.Roles = EntityRole::Engineer | EntityRole::Combat;
+        E.MaxHealth = 80;
+        E.Armor = ArmorClass::LightInfantry;
+        E.VisionRange = Metres(6);
+        E.Unit.Layer = MovementLayer::Infantry;
+        E.Unit.MaxSpeed = Metres(5);
+        E.Unit.Acceleration = Metres(20);
+        E.Unit.CollisionRadius = Fixed::FromInt(30);
+        E.Unit.bIsEngineer = true;
+        E.Production.Cost = 300;
+        E.Production.BuildTimeTicks = SecondsToTicks(4);
+        E.Production.Category = ProductionCategory::Infantry;
+        E.Production.Tier = TechTier::T0;
+        E.Production.ProducedBy = {BldSovBarracks};
+        Db.AddEntity(E);
+    }
+
+    // --- Neutral tech: oil derrick (map fixture income) ----------------------
+    {
+        EntityDef E;
+        E.Id = MakeContentId("building.neutral.oil_derrick");
+        E.Name = "building.neutral.oil_derrick";
+        E.DisplayNameKey = "neutral.building.oil_derrick";
+        E.Kind = EntityKind::Building;
+        E.Faction = FactionId::None;
+        E.Roles = EntityRole::BaseBuilding;
+        E.MaxHealth = 600;
+        E.Armor = ArmorClass::Building;
+        E.VisionRange = Metres(4);
+        E.Building.FootprintX = 1;
+        E.Building.FootprintY = 1;
+        E.Building.bIsTechBuilding = true;
+        E.Building.TechIncomePerInterval = 25;
+        E.Building.TechIncomeIntervalTicks = 100;   // 25 credits every 5 seconds
+        E.Production.Cost = 0;
+        Db.AddEntity(E);
+    }
+
+    // --- EMP trooper (Soviet anti-vehicle infantry) --------------------------
+    // The cheap hard counter to a tank push that is not another tank. Its gun
+    // barely damages; it keeps armour locked down instead, so rocket troopers or
+    // conscript mass finish the job. Useless against infantry by design.
+    {
+        EntityDef E;
+        E.Id = UnitSovGromTrooper;
+        E.Name = "unit.sov.grom_trooper";
+        E.DisplayNameKey = "soviet.unit.grom_trooper";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::Soviet;
+        E.Roles = EntityRole::Combat | EntityRole::AntiArmor;
+        E.MaxHealth = 110;
+        E.Armor = ArmorClass::LightInfantry;
+        E.VisionRange = Metres(8);
+        E.Weapon = WpnEmpDisruptor;
+        E.Unit.Layer = MovementLayer::Infantry;
+        E.Unit.MaxSpeed = Metres(4);
+        E.Unit.Acceleration = Metres(20);
+        E.Unit.TurnRatePerSecond = 4096;
+        E.Unit.TurretTurnRatePerSecond = 0;
+        E.Unit.CollisionRadius = Fixed::FromInt(35);
+        E.Production.Cost = 350;
+        E.Production.BuildTimeTicks = SecondsToTicks(6);
+        E.Production.Category = ProductionCategory::Infantry;
+        E.Production.Tier = TechTier::T1;
+        E.Production.ProducedBy = {BldSovBarracks};
+        E.Production.Prerequisites = {BldSovBarracks};
+        Db.AddEntity(E);
+    }
+
+    // --- Frostwing drone (Alliance flying cryo spotter) ----------------------
+    // Air layer ignores terrain and ground-only fire, so the drone tags targets
+    // nothing else can reach -- but it is made of paper and its pulse kills
+    // nothing by itself. The counterplay is any anti-air gun.
+    {
+        EntityDef E;
+        E.Id = UnitAllFrostwingDrone;
+        E.Name = "unit.all.frostwing_drone";
+        E.DisplayNameKey = "alliance.unit.frostwing_drone";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::Alliance;
+        E.Roles = EntityRole::Combat | EntityRole::Scout;
+        E.MaxHealth = 60;
+        E.Armor = ArmorClass::Air;
+        E.VisionRange = Metres(9);
+        E.Weapon = WpnCryoPulse;
+        E.Unit.Layer = MovementLayer::Air;
+        E.Unit.MaxSpeed = Metres(10);
+        E.Unit.Acceleration = Metres(24);
+        E.Unit.TurnRatePerSecond = 1200;
+        E.Unit.TurretTurnRatePerSecond = 0;
+        E.Unit.CollisionRadius = Fixed::FromInt(70);
+        E.Production.Cost = 500;
+        E.Production.BuildTimeTicks = SecondsToTicks(8);
+        E.Production.Category = ProductionCategory::Aircraft;
+        E.Production.Tier = TechTier::T2;
+        E.Production.ProducedBy = {BldAllWarFactory};
+        E.Production.Prerequisites = {BldAllWarFactory};
+        Db.AddEntity(E);
+    }
+
+    // --- Swarm infector (Eastern Coalition harassment crawler) ---------------
+    // Fastest ground unit in the set with a melee bite that leaves an infection
+    // burning for ten seconds. One connect ruins a rifleman; a pack of them
+    // forces the enemy to garrison everything. Fragile on purpose: anything that
+    // catches it, kills it.
+    {
+        EntityDef E;
+        E.Id = UnitEcSwarmInfector;
+        E.Name = "unit.ec.swarm_infector";
+        E.DisplayNameKey = "ec.unit.swarm_infector";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::EasternCoalition;
+        E.Roles = EntityRole::Combat | EntityRole::Scout;
+        E.MaxHealth = 120;
+        E.Armor = ArmorClass::LightVehicle;
+        E.VisionRange = Metres(7);
+        E.Weapon = WpnInfestationSpore;
+        E.Unit.Layer = MovementLayer::Wheeled;
+        E.Unit.MaxSpeed = Metres(9);
+        E.Unit.Acceleration = Metres(30);
+        E.Unit.TurnRatePerSecond = 1200;
+        E.Unit.TurretTurnRatePerSecond = 0;
+        E.Unit.CollisionRadius = Fixed::FromInt(60);
+        E.Production.Cost = 450;
+        E.Production.BuildTimeTicks = SecondsToTicks(6);
+        E.Production.Category = ProductionCategory::Vehicle;
+        // T2 to sit at its producer's tier: the war factory gates it, and an item
+        // may never be cheaper tech than the building it comes from.
+        E.Production.Tier = TechTier::T2;
+        E.Production.ProducedBy = {BldEcWarFactory};
+        E.Production.Prerequisites = {BldEcWarFactory};
+        Db.AddEntity(E);
+    }
+
+    // --- Amphibious transport (Soviet) ---------------------------------------
+    // Five seats over water and land. Deliberately unarmed: its value is the
+    // squad inside it, and an armed transport would make every other Soviet
+    // vehicle pointless rather than complementary.
+    {
+        EntityDef E;
+        E.Id = UnitSovAmphTransport;
+        E.Name = "unit.sov.amphibious_transport";
+        E.DisplayNameKey = "soviet.unit.amphibious_transport";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::Soviet;
+        E.MaxHealth = 450;
+        E.Armor = ArmorClass::LightVehicle;
+        E.VisionRange = Metres(7);
+        E.Unit.Layer = MovementLayer::Amphibious;
+        E.Unit.MaxSpeed = Metres(8);
+        E.Unit.Acceleration = Metres(16);
+        E.Unit.TurnRatePerSecond = 900;
+        E.Unit.TurretTurnRatePerSecond = 0;
+        E.Unit.CollisionRadius = Fixed::FromInt(100);
+        E.Unit.PassengerCapacity = 5;
+        E.Production.Cost = 700;
+        E.Production.BuildTimeTicks = SecondsToTicks(10);
+        E.Production.Category = ProductionCategory::Vehicle;
+        E.Production.Tier = TechTier::T2;   // matches its war-factory producer
+        E.Production.ProducedBy = {BldSovWarFactory};
+        E.Production.Prerequisites = {BldSovWarFactory};
+        Db.AddEntity(E);
+    }
+
+    // --- Multigunner IFV (Alliance) -------------------------------------------
+    // One seat and the multigunner rule: while occupied, the hull fires the
+    // passenger's weapon instead of its own popgun. The chassis is a weapon
+    // platform you load, so what the player builds to put inside it is the real
+    // decision this unit exists to create.
+    {
+        EntityDef E;
+        E.Id = UnitAllMultigunnerIfv;
+        E.Name = "unit.all.multigunner_ifv";
+        E.DisplayNameKey = "alliance.unit.multigunner_ifv";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::Alliance;
+        E.Roles = EntityRole::Combat;
+        E.MaxHealth = 260;
+        E.Armor = ArmorClass::LightVehicle;
+        E.VisionRange = Metres(8);
+        E.Weapon = WpnIfvAutocannon;
+        E.Unit.Layer = MovementLayer::Wheeled;
+        E.Unit.MaxSpeed = Metres(9);
+        E.Unit.Acceleration = Metres(24);
+        E.Unit.TurnRatePerSecond = 1100;
+        E.Unit.TurretTurnRatePerSecond = 1600;
+        E.Unit.CollisionRadius = Fixed::FromInt(90);
+        E.Unit.PassengerCapacity = 1;
+        E.Unit.bMultigunner = true;
+        E.Production.Cost = 600;
+        E.Production.BuildTimeTicks = SecondsToTicks(8);
+        E.Production.Category = ProductionCategory::Vehicle;
+        E.Production.Tier = TechTier::T2;   // matches its war-factory producer
+        E.Production.ProducedBy = {BldAllWarFactory};
+        E.Production.Prerequisites = {BldAllWarFactory};
+        Db.AddEntity(E);
+    }
+
+    // --- Combat engineers for the other three factions ------------------------
+    // Stat-for-stat mirrors of the Soviet engineer (capture specialist); only
+    // the producing barracks and localization keys differ per faction.
+    {
+        EntityDef E;
+        E.Id = MakeContentId("unit.all.combat_engineer");
+        E.Name = "unit.all.combat_engineer";
+        E.DisplayNameKey = "alliance.unit.combat_engineer";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::Alliance;
+        E.Roles = EntityRole::Engineer | EntityRole::Combat;
+        E.MaxHealth = 80;
+        E.Armor = ArmorClass::LightInfantry;
+        E.VisionRange = Metres(6);
+        E.Unit.Layer = MovementLayer::Infantry;
+        E.Unit.MaxSpeed = Metres(5);
+        E.Unit.Acceleration = Metres(20);
+        E.Unit.CollisionRadius = Fixed::FromInt(30);
+        E.Unit.bIsEngineer = true;
+        E.Production.Cost = 300;
+        E.Production.BuildTimeTicks = SecondsToTicks(4);
+        E.Production.Category = ProductionCategory::Infantry;
+        E.Production.Tier = TechTier::T0;
+        E.Production.ProducedBy = {BldAllBarracks};
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = MakeContentId("unit.ec.combat_engineer");
+        E.Name = "unit.ec.combat_engineer";
+        E.DisplayNameKey = "ec.unit.combat_engineer";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::EasternCoalition;
+        E.Roles = EntityRole::Engineer | EntityRole::Combat;
+        E.MaxHealth = 80;
+        E.Armor = ArmorClass::LightInfantry;
+        E.VisionRange = Metres(6);
+        E.Unit.Layer = MovementLayer::Infantry;
+        E.Unit.MaxSpeed = Metres(5);
+        E.Unit.Acceleration = Metres(20);
+        E.Unit.CollisionRadius = Fixed::FromInt(30);
+        E.Unit.bIsEngineer = true;
+        E.Production.Cost = 300;
+        E.Production.BuildTimeTicks = SecondsToTicks(4);
+        E.Production.Category = ProductionCategory::Infantry;
+        E.Production.Tier = TechTier::T0;
+        E.Production.ProducedBy = {BldEcBarracks};
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = MakeContentId("unit.cl.combat_engineer");
+        E.Name = "unit.cl.combat_engineer";
+        E.DisplayNameKey = "cl.unit.combat_engineer";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::ChronoLegion;
+        E.Roles = EntityRole::Engineer | EntityRole::Combat;
+        E.MaxHealth = 80;
+        E.Armor = ArmorClass::LightInfantry;
+        E.VisionRange = Metres(6);
+        E.Unit.Layer = MovementLayer::Infantry;
+        E.Unit.MaxSpeed = Metres(5);
+        E.Unit.Acceleration = Metres(20);
+        E.Unit.CollisionRadius = Fixed::FromInt(30);
+        E.Unit.bIsEngineer = true;
+        E.Production.Cost = 300;
+        E.Production.BuildTimeTicks = SecondsToTicks(4);
+        E.Production.Category = ProductionCategory::Infantry;
+        E.Production.Tier = TechTier::T0;
+        E.Production.ProducedBy = {BldClBarracks};
+        Db.AddEntity(E);
+    }
+
+    // --- Commandos -------------------------------------------------------------
+    // One elite per faction: tank-grade damage on an infantry chassis, T3-gated,
+    // priced so losing one to a mine hurts more than losing a tank. They win
+    // fights; they do not win wars alone.
+    {
+        EntityDef E;
+        E.Id = UnitSovIskraCommando;
+        E.Name = "unit.sov.iskra_commando";
+        E.DisplayNameKey = "soviet.unit.iskra_commando";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::Soviet;
+        E.Roles = EntityRole::Combat;
+        E.MaxHealth = 340;
+        E.Armor = ArmorClass::HeavyInfantry;
+        E.VisionRange = Metres(9);
+        E.Weapon = WpnIskraGun;
+        E.Unit.Layer = MovementLayer::Infantry;
+        E.Unit.MaxSpeed = Metres(5);
+        E.Unit.Acceleration = Metres(20);
+        E.Unit.TurnRatePerSecond = 4096;
+        E.Unit.TurretTurnRatePerSecond = 0;
+        E.Unit.CollisionRadius = Fixed::FromInt(35);
+        E.Production.Cost = 1800;
+        E.Production.BuildTimeTicks = SecondsToTicks(22);
+        E.Production.Category = ProductionCategory::Infantry;
+        E.Production.Tier = TechTier::T3;
+        E.Production.ProducedBy = {BldSovBarracks};
+        E.Production.Prerequisites = {BldSovRadar};
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = UnitAllWardenCommando;
+        E.Name = "unit.all.warden_commando";
+        E.DisplayNameKey = "alliance.unit.warden_commando";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::Alliance;
+        E.Roles = EntityRole::Combat | EntityRole::AntiArmor;
+        E.MaxHealth = 300;
+        E.Armor = ArmorClass::HeavyInfantry;
+        E.VisionRange = Metres(10);
+        E.Weapon = WpnWardenRailgun;
+        E.Unit.Layer = MovementLayer::Infantry;
+        E.Unit.MaxSpeed = Metres(6);
+        E.Unit.Acceleration = Metres(20);
+        E.Unit.TurnRatePerSecond = 4096;
+        E.Unit.TurretTurnRatePerSecond = 0;
+        E.Unit.CollisionRadius = Fixed::FromInt(35);
+        E.Production.Cost = 1600;
+        E.Production.BuildTimeTicks = SecondsToTicks(20);
+        E.Production.Category = ProductionCategory::Infantry;
+        E.Production.Tier = TechTier::T3;
+        E.Production.ProducedBy = {BldAllBarracks};
+        E.Production.Prerequisites = {BldAllRadar};
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = UnitEcBaihuCommando;
+        E.Name = "unit.ec.baihu_commando";
+        E.DisplayNameKey = "ec.unit.baihu_commando";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::EasternCoalition;
+        E.Roles = EntityRole::Combat;
+        E.MaxHealth = 360;
+        E.Armor = ArmorClass::HeavyInfantry;
+        E.VisionRange = Metres(8);
+        E.Weapon = WpnBaihuGlaive;
+        E.Unit.Layer = MovementLayer::Infantry;
+        E.Unit.MaxSpeed = Metres(5);
+        E.Unit.Acceleration = Metres(20);
+        E.Unit.TurnRatePerSecond = 4096;
+        E.Unit.TurretTurnRatePerSecond = 0;
+        E.Unit.CollisionRadius = Fixed::FromInt(35);
+        E.Production.Cost = 1700;
+        E.Production.BuildTimeTicks = SecondsToTicks(21);
+        E.Production.Category = ProductionCategory::Infantry;
+        E.Production.Tier = TechTier::T3;
+        E.Production.ProducedBy = {BldEcBarracks};
+        E.Production.Prerequisites = {BldEcRadar};
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = UnitClRequiemCommando;
+        E.Name = "unit.cl.requiem_commando";
+        E.DisplayNameKey = "cl.unit.requiem_commando";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::ChronoLegion;
+        E.Roles = EntityRole::Combat;
+        E.MaxHealth = 320;
+        E.Armor = ArmorClass::HeavyInfantry;
+        E.VisionRange = Metres(9);
+        E.Weapon = WpnRequiemBlade;
+        E.Unit.Layer = MovementLayer::Infantry;
+        E.Unit.MaxSpeed = Metres(5);
+        E.Unit.Acceleration = Metres(20);
+        E.Unit.TurnRatePerSecond = 4096;
+        E.Unit.TurretTurnRatePerSecond = 0;
+        E.Unit.CollisionRadius = Fixed::FromInt(35);
+        E.Production.Cost = 1900;
+        E.Production.BuildTimeTicks = SecondsToTicks(23);
+        E.Production.Category = ProductionCategory::Infantry;
+        E.Production.Tier = TechTier::T3;
+        E.Production.ProducedBy = {BldClBarracks};
+        E.Production.Prerequisites = {BldClRadar};
+        Db.AddEntity(E);
+    }
+
+    // --- Strategic bomber (Soviet heavy aircraft) ------------------------------
+    // Twice the strike bomber's payload on an airframe that trades speed for it.
+    // Same answer as ever to a bomber: flak out-ranges the bomb drop, so this is
+    // siege against an undefended rear, not an auto-win button.
+    {
+        EntityDef E;
+        E.Id = UnitSovStrategicBomber;
+        E.Name = "unit.sov.strategic_bomber";
+        E.DisplayNameKey = "soviet.unit.strategic_bomber";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::Soviet;
+        E.Roles = EntityRole::Combat | EntityRole::Artillery;
+        E.MaxHealth = 380;
+        E.Armor = ArmorClass::Air;
+        E.VisionRange = Metres(12);
+        E.Weapon = WpnHeavyBomb;
+        E.Unit.Layer = MovementLayer::Air;
+        E.Unit.MaxSpeed = Metres(7);
+        E.Unit.Acceleration = Metres(14);
+        E.Unit.TurnRatePerSecond = 800;
+        E.Unit.TurretTurnRatePerSecond = 0;
+        E.Unit.CollisionRadius = Fixed::FromInt(110);
+        E.Production.Cost = 1900;
+        E.Production.BuildTimeTicks = SecondsToTicks(25);
+        E.Production.Category = ProductionCategory::Aircraft;
+        E.Production.Tier = TechTier::T3;
+        E.Production.ProducedBy = {BldSovWarFactory};
+        E.Production.Prerequisites = {BldSovRadar};
+        Db.AddEntity(E);
+    }
+
     {
         ResourceNodeDef R;
         R.Id = ResOreField;
@@ -949,6 +1575,21 @@ void BuildDefaultContent(ContentDatabase& Db)
         R.InitialAmount = 8000;
         R.MaxAmount = 8000;
         R.ValuePerUnit = 1;
+        R.bRegrows = false;
+        Db.AddResourceNode(R);
+    }
+
+    // Rich ore field: twice the price per unit and a larger reserve. Harvesters pay
+    // the SOURCE field's ValuePerUnit on unloading, so escorting trucks to a rich
+    // field doubles income per trip -- the reason fighting over it is worth it.
+    {
+        ResourceNodeDef R;
+        R.Id = MakeContentId("resource.rich_ore_field");
+        R.Name = "resource.rich_ore_field";
+        R.InitialAmount = 16000;
+        R.MaxAmount = 16000;
+        R.ValuePerUnit = 2;
+        R.bIsRichOre = true;
         R.bRegrows = false;
         Db.AddResourceNode(R);
     }
@@ -1062,6 +1703,21 @@ void BuildDefaultContent(ContentDatabase& Db)
     AddUnitVoice(UnitClMainTank, "CH_TimelineTank");
     AddUnitVoice(UnitClArtillery, "CH_DeltaDelayArtillery");
     AddUnitVoice(UnitClAircraft, "CH_GapInterceptor");
+
+    // Tactical roster
+    AddUnitVoice(UnitSovGromTrooper, "SU_GromTrooper");
+    AddUnitVoice(UnitSovAmphTransport, "SU_RekaTransport");
+    AddUnitVoice(UnitSovIskraCommando, "SU_IskraCommando");
+    AddUnitVoice(UnitSovStrategicBomber, "SU_NeboBomber");
+    AddUnitVoice(UnitAllFrostwingDrone, "AL_FrostwingDrone");
+    AddUnitVoice(UnitAllMultigunnerIfv, "AL_LanceIfv");
+    AddUnitVoice(UnitAllWardenCommando, "AL_WardenCommando");
+    AddUnitVoice(UnitEcSwarmInfector, "CO_SwarmInfector");
+    AddUnitVoice(UnitEcBaihuCommando, "CO_BaihuCommando");
+    AddUnitVoice(UnitClRequiemCommando, "CH_RequiemCommando");
+    AddUnitVoice(MakeContentId("unit.all.combat_engineer"), "AL_CombatEngineer");
+    AddUnitVoice(MakeContentId("unit.ec.combat_engineer"), "CO_CombatEngineer");
+    AddUnitVoice(MakeContentId("unit.cl.combat_engineer"), "CH_CombatEngineer");
 }
 
 

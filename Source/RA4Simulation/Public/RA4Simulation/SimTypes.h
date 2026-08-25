@@ -91,6 +91,10 @@ enum class OrderType : uint8_t
     // by player input, but they live in the same queue so cancellation works.
     DeliverToRefinery,
     Deploy,
+    // Tactical orders: board a transport, eject from one, channel a capture.
+    Board,
+    Unload,
+    Capture,
 };
 
 struct Order
@@ -361,10 +365,19 @@ struct CombatComp
     // change WHICH target is chosen when a search does run.
     int32_t AcquireCooldownTicks = 0;
 
-    // --- Secondary Ability / Dual Mode (RA3 F-ability) ---
+    // --- Secondary Ability / Dual Mode ---
     bool bSecondaryModeActive = false;
     int32_t SecondaryAbilityCooldownTicks = 0;
     int32_t SecondaryAbilityDurationTicks = 0;
+
+    // --- Ammunition (air logistics) ------------------------------------------
+    // Strike aircraft carry a finite magazine and must return to an air producer
+    // to rearm (the harvester/refinery cycle, applied to munitions). Both fields
+    // at 0 mean an infinite magazine: every non-air unit keeps firing forever,
+    // and saves or content from before logistics existed migrate by defaulting
+    // here rather than by special-casing.
+    int32_t AmmoMax = 0;
+    int32_t AmmoCurrent = 0;
 };
 
 
@@ -462,6 +475,55 @@ struct BuildingComp
     int32_t SuperweaponChargeTicks = 0;
 };
 
+// --- Status effects (EMP, cryo, shrink, drone infestation, invulnerability) ---
+
+// One comp per entity, five independent countdowns. Zero means "not affected".
+// All effects are tick-scoped integers: deterministic, serializable, hashable.
+struct StatusComp
+{
+    // Vehicles/naval only by default (see WeaponDef::StatusTargetsVehiclesOnly).
+    // Cannot move, fire or turn while > 0.
+    int32_t StunTicks = 0;
+    // Frozen solid: cannot act, takes double damage. Killed while frozen =
+    // shattered (same death as any other, the multiplier is what matters).
+    int32_t FreezeTicks = 0;
+    // Miniaturized: takes double damage from everything.
+    int32_t ShrinkTicks = 0;
+    // Drone infestation: 1 damage per tick for the remaining duration. Cleared
+    // early when a friendly producer repairs the unit -- today that is nothing,
+    // so duration IS the cure; the field exists so a repair system can clear it.
+    int32_t InfectionTicks = 0;
+    // Iron curtain / time belt: fully immune to damage while > 0.
+    int32_t InvulnerableTicks = 0;
+
+    bool bCanAct() const { return StunTicks <= 0 && FreezeTicks <= 0; }
+    bool bIsHarmless() const { return StunTicks > 0 || FreezeTicks > 0; }
+};
+
+// --- Transport passengers ---------------------------------------------------
+
+// On the transport: who is riding. On the passenger (PassengerOf): whose cargo
+// bay they occupy. A boarded unit is dormant -- every system skips it, its
+// transform follows the transport, and it dies with the transport.
+struct TransportComp
+{
+    std::vector<EntityId> Passengers;
+};
+
+struct PassengerComp
+{
+    EntityId Transport;
+};
+
+// --- Engineer capture channel ------------------------------------------------
+
+// Progress of an in-progress building capture; meaningful only on units that
+// hold a Capture order standing adjacent to their target.
+struct CaptureComp
+{
+    int32_t ProgressTicks = 0;
+};
+
 enum class HarvesterState : uint8_t
 {
     Idle = 0,
@@ -477,6 +539,11 @@ struct HarvesterComp
     int32_t Cargo = 0;
     EntityId AssignedNode;
     EntityId AssignedRefinery;
+    // Definition of the node the current cargo was scooped from. Unloading pays the
+    // SOURCE node's ValuePerUnit, so a rich field is worth more than a plain one per
+    // unit hauled. Invalid for cargo gathered before this field existed; unloading
+    // then falls back to the standard ore price rather than guessing.
+    ContentId CargoDef;
 };
 
 struct ResourceNodeComp
@@ -614,6 +681,7 @@ enum class SimEventType : uint8_t
     MCVUndeployed,
     SecondaryAbilityToggled,
     CoopPingEmitted,
+    BuildingCaptured,
 };
 
 

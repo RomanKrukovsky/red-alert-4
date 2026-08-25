@@ -181,6 +181,17 @@ struct WeaponDef
     bool bCanTargetAir = false;
     bool bRequiresTurretAligned = true;
     Fixed ScatterAtMaxRange = Fixed::Zero();
+
+    // --- On-hit status application (tactical effects) ----------------------
+    // Applied to every landed hit against a valid target class. Zero disables.
+    // Deterministic by construction: no rolls, the content decides exactly what
+    // each weapon does per hit.
+    int32_t StunTicksOnHit = 0;         // EMP: vehicle/naval cannot move or fire
+    int32_t FreezeTicksOnHit = 0;       // cryo: immobile, takes double damage, brittle
+    int32_t ShrinkTicksOnHit = 0;       // miniaturized: takes double damage
+    int32_t InfectionTicksOnHit = 0;    // drone infestation: damage-over-time
+    // Status effects only bite specific target classes; -1 keeps the default rule.
+    int8_t StatusTargetsVehiclesOnly = -1; // 1: only vehicles/naval/buildings take status
 };
 
 // --- Entities -------------------------------------------------------------
@@ -245,7 +256,7 @@ struct BuildingInfo
     ContentId BundledUnit;
     int32_t SellRefundPercent = 50;
 
-    // --- Water / Amphibious Base-Building (RA3 feature) --------------------
+    // --- Water / Amphibious Base-Building ---------------------------------
     bool bAllowOnWater = false; // can be placed on water as well as land (e.g. Allied refinery/reactor)
     bool bWaterOnly = false;    // must be placed on water (e.g. Naval Shipyard)
 
@@ -258,6 +269,14 @@ struct BuildingInfo
     int32_t SuperweaponDamage = 0;          // applied at the impact centre
     Fixed SuperweaponRadius = Fixed::Zero();
     WarheadClass SuperweaponWarhead = WarheadClass::Siege;
+
+    // --- Neutral tech building (oil derrick / machine shop) -----------------
+    // Tech buildings spawn as map fixtures owned by nobody and are taken over by
+    // an engineer. A captured tech building pays its owner TechIncomePerInterval
+    // credits every TechIncomeIntervalTicks -- passive map-control income.
+    bool bIsTechBuilding = false;
+    int32_t TechIncomePerInterval = 0;
+    int32_t TechIncomeIntervalTicks = 0;
 };
 
 struct UnitInfo
@@ -278,8 +297,10 @@ struct UnitInfo
     bool bCanCrushInfantry = false;
     bool bIsBuilder = false;                // deployable MCV
     ContentId DeploysInto;
+    // May channel the capture of a neutral or hostile building.
+    bool bIsEngineer = false;
 
-    // --- Secondary Ability / Dual Mode (RA3 F-ability) --------------------
+    // --- Secondary Ability / Dual Mode ------------------------------------
     bool bHasSecondaryAbility = false;
     ContentId SecondaryAbilityDef;
     int32_t AbilityCooldownTicks = 0;
@@ -287,6 +308,14 @@ struct UnitInfo
     Fixed AbilitySpeedMultiplier = Fixed::One();
     int32_t AbilityArmorBonusPercent = 0;  // damage reduction percentage (e.g. 50 = 50% less damage taken)
     bool bAbilityDisablesPrimaryWeapon = false;
+
+    // --- Transport / passengers --------------------------------------------
+    // 0 = cannot carry. Boarded units are dormant: hidden from all systems,
+    // they follow the transport and die with it.
+    int32_t PassengerCapacity = 0;
+    // Multigunner rule: while carrying a passenger whose own weapon is valid,
+    // the transport fires THAT weapon instead of its default one.
+    bool bMultigunner = false;
 };
 
 

@@ -22,6 +22,11 @@ enum class ProtocolPowerKind : uint8_t
     TimeBomb,             // Delayed explosive drop
     EmergencyRepairDrone, // AOE instant repair & shield overcharge
     ReconSurge,           // Instantly reveals fog over target area
+    TroopDrop,            // Orbital reinforcement: spawns N units around target
+    SalvageBounty,        // Passive: credits back on enemy kills
+    PhaseField,           // Mass invulnerability for friendly units in radius
+    EmpPulse,             // Stuns every hostile unit in radius
+    KamikazeSquadron,     // Salvo of N autonomous warheads with radial falloff
 };
 
 struct ProtocolPowerDef
@@ -39,6 +44,17 @@ struct ProtocolPowerDef
     int32_t Damage = 0;
     Fixed Radius = Fixed::Zero();
     WarheadClass Warhead = WarheadClass::Fragmentation;
+
+    // --- Kind-specific payload fields ---------------------------------------
+    // Grouped here so the "amount" slots above keep their meaning for the kinds
+    // that predate them: Damage stays the UI-facing magnitude, and everything a
+    // new kind needs lives beside its siblings.
+    // TroopDrop reuses Damage as unit count (the drop size IS the power's
+    // magnitude), so it never reads PayloadCount.
+    ContentId DeployUnitId;            // TroopDrop: what gets spawned per cast
+    int32_t CreditPercentPerKill = 0;  // SalvageBounty passive: % of victim Production.Cost
+    int32_t StatusDurationTicks = 0;   // PhaseField/EmpPulse: applied countdown in ticks
+    int32_t PayloadCount = 0;          // KamikazeSquadron: warheads per salvo (Damage each)
 
 
     // Passive modifiers (if Kind == Passive)

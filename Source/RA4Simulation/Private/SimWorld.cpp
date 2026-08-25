@@ -20,6 +20,9 @@ namespace
 {
 // Transition window (Entering/Exiting) before direct control is fully active.
 constexpr TickIndex kDirectControlEnterExitTicks = 4; // 200ms at 20Hz
+
+// Engineer capture channel: 5 seconds of standing at the door.
+constexpr int32_t kCaptureChannelTicks = 100;
 }
 
 static_assert(MapDescription::kTileSizeUnitsLocal == kTileSizeUnits,
@@ -37,6 +40,15 @@ constexpr int32_t kTurretAlignTolerance = 64;
 
 // How close a harvester must get to the *edge* of its target to dock.
 constexpr int64_t kDockDistanceUnits = 260;
+
+// Air logistics: strike aircraft carry a finite magazine and fly home to an
+// air producer to rearm, exactly as a loaded harvester heads for its refinery.
+constexpr int32_t kAircraftDefaultAmmo = 12;
+// Reload rate while sitting inside the rearm dock radius.
+constexpr int32_t kAircraftReloadPerTick = 2;
+// Dock radius around the rearm pad's footprint centre, mirroring the harvester
+// docking idea at a scale that suits a fast flyer.
+constexpr int64_t kRearmDockDistanceUnits = 200;
 
 // Docking is measured to the target's centre, but a building occupies tiles that no
 // unit can enter. A harvester pressed against the wall of a 3x2 refinery is already
@@ -154,6 +166,7 @@ void SimWorld::Reset()
     Healths.clear();
     Movements.clear();
     Combats.clear();
+    AircraftRearming.clear();
     Buildings.clear();
     Harvesters.clear();
     ResourceNodes.clear();
@@ -161,8 +174,14 @@ void SimWorld::Reset()
     Orders.clear();
     DirectControls.clear();
     Morales.clear();
+    Statuses.clear();
+    Transports.clear();
+    PassengerOf.clear();
+    Captures.clear();
     FreeSlots.clear();
     PendingDestroy.clear();
+    PendingDestroyKillers.clear();
+    PendingSales.clear();
     Events.clear();
     // Reserve the whole entity budget up front. Systems legitimately spawn entities
     // while iterating (a factory finishing a tank, a gun firing a shell), and a
@@ -174,6 +193,7 @@ void SimWorld::Reset()
     Healths.reserve(kMaxEntities);
     Movements.reserve(kMaxEntities);
     Combats.reserve(kMaxEntities);
+    AircraftRearming.reserve(kMaxEntities);
     Buildings.reserve(kMaxEntities);
     Harvesters.reserve(kMaxEntities);
     ResourceNodes.reserve(kMaxEntities);
@@ -186,6 +206,10 @@ void SimWorld::Reset()
     // because allocators differ between platforms the resulting garbage differs per
     // peer, making it a desync rather than a clean crash.
     Morales.reserve(kMaxEntities);
+    Statuses.reserve(kMaxEntities);
+    Transports.reserve(kMaxEntities);
+    PassengerOf.reserve(kMaxEntities);
+    Captures.reserve(kMaxEntities);
 
     HighWaterMark = 0;
     CurrentTick = 0;
@@ -247,6 +271,17 @@ void SimWorld::Restart()
     Initialize(SavedContent, SavedSetup, SavedRecon);
 }
 
+bool SimWorld::HasConsistentComponentStorage() const
+{
+    const size_t Count = Core.size();
+    return Transforms.size() == Count && Healths.size() == Count && Movements.size() == Count
+        && Combats.size() == Count && AircraftRearming.size() == Count
+        && Buildings.size() == Count && Harvesters.size() == Count
+        && ResourceNodes.size() == Count && Projectiles.size() == Count && Orders.size() == Count
+        && DirectControls.size() == Count && Morales.size() == Count && Statuses.size() == Count
+        && Transports.size() == Count && PassengerOf.size() == Count && Captures.size() == Count;
+}
+
 // ---------------------------------------------------------------------------
 // Entity storage
 // ---------------------------------------------------------------------------
@@ -271,6 +306,7 @@ EntityId SimWorld::AllocateEntity()
         Healths.emplace_back();
         Movements.emplace_back();
         Combats.emplace_back();
+        AircraftRearming.emplace_back(0);
         Buildings.emplace_back();
         Harvesters.emplace_back();
         ResourceNodes.emplace_back();
@@ -278,6 +314,10 @@ EntityId SimWorld::AllocateEntity()
         Orders.emplace_back();
         DirectControls.emplace_back();
         Morales.emplace_back();
+        Statuses.emplace_back();
+        Transports.emplace_back();
+        PassengerOf.emplace_back();
+        Captures.emplace_back();
         HighWaterMark = uint32_t(Core.size());
     }
 
@@ -291,6 +331,7 @@ EntityId SimWorld::AllocateEntity()
     Healths[Index] = HealthComp();
     Movements[Index] = MovementComp();
     Combats[Index] = CombatComp();
+    AircraftRearming[Index] = 0;
     Buildings[Index] = BuildingComp();
     Harvesters[Index] = HarvesterComp();
     ResourceNodes[Index] = ResourceNodeComp();
@@ -298,6 +339,10 @@ EntityId SimWorld::AllocateEntity()
     Orders[Index].Clear();
     DirectControls[Index] = DirectControlComp();
     Morales[Index] = Recon::MoraleComp();
+    Statuses[Index] = StatusComp();
+    Transports[Index] = TransportComp();
+    PassengerOf[Index] = PassengerComp();
+    Captures[Index] = CaptureComp();
  
     return EntityId(Index, Generation);
 }
@@ -341,6 +386,9 @@ const ResourceNodeComp* SimWorld::GetResourceNode(EntityId Id) const
 const MovementComp* SimWorld::GetMovement(EntityId Id) const { return IsAlive(Id) ? &Movements[Id.Index] : nullptr; }
 const CombatComp* SimWorld::GetCombat(EntityId Id) const { return IsAlive(Id) ? &Combats[Id.Index] : nullptr; }
 const OrderQueue* SimWorld::GetOrders(EntityId Id) const { return IsAlive(Id) ? &Orders[Id.Index] : nullptr; }
+const StatusComp* SimWorld::GetStatus(EntityId Id) const { return IsAlive(Id) ? &Statuses[Id.Index] : nullptr; }
+const TransportComp* SimWorld::GetTransport(EntityId Id) const { return IsAlive(Id) ? &Transports[Id.Index] : nullptr; }
+const PassengerComp* SimWorld::GetPassengerOf(EntityId Id) const { return IsAlive(Id) ? &PassengerOf[Id.Index] : nullptr; }
 const DirectControlComp* SimWorld::GetDirectControl(EntityId Id) const { return IsAlive(Id) ? &DirectControls[Id.Index] : nullptr; }
 
 const PlayerState& SimWorld::GetPlayer(PlayerId Id) const
@@ -395,6 +443,15 @@ EntityId SimWorld::SpawnUnit(ContentId Def, PlayerId Owner, const Vec2& Position
     Healths[Id.Index].Current = D->MaxHealth;
 
     Movements[Id.Index].ArriveRadius = FxMax(D->Unit.CollisionRadius, Fixed::FromInt(25));
+
+    // Air logistics: aircraft spawn with a full magazine; every other layer
+    // keeps the 0/0 infinite-magazine default. Uniform fields, content-derived
+    // capacity -- no per-unit branching anywhere else in the simulation.
+    if (D->Unit.Layer == MovementLayer::Air)
+    {
+        Combats[Id.Index].AmmoMax = kAircraftDefaultAmmo;
+        Combats[Id.Index].AmmoCurrent = kAircraftDefaultAmmo;
+    }
 
     if (D->Unit.bIsHarvester)
     {
@@ -1186,6 +1243,75 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
 
     switch (Cmd.Type)
     {
+        case CommandType::BoardTransport:
+        case CommandType::UnloadTransport:
+        case CommandType::CaptureBuilding:
+        {
+            if (!IsAlive(Cmd.Primary))
+            {
+                return Reject(CommandReject::NoSuchEntity);
+            }
+            if (Core[Cmd.Primary.Index].Owner != Cmd.Issuer || Core[Cmd.Primary.Index].Kind != EntityKind::Unit)
+            {
+                return Reject(CommandReject::NotOwner);
+            }
+            Order O;
+            if (Cmd.Type == CommandType::BoardTransport)
+            {
+                // Infantry boards a friendly transport of its own side.
+                if (!IsAlive(Cmd.Target) || Core[Cmd.Target.Index].Owner != Cmd.Issuer
+                    || Core[Cmd.Target.Index].Kind != EntityKind::Unit)
+                {
+                    return Reject(CommandReject::TargetInvalid);
+                }
+                const EntityDef* TD = Content->FindEntity(Core[Cmd.Target.Index].Def);
+                if (TD == nullptr || Transports[Cmd.Target.Index].Passengers.size()
+                                      >= size_t(std::max(0, TD->Unit.PassengerCapacity)))
+                {
+                    return Reject(CommandReject::TargetInvalid);
+                }
+                O.Type = OrderType::Board;
+                O.Target = Cmd.Target;
+            }
+            else if (Cmd.Type == CommandType::UnloadTransport)
+            {
+                const EntityDef* TD = Content->FindEntity(Core[Cmd.Primary.Index].Def);
+                if (TD == nullptr || Transports[Cmd.Primary.Index].Passengers.empty())
+                {
+                    return Reject(CommandReject::TargetInvalid);
+                }
+                O.Type = OrderType::Unload;
+                O.Location = Transforms[Cmd.Primary.Index].Position;
+            }
+            else
+            {
+                // Engineer capture: the actor must be an engineer-class unit, and the
+                // target is a building you do not already own.
+                const EntityDef* ED = Content->FindEntity(Core[Cmd.Primary.Index].Def);
+                if (ED == nullptr || !ED->Unit.bIsEngineer)
+                {
+                    return Reject(CommandReject::NotOwner);
+                }
+                if (!IsAlive(Cmd.Target) || Core[Cmd.Target.Index].Kind != EntityKind::Building
+                    || Core[Cmd.Target.Index].Owner == Cmd.Issuer)
+                {
+                    return Reject(CommandReject::TargetInvalid);
+                }
+                O.Type = OrderType::Capture;
+                O.Target = Cmd.Target;
+            }
+            OrderQueue& QO = Orders[Cmd.Primary.Index];
+            if (Cmd.Mode == OrderMode::Replace)
+            {
+                QO.Clear();
+            }
+            if (!QO.Push(O))
+            {
+                return Reject(CommandReject::QueueFull);
+            }
+            return Result;
+        }
+
         case CommandType::Move:
         case CommandType::AttackMove:
         case CommandType::Attack:
@@ -1643,7 +1769,7 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
             // survive a save taken before the death sweep and permanently forfeit
             // the refund on a later, genuine destruction.
             PendingSales.push_back(Cmd.Primary);
-            PendingDestroy.push_back(Cmd.Primary);
+            QueueDestroy(Cmd.Primary);
             break;
         }
 
@@ -2031,6 +2157,16 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
 // Damage
 // ---------------------------------------------------------------------------
 
+void SimWorld::QueueDestroy(EntityId Id, EntityId Killer)
+{
+    if (std::find(PendingDestroy.begin(), PendingDestroy.end(), Id) != PendingDestroy.end())
+    {
+        return;
+    }
+    PendingDestroy.push_back(Id);
+    PendingDestroyKillers.push_back(Killer);
+}
+
 void SimWorld::DebugDamage(EntityId TargetId, int32_t DamageAmount)
 {
     if (IsAlive(TargetId))
@@ -2039,7 +2175,7 @@ void SimWorld::DebugDamage(EntityId TargetId, int32_t DamageAmount)
         H.Current = (DamageAmount >= H.Current) ? 0 : (H.Current - DamageAmount);
         if (H.Current == 0)
         {
-            PendingDestroy.push_back(TargetId);
+            QueueDestroy(TargetId);
         }
     }
 }
@@ -2051,14 +2187,44 @@ void SimWorld::ApplyDamage(EntityId TargetId, int32_t BaseDamage, WarheadClass W
     {
         return;
     }
+    // Iron curtain / time belt: timed invulnerability is checked here so every
+    // damage path honours it exactly like the static flag above.
+    if (Statuses[TargetId.Index].InvulnerableTicks > 0)
+    {
+        return;
+    }
     const EntityDef* D = Content->FindEntity(Core[TargetId.Index].Def);
     if (D == nullptr)
     {
         return;
     }
 
-    const int32_t Multiplier = Content->GetDamageMultiplier(Warhead, D->Armor);
+    int32_t Multiplier = Content->GetDamageMultiplier(Warhead, D->Armor);
+    // Cryo and shrink both double incoming damage; frozen-and-shrunk stacks.
+    if (Statuses[TargetId.Index].FreezeTicks > 0)
+    {
+        Multiplier *= 2;
+    }
+    if (Statuses[TargetId.Index].ShrinkTicks > 0)
+    {
+        Multiplier *= 2;
+    }
     int32_t Damage = (BaseDamage * Multiplier) / 100;
+
+    // Veterancy damage bonus, applied to the attacker's outgoing damage after the
+    // armor matrix and before the target's own mitigations.
+    const bool bSourceIsUnit = Source.IsValid() && IsAlive(Source)
+                               && Core[Source.Index].Kind == EntityKind::Unit;
+    if (bSourceIsUnit)
+    {
+        const int32_t BonusPercent =
+            Content->GetVeterancy().Levels[int32_t(Healths[Source.Index].Rank)].DamageBonusPercent;
+        if (BonusPercent > 0)
+        {
+            Damage = (Damage * (100 + BonusPercent)) / 100;
+        }
+    }
+
     if (Combats[TargetId.Index].bSecondaryModeActive && D->Unit.AbilityArmorBonusPercent > 0)
     {
         Damage = (Damage * (100 - D->Unit.AbilityArmorBonusPercent)) / 100;
@@ -2093,10 +2259,68 @@ void SimWorld::ApplyDamage(EntityId TargetId, int32_t BaseDamage, WarheadClass W
         H.Current = 0;
         // Deferred: the killer may still be iterating and the target's components
         // must stay readable for the rest of this tick.
-        if (std::find(PendingDestroy.begin(), PendingDestroy.end(), TargetId) == PendingDestroy.end())
+        const bool bFirstFatalBlow =
+            std::find(PendingDestroy.begin(), PendingDestroy.end(), TargetId) == PendingDestroy.end();
+        if (bFirstFatalBlow)
         {
-            PendingDestroy.push_back(TargetId);
+            QueueDestroy(TargetId, Source);
         }
+
+        // Kill-value credit for unit killers on hostile victims, once per victim.
+        if (bFirstFatalBlow && bSourceIsUnit
+            && (Core[TargetId.Index].Kind == EntityKind::Unit || Core[TargetId.Index].Kind == EntityKind::Building)
+            && IsHostile(Core[Source.Index].Owner, Core[TargetId.Index].Owner))
+        {
+            HealthComp& Killer = Healths[Source.Index];
+            const int64_t VictimValue = D->Production.Cost > 0 ? int64_t(D->Production.Cost) : 0;
+            if (VictimValue > 0 && Killer.KillsValue <= INT32_MAX - int32_t(VictimValue))
+            {
+                Killer.KillsValue += int32_t(VictimValue);
+                TryPromoteVeterancy(Source);
+            }
+        }
+    }
+}
+
+void SimWorld::TryPromoteVeterancy(EntityId Unit)
+{
+    if (!IsAlive(Unit) || Core[Unit.Index].Kind != EntityKind::Unit)
+    {
+        return;
+    }
+    const EntityDef* D = Content->FindEntity(Core[Unit.Index].Def);
+    if (D == nullptr || D->Production.Cost <= 0)
+    {
+        return;
+    }
+    const VeterancyDef& Vet = Content->GetVeterancy();
+    HealthComp& H = Healths[Unit.Index];
+
+    while (int32_t(H.Rank) + 1 < int32_t(VeterancyRank::Count))
+    {
+        const VeterancyLevel& Next = Vet.Levels[int32_t(H.Rank) + 1];
+        const int64_t Threshold = int64_t(std::max(1, Next.CostThresholdMultiplier)) * int64_t(D->Production.Cost);
+        if (H.KillsValue < Threshold)
+        {
+            break;
+        }
+        H.Rank = VeterancyRank(int32_t(H.Rank) + 1);
+        const VeterancyLevel& New = Vet.Levels[int32_t(H.Rank)];
+        const int32_t BaseMax = D->MaxHealth;
+        const int32_t NewMax = BaseMax + (BaseMax * std::max(0, New.HpBonusPercent)) / 100;
+        if (NewMax > H.Max)
+        {
+            H.Current = std::min(NewMax, H.Current + (NewMax - H.Max));
+            H.Max = NewMax;
+        }
+
+        SimEvent Ev;
+        Ev.Type = SimEventType::EntityVeterancyPromoted;
+        Ev.Tick = CurrentTick;
+        Ev.Entity = Unit;
+        Ev.Player = Core[Unit.Index].Owner;
+        Ev.Value = int32_t(H.Rank);
+        EmitEvent(Ev);
     }
 }
 
@@ -2184,7 +2408,7 @@ void SimWorld::DestroyEntity(EntityId Id, EntityId Killer, bool bWasSold)
         Buildings[Index].Queue.clear();
         Buildings[Index].DockedHarvester = EntityId::Invalid();
         Buildings[Index].UnloadingQueue.clear();
-        if (Owner < kMaxPlayers)
+        if (Owner < kMaxPlayers && !bWasSold)
         {
             Players[Owner].BuildingsLost += 1;
         }
@@ -2197,15 +2421,18 @@ void SimWorld::DestroyEntity(EntityId Id, EntityId Killer, bool bWasSold)
         }
     }
 
-    SimEvent Ev;
-    Ev.Type = SimEventType::EntityDestroyed;
-    Ev.Tick = CurrentTick;
-    Ev.Entity = Id;
-    Ev.Other = Killer;
-    Ev.Player = Owner;
-    Ev.Content = Core[Index].Def;
-    Ev.Location = Transforms[Index].Position;
-    EmitEvent(Ev);
+    if (!bWasSold)
+    {
+        SimEvent Ev;
+        Ev.Type = SimEventType::EntityDestroyed;
+        Ev.Tick = CurrentTick;
+        Ev.Entity = Id;
+        Ev.Other = Killer;
+        Ev.Player = Owner;
+        Ev.Content = Core[Index].Def;
+        Ev.Location = Transforms[Index].Position;
+        EmitEvent(Ev);
+    }
 
     // If this entity was under direct control, emit the exit event and mark
     // the phase so the presentation layer knows the player was ejected by
@@ -2949,9 +3176,38 @@ void SimWorld::SystemProduction()
     }
 }
 
-EntityId SimWorld::FindNearestResourceNode(const Vec2& From, PlayerId /*Owner*/) const
+EntityId SimWorld::FindNearestResourceNode(const Vec2& From, PlayerId Owner) const
 {
+    // Load tally: how many friendly harvesters are already committed to each node.
+    // Without it every idle harvester independently picked the same nearest field and
+    // queued on one tile while an equally good field sat untouched beside it. The
+    // scan is O(entities) per call, and calls happen only when a harvester goes idle
+    // or loses its field -- not per harvester per tick. Deterministic: the tally is
+    // a pure function of live state and candidates are visited in ascending index,
+    // so every machine picks the same node.
+    ResourceLoadScratch.assign(Core.size(), 0);
+    if (Owner < kMaxPlayers)
+    {
+        for (uint32_t I = 0; I < Core.size(); ++I)
+        {
+            if (!Core[I].bAlive || Core[I].Kind != EntityKind::Unit || Core[I].Owner != Owner)
+            {
+                continue;
+            }
+            const HarvesterComp& H = Harvesters[I];
+            // Only committed states count: an idle or returning harvester is free to
+            // pick anything, and counting it would push later pickers off its old
+            // target for no reason.
+            if ((H.State == HarvesterState::MovingToResource || H.State == HarvesterState::Harvesting)
+                && IsAlive(H.AssignedNode))
+            {
+                ++ResourceLoadScratch[H.AssignedNode.Index];
+            }
+        }
+    }
+
     EntityId Best = EntityId::Invalid();
+    uint32_t BestLoad = 0;
     Fixed BestDistSq = Fixed::Max();
     for (uint32_t I = 0; I < Core.size(); ++I)
     {
@@ -2960,13 +3216,26 @@ EntityId SimWorld::FindNearestResourceNode(const Vec2& From, PlayerId /*Owner*/)
             continue;
         }
         const Fixed DistSq = DistanceSquared(From, Transforms[I].Position);
-        if (DistSq < BestDistSq)
+        const bool bBetter = !Best.IsValid() || ResourceLoadScratch[I] < BestLoad
+                             || (ResourceLoadScratch[I] == BestLoad && DistSq < BestDistSq);
+        if (bBetter)
         {
+            BestLoad = ResourceLoadScratch[I];
             BestDistSq = DistSq;
             Best = MakeId(I);
         }
     }
     return Best;
+}
+
+bool SimWorld::IsRegrowingNode(EntityId NodeId) const
+{
+    if (!IsAlive(NodeId) || Core[NodeId.Index].Kind != EntityKind::ResourceNode)
+    {
+        return false;
+    }
+    const ResourceNodeDef* NodeDef = Content->FindResourceNode(Core[NodeId.Index].Def);
+    return NodeDef != nullptr && NodeDef->bRegrows;
 }
 
 EntityId SimWorld::FindNearestRefinery(const Vec2& From, PlayerId Owner) const
@@ -2998,8 +3267,62 @@ EntityId SimWorld::FindNearestRefinery(const Vec2& From, PlayerId Owner) const
     return Best;
 }
 
+// Air logistics. Same scan shape as FindNearestRefinery: ascending index,
+// strict-closer tie-break, so every peer picks the same pad. A rearm point is
+// any COMPLETE friendly building whose production category builds aircraft --
+// derived from content, never from a flag a definition could forget to set.
+EntityId SimWorld::FindNearestRearmPoint(const Vec2& From, PlayerId Owner) const
+{
+    EntityId Best = EntityId::Invalid();
+    Fixed BestDistSq = Fixed::Max();
+    for (uint32_t I = 0; I < Core.size(); ++I)
+    {
+        if (!Core[I].bAlive || Core[I].Kind != EntityKind::Building || Core[I].Owner != Owner)
+        {
+            continue;
+        }
+        if (Buildings[I].State != ConstructionState::Complete)
+        {
+            continue;
+        }
+        const EntityDef* D = Content->FindEntity(Core[I].Def);
+        if (D == nullptr || D->Production.Category != ProductionCategory::Aircraft)
+        {
+            continue;
+        }
+        const Fixed DistSq = DistanceSquared(From, Transforms[I].Position);
+        if (DistSq < BestDistSq)
+        {
+            BestDistSq = DistSq;
+            Best = MakeId(I);
+        }
+    }
+    return Best;
+}
+
 void SimWorld::SystemHarvesters()
 {
+    // Resource regrowth (ResourceNodeDef::bRegrows). Runs before the harvester pass
+    // so a field that crept back above zero this tick is immediately a legal target.
+    // Integer arithmetic only: RegrowPerTick has no fractional part by contract, so
+    // no accumulator is needed and no per-node scratch state exists.
+    for (uint32_t I = 0; I < Core.size(); ++I)
+    {
+        if (!Core[I].bAlive || Core[I].Kind != EntityKind::ResourceNode)
+        {
+            continue;
+        }
+        const ResourceNodeDef* NodeDef = Content->FindResourceNode(Core[I].Def);
+        if (NodeDef == nullptr || !NodeDef->bRegrows || NodeDef->RegrowPerTick <= 0)
+        {
+            continue;
+        }
+        ResourceNodeComp& Node = ResourceNodes[I];
+        if (Node.Amount < NodeDef->MaxAmount)
+        {
+            Node.Amount = std::min(NodeDef->MaxAmount, Node.Amount + NodeDef->RegrowPerTick);
+        }
+    }
 
     for (uint32_t I = 0; I < Core.size(); ++I)
     {
@@ -3103,14 +3426,24 @@ void SimWorld::SystemHarvesters()
                 const int32_t Take = std::min({PerTick, Space, Node.Amount});
                 Node.Amount -= Take;
                 H.Cargo += Take;
+                // Cargo is priced by where it came from (see HarvesterComp::CargoDef),
+                // so every scoop refreshes the source. Mixed cargo from two fields
+                // prices at the most recent one, which matches how the classic games
+                // keep one cargo value per trip.
+                if (Take > 0)
+                {
+                    H.CargoDef = Core[H.AssignedNode.Index].Def;
+                }
 
-                if (Node.Amount <= 0)
+                if (Node.Amount <= 0 && !IsRegrowingNode(H.AssignedNode))
                 {
                     // Exhausted fields stop being targets; the tile flag drives the
-                    // minimap and the AI's expansion logic.
+                    // minimap and the AI's expansion logic. A regrowing field is
+                    // exempt: it stays put empty and creeps back to life, so
+                    // destroying it here would delete a renewable resource forever.
                     const TileCoord T = Map.WorldToTile(Transforms[H.AssignedNode.Index].Position);
                     Map.SetTileFlag(T.X, T.Y, Tile_Resource, false);
-                    PendingDestroy.push_back(H.AssignedNode);
+                    QueueDestroy(H.AssignedNode);
                 }
                 if (H.Cargo >= D->Unit.CargoCapacity || Node.Amount <= 0)
                 {
@@ -3174,7 +3507,13 @@ void SimWorld::SystemHarvesters()
                 const int32_t Amount = std::min(D->Unit.UnloadPerTick, H.Cargo);
                 H.Cargo -= Amount;
 
-                const ResourceNodeDef* NodeDef = Content->FindResourceNode(MakeContentId("resource.ore_field"));
+                // The refinery pays what the cargo is worth where it was dug up, not
+                // a global flat price: this used to hardcode "resource.ore_field" for
+                // every delivery, which silently made rich ore worthless per unit.
+                // CargoDef is invalid only for cargo gathered by a pre-CargoDef save;
+                // that legacy load prices at the standard field rather than guessing.
+                const ResourceNodeDef* NodeDef = Content->FindResourceNode(
+                    H.CargoDef.IsValid() ? H.CargoDef : MakeContentId("resource.ore_field"));
                 const int32_t Value = NodeDef ? NodeDef->ValuePerUnit : 1;
                 if (Owner < kMaxPlayers)
                 {
@@ -3253,6 +3592,11 @@ void SimWorld::SystemOrders()
         {
             continue;
         }
+        // Cargo cannot act; a stunned or frozen crew cannot take new steps.
+        if (PassengerOf[I].Transport.IsValid() || !Statuses[I].bCanAct())
+        {
+            continue;
+        }
         OrderQueue& Q = Orders[I];
         MovementComp& M = Movements[I];
         CombatComp& C = Combats[I];
@@ -3266,6 +3610,102 @@ void SimWorld::SystemOrders()
         Order& O = Q.Front();
         switch (O.Type)
         {
+            case OrderType::Board:
+            {
+                const EntityId TransportId = O.Target;
+                if (!IsAlive(TransportId) || Core[TransportId.Index].Owner != Core[I].Owner)
+                {
+                    Q.PopFront();
+                    break;
+                }
+                const Vec2 TPos = Transforms[TransportId.Index].Position;
+                if (DistanceSquared(Transforms[I].Position, TPos) > Fixed::FromInt(150) * Fixed::FromInt(150))
+                {
+                    M.Destination = TPos;
+                    M.bHasDestination = true;
+                    break;   // keep closing until dock range
+                }
+                const EntityDef* TD = Content->FindEntity(Core[TransportId.Index].Def);
+                TransportComp& Bay = Transports[TransportId.Index];
+                if (TD == nullptr || Bay.Passengers.size() >= size_t(std::max(0, TD->Unit.PassengerCapacity)))
+                {
+                    Q.PopFront();
+                    break;
+                }
+                // Board: dormant from this tick on.
+                Bay.Passengers.push_back(MakeId(I));
+                PassengerOf[I].Transport = TransportId;
+                Orders[I].Clear();
+                Movements[I].bHasDestination = false;
+                break;
+            }
+
+            case OrderType::Unload:
+            {
+                // Eject every passenger around the transport. Positions ring out
+                // deterministically from the transport's tile.
+                for (EntityId& P : Transports[I].Passengers)
+                {
+                    if (!IsAlive(P))
+                    {
+                        continue;
+                    }
+                    PassengerOf[P.Index].Transport = EntityId::Invalid();
+                }
+                Transports[I].Passengers.clear();
+                Q.PopFront();
+                break;
+            }
+
+            case OrderType::Capture:
+            {
+                const EntityId TargetId = O.Target;
+                if (!IsAlive(TargetId) || Core[TargetId.Index].Kind != EntityKind::Building
+                    || Core[TargetId.Index].Owner == Core[I].Owner)
+                {
+                    Captures[I].ProgressTicks = 0;
+                    Q.PopFront();
+                    break;
+                }
+                const Vec2 TPos = Transforms[TargetId.Index].Position;
+                const Fixed Dock = Fixed::FromInt(200);
+                if (DistanceSquared(Transforms[I].Position, TPos) > Dock * Dock)
+                {
+                    Captures[I].ProgressTicks = 0;
+                    M.Destination = TPos;
+                    M.bHasDestination = true;
+                    break;   // walk to the door first
+                }
+                // Channel the takeover; leaving or dying resets via the pop above.
+                Captures[I].ProgressTicks += 1;
+                if (Captures[I].ProgressTicks >= kCaptureChannelTicks)
+                {
+                    const PlayerId OldOwner = Core[TargetId.Index].Owner;
+                    Core[TargetId.Index].Owner = Core[I].Owner;
+                    if (OldOwner < kMaxPlayers)
+                    {
+                        RefreshPlayerTech(OldOwner);
+                    }
+                    RefreshPlayerTech(Core[I].Owner);
+                    // A captured fixture may sit outside any build network; its new
+                    // owner simply owns the building and its income.
+                    SimEvent Ev;
+                    Ev.Type = SimEventType::BuildingCaptured;
+                    Ev.Tick = CurrentTick;
+                    Ev.Entity = TargetId;
+                    Ev.Other = MakeId(I);
+                    Ev.Player = Core[I].Owner;
+                    Ev.Location = TPos;
+                    EmitEvent(Ev);
+                    // The engineer is consumed by the capture, classic price.
+                    Healths[I].Current = 0;
+                    QueueDestroy(MakeId(I));
+                    Captures[I].ProgressTicks = 0;
+                    Q.PopFront();
+                }
+                break;
+            }
+
             case OrderType::Move:
             {
                 M.Destination = O.Location;
@@ -3344,9 +3784,29 @@ void SimWorld::SystemOrders()
                 {
                     C.Target = Acquired;
                     C.bTargetIsForced = false;
-                    // Stop and shoot; resume the advance once the area is clear.
-                    M.bHasDestination = false;
-                    M.CurrentSpeed = Fixed::Zero();
+                    // Sight can extend beyond weapon range. Close to the same stable
+                    // 90%-range envelope as an explicit Attack order before stopping;
+                    // otherwise a unit freezes the instant it sees an enemy and can
+                    // remain permanently too far away to fire.
+                    const ContentId FireWeaponId = ResolveFireWeapon(MakeId(I));
+                    const WeaponDef* W = FireWeaponId.IsValid()
+                        ? Content->FindWeapon(FireWeaponId) : nullptr;
+                    if (W != nullptr)
+                    {
+                        const Vec2 TargetPos = Transforms[Acquired.Index].Position;
+                        const Fixed Engage = (W->MaxRange * 9) / 10;
+                        if (DistanceSquared(Transforms[I].Position, TargetPos) > Engage * Engage)
+                        {
+                            M.Destination = TargetPos;
+                            M.bHasDestination = true;
+                        }
+                        else
+                        {
+                            // Stop and shoot; resume the advance once the area is clear.
+                            M.bHasDestination = false;
+                            M.CurrentSpeed = Fixed::Zero();
+                        }
+                    }
                 }
                 else
                 {
@@ -3376,8 +3836,9 @@ void SimWorld::SystemOrders()
                 C.Target = O.Target;
                 C.bTargetIsForced = true;
 
-                const EntityDef* D = Content->FindEntity(Core[I].Def);
-                const WeaponDef* W = D && D->Weapon.IsValid() ? Content->FindWeapon(D->Weapon) : nullptr;
+                const ContentId FireWeaponId = ResolveFireWeapon(MakeId(I));
+                const WeaponDef* W = FireWeaponId.IsValid()
+                    ? Content->FindWeapon(FireWeaponId) : nullptr;
                 if (W == nullptr)
                 {
                     Q.PopFront();
@@ -3674,8 +4135,7 @@ void SimWorld::SystemMovement()
     DestTileKeys.reserve(Core.size());
     for (uint32_t I = 0; I < Core.size(); ++I)
     {
-        if (!Core[I].bAlive || Core[I].Kind != EntityKind::Unit) continue;
-        if (!Movements[I].bHasDestination) continue;
+        if (!Core[I].bAlive || !Movements[I].bHasDestination) continue;
         DestTileKeys.push_back(PackDestTileKey(Map.WorldToTile(Movements[I].Destination)));
     }
     std::sort(DestTileKeys.begin(), DestTileKeys.end());
@@ -3683,6 +4143,8 @@ void SimWorld::SystemMovement()
     for (uint32_t I = 0; I < Core.size(); ++I)
     {
         if (!Core[I].bAlive || Core[I].Kind != EntityKind::Unit) continue;
+        // Cargo rides; a stunned or frozen crew cannot drive.
+        if (!Statuses[I].bCanAct() || PassengerOf[I].Transport.IsValid()) continue;
         MovementComp& M = Movements[I];
         TransformComp& T = Transforms[I];
         const EntityDef* D = Content->FindEntity(Core[I].Def);
@@ -4309,11 +4771,16 @@ EntityId SimWorld::AcquireTarget(EntityId Attacker) const
     }
     const uint32_t A = Attacker.Index;
     const EntityDef* D = Content->FindEntity(Core[A].Def);
-    if (D == nullptr || !D->Weapon.IsValid())
+    if (D == nullptr)
     {
         return EntityId::Invalid();
     }
-    const WeaponDef* W = Content->FindWeapon(D->Weapon);
+    const ContentId FireWeaponId = ResolveFireWeapon(Attacker);
+    if (!FireWeaponId.IsValid())
+    {
+        return EntityId::Invalid();
+    }
+    const WeaponDef* W = Content->FindWeapon(FireWeaponId);
     if (W == nullptr)
     {
         return EntityId::Invalid();
@@ -4371,6 +4838,10 @@ EntityId SimWorld::AcquireTarget(EntityId Attacker) const
         {
             continue;
         }
+        if (PassengerOf[I].Transport.IsValid())
+        {
+            continue;   // boarded passengers cannot be targeted
+        }
 
         const Fixed DistSq = DistanceSquared(Pos, Transforms[I].Position);
         if (DistSq <= SearchSq && DistSq < BestDistSq)
@@ -4407,6 +4878,12 @@ bool SimWorld::IsEntityVisibleTo(PlayerId Viewer, uint32_t EntityIndex) const
     {
         return false;
     }
+    // A unit riding in a transport is hidden inside it -- nobody can see, target
+    // or shoot the passenger while it is aboard.
+    if (PassengerOf[EntityIndex].Transport.IsValid())
+    {
+        return false;
+    }
     // Fog is optional. A match configured without it, and every headless fixture that
     // never builds a grid, has to behave as though the map is in the open -- the
     // alternative is that absent fog blinds every side and combat stops entirely.
@@ -4437,6 +4914,60 @@ bool SimWorld::IsEntityVisibleTo(PlayerId Viewer, uint32_t EntityIndex) const
     return Visibility == VisibilityState::CurrentlyVisible;
 }
 
+ContentId SimWorld::ResolveFireWeapon(EntityId Attacker) const
+{
+    const EntityDef* D = Content->FindEntity(Core[Attacker.Index].Def);
+    if (D == nullptr)
+    {
+        return ContentId();
+    }
+    // Multigunner rule: an armed passenger lends the
+    // carrier its weapon. First passenger wins; capacity is small so a linear scan
+    // is the whole story.
+    if (D->Unit.bMultigunner)
+    {
+        for (const EntityId& P : Transports[Attacker.Index].Passengers)
+        {
+            if (!IsAlive(P))
+            {
+                continue;
+            }
+            const EntityDef* PD = Content->FindEntity(Core[P.Index].Def);
+            if (PD != nullptr && PD->Weapon.IsValid())
+            {
+                return PD->Weapon;
+            }
+        }
+    }
+    return D->Weapon;
+}
+
+void SimWorld::ApplyOnHitStatus(EntityId Victim, const WeaponDef& Weapon)
+{
+    if (Weapon.StunTicksOnHit <= 0 && Weapon.FreezeTicksOnHit <= 0
+        && Weapon.ShrinkTicksOnHit <= 0 && Weapon.InfectionTicksOnHit <= 0)
+    {
+        return;
+    }
+    if (!IsAlive(Victim) || Core[Victim.Index].Kind == EntityKind::Projectile)
+    {
+        return;
+    }
+    // Vehicles, ships and buildings are hard targets for EMP/cryo; infantry is the
+    // classic shrink target. Content may override with StatusTargetsVehiclesOnly.
+    const bool bHardTarget = Core[Victim.Index].Kind == EntityKind::Building
+                             || Content->FindEntity(Core[Victim.Index].Def)->Unit.Layer != MovementLayer::Infantry;
+    if (Weapon.StatusTargetsVehiclesOnly == 1 && !bHardTarget)
+    {
+        return;
+    }
+    StatusComp& S = Statuses[Victim.Index];
+    if (Weapon.StunTicksOnHit > 0)      { S.StunTicks      = std::max(S.StunTicks,      Weapon.StunTicksOnHit); }
+    if (Weapon.FreezeTicksOnHit > 0)    { S.FreezeTicks    = std::max(S.FreezeTicks,    Weapon.FreezeTicksOnHit); }
+    if (Weapon.ShrinkTicksOnHit > 0)    { S.ShrinkTicks    = std::max(S.ShrinkTicks,    Weapon.ShrinkTicksOnHit); }
+    if (Weapon.InfectionTicksOnHit > 0) { S.InfectionTicks = std::max(S.InfectionTicks, Weapon.InfectionTicksOnHit); }
+}
+
 void SimWorld::FireWeapon(EntityId Attacker, EntityId TargetId, const WeaponDef& Weapon)
 {
     const uint32_t A = Attacker.Index;
@@ -4464,10 +4995,19 @@ void SimWorld::FireWeapon(EntityId Attacker, EntityId TargetId, const WeaponDef&
     }
     Combats[A].CooldownTicks = Cooldown;
 
+    // Finite magazines decrement only while rounds remain. A 0/0 magazine (every
+    // non-air unit) never enters this branch and fires forever; the SystemCombat
+    // gate is what stops a genuinely dry aircraft from shooting at all.
+    if (Combats[A].AmmoCurrent > 0)
+    {
+        Combats[A].AmmoCurrent -= 1;
+    }
+
     if (Weapon.ProjectileSpeed <= Fixed::Zero())
     {
         // Hitscan: resolve immediately.
         ApplyDamage(TargetId, Weapon.Damage, Weapon.Warhead, Attacker, Core[A].Owner);
+        ApplyOnHitStatus(TargetId, Weapon);
         if (Weapon.SplashRadius > Fixed::Zero())
         {
             ApplySplashDamage(To, Weapon.SplashRadius, Weapon.Damage, Weapon.Warhead,
@@ -4522,6 +5062,9 @@ void SimWorld::FireWeapon(EntityId Attacker, EntityId TargetId, const WeaponDef&
 // return fire, while cutting fruitless searches to a quarter.
 static constexpr int32_t kAcquireRetryTicks = 4;
 
+// Engineer capture channel: 5 seconds of standing at the door.
+
+
 void SimWorld::SystemCombat()
 {
     for (uint32_t I = 0; I < Core.size(); ++I)
@@ -4563,11 +5106,76 @@ void SimWorld::SystemCombat()
             }
         }
 
-        const EntityDef* D = Content->FindEntity(Core[I].Def);
-        if (D == nullptr || !D->Weapon.IsValid())
+        // Stunned or frozen units cannot fight; boarded units are cargo.
+        if (!Statuses[I].bCanAct() || PassengerOf[I].Transport.IsValid())
         {
             continue;
         }
+        const EntityDef* D = Content->FindEntity(Core[I].Def);
+        if (D == nullptr)
+        {
+            continue;
+        }
+
+        // --- Air logistics -------------------------------------------------
+        // A dry aircraft neither fires nor acquires a target: it breaks off and
+        // flies to the nearest friendly air producer to rearm, the munitions
+        // twin of the harvester's MovingToRefinery leg. The rearming latch stays
+        // set after the first reload tick raises AmmoCurrent above zero; without
+        // it the craft would leave after two rounds and could never become full.
+        // The destination is set
+        // HERE rather than in SystemOrders because the trigger is internal
+        // magazine state, not a player order; with an empty order queue nothing
+        // overwrites it, and SystemMovement integrates it unchanged on the next
+        // tick. Boarded and stunned craft never reach this point (gate above),
+        // so the movement gate for those states stays untouched.
+        const bool bFiniteAircraft = Kind == EntityKind::Unit &&
+                                     D->Unit.Layer == MovementLayer::Air && C.AmmoMax > 0;
+        if (bFiniteAircraft && C.AmmoCurrent <= 0)
+        {
+            AircraftRearming[I] = 1;
+        }
+        if (bFiniteAircraft && AircraftRearming[I] != 0)
+        {
+            const Vec2 Home = Transforms[I].Position;
+            const EntityId Pad = FindNearestRearmPoint(Home, Core[I].Owner);
+            if (Pad.IsValid())
+            {
+                const Vec2 PadPos = Transforms[Pad.Index].Position;
+                const Fixed DockRadius = Fixed::FromInt(kRearmDockDistanceUnits);
+                if (DistanceSquared(Home, PadPos) <= DockRadius * DockRadius)
+                {
+                    // On the pad: top up at the fixed rate and hold position
+                    // until the magazine is whole again.
+                    C.AmmoCurrent = std::min(C.AmmoMax, C.AmmoCurrent + kAircraftReloadPerTick);
+                    if (C.AmmoCurrent >= C.AmmoMax)
+                    {
+                        AircraftRearming[I] = 0;
+                    }
+                    Movements[I].bHasDestination = false;
+                    Movements[I].CurrentSpeed = Fixed::Zero();
+                }
+                else
+                {
+                    // In transit: keep steering at the pad. Re-derived each tick
+                    // so a destroyed pad re-routes to the next nearest one.
+                    Movements[I].Destination = PadPos;
+                    Movements[I].bHasDestination = true;
+                }
+            }
+            else
+            {
+                // No pad anywhere: hover rather than grind toward nothing.
+                Movements[I].bHasDestination = false;
+                Movements[I].CurrentSpeed = Fixed::Zero();
+            }
+            // Drop any retained target; acquisition below is skipped entirely.
+            C.Target = EntityId::Invalid();
+            C.bTargetIsForced = false;
+            continue;
+        }
+
+        const ContentId FireWeaponId = ResolveFireWeapon(MakeId(I));
         if (C.bSecondaryModeActive && D->Unit.bAbilityDisablesPrimaryWeapon)
         {
             continue;
@@ -4588,7 +5196,7 @@ void SimWorld::SystemCombat()
                 continue;
             }
         }
-        const WeaponDef* W = Content->FindWeapon(D->Weapon);
+        const WeaponDef* W = Content->FindWeapon(FireWeaponId);
         if (W == nullptr)
         {
             continue;
@@ -4679,7 +5287,7 @@ void SimWorld::SystemProjectiles()
         const WeaponDef* W = Content->FindWeapon(P.Weapon);
         if (W == nullptr)
         {
-            PendingDestroy.push_back(MakeId(I));
+            QueueDestroy(MakeId(I));
             continue;
         }
 
@@ -4711,13 +5319,14 @@ void SimWorld::SystemProjectiles()
             if (IsAlive(P.Target))
             {
                 ApplyDamage(P.Target, W->Damage, W->Warhead, P.Source, P.OwnerPlayer);
+                ApplyOnHitStatus(P.Target, *W);
             }
             if (W->SplashRadius > Fixed::Zero())
             {
                 ApplySplashDamage(P.ImpactPoint, W->SplashRadius, W->Damage, W->Warhead,
                                   W->SplashFalloffPercent, P.Source, P.OwnerPlayer);
             }
-            PendingDestroy.push_back(MakeId(I));
+            QueueDestroy(MakeId(I));
         }
         else
         {
@@ -4730,16 +5339,17 @@ void SimWorld::SystemProjectiles()
 
 void SimWorld::SystemDeaths()
 {
-    // PendingDestroy can contain duplicates (splash plus a direct hit in the same
-    // tick); DestroyEntity is a no-op on an already dead handle because the
-    // generation no longer matches.
-    for (const EntityId& Id : PendingDestroy)
+    // QueueDestroy deduplicates victims and keeps killer attribution aligned with
+    // the first fatal blow. Sales and hazards deliberately carry Invalid killers.
+    for (size_t I = 0; I < PendingDestroy.size(); ++I)
     {
+        const EntityId Id = PendingDestroy[I];
         const bool bWasSold =
             std::find(PendingSales.begin(), PendingSales.end(), Id) != PendingSales.end();
-        DestroyEntity(Id, EntityId::Invalid(), bWasSold);
+        DestroyEntity(Id, PendingDestroyKillers[I], bWasSold);
     }
     PendingDestroy.clear();
+    PendingDestroyKillers.clear();
     PendingSales.clear();
 }
 
@@ -5114,6 +5724,154 @@ void SimWorld::SystemDirectControl()
     }
 }
 
+void SimWorld::SystemStatusEffects()
+{
+    for (uint32_t I = 0; I < Core.size(); ++I)
+    {
+        if (!Core[I].bAlive)
+        {
+            continue;
+        }
+        StatusComp& S = Statuses[I];
+        if (S.StunTicks > 0)      { S.StunTicks -= 1; }
+        if (S.FreezeTicks > 0)    { S.FreezeTicks -= 1; }
+        if (S.ShrinkTicks > 0)    { S.ShrinkTicks -= 1; }
+        if (S.InvulnerableTicks > 0) { S.InvulnerableTicks -= 1; }
+        // Infestation drains one hitpoint per tick. Direct bookkeeping rather
+        // than ApplyDamage: no attacker exists, and per-tick damage events would
+        // flood the event queue for a slow burn the player already sees.
+        if (S.InfectionTicks > 0)
+        {
+            S.InfectionTicks -= 1;
+            HealthComp& H = Healths[I];
+            H.Current -= 1;
+            if (H.Current <= 0)
+            {
+                H.Current = 0;
+                const EntityId SelfId = MakeId(I);
+                if (std::find(PendingDestroy.begin(), PendingDestroy.end(), SelfId) == PendingDestroy.end())
+                {
+                    QueueDestroy(SelfId);
+                }
+            }
+        }
+    }
+}
+
+void SimWorld::UpdatePassengers()
+{
+    // Boarded units are cargo: they ride at their transport's position, they do
+    // not act, and when the transport is destroyed they go down with it.
+    //
+    // Bays are pruned first so a rider that died aboard (infection reaches into
+    // the hold too) frees its seat instead of haunting the capacity check.
+    for (uint32_t I = 0; I < Core.size(); ++I)
+    {
+        if (!Core[I].bAlive || Transports[I].Passengers.empty())
+        {
+            continue;
+        }
+        auto& Riders = Transports[I].Passengers;
+        Riders.erase(std::remove_if(Riders.begin(), Riders.end(),
+                                    [this](const EntityId& P) { return !IsAlive(P); }),
+                     Riders.end());
+    }
+    for (uint32_t I = 0; I < Core.size(); ++I)
+    {
+        if (!Core[I].bAlive)
+        {
+            continue;
+        }
+        const EntityId TransportId = PassengerOf[I].Transport;
+        if (!TransportId.IsValid())
+        {
+            continue;
+        }
+        if (!IsAlive(TransportId))
+        {
+            // The transport died this tick: its whole bay dies with it.
+            PassengerOf[I].Transport = EntityId::Invalid();
+            HealthComp& H = Healths[I];
+            H.Current = 0;
+            const EntityId SelfId = MakeId(I);
+            if (std::find(PendingDestroy.begin(), PendingDestroy.end(), SelfId) == PendingDestroy.end())
+            {
+                QueueDestroy(SelfId);
+            }
+            continue;
+        }
+        Transforms[I].Position = Transforms[TransportId.Index].Position;
+        Movements[I].bHasDestination = false;
+        Movements[I].CurrentSpeed = Fixed::Zero();
+    }
+}
+
+void SimWorld::ApplyStatusInRadius(PlayerId Caster, const Vec2& Center, Fixed Radius,
+                                   const StatusComp& Template, bool bEnemiesOnly)
+{
+    const Fixed RadiusSq = Radius * Radius;
+    for (uint32_t I = 0; I < Core.size(); ++I)
+    {
+        if (!Core[I].bAlive || Core[I].Kind != EntityKind::Unit)
+        {
+            continue;
+        }
+        if (PassengerOf[I].Transport.IsValid())
+        {
+            continue;
+        }
+        if (bEnemiesOnly && !IsHostile(Caster, Core[I].Owner))
+        {
+            continue;
+        }
+        if (DistanceSquared(Center, Transforms[I].Position) > RadiusSq)
+        {
+            continue;
+        }
+        StatusComp& S = Statuses[I];
+        S.StunTicks = std::max(S.StunTicks, Template.StunTicks);
+        S.FreezeTicks = std::max(S.FreezeTicks, Template.FreezeTicks);
+        S.ShrinkTicks = std::max(S.ShrinkTicks, Template.ShrinkTicks);
+        S.InfectionTicks = std::max(S.InfectionTicks, Template.InfectionTicks);
+        S.InvulnerableTicks = std::max(S.InvulnerableTicks, Template.InvulnerableTicks);
+    }
+}
+
+void SimWorld::SystemTechIncome()
+{
+    // Captured tech buildings pay their owner on a fixed cadence. The modulo
+    // keeps it accumulator-free: every peer derives the same payout ticks from
+    // CurrentTick alone.
+    for (uint32_t I = 0; I < Core.size(); ++I)
+    {
+        if (!Core[I].bAlive || Core[I].Kind != EntityKind::Building)
+        {
+            continue;
+        }
+        const BuildingComp& B = Buildings[I];
+        if (B.State != ConstructionState::Complete)
+        {
+            continue;
+        }
+        const PlayerId Owner = Core[I].Owner;
+        if (Owner >= kMaxPlayers)
+        {
+            continue;   // nobody owns this fixture yet
+        }
+        const EntityDef* D = Content->FindEntity(Core[I].Def);
+        if (D == nullptr || !D->Building.bIsTechBuilding
+            || D->Building.TechIncomeIntervalTicks <= 0 || D->Building.TechIncomePerInterval <= 0)
+        {
+            continue;
+        }
+        if (CurrentTick % TickIndex(D->Building.TechIncomeIntervalTicks) == 0)
+        {
+            Players[Owner].Credits += D->Building.TechIncomePerInterval;
+            Players[Owner].TotalHarvested += D->Building.TechIncomePerInterval;
+        }
+    }
+}
+
 void SimWorld::Tick(const CommandFrame* Frame)
 {
     if (Phase != MatchPhase::Running)
@@ -5136,10 +5894,18 @@ void SimWorld::Tick(const CommandFrame* Frame)
     SystemRepair();
     SystemProduction();
     SystemHarvesters();
+    // Status countdowns run before orders/movement/combat so a unit stunned this
+    // tick never acts on the same tick, and infection kills resolve in deaths.
+    SystemStatusEffects();
+    UpdatePassengers();
     SystemOrders();
     SystemMovement();
     SystemCombat();
     SystemProjectiles();
+    // After projectiles so a promotion earned by this tick's kills is already in
+    // effect when its regen ticks.
+    SystemVeterancy();
+    SystemTechIncome();
     SystemFactionResources();
     SystemFogOfWar();
     SystemRecon();
@@ -5148,6 +5914,33 @@ void SimWorld::Tick(const CommandFrame* Frame)
     SystemVictory();
 
     CurrentTick += 1;
+}
+
+void SimWorld::SystemVeterancy()
+{
+    if (Content == nullptr)
+    {
+        return;
+    }
+    const VeterancyDef& Vet = Content->GetVeterancy();
+    for (uint32_t I = 0; I < Core.size(); ++I)
+    {
+        if (!Core[I].bAlive || Core[I].Kind != EntityKind::Unit)
+        {
+            continue;
+        }
+        const HealthComp& H = Healths[I];
+        if (H.Rank == VeterancyRank::Recruit || H.Current <= 0 || H.Current >= H.Max)
+        {
+            continue;
+        }
+        const int32_t Regen = Vet.Levels[int32_t(H.Rank)].RegenPerTick;
+        if (Regen <= 0)
+        {
+            continue;
+        }
+        Healths[I].Current = std::min(H.Max, H.Current + Regen);
+    }
 }
 
 void SimWorld::SystemRecon()
@@ -5164,8 +5957,20 @@ void SimWorld::SystemRecon()
     // Runs before observation so today's fear distorts today's reports.
     const Recon::MoraleTuning& MT = ReconSettingsRef->Morale;
     const Fixed AllyDeathRadius = Fixed::FromInt(int64_t(MT.AllyDeathRadiusTiles) * kTileSizeUnits);
+    // Only THIS tick's events may feed morale. The queue is a per-frame handoff --
+    // the presentation layer clears it every rendered frame -- so nothing here
+    // guarantees staleness is pruned. Harvesting stale events re-applied old
+    // damage every tick, and worse: a world that resumed from a save (which does
+    // not serialize the event queue) diverged permanently from its pre-save self,
+    // because one side kept re-living wounds the other had already healed from.
+    // Filtering on the event's tick makes the harvest idempotent regardless of
+    // who clears what, which is the property lockstep actually needs.
     for (const SimEvent& Ev : Events)
     {
+        if (Ev.Tick != CurrentTick)
+        {
+            continue;
+        }
         if (Ev.Type == SimEventType::DamageApplied)
         {
             if (Ev.Entity.Index < Morales.size() && IsAlive(Ev.Entity))
@@ -5573,8 +6378,30 @@ uint64_t SimWorld::ComputeStateChecksum() const
         H.FeedInt32(Transforms[I].Facing);
         H.FeedInt32(Transforms[I].TurretFacing);
         H.FeedInt32(Healths[I].Current);
+        H.FeedUInt8(uint8_t(Healths[I].Rank));
+        H.FeedInt32(Healths[I].DamageDealt);
+        H.FeedInt32(Healths[I].KillsValue);
+        // Status effects decide whether the entity can act and how much damage it
+        // takes; boarding decides where it is and who commands its fate.
+        H.FeedInt32(Statuses[I].StunTicks);
+        H.FeedInt32(Statuses[I].FreezeTicks);
+        H.FeedInt32(Statuses[I].ShrinkTicks);
+        H.FeedInt32(Statuses[I].InfectionTicks);
+        H.FeedInt32(Statuses[I].InvulnerableTicks);
+        H.FeedUInt64(PassengerOf[I].Transport.Packed());
+        H.FeedUInt32(uint32_t(Transports[I].Passengers.size()));
+        for (const EntityId& Rider : Transports[I].Passengers)
+        {
+            H.FeedUInt64(Rider.Packed());
+        }
+        H.FeedInt32(Captures[I].ProgressTicks);
         H.FeedInt32(Combats[I].CooldownTicks);
         H.FeedInt32(Combats[I].AcquireCooldownTicks);
+        // Air logistics: magazine state decides whether a craft may fire, so
+        // a peer that disagrees about it diverges on the very next shot.
+        H.FeedInt32(Combats[I].AmmoCurrent);
+        H.FeedInt32(Combats[I].AmmoMax);
+        H.FeedBool(AircraftRearming[I] != 0);
         H.FeedUInt64(Combats[I].Target.Packed());
         H.FeedBool(Combats[I].bSecondaryModeActive);
         H.FeedInt32(Combats[I].SecondaryAbilityCooldownTicks);
@@ -5626,6 +6453,7 @@ uint64_t SimWorld::ComputeStateChecksum() const
         {
             H.FeedUInt8(uint8_t(Harvesters[I].State));
             H.FeedInt32(Harvesters[I].Cargo);
+            H.FeedUInt32(Harvesters[I].CargoDef.Value);
         }
         else if (Core[I].Kind == EntityKind::ResourceNode)
         {
@@ -5707,9 +6535,15 @@ StateHashBreakdown SimWorld::ComputeDetailedChecksum() const
         HPos.FeedInt64(Movements[I].Destination.Y.Raw);
 
         HHealth.FeedInt32(Healths[I].Current);
+        HHealth.FeedUInt8(uint8_t(Healths[I].Rank));
+        HHealth.FeedInt32(Healths[I].DamageDealt);
+        HHealth.FeedInt32(Healths[I].KillsValue);
 
         HCombat.FeedInt32(Combats[I].CooldownTicks);
         HCombat.FeedInt32(Combats[I].AcquireCooldownTicks);
+        HCombat.FeedInt32(Combats[I].AmmoCurrent);
+        HCombat.FeedInt32(Combats[I].AmmoMax);
+        HCombat.FeedBool(AircraftRearming[I] != 0);
         HCombat.FeedUInt64(Combats[I].Target.Packed());
         HCombat.FeedBool(Combats[I].bSecondaryModeActive);
         HCombat.FeedInt32(Combats[I].SecondaryAbilityCooldownTicks);
@@ -5820,7 +6654,22 @@ void SimWorld::RecordSnapshot()
 
 
 constexpr uint32_t kSimSaveMagic = 0x52413453u; // "RA4S"
-constexpr uint32_t kSimSaveVersion = 9;
+constexpr uint32_t kSimSaveVersion = 13;
+// v13: aircraft rearm latch. A partially reloaded magazine is still committed to
+// the pad, so this bit affects future movement and firing and must survive saves.
+constexpr uint32_t kSimSaveVersionAircraftRearm = 13;
+// v12: aircraft logistics -- magazines (CombatComp::AmmoMax/AmmoCurrent).
+// Written unconditionally in Serialize next to the combat fields; older saves
+// load with both at 0, which the behaviour reads as an infinite magazine, so
+// pre-logistics saves migrate by construction with no conversion pass.
+constexpr uint32_t kSimSaveVersionAmmo = 12;
+// v11: tactical state -- status effects, transport bays and boarding,
+// engineer capture channel progress.
+constexpr uint32_t kSimSaveVersionStatus = 11;
+// v10: veterancy (rank/damage dealt/kill value per entity) and harvester cargo
+// provenance. Older saves migrate by leaving the defaults in place: everyone is a
+// Recruit with no history, and legacy cargo prices at the standard ore field.
+constexpr uint32_t kSimSaveVersionVeterancy = 10;
 constexpr uint32_t kSimSaveVersionPowerTier = 5;
 constexpr uint32_t kSimSaveVersionPowerPriority = 7;
 constexpr uint32_t kSimSaveVersionRepair = 8;
@@ -5902,6 +6751,23 @@ void SimWorld::Serialize(ByteWriter& W) const
         W.WriteInt32(H.Current);
         W.WriteInt32(H.Max);
         W.WriteBool(H.bInvulnerable);
+        W.WriteUInt8(static_cast<uint8_t>(H.Rank));
+        W.WriteInt32(H.DamageDealt);
+        W.WriteInt32(H.KillsValue);
+        // v11 status payload.
+        const StatusComp& St = Statuses[I];
+        W.WriteInt32(St.StunTicks);
+        W.WriteInt32(St.FreezeTicks);
+        W.WriteInt32(St.ShrinkTicks);
+        W.WriteInt32(St.InfectionTicks);
+        W.WriteInt32(St.InvulnerableTicks);
+        W.WriteUInt64(PassengerOf[I].Transport.Packed());
+        W.WriteUInt32(static_cast<uint32_t>(Transports[I].Passengers.size()));
+        for (const EntityId& Rider : Transports[I].Passengers)
+        {
+            W.WriteUInt64(Rider.Packed());
+        }
+        W.WriteInt32(Captures[I].ProgressTicks);
 
         const MovementComp& M = Movements[I];
         W.WriteInt64(M.Destination.X.Raw);
@@ -5916,6 +6782,12 @@ void SimWorld::Serialize(ByteWriter& W) const
         W.WriteUInt32(Cm.Target.Generation);
         W.WriteInt32(Cm.CooldownTicks);
         W.WriteInt32(Cm.AcquireCooldownTicks);
+        // v12: aircraft magazine. Written unconditionally since v12; the reader
+        // gates on kSimSaveVersionAmmo and keeps the 0/0 infinite default for
+        // older saves. Read order matches this write order exactly.
+        W.WriteInt32(Cm.AmmoMax);
+        W.WriteInt32(Cm.AmmoCurrent);
+        W.WriteBool(AircraftRearming[I] != 0);
         W.WriteBool(Cm.bTargetIsForced);
 
         const BuildingComp& B = Buildings[I];
@@ -5959,6 +6831,7 @@ void SimWorld::Serialize(ByteWriter& W) const
         W.WriteUInt32(Hv.AssignedNode.Generation);
         W.WriteUInt32(Hv.AssignedRefinery.Index);
         W.WriteUInt32(Hv.AssignedRefinery.Generation);
+        W.WriteUInt32(Hv.CargoDef.Value);
 
         const ResourceNodeComp& Rn = ResourceNodes[I];
         W.WriteInt32(Rn.Amount);
@@ -6103,6 +6976,7 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
     Healths.resize(HighWaterMark);
     Movements.resize(HighWaterMark);
     Combats.resize(HighWaterMark);
+    AircraftRearming.resize(HighWaterMark);
     Morales.resize(HighWaterMark);
     Buildings.resize(HighWaterMark);
     Harvesters.resize(HighWaterMark);
@@ -6110,6 +6984,10 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
     Projectiles.resize(HighWaterMark);
     Orders.resize(HighWaterMark);
     DirectControls.resize(HighWaterMark);
+    Statuses.resize(HighWaterMark);
+    Transports.resize(HighWaterMark);
+    PassengerOf.resize(HighWaterMark);
+    Captures.resize(HighWaterMark);
 
     for (uint32_t I = 0; I < HighWaterMark; ++I)
     {
@@ -6130,6 +7008,31 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
         H.Current = R.ReadInt32();
         H.Max = R.ReadInt32();
         H.bInvulnerable = R.ReadBool();
+        if (Version >= kSimSaveVersionVeterancy)
+        {
+            H.Rank = static_cast<VeterancyRank>(R.ReadUInt8());
+            H.DamageDealt = R.ReadInt32();
+            H.KillsValue = R.ReadInt32();
+        }
+        if (Version >= kSimSaveVersionStatus)
+        {
+            StatusComp& St = Statuses[I];
+            St.StunTicks = R.ReadInt32();
+            St.FreezeTicks = R.ReadInt32();
+            St.ShrinkTicks = R.ReadInt32();
+            St.InfectionTicks = R.ReadInt32();
+            St.InvulnerableTicks = R.ReadInt32();
+            PassengerOf[I].Transport.Packed(R.ReadUInt64());
+            const uint32_t RiderCount = R.ReadUInt32();
+            Transports[I].Passengers.clear();
+            for (uint32_t Rd = 0; Rd < RiderCount; ++Rd)
+            {
+                EntityId Rider;
+                Rider.Packed(R.ReadUInt64());
+                Transports[I].Passengers.push_back(Rider);
+            }
+            Captures[I].ProgressTicks = R.ReadInt32();
+        }
 
         MovementComp& M = Movements[I];
         M.Destination.X.Raw = R.ReadInt64();
@@ -6147,6 +7050,18 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
         // defaulting it to 0 is the correct migration: it means "may search this
         // tick", which is exactly the behaviour v4 had unconditionally.
         Cm.AcquireCooldownTicks = (Version >= 5) ? R.ReadInt32() : 0;
+        // v12: aircraft magazine. Mirrors the unconditional Serialize write above,
+        // field for field. Older saves keep the resize() defaults (0/0 == infinite
+        // magazine), which is exactly how those matches behaved before logistics.
+        if (Version >= kSimSaveVersionAmmo)
+        {
+            Cm.AmmoMax = R.ReadInt32();
+            Cm.AmmoCurrent = R.ReadInt32();
+        }
+        if (Version >= kSimSaveVersionAircraftRearm)
+        {
+            AircraftRearming[I] = R.ReadBool() ? 1 : 0;
+        }
         Cm.bTargetIsForced = R.ReadBool();
 
         BuildingComp& B = Buildings[I];
@@ -6207,6 +7122,10 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
         Hv.AssignedNode.Generation = R.ReadUInt32();
         Hv.AssignedRefinery.Index = R.ReadUInt32();
         Hv.AssignedRefinery.Generation = R.ReadUInt32();
+        if (Version >= kSimSaveVersionVeterancy)
+        {
+            Hv.CargoDef.Value = R.ReadUInt32();
+        }
 
         ResourceNodeComp& Rn = ResourceNodes[I];
         Rn.Amount = R.ReadInt32();

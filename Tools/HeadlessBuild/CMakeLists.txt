@@ -245,6 +245,8 @@ add_executable(RA4Tests
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestOrbitalDebrisPhysics.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestHydrodynamicsAndWeather.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestReplayFileFormat.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestRA3Tactics.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestAircraftOps.cpp
 )
 
 

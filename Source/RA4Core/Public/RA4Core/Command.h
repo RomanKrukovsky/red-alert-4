@@ -32,6 +32,13 @@ enum class CommandType : uint8_t
     Deploy = 8,
     ToggleSecondaryAbility = 9,
     CoopPing = 10,
+    // Tactical orders. Board: Primary=infantry, Target=transport.
+    // Unload: Primary=transport, passengers eject around it. Capture:
+    // Primary=engineer-class unit, Target=neutral or hostile building; the
+    // engineer walks adjacent and channels the takeover.
+    BoardTransport = 11,
+    UnloadTransport = 12,
+    CaptureBuilding = 13,
 
     // Base management
 

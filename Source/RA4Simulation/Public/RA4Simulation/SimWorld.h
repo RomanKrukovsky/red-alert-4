@@ -93,6 +93,8 @@ public:
 
     // --- Entity access -----------------------------------------------------
     uint32_t GetEntityCapacity() const { return uint32_t(Core.size()); }
+    // Read-only diagnostic for the parallel component-storage invariant.
+    bool HasConsistentComponentStorage() const;
     bool IsAlive(EntityId Id) const;
     const EntityCore* GetCore(EntityId Id) const;
     const TransformComp* GetTransform(EntityId Id) const;
@@ -104,6 +106,9 @@ public:
     const CombatComp* GetCombat(EntityId Id) const;
     const OrderQueue* GetOrders(EntityId Id) const;
     const DirectControlComp* GetDirectControl(EntityId Id) const;
+    const StatusComp* GetStatus(EntityId Id) const;
+    const TransportComp* GetTransport(EntityId Id) const;
+    const PassengerComp* GetPassengerOf(EntityId Id) const;
     int32_t GetConstructionProgressPerMille(EntityId Id) const;
 
     // Raw slot iteration for systems and for presentation sync. Callers must check
@@ -209,6 +214,9 @@ private:
     void SystemRepair();
     void SystemProduction();
     void SystemHarvesters();
+    // Status effects: countdowns, infection damage-over-time. Runs before
+    // orders/movement so a freshly stunned unit never acts on the tick it froze.
+    void SystemStatusEffects();
     void SystemOrders();
     void SystemMovement();
     void SystemCombat();
@@ -233,6 +241,7 @@ private:
     // one tick: a persisted flag can outlive the sale it described (a save taken
     // between the command and the death sweep reloads a building that is flagged
     // selling forever) and then silently forfeits the ADR-0012 destruction refund.
+    void QueueDestroy(EntityId Id, EntityId Killer = EntityId::Invalid());
     void DestroyEntity(EntityId Id, EntityId Killer, bool bWasSold = false);
     void RemoveEntitySilently(EntityId Id);
     void ApplyDamage(EntityId TargetId, int32_t BaseDamage, WarheadClass Warhead, EntityId Source, PlayerId SourcePlayer);
@@ -265,6 +274,13 @@ private:
     void RefreshPlayerTech(PlayerId Owner);
     EntityId FindNearestResourceNode(const Vec2& From, PlayerId Owner) const;
     EntityId FindNearestRefinery(const Vec2& From, PlayerId Owner) const;
+    // Air logistics: nearest friendly COMPLETE building whose production
+    // category builds aircraft. Data-derived rearm pad -- no new flags.
+    EntityId FindNearestRearmPoint(const Vec2& From, PlayerId Owner) const;
+    // True when the node's definition regrows, i.e. an exhausted field must survive
+    // at Amount 0 rather than be destroyed. Content-driven so mods get the behaviour
+    // for free.
+    bool IsRegrowingNode(EntityId NodeId) const;
     EntityId AcquireTarget(EntityId Attacker) const;
 
     // Uniform spatial bucket grid over live entities, rebuilt once per tick.
@@ -283,6 +299,33 @@ private:
     void RebuildSpatialGrid();
     // Appends live entity indices whose cell overlaps the square around Centre.
     void QuerySpatial(const Vec2& Centre, Fixed Radius, std::vector<uint32_t>& Out) const;
+
+    // Scratch for FindNearestResourceNode's per-node harvester load tally; a member
+    // so repeated queries reuse the allocation. Re-zeroed at the top of every call,
+    // so it is derived state and deliberately absent from Serialize and checksums.
+    mutable std::vector<uint32_t> ResourceLoadScratch;
+
+    // Veterancy bookkeeping, fed from ApplyDamage where the killer is known for
+    // every damage path (hitscan, projectile impact, splash). Promotion applies the
+    // new rank's bonuses immediately and emits EntityVeterancyPromoted once per rank.
+    void TryPromoteVeterancy(EntityId Unit);
+
+    // Tactical mechanics.
+    // The weapon an entity actually fires: its own, or -- for a multigunner
+    // transport carrying an armed passenger -- the passenger's weapon.
+    ContentId ResolveFireWeapon(EntityId Attacker) const;
+    // Applies a weapon's on-hit status payload to the victim it wounded.
+    void ApplyOnHitStatus(EntityId Victim, const WeaponDef& Weapon);
+    // Boarded passengers follow their transport and die with it.
+    void UpdatePassengers();
+    // Passive income from captured tech buildings (oil derricks).
+    void SystemTechIncome();
+    // Public seam for protocol powers that mass-apply a status template (phase
+    // field, EMP pulse, ...). Copies every positive countdown of Template onto
+    // units in radius, keeping the larger of the two. bEnemiesOnly filters to
+    // hostile targets; false buffs own side too.
+    void ApplyStatusInRadius(PlayerId Caster, const Vec2& Center, Fixed Radius,
+                             const StatusComp& Template, bool bEnemiesOnly);
 
     Vec2 FindFreeSpawnPoint(const BuildingComp& Producer, ContentId UnitDef) const;
 
@@ -346,12 +389,20 @@ private:
     std::vector<HealthComp> Healths;
     std::vector<MovementComp> Movements;
     std::vector<CombatComp> Combats;
+    // Per-aircraft return/reload latch. Ammo alone cannot represent it: the first
+    // reload tick raises an empty magazine above zero, but the craft must remain at
+    // the pad until full instead of immediately re-entering combat.
+    std::vector<uint8_t> AircraftRearming;
     std::vector<BuildingComp> Buildings;
     std::vector<HarvesterComp> Harvesters;
     std::vector<ResourceNodeComp> ResourceNodes;
     std::vector<ProjectileComp> Projectiles;
     std::vector<OrderQueue> Orders;
     std::vector<DirectControlComp> DirectControls;
+    std::vector<StatusComp> Statuses;
+    std::vector<TransportComp> Transports;
+    std::vector<PassengerComp> PassengerOf;
+    std::vector<CaptureComp> Captures;
     // Psychological state per entity (RA4Recon reads it through the aggregate
     // observer; only SystemRecon writes it). Sized with the other component
     // vectors; meaningful only for units.
@@ -369,6 +420,11 @@ private:
     // iteration stable: a unit dying in the combat system must not invalidate the
     // slot the movement system is about to read.
     std::vector<EntityId> PendingDestroy;
+    // Parallel attribution for PendingDestroy. Each entry is the actual entity that
+    // delivered the first fatal blow, or Invalid for sales, hazards and debug deaths.
+    // Both vectors are consumed before Tick returns, so neither is serialized or
+    // hashed; QueueDestroy is the only writer and keeps their indices aligned.
+    std::vector<EntityId> PendingDestroyKillers;
     // Buildings the player sold this tick, as opposed to lost. ADR-0012 pays no
     // queue refund for a sale (the sale price is the compensation), and this is
     // tick-scoped intent rather than durable state, so it is neither serialized nor

@@ -29,6 +29,12 @@ struct EntityId
     constexpr bool operator<(const EntityId& O) const { return Packed() < O.Packed(); }
 
     constexpr uint64_t Packed() const { return (uint64_t(Generation) << 32) | uint64_t(Index); }
+    // Inverse of Packed(): rebuilds a handle from its serialized form.
+    constexpr void Packed(uint64_t Raw)
+    {
+        Index = uint32_t(Raw & 0xFFFFFFFFull);
+        Generation = uint32_t(Raw >> 32);
+    }
 
 };
 

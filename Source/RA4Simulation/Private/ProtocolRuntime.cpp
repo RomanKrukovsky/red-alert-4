@@ -1,6 +1,9 @@
 // Copyright (c) Red Alert 4 project. Top-Secret Protocols and Global Commander Powers runtime implementation.
 #include "RA4Simulation/ProtocolRuntime.h"
 
+#include <algorithm>
+#include <limits>
+
 namespace RA4
 {
 
@@ -71,6 +74,38 @@ void ProtocolRuntime::RegisterDefaultProtocols()
         P.Radius = Fixed::FromInt(600);
         RegisterProtocol(P);
     }
+    {
+        // Salvage economy: the Soviet doctrine pays for what it destroys, so the
+        // passive lives in the Defense/Support branch where the other eco powers sit.
+        ProtocolPowerDef P;
+        P.Id = "sov_protocol_salvage_bounty";
+        P.NameKey = "protocol.sov.salvage_bounty.name";
+        P.DescriptionKey = "protocol.sov.salvage_bounty.desc";
+        P.Faction = FactionId::Soviet;
+        P.Branch = 2;
+        P.Tier = 1;
+        P.Kind = ProtocolPowerKind::Passive;
+        P.CreditPercentPerKill = 25;
+        RegisterProtocol(P);
+    }
+    {
+        // Reinforcement drop reuses Damage as unit count by design (see
+        // ProtocolPowerDef): the drop size is the power's headline magnitude.
+        ProtocolPowerDef P;
+        P.Id = "sov_protocol_troop_drop";
+        P.NameKey = "protocol.sov.troop_drop.name";
+        P.DescriptionKey = "protocol.sov.troop_drop.desc";
+        P.Faction = FactionId::Soviet;
+        P.Branch = 0;
+        P.Tier = 4;
+        P.PrerequisiteId = "sov_protocol_magnetic_satellite";
+        P.Kind = ProtocolPowerKind::TroopDrop;
+        P.CooldownTicks = 2400; // 120s @ 20Hz
+        P.Damage = 4;           // 4 squadsmen per drop
+        P.Radius = Fixed::FromInt(400);
+        P.DeployUnitId = MakeContentId("unit.sov.conscript");
+        RegisterProtocol(P);
+    }
 
     // Allied Tree
     {
@@ -128,6 +163,53 @@ void ProtocolRuntime::RegisterDefaultProtocols()
         P.CooldownTicks = 1200;
         P.Damage = -500; // Healing
         P.Radius = Fixed::FromInt(500);
+        RegisterProtocol(P);
+    }
+    {
+        // Cheap early Assault option: a short salvo of expendable warheads.
+        ProtocolPowerDef P;
+        P.Id = "ec_protocol_kamikaze_raid";
+        P.NameKey = "protocol.ec.kamikaze_raid.name";
+        P.DescriptionKey = "protocol.ec.kamikaze_raid.desc";
+        P.Faction = FactionId::EasternCoalition;
+        P.Branch = 0;
+        P.Tier = 1;
+        P.Kind = ProtocolPowerKind::KamikazeSquadron;
+        P.CooldownTicks = 1800; // 90s @ 20Hz
+        P.Damage = 250;         // per warhead
+        P.PayloadCount = 6;
+        P.Radius = Fixed::FromInt(450);
+        RegisterProtocol(P);
+    }
+
+    // ChronoLegion Tree -- the faction's powers bend space rather than matter,
+    // so its kit is control (stun) and protection (phase), never raw damage.
+    {
+        ProtocolPowerDef P;
+        P.Id = "cl_protocol_emp_pulse";
+        P.NameKey = "protocol.cl.emp_pulse.name";
+        P.DescriptionKey = "protocol.cl.emp_pulse.desc";
+        P.Faction = FactionId::ChronoLegion;
+        P.Branch = 1;
+        P.Tier = 1;
+        P.Kind = ProtocolPowerKind::EmpPulse;
+        P.CooldownTicks = 1200; // 60s @ 20Hz
+        P.Radius = Fixed::FromInt(500);
+        P.StatusDurationTicks = 120; // 6s of paralysis @ 20Hz
+        RegisterProtocol(P);
+    }
+    {
+        ProtocolPowerDef P;
+        P.Id = "cl_protocol_phase_field";
+        P.NameKey = "protocol.cl.phase_field.name";
+        P.DescriptionKey = "protocol.cl.phase_field.desc";
+        P.Faction = FactionId::ChronoLegion;
+        P.Branch = 2;
+        P.Tier = 2;
+        P.Kind = ProtocolPowerKind::PhaseField;
+        P.CooldownTicks = 1800; // 90s @ 20Hz
+        P.Radius = Fixed::FromInt(600);
+        P.StatusDurationTicks = 150; // 7.5s untouchable @ 20Hz
         RegisterProtocol(P);
     }
 
@@ -193,6 +275,74 @@ void ProtocolRuntime::ProcessSimEvents(const std::vector<SimEvent>& Events)
             break;
         default:
             break;
+        }
+    }
+}
+
+void ProtocolRuntime::ProcessSimEvents(const std::vector<SimEvent>& Events, SimWorld& World)
+{
+    // Same XP feed as the world-less overload; salvage is layered on top so the
+    // two entry points can never drift apart on what counts as a kill.
+    ProcessSimEvents(Events);
+    AwardSalvageBounties(Events, World);
+}
+
+void ProtocolRuntime::AwardSalvageBounties(const std::vector<SimEvent>& Events, SimWorld& World)
+{
+    for (const auto& Ev : Events)
+    {
+        if (Ev.Type != SimEventType::EntityDestroyed)
+        {
+            continue;
+        }
+
+        // Attribution rides on Ev.Other (the killer entity). A kill with no
+        // attacker (world hazard, debug tool) pays nobody: guessing an owner
+        // here would let passive protocols farm uncontested deaths.
+        if (!Ev.Other.IsValid() || !Ev.Content.IsValid())
+        {
+            continue;
+        }
+
+        // The killer may itself have died in the same trade; dead slots read
+        // bAlive=false but keep their Core data until reuse, and GetCore gates
+        // on liveness -- a dead killer legitimately forfeits the bounty.
+        const EntityCore* KillerCore = World.GetCore(Ev.Other);
+        if (KillerCore == nullptr || KillerCore->Owner >= kMaxPlayers)
+        {
+            continue;
+        }
+
+        const PlayerId KillerOwner = KillerCore->Owner;
+        if (!World.IsHostile(KillerOwner, Ev.Player))
+        {
+            continue;
+        }
+
+        const auto* Content = World.GetContent();
+        const EntityDef* VictimDef = Content != nullptr ? Content->FindEntity(Ev.Content) : nullptr;
+        if (VictimDef == nullptr)
+        {
+            continue;
+        }
+
+        auto& State = PlayerStates[KillerOwner];
+        for (const std::string& UnlockedId : State.UnlockedProtocols)
+        {
+            const ProtocolPowerDef* Def = FindProtocol(UnlockedId);
+            if (Def == nullptr || Def->Kind != ProtocolPowerKind::Passive ||
+                Def->CreditPercentPerKill <= 0)
+            {
+                continue;
+            }
+
+            // int64 intermediate: cost * percent overflows int32 for expensive
+            // epic units (cost > ~21M at 100%).
+            const int64_t RawBounty = (int64_t(VictimDef->Production.Cost) * Def->CreditPercentPerKill) / 100;
+            if (RawBounty > 0)
+            {
+                World.AddCredits(KillerOwner, static_cast<int32_t>(RawBounty));
+            }
         }
     }
 }
@@ -311,6 +461,41 @@ bool ProtocolRuntime::CastPower(PlayerId Player, const std::string& ProtocolId, 
 
 void ProtocolRuntime::ExecutePowerEffect(const ProtocolPowerDef& Def, PlayerId Player, const Vec2& Location, SimWorld& World)
 {
+    // Powers that are not "scan entities and mutate them" run through their own
+    // handlers; only the legacy scan-and-damage kinds fall through to the loop
+    // below, so adding a kind can never silently change an older power.
+    switch (Def.Kind)
+    {
+    case ProtocolPowerKind::TroopDrop:
+        ExecuteTroopDrop(Def, Player, Location, World);
+        return;
+
+    case ProtocolPowerKind::PhaseField:
+    case ProtocolPowerKind::EmpPulse:
+    {
+        StatusComp Template;
+        if (Def.Kind == ProtocolPowerKind::PhaseField)
+        {
+            Template.InvulnerableTicks = Def.StatusDurationTicks;
+        }
+        else
+        {
+            Template.StunTicks = Def.StatusDurationTicks;
+        }
+        ApplyRadiusStatus(Player, Location,
+                          Def.Radius.Raw > 0 ? Def.Radius : Fixed::FromInt(500),
+                          Template, /*bEnemiesOnly=*/Def.Kind == ProtocolPowerKind::EmpPulse, World);
+        return;
+    }
+
+    case ProtocolPowerKind::KamikazeSquadron:
+        ExecuteKamikazeStrike(Def, Player, Location, World);
+        return;
+
+    default:
+        break;
+    }
+
     const Fixed Radius = Def.Radius.Raw > 0 ? Def.Radius : Fixed::FromInt(500);
     const Fixed RadiusSq = Radius * Radius;
 
@@ -361,6 +546,156 @@ void ProtocolRuntime::ExecutePowerEffect(const ProtocolPowerDef& Def, PlayerId P
                 }
             }
         }
+    }
+}
+
+void ProtocolRuntime::ExecuteTroopDrop(const ProtocolPowerDef& Def, PlayerId Player, const Vec2& Location, SimWorld& World)
+{
+    if (!Def.DeployUnitId.IsValid() || Def.Damage <= 0)
+    {
+        return;
+    }
+
+    // The draw sequence is fixed (per trooper: one angle jitter, one radius
+    // fraction, ascending index), so every lockstep peer scatters the squad
+    // identically from the same seeded world RNG.
+    Random& Rng = World.GetRandom();
+    const Fixed ScatterRadius = Def.Radius.Raw > 0 ? Def.Radius : Fixed::FromInt(300);
+    // Cap guards against a corrupt/hostile content def allocating an army in a
+    // single cast; legitimate drop sizes sit far below it.
+    const int32_t Count = std::min(Def.Damage, 64);
+
+    for (int32_t I = 0; I < Count; ++I)
+    {
+        const int32_t Angle = WrapAngle(((I * kAngleTurn) / Count) + Rng.NextRange(-128, 128));
+        const Fixed Dist = ScatterRadius * Rng.NextUnitFixed();
+        const Vec2 DropPos = Location + Vec2::FromAngle(Angle) * Dist;
+        World.SpawnUnit(Def.DeployUnitId, Player, DropPos, Angle);
+    }
+}
+
+void ProtocolRuntime::ExecuteKamikazeStrike(const ProtocolPowerDef& Def, PlayerId Player, const Vec2& Location, SimWorld& World)
+{
+    if (Def.Damage <= 0)
+    {
+        return;
+    }
+
+    const int32_t Warheads = std::max(1, std::min(Def.PayloadCount, 32));
+    const Fixed BlastRadius = Def.Radius.Raw > 0 ? Def.Radius : Fixed::FromInt(500);
+
+    // Impact points share TroopDrop's scatter discipline so the salvo pattern is
+    // reproducible on every peer.
+    Random& Rng = World.GetRandom();
+    std::vector<Vec2> Impacts;
+    Impacts.reserve(static_cast<uint32_t>(Warheads));
+    for (int32_t W = 0; W < Warheads; ++W)
+    {
+        const int32_t Angle = WrapAngle(((W * kAngleTurn) / Warheads) + Rng.NextRange(-256, 256));
+        const Fixed Dist = BlastRadius * Rng.NextUnitFixed();
+        Impacts.push_back(Location + Vec2::FromAngle(Angle) * Dist);
+    }
+
+    const Fixed BlastRadiusSq = BlastRadius * BlastRadius;
+    const std::vector<EntityCore>& Cores = World.GetAllCores();
+    for (uint32_t I = 0; I < uint32_t(Cores.size()); ++I)
+    {
+        if (!Cores[I].bAlive || Cores[I].Owner == Player)
+        {
+            continue;
+        }
+
+        const TransformComp* T = World.GetTransform(World.MakeId(I));
+        if (T == nullptr || (T->Position - Location).LengthSquared() > BlastRadiusSq)
+        {
+            continue;
+        }
+
+        // Each warhead contributes its damage with linear falloff to zero at the
+        // blast edge. Accumulating in Fixed and rounding once keeps the result a
+        // pure integer function of position -- identical on every machine.
+        Fixed TotalDamage = Fixed::Zero();
+        for (const Vec2& Impact : Impacts)
+        {
+            const Fixed D = Distance(T->Position, Impact); // FxSqrt: deterministic
+            if (D < BlastRadius)
+            {
+                TotalDamage += Fixed::FromInt(Def.Damage) * (Fixed::One() - (D / BlastRadius));
+            }
+        }
+
+        const int64_t RoundedDamage = TotalDamage.ToIntRound();
+        const int32_t DamageAmount = static_cast<int32_t>(std::clamp<int64_t>(
+            RoundedDamage,
+            static_cast<int64_t>(std::numeric_limits<int32_t>::min()),
+            static_cast<int64_t>(std::numeric_limits<int32_t>::max())));
+        if (DamageAmount <= 0)
+        {
+            continue;
+        }
+
+        const HealthComp* HRead = World.GetHealth(World.MakeId(I));
+        if (HRead == nullptr)
+        {
+            continue;
+        }
+
+        HealthComp* H = const_cast<HealthComp*>(HRead);
+        H->Current = std::max(0, H->Current - DamageAmount);
+        if (H->Current == 0)
+        {
+            const_cast<EntityCore&>(Cores[I]).bAlive = false;
+        }
+    }
+}
+
+void ProtocolRuntime::ApplyRadiusStatus(PlayerId Caster, const Vec2& Center, Fixed Radius,
+                                        const StatusComp& Template, bool bEnemiesOnly, SimWorld& World)
+{
+    const Fixed RadiusSq = Radius * Radius;
+    const std::vector<EntityCore>& Cores = World.GetAllCores();
+    for (uint32_t I = 0; I < uint32_t(Cores.size()); ++I)
+    {
+        if (!Cores[I].bAlive || Cores[I].Kind != EntityKind::Unit)
+        {
+            continue;
+        }
+
+        const EntityId Id = World.MakeId(I);
+
+        // Boarded units are dormant cargo; like SimWorld::ApplyStatusInRadius we
+        // skip them rather than shield/stun someone hidden inside a transport.
+        const PassengerComp* Ride = World.GetPassengerOf(Id);
+        if (Ride != nullptr && Ride->Transport.IsValid())
+        {
+            continue;
+        }
+
+        if (bEnemiesOnly && !World.IsHostile(Caster, Cores[I].Owner))
+        {
+            continue;
+        }
+
+        const TransformComp* T = World.GetTransform(Id);
+        if (T == nullptr || DistanceSquared(Center, T->Position) > RadiusSq)
+        {
+            continue;
+        }
+
+        const StatusComp* SRead = World.GetStatus(Id);
+        if (SRead == nullptr)
+        {
+            continue;
+        }
+
+        // Keep the larger countdown per effect so overlapping casts can never
+        // shorten an effect that is already ticking.
+        StatusComp* S = const_cast<StatusComp*>(SRead);
+        S->StunTicks = std::max(S->StunTicks, Template.StunTicks);
+        S->FreezeTicks = std::max(S->FreezeTicks, Template.FreezeTicks);
+        S->ShrinkTicks = std::max(S->ShrinkTicks, Template.ShrinkTicks);
+        S->InfectionTicks = std::max(S->InfectionTicks, Template.InfectionTicks);
+        S->InvulnerableTicks = std::max(S->InvulnerableTicks, Template.InvulnerableTicks);
     }
 }
 
