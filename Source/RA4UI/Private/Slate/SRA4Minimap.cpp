@@ -7,6 +7,7 @@
 #include "HAL/PlatformTime.h"
 #include "Rendering/DrawElements.h"
 #include "Styling/CoreStyle.h"
+#include "Engine/Texture2D.h"
 
 void SRA4Minimap::Construct(const FArguments& InArgs)
 {
@@ -32,6 +33,21 @@ void SRA4Minimap::SetSnapshot(
 void SRA4Minimap::SetViewportWorldBounds(const FBox2D& InBounds)
 {
     ViewportWorldBounds = InBounds;
+    Invalidate(EInvalidateWidgetReason::Paint);
+}
+
+void SRA4Minimap::SetBackgroundTexture(UTexture2D* InTexture)
+{
+    if (BackgroundTexture == InTexture)
+    {
+        return;
+    }
+    BackgroundTexture = InTexture;
+    BackgroundBrush.SetResourceObject(InTexture);
+    BackgroundBrush.ImageSize = InTexture
+        ? FVector2f(InTexture->GetSurfaceWidth(), InTexture->GetSurfaceHeight())
+        : FVector2f(96.0f, 96.0f);
+    BackgroundBrush.DrawAs = ESlateBrushDrawType::Image;
     Invalidate(EInvalidateWidgetReason::Paint);
 }
 
@@ -80,6 +96,16 @@ int32 SRA4Minimap::OnPaint(
         OutDrawElements, LayerId,
         AllottedGeometry.ToPaintGeometry(), WhiteBrush,
         ESlateDrawEffect::None, FLinearColor(0.008f, 0.018f, 0.022f, 0.96f));
+
+    // The explored-map texture (terrain x shroud), stretched over the whole
+    // panel: one textured element instead of up to 9216 cell boxes.
+    if (BackgroundTexture != nullptr)
+    {
+        FSlateDrawElement::MakeBox(
+            OutDrawElements, LayerId + 1,
+            AllottedGeometry.ToPaintGeometry(), &BackgroundBrush,
+            ESlateDrawEffect::None, FLinearColor::White);
+    }
 
     for (int32 LineIndex = 1; LineIndex < 6; ++LineIndex)
     {

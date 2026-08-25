@@ -73,9 +73,15 @@ protected:
     virtual TSharedRef<SWidget> RebuildWidget() override;
     virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
+    virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 private:
     void ApplyShowcaseSnapshot();
+    void UpdateMinimapViewportBounds();
+
+    UPROPERTY(Transient)
+    TObjectPtr<class URA4MinimapWidget> TacticalMinimap;
+    uint32 MinimapBackgroundRevisionSeen = 0;
     void HandleHUDChanged(ERA4HUDChangeFlags Changes);
     void RefreshResources();
     void RefreshSelection();

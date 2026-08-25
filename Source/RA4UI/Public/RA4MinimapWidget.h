@@ -28,6 +28,15 @@ public:
     UFUNCTION(BlueprintCallable, Category = "RA4|Minimap")
     void SetViewportWorldBounds(FVector2D Min, FVector2D Max);
 
+    /**
+     * Bakes the explored-map cells (terrain x shroud, row-major) into one
+     * background texture. Call only when the snapshot's background revision
+     * changed -- the upload is the expensive part of the minimap.
+     */
+    UFUNCTION(BlueprintCallable, Category = "RA4|Minimap")
+    void SetBackground(const TArray<uint8>& Terrain, const TArray<uint8>& Shroud,
+        int32 Width, int32 Height);
+
     UFUNCTION(BlueprintPure, Category = "RA4|Minimap")
     int32 GetMarkerCount() const { return Markers.Num(); }
 
@@ -58,6 +67,9 @@ private:
     FBox2D ViewportWorldBounds = FBox2D(EForceInit::ForceInit);
     int32 LocalPlayer = 0;
     TSharedPtr<SRA4Minimap> SlateMinimap;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UTexture2D> BackgroundTexture = nullptr;
 };
 
 /** UMG integration point for the batched world-space marker overlay. */

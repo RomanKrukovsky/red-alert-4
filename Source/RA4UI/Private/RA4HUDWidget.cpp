@@ -639,6 +639,7 @@ TSharedRef<SWidget> URA4HUDWidget::RebuildWidget()
 
     URA4MinimapWidget* Minimap = WidgetTree->ConstructWidget<URA4MinimapWidget>(
         URA4MinimapWidget::StaticClass(), TEXT("TacticalMinimap"));
+    TacticalMinimap = Minimap;
     Minimap->SetSnapshot(MakeShowcaseRadarMarkers(), FVector2D(100.0f, 100.0f), 0);
     Minimap->SetViewportWorldBounds(FVector2D(18.0f, 54.0f), FVector2D(46.0f, 82.0f));
     const FVector2D MinimapPosition(1590.0f, 80.0f);
@@ -1102,3 +1103,83 @@ void URA4HUDWidget::IssuePrimaryCommand()
 }
 
 #undef LOCTEXT_NAMESPACE
+
+void URA4HUDWidget::NativeTick(const FGeometry& MyGeometry, const float InDeltaTime)
+{
+    Super::NativeTick(MyGeometry, InDeltaTime);
+    static bool bTickLogged = false;
+    if (!bTickLogged)
+    {
+        bTickLogged = true;
+        UE_LOG(LogTemp, Display, TEXT("RA4HUD: NativeTick running, minimap=%s"),
+            TacticalMinimap != nullptr ? TEXT("bound") : TEXT("NULL"));
+    }
+
+    UWorld* WidgetWorld = GetWorld();
+    URA4UIDataProviderSubsystem* Provider = WidgetWorld
+        ? WidgetWorld->GetSubsystem<URA4UIDataProviderSubsystem>()
+        : nullptr;
+    if (Provider == nullptr || TacticalMinimap == nullptr)
+    {
+        return;
+    }
+
+    // Contacts: the provider has already fog-filtered them.
+    TacticalMinimap->SetSnapshot(
+        Provider->GetRadarMarkers(),
+        Provider->GetRadarMapSize(),
+        Provider->GetRadarLocalPlayer());
+
+    // Explored-map background: re-upload only when exploration changed.
+    static uint32 LastBackgroundRevision = 0;
+    const int32 Revision = Provider->GetMinimapBackgroundRevision();
+    if (Revision != LastBackgroundRevision)
+    {
+        LastBackgroundRevision = Revision;
+        TacticalMinimap->SetBackground(
+            Provider->GetMinimapTerrain(),
+            Provider->GetMinimapShroud(),
+            Provider->GetMinimapCellCounts().X,
+            Provider->GetMinimapCellCounts().Y);
+    }
+
+    UpdateMinimapViewportBounds();
+}
+
+void URA4HUDWidget::UpdateMinimapViewportBounds()
+{
+    const APlayerController* PC = GetOwningPlayer();
+    if (PC == nullptr || PC->PlayerCameraManager == nullptr || TacticalMinimap == nullptr)
+    {
+        return;
+    }
+    FVector CamLoc;
+    FRotator CamRot;
+    PC->GetPlayerViewPoint(CamLoc, CamRot);
+    if (FMath::Abs(CamRot.Vector().Z) < 1e-4f)
+    {
+        return;
+    }
+    // Ground-plane intersection under the camera centre.
+    const float Distance = -CamLoc.Z / CamRot.Vector().Z;
+    if (Distance <= 0.0f)
+    {
+        return;
+    }
+    const FVector Focus = CamLoc + CamRot.Vector() * Distance;
+    const float HalfFovRad = FMath::DegreesToRadians(PC->PlayerCameraManager->GetFOVAngle() * 0.5f);
+    const float HalfWidth = Distance * FMath::Tan(HalfFovRad) * 1.4f;
+    const float HalfHeight = HalfWidth * (16.0f / 9.0f) * 0.8f;
+    FVector Forward = CamRot.Vector();
+    Forward.Z = 0.0f;
+    if (Forward.SizeSquared2D() < 1e-6f)
+    {
+        return;
+    }
+    Forward.Normalize();
+    const FVector Right(Forward.Y, -Forward.X, 0.0f);
+    const FVector MinCorner = Focus - Forward * HalfHeight - Right * HalfWidth;
+    const FVector MaxCorner = Focus + Forward * HalfHeight + Right * HalfWidth;
+    TacticalMinimap->SetViewportWorldBounds(
+        FVector2D(MinCorner.X, MinCorner.Y), FVector2D(MaxCorner.X, MaxCorner.Y));
+}

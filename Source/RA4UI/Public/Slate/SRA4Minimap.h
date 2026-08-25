@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "RA4HUDTypes.h"
 #include "Widgets/SLeafWidget.h"
+#include "Styling/SlateBrush.h"
 
 DECLARE_DELEGATE_OneParam(FOnRA4MapCommand, FVector2D);
 DECLARE_DELEGATE_OneParam(FOnRA4CameraJump, FVector2D);
@@ -25,6 +26,9 @@ public:
         FVector2D InWorldSize,
         int32 InLocalPlayer);
     void SetViewportWorldBounds(const FBox2D& InBounds);
+
+    /** Terrain/shroud baked into one texture; drawn under grid and contacts. */
+    void SetBackgroundTexture(UTexture2D* InTexture);
 
     int32 GetMarkerCount() const { return Markers.Num(); }
 
@@ -50,4 +54,6 @@ private:
     FOnRA4MapCommand OnMapCommand;
     FOnRA4CameraJump OnCameraJump;
     mutable bool bPaintTimingLogged = false;
+    UTexture2D* BackgroundTexture = nullptr;
+    FSlateBrush BackgroundBrush;
 };
