@@ -169,6 +169,9 @@ public:
     void CheatGrantPower(PlayerId Owner, int32_t PowerAmount);
     void CheatInstantBuild(PlayerId Owner);
     void CheatToggleGodMode(PlayerId Owner);
+    void CheatRevealMap(PlayerId Owner);
+    void CheatKillAllEnemies(PlayerId Owner);
+    void CheatHealAll(PlayerId Owner);
 
     // --- Determinism, Snapshots & Save/Restore -----------------------------
     // Hashes every value that can influence future state. Deliberately excludes

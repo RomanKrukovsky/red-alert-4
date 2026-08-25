@@ -2646,6 +2646,39 @@ void SimWorld::CheatToggleGodMode(PlayerId Owner)
     }
 }
 
+void SimWorld::CheatRevealMap(PlayerId Owner)
+{
+    if (FogGrid)
+    {
+        FogGrid->RevealRadarArea(Owner, 0, 0, 9999);
+    }
+}
+
+void SimWorld::CheatKillAllEnemies(PlayerId Owner)
+{
+    for (size_t Index = 0; Index < Core.size(); ++Index)
+    {
+        if (Core[Index].bAlive && Core[Index].Owner != Owner && Core[Index].Owner < kMaxPlayers)
+        {
+            PendingDestroy.push_back(MakeId(uint32_t(Index)));
+        }
+    }
+}
+
+void SimWorld::CheatHealAll(PlayerId Owner)
+{
+    for (size_t Index = 0; Index < Core.size(); ++Index)
+    {
+        if (Core[Index].bAlive && Core[Index].Owner == Owner)
+        {
+            if (Index < Healths.size())
+            {
+                Healths[Index].Current = Healths[Index].Max;
+            }
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Systems
 // ---------------------------------------------------------------------------
