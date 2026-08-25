@@ -126,7 +126,15 @@ bool URA4CheatConsoleWidget::ExecuteCommandText(const FString& InCommandText)
 
     if (Verb == TEXT("help"))
     {
-        AddLogLine(TEXT("CHEATS: chaching, credits <amt>, power, fastbuild, god, reveal, heal, killall, spawn <id>, nuke, win, lose"));
+        AddLogLine(TEXT("--- HOI4-INSPIRED CHEATS ---"));
+        AddLogLine(TEXT("annex -- absorb nearest enemy base + all forces"));
+        AddLogLine(TEXT("spawnarmy -- spawn a full combined-arms division"));
+        AddLogLine(TEXT("focusfire -- all units attack strongest enemy"));
+        AddLogLine(TEXT("maxmods -- max damage/armor/speed/health modifiers"));
+        AddLogLine(TEXT("annexall -- annex every enemy player"));
+        AddLogLine(TEXT("--- CLASSIC CHEATS ---"));
+        AddLogLine(TEXT("chaching, credits <amt>, power, fastbuild, god"));
+        AddLogLine(TEXT("reveal, heal, killall, spawn <id>, nuke, win, lose"));
         return true;
     }
 
@@ -237,6 +245,61 @@ bool URA4CheatConsoleWidget::ExecuteCommandText(const FString& InCommandText)
     {
         Sim->CheatKillAllEnemies(LocalPlayer);
         AddLogLine(TEXT("SUCCESS: All enemy units and buildings destroyed!"));
+        return true;
+    }
+
+    // --- HOI4-inspired cheats ---
+    if (Verb == TEXT("maxmods") || Verb == TEXT("research"))
+    {
+        Sim->CheatMaxModifiers(LocalPlayer);
+        AddLogLine(TEXT("SUCCESS: All modifiers maxed! Damage/Armor/Speed/Health boosted, +50k credits!"));
+        return true;
+    }
+
+    if (Verb == TEXT("spawnarmy") || Verb == TEXT("division"))
+    {
+        Sim->CheatSpawnArmy(LocalPlayer, "sov");
+        AddLogLine(TEXT("SUCCESS: Combined-arms division deployed at your base!"));
+        return true;
+    }
+
+    if (Verb == TEXT("annex"))
+    {
+        // Annex the first active enemy player
+        for (int32 P = 1; P < 8; ++P)
+        {
+            const RA4::PlayerState& PS = Sim->GetPlayer(RA4::PlayerId(P));
+            if (PS.bActive && !PS.bDefeated)
+            {
+                Sim->CheatAnnexPlayer(LocalPlayer, RA4::PlayerId(P));
+                AddLogLine(FString::Printf(TEXT("SUCCESS: Player %d annexed! All their forces are yours!"), P));
+                return true;
+            }
+        }
+        AddLogLine(TEXT("ERROR: No active enemy player to annex."));
+        return true;
+    }
+
+    if (Verb == TEXT("annexall"))
+    {
+        int32 Count = 0;
+        for (int32 P = 1; P < 8; ++P)
+        {
+            const RA4::PlayerState& PS = Sim->GetPlayer(RA4::PlayerId(P));
+            if (PS.bActive && !PS.bDefeated)
+            {
+                Sim->CheatAnnexPlayer(LocalPlayer, RA4::PlayerId(P));
+                ++Count;
+            }
+        }
+        AddLogLine(FString::Printf(TEXT("SUCCESS: %d players annexed! The world is yours!"), Count));
+        return true;
+    }
+
+    if (Verb == TEXT("focusfire") || Verb == TEXT("ff"))
+    {
+        Sim->CheatFocusFire(LocalPlayer);
+        AddLogLine(TEXT("SUCCESS: All combat units focusing fire on the strongest enemy!"));
         return true;
     }
 

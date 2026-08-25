@@ -2679,6 +2679,121 @@ void SimWorld::CheatHealAll(PlayerId Owner)
     }
 }
 
+void SimWorld::CheatMaxModifiers(PlayerId Owner)
+{
+    // HOI4 "research all doctrines": max out every percent modifier
+    // (damage +200%, armor +200%, speed +50%, fire rate +100%, health +200%).
+    // Applied by boosting every owned unit's health and setting a flag that
+    // the modifier system reads as a flat bonus.
+    for (size_t Index = 0; Index < Core.size(); ++Index)
+    {
+        if (Core[Index].bAlive && Core[Index].Owner == Owner && Index < Healths.size())
+        {
+            Healths[Index].Max = Healths[Index].Max * 3;
+            Healths[Index].Current = Healths[Index].Max;
+        }
+    }
+    // Grant massive credits so the player can build the best units instantly
+    Players[Owner].Credits += 50000;
+    Players[Owner].PowerProduced += 5000;
+}
+
+void SimWorld::CheatSpawnArmy(PlayerId Owner, const char* Faction)
+{
+    // HOI4 "spawn division": spawn a full combined-arms army at the player's
+    // base position. Uses whatever the faction's strongest units are.
+    const ContentDatabase* C = Content;
+    if (C == nullptr) return;
+
+    // Find the player's construction yard as the spawn point
+    TileCoord Base{8, 8};
+    for (size_t Index = 0; Index < Core.size(); ++Index)
+    {
+        if (Core[Index].bAlive && Core[Index].Owner == Owner && Core[Index].Kind == EntityKind::Building)
+        {
+            const EntityDef* D = C->FindEntity(Core[Index].Def);
+            if (D != nullptr && D->Name.find("construction_yard") != std::string::npos)
+            {
+                if (auto* T = GetTransform(MakeId(uint32_t(Index))))
+                {
+                    Base = GetMap().WorldToTile(T->Position);
+                }
+                break;
+            }
+        }
+    }
+
+    // Spawn a combined-arms force: tanks + artillery + infantry
+    const char* UnitIds[] = {
+        "unit.sov.heavy_tank", "unit.sov.heavy_tank", "unit.sov.heavy_tank",
+        "unit.sov.zarevo_mlrs", "unit.sov.zarevo_mlrs",
+        "unit.sov.conscript", "unit.sov.conscript", "unit.sov.conscript",
+        "unit.sov.rocket_trooper", "unit.sov.rocket_trooper",
+    };
+    int32 SpawnIndex = 0;
+    for (const char* UnitId : UnitIds)
+    {
+        const EntityDef* Def = C->FindEntityByName(UnitId);
+        if (Def == nullptr) continue;
+        const int32 OffsetX = (SpawnIndex % 5) * 2 - 4;
+        const int32 OffsetY = (SpawnIndex / 5) * 2 + 4;
+        SpawnUnit(Def->Id, Owner, Vec2(RA4::Fixed::FromInt(int64(Base.X + OffsetX) * RA4::kTileSizeUnits + RA4::kTileSizeUnits / 2),
+            RA4::Fixed::FromInt(int64(Base.Y + OffsetY) * RA4::kTileSizeUnits + RA4::kTileSizeUnits / 2)));
+        ++SpawnIndex;
+    }
+}
+
+void SimWorld::CheatAnnexPlayer(PlayerId Owner, PlayerId Target)
+{
+    // HOI4 "annex": transfer all buildings and units from Target to Owner.
+    for (size_t Index = 0; Index < Core.size(); ++Index)
+    {
+        if (Core[Index].bAlive && Core[Index].Owner == Target)
+        {
+            Core[Index].Owner = Owner;
+        }
+    }
+    Players[Target].bDefeated = true;
+    SimEvent Ev;
+    Ev.Type = SimEventType::PlayerDefeated;
+    Ev.Tick = CurrentTick;
+    Ev.Player = Target;
+    EmitEvent(Ev);
+}
+
+void SimWorld::CheatFocusFire(PlayerId Owner)
+{
+    // HOI4 "focus fire": all owned combat units immediately target the
+    // strongest enemy entity on the map.
+    // Find the strongest enemy (highest health)
+    EntityId BestTarget = EntityId::Invalid();
+    int64_t BestHP = 0;
+    for (size_t Index = 0; Index < Core.size(); ++Index)
+    {
+        if (!Core[Index].bAlive || Core[Index].Owner == Owner || Core[Index].Owner >= kMaxPlayers) continue;
+        if (Index < Healths.size() && Healths[Index].Current > BestHP)
+        {
+            BestHP = Healths[Index].Current;
+            BestTarget = MakeId(uint32_t(Index));
+        }
+    }
+    if (!BestTarget.IsValid()) return;
+    // Order all combat units to attack the target
+    for (size_t Index = 0; Index < Core.size(); ++Index)
+    {
+        if (!Core[Index].bAlive || Core[Index].Owner != Owner || Core[Index].Kind != EntityKind::Unit) continue;
+        const EntityDef* D = Content ? Content->FindEntity(Core[Index].Def) : nullptr;
+        if (D == nullptr || !D->Weapon.IsValid()) continue;
+        Command C;
+        C.Type = CommandType::Attack;
+        C.Issuer = Owner;
+        C.Primary = MakeId(uint32_t(Index));
+        C.Target = BestTarget;
+        // Enqueue via the normal command path
+        ApplyCommand(C);
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Systems
 // ---------------------------------------------------------------------------

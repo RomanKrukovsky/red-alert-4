@@ -172,6 +172,10 @@ public:
     void CheatRevealMap(PlayerId Owner);
     void CheatKillAllEnemies(PlayerId Owner);
     void CheatHealAll(PlayerId Owner);
+    void CheatMaxModifiers(PlayerId Owner);
+    void CheatSpawnArmy(PlayerId Owner, const char* Faction);
+    void CheatAnnexPlayer(PlayerId Owner, PlayerId Target);
+    void CheatFocusFire(PlayerId Owner);
 
     // --- Determinism, Snapshots & Save/Restore -----------------------------
     // Hashes every value that can influence future state. Deliberately excludes
