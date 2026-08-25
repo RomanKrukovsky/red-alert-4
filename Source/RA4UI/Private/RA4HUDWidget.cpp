@@ -1107,8 +1107,18 @@ void URA4HUDWidget::IssuePrimaryCommand()
 void URA4HUDWidget::NativeTick(const FGeometry& MyGeometry, const float InDeltaTime)
 {
     Super::NativeTick(MyGeometry, InDeltaTime);
+    static bool bTickLogged = false;
+    if (!bTickLogged)
+    {
+        bTickLogged = true;
+        UE_LOG(LogTemp, Display, TEXT("RA4HUD: NativeTick running, minimap=%s"),
+            TacticalMinimap != nullptr ? TEXT("bound") : TEXT("NULL"));
+    }
 
-    URA4UIDataProviderSubsystem* Provider = GetProvider();
+    UWorld* WidgetWorld = GetWorld();
+    URA4UIDataProviderSubsystem* Provider = WidgetWorld
+        ? WidgetWorld->GetSubsystem<URA4UIDataProviderSubsystem>()
+        : nullptr;
     if (Provider == nullptr || TacticalMinimap == nullptr)
     {
         return;

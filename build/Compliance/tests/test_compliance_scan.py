@@ -74,6 +74,19 @@ class ComplianceScanTests(unittest.TestCase):
         violations = self.scan_repo(repo_root)
         self.assertTrue(any(item.rule_id == "missing_provenance" for item in violations))
 
+    def test_extensionless_utf8_dotfile_is_scanned_as_text(self) -> None:
+        repo_root = self.make_repo("clean_repo", add_all=False)
+        dotfile_path = repo_root / "Docs" / "UI" / "VisualDiff" / ".gitignore"
+        dotfile_path.parent.mkdir(parents=True, exist_ok=True)
+        dotfile_path.write_text("# Command & Conquer reference\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(repo_root), "add", "-A"], check=True)
+
+        violations = self.scan_repo(repo_root)
+
+        dotfile_violations = [item for item in violations if item.path == "Docs/UI/VisualDiff/.gitignore"]
+        self.assertTrue(any(item.rule_id == "command_and_conquer_identifier" for item in dotfile_violations))
+        self.assertFalse(any(item.rule_id == "missing_provenance" for item in dotfile_violations))
+
     def test_valid_suppression_hides_known_violation(self) -> None:
         repo_root = self.make_repo("forbidden_identifier")
         suppressions_path = repo_root / "Build" / "Compliance" / "policy" / "suppressions.json"

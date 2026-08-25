@@ -19,8 +19,7 @@ The Red Alert 4 (RA4) project is a deterministic real-time strategy (RTS) game b
   - `RA4InputTests`: 51/51 passed
   - `RA4PresentationTests`: 23/23 passed
 - **Simulation Engine**: 100% functional, deterministic, decoupled from UObjects/Engine headers.
-- **Unreal Engine 5 Build**: **BLOCKED** for NoesisGUI compilation due to missing `Plugins/NoesisGUI` plugin in repo, despite C++ ViewModels existing in `Source/RA4UI/`.
-- **Web UI (`ra4-ui`)**: Prototype Vite/React application compiles and builds (`dist/` present), serving as an out-of-engine visualizer.
+- **Unreal UI Stack**: **CommonUI + UMG + Slate** is the supported production stack; the obsolete web prototype was removed on August 25, 2026.
 
 ---
 
@@ -41,7 +40,7 @@ The Red Alert 4 (RA4) project is a deterministic real-time strategy (RTS) game b
 | `RA4AI` | Runtime | `Default` | `RA4Core`, `RA4Simulation` | **FULLY FUNCTIONAL** |
 | `RA4Network` | Runtime | `Default` | `RA4Core`, `RA4Simulation` | **FULLY FUNCTIONAL** |
 | `RA4Campaign` | Runtime | `Default` | `RA4Core`, `RA4Simulation` | **FULLY FUNCTIONAL** |
-| `RA4UI` | Runtime | `Default` | `UMG`, `CommonUI`, `ModelViewViewModel` | **BLOCKED_PLUGIN_MISSING** |
+| `RA4UI` | Runtime | `Default` | `UMG`, `CommonUI`, `ModelViewViewModel` | **FUNCTIONAL_NATIVE_STACK** |
 | `RA4Editor` | Editor | `Default` | `UnrealEd`, `RA4Core` | **FUNCTIONAL** |
 | `RA4Tests` | Test | `Default` | All modules | **378/378 PASS** |
 
@@ -59,8 +58,8 @@ The Red Alert 4 (RA4) project is a deterministic real-time strategy (RTS) game b
 | **AI Commander** | **Working** | `AICommander` strategy utility loop (Assault, Fortify, Tech, Economy) completes 5 skirmish scenarios deterministically. |
 | **WASD & Camera Input** | **Working** | Screen panning, edge scroll, bounds clamping verified in `Camera.*` tests. |
 | **Building Display & Placement** | **Partial** | `URA4BuildingPlacementController` handles grid validation; mesh rendering depends on blockout art mapping. |
-| **NoesisGUI Integration** | **Broken/Blocked** | ViewModels authored in `Source/RA4UI`, but Noesis plugin is missing from `RedAlert4.uproject`. |
-| **Packaged Game Build** | **Blocked** | Missing plugin prevents standard `UnrealBuildTool` packaging. |
+| **Native UI Integration** | **Functional** | CommonUI routing, UMG widgets, Slate minimap/world markers, and C++ event snapshots are the supported production path. |
+| **Packaged Game Build** | **Blocked** | Packaging remains unverified; no NoesisGUI dependency is involved. |
 
 ---
 

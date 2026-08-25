@@ -11,7 +11,7 @@ false at this commit, and which described a CI file (`ci.yml`) and a default map
 ## 1. The editor target builds — verified, not assumed
 
 ```
-$ "/Users/Shared/Epic Games/UE_5.8/Engine/Build/BatchFiles/Mac/Build.sh" \
+$ "<UE_ROOT>/Engine/Build/BatchFiles/Mac/Build.sh" \
     RedAlert4Editor Mac Development -Project=".../RedAlert4.uproject"
 ...
 [23/23] Link [Apple] libUnrealEditor-RedAlert4.dylib
@@ -33,7 +33,7 @@ Noesis runtime and the build cannot be blocked by the missing plugin. See UI_AUD
 | `RedAlert4.uproject` `EngineAssociation` | **5.8** |
 | Installed and used for this build | **5.8.1** |
 | CLAUDE.md project brief | **5.6** |
-| `/Users/Shared/Epic Games/UE_5.6` | present but **broken** — no `Engine/Build/Build.version`, no `Engine/Binaries/Mac`, only `Binaries/`, `Intermediate/`, `Plugins/`, `docs` |
+| UE 5.6 installation | present but **broken** — no `Engine/Build/Build.version`, no `Engine/Binaries/Mac`, only `Binaries/`, `Intermediate/`, `Plugins/`, `docs` |
 
 The project is really on 5.8 and 5.8 works. CLAUDE.md's "5.6" is out of date and should be
 corrected, or the decision to move to 5.8 recorded in an ADR. The half-installed 5.6 tree
@@ -101,7 +101,7 @@ GlobalDefaultGameMode=/Script/RedAlert4.RA4SkirmishGameMode
 ; DefaultGame.ini
 ProjectName=Red Alert 4
 ProjectVersion=0.1.0
-Description=Internal working title. No Electronic Arts licence; no Command & Conquer content.
+Description=Internal working title. Uses only project-owned content.
 Culture=ru
 BuildConfiguration=PPBC_Shipping
 UsePakFile=True

@@ -519,7 +519,6 @@ def scan_path_inventory(
                 f"Forbidden extension '{suffix}' under production roots.",
             )
 
-        should_read_as_text = suffix in TEXT_EXTENSIONS or suffix in forbidden_extensions
         is_known_binary = suffix in binary_extensions
 
         if is_known_binary:
@@ -535,23 +534,8 @@ def scan_path_inventory(
                 )
             continue
 
-        file_bytes = b""
-        is_text = should_read_as_text
-        if should_read_as_text:
-            file_bytes = read_bytes(normalized_path)
-            is_text = looks_text_bytes(file_bytes, suffix)
-        else:
-            if not any(coverage_matches(covered_path, normalized_path) for covered_path in provenance_paths):
-                maybe_add_violation(
-                    violations,
-                    seen,
-                    suppressions,
-                    "missing_provenance",
-                    scope,
-                    normalized_path,
-                    "Binary production asset is not covered by a valid provenance record.",
-                )
-            continue
+        file_bytes = read_bytes(normalized_path)
+        is_text = looks_text_bytes(file_bytes, suffix)
 
         if not is_text:
             if not any(coverage_matches(covered_path, normalized_path) for covered_path in provenance_paths):

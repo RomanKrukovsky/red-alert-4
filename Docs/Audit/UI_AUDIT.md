@@ -1,13 +1,14 @@
-# RA4 — UI Audit
+# RA4 — UI Audit (Historical Record)
 
 **Audit date:** 2026-08-04
 **Pinned commit:** `d915757`
 
-Supersedes the previous version, which reported the Noesis integration as a build blocker
-(it is not) and described web-UI features (JSON WebSocket bridge, live match viewer) and
-ultrawide scaling support that could not be confirmed.
+This is a historical audit of the pre-remediation repository state. The abandoned Noesis,
+React/Vite, and web-prototype artifacts described below were removed on 2026-08-25. The
+current production stack is CommonUI + UMG + Slate; this document is not a current UI
+architecture guide.
 
-## 1. Three parallel UI stacks exist; one is real
+## 1. Three parallel UI stacks existed; one was real
 
 | Stack | Volume | Wired into the build? | Verdict |
 | --- | --- | --- | --- |

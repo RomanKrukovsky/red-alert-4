@@ -166,7 +166,7 @@ bool FRA4ScreenContractTest::RunTest(const FString& Parameters)
 Run:
 
 ```bash
-"/Users/Shared/Epic Games/UE_5.8/Engine/Build/BatchFiles/Mac/Build.sh" RedAlert4Editor Mac Development "/absolute/path/RedAlert4.uproject" -WaitMutex
+"<UE_ROOT>/Engine/Build/BatchFiles/Mac/Build.sh" RedAlert4Editor Mac Development "RedAlert4.uproject" -WaitMutex
 ```
 
 Expected: compilation fails because the screen contract does not exist.
@@ -182,7 +182,7 @@ Change `URA4UINavigationService::ApplyInputModeForScreen` to use `ResolveScreenC
 - [ ] **Step 5: Build and run automation tests**
 
 ```bash
-"/Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor-Cmd" RedAlert4.uproject \
+"<UE_ROOT>/Engine/Binaries/Mac/UnrealEditor-Cmd" RedAlert4.uproject \
   -unattended -nop4 -nullrhi \
   -ExecCmds="Automation RunTests RA4.UI.Contracts; Quit" \
   -testexit="Automation Test Queue Empty"
@@ -535,7 +535,7 @@ Validate required class, screen ID, theme, background policy, focusability, bind
 Run:
 
 ```bash
-"/Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor-Cmd" RedAlert4.uproject \
+"<UE_ROOT>/Engine/Binaries/Mac/UnrealEditor-Cmd" RedAlert4.uproject \
   -run=pythonscript -script=Tools/Editor/ValidateRA4UI.py -unattended -nop4
 ```
 

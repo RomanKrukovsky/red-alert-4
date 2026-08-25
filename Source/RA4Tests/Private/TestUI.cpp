@@ -89,7 +89,8 @@ RA4_TEST(UI, WASDCameraPanningAndBoundsClamping)
     Camera.SetMapBounds(Vec2f(0.0f, 0.0f), Vec2f(10000.0f, 10000.0f));
     Camera.FocusOn(Vec2f(5000.0f, 5000.0f), true);
 
-    // Pan Up (W key -> +Y) and Right (D key -> -X focus)
+    // With the north-up zero-degree opening yaw, W and D move up/right on screen.
+    // In this camera basis W increases world Y while D decreases world X.
     Camera.SetKeyboardPan(1.0f, 1.0f);
     Camera.Update(0.5f);
 

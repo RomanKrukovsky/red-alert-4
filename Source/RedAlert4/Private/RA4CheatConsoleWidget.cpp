@@ -126,7 +126,7 @@ bool URA4CheatConsoleWidget::ExecuteCommandText(const FString& InCommandText)
 
     if (Verb == TEXT("help"))
     {
-        AddLogLine(TEXT("CHEATS: chaching, credits <amt>, power, fastbuild, god, spawn <id>, reveal, nuke, win, lose"));
+        AddLogLine(TEXT("CHEATS: chaching, credits <amt>, power, fastbuild, god, reveal, heal, killall, spawn <id>, nuke, win, lose"));
         return true;
     }
 
@@ -218,6 +218,27 @@ bool URA4CheatConsoleWidget::ExecuteCommandText(const FString& InCommandText)
 
     // win / lose / surrender were handled above, before the mutable-world gate, because
     // they are real Commands and must travel the ordinary player path.
+
+    if (Verb == TEXT("reveal") || Verb == TEXT("revealmap"))
+    {
+        Sim->CheatRevealMap(LocalPlayer);
+        AddLogLine(TEXT("SUCCESS: Full map revealed!"));
+        return true;
+    }
+
+    if (Verb == TEXT("heal"))
+    {
+        Sim->CheatHealAll(LocalPlayer);
+        AddLogLine(TEXT("SUCCESS: All your forces healed to full!"));
+        return true;
+    }
+
+    if (Verb == TEXT("killall") || Verb == TEXT("destroyenemies"))
+    {
+        Sim->CheatKillAllEnemies(LocalPlayer);
+        AddLogLine(TEXT("SUCCESS: All enemy units and buildings destroyed!"));
+        return true;
+    }
 
     if (Verb == TEXT("nuke"))
     {

@@ -31,7 +31,7 @@ One benign warning, worth cleaning: `ld: warning: ignoring duplicate libraries:
 ### 1.2 Unreal Build Tool — command actually run
 
 ```
-"/Users/Shared/Epic Games/UE_5.8/Engine/Build/BatchFiles/Mac/Build.sh" \
+"<UE_ROOT>/Engine/Build/BatchFiles/Mac/Build.sh" \
   RedAlert4Editor Mac Development -Project=.../RedAlert4.uproject
 ```
 
@@ -171,7 +171,7 @@ ctest --test-dir /tmp/ra4-verify --output-on-failure
 /tmp/ra4-verify/RA4Tests --filter=VerticalSlice.FullMatch
 
 # unreal editor target
-"/Users/Shared/Epic Games/UE_5.8/Engine/Build/BatchFiles/Mac/Build.sh" \
+"<UE_ROOT>/Engine/Build/BatchFiles/Mac/Build.sh" \
   RedAlert4Editor Mac Development -Project="$PWD/RedAlert4.uproject"
 ```
 

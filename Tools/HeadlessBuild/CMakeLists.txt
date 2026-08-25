@@ -1,9 +1,7 @@
 # Headless build of the Red Alert 4 simulation core.
 #
 # The core modules deliberately have no Unreal dependency, so they compile with a
-# plain toolchain in seconds. CI runs this on every commit; the far slower Unreal
-# build and Gauntlet suite run on merge. Both compile the identical sources -- this
-# is not a parallel implementation.
+# plain toolchain in seconds and run in CI on every commit.
 cmake_minimum_required(VERSION 3.20)
 project(RedAlert4Core CXX)
 
@@ -165,9 +163,6 @@ add_library(RA4AI STATIC
     ${RA4_SOURCE_ROOT}/RA4AI/Private/OpponentModel.cpp
     ${RA4_SOURCE_ROOT}/RA4AI/Private/ThreatMap.cpp
     ${RA4_SOURCE_ROOT}/RA4AI/Private/ValueMap.cpp
-    ${RA4_SOURCE_ROOT}/RA4AI/Private/AIDirectors.cpp
-    ${RA4_SOURCE_ROOT}/RA4AI/Private/OpponentModel.cpp
-    ${RA4_SOURCE_ROOT}/RA4AI/Private/BattlePredictor.cpp
     ${RA4_SOURCE_ROOT}/RA4AI/Private/AILeague.cpp
     ${RA4_SOURCE_ROOT}/RA4AI/Private/TacticalCombatMicro.cpp
 )
@@ -226,7 +221,7 @@ add_executable(RA4Tests
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestCrowdSeparation.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestTankGunnery.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestFoundation.cpp
-    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestRA3Gameplay.cpp
+    ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestGameplayMechanics.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestRollbackNetcode.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestPresentationFX.cpp
     ${RA4_SOURCE_ROOT}/RA4Tests/Private/TestAIStage5.cpp

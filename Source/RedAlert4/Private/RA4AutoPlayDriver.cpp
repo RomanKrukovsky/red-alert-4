@@ -327,7 +327,8 @@ namespace
 		{
 			const auto& C = Cores[I];
 			if (C.bAlive && C.Kind == RA4::EntityKind::Building && C.Owner != LocalPlayer() &&
-				C.Owner < RA4::kMaxPlayers && World.GetPlayer(C.Owner).bActive)
+				C.Owner < RA4::kMaxPlayers && World.GetPlayer(C.Owner).bActive &&
+				World.IsEntityVisibleTo(LocalPlayer(), I))
 			{
 				const auto* T = World.GetTransform(World.MakeId(I));
 				if (T != nullptr)
@@ -341,7 +342,8 @@ namespace
 		{
 			const auto& C = Cores[I];
 			if (C.bAlive && C.Kind == RA4::EntityKind::Unit && C.Owner != LocalPlayer() &&
-				C.Owner < RA4::kMaxPlayers && World.GetPlayer(C.Owner).bActive)
+				C.Owner < RA4::kMaxPlayers && World.GetPlayer(C.Owner).bActive &&
+				World.IsEntityVisibleTo(LocalPlayer(), I))
 			{
 				const auto* T = World.GetTransform(World.MakeId(I));
 				if (T != nullptr)

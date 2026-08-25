@@ -193,23 +193,6 @@
       "release_allowed": true
     },
     {
-      "asset_id": "GEN-NOESIS-XAML-01",
-      "path": "Assets/Noesis",
-      "sha256": "fa57abb8464b590afcb27ea8e9e74d32f9d34d34c713e0df57157256cd2462ed",
-      "artifact_kind": "xaml_ui",
-      "creator": "Red Alert 4 project",
-      "creation_date": "2026-08-06",
-      "source_type": "generated_from_internal",
-      "source_uri_or_contract": "authored in this repository",
-      "license": "Project-owned",
-      "commercial_use_allowed": true,
-      "contains_third_party_ip": false,
-      "similarity_review_status": "reviewed",
-      "reviewer": "compliance reconciliation 2026-08-06",
-      "comment": "XAML screens and controls authored in this project for the Noesis UI prototype. Covering subtree entry, 6 files.",
-      "release_allowed": true
-    },
-    {
       "asset_id": "GEN-UI-ART-01",
       "path": "Content/RA4UI/Art",
       "sha256": "0b9bcee7ce0897faf89048796efdb3575bc708e4df7ca9569be5f54fbcb9886a",
@@ -361,6 +344,23 @@
       "reviewer": "compliance reconciliation 2026-08-06",
       "comment": "Raw ambientCG texture downloads under CC0. Covering subtree entry, 69 files; digest is over the tree.",
       "release_allowed": true
+    },
+    {
+      "asset_id": "TPA-CITYPARK-GROUND-01",
+      "path": "Content/ThirdParty/CityPark/Materials/Ground/MI_Ground01.uasset",
+      "sha256": "14a7ebe9eb6fa66c0a6ebb4ac8b49f7145aff58c10d23dc095c52b31f1ce5bb7",
+      "artifact_kind": "third_party_material",
+      "creator": "UNKNOWN -- pending owner input",
+      "creation_date": "2026-08-25",
+      "source_type": "third_party",
+      "source_uri_or_contract": "UNRECORDED -- origin and licence not established",
+      "license": "UNKNOWN",
+      "commercial_use_allowed": false,
+      "contains_third_party_ip": true,
+      "similarity_review_status": "pending",
+      "reviewer": "compliance reconciliation 2026-08-25",
+      "comment": "The indexed CityPark material has no entitlement or licence evidence in the repository. This record inventories the file without clearing it for release; see Docs/Production/THIRD_PARTY_PACK_AUDIT.md.",
+      "release_allowed": false
     },
     {
       "asset_id": "TPA-EPICGAMES-PLACEHOLDER-01",

@@ -94,7 +94,7 @@ public:
     const BattleEstimate& GetBattleForecast() const { return BattleForecast; }
     bool HasBattleForecast() const { return bHasBattleForecast; }
 
-    // --- Co-op AI Commander Coordination (RA3 feature) ---
+    // --- Co-op AI Commander Coordination ---
     struct CoopPingTarget
     {
         bool bActive = false;

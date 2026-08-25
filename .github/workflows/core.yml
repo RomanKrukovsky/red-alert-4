@@ -8,21 +8,69 @@ on:
     branches: [ main, feature/* ]
 
 jobs:
-  compliance-scan:
-    name: Compliance Scan
+  repository-hygiene:
+    name: Repository Hygiene
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      - name: Reject unsafe tracked paths and legacy React UI
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          python3 -B - <<'PY'
+          import subprocess
+          import sys
+
+          paths = [
+              path.decode("utf-8", "surrogateescape")
+              for path in subprocess.check_output(["git", "ls-files", "-z"]).split(b"\0")
+              if path
+          ]
+
+          failures = []
+          paths_by_casefold = {}
+          for path in paths:
+              folded_path = path.casefold()
+              previous_path = paths_by_casefold.setdefault(folded_path, path)
+              if previous_path != path:
+                  failures.append(
+                      "case-fold collision: " + previous_path + " <-> " + path
+                  )
+
+          bytecode_paths = [path for path in paths if path.lower().endswith(".pyc")]
+          if bytecode_paths:
+              failures.append("tracked Python bytecode: " + ", ".join(bytecode_paths))
+
+          legacy_react_paths = [
+              path
+              for path in paths
+              if path.casefold() == "ra4-ui" or path.casefold().startswith("ra4-ui/")
+          ]
+          if legacy_react_paths:
+              failures.append("legacy ra4-ui path is still tracked: " + ", ".join(legacy_react_paths))
+
+          if failures:
+              print("Repository hygiene check failed:", file=sys.stderr)
+              print("\\n".join("- " + failure for failure in failures), file=sys.stderr)
+              raise SystemExit(1)
+
+          print("Repository hygiene check passed.")
+          PY
+
       - name: Run Compliance Unit Tests
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
         run: python3 -m unittest discover -s build/Compliance/tests -p "test_*.py" -v
 
       - name: Run Blocking Compliance Scanner
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
         run: python3 build/Compliance/compliance_scan.py --scope index
 
   headless:
     name: Headless Simulation (${{ matrix.os }})
-    needs: [compliance-scan]
+    needs: [repository-hygiene]
     strategy:
       fail-fast: false
       matrix:
@@ -101,7 +149,7 @@ jobs:
 
   sanitizers:
     name: ASan & UBSan Check (Linux)
-    needs: [compliance-scan]
+    needs: [repository-hygiene]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

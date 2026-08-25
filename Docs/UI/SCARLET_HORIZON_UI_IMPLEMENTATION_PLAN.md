@@ -9,7 +9,7 @@
 
 | Параметр | Факт |
 |---|---|
-| Проект | `/Users/romanmolodyko/Documents/Scarlet-Horizon/RedAlert4.uproject` |
+| Проект | `RedAlert4.uproject` в корне репозитория |
 | Движок | Unreal Engine **5.8**, Mac ARM64 (`CLAUDE.md` называет 5.6 — устарело) |
 | Правила агентов | `AGENTS.md` в репозитории **отсутствует**; действует `CLAUDE.md` |
 | Модуль UI | `Source/RA4UI` — C++, UMG, Slate, CommonUI, ModelViewViewModel |
@@ -17,13 +17,13 @@
 
 ```bash
 # Сборка редактора
-"/Users/Shared/Epic Games/UE_5.8/Engine/Build/BatchFiles/Mac/Build.sh" \
+"<UE_ROOT>/Engine/Build/BatchFiles/Mac/Build.sh" \
   RedAlert4Editor Mac Development \
-  -Project="/Users/romanmolodyko/Documents/Scarlet-Horizon/RedAlert4.uproject" -waitmutex
+  -Project="RedAlert4.uproject" -waitmutex
 
 # Автотесты интерфейса
-"/Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor-Cmd" \
-  "/Users/romanmolodyko/Documents/Scarlet-Horizon/RedAlert4.uproject" \
+"<UE_ROOT>/Engine/Binaries/Mac/UnrealEditor-Cmd" \
+  "RedAlert4.uproject" \
   -ExecCmds="Automation RunTests RA4.UI; Quit" \
   -unattended -nopause -nosplash -nullrhi -ReportExportPath=<dir>
 

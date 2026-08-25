@@ -1,67 +1,64 @@
-# 🎮 Red Alert 4 (Working Title)
+# Red Alert 4 (working title)
 
-A real-time strategy (RTS) game prototype built on a **100% deterministic, engine-independent C++ simulation core** with **Unreal Engine 5** as the presentation layer.
+Red Alert 4 is an RTS prototype with a deterministic, engine-independent C++ simulation and an Unreal Engine 5.8 presentation layer. `RedAlert4.uproject` is the Unreal project; the workspace directory is `Scarlet-Horizon`.
 
-> ⚠️ **Disclaimer.** "Red Alert 4" is an internal working title for demonstration purposes. The project holds no Electronic Arts license and contains zero EA assets, code, or copyrighted data. All faction names, terminology, and content live in data assets and localization keys.
+> **Clean-room project.** “Red Alert 4” is an internal working title. The repository contains no Electronic Arts assets, source code, or data.
 
----
+## Highlights
 
-## 🌟 Highlights & Features
+- Deterministic simulation core using fixed-point math (`Fixed48.16`).
+- Headless C++ build and test harness under `Tools/HeadlessBuild`; it does not require Unreal Engine.
+- RTS economy, production, combat, navigation, AI, replay, campaign, and presentation systems.
+- Native Unreal UI: **CommonUI + UMG + Slate** with C++ view models and presentation snapshots.
+- The former React/Vite and Noesis prototypes were removed. They are not supported production UI paths.
 
-- **Engine-Free C++ Core**: 100% deterministic simulation built with fixed-point math (`Fixed48.16`). Compiles in seconds and runs 242 automated tests without launching Unreal Engine.
-- **Playable Skirmish Match Loop**: HQ construction, energy & credit economy, harvester mining loops, unit production queues, armor/warhead combat matrix, and AI commander profiles (Aggressive, Defensive, Economic, Adaptive).
-- **Pathfinding & Formations**: Hierarchical NavGrid, FlowField navigation, ReservationGrid local avoidance, and squad formations.
-- **RTS HUD & UI**: MVVM-based sidebar HUD with production cards, minimap fog of war, control groups, and match statistics.
-- **AI Voice Lines**: Over 300 Russian voice lines generated using neural TTS (`VoxCPM`), covering 8 events per unit (`Selected`, `Move`, `Attack`, `Ability`, `Damaged`, `Elite`, `Idle`, `Death`).
-- **AI Music**: Thematic background gameplay tracks generated with Suno AI.
+## Quick start
 
----
-
-## 🛠 Quick Start
-
-### 1. Building and Running the Headless C++ Core (Fastest)
-
-The simulation has zero Unreal dependencies. You can compile and run all 242 tests in a few seconds:
+From the workspace root, configure, build, and run the headless test suite:
 
 ```bash
-cmake -S Tools/HeadlessBuild -B build/hb -DCMAKE_BUILD_TYPE=Release
-cmake --build build/hb -j8
-./build/hb/RA4Tests
+cmake -S Tools/HeadlessBuild -B build/headless -DCMAKE_BUILD_TYPE=Release
+cmake --build build/headless --parallel
+ctest --test-dir build/headless --output-on-failure
 ```
 
-### 2. Launching in Unreal Engine 5 (UE 5.6 / 5.8)
+For a clean build, choose a new build directory rather than deleting an existing one:
 
-1. Open `RedAlert4.uproject` in **Unreal Engine 5**.
-2. Open the main skirmish level: `/Game/Maps/RA4_Skirmish_Production.umap`.
-3. Click **Play (PIE)**:
-   - **WASD / Mouse edges**: Pan RTS camera (scroll wheel to zoom).
-   - **LMB**: Select units / drag-box group selection.
-   - **RMB**: Contextual move / attack commands.
-   - **Sidebar**: Queue buildings and units.
-
----
-
-## 📁 Repository Structure
-
-```
-Source/RA4Core/         Fixed-point math (48.16), RNG, IDs, serialization
-Source/RA4Content/      Unit data definitions, damage matrix, content hash validation
-Source/RA4Simulation/   Match state, System-of-Arrays (SoA) storage, gameplay systems
-Source/RA4Navigation/   NavGrid, FlowField, ReservationGrid, squad formations
-Source/RA4AI/           AI Commander profiles (Doctrines, Operations, WorldView)
-Source/RA4Replay/       Replay recorder, playback, checksum verification
-Source/RedAlert4/       Unreal presentation layer (Entity Actors, Landscape, Camera)
-Source/RA4UI/           RTS HUD (MVVM sidebar, minimap, building placement)
-Tools/HeadlessBuild/    CMake harness for the engine-free modules
-Audio/Voice/            Generated neural voice lines, manifests, and speaker profiles
-Docs/                   Architecture ADRs, threat models, and implementation guides
+```bash
+cmake -S Tools/HeadlessBuild -B build/headless-clean -DCMAKE_BUILD_TYPE=Release
+cmake --build build/headless-clean --parallel
+ctest --test-dir build/headless-clean --output-on-failure
 ```
 
----
+## Unreal Engine 5.8
 
-## 🎨 3D AI Integration Guide
+Install Unreal Engine **5.8** and open `RedAlert4.uproject` from the workspace root. If `UnrealEditor` is available on your `PATH`, use:
 
-The gameplay mechanics and simulation are fully functional, while the visual layer currently uses primitive blockouts. The project is designed as an ideal "before & after" canvas for 3D AI workflows:
-- **Concept Art**: Generate unit/building concepts using ChatGPT ImageGen.
-- **3D Generation**: Convert concepts into 3D meshes using **Tripo3D** or **Hunyuan3D**.
-- **Engine Setup**: Replace grey blockouts in `/Content/RA4/` with generated FBX models, PBR materials, and animations.
+```bash
+UnrealEditor RedAlert4.uproject
+```
+
+The project descriptor enables CommonUI, ModelViewViewModel, Enhanced Input, and Gameplay Abilities. In the editor, open `/Game/Maps/RA4_Skirmish_Production` and start Play in Editor to exercise the RTS controls and native HUD.
+
+## Repository layout
+
+```
+Source/RA4Core/         Fixed-point math, commands, identifiers
+Source/RA4Content/      Content definitions and validation
+Source/RA4Simulation/   Match state and gameplay systems
+Source/RA4Navigation/   Navigation, flow fields, reservations, formations
+Source/RA4AI/           AI commander and tactical systems
+Source/RA4Replay/       Replay recording and verification
+Source/RedAlert4/       Unreal presentation module
+Source/RA4UI/           CommonUI, UMG, Slate, and UI view models
+Tools/HeadlessBuild/    CMake/CTest harness for engine-free modules
+Docs/                   Architecture, production, and agent documentation
+```
+
+## Documentation
+
+- [Quick start](QUICK_START.md)
+- [Contributing](CONTRIBUTING.md)
+- [Project handoff](HANDOFF.md)
+- [Current project state](Docs/Agent/PROJECT_STATE.md)
+- [Current project status](Docs/Agent/PROJECT_STATUS.md)

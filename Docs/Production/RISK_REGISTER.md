@@ -20,7 +20,7 @@ Severity Ratings:
 | Risk ID | Risk Category | Risk Description | Probability | Impact | Severity Rating | Mitigation Strategy |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **RISK-01** | **Legal / IP** | **Command & Conquer / Red Alert Trademark Infringement**: Use of EA trademarked names (`RedAlert4`, `Soviet`, `Allied`, `Tiberium`, `EVA`). | High | Critical | **CRITICAL** | Perform complete identifier neutralization pass across project names, data assets, and audio. |
-| **RISK-02** | **Legal / IP** | **Unlicensed Proprietary Font Embedding**: `Druk Cyr` font referenced in Noesis XAML assets without verifiable commercial license. | Medium | High | **HIGH** | Replace font in `Typography.xaml` with open-source SIL OFL fonts (`Oswald`, `Inter`, `Bebas Neue`). |
+| **RISK-02** | **Legal / IP** | **Native UI font provenance**: CommonUI/UMG/Slate loads the bundled `RA4_RobotoCondensedRegular` and `RA4_RobotoCondensedSemiBold` font assets, but their commercial-use provenance is not recorded in the repository. | Medium | High | **HIGH** | Obtain and record commercial-use clearance for the font files under `Content/RA4UI/Fonts/` before release, or replace them with fonts whose license is documented in the project license inventory. |
 | **RISK-03** | **Legal / IP** | **Non-Commercial Third-Party 3D Assets**: Sketchfab / external 3D models with `CC-BY-NC` or `Editorial Use Only` licenses. | Medium | Medium | **MEDIUM** | Audit all imported 3D mesh assets in `Content/ThirdParty/` and replace non-commercial licenses with in-house or CC0 assets. |
 
 ---
@@ -29,7 +29,7 @@ Severity Ratings:
 
 | Risk ID | Risk Category | Risk Description | Probability | Impact | Severity Rating | Mitigation Strategy |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **RISK-04** | **Engine / Build** | **Missing NoesisGUI Unreal Engine Plugin**: Noesis plugin absent from `Plugins/` prevents standard Unreal Build Tool compilation. | High | Critical | **CRITICAL** | Install NoesisGUI UE5 plugin into `Plugins/NoesisGUI` OR implement `#if WITH_NOESIS` preprocessor guards. |
+| **RISK-04** | **Engine / Build** | **Native UI build integration**: CommonUI/UMG/Slate assets and code must remain covered by the standard Unreal build. | Medium | High | **HIGH** | Keep the native CommonUI + UMG + Slate stack in the Unreal targets and verify it with the UI validation/build gates. |
 | **RISK-05** | **Architecture** | **Presentation Polling Overhead**: `URA4PresentationSubsystem` polls all simulation entity positions every frame during high entity counts (>1000). | Low | High | **MEDIUM** | Implement a dirty entity queue or delta-event push mechanism from `SimWorld` to presentation subsystem. |
 | **RISK-06** | **Determinism** | **Unreal Engine Float Non-Determinism in Presentation**: Visual actors mutating simulation state via physics overlap or float precision drift. | Low | Critical | **HIGH** | Maintain strict architectural boundary: Presentation layer only reads from simulation snapshots; never mutates `SimWorld`. |
 
@@ -39,7 +39,7 @@ Severity Ratings:
 
 | Risk ID | Risk Category | Risk Description | Probability | Impact | Severity Rating | Mitigation Strategy |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **RISK-07** | **UI / Tech Debt** | **Tri-Layer UI Fragmentation**: Concurrent existence of NoesisGUI, Slate/UMG, and `ra4-ui` Web prototype. | High | Medium | **HIGH** | Deprecate `ra4-ui` prototype and standardize on single production frontend framework (UMG or NoesisGUI). |
+| **RISK-07** | **UI / Tech Debt** | **Legacy web UI prototype**: The abandoned `ra4-ui` React/Vite prototype could be mistaken for a supported production client. | Low | Low | **LOW** | **Resolved 2026-08-25**: removed `ra4-ui/` and its obsolete implementation brief; CommonUI + UMG + Slate is the only supported production UI stack. |
 | **RISK-08** | **Input** | **Dormant Direct Control Possession Mode**: Unit possession (`F` key) exists in C++ but lacks PlayerController HUD integration. | Medium | Low | **LOW** | Connect possession toggle event to `RA4PlayerController` and present input prompt in HUD. |
 
 ---

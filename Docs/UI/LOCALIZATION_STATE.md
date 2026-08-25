@@ -106,7 +106,7 @@ Unreal сбрасывает перевод, если изменился исхо
 
 ```bash
 # Пересобрать локализацию после правок текста
-"/Users/Shared/Epic Games/UE_5.8/Engine/Binaries/Mac/UnrealEditor-Cmd" \
+"<UE_ROOT>/Engine/Binaries/Mac/UnrealEditor-Cmd" \
   RedAlert4.uproject -run=GatherText -config="Config/Localization/Game.ini" \
   -unattended -nopause -nosplash -nullrhi
 

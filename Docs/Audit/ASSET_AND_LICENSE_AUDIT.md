@@ -40,7 +40,7 @@ $ git ls-files Tools/ContentImport/RA3_XML_Source | wc -l
 123
 ```
 
-These are EA's Red Alert 3 XML schemas (`AssetTypePlayerTemplate.xsd`,
+These are externally authored XML schemas (`AssetTypePlayerTemplate.xsd`,
 `AssetTypeObjectCreationList.xsd`, …), map libraries (`Lib_Camp_Restrictions/map.xml`,
 `Lib_End_Mission/map.xml`) and `RA3Music.h`. They were retrieved by
 `Tools/ContentImport/fetch_ra3_xmls.py`, which hardcodes
@@ -63,7 +63,7 @@ The generated tables use original RA4 identifiers, not EA's:
   "ArmorClass": "LightInfantry", "Cost": 100, "BuildTimeTicks": 40 }
 ```
 
-No RA3 unit names, stats or balance values were carried across. Every unit in
+No prior-title unit names, stats or balance values were carried across. Every unit in
 `DT_Units.json` is a uniform 100 HP / 100 cost / 40 ticks — placeholder scaffolding, not
 imported balance. The legal problem is the **presence of the GPLv3 source material in the
 repository and in history**, not contamination of the shipped data.

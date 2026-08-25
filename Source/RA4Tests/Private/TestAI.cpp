@@ -41,6 +41,9 @@ struct AIMatch
     bool bCommanderActive[2] = {false, false};
     int32_t PeakBuildings[2] = {0, 0};
     int32_t PeakUnits[2] = {0, 0};
+    int32_t AttackMoveCommands[2] = {0, 0};
+    int32_t AttackCommands[2] = {0, 0};
+    int32_t HostileDamageEvents[2] = {0, 0};
 
     explicit AIMatch(uint64_t Seed = 20260728)
     {
@@ -82,10 +85,39 @@ struct AIMatch
                     Commanders[P].Tick(World, Frame.Commands);
                 }
             }
+            for (const Command& Cmd : Frame.Commands)
+            {
+                if (Cmd.Issuer >= 2)
+                {
+                    continue;
+                }
+                if (Cmd.Type == CommandType::AttackMove)
+                {
+                    AttackMoveCommands[Cmd.Issuer] += 1;
+                }
+                else if (Cmd.Type == CommandType::Attack)
+                {
+                    AttackCommands[Cmd.Issuer] += 1;
+                }
+            }
             // The commanders consume events from the previous simulation tick.
             // Clear them only after every commander has observed them.
             World.ClearEvents();
             World.Tick(Frame.Commands.empty() ? nullptr : &Frame);
+            const std::vector<EntityCore>& Cores = World.GetAllCores();
+            for (const SimEvent& Event : World.GetEvents())
+            {
+                if (Event.Type != SimEventType::DamageApplied || Event.Player >= 2 ||
+                    Event.Entity.Index >= Cores.size())
+                {
+                    continue;
+                }
+                const PlayerId Victim = Cores[Event.Entity.Index].Owner;
+                if (Victim < 2 && Victim != Event.Player)
+                {
+                    HostileDamageEvents[Event.Player] += 1;
+                }
+            }
             for (PlayerId P = 0; P < 2; ++P)
             {
                 PeakBuildings[P] = std::max(PeakBuildings[P], CountBuildings(P));
@@ -380,20 +412,52 @@ RA4_TEST(AI, AttacksOnceTheArmyReachesStrength)
     M.Enable(0, AIProfile::Aggressive);
     M.Run(SecondsToTicks(300));
 
-    // The enemy headquarters must have taken damage, which only happens if the AI
-    // built an army, walked it across the map and engaged.
-    const EntityId EnemyYard = FindFirstOfType(M.World, 1, Ids::AllConYard);
-    bool bEngaged = false;
-    if (!EnemyYard.IsValid())
+    // A real hostile DamageApplied event proves that the army crossed the map and
+    // attacked. Pinning the check to one headquarters rejected valid attacks on
+    // another enemy target and hid which part of the operation had actually run.
+    const TacticalOperation& Operation = M.Commanders[0].GetActiveOperation();
+    std::printf("         aggressive @300s: armed=%d state=%s assigned=%zu "
+                "target=(%d,%d) attack-move=%d attack=%d hostile-damage=%d\n",
+                M.CountArmed(0), ToString(Operation.State), Operation.AssignedUnits.size(),
+                Operation.TargetLocation.X, Operation.TargetLocation.Y,
+                M.AttackMoveCommands[0], M.AttackCommands[0], M.HostileDamageEvents[0]);
+    RA4_EXPECT(M.HostileDamageEvents[0] > 0);
+}
+
+RA4_TEST(AI, AttackMoveClosesFromSightRangeIntoWeaponRange)
+{
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    SimWorld World;
+    World.Initialize(&Content, MakeTestSetup(20260825));
+    World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(2, 2), true);
+    World.SpawnBuilding(Ids::AllConYard, 1, TileCoord(50, 50), true);
+
+    // A conscript sees 7 m but fires only 6 m. Place the hostile rifleman between
+    // those radii: AttackMove must close the last metre instead of stopping on sight.
+    const EntityId Attacker = World.SpawnUnit(
+        Ids::SovConscript, 0, Vec2(Fixed::FromInt(4000), Fixed::FromInt(4000)));
+    const EntityId Victim = World.SpawnUnit(
+        Ids::AllRifleman, 1, Vec2(Fixed::FromInt(4650), Fixed::FromInt(4000)));
+
+    CommandFrame Frame;
+    Frame.Tick = World.GetTick();
+    Command Move;
+    Move.Type = CommandType::AttackMove;
+    Move.Issuer = 0;
+    Move.Primary = Attacker;
+    Move.Location = Vec2(Fixed::FromInt(7000), Fixed::FromInt(4000));
+    Frame.Commands.push_back(Move);
+    World.Tick(&Frame);
+    for (int32_t I = 0; I < 80 && World.IsAlive(Victim); ++I)
     {
-        bEngaged = true;   // already destroyed
+        World.ClearEvents();
+        World.Tick(nullptr);
     }
-    else if (const HealthComp* Health = M.World.GetHealth(EnemyYard))
-    {
-        bEngaged = Health->Current < Health->Max;
-    }
-    std::printf("         aggressive @300s: armed=%d, enemy HQ engaged=%d\n", M.CountArmed(0), bEngaged ? 1 : 0);
-    RA4_EXPECT(bEngaged);
+
+    const HealthComp* VictimHealth = World.GetHealth(Victim);
+    RA4_EXPECT(!World.IsAlive(Victim) ||
+               (VictimHealth != nullptr && VictimHealth->Current < VictimHealth->Max));
 }
 
 RA4_TEST(AI, RecentDamageTriggersDefenceStrategy)

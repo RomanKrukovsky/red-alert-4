@@ -95,8 +95,8 @@ RA4_TEST(Camera, KeyboardPanMovesTheFocusAndSettles)
     CameraController Cam = MakeCamera();
     const Vec2f Start = Cam.GetFocus();
 
-    // Pan.X = 1 is "D": screen-right. The camera's screen-right is world -X (see
-    // CameraController::Update), so the focus moves toward -X, not +X.
+    // Pan.X = 1 is "D": screen-right. At the north-up opening angle, screen-right
+    // is world -X.
     Cam.SetKeyboardPan(1.0f, 0.0f);
     Advance(Cam, 1.0f);
     RA4_EXPECT(Cam.GetFocus().X < Start.X);
@@ -114,9 +114,9 @@ RA4_TEST(Camera, DiagonalPanIsNotFasterThanCardinalPan)
     CameraController Cardinal = MakeCamera();
     Cardinal.SetKeyboardPan(1.0f, 0.0f);
     Advance(Cardinal, 1.0f);
-    // Signed distance, not direction, is what this test cares about: D moves the
-    // focus toward world -X (screen-right), so this is negative by design.
-    const float CardinalDistance = std::fabs(Cardinal.GetTargetFocus().X - 6400.0f);
+    const float CardinalDX = Cardinal.GetTargetFocus().X - 6400.0f;
+    const float CardinalDY = Cardinal.GetTargetFocus().Y - 6400.0f;
+    const float CardinalDistance = std::sqrt(CardinalDX * CardinalDX + CardinalDY * CardinalDY);
 
     CameraController Diagonal = MakeCamera();
     Diagonal.SetKeyboardPan(1.0f, 1.0f);
@@ -172,8 +172,8 @@ RA4_TEST(Camera, EdgeScrollOnlyRunsWhenTheWindowIsFocused)
     CameraController Focused = MakeCamera();
     Focused.SetCursorPosition(2.0f, 500.0f, true);
     Advance(Focused, 1.0f);
-    // Cursor near the left screen edge scrolls the view toward what's off the left
-    // side, which is world +X (screen-right is -X here; see CameraController::Update).
+    // Cursor near the left screen edge scrolls the view toward screen-left. At the
+    // north-up opening angle, that is world +X.
     RA4_EXPECT(Focused.GetTargetFocus().X > 6400.0f);
 }
 
@@ -214,7 +214,7 @@ RA4_TEST(Camera, PanIsFrameRateIndependent)
     // The smoothed position trails it and cannot be identical -- an exponential
     // approach evaluated in 30 steps lands slightly ahead of one evaluated in 240 --
     // but the gap must stay far below anything a player could perceive.
-    // D pans toward world -X, so this is negated to keep the magnitude positive.
+    // D pans toward world -X at the north-up opening angle.
     const float Travelled = 6400.0f - Fast.GetFocus().X;
     RA4_EXPECT(Travelled > 0.0f);
     RA4_EXPECT_NEAR(Fast.GetFocus().X, Slow.GetFocus().X, Travelled * 0.02f);
@@ -232,6 +232,23 @@ RA4_TEST(Camera, FocusOnJumpsInstantlyWhenAsked)
     RA4_EXPECT(Cam.GetFocus().X < 2000.0f);
     Advance(Cam, 2.0f);
     RA4_EXPECT_NEAR(Cam.GetFocus().X, 9000.0f, 20.0f);
+}
+
+RA4_TEST(Camera, ResetRotationRestoresNorthUpScreenMovement)
+{
+    CameraController Cam = MakeCamera();
+    Cam.AddYawDegrees(90.0f);
+    Cam.ResetRotation();
+
+    // Reset must restore the opening north-up view in the documented public yaw
+    // range. W then continues to move toward the top of the screen, which is +Y
+    // in the north-up world orientation.
+    RA4_EXPECT_NEAR(Cam.GetYawDegrees(), 0.0f, 0.01f);
+    const Vec2f Start = Cam.GetFocus();
+    Cam.SetKeyboardPan(0.0f, 1.0f); // W
+    Advance(Cam, 0.5f);
+    RA4_EXPECT_NEAR(Cam.GetFocus().X, Start.X, 1.0f);
+    RA4_EXPECT(Cam.GetFocus().Y > Start.Y + 1.0f);
 }
 
 // ---------------------------------------------------------------------------
@@ -941,12 +958,13 @@ RA4_TEST(Camera, PanFollowsTheCameraWhenItRotates)
     CameraController Cam = MakeCamera();
     const Vec2f Start = Cam.GetFocus();
 
-    // Yaw 0: the camera looks down +Y, so pushing forward increases Y and leaves X.
+    // Opening yaw 0 keeps north at the top of the screen, so pushing forward
+    // increases Y and leaves X unchanged.
     Cam.SetKeyboardPan(0.0f, 1.0f);
     Advance(Cam, 0.5f);
     const Vec2f Unrotated = Cam.GetFocus();
-    RA4_EXPECT(Unrotated.Y > Start.Y + 1.0f);
     RA4_EXPECT(std::fabs(Unrotated.X - Start.X) < 1.0f);
+    RA4_EXPECT(Unrotated.Y > Start.Y + 1.0f);
 
     // Turn a quarter turn and push forward again: the motion must now be along the
     // other world axis, not still along +Y.
@@ -957,8 +975,8 @@ RA4_TEST(Camera, PanFollowsTheCameraWhenItRotates)
     Advance(Rotated, 0.5f);
     const Vec2f RotatedEnd = Rotated.GetFocus();
 
+    RA4_EXPECT(RotatedEnd.X < RotatedStart.X - 1.0f);
     RA4_EXPECT(std::fabs(RotatedEnd.Y - RotatedStart.Y) < 1.0f);
-    RA4_EXPECT(std::fabs(RotatedEnd.X - RotatedStart.X) > 1.0f);
 }
 
 RA4_TEST(Camera, YawWrapsAndStaysWithinOneTurn)
@@ -973,8 +991,8 @@ RA4_TEST(Camera, YawWrapsAndStaysWithinOneTurn)
 RA4_TEST(Camera, DKeyPansRightAndAKeyPansLeftOnScreen)
 {
     // Regression guard for a real, reported bug: D moved the view left and A moved it
-    // right. The camera's screen-right is world -X (the SpringArm's Right vector at
-    // its base yaw of 90 degrees is (-1, 0, 0)), which a previous fix got backwards.
+    // right. At the north-up opening angle, the camera's screen-right is world -X,
+    // which a previous fix got backwards.
     // "Pans right on screen" here means the focus moves so new ground enters from the
     // right edge, i.e. the focus itself moves toward the camera's right vector.
     CameraController Cam = MakeCamera();

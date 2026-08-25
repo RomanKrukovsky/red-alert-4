@@ -1,63 +1,49 @@
-# RA4 — Project Handoff
+# Red Alert 4 project handoff
 
----
+## Identity and environment
 
-You are the Lead C++ / Unreal Engine 5.6 Developer for the RTS project "Red Alert 4" (internal working title, Clean-Room profile — original names, zero EA content).
-Project: `/Users/romanmolodyko/Documents/red-alert-4`.
+- Workspace: `Scarlet-Horizon`
+- Unreal project: `RedAlert4.uproject`
+- Supported engine: **Unreal Engine 5.8**
+- Project status: pre-alpha RTS prototype using a deterministic C++ simulation with an Unreal presentation layer.
+- Clean-room rule: use original content and neutral identifiers; do not add Electronic Arts assets, code, data, or protected names.
 
-## Core Architectural Rule
+## Architecture boundary
 
-The simulation is 100% deterministic and **completely engine-independent**. Modules `RA4Core`, `RA4Content`, `RA4Simulation`, `RA4Navigation`, `RA4Input`, `RA4Presentation`, and `RA4Replay` compile with standard Clang in ~2 seconds and are covered by unit tests. Only `RedAlert4` and `RA4UI` depend on Unreal Engine / UMG.
+`RA4Core`, `RA4Content`, `RA4Simulation`, `RA4Navigation`, `RA4Input`, `RA4Presentation`, `RA4Replay`, and related headless modules are designed to compile without Unreal Engine. The simulation uses fixed-point math and mutates authoritative state through `SimWorld::ApplyCommand`.
 
-No `float` types are used in the simulation — fixed-point math 48.16 (`RA4Core/Fixed.h`) and integer CORDIC are used instead of `libm`. State mutates **exclusively** through `SimWorld::ApplyCommand`, which validates ownership, cost, tech prerequisites, placement, target, and rate limits.
+`RedAlert4` and `RA4UI` provide the Unreal-facing layer. The supported production UI is native **CommonUI + UMG + Slate**, fed by C++ view models and presentation snapshots. The earlier React/Vite and Noesis prototypes were removed and must not be restored as supported build paths.
 
-## Verification Workflow
+## Verification commands
+
+Run from the workspace root:
 
 ```bash
-cd /Users/romanmolodyko/Documents/red-alert-4
-
-# Headless Core test suite (seconds)
-cmake -S Tools/HeadlessBuild -B build/hb && cmake --build build/hb -j8
-./build/hb/RA4Tests                    # 245 passed, 0 failed (verified 2026-08-04)
+cmake -S Tools/HeadlessBuild -B build/headless -DCMAKE_BUILD_TYPE=Release
+cmake --build build/headless --parallel
+ctest --test-dir build/headless --output-on-failure
 ```
 
-## Implemented & Verified Systems
+Use the CMake/CTest workflow above for the engine-free suite; retired script and Python-helper paths are not supported.
 
-| Subsystem | State |
-| --- | --- |
-| Deterministic simulation, 20 Hz tick rate, fixed system order | Working |
-| Commands + full server validation + rate limits | Working |
-| Economy: Harvester mining, credit accumulation, energy degradation | Working |
-| Production: Queues, payments, cancellations with refunds, rally points | Working |
-| Combat: Armor/warhead matrix, projectiles, splash damage, turret rotation | Working |
-| Navigation: NavGrid, Portals, FlowField, ReservationGrid, MNavRouter, Formations | Working |
-| Input: Camera, box selection, contextual right-click, control groups | Working |
-| HUD Data (`RA4Presentation/HudSnapshot`) | Working |
-| Replays: Recording, playback, checksum verification | Working |
-| **Map `/Game/Maps/RA4_Skirmish_Production`** | **Created and verified** |
+For editor work, use Unreal Engine 5.8 to open `RedAlert4.uproject`; if the editor is on `PATH`:
 
-Determinism confirmed: identical checksum across builds with `-O3` and `-O0 + ASan + UBSan`.
+```bash
+UnrealEditor RedAlert4.uproject
+```
 
-## Task 1 — AI Commander Profiles
+## Key checks before handoff
 
-`Source/RA4AI/` contains AI commanders (`AICommander`, `AIStrategy`, `AIDoctrine`) implementing economic, defensive, aggressive, and adaptive strategies.
+1. Keep deterministic code free of Unreal dependencies and non-deterministic state.
+2. Run the headless CMake/CTest sequence after headless changes.
+3. Check the affected UE 5.8 editor or PIE path after Unreal/UI changes.
+4. Keep product documentation aligned with CommonUI + UMG + Slate as the only production UI stack.
+5. Do not claim a fixed total number of tests; report the current command output instead.
 
-- Engine-free module depending on `RA4Simulation` read-only.
-- Generates `std::vector<Command>` validated by server rules.
-- Covered by unit tests in `build/hb/RA4Tests`.
+## Useful references
 
-## Task 2 — Unreal Presentation Layer (PIE)
-
-Open the project in Unreal Editor, press Play (PIE) and verify:
-- WASD camera navigation and edge scrolling, mouse wheel zoom.
-- Left-click unit selection, drag-box group selection.
-- Right-click ground for movement, right-click enemy for attack.
-- Sidebar MVVM HUD with production queues and resource display.
-
-## Design Bible
-
-`RA4_Factions_Units_Economy_Voice_Bible_v2_Naming_Reset.md` contains full specs for 4 factions, economy, ~78 units, damage matrix, and voice lines.
-
-## Documentation Reference
-
-`Docs/Architecture.md`, `Docs/Roadmap.md`, `Docs/ADR/0001..0011`, `Docs/Skirmish_Production_Readiness_Report.md`.
+- [Current project state](Docs/Agent/PROJECT_STATE.md)
+- [Current project status](Docs/Agent/PROJECT_STATUS.md)
+- [Quick start](QUICK_START.md)
+- [Contributing](CONTRIBUTING.md)
+- [Headless build configuration](Tools/HeadlessBuild/CMakeLists.txt)

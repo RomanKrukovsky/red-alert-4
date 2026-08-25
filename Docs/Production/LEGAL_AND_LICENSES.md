@@ -40,7 +40,6 @@ commercial title is the one that ships.
 | **Kenney 3D Assets** | Kenney.nl | CC0 1.0 (Public Domain) | **Permitted** | None required. |
 | **Oswald Font** | Google Fonts | SIL Open Font License 1.1 | **Permitted** | Include OFL license text in `Credits.md`. |
 | **Inter Font** | Google Fonts | SIL Open Font License 1.1 | **Permitted** | Include OFL license text in `Credits.md`. |
-| **React / Vite / Oxlint** | `ra4-ui/` | MIT License | **Permitted** | Retain copyright header in source. |
 | **Freesound SFX (CC-BY)** | Freesound.org | CC-BY 3.0 / 4.0 | **Permitted** | Log author name & clip title in `Audio/ATTRIBUTION.md`. |
 | **QuantumCharacter** | **UNRECORDED — owner input required** | **UNKNOWN** | **BLOCKS RELEASE** | 839 MB, tracked in git, used by `RA4EntityActor.cpp` and `create_art_mappings_and_lab.py` for infantry meshes/animations. No license file in the pack directory. |
 | **IndustryPropsPack6** | **UNRECORDED — owner input required** | **UNKNOWN** | **BLOCKS RELEASE** | 325 MB, tracked in git, referenced by `RA4SkirmishGameMode.cpp` and `inventory_map_assets.py`. No license file in the pack directory. |

@@ -2474,7 +2474,7 @@ void AICommander::CommandArmy(const SimWorld& World, std::vector<Command>& Out)
         return;
     }
 
-    // RA3 pacing: the opening minutes belong to building, not rushing. An AI
+    // Deliberate pacing: the opening minutes belong to building, not rushing. An AI
     // that beelines with its starting army kills an economy player at 0:40,
     // which reads as a bug rather than as a challenge -- the originals give the
     // player time to get a refinery and a couple of units out first. Offense

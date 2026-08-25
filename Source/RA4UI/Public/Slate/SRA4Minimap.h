@@ -55,4 +55,5 @@ private:
     FOnRA4CameraJump OnCameraJump;
     mutable bool bPaintTimingLogged = false;
     UTexture2D* BackgroundTexture = nullptr;
+    FSlateBrush BackgroundBrush;
 };

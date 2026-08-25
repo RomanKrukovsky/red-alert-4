@@ -29,7 +29,6 @@ public class RA4UI : ModuleRules
             "Slate",
             "SlateCore",
             "InputCore",
-            "CommonUI",
             "ModelViewViewModel",
             "EnhancedInput"
 		});

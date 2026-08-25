@@ -6,8 +6,7 @@
 // widget binds to these and renders the reticle, compass, vehicle card, weapon
 // readouts and minimap.
 //
-// No NoesisGUI plugin is installed in this project (see ADR-0006); this uses
-// the same UMG + MVVM stack the rest of the HUD uses.
+// This uses the native CommonUI + UMG + Slate stack used by the rest of the HUD.
 #pragma once
 
 #include "CoreMinimal.h"

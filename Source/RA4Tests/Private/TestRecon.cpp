@@ -2817,6 +2817,7 @@ RA4_TEST(Recon, ObjectiveStateFunnelInventory)
 
 
         "Source/RA4Simulation/Public/RA4Simulation/SimWorld.h",
+        "Source/RedAlert4/Private/RA4AutoPlayDriver.cpp", // OWN x5 + FOG-GATED target selection
         "Source/RedAlert4/Private/RA4PlayerController.cpp", // OWN x2 + LEAK V-B (picking)
         "Source/RedAlert4/Private/RA4ReconDebugOverlay.cpp", // OMNISCIENT-BY-DESIGN (two-maps overlay)
         "Source/RedAlert4/Private/RA4RtsHud.cpp",           // OWN (selection / HUD telemetry)

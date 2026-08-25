@@ -1,471 +1,61 @@
-# 🤝 Contributing to Red Alert 4
+# Contributing to Red Alert 4
 
-Thank you for your interest in contributing to Red Alert 4! This document provides guidelines for contributing to the project.
+Thanks for contributing. This repository is a clean-room RTS project: do not add Electronic Arts assets, source code, data, or protected names to the project.
 
----
+## Set up
 
-## 🎯 How to Contribute
+Clone the repository, enter the `Scarlet-Horizon` workspace, and install:
 
-### **For Developers**
+- CMake 3.20 or later and a C++17 compiler for the headless simulation build.
+- Unreal Engine **5.8** for Unreal modules, assets, and editor testing.
+- Git LFS if your checkout requires LFS-managed assets.
 
-#### 1. Set Up Your Development Environment
+The project file is `RedAlert4.uproject`. It enables the native CommonUI, UMG, Slate, ModelViewViewModel, and Enhanced Input path. React/Vite and Noesis are not supported UI dependencies.
 
-```bash
-# Clone the repository
-git clone https://github.com/your-org/red-alert-4.git
-cd red-alert-4
+## Build and test
 
-# Install Unreal Engine 5.3
-# Add Unreal Engine to your PATH
-# Example: /Users/Shared/Epic Games/UE_5.3/Engine/Binaries/ThirdParty/NotForLicensees
-
-# Install Git LFS
-git lfs install
-
-# Install development dependencies
-pip install -r requirements.txt  # If you have any Python dependencies
-```
-
-#### 2. Build the Project
+From the workspace root:
 
 ```bash
-# Build for development
-./BuildScripts/build_all.sh Win64
-
-# Build for shipping
-./BuildScripts/build_all.sh Win64 --shipping
-
-# Check build artifacts
-ls -la build/Win64/RedAlert4/Content/Paks/
+cmake -S Tools/HeadlessBuild -B build/headless -DCMAKE_BUILD_TYPE=Release
+cmake --build build/headless --parallel
+ctest --test-dir build/headless --output-on-failure
 ```
 
-#### 3. Run Tests
+Use the CMake/CTest commands above for the engine-free suite; retired script and Python-helper paths are not supported.
+
+For Unreal changes, open the project with UE 5.8 and test the affected editor or PIE workflow:
 
 ```bash
-# Run unit tests
-python Tests/run_tests.py
-
-# Run Unreal Automation Tests
-UnrealEditor RedAlert4.uproject -ExecCmds="Automation RunTests RedAlert4" -nullrhi -unattended
-
-# Check test coverage
-python Tools/code_metrics.py
-```
-
----
-
-### **Code Style Guidelines**
-
-#### **C++ Naming Conventions**
-
-```cpp
-// Classes
-class FRedAlert4PlayerManager { ... }
-
-// Structs
-struct FUnitStats { ... }
-
-// Enums
-enum class EResourceType { Ore, Crystal, Power };
-
-// Variables
-int32 CurrentCredits;
-bool bIsActive;
-
-// Constants
-const int32 MAX_PLAYERS = 8;
-
-// Functions
-void CalculateProductionCapacity();
-bool CanAfford(int32 Cost);
-
-// Private members
-int32 _currentCredits;
-FString _unitName;
-```
-
-#### **File Structure**
-
-```
-Source/
-├── Core/                  # Core systems (Economy, Simulation, etc.)
-│   ├── Public/            # Public headers
-│   ├── Private/           # Private implementation
-│   └── Tests/             # Unit tests
-├── Gameplay/              # Gameplay systems (Units, Buildings, etc.)
-├── AI/                    # Artificial Intelligence
-├── Simulation/            # Game simulation
-├── Audio/                 # Audio systems
-└── Content/               # Content files
-```
-
-#### **Documentation Requirements**
-
-Every public class and method must have:
-
-```cpp
-/**
- * Calculates the total production capacity for a given resource type.
- * 
- * @param ResourceType Type of resource to calculate
- * @param bIncludeUpgrades Whether to include building upgrades in calculation
- * @return Total production capacity
- * @see UResourceManager, AProductionBuilding
- */
-int32 CalculateProductionCapacity(EResourceType ResourceType, bool bIncludeUpgrades = true);
-```
-
----
-
-### **Development Workflow**
-
-#### 1. Create a Feature Branch
-
-```bash
-# Create a new branch for your feature
-git checkout -b feature/unit-movement-system
-
-# Or for a bug fix
-git checkout -b bugfix/resource-leak
-```
-
-#### 2. Make Your Changes
-
-```cpp
-// Example: Adding a new unit type
-UCLASS()
-class REDALERT4_API AInfantryUnit : public ACombatUnit
-{
-    GENERATED_BODY()
-
-public:
-    /**
-     * Fire weapon at target position.
-     * @param TargetPosition Position to attack
-     */
-    UFUNCTION(BlueprintCallable, Category = "Combat")
-    void FireAt(const FVector& TargetPosition);
-
-private:
-    UPROPERTY(EditAnywhere, Category = "Combat")
-    float WeaponRange;
-
-    UPROPERTY(EditAnywhere, Category = "Combat")
-    int32 DamagePerShot;
-};
-```
-
-#### 3. Test Your Changes
-
-```bash
-# Build the project
-./BuildScripts/build_all.sh Win64
-
-# Run tests
-python Tests/run_tests.py
-
-# Test in editor
 UnrealEditor RedAlert4.uproject
-
-# Test specific functionality
 ```
 
-#### 4. Commit Your Changes
-
-```bash
-# Stage your changes
-git add Source/Core/Public/Economy/ResourceSystem.h
-
-# Write a good commit message
-git commit -m "feat(economy): Add resource cap system
-
-- Add ResourceCap component
-- Implement cap checking logic
-- Add unit tests for resource limits
-
-Fixes #123"
-```
-
-**Commit Message Format:**
-```
-<type>(<scope>): <description>
-
-[type]: feat, fix, docs, style, refactor, test, chore
-[scope]: economy, simulation, ai, audio, ui, build, ci, etc.
-
-Example types:
-- feat: A new feature
-- fix: A bug fix
-- docs: Documentation only changes
-- style: Formatting, missing semicolons, etc
-- refactor: A code change that neither fixes a bug nor adds a feature
-- test: Adding missing tests
-- chore: Changes to the build process or auxiliary tools
-```
-
-#### 5. Push and Create Pull Request
-
-```bash
-# Push your changes
-git push origin feature/unit-movement-system
-
-# Create a Pull Request on GitHub
-# Include:
-# - Description of changes
-# - Screenshots if UI changes
-# - Testing performed
-# - Related issues
-```
-
----
-
-### **Pull Request Guidelines**
-
-#### **Required Checks**
-
-✅ **Before submitting a PR, ensure:**
-
-- [ ] Code builds successfully on all platforms
-- [ ] All existing tests pass
-- [ ] New tests added for new functionality
-- [ ] Code follows project style guidelines
-- [ ] Documentation updated (if applicable)
-- [ ] No console warnings or errors
-- [ ] Performance impact assessed
-- [ ] Memory leaks checked (use Unreal Insights)
-
-#### **PR Template**
-
-```markdown
-## Description
-
-[Provide a clear description of the changes]
-
-## Related Issues
-
-- Fixes #123
-- Related to #456
-
-## Changes Made
-
-- [ ] Added new feature
-- [ ] Fixed bug
-- [ ] Updated documentation
-- [ ] Refactored code
-- [ ] Added tests
-
-## Testing
-
-- [ ] Unit tests added/updated
-- [ ] Integration tests passed
-- [ ] Manual testing performed
-- [ ] Performance tested
-
-## Screenshots/Videos
-
-[If applicable, add screenshots or videos]
-
-## Checklist
-
-- [ ] My code follows the project's style guidelines
-- [ ] I have performed a self-review of my code
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] I have made corresponding changes to the documentation
-- [ ] My changes generate no new warnings
-- [ ] I have added tests that prove my fix is effective or that my feature works
-- [ ] New and existing unit tests pass locally with my changes
-- [ ] Any dependent changes have been merged and published in downstream modules
-```
-
----
-
-### **Code Review Process**
-
-#### **What to Expect**
-
-1. **Automated Checks:** GitHub Actions will run CI pipeline
-2. **Code Review:** Maintainers will review your code
-3. **Feedback:** You'll receive feedback and suggestions
-4. **Approval:** Once approved, your PR will be merged
-
-#### **Review Criteria**
-
-✅ **Code Quality:**
-- Follows project style guidelines
-- Well-documented
-- Proper error handling
-- No code smells or anti-patterns
-
-✅ **Functionality:**
-- Works as intended
-- Handles edge cases
-- No regressions
-- Performance acceptable
-
-✅ **Testing:**
-- Tests cover critical paths
-- Tests are maintainable
-- Tests run in CI
-
-✅ **Documentation:**
-- Code is documented
-- Public APIs documented
-- README updated if needed
-
----
-
-### **Reporting Issues**
-
-#### **Bug Reports**
-
-```markdown
-## Description
-
-[Clear and concise description of the bug]
-
-## Steps to Reproduce
-
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
-
-## Expected Behavior
-
-[What you expected to happen]
-
-## Actual Behavior
-
-[What actually happened]
-
-## Screenshots/Videos
-
-[If applicable, add screenshots or videos]
-
-## Environment
-
-- **Unreal Engine Version:** 5.3
-- **Platform:** Windows 11
-- **Build Configuration:** Development
-- **Branch:** main
-
-## Additional Context
-
-[Any other context about the problem]
-```
-
-#### **Feature Requests**
-
-```markdown
-## Description
-
-[Clear description of the feature]
-
-## Problem Statement
-
-[What problem does this solve?]
-
-## Proposed Solution
-
-[How should this be implemented?]
-
-## Alternatives Considered
-
-[Any alternative solutions?]
-
-## Additional Context
-
-[Any other context or screenshots]
-```
-
----
-
-### **Getting Help**
-
-#### **Questions**
-
-- Check the [README.md](README.md)
-- Review the [CLAUDE.md](CLAUDE.md)
-- Look at existing issues and PRs
-- Check Unreal Engine documentation
-
-#### **Discussions**
-
-- Join our Discord: [https://discord.gg/red-alert-4](https://discord.gg/red-alert-4)
-- Ask questions in GitHub Discussions
-- Check the wiki for detailed guides
-
-#### **Contact**
-
-- **Project Lead:** [Your Name]
-- **Email:** your-email@example.com
-- **Discord:** @your-discord-name
-
----
-
-### **Development Tips**
-
-#### **Unreal Engine Tips**
-
-```cpp
-// Use UE_LOG for debugging
-UE_LOG(LogTemp, Log, TEXT("Player position: %s"), *PlayerPosition.ToString());
-
-// Use UE_LOG with different verbosity levels
-UE_LOG(LogTemp, Warning, TEXT("Resource depleted!"));
-UE_LOG(LogTemp, Error, TEXT("Failed to load asset!"));
-
-// Use GEngine->AddOnScreenDebugMessage for in-game debugging
-if (GEngine)
-{
-    GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, TEXT("Unit spawned!"));
-}
-
-// Use CHECK and ensure for runtime checks
-check(Unit != nullptr);
-ensure(Health > 0);
-```
-
-#### **Performance Tips**
-
-```cpp
-// Use TArray for dynamic collections
-TArray<AUnit*> Units;
-
-// Use TMap for key-value pairs
-TMap<FString, int32> ResourceCounts;
-
-// Use TSharedPtr for shared ownership
-TSharedPtr<FObjectPool> UnitPool;
-
-// Use const references for function parameters
-void ProcessUnits(const TArray<AActor*>& Units);
-
-// Use UPROPERTY for Unreal reflection
-UPROPERTY(EditAnywhere, Category = "Combat")
-int32 MaxHealth;
-```
-
----
-
-### **Code of Conduct**
-
-We expect all contributors to follow our [Code of Conduct](CODE_OF_CONDUCT.md). Be respectful, inclusive, and professional.
-
----
-
-### **License**
-
-By contributing, you agree that your contributions will be licensed under the project's [LICENSE](LICENSES.md).
-
----
-
-### **Acknowledgements**
-
-Thank you to all our contributors! 🎉
-
----
-
-**📝 Last Updated:** August 18, 2026  
-**🔄 Version:** 1.0  
-**📚 Related Documents:** [README.md](README.md), [IMPROVEMENT_PLAN.md](IMPROVEMENT_PLAN.md)
+## Workflow
+
+1. Create a focused branch using the team’s branch convention.
+2. Make the smallest complete change.
+3. Add or update tests for behaviour changes.
+4. Build and run CTest for headless-code changes.
+5. Test the relevant Unreal Editor or PIE path for Unreal/UI changes.
+6. Update documentation when commands, behaviour, or supported tools change.
+7. In the pull request, describe the change, its risks, and the commands or editor steps you ran.
+
+## C++ and architecture rules
+
+- Keep the simulation deterministic and engine-independent. Do not add Unreal types, floating-point state, unseeded randomness, or pointer-address hashing to simulation modules.
+- Route simulation state changes through `SimWorld::ApplyCommand`.
+- Keep imports at the top of a module. For TypeScript switches over discriminated unions or enums, include a `never` check in the default case.
+- Use the existing module and naming patterns; avoid unrelated refactors.
+
+## Pull request checklist
+
+- [ ] The headless build and CTest suite pass for changes that affect engine-free code.
+- [ ] New or changed behaviour has appropriate tests.
+- [ ] Unreal/UI changes were checked in UE 5.8 where applicable.
+- [ ] No unsupported React/Vite or Noesis dependency was introduced.
+- [ ] Documentation reflects any changed setup, command, or supported path.
+- [ ] The change respects the clean-room/IP rules.
+
+## Reporting issues
+
+Include the Unreal Engine version (use 5.8 for supported editor work), operating system, branch or revision, clear reproduction steps, expected result, actual result, and relevant logs or screenshots. Do not include proprietary assets or data in an issue.

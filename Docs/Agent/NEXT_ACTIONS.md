@@ -65,13 +65,9 @@ core.
 ## What is unverified or known broken
 
 - **No packaged game build.** Nothing has been produced that a player could run.
-- **`ra4-ui` prototype calls an LLM inside the match loop.**
-  `ra4-ui/src/adminConsoleService.ts` posts game state to `openrouter.ai` and
-  parses the reply into gameplay commands. That is non-deterministic, so it
-  cannot ship in any build supporting lockstep or replay — see
-  `Docs/Architecture/ADR/ADR-0018-no-llm-in-runtime-command-path.md`. The file
-  also hardcodes an API key. Not fixed here: it belongs to the web prototype,
-  not the C++ core.
+- **Legacy web UI removed 2026-08-25.** The abandoned `ra4-ui` React/Vite
+  prototype and its obsolete implementation brief were deleted. Production UI
+  work must use CommonUI + UMG + Slate; no web UI or npm runtime is supported.
 - **AI depth is unproven at scale.** The hierarchy is wired and unit-tested, but
   it has not been run through a large AI-vs-AI league, so profile balance and
   long-match behaviour are unmeasured. The blueprint's self-play league,
