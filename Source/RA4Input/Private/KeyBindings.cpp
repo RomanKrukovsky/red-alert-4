@@ -285,7 +285,7 @@ void KeyBindingTable::LoadDefaults(ControlScheme Scheme)
     Bindings[int32_t(GameAction::HoldPosition)] = {Chord("H"), KeyChord()};
     Bindings[int32_t(GameAction::CancelAction)] = {Chord("Escape"), KeyChord()};
     Bindings[int32_t(GameAction::ToggleDirectControl)] = {Chord("F"), KeyChord()};
-    Bindings[int32_t(GameAction::ToggleCheatConsole)] = {Chord("Tilde"), KeyChord()};
+    Bindings[int32_t(GameAction::ToggleCheatConsole)] = {Chord("Tab"), KeyChord()};
 
     Bindings[int32_t(GameAction::ControlGroup1)] = {Chord("One"), KeyChord()};
     Bindings[int32_t(GameAction::ControlGroup2)] = {Chord("Two"), KeyChord()};
