@@ -73,9 +73,9 @@ void CameraController::AddPitchDegrees(float Delta)
 
 void CameraController::ResetRotation()
 {
-    // Face north (-Y): the tactical minimap draws north up, so the opening
-    // camera orientation matches the map instead of being rotated 90 degrees
-    // from it (which read as "the radar shows the map wrong").
+    // Restore the verified north-up opening orientation so the camera and tactical
+    // minimap agree, without describing it as a world axis (the pan basis is
+    // screen-relative and intentionally owns that conversion).
     YawDegrees = 270.0f;
     PitchDegrees = -55.0f;
 }
