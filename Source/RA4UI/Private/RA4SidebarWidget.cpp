@@ -211,7 +211,7 @@ public:
         // Camera-relative rotation: rotate world positions by -CameraYaw so
         // up-on-radar always equals up-on-screen, regardless of camera rotation.
         const float CamYaw = RadarOwner->GetCameraYaw();
-        const float RotAngle = FMath::DegreesToRadians(-CamYaw);
+        const float RotAngle = FMath::DegreesToRadians(-(CamYaw - 90.0f));
         const float CosA = FMath::Cos(RotAngle);
         const float SinA = FMath::Sin(RotAngle);
         const float HalfMapX = MapSize.X * 0.5f;
