@@ -29,7 +29,7 @@
 | MCV развёртывание / сворачивание | DONE | Deploy, MCVDeployed/Undeployed |
 | **Нефтяные вышки (нейтральные tech-здания) с пассивным доходом** | **DONE** | `bIsTechBuilding`, `SystemTechIncome`, инженер |
 | Захват нейтральных/вражеских зданий инженером | **DONE** | `CaptureBuilding`, канал 100 тиков, инженер расходуется |
-| Апгрейды (покупаемые глобальные улучшения) | ROADMAP | нужен UpgradeDef + модификаторы игрока |
+| Апгрейды (покупаемые глобальные улучшения) | **DONE** | `UpgradeDef` + `ResearchUpgrade` через очередь производства (flow payment), `GetPlayerModifiers`; тесты Upgrades.*; save v13 |
 
 ## 2. Боевые системы
 

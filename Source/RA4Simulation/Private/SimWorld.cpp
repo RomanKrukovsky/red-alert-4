@@ -1243,6 +1243,72 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
 
     switch (Cmd.Type)
     {
+        case CommandType::ResearchUpgrade:
+        {
+            // Routed through the producing building's queue as a ProductionItem
+            // with Category::Ability, so flow payment, prerequisites and power
+            // throttling all apply for free. The upgrade completes when the
+            // queue item does, in SystemProduction.
+            if (!IsAlive(Cmd.Primary) || Core[Cmd.Primary.Index].Owner != Cmd.Issuer
+                || Core[Cmd.Primary.Index].Kind != EntityKind::Building)
+            {
+                return Reject(CommandReject::NoSuchEntity);
+            }
+            const UpgradeDef* U = Content->FindUpgrade(Cmd.Content);
+            if (U == nullptr)
+            {
+                return Reject(CommandReject::UnknownContent);
+            }
+            // Prerequisite buildings must be complete.
+            for (const ContentId& Prereq : U->Prerequisites)
+            {
+                const EntityDef* PD = Content->FindEntity(Prereq);
+                if (PD == nullptr || !HasPrerequisites(Cmd.Issuer, *PD))
+                {
+                    return Reject(CommandReject::TechRequirementsUnmet);
+                }
+            }
+            bool bProducerOk = false;
+            for (const ContentId& Prod : U->ProducedBy)
+            {
+                if (Prod == Core[Cmd.Primary.Index].Def) { bProducerOk = true; break; }
+            }
+            if (!bProducerOk)
+            {
+                return Reject(CommandReject::NoProducer);
+            }
+            // Already researched or already queued?
+            const PlayerState& P = Players[Cmd.Issuer];
+            for (const ContentId& Done : P.ResearchedUpgrades)
+            {
+                if (Done == Cmd.Content) { return Reject(CommandReject::TechRequirementsUnmet); }
+            }
+            BuildingComp& B = Buildings[Cmd.Primary.Index];
+            for (const ProductionItem& Queued : B.Queue)
+            {
+                if (Queued.Content == Cmd.Content) { return Reject(CommandReject::QueueFull); }
+            }
+            ProductionItem Item;
+            Item.Content = Cmd.Content;
+            Item.TotalCost = U->Cost;
+            Item.TotalTicks = U->BuildTimeTicks;
+            Item.State = FlowPaymentState::Queued;
+            Item.Priority = 0;
+            if (int32_t(B.Queue.size()) >= kMaxProductionQueueLength)
+            {
+                return Reject(CommandReject::QueueFull);
+            }
+            B.Queue.push_back(Item);
+            SimEvent Ev;
+            Ev.Type = SimEventType::ProductionStarted;
+            Ev.Tick = CurrentTick;
+            Ev.Entity = Cmd.Primary;
+            Ev.Player = Cmd.Issuer;
+            Ev.Content = Cmd.Content;
+            EmitEvent(Ev);
+            return Result;
+        }
+
         case CommandType::BoardTransport:
         case CommandType::UnloadTransport:
         case CommandType::CaptureBuilding:
@@ -2200,6 +2266,16 @@ void SimWorld::ApplyDamage(EntityId TargetId, int32_t BaseDamage, WarheadClass W
     }
 
     int32_t Multiplier = Content->GetDamageMultiplier(Warhead, D->Armor);
+    // Research upgrades: armor bonus reduces incoming damage. ArmorPercent is
+    // capped at 90 in GetPlayerModifiers, so this never zeroes damage out.
+    if (Core[TargetId.Index].Owner < kMaxPlayers)
+    {
+        const PlayerModifiers Mod = GetPlayerModifiers(Core[TargetId.Index].Owner);
+        if (Mod.ArmorPercent > 0)
+        {
+            Multiplier = (Multiplier * (100 - Mod.ArmorPercent)) / 100;
+        }
+    }
     // Cryo and shrink both double incoming damage; frozen-and-shrunk stacks.
     if (Statuses[TargetId.Index].FreezeTicks > 0)
     {
@@ -2222,6 +2298,12 @@ void SimWorld::ApplyDamage(EntityId TargetId, int32_t BaseDamage, WarheadClass W
         if (BonusPercent > 0)
         {
             Damage = (Damage * (100 + BonusPercent)) / 100;
+        }
+        // Research upgrade: outgoing damage bonus from the attacker's owner.
+        const PlayerModifiers Mod = GetPlayerModifiers(Core[Source.Index].Owner);
+        if (Mod.DamagePercent > 0)
+        {
+            Damage = (Damage * (100 + Mod.DamagePercent)) / 100;
         }
     }
 
@@ -3117,6 +3199,26 @@ void SimWorld::SystemProduction()
                 continue;
             }
             QueueItem.State = FlowPaymentState::Completed;
+        }
+
+        // RA3-style upgrade: an Ability-category queue item whose content is an
+        // UpgradeDef, not an EntityDef. It completes in place: no entity spawns,
+        // the modifier lands on the player, and the queue item is consumed.
+        if (Content->FindUpgrade(QueueItem.Content) != nullptr)
+        {
+            if (Owner < kMaxPlayers)
+            {
+                Players[Owner].ResearchedUpgrades.push_back(QueueItem.Content);
+            }
+            SimEvent Ev;
+            Ev.Type = SimEventType::UpgradeResearched;
+            Ev.Tick = CurrentTick;
+            Ev.Entity = MakeId(I);
+            Ev.Player = Owner;
+            Ev.Content = QueueItem.Content;
+            EmitEvent(Ev);
+            B.Queue.erase(B.Queue.begin());
+            continue;
         }
 
         const EntityDef* Item = Content->FindEntity(QueueItem.Content);
@@ -4993,6 +5095,17 @@ void SimWorld::FireWeapon(EntityId Attacker, EntityId TargetId, const WeaponDef&
     {
         Cooldown *= StaticDefenceCooldownMultiplierForTier(Players[Core[A].Owner].GetPowerTier());
     }
+    // Research upgrades: fire rate bonus shortens the cooldown. FireRatePercent>0
+    // means faster, so cooldown shrinks by the inverse ratio.
+    if (Core[A].Owner < kMaxPlayers)
+    {
+        const PlayerModifiers Mod = GetPlayerModifiers(Core[A].Owner);
+        if (Mod.FireRatePercent > 0)
+        {
+            Cooldown = (Cooldown * 100) / (100 + Mod.FireRatePercent);
+            if (Cooldown < 1) { Cooldown = 1; }
+        }
+    }
     Combats[A].CooldownTicks = Cooldown;
 
     // Finite magazines decrement only while rounds remain. A 0/0 magazine (every
@@ -5806,6 +5919,31 @@ void SimWorld::UpdatePassengers()
     }
 }
 
+SimWorld::PlayerModifiers SimWorld::GetPlayerModifiers(PlayerId Owner) const
+{
+    PlayerModifiers Mod;
+    if (Owner >= kMaxPlayers || Content == nullptr)
+    {
+        return Mod;
+    }
+    for (const ContentId& UpId : Players[Owner].ResearchedUpgrades)
+    {
+        const UpgradeDef* U = Content->FindUpgrade(UpId);
+        if (U == nullptr)
+        {
+            continue;
+        }
+        Mod.DamagePercent += U->DamagePercent;
+        Mod.ArmorPercent += U->ArmorPercent;
+        Mod.SpeedPercent += U->SpeedPercent;
+        Mod.FireRatePercent += U->FireRatePercent;
+        Mod.HealthPercent += U->HealthPercent;
+    }
+    // Armor reduction is capped: 90% is the hardest a research stack can tank.
+    if (Mod.ArmorPercent > 90) { Mod.ArmorPercent = 90; }
+    return Mod;
+}
+
 void SimWorld::ApplyStatusInRadius(PlayerId Caster, const Vec2& Center, Fixed Radius,
                                    const StatusComp& Template, bool bEnemiesOnly)
 {
@@ -6357,6 +6495,10 @@ uint64_t SimWorld::ComputeStateChecksum() const
         {
             H.FeedUInt32(C.Value);
         }
+        for (const ContentId& Up : P.ResearchedUpgrades)
+        {
+            H.FeedUInt32(Up.Value);
+        }
     }
 
     // Slot order is deterministic because allocation and recycling are
@@ -6506,6 +6648,10 @@ StateHashBreakdown SimWorld::ComputeDetailedChecksum() const
         for (const ContentId& C : P.CompletedBuildingTypes)
         {
             HEcon.FeedUInt32(C.Value);
+        }
+        for (const ContentId& Up : P.ResearchedUpgrades)
+        {
+            HEcon.FeedUInt32(Up.Value);
         }
     }
 
@@ -6658,6 +6804,8 @@ constexpr uint32_t kSimSaveVersion = 13;
 // v13: aircraft rearm latch. A partially reloaded magazine is still committed to
 // the pad, so this bit affects future movement and firing and must survive saves.
 constexpr uint32_t kSimSaveVersionAircraftRearm = 13;
+// v13: per-player researched upgrades (RA3-style global research).
+constexpr uint32_t kSimSaveVersionUpgrades = 13;
 // v12: aircraft logistics -- magazines (CombatComp::AmmoMax/AmmoCurrent).
 // Written unconditionally in Serialize next to the combat fields; older saves
 // load with both at 0, which the behaviour reads as an infinite magazine, so
@@ -6720,6 +6868,12 @@ void SimWorld::Serialize(ByteWriter& W) const
         for (const ContentId& C : S.CompletedBuildingTypes)
         {
             W.WriteUInt32(C.Value);
+        }
+        // v13: researched upgrades.
+        W.WriteUInt32(static_cast<uint32_t>(S.ResearchedUpgrades.size()));
+        for (const ContentId& Up : S.ResearchedUpgrades)
+        {
+            W.WriteUInt32(Up.Value);
         }
     }
 
@@ -6960,6 +7114,15 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
         for (uint32_t T = 0; T < TechCount; ++T)
         {
             S.CompletedBuildingTypes[T].Value = R.ReadUInt32();
+        }
+        if (Version >= kSimSaveVersionUpgrades)
+        {
+            const uint32_t UpCount = R.ReadUInt32();
+            S.ResearchedUpgrades.resize(UpCount);
+            for (uint32_t U = 0; U < UpCount; ++U)
+            {
+                S.ResearchedUpgrades[U].Value = R.ReadUInt32();
+            }
         }
     }
 

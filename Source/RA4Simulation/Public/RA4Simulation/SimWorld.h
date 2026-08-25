@@ -320,6 +320,16 @@ private:
     void UpdatePassengers();
     // Passive income from captured tech buildings (oil derricks).
     void SystemTechIncome();
+    // Aggregated percent modifiers from a player's researched upgrades.
+    struct PlayerModifiers
+    {
+        int32_t DamagePercent = 0;
+        int32_t ArmorPercent = 0;
+        int32_t SpeedPercent = 0;
+        int32_t FireRatePercent = 0;
+        int32_t HealthPercent = 0;
+    };
+    PlayerModifiers GetPlayerModifiers(PlayerId Owner) const;
     // Public seam for protocol powers that mass-apply a status template (phase
     // field, EMP pulse, ...). Copies every positive countdown of Template onto
     // units in radius, keeping the larger of the two. bEnemiesOnly filters to

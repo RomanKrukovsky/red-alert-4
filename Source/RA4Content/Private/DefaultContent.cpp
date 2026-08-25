@@ -1174,6 +1174,34 @@ void BuildDefaultContent(ContentDatabase& Db)
         Db.AddEntity(E);
     }
 
+    // --- Research upgrades (RA3-style global improvements) -------------------
+    {
+        UpgradeDef U;
+        U.Id = MakeContentId("upgrade.sov.advanced_munitions");
+        U.Name = "upgrade.sov.advanced_munitions";
+        U.DisplayNameKey = "soviet.upgrade.advanced_munitions";
+        U.Faction = FactionId::Soviet;
+        U.Cost = 2000;
+        U.BuildTimeTicks = SecondsToTicks(30);
+        U.ProducedBy = {BldSovWarFactory};
+        U.Prerequisites = {BldSovWarFactory};
+        U.DamagePercent = 15;
+        Db.AddUpgrade(U);
+    }
+    {
+        UpgradeDef U;
+        U.Id = MakeContentId("upgrade.all.composite_armor");
+        U.Name = "upgrade.all.composite_armor";
+        U.DisplayNameKey = "alliance.upgrade.composite_armor";
+        U.Faction = FactionId::Alliance;
+        U.Cost = 1500;
+        U.BuildTimeTicks = SecondsToTicks(25);
+        U.ProducedBy = {BldAllWarFactory};
+        U.Prerequisites = {BldAllWarFactory};
+        U.ArmorPercent = 20;
+        Db.AddUpgrade(U);
+    }
+
     // --- Neutral tech: oil derrick (map fixture income) ----------------------
     {
         EntityDef E;

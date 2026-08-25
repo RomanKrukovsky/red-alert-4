@@ -621,6 +621,10 @@ struct PlayerState
     // losing a war factory immediately removes access to tanks with no bookkeeping.
     std::vector<ContentId> CompletedBuildingTypes;
 
+    // RA3-style researched upgrades. Additive percent modifiers apply to this
+    // player's units for the rest of the match. Serialized + checksummed (v13).
+    std::vector<ContentId> ResearchedUpgrades;
+
     // ADR-0013: the tier as of the end of last tick. Unlike the tier itself this is
     // NOT derivable -- it is the memory that makes the warning edge-triggered, so it
     // is serialized and hashed. Without it a reloaded save would either re-announce
@@ -682,6 +686,7 @@ enum class SimEventType : uint8_t
     SecondaryAbilityToggled,
     CoopPingEmitted,
     BuildingCaptured,
+    UpgradeResearched,
 };
 
 

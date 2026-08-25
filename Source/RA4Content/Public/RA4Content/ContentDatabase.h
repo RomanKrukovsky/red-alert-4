@@ -36,6 +36,9 @@ public:
     void AddEvaLine(const EvaLineDef& Def);
     void SetFactionResource(const FactionResourceDef& Def);
     void SetVeterancy(const VeterancyDef& Def);
+    ContentId AddUpgrade(const UpgradeDef& Def);
+    const UpgradeDef* FindUpgrade(ContentId Id) const;
+    const std::vector<UpgradeDef>& GetUpgrades() const { return Upgrades; }
     void SetDamageMatrix(const DamageMatrixDef& Def);
 
     const EntityDef* FindEntity(ContentId Id) const;
@@ -82,6 +85,8 @@ private:
     std::vector<EvaLineDef> EvaLines;
     std::vector<FactionResourceDef> FactionResources;
     VeterancyDef Veterancy;
+    std::vector<UpgradeDef> Upgrades;
+    std::unordered_map<uint32_t, size_t> UpgradeIndex;
     DamageMatrixDef DamageMatrix;
 
     std::unordered_map<uint32_t, size_t> EntityIndex;

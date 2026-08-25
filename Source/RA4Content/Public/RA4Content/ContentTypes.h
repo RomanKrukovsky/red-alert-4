@@ -361,6 +361,30 @@ struct ResourceNodeDef
 
 // --- Faction --------------------------------------------------------------
 
+// --- Upgrades (RA3-style purchasable global improvements) ------------------
+//
+// An upgrade is a one-shot research item bought from a producing building. Once
+// complete it applies percent modifiers to that player's units for the rest of
+// the match. Percent fields are additive across all researched upgrades of the
+// player, so two +10% damage upgrades stack to +20%.
+struct UpgradeDef
+{
+    ContentId Id;
+    std::string Name;
+    std::string DisplayNameKey;
+    FactionId Faction = FactionId::None;
+    int32_t Cost = 0;
+    int32_t BuildTimeTicks = 0;
+    std::vector<ContentId> ProducedBy;      // which building(s) can research it
+    std::vector<ContentId> Prerequisites;   // required completed buildings
+    // Percent modifiers (positive = bonus). Zero = no effect.
+    int32_t DamagePercent = 0;       // outgoing damage multiplier
+    int32_t ArmorPercent = 0;        // incoming damage reduction (capped 0..90)
+    int32_t SpeedPercent = 0;        // movement speed multiplier
+    int32_t FireRatePercent = 0;     // fire rate: cooldown *= 100/(100+pct)
+    int32_t HealthPercent = 0;       // max HP on newly spawned units
+};
+
 struct FactionDef
 {
     FactionId Id = FactionId::None;

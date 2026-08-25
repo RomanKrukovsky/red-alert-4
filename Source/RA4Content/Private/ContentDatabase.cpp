@@ -202,6 +202,30 @@ void ContentDatabase::SetVeterancy(const VeterancyDef& Def)
     Veterancy = Def;
 }
 
+ContentId ContentDatabase::AddUpgrade(const UpgradeDef& Def)
+{
+    UpgradeDef Copy = Def;
+    if (!Copy.Id.IsValid())
+    {
+        Copy.Id = MakeContentId(Copy.Name.c_str());
+    }
+    const auto Existing = UpgradeIndex.find(Copy.Id.Value);
+    if (Existing != UpgradeIndex.end())
+    {
+        Upgrades[Existing->second] = Copy;
+        return Copy.Id;
+    }
+    UpgradeIndex[Copy.Id.Value] = Upgrades.size();
+    Upgrades.push_back(Copy);
+    return Copy.Id;
+}
+
+const UpgradeDef* ContentDatabase::FindUpgrade(ContentId Id) const
+{
+    const auto It = UpgradeIndex.find(Id.Value);
+    return It != UpgradeIndex.end() ? &Upgrades[It->second] : nullptr;
+}
+
 void ContentDatabase::SetDamageMatrix(const DamageMatrixDef& Def)
 {
     for (size_t W = 0; W < size_t(WarheadClass::Count); ++W)

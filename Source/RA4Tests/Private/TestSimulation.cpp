@@ -813,6 +813,108 @@ RA4_TEST(Tactics, EngineerCapturesNeutralDerrickAndItPays)
     RA4_EXPECT(P.Credits > Before);
 }
 
+// ---------------------------------------------------------------------------
+// Research upgrades (RA3-style purchasable global improvements)
+// ---------------------------------------------------------------------------
+
+namespace
+{
+// Builds a tiny fast-cheap damage upgrade owned by the test so timing stays
+// deterministic and short: 100 ticks of research, +25% outgoing damage.
+UpgradeDef MakeTestDamageUpgrade()
+{
+    UpgradeDef U;
+    U.Id = MakeContentId("upgrade.test.dmg");
+    U.Name = "upgrade.test.dmg";
+    U.DisplayNameKey = "test.upgrade.dmg";
+    U.Faction = FactionId::Soviet;
+    U.Cost = 500;
+    U.BuildTimeTicks = 100;
+    U.ProducedBy = {Ids::SovConYard};
+    U.DamagePercent = 25;
+    return U;
+}
+} // namespace
+
+RA4_TEST(Upgrades, ResearchAppliesDamageBonusOnCompletion)
+{
+    Fixture F;
+    SpawnEnemyOutpost(F.World);
+    const UpgradeDef Up = MakeTestDamageUpgrade();
+    RA4_REQUIRE(F.Content.FindUpgrade(Up.Id) == nullptr);
+    F.Content.AddUpgrade(Up);
+    F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+
+    Command R = MakeCommand(CommandType::ResearchUpgrade, 0);
+    R.Primary = FindFirstOfType(F.World, 0, Ids::SovConYard);
+    R.Content = Up.Id;
+    RA4_REQUIRE(F.World.ApplyCommand(R).IsAccepted());
+
+    // Flow payment needs credits: the fixture starts the player with the default
+    // stash, which covers the 500-cost research comfortably.
+    const int32_t Done = RunUntil(F.World, SecondsToTicks(30), [&]
+    {
+        const PlayerState& P = F.World.GetPlayer(0);
+        for (const ContentId& Id : P.ResearchedUpgrades)
+        {
+            if (Id == Up.Id) { return true; }
+        }
+        return false;
+    });
+    RA4_REQUIRE(Done >= 0);
+
+    // The modifier is live: a conscript's rifle now hits for floor(15*1.25)=18
+    // against light infantry armor instead of 15.
+    const EntityId Victim = F.World.SpawnUnit(Ids::AllRifleman, 1, Vec2::FromInts(2600, 2000));
+    const EntityId Shooter = F.World.SpawnUnit(Ids::SovConscript, 0, Vec2::FromInts(2200, 2000));
+    RA4_REQUIRE(Victim.IsValid() && Shooter.IsValid());
+    int32_t BestHit = 0;
+    for (int32_t I = 0; I < SecondsToTicks(5); ++I)
+    {
+        F.World.Tick(nullptr);
+        for (const SimEvent& Ev : F.World.GetEvents())
+        {
+            if (Ev.Type == SimEventType::DamageApplied && Ev.Other == Shooter)
+            {
+                BestHit = Ev.Value > BestHit ? Ev.Value : BestHit;
+            }
+        }
+        F.World.ClearEvents();
+    }
+    RA4_EXPECT_EQ(BestHit, 18);
+}
+
+RA4_TEST(Upgrades, DuplicateResearchAndWrongProducerAreRejected)
+{
+    Fixture F;
+    SpawnEnemyOutpost(F.World);
+    const UpgradeDef Up = MakeTestDamageUpgrade();
+    F.Content.AddUpgrade(Up);
+    const EntityId Yard = F.World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    // An Alliance yard cannot research a Soviet upgrade.
+    const EntityId ForeignYard = F.World.SpawnBuilding(Ids::AllConYard, 0, TileCoord(20, 20), true);
+    RA4_REQUIRE(Yard.IsValid() && ForeignYard.IsValid());
+
+    Command R = MakeCommand(CommandType::ResearchUpgrade, 0);
+    R.Primary = ForeignYard;
+    R.Content = Up.Id;
+    RA4_EXPECT(!F.World.ApplyCommand(R).IsAccepted());
+
+    R.Primary = Yard;
+    RA4_REQUIRE(F.World.ApplyCommand(R).IsAccepted());
+
+    // Duplicate while in queue or after completion must be refused.
+    Command Dup = MakeCommand(CommandType::ResearchUpgrade, 0);
+    Dup.Primary = Yard;
+    Dup.Content = Up.Id;
+    RA4_EXPECT(!F.World.ApplyCommand(Dup).IsAccepted());
+    RunUntil(F.World, SecondsToTicks(30), [&]
+    {
+        return !F.World.GetPlayer(0).ResearchedUpgrades.empty();
+    });
+    RA4_EXPECT(!F.World.ApplyCommand(Dup).IsAccepted());
+}
+
 RA4_TEST(Economy, IdleHarvestersSpreadAcrossAdjacentFields)
 {
     Fixture F;

@@ -48,6 +48,8 @@ enum class CommandType : uint8_t
     PauseProduction = 23,
     SellBuilding = 24,
     RepairBuilding = 25,
+    // RA3-style research: Primary = producing building, Content = upgrade id.
+    ResearchUpgrade = 27,
     // ADR-0013. Param carries the PowerPriority level. A player override, so it goes
     // through the command bus like any other decision and lands in the replay.
     SetPowerPriority = 26,
