@@ -258,7 +258,7 @@ public:
                     const float CellWorldX = (float(CellX) + 0.5f) / float(Cells.X) * MapSize.X;
                     const float CellWorldY = (float(CellY) + 0.5f) / float(Cells.Y) * MapSize.Y;
                     const FVector2D RotCell = RotateToWorld(FVector2D(CellWorldX, CellWorldY));
-                    const float NormCX = FMath::Clamp(float(RotCell.X / MapSize.X), 0.0f, 1.0f);
+                    const float NormCX = FMath::Clamp(1.0f - float(RotCell.X / MapSize.X), 0.0f, 1.0f);
                     const float NormCY = FMath::Clamp(float(RotCell.Y / MapSize.Y), 0.0f, 1.0f);
                     const FVector2D CellPos(
                         MapOffset.X + NormCX * MapExtent.X,
@@ -277,9 +277,11 @@ public:
         const FVector2D ViewCentre = RadarOwner->GetCameraViewCentre();
         const FVector2D ViewExtent = RadarOwner->GetCameraViewExtent();
         double FrameLeft = 0.0, FrameTop = 0.0, FrameRight = 0.0, FrameBottom = 0.0;
+        // X-flipped: mirror the view centre so the frame matches the flipped markers
+        const FVector2D FlippedCentre(1.0f - ViewCentre.X, ViewCentre.Y);
         if (RA4::Presentation::ComputeMinimapCameraFrame(
                 MapOffset.X, MapOffset.Y, MapExtent.X, MapExtent.Y, MapSize.X, MapSize.Y,
-                ViewCentre.X, ViewCentre.Y, ViewExtent.X, ViewExtent.Y,
+                FlippedCentre.X, FlippedCentre.Y, ViewExtent.X, ViewExtent.Y,
                 FrameLeft, FrameTop, FrameRight, FrameBottom))
         {
             TArray<FVector2D> Outline{
@@ -298,7 +300,7 @@ public:
         for (const FRA4RadarMarker& Marker : RadarOwner->GetMarkers())
         {
             const FVector2D Rotated = RotateToWorld(Marker.WorldPosition);
-            const float NormalizedX = FMath::Clamp(float(Rotated.X / MapSize.X), 0.0f, 1.0f);
+            const float NormalizedX = FMath::Clamp(1.0f - float(Rotated.X / MapSize.X), 0.0f, 1.0f);
             const float NormalizedY = FMath::Clamp(float(Rotated.Y / MapSize.Y), 0.0f, 1.0f);
             const FVector2D Centre(MapOffset.X + NormalizedX * MapExtent.X,
                                    MapOffset.Y + (1.0f - NormalizedY) * MapExtent.Y);
@@ -362,7 +364,7 @@ public:
                 continue;
             }
             const FVector2D RotPing = RotateToWorld(Ping.WorldPosition);
-            const float NormalizedX = FMath::Clamp(float(RotPing.X / MapSize.X), 0.0f, 1.0f);
+            const float NormalizedX = FMath::Clamp(1.0f - float(RotPing.X / MapSize.X), 0.0f, 1.0f);
             const float NormalizedY = FMath::Clamp(float(RotPing.Y / MapSize.Y), 0.0f, 1.0f);
             const FVector2D Centre(MapOffset.X + NormalizedX * MapExtent.X,
                                    MapOffset.Y + (1.0f - NormalizedY) * MapExtent.Y);
@@ -795,7 +797,7 @@ void URA4RadarWidget::HandleSlateClick(const FVector2D& NormalizedPosition)
     }
 
     OnRadarClicked.Broadcast(FVector2D(
-        NormalizedPosition.X * MapSize.X,
+        (1.0f - NormalizedPosition.X) * MapSize.X,
         (1.0f - NormalizedPosition.Y) * MapSize.Y));
 }
 
@@ -810,7 +812,7 @@ void URA4RadarWidget::HandleSlateOrder(const FVector2D& NormalizedPosition)
     // Same mapping as the camera click; only the delegate differs, so an order cannot land
     // somewhere other than where the camera would have gone for the same pixel.
     OnRadarOrdered.Broadcast(FVector2D(
-        NormalizedPosition.X * MapSize.X,
+        (1.0f - NormalizedPosition.X) * MapSize.X,
         (1.0f - NormalizedPosition.Y) * MapSize.Y));
 }
 
