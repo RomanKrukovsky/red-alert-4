@@ -7,8 +7,8 @@
 - **PARTIAL** — каркас есть, части не хватает.
 - **ROADMAP** — отсутствует; зафиксировано как следующий этап.
 
-Последнее обновление: после пакета "RA3 tactical batch" (статус-эффекты,
-транспорты/мультиганнер, захват инженером, техздания, стены).
+Последнее обновление: после пакета "RA3 tactical batch" + параллельной работы
+субагентов (протоколы, контент-ростер, авиалогистика). Полный прогон: 703/0.
 
 ---
 
@@ -48,8 +48,8 @@
 | **Неуязвимость (Iron Curtain / time belt)** | **DONE** | `InvulnerableTicks`, проверяется во всех путях урона |
 | Разбить замороженного (shatter) | PARTIAL | покрыт двойным уроном; отдельного «осколочного» события нет |
 | Мгновенное раздавливание уменьшенной техники | ROADMAP | нужна правка crush-pass |
-| Транспорт-пассажиры (Bullfrog/Twinblade/Riptide) | **DONE (каркас)** | Board/Unload команды, `TransportComp`/`PassengerOf`, пассажиры погибают с транспортом |
-| Multigunner: оружие от пассажира | **DONE (каркас)** | `ResolveFireWeapon`, `bMultigunner`; контентных носителей пока нет |
+| Транспорт-пассажиры (Bullfrog/Twinblade/Riptide) | **DONE** | Board/Unload команды, `TransportComp`/`PassengerOf`, пассажиры погибают с транспортом; контент: `unit.sov.amphibious_transport` |
+| Multigunner: оружие от пассажира | **DONE** | `ResolveFireWeapon`, `bMultigunner`; контент: `unit.all.multigunner_ifv` |
 | Выстрел пехоты «пушкой» (man-cannon fling) | ROADMAP | баллистика выброса |
 | Авиация: боезапас + возврат на базу (RTB) | **DONE** | CombatComp Ammo, FindNearestRearmPoint, save v12; тест AircraftOps.* |
 | Подводные лодки (submerge/invisible state) | ROADMAP | stealth-состояние |
@@ -77,23 +77,36 @@
 | Разведка области (surveillance sweep) | DONE | ReconSurge |
 | Пассивные протоколы (модификаторы) | DONE | Passive kind |
 | Vacuum Imploder / Proton Collider / Psionic Decimator | DONE (каркас) | SuperweaponRechargeTicks на зданиях |
-| Paradrop / Orbital Drop десант | ROADMAP | спавн группы в точке |
-| Cash Bounty (% от убийств) | ROADMAP | хук в kill-credit |
-| Iron Curtain как сила (массовый бафф) | PARTIAL | эффект есть (`InvulnerableTicks`), каст силы — нет |
 | Хроносфера (телепорт группы) | ROADMAP | TeleportEntity есть, группового каста нет |
-| Balloon Bombs / Final Squadron | ROADMAP | дрейфующие/камикадзе снаряды |
+| Balloon Bombs / Final Squadron | PARTIAL | KamikazeSquadron — адаптация; дрейфующие снаряды — ROADMAP |
 | Rage (ускорение строя своих) | ROADMAP | глобальный таймер-бафф |
 
 ## 4. Составы сторон (units roster)
 
 Каркас data-driven (`EntityDef`): контент добавляется без кода.
-Проверить покрытие библией: медведь/пёс-разведчики, Terror Drone, Bullfrog,
-Twinblade, Sickle, Stingray, Mortar Cycle, Peacekeeper, Javelin, Guardian,
-Athena, Mirage (маскировка — ROADMAP), Cryocopter (shrink — готов через статус),
-Century Bomber, Hydrofoil, Assault Destroyer, Aircraft Carrier, Imperial Warrior
-(banzai), Tank Buster, Shinobi, Tengu/Jet Tengu (трансформации — ROADMAP),
-Tsunami, Striker VX, King Oni (bull rush), Wave-Force (заряд), Rocket Angel,
-Yuriko/Natasha/Tanya (герои), Kirov, Akula, Shogun, Nagara, Seawing.
+
+### Реализованные адаптации (чистая комната, оригинальные имена)
+
+| Концепт RA3 | Адаптация | Id |
+|---|---|---|
+| Tesla Trooper (EMP) | ЭМП-пехота Советов | `unit.sov.grom_trooper` |
+| Cryocopter (freeze+shrink) | Летающий крио-дрон Альянса | `unit.all.frostwing_drone` |
+| Terror Drone (infection) | Быстрый инфектор Восточной Коалиции | `unit.ec.swarm_infector` |
+| Bullfrog/Twinblade (transport) | Амфибийный транспорт Советов | `unit.sov.amphibious_transport` |
+| Multigunner IFV | Мультиганнер Альянса | `unit.all.multigunner_ifv` |
+| Engineer (capture) | Инженеры всех 4 фракций | `unit.{sov,all,ec,cl}.combat_engineer` |
+| Tanya/Natasha/Yuriko (heroes) | 4 оригинальных коммандоса | `unit.sov.iskra_commando`, `unit.all.warden_commando`, `unit.ec.baihu_commando`, `unit.cl.requiem_commando` |
+| Kirov (heavy bomber) | Тяжёлый бомбардировщик Советов | `unit.sov.strategic_bomber` |
+| EMP/cryo/infection weapons | Оригинальные оружия | `weapon.emp_disruptor`, `weapon.cryo_pulse`, `weapon.infestation_spore` и др. |
+
+### ROADMAP (контент не добавлен)
+
+Медведь/пёс-разведчики, Sickle, Stingray, Mortar Cycle, Peacekeeper, Javelin,
+Guardian, Athena, Mirage (маскировка — ROADMAP), Century Bomber, Hydrofoil,
+Assault Destroyer, Aircraft Carrier, Imperial Warrior (banzai), Tank Buster,
+Shinobi, Tengu/Jet Tengu (трансформации — ROADMAP), Tsunami, Striker VX,
+King Oni (bull rush), Wave-Force (заряд), Rocket Angel, Akula, Shogun, Nagara,
+Seawing.
 
 Трансформации Empire (Tengu ↔ Jet Tengu, Sea-Wing) — ROADMAP:
 нужна смена Def на лету с сохранением здоровья/ветеранства.
