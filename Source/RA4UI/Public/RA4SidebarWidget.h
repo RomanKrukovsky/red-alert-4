@@ -76,6 +76,12 @@ public:
     FVector2D GetCameraViewCentre() const { return CameraViewCentre; }
     FVector2D GetCameraViewExtent() const { return CameraViewExtent; }
 
+    /** Camera yaw in degrees (controller yaw + pawn offset). The radar rotates
+     *  its contents by -yaw so that up-on-radar always equals up-on-screen,
+     *  regardless of camera rotation. */
+    float GetCameraYaw() const { return CameraYaw; }
+    void SetCameraYaw(float InYaw) { CameraYaw = InYaw; }
+
     /**
      * The rectangle inside a square radar panel that the map actually occupies, letterboxed
      * to preserve the map's aspect ratio. A 128x64 map drawn to fill a square panel is
@@ -101,6 +107,7 @@ private:
 
     FVector2D CameraViewCentre = FVector2D::ZeroVector;
     FVector2D CameraViewExtent = FVector2D::ZeroVector;
+    float CameraYaw = 0.0f;
 };
 
 /**
@@ -209,7 +216,7 @@ public:
     FRA4OnSuperweaponClicked OnSuperweaponClicked;
 
     /** Forwards the camera's ground footprint to the radar panel, which outlines it. */
-    void SetRadarCameraView(const FVector2D& CentreWorld, const FVector2D& ExtentWorld);
+    void SetRadarCameraView(const FVector2D& CentreWorld, const FVector2D& ExtentWorld, float CameraYawDeg = 0.0f);
 
     /** Which sidebar tab is showing. Values match ProductionCategory. */
     UFUNCTION(BlueprintCallable, Category = "RA4|UI")

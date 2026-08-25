@@ -208,6 +208,22 @@ public:
         // Terrain and shroud, drawn underneath the markers. Without this the panel was a
         // blank grid: a player could see where their units were but nothing about the
         // ground they were standing on, and no record of what they had explored.
+        // Camera-relative rotation: rotate world positions by -CameraYaw so
+        // up-on-radar always equals up-on-screen, regardless of camera rotation.
+        const float CamYaw = RadarOwner->GetCameraYaw();
+        const float RotAngle = FMath::DegreesToRadians(-CamYaw);
+        const float CosA = FMath::Cos(RotAngle);
+        const float SinA = FMath::Sin(RotAngle);
+        const float HalfMapX = MapSize.X * 0.5f;
+        const float HalfMapY = MapSize.Y * 0.5f;
+        auto RotateToWorld = [&](FVector2D WorldPos) -> FVector2D
+        {
+            const float Rx = WorldPos.X - HalfMapX;
+            const float Ry = WorldPos.Y - HalfMapY;
+            return FVector2D(Rx * CosA - Ry * SinA + HalfMapX,
+                             Rx * SinA + Ry * CosA + HalfMapY);
+        };
+
         const FIntPoint Cells = RadarOwner->GetBackgroundCellCounts();
         const TArray<uint8>& Terrain = RadarOwner->GetBackgroundTerrain();
         const TArray<uint8>& Shroud = RadarOwner->GetBackgroundShroud();
@@ -238,13 +254,15 @@ public:
                         Colour.A = 1.0f;
                     }
 
-                    // The simulation's Y grows northward and the panel's grows downward.
-                    // CAMERA COUPLING: because this flip puts world +Y at the top of the
-                    // panel, the RTS camera must face +Y at spawn -- RA4CameraPawn adds
-                    // +90 to CameraController::YawDegrees, so that yaw must stay 0.
+                    // Camera-relative: rotate the cell's world position before mapping.
+                    const float CellWorldX = (float(CellX) + 0.5f) / float(Cells.X) * MapSize.X;
+                    const float CellWorldY = (float(CellY) + 0.5f) / float(Cells.Y) * MapSize.Y;
+                    const FVector2D RotCell = RotateToWorld(FVector2D(CellWorldX, CellWorldY));
+                    const float NormCX = FMath::Clamp(float(RotCell.X / MapSize.X), 0.0f, 1.0f);
+                    const float NormCY = FMath::Clamp(float(RotCell.Y / MapSize.Y), 0.0f, 1.0f);
                     const FVector2D CellPos(
-                        MapOffset.X + float(CellX) * float(MapExtent.X) / float(Cells.X),
-                        MapOffset.Y + float(Cells.Y - 1 - CellY) * float(MapExtent.Y) / float(Cells.Y));
+                        MapOffset.X + NormCX * MapExtent.X,
+                        MapOffset.Y + (1.0f - NormCY) * MapExtent.Y);
                     FSlateDrawElement::MakeBox(
                         OutDrawElements, LayerId + 2,
                         AllottedGeometry.ToPaintGeometry(CellSize, FSlateLayoutTransform(CellPos)),
@@ -279,8 +297,9 @@ public:
         const int32 LocalPlayer = RadarOwner->GetLocalPlayer();
         for (const FRA4RadarMarker& Marker : RadarOwner->GetMarkers())
         {
-            const float NormalizedX = FMath::Clamp(float(Marker.WorldPosition.X / MapSize.X), 0.0f, 1.0f);
-            const float NormalizedY = FMath::Clamp(float(Marker.WorldPosition.Y / MapSize.Y), 0.0f, 1.0f);
+            const FVector2D Rotated = RotateToWorld(Marker.WorldPosition);
+            const float NormalizedX = FMath::Clamp(float(Rotated.X / MapSize.X), 0.0f, 1.0f);
+            const float NormalizedY = FMath::Clamp(float(Rotated.Y / MapSize.Y), 0.0f, 1.0f);
             const FVector2D Centre(MapOffset.X + NormalizedX * MapExtent.X,
                                    MapOffset.Y + (1.0f - NormalizedY) * MapExtent.Y);
 
@@ -342,8 +361,9 @@ public:
             {
                 continue;
             }
-            const float NormalizedX = FMath::Clamp(float(Ping.WorldPosition.X / MapSize.X), 0.0f, 1.0f);
-            const float NormalizedY = FMath::Clamp(float(Ping.WorldPosition.Y / MapSize.Y), 0.0f, 1.0f);
+            const FVector2D RotPing = RotateToWorld(Ping.WorldPosition);
+            const float NormalizedX = FMath::Clamp(float(RotPing.X / MapSize.X), 0.0f, 1.0f);
+            const float NormalizedY = FMath::Clamp(float(RotPing.Y / MapSize.Y), 0.0f, 1.0f);
             const FVector2D Centre(MapOffset.X + NormalizedX * MapExtent.X,
                                    MapOffset.Y + (1.0f - NormalizedY) * MapExtent.Y);
 
@@ -1307,11 +1327,12 @@ void URA4SidebarWidget::HandleRadarOrdered(FVector2D WorldPosition)
     OnRadarOrdered.Broadcast(WorldPosition);
 }
 
-void URA4SidebarWidget::SetRadarCameraView(const FVector2D& CentreWorld, const FVector2D& ExtentWorld)
+void URA4SidebarWidget::SetRadarCameraView(const FVector2D& CentreWorld, const FVector2D& ExtentWorld, float CameraYawDeg)
 {
     if (RadarWidget != nullptr)
     {
         RadarWidget->SetCameraView(CentreWorld, ExtentWorld);
+        RadarWidget->SetCameraYaw(CameraYawDeg);
     }
 }
 

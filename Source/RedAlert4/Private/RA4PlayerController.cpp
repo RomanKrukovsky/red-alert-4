@@ -2517,7 +2517,7 @@ void ARA4PlayerController::UpdateRadarCameraView()
         {
             // A near-horizon corner can miss the ground plane entirely. Reporting an unknown
             // frame is better than one built from the corners that happened to hit.
-            Sidebar->SetRadarCameraView(FVector2D::ZeroVector, FVector2D::ZeroVector);
+            Sidebar->SetRadarCameraView(FVector2D::ZeroVector, FVector2D::ZeroVector, 0.0f);
             return;
         }
         const double X = Ground.X.ToDoubleUnsafe();
@@ -2535,8 +2535,15 @@ void ARA4PlayerController::UpdateRadarCameraView()
         MaxY = FMath::Max(MaxY, Y);
     }
 
+    // Pass the camera's effective yaw (controller yaw + 90 pawn offset) so the
+    // radar rotates its contents to match the screen orientation.
+    float CamYaw = 90.0f; // default if camera pawn unavailable
+    if (const ARA4CameraPawn* CamPawn = GetCameraPawn())
+    {
+        CamYaw = 90.0f + CamPawn->GetCameraController().GetYawDegrees();
+    }
     Sidebar->SetRadarCameraView(FVector2D((MinX + MaxX) * 0.5, (MinY + MaxY) * 0.5),
-                               FVector2D(MaxX - MinX, MaxY - MinY));
+                               FVector2D(MaxX - MinX, MaxY - MinY), CamYaw);
 }
 
 // ---------------------------------------------------------------------------
