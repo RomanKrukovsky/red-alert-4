@@ -73,10 +73,13 @@ void CameraController::AddPitchDegrees(float Delta)
 
 void CameraController::ResetRotation()
 {
-    // Restore the verified north-up opening orientation so the camera and tactical
-    // minimap agree, without describing it as a world axis (the pan basis is
-    // screen-relative and intentionally owns that conversion).
-    YawDegrees = 270.0f;
+    // CONSTRAINT (do not change without reading SRA4RadarSlate): the tactical
+    // radar draws world +Y at the TOP of its panel ((1 - NormalizedY) flip in
+    // RA4SidebarWidget.cpp). RA4CameraPawn adds +90 to this yaw when it drives
+    // the spring arm, so controller yaw 0 = camera faces +Y = camera-up equals
+    // radar-up. 270 faces +X (90 degrees off); 90 faces -Y (180 degrees off).
+    // Both were tried and both were reported as "the radar shows the map wrong".
+    YawDegrees = 0.0f;
     PitchDegrees = -55.0f;
 }
 

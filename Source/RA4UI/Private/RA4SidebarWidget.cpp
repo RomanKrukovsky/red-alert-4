@@ -239,6 +239,9 @@ public:
                     }
 
                     // The simulation's Y grows northward and the panel's grows downward.
+                    // CAMERA COUPLING: because this flip puts world +Y at the top of the
+                    // panel, the RTS camera must face +Y at spawn -- RA4CameraPawn adds
+                    // +90 to CameraController::YawDegrees, so that yaw must stay 0.
                     const FVector2D CellPos(
                         MapOffset.X + float(CellX) * float(MapExtent.X) / float(Cells.X),
                         MapOffset.Y + float(Cells.Y - 1 - CellY) * float(MapExtent.Y) / float(Cells.Y));

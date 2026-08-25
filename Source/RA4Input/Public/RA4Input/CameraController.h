@@ -140,7 +140,7 @@ private:
     Vec2f TargetFocus;
     float Height = 2500.0f;
     float TargetHeight = 2500.0f;
-    float YawDegrees = 270.0f;
+    float YawDegrees = 0.0f;
     float PitchDegrees = -55.0f;
 };
 

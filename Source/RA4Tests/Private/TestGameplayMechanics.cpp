@@ -1,4 +1,4 @@
-// Copyright (c) Red Alert 4 project. Tests for Stage 2 (RA3 Gameplay Mechanics).
+// Copyright (c) Red Alert 4 project. Tests for Stage 2 gameplay mechanics.
 #include "TestFramework.h"
 #include "TestHelpers.h"
 

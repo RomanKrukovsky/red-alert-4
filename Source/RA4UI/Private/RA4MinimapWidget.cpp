@@ -103,7 +103,7 @@ void URA4MinimapWidget::SetBackground(
         BackgroundTexture->GetSurfaceWidth() != Width ||
         BackgroundTexture->GetSurfaceHeight() != Height)
     {
-        BackgroundTexture = UTexture2D::CreateTransient(Width, Height, PF_B8G8R8A8);
+        BackgroundTexture = UTexture2D::CreateTransient(Width, Height, PF_B8G8RA8);
         if (BackgroundTexture == nullptr)
         {
             return;
@@ -113,7 +113,7 @@ void URA4MinimapWidget::SetBackground(
         BackgroundTexture->NeverStream = true;
     }
 
-    // Cell -> colour: readable terrain hues, shroud as brightness.
+    // Cell -> colour. RA3-style: readable terrain hues, shroud as brightness.
     auto TerrainColour = [](const uint8 T) -> FLinearColor
     {
         switch (static_cast<ERA4MinimapTerrain>(T))
@@ -127,42 +127,39 @@ void URA4MinimapWidget::SetBackground(
         }
     };
 
-    if (FTexturePlatformData* PlatformData = BackgroundTexture->GetPlatformData())
+    FUpdateTextureRegionData* Region = new FUpdateTextureRegionData(
+        0, 0, 0, 0, Width, Height);
+    Region->Data.SetNumUninitialized(Width * Height * 4);
+    for (int32 Y = 0; Y < Height; ++Y)
     {
-        if (PlatformData->Mips.Num() > 0)
+        for (int32 X = 0; X < Width; ++X)
         {
-            FTexture2DMipMap& Mip = PlatformData->Mips[0];
-            if (void* Dest = Mip.BulkData.Lock(LOCK_READ_WRITE))
+            const int32 Cell = Y * Width + X;
+            const uint8 ShroudByte = Shroud[Cell];
+            float Brightness = 1.0f;
+            if (ShroudByte == uint8(ERA4MinimapShroud::NeverSeen))
             {
-                uint8* Pixels = static_cast<uint8*>(Dest);
-                for (int32 Y = 0; Y < Height; ++Y)
-                {
-                    for (int32 X = 0; X < Width; ++X)
-                    {
-                        const int32 Cell = Y * Width + X;
-                        const uint8 ShroudByte = Shroud[Cell];
-                        float Brightness = 1.0f;
-                        if (ShroudByte == uint8(ERA4MinimapShroud::NeverSeen))
-                        {
-                            Brightness = 0.04f;
-                        }
-                        else if (ShroudByte == uint8(ERA4MinimapShroud::Remembered))
-                        {
-                            Brightness = 0.45f;
-                        }
-                        const FLinearColor C = TerrainColour(Terrain[Cell]) * Brightness;
-                        uint8* Px = Pixels + (static_cast<int64>(Y) * Width + X) * 4;
-                        Px[0] = uint8(FMath::Clamp(C.B, 0.0f, 1.0f) * 255.0f);
-                        Px[1] = uint8(FMath::Clamp(C.G, 0.0f, 1.0f) * 255.0f);
-                        Px[2] = uint8(FMath::Clamp(C.R, 0.0f, 1.0f) * 255.0f);
-                        Px[3] = 255;
-                    }
-                }
+                Brightness = 0.04f;
             }
-            Mip.BulkData.Unlock();
-            BackgroundTexture->UpdateResource();
+            else if (ShroudByte == uint8(ERA4MinimapShroud::Remembered))
+            {
+                Brightness = 0.45f;
+            }
+            const FLinearColor C = TerrainColour(Terrain[Cell]) * Brightness;
+            const int32 O = Cell * 4;
+            Region->Data[O + 0] = uint8(FMath::Clamp(C.B, 0.0f, 1.0f) * 255.0f);
+            Region->Data[O + 1] = uint8(FMath::Clamp(C.G, 0.0f, 1.0f) * 255.0f);
+            Region->Data[O + 2] = uint8(FMath::Clamp(C.R, 0.0f, 1.0f) * 255.0f);
+            Region->Data[O + 3] = 255;
         }
     }
+
+    BackgroundTexture->UpdateTextureRegions(
+        0, 1, Region, Width * 4, 4,
+        [](uint8* SrcData, const FUpdateTextureRegionData* Regions)
+        {
+            delete const_cast<FUpdateTextureRegionData*>(Regions);
+        });
 
     if (SlateMinimap.IsValid())
     {
