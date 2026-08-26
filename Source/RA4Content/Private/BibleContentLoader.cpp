@@ -64,6 +64,30 @@ ProductionCategory ParseCategory(const std::string& Name)
     return ProductionCategory::Infantry;
 }
 
+TechTier ParseTechTier(const std::string& Name)
+{
+    if (Name == "T3" || Name == "Т3") return TechTier::T3;
+    if (Name == "T2" || Name == "Т2") return TechTier::T2;
+    if (Name == "T1" || Name == "Т1") return TechTier::T1;
+    return TechTier::T0;
+}
+
+WarheadClass ParseWarheadFromWeaponString(const std::string& S)
+{
+    if (S.find("баллистический") != std::string::npos || S.find("Ballistic") != std::string::npos) return WarheadClass::Ballistic;
+    if (S.find("осколочный") != std::string::npos || S.find("Fragmentation") != std::string::npos) return WarheadClass::Fragmentation;
+    if (S.find("бронебойный") != std::string::npos) return WarheadClass::ArmorPiercing;
+    if (S.find("осадный") != std::string::npos || S.find("Siege") != std::string::npos) return WarheadClass::Siege;
+    if (S.find("электрический") != std::string::npos || S.find("Electric") != std::string::npos) return WarheadClass::Electric;
+    if (S.find("плазменный") != std::string::npos || S.find("Plasma") != std::string::npos) return WarheadClass::Plasma;
+    if (S.find("криогенный") != std::string::npos) return WarheadClass::Cryogenic;
+    if (S.find("темпоральный") != std::string::npos || S.find("Temporal") != std::string::npos) return WarheadClass::Temporal;
+    if (S.find("ПВО") != std::string::npos || S.find("AntiAir") != std::string::npos) return WarheadClass::AntiAir;
+    if (S.find("термобарический") != std::string::npos) return WarheadClass::Siege;
+    if (S.find("ракет") != std::string::npos) return WarheadClass::ArmorPiercing;
+    return WarheadClass::Ballistic;
+}
+
 MovementLayer ParseMovementLayer(const std::string& Category, const std::string& Armor)
 {
     if (Category == "Авиация") return MovementLayer::Air;
@@ -167,6 +191,10 @@ void ParseUnitJson(const Json::Value& UnitVal, FactionId Faction, ContentDatabas
     if (const Json::Value* Cat = UnitVal.Find("category")) E.Production.Category = ParseCategory(Cat->AsString());
 
     // Parse params dictionary if present
+    int32_t BibleRange = 0;
+    int32_t BibleDps = 0;
+    std::string WeaponString;
+    std::string TierString;
     if (const Json::Value* Params = UnitVal.Find("params"))
     {
         const auto& Obj = Params->AsObject();
@@ -201,7 +229,27 @@ void ParseUnitJson(const Json::Value& UnitVal, FactionId Faction, ContentDatabas
             {
                 E.Unit.MaxSpeed = Fixed::FromInt(static_cast<int32_t>(ParseDouble(StrVal) * 100));
             }
+            else if (Key == "Дальность")
+            {
+                BibleRange = ParseInt(StrVal);
+            }
+            else if (Key == "Ориентировочный DPS")
+            {
+                BibleDps = ParseInt(StrVal);
+            }
+            else if (Key == "Основное оружие")
+            {
+                WeaponString = StrVal;
+            }
+            else if (Key == "Технологический уровень")
+            {
+                TierString = StrVal;
+            }
         }
+    }
+    if (!TierString.empty())
+    {
+        E.Production.Tier = ParseTechTier(TierString);
     }
 
     // Set movement layer
@@ -217,6 +265,83 @@ void ParseUnitJson(const Json::Value& UnitVal, FactionId Faction, ContentDatabas
     else if (E.Armor == ArmorClass::SiegeVehicle) ArmorStr = "Осадная техника";
 
     E.Unit.Layer = ParseMovementLayer(CatStr, ArmorStr);
+    if (E.Unit.MaxSpeed.Raw == 0)
+    {
+        // Default speed per category if bible omitted
+        if (E.Production.Category == ProductionCategory::Naval) E.Unit.MaxSpeed = Fixed::FromInt(500);
+        else if (E.Production.Category == ProductionCategory::Aircraft) E.Unit.MaxSpeed = Fixed::FromInt(900);
+        else if (E.Production.Category == ProductionCategory::Vehicle) E.Unit.MaxSpeed = Fixed::FromInt(450);
+        else E.Unit.MaxSpeed = Fixed::FromInt(400);
+    }
+    E.VisionRange = Fixed::FromInt((BibleRange > 0 ? BibleRange + 2 : 8) * 100);
+    if (E.MaxHealth == 100 && E.Production.Cost > 0)
+    {
+        // Fallback: keep bible HP, already parsed
+    }
+
+    // Create per-unit weapon from bible DPS/range/warhead if combat unit
+    if (BibleDps > 0 && BibleRange > 0)
+    {
+        WeaponDef W;
+        W.Id = MakeContentId(("weapon." + UnitId).c_str());
+        W.Name = "weapon." + UnitId;
+        W.Warhead = ParseWarheadFromWeaponString(WeaponString);
+        // DPS is per-second; cooldown 20 ticks = 1 sec, so damage = DPS
+        W.Damage = std::max(5, BibleDps);
+        W.MaxRange = Fixed::FromInt(BibleRange * 100);
+        W.MinRange = Fixed::FromInt(0);
+        // Cooldown tuned by category: arty slower, infantry faster
+        if (E.Production.Category == ProductionCategory::Vehicle && E.Armor == ArmorClass::SiegeVehicle) W.CooldownTicks = 60;
+        else if (E.Production.Category == ProductionCategory::Naval) W.CooldownTicks = 30;
+        else if (E.Production.Category == ProductionCategory::Aircraft) W.CooldownTicks = 25;
+        else W.CooldownTicks = 20;
+        // Naval/air can hit both, anti-air filtered elsewhere
+        W.bCanTargetGround = true;
+        W.bCanTargetAir = (E.Production.Category == ProductionCategory::Aircraft || WeaponString.find("ПВО") != std::string::npos);
+        if (E.Production.Category == ProductionCategory::Naval) W.bCanTargetGround = true;
+        W.bRequiresTurretAligned = false;
+        Db.AddWeapon(W);
+        E.Weapon = W.Id;
+        // Role hints for AI
+        if (E.Armor == ArmorClass::SiegeVehicle) E.Roles = EntityRole::Combat | EntityRole::Artillery;
+        else if (WeaponString.find("ПВО") != std::string::npos) E.Roles = EntityRole::Combat | EntityRole::AntiAir;
+        else E.Roles = EntityRole::Combat;
+    }
+
+    // Infer producer building from category + faction for buildability
+    auto ProducerFor = [&](FactionId Fac, ProductionCategory Cat) -> std::string {
+        if (Cat == ProductionCategory::Infantry) {
+            if (Fac == FactionId::Soviet) return "Казарма мобилизации";
+            if (Fac == FactionId::Alliance) return "Казарма";
+            if (Fac == FactionId::EasternCoalition) return "Казарма";
+            if (Fac == FactionId::ChronoLegion) return "Казарма";
+        } else if (Cat == ProductionCategory::Vehicle) {
+            if (Fac == FactionId::Soviet) return "Тяжёлый завод";
+            if (Fac == FactionId::Alliance) return "Военный завод";
+            if (Fac == FactionId::EasternCoalition) return "Военный завод";
+            if (Fac == FactionId::ChronoLegion) return "Военный завод";
+        } else if (Cat == ProductionCategory::Aircraft) {
+            if (Fac == FactionId::Soviet) return "Аэродром дальней авиации";
+            return "Аэродром";
+        } else if (Cat == ProductionCategory::Naval) {
+            if (Fac == FactionId::Soviet) return "Военно-морской док";
+            return "Военно-морской док";
+        }
+        return "";
+    };
+    std::string ProducerName = ProducerFor(E.Faction, E.Production.Category);
+    if (!ProducerName.empty()) {
+        ContentId ProducerId = MakeContentId(ProducerName.c_str());
+        // Also try the default-content english id as fallback
+        E.Production.ProducedBy = {ProducerId};
+        // Keep tier-based prerequisites minimal: T1 needs nothing else, T2 needs radar, T3 needs tech center
+        if (E.Production.Tier == TechTier::T2) {
+            std::string RadarName = (E.Faction == FactionId::Soviet ? "Командный радар" : "Радар");
+            E.Production.Prerequisites = {MakeContentId(RadarName.c_str())};
+        } else if (E.Production.Tier == TechTier::T3) {
+            E.Production.Prerequisites = {MakeContentId(ProducerName.c_str())};
+        }
+    }
 
     Db.AddEntity(E);
 
@@ -298,9 +423,52 @@ void ParseBuildingJson(const Json::Value& BVal, FactionId Faction, ContentDataba
         }
     }
 
+    // Purpose-driven flags for RA3 parity
+    std::string PurposeCheck;
+    if (const Json::Value* Purp = BVal.Find("purpose")) PurposeCheck = Purp->AsString();
+    // Detect naval yard / airfield / superweapon by name/purpose
+    const std::string NameCheck = BldId + PurposeCheck;
+    if (NameCheck.find("док") != std::string::npos || PurposeCheck.find("Корабли") != std::string::npos)
+    {
+        E.Building.bWaterOnly = true;
+        E.Building.bProvidesBuildRadius = true;
+        E.Building.BuildRadius = Fixed::FromInt(1200);
+        if (E.Building.FootprintX == 1) { E.Building.FootprintX = 3; E.Building.FootprintY = 3; }
+    }
+    if (NameCheck.find("Аэродром") != std::string::npos || PurposeCheck.find("посадочных места") != std::string::npos)
+    {
+        E.Building.bProvidesBuildRadius = true;
+        E.Building.BuildRadius = Fixed::FromInt(1200);
+        if (E.Building.FootprintX == 1) { E.Building.FootprintX = 3; E.Building.FootprintY = 2; }
+    }
+    if (PurposeCheck.find("неуязвимой") != std::string::npos || PurposeCheck.find("Железный купол") != std::string::npos)
+    {
+        E.Building.SuperweaponRechargeTicks = 6 * 60 * 20;
+        E.Building.SuperweaponDamage = 0;
+        E.Building.SuperweaponRadius = Fixed::FromInt(800);
+        E.Building.SuperweaponWarhead = WarheadClass::Siege;
+    }
+    if (PurposeCheck.find("ракетный удар") != std::string::npos || PurposeCheck.find("Каратель") != std::string::npos)
+    {
+        E.Building.SuperweaponRechargeTicks = 8 * 60 * 20;
+        E.Building.SuperweaponDamage = 900;
+        E.Building.SuperweaponRadius = Fixed::FromInt(600);
+        E.Building.SuperweaponWarhead = WarheadClass::Siege;
+    }
+    if (PurposeCheck.find("Мини-карта") != std::string::npos || NameCheck.find("радар") != std::string::npos || NameCheck.find("Радар") != std::string::npos)
+    {
+        E.Building.bIsRadar = true;
+    }
     if (E.Building.PowerProduced == 0 && E.Building.PowerConsumed == 0)
     {
         E.Building.PowerConsumed = 50;
+    }
+    if (E.Building.FootprintX == 1 && E.Building.FootprintY == 1 && E.Kind == EntityKind::Building)
+    {
+        // Default footprint for bible buildings lacking explicit size
+        if (PurposeCheck.find("Техника") != std::string::npos || NameCheck.find("завод") != std::string::npos) { E.Building.FootprintX = 3; E.Building.FootprintY = 3; }
+        else if (NameCheck.find("Казарма") != std::string::npos) { E.Building.FootprintX = 2; E.Building.FootprintY = 2; }
+        else if (NameCheck.find("электростанция") != std::string::npos) { E.Building.FootprintX = 2; E.Building.FootprintY = 2; }
     }
 
     Db.AddEntity(E);

@@ -436,6 +436,7 @@ struct VeterancyLevel
     int32_t RegenPerTick = 0;
     bool bImprovedAbility = false;
     bool bHeroicPassive = false;
+    int32_t FireRateBonusPercent = 0;
 };
 
 struct VeterancyDef

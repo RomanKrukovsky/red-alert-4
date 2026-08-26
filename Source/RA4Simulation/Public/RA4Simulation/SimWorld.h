@@ -458,6 +458,7 @@ private:
         uint32_t BuildingIndex = 0;
         int32_t Priority = 0;
         PlayerId Owner = kInvalidPlayer;
+        bool bIsDefenseQueue = false;
     };
     std::vector<FundingCandidate> FundingCandidates;
 

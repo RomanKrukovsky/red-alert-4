@@ -450,6 +450,7 @@ struct BuildingComp
     bool bHasRallyPoint = false;
 
     std::vector<ProductionItem> Queue;
+    std::vector<ProductionItem> DefenseQueue;
 
     // ADR-0013 power priority. Seeded from the definition when the building is created
     // and then owned by the player: an explicit override has to persist, so this is

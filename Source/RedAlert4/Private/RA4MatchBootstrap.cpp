@@ -2,6 +2,7 @@
 #include "RA4MatchBootstrap.h"
 
 #include "RA4Content/ContentDatabase.h"
+#include "RA4Content/BibleContentLoader.h"
 #include "RA4Core/SimConfig.h"
 #include "RA4Simulation/SimWorld.h"
 
@@ -99,6 +100,20 @@ void FRA4MatchBootstrap::BuildSkirmish(ContentDatabase& Content, SimWorld& World
                                        const RA4::Recon::ReconSettings* ReconSettings)
 {
     BuildDefaultContent(Content);
+    // Supplement with bible-defined roster (78 units + 64 buildings) for full RA3 parity.
+    // If the normalized JSON is absent (CI headless), we keep the default set.
+    {
+        std::vector<std::string> BibleErrors;
+        const bool bBibleOk = LoadBibleContent(Content, "Content/RA4/Data/Generated/ra4_content.normalized.json", BibleErrors);
+        if (bBibleOk)
+        {
+            UE_LOG(LogTemp, Display, TEXT("RA4 content: bible roster merged (%d entities)"), int32(Content.GetEntities().size()));
+        }
+        else if (!BibleErrors.empty())
+        {
+            UE_LOG(LogTemp, Verbose, TEXT("RA4 content: bible not loaded (%s)"), UTF8_TO_TCHAR(BibleErrors[0].c_str()));
+        }
+    }
 
     // Authoring mistakes in content must not reach a running match; they are far
     // cheaper to diagnose here than as a crash twenty minutes in.

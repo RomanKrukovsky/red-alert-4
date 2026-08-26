@@ -10,6 +10,7 @@
 #include "RA4AI/AIStrategy.h"
 #include "RA4Simulation/SimWorld.h"
 #include "RA4Content/ContentDatabase.h"
+#include "RA4Content/BibleContentLoader.h"
 #include "CampaignDatabase.h"
 #include "MissionRuntime.h"
 #include "RA4Presentation/HudSnapshot.h"
@@ -277,6 +278,10 @@ bool URA4SimWorldSubsystem::StartCampaignMission(const FString& MissionId, int32
     }
 
     RA4::BuildDefaultContent(*Content);
+    {
+        std::vector<std::string> BibleErrors;
+        LoadBibleContent(*Content, "Content/RA4/Data/Generated/ra4_content.normalized.json", BibleErrors);
+    }
 
     std::vector<std::string> Errors;
     if (!Content->Validate(Errors))

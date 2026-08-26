@@ -695,6 +695,10 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Unit.TurnRatePerSecond = 400;
         E.Unit.TurretTurnRatePerSecond = 600;
         E.Unit.CollisionRadius = Fixed::FromInt(120);
+        E.Unit.bHasSecondaryAbility = true;
+        E.Unit.AbilityCooldownTicks = SecondsToTicks(12);
+        E.Unit.AbilityDurationTicks = SecondsToTicks(6);
+        E.Unit.AbilityArmorBonusPercent = 50;
         E.Production.Cost = 800;
         E.Production.BuildTimeTicks = SecondsToTicks(15);
         E.Production.Category = ProductionCategory::Vehicle;
@@ -820,6 +824,10 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Unit.HarvestPerTick = 12;
         E.Unit.UnloadPerTick = 40;
         E.Unit.bCanCrushInfantry = true;
+        E.Unit.bHasSecondaryAbility = true;
+        E.Unit.AbilityCooldownTicks = SecondsToTicks(15);
+        E.Unit.AbilityDurationTicks = SecondsToTicks(6);
+        E.Unit.AbilitySpeedMultiplier = Fixed::FromRatio(3, 2);
         E.Production.Cost = 1400;
         E.Production.BuildTimeTicks = SecondsToTicks(15);
         E.Production.Category = ProductionCategory::Vehicle;
@@ -1663,10 +1671,10 @@ void BuildDefaultContent(ContentDatabase& Db)
     // Elite(2x, +10% more, +10% HP), Heroic(5x, unique passive)
     {
         VeterancyDef Vet;
-        Vet.Levels[int32_t(VeterancyRank::Recruit)] = {1, 0, 0, 0, false, false};
-        Vet.Levels[int32_t(VeterancyRank::Veteran)] = {1, 10, 8, 1, false, false};
-        Vet.Levels[int32_t(VeterancyRank::Elite)] = {2, 10, 10, 2, true, false};
-        Vet.Levels[int32_t(VeterancyRank::Heroic)] = {5, 10, 10, 3, true, true};
+        Vet.Levels[int32_t(VeterancyRank::Recruit)] = {1, 0, 0, 0, false, false, 0};
+        Vet.Levels[int32_t(VeterancyRank::Veteran)] = {1, 10, 8, 1, false, false, 0};
+        Vet.Levels[int32_t(VeterancyRank::Elite)] = {2, 10, 10, 2, true, false, 0};
+        Vet.Levels[int32_t(VeterancyRank::Heroic)] = {5, 10, 10, 3, true, true, 0};
         Db.SetVeterancy(Vet);
     }
 
