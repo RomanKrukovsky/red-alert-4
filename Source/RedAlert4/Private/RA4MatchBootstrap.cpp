@@ -95,7 +95,7 @@ void SeedBase(SimWorld& World, const StartingForce& Force, PlayerId Owner, const
 
 void FRA4MatchBootstrap::BuildSkirmish(ContentDatabase& Content, SimWorld& World, uint64 Seed,
                                        RA4::FactionId PlayerFaction, RA4::FactionId EnemyFaction,
-                                       int32 NumAIPlayers, int32 AISpot,
+                                       int32 NumAIPlayers, int32 AISpot, int32 TeamMode,
                                        const RA4::Recon::ReconSettings* ReconSettings)
 {
     BuildDefaultContent(Content);
@@ -117,6 +117,7 @@ void FRA4MatchBootstrap::BuildSkirmish(ContentDatabase& Content, SimWorld& World
     Setup.Map.Resize(kMapTiles, kMapTiles, Tile_GroundPassable);
 
     Setup.Players[0].bActive = true;
+    Setup.Players[0].Team = 0;
     Setup.Players[0].Faction = PlayerFaction;
     Setup.Players[0].StartingCredits = 10000;
 
@@ -128,16 +129,20 @@ void FRA4MatchBootstrap::BuildSkirmish(ContentDatabase& Content, SimWorld& World
         TileCoord Yard;
         TileCoord Ore;
     };
-    static const StartSpot Spots[4] = {
-        {TileCoord(10, 10), TileCoord(6, 15)},   // spot 1: north-west
-        {TileCoord(48, 48), TileCoord(53, 43)},  // spot 2: south-east
-        {TileCoord(48, 10), TileCoord(53, 6)},   // spot 3: north-east
-        {TileCoord(10, 48), TileCoord(6, 43)},   // spot 4: south-west
+    static const StartSpot Spots[8] = {
+        {TileCoord(10, 10), TileCoord(6, 15)},   // spot 1: NW corner
+        {TileCoord(48, 48), TileCoord(53, 43)},  // spot 2: SE corner
+        {TileCoord(48, 10), TileCoord(53, 6)},    // spot 3: NE corner
+        {TileCoord(10, 48), TileCoord(6, 43)},   // spot 4: SW corner
+        {TileCoord(29, 5),  TileCoord(25, 10)},   // spot 5: N edge center
+        {TileCoord(29, 53), TileCoord(25, 48)},   // spot 6: S edge center
+        {TileCoord(5, 29),  TileCoord(10, 25)},   // spot 7: W edge center
+        {TileCoord(53, 29), TileCoord(48, 33)},   // spot 8: E edge center
     };
     constexpr int32 kSpotCount = int32(sizeof(Spots) / sizeof(Spots[0]));
 
     NumAIPlayers = NumAIPlayers < 1 ? 1 : NumAIPlayers;
-    const int32 MaxAIPlayers = kMaxPlayers - 1 < kSpotCount - 1 ? kMaxPlayers - 1 : kSpotCount - 1;
+    const int32 MaxAIPlayers = FMath::Min(kMaxPlayers - 1, kSpotCount - 1);
     if (NumAIPlayers > MaxAIPlayers)
     {
         UE_LOG(LogTemp, Warning, TEXT("RA4 BuildSkirmish: NumAIPlayers=%d clamped to %d"), NumAIPlayers, MaxAIPlayers);
@@ -188,6 +193,9 @@ void FRA4MatchBootstrap::BuildSkirmish(ContentDatabase& Content, SimWorld& World
         Setup.Players[Slot].bActive = true;
         Setup.Players[Slot].Faction = EnemyFaction;
         Setup.Players[Slot].StartingCredits = 10000;
+        // Default: all AI on team 1 (enemy team), player on team 0.
+        // The skirmish setup widget can override this per-slot.
+        Setup.Players[Slot].Team = 1;
     }
     for (int32 Slot = 2; Slot <= NumAIPlayers; Slot += 2)
     {

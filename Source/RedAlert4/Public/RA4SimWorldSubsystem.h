@@ -131,7 +131,7 @@ public:
     void ConfigureRecon(bool bEnabled, bool bShowTruth);
 
     void StartSkirmishMatch(uint8 PlayerFaction, uint8 EnemyFaction, int32 Difficulty,
-                            int32 NumAI = 1, int32 AISpot = -1);
+                            int32 NumAI = 1, int32 AISpot = -1, int32 TeamMode = 0);
 
     // Brings up a campaign mission by id: the mission's own MissionSetupDef decides
     // the map, the player slots and the opening forces, so a mission is a match in

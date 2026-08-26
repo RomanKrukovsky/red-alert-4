@@ -27,6 +27,6 @@ struct REDALERT4_API FRA4MatchBootstrap
     static void BuildSkirmish(RA4::ContentDatabase& Content, RA4::SimWorld& World, uint64 Seed,
                               RA4::FactionId PlayerFaction = RA4::FactionId::Soviet,
                               RA4::FactionId EnemyFaction = RA4::FactionId::Alliance,
-                              int32 NumAIPlayers = 1, int32 AISpot = -1,
+                              int32 NumAIPlayers = 1, int32 AISpot = -1, int32 TeamMode = 0,
                               const RA4::Recon::ReconSettings* ReconSettings = nullptr);
 };

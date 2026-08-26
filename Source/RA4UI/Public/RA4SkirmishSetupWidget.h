@@ -80,6 +80,8 @@ private:
 
     UPROPERTY(Transient)
     TObjectPtr<UComboBoxString> AISpotCombo;
+    TObjectPtr<UComboBoxString> NumAICombo;
+    TObjectPtr<UComboBoxString> TeamCombo;
 
     UPROPERTY(Transient)
     TObjectPtr<UComboBoxString> DifficultyCombo;

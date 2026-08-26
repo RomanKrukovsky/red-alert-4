@@ -285,9 +285,38 @@ void URA4SkirmishSetupWidget::BuildLayout()
     AISpotCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("AISpotCombo"));
     AISpotCombo->AddOption(TEXT("Старт: Позиция 1 (Запад)"));
     AISpotCombo->AddOption(TEXT("Старт: Позиция 2 (Восток)"));
+    AISpotCombo->AddOption(TEXT("Старт: Позиция 3 (Северо-восток)"));
+    AISpotCombo->AddOption(TEXT("Старт: Позиция 4 (Юго-запад)"));
+    AISpotCombo->AddOption(TEXT("Старт: Позиция 5 (Север)"));
+    AISpotCombo->AddOption(TEXT("Старт: Позиция 6 (Юг)"));
+    AISpotCombo->AddOption(TEXT("Старт: Позиция 7 (Запад-центр)"));
+    AISpotCombo->AddOption(TEXT("Старт: Позиция 8 (Восток-центр)"));
     AISpotCombo->SetSelectedIndex(1);
     AISpotCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
-    RightBox->AddChildToVerticalBox(AISpotCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 16.0f));
+    RightBox->AddChildToVerticalBox(AISpotCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
+
+    // Number of AI opponents (1-7)
+    NumAICombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("NumAICombo"));
+    NumAICombo->AddOption(TEXT("1 противник"));
+    NumAICombo->AddOption(TEXT("2 противника"));
+    NumAICombo->AddOption(TEXT("3 противника"));
+    NumAICombo->AddOption(TEXT("4 противника"));
+    NumAICombo->AddOption(TEXT("5 противников"));
+    NumAICombo->AddOption(TEXT("6 противников"));
+    NumAICombo->AddOption(TEXT("7 противников"));
+    NumAICombo->SetSelectedIndex(0);
+    NumAICombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
+    RightBox->AddChildToVerticalBox(NumAICombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
+
+    // Alliance/Team selector for the AI group
+    TeamCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("TeamCombo"));
+    TeamCombo->AddOption(TEXT("Все ИИ — враги (каждый сам за себя)"));
+    TeamCombo->AddOption(TEXT("Все ИИ — одна команда"));
+    TeamCombo->AddOption(TEXT("ИИ разбиты на 2 союза"));
+    TeamCombo->AddOption(TEXT("ИИ разбиты на 3 союза"));
+    TeamCombo->SetSelectedIndex(0);
+    TeamCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
+    RightBox->AddChildToVerticalBox(TeamCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 16.0f));
 
     UBorder* RightPanel = MakeFramedSetupPanel(WidgetTree, RightBox, TEXT("RightPanel"));
     PlaceSetupWidget(MainCanvas, RightPanel, FVector2D(630.0f, 140.0f), FVector2D(530.0f, 500.0f), 2);
@@ -450,9 +479,11 @@ void URA4SkirmishSetupWidget::LaunchSkirmishMatch()
 {
     if (UWorld* World = GetWorld())
     {
+        const int32 NumAI = NumAICombo ? NumAICombo->GetSelectedIndex() + 1 : 1;
+        const int32 TeamMode = TeamCombo ? TeamCombo->GetSelectedIndex() : 0;
         const FString Options = FString::Printf(
-            TEXT("?PlayerFaction=%d?EnemyFaction=%d?PlayerSpot=%d?AISpot=%d?Difficulty=%d?Credits=%d"),
-            PlayerFactionIndex, AIFactionIndex, PlayerSpotIndex, AISpotIndex, DifficultyIndex, CreditsIndex);
+            TEXT("?PlayerFaction=%d?EnemyFaction=%d?PlayerSpot=%d?AISpot=%d?Difficulty=%d?Credits=%d?NumAI=%d?TeamMode=%d"),
+            PlayerFactionIndex, AIFactionIndex, PlayerSpotIndex, AISpotIndex, DifficultyIndex, CreditsIndex, NumAI, TeamMode);
 
         UGameplayStatics::OpenLevel(World, TEXT("/Game/Maps/RA4_Skirmish_Production"), true, Options);
     }

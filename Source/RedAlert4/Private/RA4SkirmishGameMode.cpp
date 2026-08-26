@@ -94,6 +94,7 @@ void ARA4SkirmishGameMode::StartSimulationMatch()
     int32 Difficulty = UGameplayStatics::GetIntOption(Options, TEXT("Difficulty"), 1);
     int32 AISpot = UGameplayStatics::GetIntOption(Options, TEXT("AISpot"), -1);
     int32 NumAI = UGameplayStatics::GetIntOption(Options, TEXT("NumAI"), 1);
+    int32 TeamMode = UGameplayStatics::GetIntOption(Options, TEXT("TeamMode"), 0);
     // Unreliable-recon skirmish options (ADR-0026). Open options, not cheat codes:
     // ?Recon=1 makes belief drive the HUD, ?ShowTruth=1 also raises the two-maps
     // overlay so a player can watch how wrong their staff map is.
@@ -128,8 +129,8 @@ void ARA4SkirmishGameMode::StartSimulationMatch()
         UE_LOG(LogTemp, Warning, TEXT("RA4 invalid EnemyFaction option; using %u"), EnemyFaction);
     }
 
-    UE_LOG(LogTemp, Display, TEXT("RA4 skirmish factions: player=%u enemy=%u difficulty=%d ai=%d aispot=%d"),
-           PlayerFaction, EnemyFaction, Difficulty, NumAI, AISpot);
+    UE_LOG(LogTemp, Display, TEXT("RA4 skirmish factions: player=%u enemy=%u difficulty=%d ai=%d aispot=%d teammode=%d"),
+           PlayerFaction, EnemyFaction, Difficulty, NumAI, AISpot, TeamMode);
 
     // Start the simulation match
     if (UWorld* World = GetWorld())
