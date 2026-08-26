@@ -465,7 +465,7 @@ void ARA4EntityActor::Tick(float DeltaTime)
     // Dynamic vehicle tank tread marks on ground
     if (bIsVehicle && Speed > 25.0f)
     {
-        if (LastTreadSpawnPosition.IsNearlyZero() || FVector::DistSquared(InterpolatedLocation, LastTreadSpawnPosition) > (45.0f * 45.0f))
+        if (LastTreadSpawnPosition.IsNearlyZero() || FVector::DistSquared(InterpolatedLocation, LastTreadSpawnPosition) > (80.0f * 80.0f))
         {
             LastTreadSpawnPosition = InterpolatedLocation;
             if (UWorld* World = GetWorld())
@@ -475,8 +475,8 @@ void ARA4EntityActor::Tick(float DeltaTime)
                 const FVector LeftTrack = InterpolatedLocation - Right * 28.0f;
                 const FVector RightTrack = InterpolatedLocation + Right * 28.0f;
 
-                DrawDebugLine(World, LeftTrack - Forward * 16.0f, LeftTrack + Forward * 16.0f, FColor(20, 18, 14), false, 20.0f, 0, 3.2f);
-                DrawDebugLine(World, RightTrack - Forward * 16.0f, RightTrack + Forward * 16.0f, FColor(20, 18, 14), false, 20.0f, 0, 3.2f);
+                DrawDebugLine(World, LeftTrack - Forward * 20.0f, LeftTrack + Forward * 20.0f, FColor(20, 18, 14, 180), false, 30.0f, 0, 4.0f);
+                DrawDebugLine(World, RightTrack - Forward * 20.0f, RightTrack + Forward * 20.0f, FColor(20, 18, 14, 180), false, 30.0f, 0, 4.0f);
             }
         }
     }
@@ -875,13 +875,19 @@ void ARA4EntityActor::ApplyPrimitiveComposition(const FString& InEntityId)
         USkeletalMesh* QuantumMesh = LoadObject<USkeletalMesh>(nullptr, TEXT("/Game/ThirdParty/QuantumCharacter/Mesh/SKM_QuantumCharacter.SKM_QuantumCharacter"));
         if (QuantumMesh && SkeletalMeshComponent)
         {
-            MeshComponent->SetVisibility(false, true); // Hide cube and all child components
+            MeshComponent->SetVisibility(false, true);
             SkeletalMeshComponent->SetSkeletalMesh(QuantumMesh);
             SkeletalMeshComponent->SetVisibility(true);
             SkeletalMeshComponent->SetRelativeLocation(FVector(0, 0, 0));
             SkeletalMeshComponent->SetRelativeRotation(FRotator(0, -90, 0));
             SkeletalMeshComponent->SetWorldScale3D(FVector(1.0f, 1.0f, 1.0f));
             VisualZOffset = 0.0f;
+        }
+        else if (MeshComponent)
+        {
+            // QuantumCharacter not available: keep the static mesh visible
+            // rather than leaving the actor invisible (which read as a crash).
+            MeshComponent->SetVisibility(true, true);
         }
     }
     else

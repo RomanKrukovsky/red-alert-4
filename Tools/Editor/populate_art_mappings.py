@@ -6,6 +6,10 @@ A = "/Game/RA4/Art"  # root
 # content id -> static mesh path (authored first, blockout fallback)
 UNIT_MAP = {
     # --- Soviet ---
+    "unit.sov.combat_engineer": f"{A}/Blockout/Soviet/SM_Soviet_SU_MasterEngineer_Blockout",
+    "unit.all.combat_engineer": f"{A}/Blockout/Alliance/SM_Alliance_AL_FieldEngineer_Blockout",
+    "unit.ec.combat_engineer":  f"{A}/Blockout/Coalition/SM_Coalition_CO_QianweiRifleman_Blockout",
+    "unit.cl.combat_engineer":  f"{A}/Blockout/Chronolegion/SM_Chronolegion_CH_CausalityEngineer_Blockout",
     "unit.sov.mcv":             f"{A}/Blockout/Soviet/SM_Soviet_SU_MCV_MobileYard_Blockout",
     "unit.sov.conscript":       f"{A}/Blockout/Soviet/SM_Soviet_SU_RubezhRifleman_Blockout",
     "unit.sov.rocket_trooper":  f"{A}/Blockout/Soviet/SM_Soviet_SU_RazryadTrooper_Blockout",
