@@ -30,7 +30,7 @@ namespace RA4
 //       the payment and power-tier fields added to the state checksum (ADR-0012,
 //       ADR-0013) -- either alone makes an older recording replay to a different hash
 //   v3: the union of the above
-constexpr uint32_t kReplayFormatVersion = 3;
+constexpr uint32_t kReplayFormatVersion = 4;
 constexpr uint32_t kReplayMagic = 0x34414952;   // 'RA4R'
 
 struct ReplayHeader
@@ -48,8 +48,10 @@ struct ReplayHeader
     struct PlayerEntry
     {
         bool bActive = false;
+        uint8_t Team = 0;
         uint8_t Faction = 0;
         int32_t StartingCredits = 0;
+        int32_t StartPositionIndex = 0;
         std::string Name;
     };
     PlayerEntry Players[kMaxPlayers];

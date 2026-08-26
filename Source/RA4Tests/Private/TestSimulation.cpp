@@ -1242,6 +1242,32 @@ RA4_TEST(Victory, SurrenderEndsTheMatchImmediately)
     RA4_EXPECT_EQ(int32_t(F.World.GetWinner()), 0);
 }
 
+RA4_TEST(Victory, LastRemainingAllianceWinsTogether)
+{
+    ContentDatabase Content;
+    BuildDefaultContent(Content);
+    MatchSetup Setup = MakeTestSetup(12345);
+    Setup.Players[0].Team = 1;
+    Setup.Players[1].Team = 1;
+    Setup.Players[2].bActive = true;
+    Setup.Players[2].Team = 2;
+    Setup.Players[2].Faction = FactionId::Alliance;
+
+    SimWorld World;
+    World.Initialize(&Content, Setup);
+    World.SpawnBuilding(Ids::SovConYard, 0, TileCoord(10, 10), true);
+    World.SpawnBuilding(Ids::SovConYard, 1, TileCoord(20, 20), true);
+    World.SpawnBuilding(Ids::AllConYard, 2, TileCoord(40, 40), true);
+
+    Command Surrender = MakeCommand(CommandType::Surrender, 2);
+    RA4_REQUIRE(World.ApplyCommand(Surrender).IsAccepted());
+    RunTicks(World, 2);
+
+    RA4_EXPECT(World.GetPhase() == MatchPhase::Finished);
+    RA4_EXPECT_EQ(int32_t(World.GetWinner()), 0);
+    RA4_EXPECT(!World.GetPlayer(1).bDefeated);
+}
+
 RA4_TEST(Economy, MultiHarvesterTenCyclesAndRefineryQueue)
 {
     Fixture F;

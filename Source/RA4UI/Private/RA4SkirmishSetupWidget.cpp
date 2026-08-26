@@ -2,6 +2,7 @@
 #include "RA4SkirmishSetupWidget.h"
 
 #include "RA4MainMenuScreenWidget.h"
+#include "RA4Core/Ids.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
@@ -9,12 +10,14 @@
 #include "Components/CanvasPanel.h"
 #include "Components/CanvasPanelSlot.h"
 #include "Components/ComboBoxString.h"
+#include "Components/EditableTextBox.h"
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/Image.h"
 #include "Components/Overlay.h"
 #include "Components/OverlaySlot.h"
 #include "Components/ScaleBox.h"
+#include "Components/ScrollBox.h"
 #include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
@@ -23,6 +26,7 @@
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
 #include "Misc/Paths.h"
+#include "Misc/Base64.h"
 #include "Styling/SlateBrush.h"
 
 #define LOCTEXT_NAMESPACE "RA4SkirmishSetup"
@@ -191,7 +195,7 @@ void URA4SkirmishSetupWidget::BuildLayout()
     LeftBox->AddChildToVerticalBox(MapLabel)->SetPadding(FMargin(0.0f, 10.0f, 0.0f, 4.0f));
 
     MapCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("MapCombo"));
-    MapCombo->AddOption(TEXT("Архипелаг — Холмы и Проливы (2 игрока)"));
+    MapCombo->AddOption(TEXT("Архипелаг — Холмы и Проливы (до 9 участников)"));
     MapCombo->SetSelectedIndex(0);
     MapCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
     LeftBox->AddChildToVerticalBox(MapCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 16.0f));
@@ -224,121 +228,110 @@ void URA4SkirmishSetupWidget::BuildLayout()
     UBorder* LeftPanel = MakeFramedSetupPanel(WidgetTree, LeftBox, TEXT("LeftPanel"));
     PlaceSetupWidget(MainCanvas, LeftPanel, FVector2D(80.0f, 140.0f), FVector2D(520.0f, 520.0f), 2);
 
-    // Right Column: Player & AI Setup
+    // Player slots: one local commander plus eight independently configurable AI vacancies.
     UVerticalBox* RightBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("RightBox"));
+    UTextBlock* SlotsHeader = MakeSetupText(WidgetTree, LOCTEXT("SlotsHeader", "СЛОТЫ УЧАСТНИКОВ"), 18, Red, TEXT("SlotsHeader"));
+    RightBox->AddChildToVerticalBox(SlotsHeader)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 6.0f));
 
-    // Player Setup
-    UTextBlock* PlayerHeader = MakeSetupText(WidgetTree, LOCTEXT("PlayerHeader", "ИГРОК 1 (КОМАНДИР)"), 18, Red, TEXT("PlayerHeader"));
-    RightBox->AddChildToVerticalBox(PlayerHeader)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
+    SlotStatusCombos.Reset();
+    SlotFactionCombos.Reset();
+    SlotTeamCombos.Reset();
+    SlotSpotCombos.Reset();
+    for (int32 SlotIndex = 0; SlotIndex < RA4::kMaxPlayers; ++SlotIndex)
+    {
+        UHorizontalBox* Row = WidgetTree->ConstructWidget<UHorizontalBox>(
+            UHorizontalBox::StaticClass(), FName(*FString::Printf(TEXT("SlotRow%d"), SlotIndex)));
 
-    PlayerFactionCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("PlayerFactionCombo"));
-    PlayerFactionCombo->AddOption(TEXT("Евразийский пакт (Россия)"));
-    PlayerFactionCombo->AddOption(TEXT("Атлантический альянс (США)"));
-    PlayerFactionCombo->AddOption(TEXT("Восточная коалиция (Китай)"));
-    PlayerFactionCombo->AddOption(TEXT("Тихоокеанский пакт (Япония)"));
-    PlayerFactionCombo->AddOption(TEXT("Независимые державы (Иран)"));
-    PlayerFactionCombo->SetSelectedIndex(0);
-    PlayerFactionCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
-    RightBox->AddChildToVerticalBox(PlayerFactionCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
+        UTextBlock* SlotLabel = MakeSetupText(WidgetTree,
+            FText::FromString(FString::Printf(TEXT("%d"), SlotIndex + 1)), 14, TextColor,
+            FName(*FString::Printf(TEXT("SlotLabel%d"), SlotIndex)));
+        USizeBox* LabelBox = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
+        LabelBox->SetWidthOverride(38.0f);
+        LabelBox->SetContent(SlotLabel);
+        Row->AddChildToHorizontalBox(LabelBox);
 
-    PlayerColorCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("PlayerColorCombo"));
-    PlayerColorCombo->AddOption(TEXT("Цвет: Фиолетовый (Пакт)"));
-    PlayerColorCombo->AddOption(TEXT("Цвет: Кобальтовый (Альянс)"));
-    PlayerColorCombo->AddOption(TEXT("Цвет: Золотой (Коалиция)"));
-    PlayerColorCombo->AddOption(TEXT("Цвет: Бирюзовый (Тихоокеанский)"));
-    PlayerColorCombo->AddOption(TEXT("Цвет: Янтарный (Независимые)"));
-    PlayerColorCombo->SetSelectedIndex(0);
-    PlayerColorCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
-    RightBox->AddChildToVerticalBox(PlayerColorCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
+        UComboBoxString* Status = WidgetTree->ConstructWidget<UComboBoxString>(
+            UComboBoxString::StaticClass(), FName(*FString::Printf(TEXT("SlotStatus%d"), SlotIndex)));
+        if (SlotIndex == 0)
+        {
+            Status->AddOption(TEXT("Игрок"));
+        }
+        else
+        {
+            Status->AddOption(TEXT("ИИ"));
+            Status->AddOption(TEXT("Закрыто"));
+            Status->SetSelectedIndex(SlotIndex == 1 ? 0 : 1);
+        }
+        Status->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
+        USizeBox* StatusBox = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
+        StatusBox->SetWidthOverride(180.0f);
+        StatusBox->SetContent(Status);
+        Row->AddChildToHorizontalBox(StatusBox)->SetPadding(FMargin(0.0f, 0.0f, 8.0f, 0.0f));
+        SlotStatusCombos.Add(Status);
 
-    PlayerSpotCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("PlayerSpotCombo"));
-    PlayerSpotCombo->AddOption(TEXT("Старт: Позиция 1 (Запад)"));
-    PlayerSpotCombo->AddOption(TEXT("Старт: Позиция 2 (Восток)"));
-    PlayerSpotCombo->SetSelectedIndex(0);
-    PlayerSpotCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
-    RightBox->AddChildToVerticalBox(PlayerSpotCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 24.0f));
+        UComboBoxString* Faction = WidgetTree->ConstructWidget<UComboBoxString>(
+            UComboBoxString::StaticClass(), FName(*FString::Printf(TEXT("SlotFaction%d"), SlotIndex)));
+        Faction->AddOption(TEXT("Евразийский пакт"));
+        Faction->AddOption(TEXT("Атлантический альянс"));
+        Faction->SetSelectedIndex(SlotIndex % 2);
+        Faction->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
+        USizeBox* FactionBox = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
+        FactionBox->SetWidthOverride(300.0f);
+        FactionBox->SetContent(Faction);
+        Row->AddChildToHorizontalBox(FactionBox)->SetPadding(FMargin(0.0f, 0.0f, 8.0f, 0.0f));
+        SlotFactionCombos.Add(Faction);
 
-    // AI Setup
-    UTextBlock* AIHeader = MakeSetupText(WidgetTree, LOCTEXT("AIHeader", "ИГРОК 2 (ИИ КОМАНДИР)"), 18, Red, TEXT("AIHeader"));
-    RightBox->AddChildToVerticalBox(AIHeader)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
+        UComboBoxString* Team = WidgetTree->ConstructWidget<UComboBoxString>(
+            UComboBoxString::StaticClass(), FName(*FString::Printf(TEXT("SlotTeam%d"), SlotIndex)));
+        Team->AddOption(TEXT("Без союза"));
+        Team->AddOption(TEXT("Союз A"));
+        Team->AddOption(TEXT("Союз B"));
+        Team->AddOption(TEXT("Союз C"));
+        Team->AddOption(TEXT("Союз D"));
+        Team->SetSelectedIndex(0);
+        Team->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
+        USizeBox* TeamBox = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
+        TeamBox->SetWidthOverride(210.0f);
+        TeamBox->SetContent(Team);
+        Row->AddChildToHorizontalBox(TeamBox)->SetPadding(FMargin(0.0f, 0.0f, 8.0f, 0.0f));
+        SlotTeamCombos.Add(Team);
 
-    AIFactionCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("AIFactionCombo"));
-    AIFactionCombo->AddOption(TEXT("Евразийский пакт (Россия)"));
-    AIFactionCombo->AddOption(TEXT("Атлантический альянс (США)"));
-    AIFactionCombo->AddOption(TEXT("Восточная коалиция (Китай)"));
-    AIFactionCombo->AddOption(TEXT("Тихоокеанский пакт (Япония)"));
-    AIFactionCombo->AddOption(TEXT("Независимые державы (Иран)"));
-    AIFactionCombo->SetSelectedIndex(1);
-    AIFactionCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
-    RightBox->AddChildToVerticalBox(AIFactionCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
+        UComboBoxString* Spot = WidgetTree->ConstructWidget<UComboBoxString>(
+            UComboBoxString::StaticClass(), FName(*FString::Printf(TEXT("SlotSpot%d"), SlotIndex)));
+        for (int32 SpotIndex = 0; SpotIndex < RA4::kMaxPlayers; ++SpotIndex)
+        {
+            Spot->AddOption(FString::Printf(TEXT("Позиция %d"), SpotIndex + 1));
+        }
+        Spot->SetSelectedIndex(SlotIndex);
+        Spot->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
+        USizeBox* SpotBox = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
+        SpotBox->SetWidthOverride(180.0f);
+        SpotBox->SetContent(Spot);
+        Row->AddChildToHorizontalBox(SpotBox);
+        SlotSpotCombos.Add(Spot);
 
-    AIColorCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("AIColorCombo"));
-    AIColorCombo->AddOption(TEXT("Цвет: Фиолетовый (Пакт)"));
-    AIColorCombo->AddOption(TEXT("Цвет: Кобальтовый (Альянс)"));
-    AIColorCombo->AddOption(TEXT("Цвет: Золотой (Коалиция)"));
-    AIColorCombo->AddOption(TEXT("Цвет: Бирюзовый (Тихоокеанский)"));
-    AIColorCombo->AddOption(TEXT("Цвет: Янтарный (Независимые)"));
-    AIColorCombo->SetSelectedIndex(1);
-    AIColorCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
-    RightBox->AddChildToVerticalBox(AIColorCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
+        RightBox->AddChildToVerticalBox(Row)->SetPadding(FMargin(0.0f, 2.0f));
+    }
 
-    AISpotCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("AISpotCombo"));
-    AISpotCombo->AddOption(TEXT("Старт: Позиция 1 (Запад)"));
-    AISpotCombo->AddOption(TEXT("Старт: Позиция 2 (Восток)"));
-    AISpotCombo->AddOption(TEXT("Старт: Позиция 3 (Северо-восток)"));
-    AISpotCombo->AddOption(TEXT("Старт: Позиция 4 (Юго-запад)"));
-    AISpotCombo->AddOption(TEXT("Старт: Позиция 5 (Север)"));
-    AISpotCombo->AddOption(TEXT("Старт: Позиция 6 (Юг)"));
-    AISpotCombo->AddOption(TEXT("Старт: Позиция 7 (Запад-центр)"));
-    AISpotCombo->AddOption(TEXT("Старт: Позиция 8 (Восток-центр)"));
-    AISpotCombo->SetSelectedIndex(1);
-    AISpotCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
-    RightBox->AddChildToVerticalBox(AISpotCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
-
-    // Number of AI opponents (1-7)
-    NumAICombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("NumAICombo"));
-    NumAICombo->AddOption(TEXT("1 противник"));
-    NumAICombo->AddOption(TEXT("2 противника"));
-    NumAICombo->AddOption(TEXT("3 противника"));
-    NumAICombo->AddOption(TEXT("4 противника"));
-    NumAICombo->AddOption(TEXT("5 противников"));
-    NumAICombo->AddOption(TEXT("6 противников"));
-    NumAICombo->AddOption(TEXT("7 противников"));
-    NumAICombo->SetSelectedIndex(0);
-    NumAICombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
-    RightBox->AddChildToVerticalBox(NumAICombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
-
-    // Alliance/Team selector for the AI group
-    TeamCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("TeamCombo"));
-    TeamCombo->AddOption(TEXT("Все ИИ — враги (каждый сам за себя)"));
-    TeamCombo->AddOption(TEXT("Все ИИ — одна команда"));
-    TeamCombo->AddOption(TEXT("ИИ разбиты на 2 союза"));
-    TeamCombo->AddOption(TEXT("ИИ разбиты на 3 союза"));
-    TeamCombo->SetSelectedIndex(0);
-    TeamCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
-    RightBox->AddChildToVerticalBox(TeamCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 16.0f));
+    UHorizontalBox* AllianceRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("AllianceNames"));
+    AllianceNameEdits.Reset();
+    for (int32 TeamIndex = 0; TeamIndex < 4; ++TeamIndex)
+    {
+        UEditableTextBox* NameEdit = WidgetTree->ConstructWidget<UEditableTextBox>(
+            UEditableTextBox::StaticClass(), FName(*FString::Printf(TEXT("AllianceName%d"), TeamIndex)));
+        NameEdit->SetText(FText::FromString(FString::Printf(TEXT("Союз %c"), TCHAR('A' + TeamIndex))));
+        NameEdit->SetHintText(FText::FromString(FString::Printf(TEXT("Имя союза %c"), TCHAR('A' + TeamIndex))));
+        NameEdit->OnTextChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleAllianceNameChanged);
+        USizeBox* NameBox = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
+        NameBox->SetWidthOverride(268.0f);
+        NameBox->SetContent(NameEdit);
+        AllianceRow->AddChildToHorizontalBox(NameBox)->SetPadding(FMargin(0.0f, 8.0f, 8.0f, 0.0f));
+        AllianceNameEdits.Add(NameEdit);
+    }
+    RightBox->AddChildToVerticalBox(AllianceRow)->SetPadding(FMargin(38.0f, 8.0f, 0.0f, 0.0f));
 
     UBorder* RightPanel = MakeFramedSetupPanel(WidgetTree, RightBox, TEXT("RightPanel"));
-    PlaceSetupWidget(MainCanvas, RightPanel, FVector2D(630.0f, 140.0f), FVector2D(530.0f, 500.0f), 2);
-
-    // Right Column: Tactical Intel & Match Rules
-    UVerticalBox* IntelBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("IntelBox"));
-    UTextBlock* IntelHeader = MakeSetupText(
-        WidgetTree, LOCTEXT("IntelHeader", "ТАКТИЧЕСКИЕ ДАННЫЕ ОПЕРАЦИИ"), 18, TextColor, TEXT("IntelHeader"));
-    IntelBox->AddChildToVerticalBox(IntelHeader)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 12.0f));
-
-    UTextBlock* IntelDesc = MakeSetupText(
-        WidgetTree,
-        LOCTEXT("IntelDesc", "ЛАНДШАФТ: Архипелаг с возвышенностями, водными преградами и узкими проходами.\n"
-                             "БАЗОСТРОЕНИЕ: Развёртывание Сборочного цеха (MCV) и добыча руды.\n"
-                             "ТУМАН ВОЙНЫ: Включён (Требуется разведка радаром и мобильными силами).\n"
-                             "СУПЕРОРУЖИЕ: Активно после достижения 3-го технологического уровня.\n"
-                             "УСЛОВИЕ ПОБЕДЫ: Полная ликвидация всех баз и боевых подразделений противника."),
-        14, Muted, TEXT("IntelDesc"), false);
-    IntelBox->AddChildToVerticalBox(IntelDesc)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 16.0f));
-
-    UBorder* IntelPanel = MakeFramedSetupPanel(WidgetTree, IntelBox, TEXT("IntelPanel"));
-    PlaceSetupWidget(MainCanvas, IntelPanel, FVector2D(1190.0f, 140.0f), FVector2D(650.0f, 500.0f), 2);
+    PlaceSetupWidget(MainCanvas, RightPanel, FVector2D(630.0f, 140.0f), FVector2D(1210.0f, 500.0f), 2);
 
     // Validation Status Bar (Bottom Row 1)
     UVerticalBox* BannerStack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("BannerStack"));
@@ -406,15 +399,29 @@ void URA4SkirmishSetupWidget::HandleOptionChanged(FString SelectedItem, ESelectI
     (void)SelectedItem;
     (void)SelectionType;
 
-    if (PlayerFactionCombo) PlayerFactionIndex = PlayerFactionCombo->GetSelectedIndex();
-    if (AIFactionCombo) AIFactionIndex = AIFactionCombo->GetSelectedIndex();
-    if (PlayerColorCombo) PlayerColorIndex = PlayerColorCombo->GetSelectedIndex();
-    if (AIColorCombo) AIColorIndex = AIColorCombo->GetSelectedIndex();
-    if (PlayerSpotCombo) PlayerSpotIndex = PlayerSpotCombo->GetSelectedIndex();
-    if (AISpotCombo) AISpotIndex = AISpotCombo->GetSelectedIndex();
     if (DifficultyCombo) DifficultyIndex = DifficultyCombo->GetSelectedIndex();
     if (CreditsCombo) CreditsIndex = CreditsCombo->GetSelectedIndex();
 
+    UpdateConflictValidation();
+}
+
+void URA4SkirmishSetupWidget::HandleAllianceNameChanged(const FText& Text)
+{
+    (void)Text;
+    for (UComboBoxString* TeamCombo : SlotTeamCombos)
+    {
+        const int32 SelectedTeam = TeamCombo->GetSelectedIndex();
+        TeamCombo->ClearOptions();
+        TeamCombo->AddOption(TEXT("Без союза"));
+        for (int32 TeamIndex = 0; TeamIndex < AllianceNameEdits.Num(); ++TeamIndex)
+        {
+            const FString Name = AllianceNameEdits[TeamIndex]->GetText().ToString();
+            TeamCombo->AddOption(Name.IsEmpty()
+                ? FString::Printf(TEXT("Союз %c"), TCHAR('A' + TeamIndex))
+                : Name);
+        }
+        TeamCombo->SetSelectedIndex(SelectedTeam);
+    }
     UpdateConflictValidation();
 }
 
@@ -428,19 +435,54 @@ void URA4SkirmishSetupWidget::UpdateConflictValidation()
     bool bHasConflict = false;
     FText Message;
 
-    if (PlayerColorIndex == AIColorIndex)
+    TSet<int32> UsedSpots;
+    TSet<int32> HostileSides;
+    int32 ActiveSlots = 0;
+    for (int32 Slot = 0; Slot < SlotStatusCombos.Num(); ++Slot)
+    {
+        const bool bActive = Slot == 0 || SlotStatusCombos[Slot]->GetSelectedIndex() == 0;
+        if (!bActive)
+        {
+            continue;
+        }
+        ++ActiveSlots;
+        const int32 Team = SlotTeamCombos[Slot]->GetSelectedIndex();
+        HostileSides.Add(Team == 0 ? 100 + Slot : Team);
+        const int32 Spot = SlotSpotCombos[Slot]->GetSelectedIndex();
+        if (UsedSpots.Contains(Spot))
+        {
+            bHasConflict = true;
+            Message = LOCTEXT("SpotConflict", "ОШИБКА: активные участники не могут занимать одну стартовую позицию.");
+            break;
+        }
+        UsedSpots.Add(Spot);
+    }
+    if (!bHasConflict && ActiveSlots < 2)
     {
         bHasConflict = true;
-        Message = LOCTEXT("ColorConflict", "ОШИБКА: игрок и ИИ выставили одинаковый цвет! Выберите разные цвета.");
+        Message = LOCTEXT("OpponentRequired", "ОШИБКА: откройте хотя бы одну вакансию ИИ.");
     }
-    else if (PlayerSpotIndex == AISpotIndex)
+    if (!bHasConflict && HostileSides.Num() < 2)
     {
         bHasConflict = true;
-        Message = LOCTEXT("SpotConflict", "ОШИБКА: конфликт стартовых позиций! Игроки не могут стартовать на одном спавне.");
+        Message = LOCTEXT("HostileSideRequired", "ОШИБКА: все участники находятся в одном союзе; назначьте хотя бы две стороны.");
     }
-    else
+    if (!bHasConflict)
     {
-        Message = LOCTEXT("ValidationOk", "Параметры матча проверены. Нажмите «НАЧАТЬ МАТЧ» для загрузки.");
+        for (int32 TeamIndex = 0; TeamIndex < AllianceNameEdits.Num(); ++TeamIndex)
+        {
+            if (AllianceNameEdits[TeamIndex]->GetText().IsEmpty())
+            {
+                bHasConflict = true;
+                Message = LOCTEXT("AllianceNameRequired", "ОШИБКА: названия союзов не могут быть пустыми.");
+                break;
+            }
+        }
+    }
+    if (!bHasConflict)
+    {
+        Message = FText::Format(LOCTEXT("ValidationOkCount", "Готово: {0} участников, включая {1} противников."),
+            FText::AsNumber(ActiveSlots), FText::AsNumber(ActiveSlots - 1));
     }
 
     if (bHasConflict)
@@ -479,11 +521,20 @@ void URA4SkirmishSetupWidget::LaunchSkirmishMatch()
 {
     if (UWorld* World = GetWorld())
     {
-        const int32 NumAI = NumAICombo ? NumAICombo->GetSelectedIndex() + 1 : 1;
-        const int32 TeamMode = TeamCombo ? TeamCombo->GetSelectedIndex() : 0;
-        const FString Options = FString::Printf(
-            TEXT("?PlayerFaction=%d?EnemyFaction=%d?PlayerSpot=%d?AISpot=%d?Difficulty=%d?Credits=%d?NumAI=%d?TeamMode=%d"),
-            PlayerFactionIndex, AIFactionIndex, PlayerSpotIndex, AISpotIndex, DifficultyIndex, CreditsIndex, NumAI, TeamMode);
+        FString Options = FString::Printf(TEXT("?Difficulty=%d?Credits=%d"), DifficultyIndex, CreditsIndex);
+        for (int32 Slot = 0; Slot < SlotStatusCombos.Num(); ++Slot)
+        {
+            const int32 bActive = Slot == 0 || SlotStatusCombos[Slot]->GetSelectedIndex() == 0 ? 1 : 0;
+            Options += FString::Printf(TEXT("?Slot%d=%d,%d,%d,%d"), Slot, bActive,
+                SlotFactionCombos[Slot]->GetSelectedIndex(),
+                SlotTeamCombos[Slot]->GetSelectedIndex(),
+                SlotSpotCombos[Slot]->GetSelectedIndex());
+        }
+        for (int32 TeamIndex = 0; TeamIndex < AllianceNameEdits.Num(); ++TeamIndex)
+        {
+            Options += FString::Printf(TEXT("?Alliance%d=%s"), TeamIndex + 1,
+                *FBase64::Encode(AllianceNameEdits[TeamIndex]->GetText().ToString()));
+        }
 
         UGameplayStatics::OpenLevel(World, TEXT("/Game/Maps/RA4_Skirmish_Production"), true, Options);
     }

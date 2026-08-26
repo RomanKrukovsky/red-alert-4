@@ -59,7 +59,7 @@ void SimWorldView::UpdateMemory(TickIndex MemoryRetentionTicks)
     for (uint32_t I = 0; I < uint32_t(Cores.size()); ++I)
     {
         const EntityCore& Core = Cores[I];
-        if (!Core.bAlive || Core.Owner == Player || Core.Owner >= kMaxPlayers)
+        if (!Core.bAlive || Core.Owner >= kMaxPlayers || !World.IsHostile(Player, Core.Owner))
         {
             continue;
         }

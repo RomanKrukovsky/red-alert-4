@@ -1679,7 +1679,7 @@ EntityId AICommander::FindTacticalFocusTarget(const SimWorld& World, EntityId At
             continue;
         }
 
-        if (EnemyCore->Owner == Player || EnemyCore->Owner >= kMaxPlayers ||
+        if (EnemyCore->Owner >= kMaxPlayers || !World.IsHostile(Player, EnemyCore->Owner) ||
             !World.IsEntityVisibleTo(Player, EnemyId.Index))
         {
             continue;
@@ -1776,7 +1776,8 @@ void AICommander::IssueSquadTacticalCombatOrders(const SimWorld& World, const Ve
     const std::vector<EntityCore>& AllCores = World.GetAllCores();
     for (uint32_t I = 0; I < uint32_t(AllCores.size()); ++I)
     {
-        if (!AllCores[I].bAlive || AllCores[I].Owner == Player || AllCores[I].Owner >= kMaxPlayers)
+        if (!AllCores[I].bAlive || AllCores[I].Owner >= kMaxPlayers ||
+            !World.IsHostile(Player, AllCores[I].Owner))
         {
             continue;
         }
@@ -1811,7 +1812,8 @@ void AICommander::IssueSquadTacticalCombatOrders(const SimWorld& World, const Ve
                 continue;
             }
             const EntityCore* Shooter = World.GetCore(Ev.Other);
-            if (Shooter == nullptr || Shooter->Owner == Player || Shooter->Owner >= kMaxPlayers)
+            if (Shooter == nullptr || Shooter->Owner >= kMaxPlayers ||
+                !World.IsHostile(Player, Shooter->Owner))
             {
                 continue;
             }

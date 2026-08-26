@@ -16,17 +16,21 @@ class ContentDatabase;
 class SimWorld;
 }
 
+struct FRA4SkirmishSlotConfig
+{
+    bool bActive = false;
+    RA4::FactionId Faction = RA4::FactionId::Soviet;
+    uint8 Team = 0;
+    int32 StartSpot = 0;
+};
+
 struct REDALERT4_API FRA4MatchBootstrap
 {
-    // Fills Content, initialises World, and seeds two opposing bases plus an ore
-    // field for each. Content must outlive World: the simulation holds a raw
-    // pointer to it for the whole match. NumAIPlayers seeds additional opposing
-    // bases (slots 1..NumAIPlayers); defaults keep the classic 1v1 unchanged.
+    // Fills Content, initialises World, and seeds every active lobby slot.
     // ReconSettings may be null (classic perfect information). The pointer must
     // outlive the match: SimWorld keeps borrowing it for Restart().
     static void BuildSkirmish(RA4::ContentDatabase& Content, RA4::SimWorld& World, uint64 Seed,
-                              RA4::FactionId PlayerFaction = RA4::FactionId::Soviet,
-                              RA4::FactionId EnemyFaction = RA4::FactionId::Alliance,
-                              int32 NumAIPlayers = 1, int32 AISpot = -1, int32 TeamMode = 0,
+                              const TArray<FRA4SkirmishSlotConfig>& PlayerSlots,
+                              int32 StartingCredits,
                               const RA4::Recon::ReconSettings* ReconSettings = nullptr);
 };

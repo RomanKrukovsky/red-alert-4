@@ -10,6 +10,7 @@ class UComboBoxString;
 class UButton;
 class UTextBlock;
 class UBorder;
+class UEditableTextBox;
 
 /**
  * Production Skirmish Setup Widget.
@@ -33,6 +34,9 @@ private:
     void HandleOptionChanged(FString SelectedItem, ESelectInfo::Type SelectionType);
 
     UFUNCTION()
+    void HandleAllianceNameChanged(const FText& Text);
+
+    UFUNCTION()
     void HandleStartMatchClicked();
 
     UFUNCTION()
@@ -44,12 +48,6 @@ private:
 
     // Selections
     int32 SelectedMapIndex = 0;
-    int32 PlayerFactionIndex = 0;   // 0: USSR, 1: Alliance, 2: Coalition, 3: Chrono
-    int32 AIFactionIndex = 1;       // 0: USSR, 1: Alliance, 2: Coalition, 3: Chrono
-    int32 PlayerColorIndex = 0;     // Red
-    int32 AIColorIndex = 1;         // Blue
-    int32 PlayerSpotIndex = 0;      // Spot 1
-    int32 AISpotIndex = 1;          // Spot 2
     int32 DifficultyIndex = 1;      // Medium
     int32 CreditsIndex = 1;         // 10,000
 
@@ -64,24 +62,19 @@ private:
     TObjectPtr<UComboBoxString> MapCombo;
 
     UPROPERTY(Transient)
-    TObjectPtr<UComboBoxString> PlayerFactionCombo;
+    TArray<TObjectPtr<UComboBoxString>> SlotStatusCombos;
 
     UPROPERTY(Transient)
-    TObjectPtr<UComboBoxString> AIFactionCombo;
+    TArray<TObjectPtr<UComboBoxString>> SlotFactionCombos;
 
     UPROPERTY(Transient)
-    TObjectPtr<UComboBoxString> PlayerColorCombo;
+    TArray<TObjectPtr<UComboBoxString>> SlotTeamCombos;
 
     UPROPERTY(Transient)
-    TObjectPtr<UComboBoxString> AIColorCombo;
+    TArray<TObjectPtr<UComboBoxString>> SlotSpotCombos;
 
     UPROPERTY(Transient)
-    TObjectPtr<UComboBoxString> PlayerSpotCombo;
-
-    UPROPERTY(Transient)
-    TObjectPtr<UComboBoxString> AISpotCombo;
-    TObjectPtr<UComboBoxString> NumAICombo;
-    TObjectPtr<UComboBoxString> TeamCombo;
+    TArray<TObjectPtr<UEditableTextBox>> AllianceNameEdits;
 
     UPROPERTY(Transient)
     TObjectPtr<UComboBoxString> DifficultyCombo;

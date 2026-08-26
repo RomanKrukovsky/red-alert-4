@@ -25,8 +25,10 @@ void SerializeHeader(ByteWriter& W, const ReplayHeader& H)
     for (const ReplayHeader::PlayerEntry& P : H.Players)
     {
         W.WriteBool(P.bActive);
+        W.WriteUInt8(P.Team);
         W.WriteUInt8(P.Faction);
         W.WriteInt32(P.StartingCredits);
+        W.WriteInt32(P.StartPositionIndex);
         W.WriteString(P.Name);
     }
     W.WriteBool(H.bReconEnabled);
@@ -70,8 +72,10 @@ bool DeserializeHeader(ByteReader& R, ReplayHeader& H, std::string& OutError)
     for (ReplayHeader::PlayerEntry& P : H.Players)
     {
         P.bActive = R.ReadBool();
+        P.Team = R.ReadUInt8();
         P.Faction = R.ReadUInt8();
         P.StartingCredits = R.ReadInt32();
+        P.StartPositionIndex = R.ReadInt32();
         P.Name = R.ReadString();
     }
 
@@ -110,8 +114,10 @@ ReplayHeader MakeHeaderFromSetup(const MatchSetup& Setup, const ContentDatabase&
     for (int32_t I = 0; I < kMaxPlayers; ++I)
     {
         H.Players[I].bActive = Setup.Players[I].bActive;
+        H.Players[I].Team = Setup.Players[I].Team;
         H.Players[I].Faction = uint8_t(Setup.Players[I].Faction);
         H.Players[I].StartingCredits = Setup.Players[I].StartingCredits;
+        H.Players[I].StartPositionIndex = Setup.Players[I].StartPositionIndex;
     }
     if (ReconSettings != nullptr && ReconSettings->bEnabled)
     {
@@ -302,8 +308,10 @@ ReplayVerifyResult VerifyReplay(const ReplayData& Replay, const ContentDatabase&
     for (int32_t I = 0; I < kMaxPlayers; ++I)
     {
         Setup.Players[I].bActive = Replay.Header.Players[I].bActive;
+        Setup.Players[I].Team = Replay.Header.Players[I].Team;
         Setup.Players[I].Faction = FactionId(Replay.Header.Players[I].Faction);
         Setup.Players[I].StartingCredits = Replay.Header.Players[I].StartingCredits;
+        Setup.Players[I].StartPositionIndex = Replay.Header.Players[I].StartPositionIndex;
     }
 
     SimWorld World;

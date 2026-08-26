@@ -2756,15 +2756,15 @@ void SimWorld::CheatSpawnArmy(PlayerId Owner, const char* Faction)
         "unit.sov.conscript", "unit.sov.conscript", "unit.sov.conscript",
         "unit.sov.rocket_trooper", "unit.sov.rocket_trooper",
     };
-    int32 SpawnIndex = 0;
+    int32_t SpawnIndex = 0;
     for (const char* UnitId : UnitIds)
     {
         const EntityDef* Def = C->FindEntityByName(UnitId);
         if (Def == nullptr) continue;
-        const int32 OffsetX = (SpawnIndex % 5) * 2 - 4;
-        const int32 OffsetY = (SpawnIndex / 5) * 2 + 4;
-        SpawnUnit(Def->Id, Owner, Vec2(RA4::Fixed::FromInt(int64(Base.X + OffsetX) * RA4::kTileSizeUnits + RA4::kTileSizeUnits / 2),
-            RA4::Fixed::FromInt(int64(Base.Y + OffsetY) * RA4::kTileSizeUnits + RA4::kTileSizeUnits / 2)));
+        const int32_t OffsetX = (SpawnIndex % 5) * 2 - 4;
+        const int32_t OffsetY = (SpawnIndex / 5) * 2 + 4;
+        SpawnUnit(Def->Id, Owner, Vec2(RA4::Fixed::FromInt(int64_t(Base.X + OffsetX) * RA4::kTileSizeUnits + RA4::kTileSizeUnits / 2),
+            RA4::Fixed::FromInt(int64_t(Base.Y + OffsetY) * RA4::kTileSizeUnits + RA4::kTileSizeUnits / 2)));
         ++SpawnIndex;
     }
 }
@@ -5838,8 +5838,8 @@ void SimWorld::SystemVictory()
     // refinery is now covered by the building test above, so no pairing step is
     // needed here. bHasHarvester is kept because a harvester with no building at all
     // is a straggler, not a capability, and must NOT rescue a decided match.
-    int32_t Remaining = 0;
-    PlayerId LastStanding = kInvalidPlayer;
+    std::vector<uint16_t> RemainingSides;
+    PlayerId WinningRepresentative = kInvalidPlayer;
     for (PlayerId I = 0; I < kMaxPlayers; ++I)
     {
         PlayerState& P = Players[I];
@@ -5857,14 +5857,21 @@ void SimWorld::SystemVictory()
             EmitEvent(Ev);
             continue;
         }
-        Remaining += 1;
-        LastStanding = I;
+        const uint16_t Side = P.Team != 0 ? uint16_t(P.Team) : uint16_t(256 + I);
+        if (std::find(RemainingSides.begin(), RemainingSides.end(), Side) == RemainingSides.end())
+        {
+            RemainingSides.push_back(Side);
+            if (WinningRepresentative == kInvalidPlayer || I < WinningRepresentative)
+            {
+                WinningRepresentative = I;
+            }
+        }
     }
 
-    if (Remaining <= 1)
+    if (RemainingSides.size() <= 1)
     {
         Phase = MatchPhase::Finished;
-        Winner = Remaining == 1 ? LastStanding : kInvalidPlayer;
+        Winner = RemainingSides.size() == 1 ? WinningRepresentative : kInvalidPlayer;
 
         SimEvent Ev;
         Ev.Type = SimEventType::MatchEnded;
@@ -6657,6 +6664,7 @@ uint64_t SimWorld::ComputeStateChecksum() const
         const PlayerState& P = Players[I];
         H.FeedBool(P.bActive);
         H.FeedBool(P.bDefeated);
+        H.FeedUInt8(P.Team);
         H.FeedInt32(P.Credits);
         H.FeedInt32(P.PowerProduced);
         H.FeedInt32(P.PowerConsumed);
@@ -6974,7 +6982,9 @@ void SimWorld::RecordSnapshot()
 
 
 constexpr uint32_t kSimSaveMagic = 0x52413453u; // "RA4S"
-constexpr uint32_t kSimSaveVersion = 13;
+constexpr uint32_t kSimSaveVersion = 14;
+// v14: ninth playable slot and authoritative alliance/team persistence.
+constexpr uint32_t kSimSaveVersionNinePlayers = 14;
 // v13: aircraft rearm latch. A partially reloaded magazine is still committed to
 // the pad, so this bit affects future movement and firing and must survive saves.
 constexpr uint32_t kSimSaveVersionAircraftRearm = 13;
@@ -7026,6 +7036,7 @@ void SimWorld::Serialize(ByteWriter& W) const
         const PlayerState& S = Players[P];
         W.WriteBool(S.bActive);
         W.WriteBool(S.bDefeated);
+        W.WriteUInt8(S.Team);
         W.WriteUInt8(static_cast<uint8_t>(S.Faction));
         W.WriteInt32(S.Credits);
         W.WriteInt32(S.PowerProduced);
@@ -7258,11 +7269,13 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
         Map.Tiles[I] = R.ReadUInt8();
     }
 
-    for (int32_t P = 0; P < kMaxPlayers; ++P)
+    const int32_t SerializedPlayerCount = Version >= kSimSaveVersionNinePlayers ? kMaxPlayers : 8;
+    for (int32_t P = 0; P < SerializedPlayerCount; ++P)
     {
         PlayerState& S = Players[P];
         S.bActive = R.ReadBool();
         S.bDefeated = R.ReadBool();
+        S.Team = Version >= kSimSaveVersionNinePlayers ? R.ReadUInt8() : 0;
         S.Faction = static_cast<FactionId>(R.ReadUInt8());
         S.Credits = R.ReadInt32();
         S.PowerProduced = R.ReadInt32();
@@ -7334,6 +7347,10 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
         C.Def.Value = R.ReadUInt32();
         C.Kind = static_cast<EntityKind>(R.ReadUInt8());
         C.Owner = R.ReadUInt8();
+        if (Version < kSimSaveVersionNinePlayers && C.Owner == 8)
+        {
+            C.Owner = kNeutralPlayer;
+        }
 
         TransformComp& T = Transforms[I];
         T.Position.X.Raw = R.ReadInt64();
@@ -7505,6 +7522,10 @@ bool SimWorld::Deserialize(ByteReader& R, const ContentDatabase* InContent)
             Pr.ImpactPoint.Y.Raw = R.ReadInt64();
             Pr.Weapon.Value = R.ReadUInt32();
             Pr.OwnerPlayer = R.ReadUInt8();
+            if (Version < kSimSaveVersionNinePlayers && Pr.OwnerPlayer == 8)
+            {
+                Pr.OwnerPlayer = kNeutralPlayer;
+            }
             Pr.Speed.Raw = R.ReadInt64();
         }
     }

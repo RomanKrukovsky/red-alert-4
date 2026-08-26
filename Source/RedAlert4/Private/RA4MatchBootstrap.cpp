@@ -94,8 +94,8 @@ void SeedBase(SimWorld& World, const StartingForce& Force, PlayerId Owner, const
 } // namespace
 
 void FRA4MatchBootstrap::BuildSkirmish(ContentDatabase& Content, SimWorld& World, uint64 Seed,
-                                       RA4::FactionId PlayerFaction, RA4::FactionId EnemyFaction,
-                                       int32 NumAIPlayers, int32 AISpot, int32 TeamMode,
+                                       const TArray<FRA4SkirmishSlotConfig>& PlayerSlots,
+                                       int32 StartingCredits,
                                        const RA4::Recon::ReconSettings* ReconSettings)
 {
     BuildDefaultContent(Content);
@@ -116,11 +116,6 @@ void FRA4MatchBootstrap::BuildSkirmish(ContentDatabase& Content, SimWorld& World
     Setup.Map.Name = "skirmish.plains";
     Setup.Map.Resize(kMapTiles, kMapTiles, Tile_GroundPassable);
 
-    Setup.Players[0].bActive = true;
-    Setup.Players[0].Team = 0;
-    Setup.Players[0].Faction = PlayerFaction;
-    Setup.Players[0].StartingCredits = 10000;
-
     // The map's start spots, in spots-combobox order (Zapad = spot 1, Vostok =
     // spot 2, then the remaining corners). Yard tile plus the ore field that
     // belongs to it.
@@ -129,7 +124,7 @@ void FRA4MatchBootstrap::BuildSkirmish(ContentDatabase& Content, SimWorld& World
         TileCoord Yard;
         TileCoord Ore;
     };
-    static const StartSpot Spots[8] = {
+    static const StartSpot Spots[kMaxPlayers] = {
         {TileCoord(10, 10), TileCoord(6, 15)},   // spot 1: NW corner
         {TileCoord(48, 48), TileCoord(53, 43)},  // spot 2: SE corner
         {TileCoord(48, 10), TileCoord(53, 6)},    // spot 3: NE corner
@@ -138,70 +133,42 @@ void FRA4MatchBootstrap::BuildSkirmish(ContentDatabase& Content, SimWorld& World
         {TileCoord(29, 53), TileCoord(25, 48)},   // spot 6: S edge center
         {TileCoord(5, 29),  TileCoord(10, 25)},   // spot 7: W edge center
         {TileCoord(53, 29), TileCoord(48, 33)},   // spot 8: E edge center
+        {TileCoord(29, 29), TileCoord(24, 34)},   // spot 9: map center
     };
     constexpr int32 kSpotCount = int32(sizeof(Spots) / sizeof(Spots[0]));
 
-    NumAIPlayers = NumAIPlayers < 1 ? 1 : NumAIPlayers;
-    const int32 MaxAIPlayers = FMath::Min(kMaxPlayers - 1, kSpotCount - 1);
-    if (NumAIPlayers > MaxAIPlayers)
+    bool TakenSpots[kSpotCount] = {};
+    int32 ActivePlayers = 0;
+    for (int32 Slot = 0; Slot < kMaxPlayers; ++Slot)
     {
-        UE_LOG(LogTemp, Warning, TEXT("RA4 BuildSkirmish: NumAIPlayers=%d clamped to %d"), NumAIPlayers, MaxAIPlayers);
-        NumAIPlayers = MaxAIPlayers;
-    }
-
-    // Assign each AI slot a spot: the first takes AISpot (or spot 2 by default),
-    // the rest take the remaining spots in table order. One array drives both the
-    // player setup and the base seeding, so the two cannot drift apart.
-    const int32 PlayerSpot = 0;
-    int32 EnemySpot = (AISpot >= 0) ? (AISpot % kSpotCount) : 1;
-    if (EnemySpot == PlayerSpot)
-    {
-        EnemySpot = (EnemySpot + 1) % kSpotCount;
-    }
-    int32 SpotOfSlot[kMaxPlayers];
-    SpotOfSlot[0] = PlayerSpot;
-    SpotOfSlot[1] = EnemySpot;
-    {
-        int32 Next = 0;
-        for (int32 Slot = 2; Slot <= NumAIPlayers; ++Slot)
+        if (!PlayerSlots.IsValidIndex(Slot) || !PlayerSlots[Slot].bActive)
         {
-            while (Next < kSpotCount)
+            continue;
+        }
+
+        const FRA4SkirmishSlotConfig& Config = PlayerSlots[Slot];
+        int32 Spot = FMath::Clamp(Config.StartSpot, 0, kSpotCount - 1);
+        if (TakenSpots[Spot])
+        {
+            for (int32 Candidate = 0; Candidate < kSpotCount; ++Candidate)
             {
-                bool bTaken = false;
-                for (int32 Other = 0; Other < Slot; ++Other)
+                if (!TakenSpots[Candidate])
                 {
-                    if (SpotOfSlot[Other] == Next)
-                    {
-                        bTaken = true;
-                        break;
-                    }
-                }
-                if (!bTaken)
-                {
+                    Spot = Candidate;
                     break;
                 }
-                ++Next;
             }
-            SpotOfSlot[Slot] = Next;
         }
+        TakenSpots[Spot] = true;
+        Setup.Players[Slot].bActive = true;
+        Setup.Players[Slot].Faction = Config.Faction;
+        Setup.Players[Slot].Team = Config.Team;
+        Setup.Players[Slot].StartingCredits = StartingCredits;
+        Setup.Players[Slot].StartPositionIndex = Spot;
+        ++ActivePlayers;
     }
 
-    // Additional AI slots alternate between the two playable factions, so two AIs
-    // in one match do not mirror each other's build order.
-    for (int32 Slot = 1; Slot <= NumAIPlayers; ++Slot)
-    {
-        Setup.Players[Slot].bActive = true;
-        Setup.Players[Slot].Faction = EnemyFaction;
-        Setup.Players[Slot].StartingCredits = 10000;
-        // Default: all AI on team 1 (enemy team), player on team 0.
-        // The skirmish setup widget can override this per-slot.
-        Setup.Players[Slot].Team = 1;
-    }
-    for (int32 Slot = 2; Slot <= NumAIPlayers; Slot += 2)
-    {
-        Setup.Players[Slot].Faction =
-            EnemyFaction == RA4::FactionId::Soviet ? RA4::FactionId::Alliance : RA4::FactionId::Soviet;
-    }
+    checkf(ActivePlayers >= 2, TEXT("A skirmish requires at least two active slots"));
 
     World.Initialize(&Content, Setup, ReconSettings);
 
@@ -210,10 +177,15 @@ void FRA4MatchBootstrap::BuildSkirmish(ContentDatabase& Content, SimWorld& World
         return (Faction == RA4::FactionId::Soviet) ? SovietForce : AllianceForce;
     };
 
-    for (int32 Slot = 0; Slot <= NumAIPlayers; ++Slot)
+    for (int32 Slot = 0; Slot < kMaxPlayers; ++Slot)
     {
+        if (!Setup.Players[Slot].bActive)
+        {
+            continue;
+        }
         SeedBase(World, ForceFor(Setup.Players[Slot].Faction), PlayerId(Slot),
-                 Spots[SpotOfSlot[Slot]].Yard, Spots[SpotOfSlot[Slot]].Ore);
+                 Spots[Setup.Players[Slot].StartPositionIndex].Yard,
+                 Spots[Setup.Players[Slot].StartPositionIndex].Ore);
     }
     World.ClearEvents();
 }

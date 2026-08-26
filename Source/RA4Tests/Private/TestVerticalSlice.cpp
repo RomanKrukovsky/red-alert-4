@@ -393,6 +393,10 @@ RA4_TEST(Replay, PlaybackReproducesEveryCheckpointChecksum)
     // A scenario whose entire starting state comes from the replay header, which is
     // what a real match produces: units arrive from production, not from test code.
     MatchSetup Setup = MakeTestSetup(777);
+    Setup.Players[0].Team = 1;
+    Setup.Players[1].Team = 2;
+    Setup.Players[0].StartPositionIndex = 3;
+    Setup.Players[1].StartPositionIndex = 7;
     SimWorld World;
     World.Initialize(&Content, Setup);
 

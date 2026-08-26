@@ -24,8 +24,10 @@ MatchSetup MakeSetupFromHeader(const ReplayHeader& Header)
     for (PlayerId P = 0; P < kMaxPlayers; ++P)
     {
         Setup.Players[P].bActive = Header.Players[P].bActive;
+        Setup.Players[P].Team = Header.Players[P].Team;
         Setup.Players[P].Faction = static_cast<FactionId>(Header.Players[P].Faction);
         Setup.Players[P].StartingCredits = Header.Players[P].StartingCredits;
+        Setup.Players[P].StartPositionIndex = Header.Players[P].StartPositionIndex;
     }
 
     return Setup;

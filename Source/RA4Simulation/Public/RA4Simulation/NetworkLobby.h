@@ -43,7 +43,7 @@ struct LobbyRoomSettings
 {
     std::string RoomName = "Scarlet Skirmish";
     std::string MapName = "maps/coastal_fury";
-    uint8_t MaxPlayers = 8;
+    uint8_t MaxPlayers = kMaxPlayers;
     uint32_t StartingCredits = 10000;
     uint32_t RandomSeed = 1337;
     bool bSuperweaponsEnabled = true;

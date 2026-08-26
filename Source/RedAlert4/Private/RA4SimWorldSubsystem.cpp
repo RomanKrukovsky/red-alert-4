@@ -216,12 +216,13 @@ void URA4SimWorldSubsystem::ConfigureRecon(bool bEnabled, bool bShowTruth)
     UE_LOG(LogTemp, Display, TEXT("RA4 recon enabled (showTruth=%d)"), bShowTruth ? 1 : 0);
 }
 
-void URA4SimWorldSubsystem::StartSkirmishMatch(uint8 PlayerFaction, uint8 EnemyFaction, int32 Difficulty, int32 NumAI, int32 AISpot, int32 TeamMode)
+void URA4SimWorldSubsystem::StartSkirmishMatch(const TArray<FRA4SkirmishSlotConfig>& PlayerSlots,
+                                               int32 Difficulty, int32 StartingCredits,
+                                               const TArray<FString>& InAllianceNames)
 {
-    // The lobby or GameMode supplies the match setup.
+    AllianceNames = InAllianceNames;
     FRA4MatchBootstrap::BuildSkirmish(*Content, *SimWorld, /*Seed*/ 20260728,
-        static_cast<RA4::FactionId>(PlayerFaction), static_cast<RA4::FactionId>(EnemyFaction),
-        NumAI, AISpot, TeamMode,
+        PlayerSlots, StartingCredits,
         bReconEnabled ? &ReconSettings : nullptr);
     bWasLocalPowerShortage = false;
 

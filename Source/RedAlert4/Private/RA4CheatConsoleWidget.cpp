@@ -266,7 +266,7 @@ bool URA4CheatConsoleWidget::ExecuteCommandText(const FString& InCommandText)
     if (Verb == TEXT("annex"))
     {
         // Annex the first active enemy player
-        for (int32 P = 1; P < 8; ++P)
+        for (int32 P = 1; P < RA4::kMaxPlayers; ++P)
         {
             const RA4::PlayerState& PS = Sim->GetPlayer(RA4::PlayerId(P));
             if (PS.bActive && !PS.bDefeated)
@@ -283,7 +283,7 @@ bool URA4CheatConsoleWidget::ExecuteCommandText(const FString& InCommandText)
     if (Verb == TEXT("annexall"))
     {
         int32 Count = 0;
-        for (int32 P = 1; P < 8; ++P)
+        for (int32 P = 1; P < RA4::kMaxPlayers; ++P)
         {
             const RA4::PlayerState& PS = Sim->GetPlayer(RA4::PlayerId(P));
             if (PS.bActive && !PS.bDefeated)

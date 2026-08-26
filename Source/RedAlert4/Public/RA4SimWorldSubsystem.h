@@ -32,6 +32,8 @@ namespace RA4
     }
 }
 
+struct FRA4SkirmishSlotConfig;
+
 #include "RA4SimWorldSubsystem.generated.h"
 
 class URA4NetworkManager;
@@ -130,8 +132,11 @@ public:
     // the two-maps overlay for the whole match.
     void ConfigureRecon(bool bEnabled, bool bShowTruth);
 
-    void StartSkirmishMatch(uint8 PlayerFaction, uint8 EnemyFaction, int32 Difficulty,
-                            int32 NumAI = 1, int32 AISpot = -1, int32 TeamMode = 0);
+    void StartSkirmishMatch(const TArray<FRA4SkirmishSlotConfig>& PlayerSlots,
+                            int32 Difficulty, int32 StartingCredits,
+                            const TArray<FString>& InAllianceNames);
+
+    const TArray<FString>& GetAllianceNames() const { return AllianceNames; }
 
     // Brings up a campaign mission by id: the mission's own MissionSetupDef decides
     // the map, the player slots and the opening forces, so a mission is a match in
@@ -337,6 +342,7 @@ private:
     bool bReportedPresentationState = false;
 
     TArray<FVector> ActiveMysteryCratePositions;
+    TArray<FString> AllianceNames;
     float TimeSinceLastCrateSpawn = 10.0f;
 
     struct FRA4ExplosiveBarrel

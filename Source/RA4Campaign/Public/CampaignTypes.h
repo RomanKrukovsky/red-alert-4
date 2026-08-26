@@ -142,7 +142,7 @@ struct MissionSetupDef
     int32_t MapWidth = 64;
     int32_t MapHeight = 64;
     std::string MapName;
-    MissionPlayerSlot Players[8];
+    MissionPlayerSlot Players[kMaxPlayers];
     std::vector<MissionSpawn> Spawns;
 };
 

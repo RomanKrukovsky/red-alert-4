@@ -38,11 +38,11 @@ struct EntityId
 
 };
 
-// Player slots are fixed for the lifetime of a match (8 players + neutral/observer).
+// Player slots are fixed for the lifetime of a match (1 human + up to 8 opponents).
 enum : uint8_t
 {
-    kMaxPlayers = 8,
-    kNeutralPlayer = 8,
+    kMaxPlayers = 9,
+    kNeutralPlayer = 9,
     kInvalidPlayer = 0xFF,
 };
 

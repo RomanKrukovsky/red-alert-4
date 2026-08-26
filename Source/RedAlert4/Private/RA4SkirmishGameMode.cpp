@@ -18,11 +18,14 @@
 #include "Materials/MaterialInterface.h"
 
 #include "RA4GameState.h"
+#include "RA4MatchBootstrap.h"
 #include "RA4PlayerState.h"
 #include "RA4SimWorldSubsystem.h"
 #include "RA4NetworkManager.h"
 #include "RA4NetworkChannel.h"
 #include "Kismet/GameplayStatics.h"
+#include "Algo/Count.h"
+#include "Misc/Base64.h"
 
 #include "RA4UIScreenHost.h"
 #include "RA4UIRouterSubsystem.h"
@@ -89,48 +92,62 @@ void ARA4SkirmishGameMode::StartSimulationMatch()
 
     // Extract options from the URL (Main Menu passes them here)
     FString Options = OptionsString;
-    uint8 PlayerFaction = UGameplayStatics::GetIntOption(Options, TEXT("PlayerFaction"), SovietFaction);
-    uint8 EnemyFaction = UGameplayStatics::GetIntOption(Options, TEXT("EnemyFaction"), AllianceFaction);
     int32 Difficulty = UGameplayStatics::GetIntOption(Options, TEXT("Difficulty"), 1);
-    int32 AISpot = UGameplayStatics::GetIntOption(Options, TEXT("AISpot"), -1);
-    int32 NumAI = UGameplayStatics::GetIntOption(Options, TEXT("NumAI"), 1);
-    int32 TeamMode = UGameplayStatics::GetIntOption(Options, TEXT("TeamMode"), 0);
+    const int32 CreditsIndex = UGameplayStatics::GetIntOption(Options, TEXT("Credits"), 1);
+    const int32 CreditValues[] = {5000, 10000, 20000};
+    const int32 StartingCredits = CreditValues[FMath::Clamp(CreditsIndex, 0, 2)];
+
+    TArray<FRA4SkirmishSlotConfig> PlayerSlots;
+    PlayerSlots.SetNum(RA4::kMaxPlayers);
+    for (int32 Slot = 0; Slot < RA4::kMaxPlayers; ++Slot)
+    {
+        const FString Key = FString::Printf(TEXT("Slot%d"), Slot);
+        TArray<FString> Fields;
+        UGameplayStatics::ParseOption(Options, Key).ParseIntoArray(Fields, TEXT(","), false);
+        if (Fields.Num() == 4)
+        {
+            PlayerSlots[Slot].bActive = FCString::Atoi(*Fields[0]) != 0;
+            const int32 FactionOption = FCString::Atoi(*Fields[1]);
+            PlayerSlots[Slot].Faction = static_cast<RA4::FactionId>(
+                FMath::Clamp(FactionOption + int32(SovietFaction),
+                    int32(SovietFaction), int32(AllianceFaction)));
+            PlayerSlots[Slot].Team = uint8(FMath::Clamp(FCString::Atoi(*Fields[2]), 0, 4));
+            PlayerSlots[Slot].StartSpot = FMath::Clamp(FCString::Atoi(*Fields[3]), 0, RA4::kMaxPlayers - 1);
+        }
+    }
+    if (!PlayerSlots[0].bActive)
+    {
+        PlayerSlots[0] = {true, RA4::FactionId::Soviet, 0, 0};
+    }
+    if (Algo::CountIf(PlayerSlots,
+        [](const FRA4SkirmishSlotConfig& Slot) { return Slot.bActive; }) < 2)
+    {
+        PlayerSlots[1] = {true, RA4::FactionId::Alliance, 0, 1};
+    }
+
+    TArray<FString> AllianceNames;
+    for (int32 Team = 1; Team <= 4; ++Team)
+    {
+        const FString EncodedName = UGameplayStatics::ParseOption(Options, FString::Printf(TEXT("Alliance%d"), Team));
+        FString Name;
+        FBase64::Decode(EncodedName, Name);
+        AllianceNames.Add(Name.IsEmpty() ? FString::Printf(TEXT("Союз %c"), TCHAR('A' + Team - 1)) : Name);
+    }
     // Unreliable-recon skirmish options (ADR-0026). Open options, not cheat codes:
     // ?Recon=1 makes belief drive the HUD, ?ShowTruth=1 also raises the two-maps
     // overlay so a player can watch how wrong their staff map is.
     const bool bReconEnabled = UGameplayStatics::GetIntOption(Options, TEXT("Recon"), 0) != 0;
     const bool bReconShowTruth = UGameplayStatics::GetIntOption(Options, TEXT("ShowTruth"), 0) != 0;
-    if (NumAI < 1)
-    {
-        NumAI = 1;
-    }
-
     // ?NumPlayers>1 turns this into a lockstep match. At 1 nothing below runs and the
     // simulation ticks locally exactly as it always has, which is what keeps the
     // single-player path free of any dependency on the network being healthy.
     ExpectedPlayers = UGameplayStatics::GetIntOption(Options, TEXT("NumPlayers"), 1);
-    if (ExpectedPlayers < 1)
-    {
-        ExpectedPlayers = 1;
-    }
+    ExpectedPlayers = FMath::Clamp(ExpectedPlayers, 1, int32(RA4::kMaxPlayers));
 
-    const auto IsPlayableFaction = [](uint8 Faction)
-    {
-        return Faction == SovietFaction || Faction == AllianceFaction;
-    };
-    if (!IsPlayableFaction(PlayerFaction))
-    {
-        UE_LOG(LogTemp, Warning, TEXT("RA4 invalid PlayerFaction=%u; using Soviet"), PlayerFaction);
-        PlayerFaction = SovietFaction;
-    }
-    if (!IsPlayableFaction(EnemyFaction) || EnemyFaction == PlayerFaction)
-    {
-        EnemyFaction = PlayerFaction == SovietFaction ? AllianceFaction : SovietFaction;
-        UE_LOG(LogTemp, Warning, TEXT("RA4 invalid EnemyFaction option; using %u"), EnemyFaction);
-    }
-
-    UE_LOG(LogTemp, Display, TEXT("RA4 skirmish factions: player=%u enemy=%u difficulty=%d ai=%d aispot=%d teammode=%d"),
-           PlayerFaction, EnemyFaction, Difficulty, NumAI, AISpot, TeamMode);
+    const int32 ActiveSlots = Algo::CountIf(PlayerSlots,
+        [](const FRA4SkirmishSlotConfig& Slot) { return Slot.bActive; });
+    UE_LOG(LogTemp, Display, TEXT("RA4 skirmish: %d active slots, difficulty=%d, credits=%d"),
+           ActiveSlots, Difficulty, StartingCredits);
 
     // Start the simulation match
     if (UWorld* World = GetWorld())
@@ -138,7 +155,7 @@ void ARA4SkirmishGameMode::StartSimulationMatch()
         if (URA4SimWorldSubsystem* SimSub = World->GetSubsystem<URA4SimWorldSubsystem>())
         {
             SimSub->ConfigureRecon(bReconEnabled, bReconShowTruth);
-            SimSub->StartSkirmishMatch(PlayerFaction, EnemyFaction, Difficulty, NumAI, AISpot);
+            SimSub->StartSkirmishMatch(PlayerSlots, Difficulty, StartingCredits, AllianceNames);
         }
     }
 }

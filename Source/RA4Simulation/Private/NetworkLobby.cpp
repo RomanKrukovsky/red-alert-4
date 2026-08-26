@@ -10,8 +10,8 @@ namespace RA4
 
 NetworkLobby::NetworkLobby()
 {
-    Slots.resize(8);
-    for (uint8_t I = 0; I < 8; ++I)
+    Slots.resize(kMaxPlayers);
+    for (uint8_t I = 0; I < kMaxPlayers; ++I)
     {
         Slots[I].SlotIndex = I;
         Slots[I].Status = (I == 0 ? LobbySlotStatus::Human : (I == 1 ? LobbySlotStatus::Open : LobbySlotStatus::Closed));
@@ -22,6 +22,7 @@ NetworkLobby::NetworkLobby()
 void NetworkLobby::InitializeRoom(const LobbyRoomSettings& InSettings, const std::string& HostName, FactionId HostFaction)
 {
     Settings = InSettings;
+    Settings.MaxPlayers = std::clamp<uint8_t>(Settings.MaxPlayers, 2, kMaxPlayers);
     bMatchStarted = false;
     HostSlot = 0;
 
