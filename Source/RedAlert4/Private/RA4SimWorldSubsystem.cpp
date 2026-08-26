@@ -227,6 +227,21 @@ void URA4SimWorldSubsystem::StartSkirmishMatch(uint8 PlayerFaction, uint8 EnemyF
 
     BakeTerrainPassabilityFromLandscape();
 
+    // Force-assign the simple grass material so the ground is always green
+    // regardless of what the umap has (the other agent keeps changing it).
+    if (UWorld* W = GetWorld())
+    {
+        for (TActorIterator<ALandscapeProxy> It(W); It; ++It)
+        {
+            if (UMaterialInterface* GroundMat = LoadObject<UMaterialInterface>(
+                nullptr, TEXT("/Game/RA4/Generated/Terrain/M_RA4_GroundFlat.M_RA4_GroundFlat")))
+            {
+                It->LandscapeMaterial = GroundMat;
+                UE_LOG(LogTemp, Display, TEXT("RA4: forced M_RA4_GroundFlat on landscape"));
+            }
+        }
+    }
+
     AttachAICommanders(Difficulty, 20260728ull, /*LocalPlayer*/ 0);
 
     UE_LOG(LogTemp, Display, TEXT("RA4 skirmish initialized with %llu simulation entities"),

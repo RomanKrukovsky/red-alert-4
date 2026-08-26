@@ -500,39 +500,12 @@ void ARA4EntityActor::Tick(float DeltaTime)
         BeaconLightComponent->SetIntensity(FMath::Lerp(300.0f, 2000.0f, Pulse));
     }
 
-    // Infantry locomotion animation: only runs when the skeletal mesh
-    // component has a valid skeletal mesh AND the mesh is visible.
-    // The QuantumCharacter animations match the QuantumCharacter skeleton,
-    // so they are safe to play on infantry units that use that mesh.
-    // Blockout static-mesh units (tanks, buildings) never enter this block
-    // because their skeletal mesh component is hidden.
-    if (SkeletalMeshComponent && SkeletalMeshComponent->IsVisible() &&
-        SkeletalMeshComponent->GetSkeletalMeshAsset() != nullptr)
-    {
-        const bool bIsMoving = Speed > 20.0f;
-
-        static UAnimSequence* DefaultIdleAnim = LoadObject<UAnimSequence>(nullptr, TEXT("/Game/ThirdParty/QuantumCharacter/Demo/Animations/A_MM_Idle.A_MM_Idle"));
-        static UAnimSequence* DefaultRunAnim = LoadObject<UAnimSequence>(nullptr, TEXT("/Game/ThirdParty/QuantumCharacter/Demo/Animations/A_MM_Run_Fwd.A_MM_Run_Fwd"));
-
-        UAnimSequence* TargetAnim = bIsMoving
-            ? (CachedRunAnim != nullptr ? CachedRunAnim.Get() : DefaultRunAnim)
-            : (CachedIdleAnim != nullptr ? CachedIdleAnim.Get() : DefaultIdleAnim);
-
-        if (TargetAnim != nullptr)
-        {
-            if (SkeletalMeshComponent->GetAnimationMode() != EAnimationMode::AnimationSingleNode)
-            {
-                SkeletalMeshComponent->SetAnimationMode(EAnimationMode::AnimationSingleNode);
-            }
-
-            // Only call PlayAnimation when the animation actually changes.
-            if (SkeletalMeshComponent->GetSingleNodeInstance() &&
-                SkeletalMeshComponent->AnimationData.AnimToPlay != TargetAnim)
-            {
-                SkeletalMeshComponent->PlayAnimation(TargetAnim, false);
-            }
-        }
-    }
+    // Infantry locomotion animation DISABLED PERMANENTLY: PlayAnimation
+    // crashes inside SetAnimationAsset regardless of null checks. The
+    // QuantumCharacter animations have a different skeleton than some of
+    // the blockout meshes, causing GetMaterialInheritanceChain to crash.
+    // Re-enable only when proper animations are authored for the exact
+    // skeleton used by each unit type's skeletal mesh.
 }
 
 FString ARA4EntityActor::DescribeVisualState() const

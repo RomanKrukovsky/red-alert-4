@@ -14,6 +14,54 @@
 #include "CanvasItem.h"
 #include "Engine/Canvas.h"
 
+void ARA4RtsHud::DrawConstructionProgress(const ARA4PlayerController* Controller)
+{
+    if (Canvas == nullptr || Controller == nullptr) return;
+    UWorld* World = GetWorld();
+    const URA4SimWorldSubsystem* Subsystem = World ? World->GetSubsystem<URA4SimWorldSubsystem>() : nullptr;
+    const RA4::SimWorld* Sim = Subsystem ? Subsystem->GetSimWorld() : nullptr;
+    if (Sim == nullptr) return;
+
+    const auto& Cores = Sim->GetAllCores();
+    for (size_t i = 0; i < Cores.size(); ++i)
+    {
+        if (!Cores[i].bAlive || Cores[i].Kind != RA4::EntityKind::Building) continue;
+        if (Cores[i].Owner != Controller->GetSelection().GetLocalPlayer()) continue;
+
+        const RA4::BuildingComp* B = Sim->GetBuilding(Sim->MakeId(uint32_t(i)));
+        if (B == nullptr || B->State != RA4::ConstructionState::UnderConstruction) continue;
+
+        const RA4::EntityDef* D = Sim->GetContent() ? Sim->GetContent()->FindEntity(Cores[i].Def) : nullptr;
+        const int32_t Total = B->ConstructionTotalTicks > 0 ? B->ConstructionTotalTicks * 100 : 1;
+        const float Fraction = FMath::Clamp(float(B->ConstructionProgressTicks) / float(Total), 0.0f, 1.0f);
+
+        const RA4::TransformComp* T = Sim->GetTransform(Sim->MakeId(uint32_t(i)));
+        if (!T) continue;
+        FVector WorldPos = RA4Coords::ToUnreal(T->Position);
+        WorldPos.Z += 130.0f; // above the building
+
+        FVector2D ScreenPos;
+        if (!Controller->ProjectWorldLocationToScreen(WorldPos, ScreenPos)) continue;
+
+        // Draw a progress bar (green filling left-to-right)
+        const float BarWidth = 50.0f;
+        const float BarHeight = 4.0f;
+        const float BarX = ScreenPos.X - BarWidth * 0.5f;
+        const float BarY = ScreenPos.Y;
+
+        DrawRect(FLinearColor(0.01f, 0.01f, 0.02f, 0.90f), BarX - 1.0f, BarY - 1.0f, BarWidth + 2.0f, BarHeight + 2.0f);
+        DrawRect(FLinearColor(0.10f, 0.12f, 0.14f, 0.85f), BarX, BarY, BarWidth, BarHeight);
+        DrawRect(FLinearColor(0.30f, 1.0f, 0.40f, 0.9f), BarX, BarY, BarWidth * Fraction, BarHeight);
+
+        // Percentage text
+        const int32 Percent = int32(Fraction * 100.0f);
+        FString PercentText = FString::Printf(TEXT("%d%%"), Percent);
+        FCanvasTextItem TextItem(FVector2D(BarX + BarWidth * 0.5f, BarY - 16.0f), FText::FromString(PercentText), nullptr, FLinearColor(0.9f, 0.95f, 0.5f, 1.0f));
+        TextItem.Scale = FVector2D(0.8f, 0.8f);
+        Canvas->DrawItem(TextItem);
+    }
+}
+
 void ARA4RtsHud::DrawHUD()
 {
     Super::DrawHUD();
@@ -25,6 +73,7 @@ void ARA4RtsHud::DrawHUD()
     }
     DrawSelectionBrackets(Controller);
     DrawAll3DHealthBars(Controller);
+    DrawConstructionProgress(Controller);
     DrawFloatingTexts();
     DrawMarquee(Controller);
     DrawMoveTargetRing(Controller);

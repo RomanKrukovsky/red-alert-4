@@ -70,6 +70,7 @@ private:
     void DrawMarquee(const class ARA4PlayerController* Controller);
     void DrawSelectionBrackets(const class ARA4PlayerController* Controller);
     void DrawAll3DHealthBars(const class ARA4PlayerController* Controller);
+    void DrawConstructionProgress(const class ARA4PlayerController* Controller);
     void DrawFloatingTexts();
     void DrawPlacementFootprint(const class ARA4PlayerController* Controller);
     // One-shot ping at the spot a move order was just issued.
