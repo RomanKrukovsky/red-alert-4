@@ -75,6 +75,34 @@ ATLANTIC ALLIANCE — buildings (blue accent, modular clean panels)
 71. Гиперзвуковой ударный комплекс — hypersonic strike complex: VLS
     silo, kinetic-rod markings, blue.
 
+============================================================
+AFRICAN FEDERATION — buildings (terracotta/amber accent, obsidian, solar panels)
+============================================================
+72. Штабной модуль развёртывания (ConYard): 8-wheel mobile command platform
+    unfolding into a reinforced field HQ with solar canopies and satcom mast.
+73. Гелиотермальная станция «Гелиос» (Power): central concentrated solar tower
+    with surrounding heliostat mirrors + localized high-power point-defense laser mode.
+74. Обогатительный комплекс «Сахель» (Refinery): dust-filtered mineral processing
+    depot with docking cradle for Savanna heavy harvesters.
+75. Тактический лагерь (Barracks): modular climate-controlled container barracks,
+    training obstacle grounds and arms depot.
+76. Завод колёсной и бронетехники (War Factory): heavy multi-bay fabrication hall
+    with overhead gantry crane and vehicle test ramp.
+77. Вертолётная база «Килиманджаро» (Airfield/Helipad): dual hardened landing pads,
+    rapid fuel/ordnance loading pits, tactical radar tower.
+78. Прибрежный док «Суэц» (Naval Yard): littoral hovercraft slipway and drydock
+    with automated gantry cranes.
+79. Радарный узел «Атлас» (Radar): mobile mast with dual-band AESA phased array,
+    electronic warfare radome and communications relay.
+80. Акустический ДОТ (Sonic Turret): reinforced concrete bunker with high-output
+    directional sonic emitter for non-lethal infantry denial and garrison clearing.
+81. Зенитный ракетно-пушечный комплекс «Зулу» (AA Turret): dual 35mm rotary cannons
+    and quad short-range IR/radar missiles on a stabilized pedestal.
+82. Орбитальный зеркальный комплекс «Око Сахары» (Superweapon): T3 experimental
+    ground-to-orbit uplink station focusing concentrated orbital solar arrays into an ultra-high energy thermal strike.
+83. Защитная стена (Wall): interlocking sand-composite ballistic blast barrier
+    with obsidian finish and bronze mounting fixtures.
+
 OUTPUT RULES: one building per image, same 3/4 isometric-ish angle
 for lineup, footprint-readable silhouette, faction color only on
 trim/insignia/energy. Construction-stage variant optional (show

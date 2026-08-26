@@ -94,8 +94,17 @@ void ARA4SkirmishGameMode::StartSimulationMatch()
     FString Options = OptionsString;
     int32 Difficulty = UGameplayStatics::GetIntOption(Options, TEXT("Difficulty"), 1);
     const int32 CreditsIndex = UGameplayStatics::GetIntOption(Options, TEXT("Credits"), 1);
-    const int32 CreditValues[] = {5000, 10000, 20000};
-    const int32 StartingCredits = CreditValues[FMath::Clamp(CreditsIndex, 0, 2)];
+    const int32 CreditValues[] = {5000, 10000, 20000, 30000, 50000};
+    const int32 StartingCredits = CreditValues[FMath::Clamp(CreditsIndex, 0, UE_ARRAY_COUNT(CreditValues) - 1)];
+
+    static const RA4::FactionId AllFactions[] = {
+        RA4::FactionId::EurasianPact,
+        RA4::FactionId::AtlanticAlliance,
+        RA4::FactionId::EasternCoalition,
+        RA4::FactionId::PacificPact,
+        RA4::FactionId::AfricanFederation
+    };
+    constexpr int32 FactionCount = UE_ARRAY_COUNT(AllFactions);
 
     TArray<FRA4SkirmishSlotConfig> PlayerSlots;
     PlayerSlots.SetNum(RA4::kMaxPlayers);
@@ -108,21 +117,26 @@ void ARA4SkirmishGameMode::StartSimulationMatch()
         {
             PlayerSlots[Slot].bActive = FCString::Atoi(*Fields[0]) != 0;
             const int32 FactionOption = FCString::Atoi(*Fields[1]);
-            PlayerSlots[Slot].Faction = static_cast<RA4::FactionId>(
-                FMath::Clamp(FactionOption + int32(SovietFaction),
-                    int32(SovietFaction), int32(AllianceFaction)));
+            if (FactionOption >= 0 && FactionOption < FactionCount)
+            {
+                PlayerSlots[Slot].Faction = AllFactions[FactionOption];
+            }
+            else // 5 = Random
+            {
+                PlayerSlots[Slot].Faction = AllFactions[FMath::RandRange(0, FactionCount - 1)];
+            }
             PlayerSlots[Slot].Team = uint8(FMath::Clamp(FCString::Atoi(*Fields[2]), 0, 4));
             PlayerSlots[Slot].StartSpot = FMath::Clamp(FCString::Atoi(*Fields[3]), 0, RA4::kMaxPlayers - 1);
         }
     }
     if (!PlayerSlots[0].bActive)
     {
-        PlayerSlots[0] = {true, RA4::FactionId::Soviet, 0, 0};
+        PlayerSlots[0] = {true, RA4::FactionId::EurasianPact, 0, 0};
     }
     if (Algo::CountIf(PlayerSlots,
         [](const FRA4SkirmishSlotConfig& Slot) { return Slot.bActive; }) < 2)
     {
-        PlayerSlots[1] = {true, RA4::FactionId::Alliance, 0, 1};
+        PlayerSlots[1] = {true, RA4::FactionId::AtlanticAlliance, 0, 1};
     }
 
     TArray<FString> AllianceNames;

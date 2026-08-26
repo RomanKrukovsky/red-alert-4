@@ -361,3 +361,42 @@ RA4_TEST(RA3Gameplay, CoopAIPingCoordination)
     RA4_EXPECT_EQ(static_cast<uint8_t>(ActivePing.Type), static_cast<uint8_t>(CoopPingType::Attack));
     RA4_EXPECT(ActivePing.Location == Vec2(Fixed::FromInt(1200), Fixed::FromInt(1800)));
 }
+
+// --- 5. African Federation & Canonical Faction Roster Test ---
+
+RA4_TEST(AfricanFederation, FactionRegistrationAndUnitRoster)
+{
+    ContentDatabase Db;
+    BuildDefaultContent(Db);
+
+    const FactionDef* AfFaction = Db.FindFaction(FactionId::AfricanFederation);
+    RA4_REQUIRE(AfFaction != nullptr);
+    RA4_EXPECT(AfFaction->Name == "faction.au" || AfFaction->Name == "faction.af");
+    RA4_EXPECT_EQ(AfFaction->StartingCredits, 10000);
+
+    const EntityDef* Askari = Db.FindEntity(MakeContentId("unit.au.askari_rifleman"));
+    RA4_REQUIRE(Askari != nullptr);
+    RA4_EXPECT(Askari->Faction == FactionId::AfricanFederation);
+    RA4_EXPECT(Askari->Kind == EntityKind::Unit);
+
+    const EntityDef* Mamba = Db.FindEntity(MakeContentId("unit.au.mamba_mbt"));
+    RA4_REQUIRE(Mamba != nullptr);
+    RA4_EXPECT(Mamba->Faction == FactionId::AfricanFederation);
+    RA4_EXPECT(Mamba->Unit.MaxSpeed >= Fixed::FromInt(900));
+
+    const EntityDef* Elephant = Db.FindEntity(MakeContentId("unit.au.elephant_superheavy"));
+    RA4_REQUIRE(Elephant != nullptr);
+    RA4_EXPECT(Elephant->MaxHealth >= 1000);
+    RA4_EXPECT(Elephant->Unit.bHasSecondaryAbility == true);
+
+    const EntityDef* Amina = Db.FindEntity(MakeContentId("unit.au.amina_commando"));
+    RA4_REQUIRE(Amina != nullptr);
+    RA4_EXPECT(Amina->Production.Tier == TechTier::T3);
+
+    // Verify all 5 canonical factions are present
+    RA4_EXPECT(Db.FindFaction(FactionId::EurasianPact) != nullptr);
+    RA4_EXPECT(Db.FindFaction(FactionId::AtlanticAlliance) != nullptr);
+    RA4_EXPECT(Db.FindFaction(FactionId::EasternCoalition) != nullptr);
+    RA4_EXPECT(Db.FindFaction(FactionId::PacificPact) != nullptr);
+    RA4_EXPECT(Db.FindFaction(FactionId::AfricanFederation) != nullptr);
+}

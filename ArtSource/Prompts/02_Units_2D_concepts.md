@@ -131,14 +131,71 @@ GERMANY:
     turret, siege stabilizers, German markings.
 
 ============================================================
+FACTION 5 — AFRICAN FEDERATION (Африканская федерация)
+============================================================
+VISUAL LANGUAGE: high-mobility desert raiders, aerodynamic multi-axle wheeled
+chassis (6x6, 8x8), hovercraft platforms, sand-filtration intake grills,
+deployable solar arrays, matte bronze & warm copper fittings.
+PALETTE: warm burnt terracotta/ochre, obsidian graphite, polished bronze trim.
+Glowing solar-amber/gold optics and energy beams (NEVER red).
+INSIGNIA: geometric stylized rising solar crest in warm amber gold.
+
+NATIONAL MODULES (Блок → Страна → Доктрина):
+- ЮАР (South Africa): колёсная бронетехника (8×8), дальнобойная артиллерия, противоминная V-образная защита.
+- Египет (Egypt): эшелонированная ПВО, тяжёлая механизация, логистические узлы.
+- Нигерия (Nigeria): разведывательные и ударные БПЛА, мобильные комплексы РЭБ.
+- Алжир (Algeria): дальнобойные ракетные комплексы, пустынные рейдовые группы.
+- Кения (Kenya): лёгкая высокомобильная разведка, скоростные штурмовые группы.
+- Эфиопия (Ethiopia): горнострелковая доктрина, укреплённые рубежи обороны.
+
+Render EACH as separate image, same 3/4 hero view & lighting:
+
+INFANTRY:
+40. "Аскари" — vanguard rifleman: lightweight desert composite armor,
+    modular 6.8mm assault carbine with thermal optic, dust goggles, smoke canister belt.
+41. "Самум" — anti-tank rocketeer: shoulder-mounted tandem ATGM launcher,
+    heat-shielded blast mantle, sand-camo tactical harness.
+42. "Шакал" — non-lethal/EW acoustic specialist: directional acoustic horn emitter,
+    heavy noise-dampening helmet, power pack harness.
+43. "Техник" — combat field engineer: modular repair kit, electronic hacking deck,
+    amber visor HUD, lightweight protective harness.
+
+VEHICLES:
+44. "Саванна" — ore harvester: high-speed 6-wheel all-terrain truck,
+    rapid ore intake scoop, solar hood generator panels.
+45. "Гепард" — fast scout/IFV: 6x6 high-speed armored chassis, 30mm autocannon
+    turret, deployable scout drone pod, smoke grenade banks.
+46. "Мамба" ОБТ — agile wheeled tank destroyer / MBT: 6x6 high-mobility chassis,
+    120mm low-recoil smoothbore gun with thermal shroud, reactive armor blocks.
+47. "Баобаб" — heavy MLRS / rocket artillery: 8x8 heavy all-terrain chassis,
+    elevating 300mm rocket launch canister with precision guidance pods, hydraulic stabilizers.
+48. "Слон" — heavy assault breakthrough platform: heavy 8x8 wheeled armored platform,
+    reinforced frontal V-hull and dozer blade, twin 125mm high-pressure cannons.
+
+AIRCRAFT & NAVAL:
+49. "Сирокко" — assault gunship: dual tilt-rotor VTOL, underslung 20mm rotary
+    cannon and precision laser-guided rocket pods, desert sand camo.
+50. "Орёл Нубии" — air superiority interceptor: delta-canard supersonic fighter,
+    amber afterburner plume, long-range radar-guided BVR missiles.
+51. "Фенек" — amphibious patrol hovercraft: high-speed air-cushion platform,
+    dual remote-weapon SAM turrets, shallow-water assault capability.
+52. "Занзибар" — littoral missile corvette: low-RCS wave-piercing stealth catamaran,
+    vertical launch missile cells, bronze sensor mast.
+
+HERO:
+53. Капитан Амина Диалло — recon & sabotage commando: lightweight active-camo cloak,
+    dual ceramic combat knives, suppressed PDW, tactical tablet designator.
+
+============================================================
 OUTPUT RULES
 ============================================================
 - One unit per image, transparent-style neutral grey studio backdrop.
 - Maintain scale readability: infantry ~1.8m, light vehicle ~4m, tank
   ~7m, superheavy ~12m, aircraft appropriate, naval shown at waterline.
-- Faction accent (violet for Pact, blue for Alliance) used sparingly —
+- Faction accent (violet for Pact, blue for Alliance, emerald for Coalition,
+  turquoise for Chrono, terracotta/amber for African Union) used sparingly —
   on insignia, optics glow, energy weapons, trim panels only.
 - No faction logos from real world; markings are original geometric.
-- Each image captioned with unit's Stable ID (e.g. RU_GranitMBT).
+- Each image captioned with unit's Stable ID (e.g. AU_MambaMBT).
 - 8K, 16:9 or square, concept turnaround sheet acceptable per unit.
 ```

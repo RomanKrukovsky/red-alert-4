@@ -13,20 +13,20 @@ FactionDoctrineDef AIDoctrineRegistry::GetDoctrineForFaction(FactionId Faction, 
 
     switch (Faction)
     {
-    case FactionId::Soviet:
-        Doc.Type = AIDoctrineType::SovietArmoredPush;
-        Doc.Name = "Soviet Armored Push";
-        Doc.Description = "Mass armor, V2 artillery prep, relentless front assault.";
+    case FactionId::EurasianPact:
+        Doc.Type = AIDoctrineType::EurasianArmoredPush;
+        Doc.Name = "Eurasian Armored Push";
+        Doc.Description = "Mass armor, heavy artillery prep, relentless frontline assault.";
         Doc.MinimumAssaultArmySize = 12;
         Doc.TargetHarvesterCount = 4;
         Doc.PowerPlantBuffer = 80;
         Doc.Personality = CreatePersonality(Doc.Type, Profile);
         break;
 
-    case FactionId::Alliance:
-        Doc.Type = AIDoctrineType::AllianceMobilePrecision;
-        Doc.Name = "Alliance Mobile Precision";
-        Doc.Description = "High mobility, recon, surgical strikes, air & light armor.";
+    case FactionId::AtlanticAlliance:
+        Doc.Type = AIDoctrineType::AtlanticMobilePrecision;
+        Doc.Name = "Atlantic Mobile Precision";
+        Doc.Description = "High mobility, recon, surgical strikes, air superiority & precision strikes.";
         Doc.MinimumAssaultArmySize = 8;
         Doc.TargetHarvesterCount = 3;
         Doc.PowerPlantBuffer = 40;
@@ -36,20 +36,30 @@ FactionDoctrineDef AIDoctrineRegistry::GetDoctrineForFaction(FactionId Faction, 
     case FactionId::EasternCoalition:
         Doc.Type = AIDoctrineType::CoalitionSynchronized;
         Doc.Name = "Coalition Synchronized";
-        Doc.Description = "Synchronized formations, shield protection, area denial.";
+        Doc.Description = "Synchronized formations, shield protection, area denial & missile swarms.";
         Doc.MinimumAssaultArmySize = 10;
         Doc.TargetHarvesterCount = 3;
         Doc.PowerPlantBuffer = 50;
         Doc.Personality = CreatePersonality(Doc.Type, Profile);
         break;
 
-    case FactionId::ChronoLegion:
-        Doc.Type = AIDoctrineType::ChronoTemporalHarass;
-        Doc.Name = "Chrono Temporal Harass";
-        Doc.Description = "Hit-and-run tactics, phase shifts, rapid redeployment.";
+    case FactionId::PacificPact:
+        Doc.Type = AIDoctrineType::PacificAutonomousMaritime;
+        Doc.Name = "Pacific Autonomous Maritime";
+        Doc.Description = "Sensor network, autonomous systems, littoral control, rapid redeployment.";
         Doc.MinimumAssaultArmySize = 6;
         Doc.TargetHarvesterCount = 3;
         Doc.PowerPlantBuffer = 40;
+        Doc.Personality = CreatePersonality(Doc.Type, Profile);
+        break;
+
+    case FactionId::AfricanFederation:
+        Doc.Type = AIDoctrineType::AfricanFederationRaider;
+        Doc.Name = "African Federation Desert Raider";
+        Doc.Description = "Fast 8x8 wheeled raiders, precision rocket artillery, distributed solar power, terrain ambushes.";
+        Doc.MinimumAssaultArmySize = 8;
+        Doc.TargetHarvesterCount = 4;
+        Doc.PowerPlantBuffer = 60;
         Doc.Personality = CreatePersonality(Doc.Type, Profile);
         break;
 
@@ -69,7 +79,7 @@ AIPersonality AIDoctrineRegistry::CreatePersonality(AIDoctrineType Doctrine, AIP
 
     switch (Doctrine)
     {
-    case AIDoctrineType::SovietArmoredPush:
+    case AIDoctrineType::EurasianArmoredPush:
         P.Name = "General Sokolov";
         P.Aggressiveness = 80;
         P.Cautiousness = 25;
@@ -84,7 +94,7 @@ AIPersonality AIDoctrineRegistry::CreatePersonality(AIDoctrineType Doctrine, AIP
         P.RatioArtillery = 15;
         break;
 
-    case AIDoctrineType::AllianceMobilePrecision:
+    case AIDoctrineType::AtlanticMobilePrecision:
         P.Name = "Commander Hart";
         P.Aggressiveness = 45;
         P.Cautiousness = 70;
@@ -114,8 +124,8 @@ AIPersonality AIDoctrineRegistry::CreatePersonality(AIDoctrineType Doctrine, AIP
         P.RatioArtillery = 15;
         break;
 
-    case AIDoctrineType::ChronoTemporalHarass:
-        P.Name = "Archon Voss";
+    case AIDoctrineType::PacificAutonomousMaritime:
+        P.Name = "Admiral Tanaka";
         P.Aggressiveness = 60;
         P.Cautiousness = 75;
         P.EconomicRisk = 60;
@@ -125,6 +135,21 @@ AIPersonality AIDoctrineRegistry::CreatePersonality(AIDoctrineType Doctrine, AIP
         P.FlankingTendency = 80;
         P.RatioInfantry = 20;
         P.RatioAntiArmor = 40;
+        P.RatioAntiAir = 20;
+        P.RatioArtillery = 20;
+        break;
+
+    case AIDoctrineType::AfricanFederationRaider:
+        P.Name = "General Diallo";
+        P.Aggressiveness = 70;
+        P.Cautiousness = 50;
+        P.EconomicRisk = 50;
+        P.ScoutPriority = 95;
+        P.AcceptableLossesPercent = 35;
+        P.ReserveDepthPercent = 20;
+        P.FlankingTendency = 85;
+        P.RatioInfantry = 25;
+        P.RatioAntiArmor = 35;
         P.RatioAntiAir = 20;
         P.RatioArtillery = 20;
         break;

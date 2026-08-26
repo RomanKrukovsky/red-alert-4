@@ -358,7 +358,31 @@ FText KeyToText(const std::string& Key)
         {"faction.alliance.building.superweapon", NSLOCTEXT("RA4", "superweapon_atl", "Гиперзвуковой ударный комплекс")},
         {"faction.eastern.building.superweapon", NSLOCTEXT("RA4", "superweapon_cn", "Сейсмический комплекс")},
         {"faction.coalition.building.superweapon", NSLOCTEXT("RA4", "superweapon_cn", "Сейсмический комплекс")},
-        {"faction.pacific.building.superweapon", NSLOCTEXT("RA4", "superweapon_jp", "Матрица перехвата")}
+        {"faction.pacific.building.superweapon", NSLOCTEXT("RA4", "superweapon_jp", "Матрица перехвата")},
+
+        // ---------------------------------------------------------------
+        // Африканская федерация (African Federation)
+        // ---------------------------------------------------------------
+        {"faction.african.building.construction_yard", NSLOCTEXT("RA4", "hq_af", "Штабной модуль")},
+        {"faction.african.building.power_plant", NSLOCTEXT("RA4", "power_plant_af", "Гелиотермальная станция «Гелиос»")},
+        {"faction.african.building.refinery", NSLOCTEXT("RA4", "refinery_af", "Обогатитель «Сахель»")},
+        {"faction.african.building.barracks", NSLOCTEXT("RA4", "barracks_af", "Тактический лагерь")},
+        {"faction.african.building.war_factory", NSLOCTEXT("RA4", "war_factory_af", "Завод колёсной техники")},
+        {"faction.african.building.radar", NSLOCTEXT("RA4", "radar_af", "Радарный узел «Атлас»")},
+        {"faction.african.building.turret", NSLOCTEXT("RA4", "turret_sonic_af", "Акустический ДОТ")},
+        {"faction.african.building.aa_turret", NSLOCTEXT("RA4", "turret_aa_af", "ЗРК «Зулу»")},
+        {"faction.african.building.superweapon", NSLOCTEXT("RA4", "superweapon_af", "Орбитальный комплекс «Око Сахары»")},
+        {"faction.african.unit.mcv", NSLOCTEXT("RA4", "mcv_af", "Штабной комплекс")},
+        {"faction.african.unit.harvester", NSLOCTEXT("RA4", "harvester_af", "Комбайн «Саванна»")},
+        {"faction.african.unit.basic_infantry", NSLOCTEXT("RA4", "askari_rifleman", "Стрелок «Аскари»")},
+        {"faction.african.unit.antiarmor_infantry", NSLOCTEXT("RA4", "samum_atgm", "ПТРК «Самум»")},
+        {"faction.african.unit.main_tank", NSLOCTEXT("RA4", "mamba_mbt", "ОБТ «Мамба»")},
+        {"faction.african.unit.artillery", NSLOCTEXT("RA4", "baobab_artillery", "РСЗО «Баобаб»")},
+        {"AU_MambaMBT", NSLOCTEXT("RA4", "mamba_mbt", "ОБТ «Мамба»")},
+        {"AU_CheetahIFV", NSLOCTEXT("RA4", "cheetah_ifv", "БТР «Гепард»")},
+        {"AU_ElephantSuperheavy", NSLOCTEXT("RA4", "elephant_heavy", "Платформа «Слон»")},
+        {"AU_AskariRifleman", NSLOCTEXT("RA4", "askari_rifleman", "Стрелок «Аскари»")},
+        {"AU_AminaCommando", NSLOCTEXT("RA4", "amina_commando", "Капитан Амина Диалло")}
     };
 
     auto It = LocMap.find(Key);

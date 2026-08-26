@@ -190,47 +190,123 @@ void URA4SkirmishSetupWidget::BuildLayout()
     // Left Column: Map & Game Options
     UVerticalBox* LeftBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("LeftBox"));
 
-    // Map Selection
-    UTextBlock* MapLabel = MakeSetupText(WidgetTree, LOCTEXT("MapLabel", "КАРТА СРАЖЕНИЯ"), 16, TextColor, TEXT("MapLabelText"));
-    LeftBox->AddChildToVerticalBox(MapLabel)->SetPadding(FMargin(0.0f, 10.0f, 0.0f, 4.0f));
+    // 1. Map Selection
+    UTextBlock* MapLabel = MakeSetupText(WidgetTree, LOCTEXT("MapLabel", "КАРТА СРАЖЕНИЯ"), 15, TextColor, TEXT("MapLabelText"));
+    LeftBox->AddChildToVerticalBox(MapLabel)->SetPadding(FMargin(0.0f, 4.0f, 0.0f, 2.0f));
 
     MapCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("MapCombo"));
-    MapCombo->AddOption(TEXT("Архипелаг — Холмы и Проливы (до 9 участников)"));
+    MapCombo->AddOption(TEXT("Архипелаг — Холмы и Проливы (2–9 участников)"));
+    MapCombo->AddOption(TEXT("Красный Рассвет — Центральная Равнина (2–4 игрока)"));
+    MapCombo->AddOption(TEXT("Пустынный Рубеж — Сахель (2–6 игроков)"));
+    MapCombo->AddOption(TEXT("Тихоокеанский Риф — Морской Бой (2–8 игроков)"));
     MapCombo->SetSelectedIndex(0);
     MapCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
-    LeftBox->AddChildToVerticalBox(MapCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 16.0f));
+    LeftBox->AddChildToVerticalBox(MapCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
 
-    // Starting Credits
-    UTextBlock* CreditsLabel = MakeSetupText(WidgetTree, LOCTEXT("CreditsLabel", "СТАРТОВЫЙ БЮДЖЕТ (КРЕДИТЫ)"), 16, TextColor, TEXT("CreditsLabelText"));
-    LeftBox->AddChildToVerticalBox(CreditsLabel)->SetPadding(FMargin(0.0f, 10.0f, 0.0f, 4.0f));
+    // 2. Game Mode
+    UTextBlock* ModeLabel = MakeSetupText(WidgetTree, LOCTEXT("ModeLabel", "РЕЖИМ БОЯ"), 15, TextColor, TEXT("ModeLabelText"));
+    LeftBox->AddChildToVerticalBox(ModeLabel)->SetPadding(FMargin(0.0f, 4.0f, 0.0f, 2.0f));
+
+    GameModeCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("GameModeCombo"));
+    GameModeCombo->AddOption(TEXT("Уничтожение баз (Стандартная битва)"));
+    GameModeCombo->AddOption(TEXT("Охота за МСЦ (Ликвидация штаба)"));
+    GameModeCombo->AddOption(TEXT("Битва на истощение (Без супероружия)"));
+    GameModeCombo->AddOption(TEXT("Быстрый штурм (Форсаж и ускорение)"));
+    GameModeCombo->SetSelectedIndex(0);
+    GameModeCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
+    LeftBox->AddChildToVerticalBox(GameModeCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
+
+    // 3. Starting Credits
+    UTextBlock* CreditsLabel = MakeSetupText(WidgetTree, LOCTEXT("CreditsLabel", "СТАРТОВЫЙ БЮДЖЕТ (КРЕДИТЫ)"), 15, TextColor, TEXT("CreditsLabelText"));
+    LeftBox->AddChildToVerticalBox(CreditsLabel)->SetPadding(FMargin(0.0f, 4.0f, 0.0f, 2.0f));
 
     CreditsCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("CreditsCombo"));
     CreditsCombo->AddOption(TEXT("5 000 Кредитов (Малый)"));
     CreditsCombo->AddOption(TEXT("10 000 Кредитов (Стандарт)"));
     CreditsCombo->AddOption(TEXT("20 000 Кредитов (Большой)"));
+    CreditsCombo->AddOption(TEXT("30 000 Кредитов (Обильный)"));
+    CreditsCombo->AddOption(TEXT("50 000 Кредитов (Сверхвысокий)"));
     CreditsCombo->SetSelectedIndex(1);
     CreditsCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
-    LeftBox->AddChildToVerticalBox(CreditsCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 16.0f));
+    LeftBox->AddChildToVerticalBox(CreditsCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
 
-    // AI Difficulty
-    UTextBlock* DiffLabel = MakeSetupText(WidgetTree, LOCTEXT("DiffLabel", "СЛОЖНОСТЬ ИИ"), 16, TextColor, TEXT("DiffLabelText"));
-    LeftBox->AddChildToVerticalBox(DiffLabel)->SetPadding(FMargin(0.0f, 10.0f, 0.0f, 4.0f));
+    // 4. AI Difficulty
+    UTextBlock* DiffLabel = MakeSetupText(WidgetTree, LOCTEXT("DiffLabel", "СЛОЖНОСТЬ ИИ"), 15, TextColor, TEXT("DiffLabelText"));
+    LeftBox->AddChildToVerticalBox(DiffLabel)->SetPadding(FMargin(0.0f, 4.0f, 0.0f, 2.0f));
 
     DifficultyCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("DifficultyCombo"));
     DifficultyCombo->AddOption(TEXT("Базовая (Легкий)"));
     DifficultyCombo->AddOption(TEXT("Тактическая (Средний)"));
     DifficultyCombo->AddOption(TEXT("Командная (Тяжёлый)"));
     DifficultyCombo->AddOption(TEXT("Экстремальная (Эксперт)"));
+    DifficultyCombo->AddOption(TEXT("Брутальная (Читер)"));
     DifficultyCombo->SetSelectedIndex(1);
     DifficultyCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
-    LeftBox->AddChildToVerticalBox(DifficultyCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 16.0f));
+    LeftBox->AddChildToVerticalBox(DifficultyCombo)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 8.0f));
+
+    // 5. Superweapons & Secondary Rules in dual horizontal row
+    UHorizontalBox* RulesRow1 = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("RulesRow1"));
+
+    UVerticalBox* SwBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("SwBox"));
+    UTextBlock* SwLabel = MakeSetupText(WidgetTree, LOCTEXT("SwLabel", "СУПЕРОРУЖИЕ"), 14, TextColor, TEXT("SwLabelText"));
+    SwBox->AddChildToVerticalBox(SwLabel)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 2.0f));
+    SuperweaponCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("SuperweaponCombo"));
+    SuperweaponCombo->AddOption(TEXT("Включено"));
+    SuperweaponCombo->AddOption(TEXT("Отключено"));
+    SuperweaponCombo->AddOption(TEXT("Задержка 10 мин"));
+    SuperweaponCombo->SetSelectedIndex(0);
+    SuperweaponCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
+    SwBox->AddChildToVerticalBox(SuperweaponCombo);
+    RulesRow1->AddChildToHorizontalBox(SwBox)->SetPadding(FMargin(0.0f, 0.0f, 8.0f, 0.0f));
+
+    UVerticalBox* FowBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("FowBox"));
+    UTextBlock* FowLabel = MakeSetupText(WidgetTree, LOCTEXT("FowLabel", "ТУМАН ВОЙНЫ"), 14, TextColor, TEXT("FowLabelText"));
+    FowBox->AddChildToVerticalBox(FowLabel)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 2.0f));
+    FogOfWarCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("FogOfWarCombo"));
+    FogOfWarCombo->AddOption(TEXT("Динамический"));
+    FogOfWarCombo->AddOption(TEXT("Открытая карта"));
+    FogOfWarCombo->SetSelectedIndex(0);
+    FogOfWarCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
+    FowBox->AddChildToVerticalBox(FogOfWarCombo);
+    RulesRow1->AddChildToHorizontalBox(FowBox);
+
+    LeftBox->AddChildToVerticalBox(RulesRow1)->SetPadding(FMargin(0.0f, 4.0f, 0.0f, 8.0f));
+
+    // 6. Crates & Game Speed in dual horizontal row
+    UHorizontalBox* RulesRow2 = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass(), TEXT("RulesRow2"));
+
+    UVerticalBox* CratesBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("CratesBox"));
+    UTextBlock* CratesLabel = MakeSetupText(WidgetTree, LOCTEXT("CratesLabel", "БОНУСНЫЕ ЯЩИКИ"), 14, TextColor, TEXT("CratesLabelText"));
+    CratesBox->AddChildToVerticalBox(CratesLabel)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 2.0f));
+    CratesCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("CratesCombo"));
+    CratesCombo->AddOption(TEXT("Включены"));
+    CratesCombo->AddOption(TEXT("Отключены"));
+    CratesCombo->SetSelectedIndex(0);
+    CratesCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
+    CratesBox->AddChildToVerticalBox(CratesCombo);
+    RulesRow2->AddChildToHorizontalBox(CratesBox)->SetPadding(FMargin(0.0f, 0.0f, 8.0f, 0.0f));
+
+    UVerticalBox* SpeedBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("SpeedBox"));
+    UTextBlock* SpeedLabel = MakeSetupText(WidgetTree, LOCTEXT("SpeedLabel", "СКОРОСТЬ ИГРЫ"), 14, TextColor, TEXT("SpeedLabelText"));
+    SpeedBox->AddChildToVerticalBox(SpeedLabel)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 2.0f));
+    GameSpeedCombo = WidgetTree->ConstructWidget<UComboBoxString>(UComboBoxString::StaticClass(), TEXT("GameSpeedCombo"));
+    GameSpeedCombo->AddOption(TEXT("1.0x (Нормальная)"));
+    GameSpeedCombo->AddOption(TEXT("0.75x (Тактическая)"));
+    GameSpeedCombo->AddOption(TEXT("1.25x (Динамичная)"));
+    GameSpeedCombo->AddOption(TEXT("1.5x (Турбо)"));
+    GameSpeedCombo->SetSelectedIndex(0);
+    GameSpeedCombo->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
+    SpeedBox->AddChildToVerticalBox(GameSpeedCombo);
+    RulesRow2->AddChildToHorizontalBox(SpeedBox);
+
+    LeftBox->AddChildToVerticalBox(RulesRow2)->SetPadding(FMargin(0.0f, 4.0f, 0.0f, 4.0f));
 
     UBorder* LeftPanel = MakeFramedSetupPanel(WidgetTree, LeftBox, TEXT("LeftPanel"));
-    PlaceSetupWidget(MainCanvas, LeftPanel, FVector2D(80.0f, 140.0f), FVector2D(520.0f, 520.0f), 2);
+    PlaceSetupWidget(MainCanvas, LeftPanel, FVector2D(80.0f, 130.0f), FVector2D(520.0f, 520.0f), 2);
 
     // Player slots: one local commander plus eight independently configurable AI vacancies.
     UVerticalBox* RightBox = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("RightBox"));
-    UTextBlock* SlotsHeader = MakeSetupText(WidgetTree, LOCTEXT("SlotsHeader", "СЛОТЫ УЧАСТНИКОВ"), 18, Red, TEXT("SlotsHeader"));
+    UTextBlock* SlotsHeader = MakeSetupText(WidgetTree, LOCTEXT("SlotsHeader", "СЛОТЫ УЧАСТНИКОВ (ДО 9 КОМАНДУЮЩИХ)"), 18, Red, TEXT("SlotsHeader"));
     RightBox->AddChildToVerticalBox(SlotsHeader)->SetPadding(FMargin(0.0f, 0.0f, 0.0f, 6.0f));
 
     SlotStatusCombos.Reset();
@@ -246,7 +322,7 @@ void URA4SkirmishSetupWidget::BuildLayout()
             FText::FromString(FString::Printf(TEXT("%d"), SlotIndex + 1)), 14, TextColor,
             FName(*FString::Printf(TEXT("SlotLabel%d"), SlotIndex)));
         USizeBox* LabelBox = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
-        LabelBox->SetWidthOverride(38.0f);
+        LabelBox->SetWidthOverride(32.0f);
         LabelBox->SetContent(SlotLabel);
         Row->AddChildToHorizontalBox(LabelBox);
 
@@ -264,19 +340,23 @@ void URA4SkirmishSetupWidget::BuildLayout()
         }
         Status->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
         USizeBox* StatusBox = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
-        StatusBox->SetWidthOverride(180.0f);
+        StatusBox->SetWidthOverride(150.0f);
         StatusBox->SetContent(Status);
         Row->AddChildToHorizontalBox(StatusBox)->SetPadding(FMargin(0.0f, 0.0f, 8.0f, 0.0f));
         SlotStatusCombos.Add(Status);
 
         UComboBoxString* Faction = WidgetTree->ConstructWidget<UComboBoxString>(
             UComboBoxString::StaticClass(), FName(*FString::Printf(TEXT("SlotFaction%d"), SlotIndex)));
-        Faction->AddOption(TEXT("Евразийский пакт"));
-        Faction->AddOption(TEXT("Атлантический альянс"));
-        Faction->SetSelectedIndex(SlotIndex % 2);
+        Faction->AddOption(TEXT("🟣 Евразийский пакт"));
+        Faction->AddOption(TEXT("🔵 Атлантический альянс"));
+        Faction->AddOption(TEXT("🟢 Восточная коалиция"));
+        Faction->AddOption(TEXT("🔷 Тихоокеанский пакт"));
+        Faction->AddOption(TEXT("🟤 Африканская федерация"));
+        Faction->AddOption(TEXT("🎲 Случайный блок (Random)"));
+        Faction->SetSelectedIndex(SlotIndex % 5);
         Faction->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
         USizeBox* FactionBox = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
-        FactionBox->SetWidthOverride(300.0f);
+        FactionBox->SetWidthOverride(330.0f);
         FactionBox->SetContent(Faction);
         Row->AddChildToHorizontalBox(FactionBox)->SetPadding(FMargin(0.0f, 0.0f, 8.0f, 0.0f));
         SlotFactionCombos.Add(Faction);
@@ -291,7 +371,7 @@ void URA4SkirmishSetupWidget::BuildLayout()
         Team->SetSelectedIndex(0);
         Team->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
         USizeBox* TeamBox = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
-        TeamBox->SetWidthOverride(210.0f);
+        TeamBox->SetWidthOverride(190.0f);
         TeamBox->SetContent(Team);
         Row->AddChildToHorizontalBox(TeamBox)->SetPadding(FMargin(0.0f, 0.0f, 8.0f, 0.0f));
         SlotTeamCombos.Add(Team);
@@ -305,7 +385,7 @@ void URA4SkirmishSetupWidget::BuildLayout()
         Spot->SetSelectedIndex(SlotIndex);
         Spot->OnSelectionChanged.AddDynamic(this, &URA4SkirmishSetupWidget::HandleOptionChanged);
         USizeBox* SpotBox = WidgetTree->ConstructWidget<USizeBox>(USizeBox::StaticClass());
-        SpotBox->SetWidthOverride(180.0f);
+        SpotBox->SetWidthOverride(160.0f);
         SpotBox->SetContent(Spot);
         Row->AddChildToHorizontalBox(SpotBox);
         SlotSpotCombos.Add(Spot);
@@ -328,10 +408,10 @@ void URA4SkirmishSetupWidget::BuildLayout()
         AllianceRow->AddChildToHorizontalBox(NameBox)->SetPadding(FMargin(0.0f, 8.0f, 8.0f, 0.0f));
         AllianceNameEdits.Add(NameEdit);
     }
-    RightBox->AddChildToVerticalBox(AllianceRow)->SetPadding(FMargin(38.0f, 8.0f, 0.0f, 0.0f));
+    RightBox->AddChildToVerticalBox(AllianceRow)->SetPadding(FMargin(32.0f, 6.0f, 0.0f, 0.0f));
 
     UBorder* RightPanel = MakeFramedSetupPanel(WidgetTree, RightBox, TEXT("RightPanel"));
-    PlaceSetupWidget(MainCanvas, RightPanel, FVector2D(630.0f, 140.0f), FVector2D(1210.0f, 500.0f), 2);
+    PlaceSetupWidget(MainCanvas, RightPanel, FVector2D(620.0f, 130.0f), FVector2D(1220.0f, 520.0f), 2);
 
     // Validation Status Bar (Bottom Row 1)
     UVerticalBox* BannerStack = WidgetTree->ConstructWidget<UVerticalBox>(UVerticalBox::StaticClass(), TEXT("BannerStack"));
@@ -521,7 +601,17 @@ void URA4SkirmishSetupWidget::LaunchSkirmishMatch()
 {
     if (UWorld* World = GetWorld())
     {
-        FString Options = FString::Printf(TEXT("?Difficulty=%d?Credits=%d"), DifficultyIndex, CreditsIndex);
+        const int32 MapIdx = MapCombo ? MapCombo->GetSelectedIndex() : 0;
+        const int32 GameModeIdx = GameModeCombo ? GameModeCombo->GetSelectedIndex() : 0;
+        const int32 SuperweaponIdx = SuperweaponCombo ? SuperweaponCombo->GetSelectedIndex() : 0;
+        const int32 FogOfWarIdx = FogOfWarCombo ? FogOfWarCombo->GetSelectedIndex() : 0;
+        const int32 CratesIdx = CratesCombo ? CratesCombo->GetSelectedIndex() : 0;
+        const int32 GameSpeedIdx = GameSpeedCombo ? GameSpeedCombo->GetSelectedIndex() : 0;
+
+        FString Options = FString::Printf(
+            TEXT("?Difficulty=%d?Credits=%d?Map=%d?GameMode=%d?Superweapons=%d?FogOfWar=%d?Crates=%d?GameSpeed=%d"),
+            DifficultyIndex, CreditsIndex, MapIdx, GameModeIdx, SuperweaponIdx, FogOfWarIdx, CratesIdx, GameSpeedIdx);
+
         for (int32 Slot = 0; Slot < SlotStatusCombos.Num(); ++Slot)
         {
             const int32 bActive = Slot == 0 || SlotStatusCombos[Slot]->GetSelectedIndex() == 0 ? 1 : 0;

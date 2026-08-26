@@ -22,10 +22,17 @@ namespace AI
 
 enum class AIDoctrineType : uint8_t
 {
-    SovietArmoredPush = 0,    // Soviet: Heavy front, armored push, V2 artillery prep
-    AllianceMobilePrecision,  // Alliance: High mobility, recon, flanking, high-value unit preservation
-    CoalitionSynchronized,   // Coalition: Formation shields, area denial, synchronized strikes
-    ChronoTemporalHarass     // Chrono: Hit-and-run, temporal abilities, mobile reserves
+    EurasianArmoredPush = 0,        // Eurasian Pact: Heavy front, armored push, heavy artillery prep
+    AtlanticMobilePrecision,        // Atlantic Alliance: High mobility, recon, flanking, precision strike
+    CoalitionSynchronized,         // Eastern Coalition: Formation shields, area denial, drone coordination
+    PacificAutonomousMaritime,     // Pacific Pact: Autonomous systems, littoral defense, sensor networks
+    AfricanFederationRaider,       // African Federation: High operational mobility, wheeled raiders, terrain adaptation
+
+    // --- Legacy aliases ---
+    SovietArmoredPush = EurasianArmoredPush,
+    AllianceMobilePrecision = AtlanticMobilePrecision,
+    ChronoTemporalHarass = PacificAutonomousMaritime,
+    AfricanUnionRaider = AfricanFederationRaider
 };
 
 struct AIPersonality

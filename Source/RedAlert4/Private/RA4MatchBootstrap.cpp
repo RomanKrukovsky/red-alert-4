@@ -29,7 +29,7 @@ struct StartingForce
     ContentId SuperTank;
 };
 
-const StartingForce SovietForce{
+const StartingForce EurasianForce{
     MakeContentId("unit.sov.mcv"),
     MakeContentId("unit.sov.conscript"),
     MakeContentId("unit.sov.rocket_trooper"),
@@ -44,6 +44,30 @@ const StartingForce AllianceForce{
     MakeContentId("unit.all.light_tank"),
     MakeContentId("unit.all.oracle_artillery"),
     MakeContentId("unit.all.light_tank")};
+
+const StartingForce CoalitionForce{
+    MakeContentId("unit.ec.mcv"),
+    MakeContentId("unit.ec.rifleman"),
+    MakeContentId("unit.ec.lancer"),
+    MakeContentId("unit.ec.main_tank"),
+    MakeContentId("unit.ec.artillery"),
+    MakeContentId("unit.ec.main_tank")};
+
+const StartingForce PacificForce{
+    MakeContentId("unit.cl.mcv"),
+    MakeContentId("unit.cl.rifleman"),
+    MakeContentId("unit.cl.lancer"),
+    MakeContentId("unit.cl.main_tank"),
+    MakeContentId("unit.cl.artillery"),
+    MakeContentId("unit.cl.main_tank")};
+
+const StartingForce AfricanForce{
+    MakeContentId("unit.au.mcv"),
+    MakeContentId("unit.au.askari_rifleman"),
+    MakeContentId("unit.au.samum_rocketeer"),
+    MakeContentId("unit.au.mamba_mbt"),
+    MakeContentId("unit.au.baobab_artillery"),
+    MakeContentId("unit.au.elephant_superheavy")};
 
 Vec2 TileCentre(const TileCoord& Tile)
 {
@@ -189,7 +213,15 @@ void FRA4MatchBootstrap::BuildSkirmish(ContentDatabase& Content, SimWorld& World
 
     const auto ForceFor = [](RA4::FactionId Faction) -> const StartingForce&
     {
-        return (Faction == RA4::FactionId::Soviet) ? SovietForce : AllianceForce;
+        switch (Faction)
+        {
+        case RA4::FactionId::EurasianPact: return EurasianForce;
+        case RA4::FactionId::AtlanticAlliance: return AllianceForce;
+        case RA4::FactionId::EasternCoalition: return CoalitionForce;
+        case RA4::FactionId::PacificPact: return PacificForce;
+        case RA4::FactionId::AfricanFederation: return AfricanForce;
+        default: return EurasianForce;
+        }
     };
 
     for (int32 Slot = 0; Slot < kMaxPlayers; ++Slot)

@@ -83,6 +83,21 @@ private:
     TObjectPtr<UComboBoxString> CreditsCombo;
 
     UPROPERTY(Transient)
+    TObjectPtr<UComboBoxString> GameModeCombo;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UComboBoxString> SuperweaponCombo;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UComboBoxString> FogOfWarCombo;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UComboBoxString> CratesCombo;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UComboBoxString> GameSpeedCombo;
+
+    UPROPERTY(Transient)
     TObjectPtr<UTextBlock> ValidationWarningText;
 
     UPROPERTY(Transient)

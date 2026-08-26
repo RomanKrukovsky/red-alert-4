@@ -42,6 +42,31 @@ constexpr ContentId WpnWardenRailgun = MakeContentId("weapon.warden_railgun");
 constexpr ContentId WpnBaihuGlaive = MakeContentId("weapon.baihu_glaive");
 constexpr ContentId WpnRequiemBlade = MakeContentId("weapon.requiem_blade");
 
+// --- Expanded RA3 Naval & Advanced Weapons -------------------------------
+constexpr ContentId WpnTeslaZap = MakeContentId("weapon.tesla_zap");
+constexpr ContentId WpnTeslaShockwave = MakeContentId("weapon.tesla_shockwave");
+constexpr ContentId WpnDreadnoughtMissile = MakeContentId("weapon.dreadnought_missile");
+constexpr ContentId WpnTerrorDismantle = MakeContentId("weapon.terror_dismantle");
+constexpr ContentId WpnHydrofoilFlak = MakeContentId("weapon.hydrofoil_flak");
+constexpr ContentId WpnDestroyerCannon = MakeContentId("weapon.destroyer_cannon");
+constexpr ContentId WpnCarrierDrone = MakeContentId("weapon.carrier_drone");
+constexpr ContentId WpnPrismTankBeam = MakeContentId("weapon.prism_tank_beam");
+constexpr ContentId WpnNaginataTorpedo = MakeContentId("weapon.naginata_torpedo");
+constexpr ContentId WpnShiradaCannon = MakeContentId("weapon.shirada_cannon");
+constexpr ContentId WpnOniLaser = MakeContentId("weapon.oni_eye_laser");
+constexpr ContentId WpnTachyonLance = MakeContentId("weapon.tachyon_lance");
+constexpr ContentId WpnPhaseTorpedo = MakeContentId("weapon.phase_torpedo");
+
+// --- African Union Weapons ------------------------------------------------
+constexpr ContentId WpnAuPlasmaCarbine = MakeContentId("weapon.au.plasma_carbine");
+constexpr ContentId WpnAuSamumMissile = MakeContentId("weapon.au.samum_missile");
+constexpr ContentId WpnAuSonicDisruptor = MakeContentId("weapon.au.sonic_disruptor");
+constexpr ContentId WpnAuMambaRailgun = MakeContentId("weapon.au.mamba_railgun");
+constexpr ContentId WpnAuBaobabMortar = MakeContentId("weapon.au.baobab_mortar");
+constexpr ContentId WpnAuSolarLaser = MakeContentId("weapon.au.solar_laser");
+constexpr ContentId WpnAuElephantCannon = MakeContentId("weapon.au.elephant_cannon");
+constexpr ContentId WpnAuAminaBlade = MakeContentId("weapon.au.amina_vibro_blade");
+
 // --- Building ids ---------------------------------------------------------
 constexpr ContentId BldSovConYard = MakeContentId("building.sov.construction_yard");
 constexpr ContentId BldSovPower = MakeContentId("building.sov.tesla_reactor");
@@ -52,6 +77,7 @@ constexpr ContentId BldSovTurret = MakeContentId("building.sov.gun_turret");
 constexpr ContentId BldSovRadar = MakeContentId("building.sov.radar_complex");
 constexpr ContentId BldSovAaTurret = MakeContentId("building.sov.flak_turret");
 constexpr ContentId BldSovSuper = MakeContentId("building.sov.iron_barrage");
+constexpr ContentId BldSovNavalYard = MakeContentId("building.sov.naval_yard");
 
 constexpr ContentId BldAllConYard = MakeContentId("building.all.construction_yard");
 constexpr ContentId BldAllPower = MakeContentId("building.all.power_plant");
@@ -62,6 +88,7 @@ constexpr ContentId BldAllTurret = MakeContentId("building.all.pillbox");
 constexpr ContentId BldAllRadar = MakeContentId("building.all.radar_complex");
 constexpr ContentId BldAllAaTurret = MakeContentId("building.all.patriot_battery");
 constexpr ContentId BldAllSuper = MakeContentId("building.all.aegis_lance");
+constexpr ContentId BldAllNavalYard = MakeContentId("building.all.naval_yard");
 
 constexpr ContentId BldEcConYard = MakeContentId("building.ec.construction_yard");
 constexpr ContentId BldEcPower = MakeContentId("building.ec.solar_collector");
@@ -72,6 +99,7 @@ constexpr ContentId BldEcTurret = MakeContentId("building.ec.defense_tower");
 constexpr ContentId BldEcAaTurret = MakeContentId("building.ec.aa_tower");
 constexpr ContentId BldEcRadar = MakeContentId("building.ec.radar_array");
 constexpr ContentId BldEcSuper = MakeContentId("building.ec.harmony_sanctuary");
+constexpr ContentId BldEcNavalYard = MakeContentId("building.ec.naval_yard");
 
 constexpr ContentId BldClConYard = MakeContentId("building.cl.construction_yard");
 constexpr ContentId BldClPower = MakeContentId("building.cl.decay_reactor");
@@ -82,6 +110,23 @@ constexpr ContentId BldClTurret = MakeContentId("building.cl.temporal_turret");
 constexpr ContentId BldClAaTurret = MakeContentId("building.cl.warp_flak");
 constexpr ContentId BldClRadar = MakeContentId("building.cl.chronoscan_array");
 constexpr ContentId BldClSuper = MakeContentId("building.cl.chronosphere");
+constexpr ContentId BldClNavalYard = MakeContentId("building.cl.naval_yard");
+
+constexpr ContentId BldAuConYard = MakeContentId("building.au.construction_yard");
+constexpr ContentId BldAuPower = MakeContentId("building.au.solar_plant");
+constexpr ContentId BldAuRefinery = MakeContentId("building.au.ore_refinery");
+constexpr ContentId BldAuBarracks = MakeContentId("building.au.barracks");
+constexpr ContentId BldAuWarFactory = MakeContentId("building.au.war_factory");
+constexpr ContentId BldAuTurret = MakeContentId("building.au.sonic_turret");
+constexpr ContentId BldAuAaTurret = MakeContentId("building.au.aa_turret");
+constexpr ContentId BldAuRadar = MakeContentId("building.au.radar_complex");
+constexpr ContentId BldAuSuper = MakeContentId("building.au.eye_of_sahara");
+constexpr ContentId BldAuNavalYard = MakeContentId("building.au.naval_yard");
+
+// --- Neutral Tech Buildings -----------------------------------------------
+constexpr ContentId BldNeutralHospital = MakeContentId("building.neutral.tech_hospital");
+constexpr ContentId BldNeutralMachineShop = MakeContentId("building.neutral.tech_machine_shop");
+constexpr ContentId BldNeutralObservationPost = MakeContentId("building.neutral.observation_post");
 
 // --- Unit ids -------------------------------------------------------------
 constexpr ContentId UnitSovMcv = MakeContentId("unit.sov.mcv");
@@ -91,6 +136,10 @@ constexpr ContentId UnitSovRocketeer = MakeContentId("unit.sov.rocket_trooper");
 constexpr ContentId UnitSovHeavyTank = MakeContentId("unit.sov.heavy_tank");
 constexpr ContentId UnitSovArtillery = MakeContentId("unit.sov.zarevo_mlrs");
 constexpr ContentId UnitSovAircraft = MakeContentId("unit.sov.mig_bomber");
+constexpr ContentId UnitSovStingray = MakeContentId("unit.sov.stingray");
+constexpr ContentId UnitSovDreadnought = MakeContentId("unit.sov.dreadnought");
+constexpr ContentId UnitSovTerrorDrone = MakeContentId("unit.sov.terror_drone");
+constexpr ContentId UnitSovTwinblade = MakeContentId("unit.sov.twinblade");
 
 constexpr ContentId UnitAllMcv = MakeContentId("unit.all.mcv");
 constexpr ContentId UnitAllHarvester = MakeContentId("unit.all.ore_harvester");
@@ -99,6 +148,11 @@ constexpr ContentId UnitAllRocketeer = MakeContentId("unit.all.missile_infantry"
 constexpr ContentId UnitAllLightTank = MakeContentId("unit.all.light_tank");
 constexpr ContentId UnitAllArtillery = MakeContentId("unit.all.oracle_artillery");
 constexpr ContentId UnitAllAircraft = MakeContentId("unit.all.harrier_jet");
+constexpr ContentId UnitAllHydrofoil = MakeContentId("unit.all.hydrofoil");
+constexpr ContentId UnitAllAssaultDestroyer = MakeContentId("unit.all.assault_destroyer");
+constexpr ContentId UnitAllAircraftCarrier = MakeContentId("unit.all.aircraft_carrier");
+constexpr ContentId UnitAllCryoCopter = MakeContentId("unit.all.cryo_copter");
+constexpr ContentId UnitAllMirageTank = MakeContentId("unit.all.mirage_tank");
 
 constexpr ContentId UnitEcMcv = MakeContentId("unit.ec.mcv");
 constexpr ContentId UnitEcHarvester = MakeContentId("unit.ec.harmony_harvester");
@@ -107,6 +161,11 @@ constexpr ContentId UnitEcLancer = MakeContentId("unit.ec.vajra_lancer");
 constexpr ContentId UnitEcMainTank = MakeContentId("unit.ec.qinglong_mbt");
 constexpr ContentId UnitEcArtillery = MakeContentId("unit.ec.longbow_artillery");
 constexpr ContentId UnitEcAircraft = MakeContentId("unit.ec.phoenix_gunship");
+constexpr ContentId UnitEcNaginataCruiser = MakeContentId("unit.ec.naginata_cruiser");
+constexpr ContentId UnitEcSeaWing = MakeContentId("unit.ec.sea_wing");
+constexpr ContentId UnitEcTsunamiTank = MakeContentId("unit.ec.tsunami_tank");
+constexpr ContentId UnitEcShogunBattleship = MakeContentId("unit.ec.shogun_battleship");
+constexpr ContentId UnitEcKingOni = MakeContentId("unit.ec.king_oni");
 
 constexpr ContentId UnitClMcv = MakeContentId("unit.cl.mcv");
 constexpr ContentId UnitClHarvester = MakeContentId("unit.cl.echo_harvester");
@@ -115,6 +174,24 @@ constexpr ContentId UnitClLancer = MakeContentId("unit.cl.paradox_lancer");
 constexpr ContentId UnitClMainTank = MakeContentId("unit.cl.timeline_tank");
 constexpr ContentId UnitClArtillery = MakeContentId("unit.cl.entropy_mortar");
 constexpr ContentId UnitClAircraft = MakeContentId("unit.cl.phase_striker");
+constexpr ContentId UnitClChronoDestroyer = MakeContentId("unit.cl.chrono_destroyer");
+constexpr ContentId UnitClTemporalSub = MakeContentId("unit.cl.temporal_sub");
+constexpr ContentId UnitClVortexTank = MakeContentId("unit.cl.vortex_tank");
+
+constexpr ContentId UnitAuMcv = MakeContentId("unit.au.mcv");
+constexpr ContentId UnitAuHarvester = MakeContentId("unit.au.savanna_harvester");
+constexpr ContentId UnitAuAskari = MakeContentId("unit.au.askari_rifleman");
+constexpr ContentId UnitAuSamum = MakeContentId("unit.au.samum_rocketeer");
+constexpr ContentId UnitAuJackal = MakeContentId("unit.au.jackal_sonic_trooper");
+constexpr ContentId UnitAuMamba = MakeContentId("unit.au.mamba_mbt");
+constexpr ContentId UnitAuBaobab = MakeContentId("unit.au.baobab_artillery");
+constexpr ContentId UnitAuEagle = MakeContentId("unit.au.eagle_interceptor");
+constexpr ContentId UnitAuCheetah = MakeContentId("unit.au.cheetah_ifv");
+constexpr ContentId UnitAuElephant = MakeContentId("unit.au.elephant_superheavy");
+constexpr ContentId UnitAuSirocco = MakeContentId("unit.au.sirocco_gunship");
+constexpr ContentId UnitAuFennec = MakeContentId("unit.au.fennec_patrol_craft");
+constexpr ContentId UnitAuZanzibar = MakeContentId("unit.au.zanzibar_corvette");
+constexpr ContentId UnitAuAminaCommando = MakeContentId("unit.au.amina_commando");
 
 // --- Tactical roster: support, transports, commandos ----------------------
 constexpr ContentId UnitSovGromTrooper = MakeContentId("unit.sov.grom_trooper");
@@ -399,16 +476,274 @@ void BuildWeapons(ContentDatabase& Db)
         }
         {
             WeaponDef W;
-            W.Id = WpnRequiemBlade;
-            W.Name = "weapon.requiem_blade";
-            W.Damage = 70;
-            W.Warhead = WarheadClass::Temporal;
-            W.MaxRange = Metres(9);
-            W.CooldownTicks = 26;
-            W.ProjectileSpeed = Metres(120);
-            W.bRequiresTurretAligned = false;
-            Db.AddWeapon(W);
+            WeaponDef WpnT = W;
+            WpnT.Id = WpnRequiemBlade;
+            WpnT.Name = "weapon.requiem_blade";
+            WpnT.Damage = 70;
+            WpnT.Warhead = WarheadClass::Temporal;
+            WpnT.MaxRange = Metres(9);
+            WpnT.CooldownTicks = 26;
+            WpnT.ProjectileSpeed = Metres(120);
+            WpnT.bRequiresTurretAligned = false;
+            Db.AddWeapon(WpnT);
         }
+    }
+
+    // --- Expanded RA3 Naval & Advanced Heavy Weaponry ---
+    {
+        WeaponDef W;
+        W.Id = WpnTeslaZap;
+        W.Name = "weapon.tesla_zap";
+        W.Damage = 75;
+        W.Warhead = WarheadClass::Electric;
+        W.MaxRange = Metres(7);
+        W.CooldownTicks = 22;
+        W.bRequiresTurretAligned = false;
+        Db.AddWeapon(W);
+    }
+    {
+        WeaponDef W;
+        W.Id = WpnTeslaShockwave;
+        W.Name = "weapon.tesla_shockwave";
+        W.Damage = 60;
+        W.Warhead = WarheadClass::Electric;
+        W.MaxRange = Metres(4);
+        W.CooldownTicks = 40;
+        W.SplashRadius = Metres(4);
+        W.bRequiresTurretAligned = false;
+        Db.AddWeapon(W);
+    }
+    {
+        WeaponDef W;
+        W.Id = WpnDreadnoughtMissile;
+        W.Name = "weapon.dreadnought_missile";
+        W.Damage = 130;
+        W.Warhead = WarheadClass::Siege;
+        W.MaxRange = Metres(18);
+        W.MinRange = Metres(5);
+        W.CooldownTicks = 55;
+        W.ProjectileSpeed = Metres(40);
+        W.SplashRadius = Metres(3);
+        Db.AddWeapon(W);
+    }
+    {
+        WeaponDef W;
+        W.Id = WpnTerrorDismantle;
+        W.Name = "weapon.terror_dismantle";
+        W.Damage = 25;
+        W.Warhead = WarheadClass::ArmorPiercing;
+        W.MaxRange = Metres(2);
+        W.CooldownTicks = 15;
+        W.bRequiresTurretAligned = false;
+        Db.AddWeapon(W);
+    }
+    {
+        WeaponDef W;
+        W.Id = WpnHydrofoilFlak;
+        W.Name = "weapon.hydrofoil_flak";
+        W.Damage = 35;
+        W.Warhead = WarheadClass::AntiAir;
+        W.MaxRange = Metres(11);
+        W.CooldownTicks = 12;
+        W.ProjectileSpeed = Metres(110);
+        W.bCanTargetGround = false;
+        W.bCanTargetAir = true;
+        W.bRequiresTurretAligned = false;
+        Db.AddWeapon(W);
+    }
+    {
+        WeaponDef W;
+        W.Id = WpnDestroyerCannon;
+        W.Name = "weapon.destroyer_cannon";
+        W.Damage = 85;
+        W.Warhead = WarheadClass::ArmorPiercing;
+        W.MaxRange = Metres(10);
+        W.CooldownTicks = 32;
+        W.ProjectileSpeed = Metres(85);
+        W.SplashRadius = Metres(1);
+        Db.AddWeapon(W);
+    }
+    {
+        WeaponDef W;
+        W.Id = WpnCarrierDrone;
+        W.Name = "weapon.carrier_drone";
+        W.Damage = 95;
+        W.Warhead = WarheadClass::Siege;
+        W.MaxRange = Metres(16);
+        W.MinRange = Metres(4);
+        W.CooldownTicks = 60;
+        W.ProjectileSpeed = Metres(55);
+        W.SplashRadius = Metres(2);
+        Db.AddWeapon(W);
+    }
+    {
+        WeaponDef W;
+        W.Id = WpnPrismTankBeam;
+        W.Name = "weapon.prism_tank_beam";
+        W.Damage = 65;
+        W.Warhead = WarheadClass::Plasma;
+        W.MaxRange = Metres(11);
+        W.CooldownTicks = 30;
+        W.SplashRadius = Metres(2);
+        Db.AddWeapon(W);
+    }
+    {
+        WeaponDef W;
+        W.Id = WpnNaginataTorpedo;
+        W.Name = "weapon.naginata_torpedo";
+        W.Damage = 110;
+        W.Warhead = WarheadClass::ArmorPiercing;
+        W.MaxRange = Metres(12);
+        W.CooldownTicks = 40;
+        W.ProjectileSpeed = Metres(50);
+        W.bRequiresTurretAligned = false;
+        Db.AddWeapon(W);
+    }
+    {
+        WeaponDef W;
+        W.Id = WpnShiradaCannon;
+        W.Name = "weapon.shirada_cannon";
+        W.Damage = 140;
+        W.Warhead = WarheadClass::Siege;
+        W.MaxRange = Metres(19);
+        W.MinRange = Metres(5);
+        W.CooldownTicks = 65;
+        W.ProjectileSpeed = Metres(45);
+        W.SplashRadius = Metres(3);
+        Db.AddWeapon(W);
+    }
+    {
+        WeaponDef W;
+        W.Id = WpnOniLaser;
+        W.Name = "weapon.oni_eye_laser";
+        W.Damage = 95;
+        W.Warhead = WarheadClass::Plasma;
+        W.MaxRange = Metres(9);
+        W.CooldownTicks = 25;
+        W.bRequiresTurretAligned = false;
+        Db.AddWeapon(W);
+    }
+    {
+        WeaponDef W;
+        W.Id = WpnTachyonLance;
+        W.Name = "weapon.tachyon_lance";
+        W.Damage = 80;
+        W.Warhead = WarheadClass::Temporal;
+        W.MaxRange = Metres(10);
+        W.CooldownTicks = 28;
+        W.ProjectileSpeed = Metres(130);
+        W.bRequiresTurretAligned = false;
+        Db.AddWeapon(W);
+    }
+    {
+        WeaponDef W;
+        W.Id = WpnPhaseTorpedo;
+        W.Name = "weapon.phase_torpedo";
+        W.Damage = 105;
+        W.Warhead = WarheadClass::Temporal;
+        W.MaxRange = Metres(11);
+        W.CooldownTicks = 38;
+        W.ProjectileSpeed = Metres(55);
+        W.bRequiresTurretAligned = false;
+        Db.AddWeapon(W);
+    }
+    {
+        WeaponDef W;
+        W.Id = WpnAuPlasmaCarbine;
+        W.Name = "weapon.au.plasma_carbine";
+        W.Damage = 18;
+        W.Warhead = WarheadClass::SmallArms;
+        W.MaxRange = Metres(7);
+        W.CooldownTicks = 9;
+        W.bRequiresTurretAligned = false;
+        Db.AddWeapon(W);
+    }
+    {
+        WeaponDef W;
+        W.Id = WpnAuSamumMissile;
+        W.Name = "weapon.au.samum_missile";
+        W.Damage = 60;
+        W.Warhead = WarheadClass::Rocket;
+        W.MaxRange = Metres(10);
+        W.CooldownTicks = 38;
+        W.ProjectileSpeed = Metres(35);
+        W.SplashRadius = Metres(2);
+        W.bCanTargetAir = true;
+        W.bRequiresTurretAligned = false;
+        Db.AddWeapon(W);
+    }
+    {
+        WeaponDef W;
+        W.Id = WpnAuSonicDisruptor;
+        W.Name = "weapon.au.sonic_disruptor";
+        W.Damage = 45;
+        W.Warhead = WarheadClass::Electric;
+        W.MaxRange = Metres(8);
+        W.CooldownTicks = 20;
+        W.SplashRadius = Metres(3);
+        W.bRequiresTurretAligned = false;
+        Db.AddWeapon(W);
+    }
+    {
+        WeaponDef W;
+        W.Id = WpnAuMambaRailgun;
+        W.Name = "weapon.au.mamba_railgun";
+        W.Damage = 85;
+        W.Warhead = WarheadClass::ArmorPiercing;
+        W.MaxRange = Metres(10);
+        W.CooldownTicks = 24;
+        W.ProjectileSpeed = Metres(120);
+        W.bRequiresTurretAligned = true;
+        Db.AddWeapon(W);
+    }
+    {
+        WeaponDef W;
+        W.Id = WpnAuBaobabMortar;
+        W.Name = "weapon.au.baobab_mortar";
+        W.Damage = 135;
+        W.Warhead = WarheadClass::Siege;
+        W.MaxRange = Metres(18);
+        W.MinRange = Metres(4);
+        W.CooldownTicks = 55;
+        W.ProjectileSpeed = Metres(35);
+        W.SplashRadius = Metres(3);
+        W.bRequiresTurretAligned = true;
+        Db.AddWeapon(W);
+    }
+    {
+        WeaponDef W;
+        W.Id = WpnAuSolarLaser;
+        W.Name = "weapon.au.solar_laser";
+        W.Damage = 90;
+        W.Warhead = WarheadClass::Plasma;
+        W.MaxRange = Metres(10);
+        W.CooldownTicks = 25;
+        W.bRequiresTurretAligned = false;
+        Db.AddWeapon(W);
+    }
+    {
+        WeaponDef W;
+        W.Id = WpnAuElephantCannon;
+        W.Name = "weapon.au.elephant_cannon";
+        W.Damage = 180;
+        W.Warhead = WarheadClass::ArmorPiercing;
+        W.MaxRange = Metres(13);
+        W.CooldownTicks = 60;
+        W.ProjectileSpeed = Metres(60);
+        W.SplashRadius = Metres(2);
+        W.bRequiresTurretAligned = true;
+        Db.AddWeapon(W);
+    }
+    {
+        WeaponDef W;
+        W.Id = WpnAuAminaBlade;
+        W.Name = "weapon.au.amina_vibro_blade";
+        W.Damage = 120;
+        W.Warhead = WarheadClass::SmallArms;
+        W.MaxRange = Metres(4);
+        W.CooldownTicks = 12;
+        W.bRequiresTurretAligned = false;
+        Db.AddWeapon(W);
     }
 }
 
@@ -419,7 +754,7 @@ struct FactionSetup
 {
     FactionId Faction;
     const char* KeyPrefix;
-    ContentId ConYard, Power, Refinery, Barracks, WarFactory, Turret, Radar, AaTurret, Airfield, Superweapon;
+    ContentId ConYard, Power, Refinery, Barracks, WarFactory, Turret, Radar, AaTurret, Airfield, Superweapon, NavalYard;
     ContentId Mcv, Harvester, BasicInfantry, AntiArmorInfantry, MainTank, Artillery, Aircraft;
     const char* ConYardName;
     const char* PowerName;
@@ -437,6 +772,7 @@ struct FactionSetup
     const char* AircraftName;
     const char* AaTurretName;
     const char* SuperweaponName;
+    const char* NavalYardName;
 
     int32_t PowerOutput;
     int32_t TankHealth;
@@ -924,6 +1260,34 @@ void BuildFactionSet(ContentDatabase& Db, const FactionSetup& S)
         E.Production.Prerequisites = {S.WarFactory};
         Db.AddEntity(E);
     }
+
+    // --- Naval shipyard ----------------------------------------------------
+    if (S.NavalYard.IsValid() && S.NavalYardName != nullptr)
+    {
+        EntityDef E;
+        E.Id = S.NavalYard;
+        E.Name = S.NavalYardName;
+        E.DisplayNameKey = Prefix + ".building.naval_yard";
+        E.Kind = EntityKind::Building;
+        E.Faction = S.Faction;
+        E.MaxHealth = 1200;
+        E.Armor = ArmorClass::Building;
+        E.VisionRange = Metres(9);
+        E.Roles = EntityRole::BaseBuilding | EntityRole::Production;
+        E.Building.FootprintX = 3;
+        E.Building.FootprintY = 3;
+        E.Building.bWaterOnly = true;
+        E.Building.bProvidesBuildRadius = true;
+        E.Building.BuildRadius = Metres(15);
+        E.Building.PowerConsumed = 40;
+        E.Production.Cost = 1500;
+        E.Production.BuildTimeTicks = SecondsToTicks(15);
+        E.Production.Category = ProductionCategory::Structure;
+        E.Production.Tier = TechTier::T2;
+        E.Production.ProducedBy = {S.ConYard};
+        E.Production.Prerequisites = {S.Refinery};
+        Db.AddEntity(E);
+    }
 }
 
 } // namespace
@@ -970,6 +1334,8 @@ void BuildDefaultContent(ContentDatabase& Db)
     Soviet.AircraftName = "unit.sov.mig_bomber";
     Soviet.AaTurretName = "building.sov.flak_turret";
     Soviet.SuperweaponName = "building.sov.iron_barrage";
+    Soviet.NavalYard = BldSovNavalYard;
+    Soviet.NavalYardName = "building.sov.naval_yard";
     Soviet.PowerOutput = 150;
     Soviet.TankHealth = 520;
     Soviet.TankWeapon = WpnTankCannonHeavy;
@@ -999,6 +1365,7 @@ void BuildDefaultContent(ContentDatabase& Db)
     Alliance.Aircraft = UnitAllAircraft;
     Alliance.AaTurret = BldAllAaTurret;
     Alliance.Superweapon = BldAllSuper;
+    Alliance.NavalYard = BldAllNavalYard;
     Alliance.ConYardName = "building.all.construction_yard";
     Alliance.PowerName = "building.all.power_plant";
     Alliance.RefineryName = "building.all.ore_refinery";
@@ -1015,6 +1382,7 @@ void BuildDefaultContent(ContentDatabase& Db)
     Alliance.AircraftName = "unit.all.harrier_jet";
     Alliance.AaTurretName = "building.all.patriot_battery";
     Alliance.SuperweaponName = "building.all.aegis_lance";
+    Alliance.NavalYardName = "building.all.naval_yard";
     Alliance.PowerOutput = 100;
     Alliance.TankHealth = 380;
     Alliance.TankWeapon = WpnTankCannonLight;
@@ -1036,6 +1404,7 @@ void BuildDefaultContent(ContentDatabase& Db)
     Coalition.AaTurret = BldEcAaTurret;
     Coalition.Airfield = MakeContentId("building.ec.helipad");
     Coalition.Superweapon = BldEcSuper;
+    Coalition.NavalYard = BldEcNavalYard;
     Coalition.Mcv = UnitEcMcv;
     Coalition.Harvester = UnitEcHarvester;
     Coalition.BasicInfantry = UnitEcRifleman;
@@ -1053,6 +1422,7 @@ void BuildDefaultContent(ContentDatabase& Db)
     Coalition.Radar = BldEcRadar;
     Coalition.RadarName = "building.ec.radar_array";
     Coalition.SuperweaponName = "building.ec.harmony_sanctuary";
+    Coalition.NavalYardName = "building.ec.naval_yard";
     Coalition.McvName = "unit.ec.mcv";
     Coalition.HarvesterName = "unit.ec.harmony_harvester";
     Coalition.BasicInfantryName = "unit.ec.qianwei_rifleman";
@@ -1082,6 +1452,7 @@ void BuildDefaultContent(ContentDatabase& Db)
     Chrono.Airfield = MakeContentId("building.cl.rift_pad");
     Chrono.Radar = BldClRadar;
     Chrono.Superweapon = BldClSuper;
+    Chrono.NavalYard = BldClNavalYard;
     Chrono.Mcv = UnitClMcv;
     Chrono.Harvester = UnitClHarvester;
     Chrono.BasicInfantry = UnitClRifleman;
@@ -1098,6 +1469,7 @@ void BuildDefaultContent(ContentDatabase& Db)
     Chrono.AaTurretName = "building.cl.warp_flak";
     Chrono.RadarName = "building.cl.chronoscan_array";
     Chrono.SuperweaponName = "building.cl.chronosphere";
+    Chrono.NavalYardName = "building.cl.naval_yard";
     Chrono.McvName = "unit.cl.mcv";
     Chrono.HarvesterName = "unit.cl.echo_harvester";
     Chrono.BasicInfantryName = "unit.cl.resonance_rifleman";
@@ -1112,6 +1484,53 @@ void BuildDefaultContent(ContentDatabase& Db)
     Chrono.TankCost = 800;
     Chrono.TurretWeapon = WpnPrismBeam;
     BuildFactionSet(Db, Chrono);
+
+    // African Union doctrine: high mobility, solar power grids, sonic disruption, desert raiders.
+    FactionSetup African{};
+    African.Faction = FactionId::AfricanUnion;
+    African.KeyPrefix = "faction.au";
+    African.ConYard = BldAuConYard;
+    African.Power = BldAuPower;
+    African.Refinery = BldAuRefinery;
+    African.Barracks = BldAuBarracks;
+    African.WarFactory = BldAuWarFactory;
+    African.Turret = BldAuTurret;
+    African.AaTurret = BldAuAaTurret;
+    African.Airfield = MakeContentId("building.au.helipad");
+    African.Radar = BldAuRadar;
+    African.Superweapon = BldAuSuper;
+    African.NavalYard = BldAuNavalYard;
+    African.Mcv = UnitAuMcv;
+    African.Harvester = UnitAuHarvester;
+    African.BasicInfantry = UnitAuAskari;
+    African.AntiArmorInfantry = UnitAuSamum;
+    African.MainTank = UnitAuMamba;
+    African.Artillery = UnitAuBaobab;
+    African.Aircraft = UnitAuEagle;
+    African.ConYardName = "building.au.construction_yard";
+    African.PowerName = "building.au.solar_plant";
+    African.RefineryName = "building.au.ore_refinery";
+    African.BarracksName = "building.au.barracks";
+    African.WarFactoryName = "building.au.war_factory";
+    African.TurretName = "building.au.sonic_turret";
+    African.AaTurretName = "building.au.aa_turret";
+    African.RadarName = "building.au.radar_complex";
+    African.SuperweaponName = "building.au.eye_of_sahara";
+    African.NavalYardName = "building.au.naval_yard";
+    African.McvName = "unit.au.mcv";
+    African.HarvesterName = "unit.au.savanna_harvester";
+    African.BasicInfantryName = "unit.au.askari_rifleman";
+    African.AntiArmorInfantryName = "unit.au.samum_rocketeer";
+    African.MainTankName = "unit.au.mamba_mbt";
+    African.ArtilleryName = "unit.au.baobab_artillery";
+    African.AircraftName = "unit.au.eagle_interceptor";
+    African.PowerOutput = 130;
+    African.TankHealth = 420;
+    African.TankWeapon = WpnAuMambaRailgun;
+    African.TankSpeed = Metres(9);
+    African.TankCost = 780;
+    African.TurretWeapon = WpnAuSonicDisruptor;
+    BuildFactionSet(Db, African);
 
     // --- Defensive walls (fortification line) -------------------------------
     // Pure content: a wall is just a cheap blocking structure. Footprint tiles
@@ -1154,6 +1573,26 @@ void BuildDefaultContent(ContentDatabase& Db)
         E.Production.Category = ProductionCategory::Defense;
         E.Production.Tier = TechTier::T0;
         E.Production.ProducedBy = {BldAllConYard};
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = MakeContentId("building.au.wall");
+        E.Name = "building.au.wall";
+        E.DisplayNameKey = "au.building.wall";
+        E.Kind = EntityKind::Building;
+        E.Faction = FactionId::AfricanUnion;
+        E.Roles = EntityRole::Defense | EntityRole::BaseBuilding;
+        E.MaxHealth = 800;
+        E.Armor = ArmorClass::Defense;
+        E.VisionRange = Fixed::FromInt(100);
+        E.Building.FootprintX = 1;
+        E.Building.FootprintY = 1;
+        E.Production.Cost = 50;
+        E.Production.BuildTimeTicks = SecondsToTicks(2);
+        E.Production.Category = ProductionCategory::Defense;
+        E.Production.Tier = TechTier::T0;
+        E.Production.ProducedBy = {BldAuConYard};
         Db.AddEntity(E);
     }
 
@@ -1463,6 +1902,54 @@ void BuildDefaultContent(ContentDatabase& Db)
         E.Production.ProducedBy = {BldClBarracks};
         Db.AddEntity(E);
     }
+    {
+        EntityDef E;
+        E.Id = MakeContentId("unit.au.combat_engineer");
+        E.Name = "unit.au.combat_engineer";
+        E.DisplayNameKey = "au.unit.combat_engineer";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::AfricanUnion;
+        E.Roles = EntityRole::Engineer | EntityRole::Combat;
+        E.MaxHealth = 80;
+        E.Armor = ArmorClass::LightInfantry;
+        E.VisionRange = Metres(6);
+        E.Unit.Layer = MovementLayer::Infantry;
+        E.Unit.MaxSpeed = Metres(6);
+        E.Unit.Acceleration = Metres(22);
+        E.Unit.CollisionRadius = Fixed::FromInt(30);
+        E.Unit.bIsEngineer = true;
+        E.Production.Cost = 300;
+        E.Production.BuildTimeTicks = SecondsToTicks(4);
+        E.Production.Category = ProductionCategory::Infantry;
+        E.Production.Tier = TechTier::T0;
+        E.Production.ProducedBy = {BldAuBarracks};
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = UnitAuJackal;
+        E.Name = "unit.au.jackal_sonic_trooper";
+        E.DisplayNameKey = "au.unit.jackal_sonic_trooper";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::AfricanUnion;
+        E.Roles = EntityRole::Combat;
+        E.MaxHealth = 150;
+        E.Armor = ArmorClass::HeavyInfantry;
+        E.VisionRange = Metres(8);
+        E.Weapon = WpnAuSonicDisruptor;
+        E.Unit.Layer = MovementLayer::Infantry;
+        E.Unit.MaxSpeed = Metres(6);
+        E.Unit.Acceleration = Metres(22);
+        E.Unit.TurnRatePerSecond = 4096;
+        E.Unit.CollisionRadius = Fixed::FromInt(30);
+        E.Production.Cost = 350;
+        E.Production.BuildTimeTicks = SecondsToTicks(6);
+        E.Production.Category = ProductionCategory::Infantry;
+        E.Production.Tier = TechTier::T1;
+        E.Production.ProducedBy = {BldAuBarracks};
+        E.Production.Prerequisites = {BldAuBarracks};
+        Db.AddEntity(E);
+    }
 
     // --- Commandos -------------------------------------------------------------
     // One elite per faction: tank-grade damage on an infantry chassis, T3-gated,
@@ -1572,6 +2059,32 @@ void BuildDefaultContent(ContentDatabase& Db)
         E.Production.Prerequisites = {BldClRadar};
         Db.AddEntity(E);
     }
+    {
+        EntityDef E;
+        E.Id = UnitAuAminaCommando;
+        E.Name = "unit.au.amina_commando";
+        E.DisplayNameKey = "au.unit.amina_commando";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::AfricanUnion;
+        E.Roles = EntityRole::Combat;
+        E.MaxHealth = 350;
+        E.Armor = ArmorClass::HeavyInfantry;
+        E.VisionRange = Metres(10);
+        E.Weapon = WpnAuAminaBlade;
+        E.Unit.Layer = MovementLayer::Infantry;
+        E.Unit.MaxSpeed = Metres(7);
+        E.Unit.Acceleration = Metres(25);
+        E.Unit.TurnRatePerSecond = 4096;
+        E.Unit.TurretTurnRatePerSecond = 0;
+        E.Unit.CollisionRadius = Fixed::FromInt(35);
+        E.Production.Cost = 1750;
+        E.Production.BuildTimeTicks = SecondsToTicks(21);
+        E.Production.Category = ProductionCategory::Infantry;
+        E.Production.Tier = TechTier::T3;
+        E.Production.ProducedBy = {BldAuBarracks};
+        E.Production.Prerequisites = {BldAuRadar};
+        Db.AddEntity(E);
+    }
 
     // --- Strategic bomber (Soviet heavy aircraft) ------------------------------
     // Twice the strike bomber's payload on an airframe that trades speed for it.
@@ -1601,6 +2114,700 @@ void BuildDefaultContent(ContentDatabase& Db)
         E.Production.Tier = TechTier::T3;
         E.Production.ProducedBy = {BldSovWarFactory};
         E.Production.Prerequisites = {BldSovRadar};
+        Db.AddEntity(E);
+    }
+
+    // --- Soviet Naval & Advanced Roster ---------------------------------------
+    {
+        EntityDef E;
+        E.Id = UnitSovStingray;
+        E.Name = "unit.sov.stingray";
+        E.DisplayNameKey = "soviet.unit.stingray";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::Soviet;
+        E.Roles = EntityRole::Combat;
+        E.MaxHealth = 420;
+        E.Armor = ArmorClass::LightVehicle;
+        E.VisionRange = Metres(8);
+        E.Weapon = WpnTeslaZap;
+        E.Unit.Layer = MovementLayer::Amphibious;
+        E.Unit.MaxSpeed = Metres(8);
+        E.Unit.Acceleration = Metres(18);
+        E.Unit.TurnRatePerSecond = 1000;
+        E.Unit.CollisionRadius = Fixed::FromInt(85);
+        E.Unit.bHasSecondaryAbility = true;
+        E.Unit.AbilityCooldownTicks = SecondsToTicks(15);
+        E.Unit.AbilityDurationTicks = SecondsToTicks(3);
+        E.Production.Cost = 900;
+        E.Production.BuildTimeTicks = SecondsToTicks(10);
+        E.Production.Category = ProductionCategory::Naval;
+        E.Production.Tier = TechTier::T2;
+        E.Production.ProducedBy = {BldSovNavalYard};
+        E.Production.Prerequisites = {BldSovNavalYard};
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = UnitSovDreadnought;
+        E.Name = "unit.sov.dreadnought";
+        E.DisplayNameKey = "soviet.unit.dreadnought";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::Soviet;
+        E.Roles = EntityRole::Combat | EntityRole::Artillery;
+        E.MaxHealth = 1100;
+        E.Armor = ArmorClass::Naval;
+        E.VisionRange = Metres(12);
+        E.Weapon = WpnDreadnoughtMissile;
+        E.Unit.Layer = MovementLayer::Naval;
+        E.Unit.MaxSpeed = Metres(5);
+        E.Unit.Acceleration = Metres(10);
+        E.Unit.TurnRatePerSecond = 400;
+        E.Unit.TurretTurnRatePerSecond = 600;
+        E.Unit.CollisionRadius = Fixed::FromInt(150);
+        E.Unit.bHasSecondaryAbility = true;
+        E.Unit.AbilityCooldownTicks = SecondsToTicks(20);
+        E.Unit.AbilityDurationTicks = SecondsToTicks(8);
+        E.Production.Cost = 2200;
+        E.Production.BuildTimeTicks = SecondsToTicks(25);
+        E.Production.Category = ProductionCategory::Naval;
+        E.Production.Tier = TechTier::T3;
+        E.Production.ProducedBy = {BldSovNavalYard};
+        E.Production.Prerequisites = {BldSovRadar};
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = UnitSovTerrorDrone;
+        E.Name = "unit.sov.terror_drone";
+        E.DisplayNameKey = "soviet.unit.terror_drone";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::Soviet;
+        E.Roles = EntityRole::Combat | EntityRole::Scout;
+        E.MaxHealth = 120;
+        E.Armor = ArmorClass::LightVehicle;
+        E.VisionRange = Metres(8);
+        E.Weapon = WpnTerrorDismantle;
+        E.Unit.Layer = MovementLayer::Wheeled;
+        E.Unit.MaxSpeed = Metres(11);
+        E.Unit.Acceleration = Metres(35);
+        E.Unit.TurnRatePerSecond = 2000;
+        E.Unit.CollisionRadius = Fixed::FromInt(45);
+        E.Unit.bHasSecondaryAbility = true;
+        E.Unit.AbilityCooldownTicks = SecondsToTicks(12);
+        E.Unit.AbilityDurationTicks = SecondsToTicks(6);
+        E.Production.Cost = 400;
+        E.Production.BuildTimeTicks = SecondsToTicks(6);
+        E.Production.Category = ProductionCategory::Vehicle;
+        E.Production.Tier = TechTier::T2;
+        E.Production.ProducedBy = {BldSovWarFactory};
+        E.Production.Prerequisites = {BldSovWarFactory};
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = UnitSovTwinblade;
+        E.Name = "unit.sov.twinblade";
+        E.DisplayNameKey = "soviet.unit.twinblade";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::Soviet;
+        E.Roles = EntityRole::Combat;
+        E.MaxHealth = 320;
+        E.Armor = ArmorClass::Air;
+        E.VisionRange = Metres(10);
+        E.Weapon = WpnRocketLauncher;
+        E.Unit.Layer = MovementLayer::Air;
+        E.Unit.MaxSpeed = Metres(10);
+        E.Unit.Acceleration = Metres(20);
+        E.Unit.TurnRatePerSecond = 1000;
+        E.Unit.CollisionRadius = Fixed::FromInt(90);
+        E.Unit.PassengerCapacity = 2;
+        E.Production.Cost = 1200;
+        E.Production.BuildTimeTicks = SecondsToTicks(16);
+        E.Production.Category = ProductionCategory::Aircraft;
+        E.Production.Tier = TechTier::T2;
+        E.Production.ProducedBy = {BldSovWarFactory};
+        E.Production.Prerequisites = {BldSovWarFactory};
+        Db.AddEntity(E);
+    }
+
+    // --- Alliance Naval & Advanced Roster -------------------------------------
+    {
+        EntityDef E;
+        E.Id = UnitAllHydrofoil;
+        E.Name = "unit.all.hydrofoil";
+        E.DisplayNameKey = "alliance.unit.hydrofoil";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::Alliance;
+        E.Roles = EntityRole::Defense | EntityRole::AntiAir;
+        E.MaxHealth = 380;
+        E.Armor = ArmorClass::LightVehicle;
+        E.VisionRange = Metres(11);
+        E.Weapon = WpnHydrofoilFlak;
+        E.Unit.Layer = MovementLayer::Naval;
+        E.Unit.MaxSpeed = Metres(10);
+        E.Unit.Acceleration = Metres(24);
+        E.Unit.TurnRatePerSecond = 1200;
+        E.Unit.CollisionRadius = Fixed::FromInt(80);
+        E.Unit.bHasSecondaryAbility = true;
+        E.Unit.AbilityCooldownTicks = SecondsToTicks(10);
+        E.Unit.AbilityDurationTicks = SecondsToTicks(5);
+        E.Production.Cost = 800;
+        E.Production.BuildTimeTicks = SecondsToTicks(9);
+        E.Production.Category = ProductionCategory::Naval;
+        E.Production.Tier = TechTier::T2;
+        E.Production.ProducedBy = {BldAllNavalYard};
+        E.Production.Prerequisites = {BldAllNavalYard};
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = UnitAllAssaultDestroyer;
+        E.Name = "unit.all.assault_destroyer";
+        E.DisplayNameKey = "alliance.unit.assault_destroyer";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::Alliance;
+        E.Roles = EntityRole::Combat;
+        E.MaxHealth = 950;
+        E.Armor = ArmorClass::HeavyVehicle;
+        E.VisionRange = Metres(9);
+        E.Weapon = WpnDestroyerCannon;
+        E.Unit.Layer = MovementLayer::Amphibious;
+        E.Unit.MaxSpeed = Metres(6);
+        E.Unit.Acceleration = Metres(12);
+        E.Unit.TurnRatePerSecond = 600;
+        E.Unit.TurretTurnRatePerSecond = 1000;
+        E.Unit.CollisionRadius = Fixed::FromInt(120);
+        E.Unit.bCanCrushInfantry = true;
+        E.Unit.bHasSecondaryAbility = true;
+        E.Unit.AbilityCooldownTicks = SecondsToTicks(18);
+        E.Unit.AbilityDurationTicks = SecondsToTicks(8);
+        E.Unit.AbilityArmorBonusPercent = 75;
+        E.Production.Cost = 1600;
+        E.Production.BuildTimeTicks = SecondsToTicks(18);
+        E.Production.Category = ProductionCategory::Naval;
+        E.Production.Tier = TechTier::T2;
+        E.Production.ProducedBy = {BldAllNavalYard};
+        E.Production.Prerequisites = {BldAllNavalYard};
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = UnitAllAircraftCarrier;
+        E.Name = "unit.all.aircraft_carrier";
+        E.DisplayNameKey = "alliance.unit.aircraft_carrier";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::Alliance;
+        E.Roles = EntityRole::Combat | EntityRole::Artillery;
+        E.MaxHealth = 1200;
+        E.Armor = ArmorClass::Naval;
+        E.VisionRange = Metres(13);
+        E.Weapon = WpnCarrierDrone;
+        E.Unit.Layer = MovementLayer::Naval;
+        E.Unit.MaxSpeed = Metres(5);
+        E.Unit.Acceleration = Metres(10);
+        E.Unit.TurnRatePerSecond = 400;
+        E.Unit.CollisionRadius = Fixed::FromInt(160);
+        E.Unit.bHasSecondaryAbility = true;
+        E.Unit.AbilityCooldownTicks = SecondsToTicks(25);
+        E.Unit.AbilityDurationTicks = SecondsToTicks(6);
+        E.Production.Cost = 2400;
+        E.Production.BuildTimeTicks = SecondsToTicks(28);
+        E.Production.Category = ProductionCategory::Naval;
+        E.Production.Tier = TechTier::T3;
+        E.Production.ProducedBy = {BldAllNavalYard};
+        E.Production.Prerequisites = {BldAllRadar};
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = UnitAllCryoCopter;
+        E.Name = "unit.all.cryo_copter";
+        E.DisplayNameKey = "alliance.unit.cryo_copter";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::Alliance;
+        E.Roles = EntityRole::Combat | EntityRole::Scout;
+        E.MaxHealth = 240;
+        E.Armor = ArmorClass::Air;
+        E.VisionRange = Metres(10);
+        E.Weapon = WpnCryoPulse;
+        E.Unit.Layer = MovementLayer::Air;
+        E.Unit.MaxSpeed = Metres(11);
+        E.Unit.Acceleration = Metres(22);
+        E.Unit.TurnRatePerSecond = 1200;
+        E.Unit.CollisionRadius = Fixed::FromInt(75);
+        E.Unit.bHasSecondaryAbility = true;
+        E.Unit.AbilityCooldownTicks = SecondsToTicks(15);
+        E.Unit.AbilityDurationTicks = SecondsToTicks(6);
+        E.Production.Cost = 1100;
+        E.Production.BuildTimeTicks = SecondsToTicks(14);
+        E.Production.Category = ProductionCategory::Aircraft;
+        E.Production.Tier = TechTier::T2;
+        E.Production.ProducedBy = {BldAllWarFactory};
+        E.Production.Prerequisites = {BldAllWarFactory};
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = UnitAllMirageTank;
+        E.Name = "unit.all.mirage_tank";
+        E.DisplayNameKey = "alliance.unit.mirage_tank";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::Alliance;
+        E.Roles = EntityRole::Combat;
+        E.MaxHealth = 420;
+        E.Armor = ArmorClass::HeavyVehicle;
+        E.VisionRange = Metres(10);
+        E.Weapon = WpnPrismTankBeam;
+        E.Unit.Layer = MovementLayer::Tracked;
+        E.Unit.MaxSpeed = Metres(8);
+        E.Unit.Acceleration = Metres(18);
+        E.Unit.TurnRatePerSecond = 900;
+        E.Unit.TurretTurnRatePerSecond = 1800;
+        E.Unit.CollisionRadius = Fixed::FromInt(100);
+        E.Unit.bHasSecondaryAbility = true;
+        E.Unit.AbilityCooldownTicks = SecondsToTicks(12);
+        E.Unit.AbilityDurationTicks = SecondsToTicks(6);
+        E.Production.Cost = 1300;
+        E.Production.BuildTimeTicks = SecondsToTicks(16);
+        E.Production.Category = ProductionCategory::Vehicle;
+        E.Production.Tier = TechTier::T3;
+        E.Production.ProducedBy = {BldAllWarFactory};
+        E.Production.Prerequisites = {BldAllRadar};
+        Db.AddEntity(E);
+    }
+
+    // --- Eastern Coalition Naval & Advanced Roster ----------------------------
+    {
+        EntityDef E;
+        E.Id = UnitEcNaginataCruiser;
+        E.Name = "unit.ec.naginata_cruiser";
+        E.DisplayNameKey = "ec.unit.naginata_cruiser";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::EasternCoalition;
+        E.Roles = EntityRole::Combat;
+        E.MaxHealth = 850;
+        E.Armor = ArmorClass::Naval;
+        E.VisionRange = Metres(10);
+        E.Weapon = WpnNaginataTorpedo;
+        E.Unit.Layer = MovementLayer::Naval;
+        E.Unit.MaxSpeed = Metres(7);
+        E.Unit.Acceleration = Metres(15);
+        E.Unit.TurnRatePerSecond = 700;
+        E.Unit.CollisionRadius = Fixed::FromInt(130);
+        E.Unit.bHasSecondaryAbility = true;
+        E.Unit.AbilityCooldownTicks = SecondsToTicks(16);
+        E.Unit.AbilityDurationTicks = SecondsToTicks(5);
+        E.Unit.AbilitySpeedMultiplier = Fixed::FromRatio(3, 2);
+        E.Production.Cost = 1800;
+        E.Production.BuildTimeTicks = SecondsToTicks(20);
+        E.Production.Category = ProductionCategory::Naval;
+        E.Production.Tier = TechTier::T2;
+        E.Production.ProducedBy = {BldEcNavalYard};
+        E.Production.Prerequisites = {BldEcNavalYard};
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = UnitEcSeaWing;
+        E.Name = "unit.ec.sea_wing";
+        E.DisplayNameKey = "ec.unit.sea_wing";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::EasternCoalition;
+        E.Roles = EntityRole::Combat | EntityRole::AntiAir;
+        E.MaxHealth = 340;
+        E.Armor = ArmorClass::Naval;
+        E.VisionRange = Metres(9);
+        E.Weapon = WpnNaginataTorpedo;
+        E.Unit.Layer = MovementLayer::Naval;
+        E.Unit.MaxSpeed = Metres(9);
+        E.Unit.Acceleration = Metres(20);
+        E.Unit.TurnRatePerSecond = 1100;
+        E.Unit.CollisionRadius = Fixed::FromInt(75);
+        E.Unit.bHasSecondaryAbility = true;
+        E.Unit.AbilityCooldownTicks = SecondsToTicks(10);
+        E.Unit.AbilityDurationTicks = SecondsToTicks(6);
+        E.Production.Cost = 1000;
+        E.Production.BuildTimeTicks = SecondsToTicks(12);
+        E.Production.Category = ProductionCategory::Naval;
+        E.Production.Tier = TechTier::T2;
+        E.Production.ProducedBy = {BldEcNavalYard};
+        E.Production.Prerequisites = {BldEcNavalYard};
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = UnitEcTsunamiTank;
+        E.Name = "unit.ec.tsunami_tank";
+        E.DisplayNameKey = "ec.unit.tsunami_tank";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::EasternCoalition;
+        E.Roles = EntityRole::Combat;
+        E.MaxHealth = 480;
+        E.Armor = ArmorClass::HeavyVehicle;
+        E.VisionRange = Metres(8);
+        E.Weapon = WpnTankCannonLight;
+        E.Unit.Layer = MovementLayer::Amphibious;
+        E.Unit.MaxSpeed = Metres(7);
+        E.Unit.Acceleration = Metres(16);
+        E.Unit.TurnRatePerSecond = 850;
+        E.Unit.TurretTurnRatePerSecond = 1600;
+        E.Unit.CollisionRadius = Fixed::FromInt(100);
+        E.Unit.bCanCrushInfantry = true;
+        E.Unit.bHasSecondaryAbility = true;
+        E.Unit.AbilityCooldownTicks = SecondsToTicks(12);
+        E.Unit.AbilityDurationTicks = SecondsToTicks(6);
+        E.Unit.AbilityArmorBonusPercent = 60;
+        E.Production.Cost = 1000;
+        E.Production.BuildTimeTicks = SecondsToTicks(12);
+        E.Production.Category = ProductionCategory::Vehicle;
+        E.Production.Tier = TechTier::T2;
+        E.Production.ProducedBy = {BldEcWarFactory};
+        E.Production.Prerequisites = {BldEcWarFactory};
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = UnitEcShogunBattleship;
+        E.Name = "unit.ec.shogun_battleship";
+        E.DisplayNameKey = "ec.unit.shogun_battleship";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::EasternCoalition;
+        E.Roles = EntityRole::Combat | EntityRole::Artillery;
+        E.MaxHealth = 1300;
+        E.Armor = ArmorClass::Naval;
+        E.VisionRange = Metres(12);
+        E.Weapon = WpnShiradaCannon;
+        E.Unit.Layer = MovementLayer::Naval;
+        E.Unit.MaxSpeed = Metres(5);
+        E.Unit.Acceleration = Metres(10);
+        E.Unit.TurnRatePerSecond = 400;
+        E.Unit.TurretTurnRatePerSecond = 600;
+        E.Unit.CollisionRadius = Fixed::FromInt(160);
+        E.Unit.bHasSecondaryAbility = true;
+        E.Unit.AbilityCooldownTicks = SecondsToTicks(20);
+        E.Unit.AbilityDurationTicks = SecondsToTicks(6);
+        E.Unit.AbilitySpeedMultiplier = Fixed::FromRatio(2, 1);
+        E.Production.Cost = 2500;
+        E.Production.BuildTimeTicks = SecondsToTicks(30);
+        E.Production.Category = ProductionCategory::Naval;
+        E.Production.Tier = TechTier::T3;
+        E.Production.ProducedBy = {BldEcNavalYard};
+        E.Production.Prerequisites = {BldEcRadar};
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = UnitEcKingOni;
+        E.Name = "unit.ec.king_oni";
+        E.DisplayNameKey = "ec.unit.king_oni";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::EasternCoalition;
+        E.Roles = EntityRole::Combat;
+        E.MaxHealth = 950;
+        E.Armor = ArmorClass::HeavyVehicle;
+        E.VisionRange = Metres(9);
+        E.Weapon = WpnOniLaser;
+        E.Unit.Layer = MovementLayer::Tracked;
+        E.Unit.MaxSpeed = Metres(6);
+        E.Unit.Acceleration = Metres(16);
+        E.Unit.TurnRatePerSecond = 700;
+        E.Unit.CollisionRadius = Fixed::FromInt(120);
+        E.Unit.bCanCrushInfantry = true;
+        E.Unit.bHasSecondaryAbility = true;
+        E.Unit.AbilityCooldownTicks = SecondsToTicks(15);
+        E.Unit.AbilityDurationTicks = SecondsToTicks(4);
+        E.Unit.AbilitySpeedMultiplier = Fixed::FromRatio(2, 1);
+        E.Production.Cost = 2000;
+        E.Production.BuildTimeTicks = SecondsToTicks(24);
+        E.Production.Category = ProductionCategory::Vehicle;
+        E.Production.Tier = TechTier::T3;
+        E.Production.ProducedBy = {BldEcWarFactory};
+        E.Production.Prerequisites = {BldEcRadar};
+        Db.AddEntity(E);
+    }
+
+    // --- Chrono Legion Naval & Advanced Roster --------------------------------
+    {
+        EntityDef E;
+        E.Id = UnitClChronoDestroyer;
+        E.Name = "unit.cl.chrono_destroyer";
+        E.DisplayNameKey = "cl.unit.chrono_destroyer";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::ChronoLegion;
+        E.Roles = EntityRole::Combat;
+        E.MaxHealth = 800;
+        E.Armor = ArmorClass::HeavyVehicle;
+        E.VisionRange = Metres(9);
+        E.Weapon = WpnTachyonLance;
+        E.Unit.Layer = MovementLayer::Amphibious;
+        E.Unit.MaxSpeed = Metres(7);
+        E.Unit.Acceleration = Metres(15);
+        E.Unit.TurnRatePerSecond = 800;
+        E.Unit.CollisionRadius = Fixed::FromInt(110);
+        E.Unit.bHasSecondaryAbility = true;
+        E.Unit.AbilityCooldownTicks = SecondsToTicks(14);
+        E.Unit.AbilityDurationTicks = SecondsToTicks(4);
+        E.Production.Cost = 1500;
+        E.Production.BuildTimeTicks = SecondsToTicks(16);
+        E.Production.Category = ProductionCategory::Naval;
+        E.Production.Tier = TechTier::T2;
+        E.Production.ProducedBy = {BldClNavalYard};
+        E.Production.Prerequisites = {BldClNavalYard};
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = UnitClTemporalSub;
+        E.Name = "unit.cl.temporal_sub";
+        E.DisplayNameKey = "cl.unit.temporal_sub";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::ChronoLegion;
+        E.Roles = EntityRole::Combat;
+        E.MaxHealth = 550;
+        E.Armor = ArmorClass::Naval;
+        E.VisionRange = Metres(9);
+        E.Weapon = WpnPhaseTorpedo;
+        E.Unit.Layer = MovementLayer::Naval;
+        E.Unit.MaxSpeed = Metres(8);
+        E.Unit.Acceleration = Metres(16);
+        E.Unit.TurnRatePerSecond = 900;
+        E.Unit.CollisionRadius = Fixed::FromInt(90);
+        E.Unit.bHasSecondaryAbility = true;
+        E.Unit.AbilityCooldownTicks = SecondsToTicks(16);
+        E.Unit.AbilityDurationTicks = SecondsToTicks(5);
+        E.Production.Cost = 1200;
+        E.Production.BuildTimeTicks = SecondsToTicks(14);
+        E.Production.Category = ProductionCategory::Naval;
+        E.Production.Tier = TechTier::T2;
+        E.Production.ProducedBy = {BldClNavalYard};
+        E.Production.Prerequisites = {BldClNavalYard};
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = UnitClVortexTank;
+        E.Name = "unit.cl.vortex_tank";
+        E.DisplayNameKey = "cl.unit.vortex_tank";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::ChronoLegion;
+        E.Roles = EntityRole::Combat;
+        E.MaxHealth = 520;
+        E.Armor = ArmorClass::HeavyVehicle;
+        E.VisionRange = Metres(9);
+        E.Weapon = WpnTachyonLance;
+        E.Unit.Layer = MovementLayer::Tracked;
+        E.Unit.MaxSpeed = Metres(7);
+        E.Unit.Acceleration = Metres(16);
+        E.Unit.TurnRatePerSecond = 800;
+        E.Unit.TurretTurnRatePerSecond = 1600;
+        E.Unit.CollisionRadius = Fixed::FromInt(105);
+        E.Unit.bCanCrushInfantry = true;
+        E.Unit.bHasSecondaryAbility = true;
+        E.Unit.AbilityCooldownTicks = SecondsToTicks(12);
+        E.Unit.AbilityDurationTicks = SecondsToTicks(5);
+        E.Production.Cost = 1400;
+        E.Production.BuildTimeTicks = SecondsToTicks(16);
+        E.Production.Category = ProductionCategory::Vehicle;
+        E.Production.Tier = TechTier::T3;
+        E.Production.ProducedBy = {BldClWarFactory};
+        E.Production.Prerequisites = {BldClRadar};
+        Db.AddEntity(E);
+    }
+
+    // --- African Union Advanced & Naval Roster --------------------------------
+    {
+        EntityDef E;
+        E.Id = UnitAuCheetah;
+        E.Name = "unit.au.cheetah_ifv";
+        E.DisplayNameKey = "au.unit.cheetah_ifv";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::AfricanUnion;
+        E.Roles = EntityRole::Combat | EntityRole::Scout;
+        E.MaxHealth = 320;
+        E.Armor = ArmorClass::LightVehicle;
+        E.VisionRange = Metres(10);
+        E.Weapon = WpnAuPlasmaCarbine;
+        E.Unit.Layer = MovementLayer::Wheeled;
+        E.Unit.MaxSpeed = Metres(12);
+        E.Unit.Acceleration = Metres(40);
+        E.Unit.TurnRatePerSecond = 1800;
+        E.Unit.TurretTurnRatePerSecond = 2400;
+        E.Unit.CollisionRadius = Fixed::FromInt(70);
+        E.Unit.bHasSecondaryAbility = true;
+        E.Unit.AbilityCooldownTicks = SecondsToTicks(10);
+        E.Unit.AbilityDurationTicks = SecondsToTicks(4);
+        E.Unit.AbilitySpeedMultiplier = Fixed::FromRatio(3, 2);
+        E.Production.Cost = 600;
+        E.Production.BuildTimeTicks = SecondsToTicks(7);
+        E.Production.Category = ProductionCategory::Vehicle;
+        E.Production.Tier = TechTier::T2;
+        E.Production.ProducedBy = {BldAuWarFactory};
+        E.Production.Prerequisites = {BldAuWarFactory};
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = UnitAuElephant;
+        E.Name = "unit.au.elephant_superheavy";
+        E.DisplayNameKey = "au.unit.elephant_superheavy";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::AfricanUnion;
+        E.Roles = EntityRole::Combat | EntityRole::Artillery;
+        E.MaxHealth = 1100;
+        E.Armor = ArmorClass::HeavyVehicle;
+        E.VisionRange = Metres(10);
+        E.Weapon = WpnAuElephantCannon;
+        E.Unit.Layer = MovementLayer::Tracked;
+        E.Unit.MaxSpeed = Metres(5);
+        E.Unit.Acceleration = Metres(12);
+        E.Unit.TurnRatePerSecond = 600;
+        E.Unit.TurretTurnRatePerSecond = 800;
+        E.Unit.CollisionRadius = Fixed::FromInt(130);
+        E.Unit.bCanCrushInfantry = true;
+        E.Unit.bHasSecondaryAbility = true;
+        E.Unit.AbilityCooldownTicks = SecondsToTicks(18);
+        E.Unit.AbilityDurationTicks = SecondsToTicks(6);
+        E.Unit.AbilityArmorBonusPercent = 50;
+        E.Production.Cost = 2200;
+        E.Production.BuildTimeTicks = SecondsToTicks(26);
+        E.Production.Category = ProductionCategory::Vehicle;
+        E.Production.Tier = TechTier::T3;
+        E.Production.ProducedBy = {BldAuWarFactory};
+        E.Production.Prerequisites = {BldAuRadar};
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = UnitAuSirocco;
+        E.Name = "unit.au.sirocco_gunship";
+        E.DisplayNameKey = "au.unit.sirocco_gunship";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::AfricanUnion;
+        E.Roles = EntityRole::Combat;
+        E.MaxHealth = 340;
+        E.Armor = ArmorClass::Air;
+        E.VisionRange = Metres(9);
+        E.Weapon = WpnAuSolarLaser;
+        E.Unit.Layer = MovementLayer::Air;
+        E.Unit.MaxSpeed = Metres(9);
+        E.Unit.Acceleration = Metres(24);
+        E.Unit.TurnRatePerSecond = 1400;
+        E.Unit.CollisionRadius = Fixed::FromInt(80);
+        E.Production.Cost = 1100;
+        E.Production.BuildTimeTicks = SecondsToTicks(13);
+        E.Production.Category = ProductionCategory::Aircraft;
+        E.Production.Tier = TechTier::T2;
+        E.Production.ProducedBy = {BldAuWarFactory};
+        E.Production.Prerequisites = {BldAuRadar};
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = UnitAuFennec;
+        E.Name = "unit.au.fennec_patrol_craft";
+        E.DisplayNameKey = "au.unit.fennec_patrol_craft";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::AfricanUnion;
+        E.Roles = EntityRole::Combat | EntityRole::Scout;
+        E.MaxHealth = 380;
+        E.Armor = ArmorClass::LightVehicle;
+        E.VisionRange = Metres(9);
+        E.Weapon = WpnAuSamumMissile;
+        E.Unit.Layer = MovementLayer::Amphibious;
+        E.Unit.MaxSpeed = Metres(10);
+        E.Unit.Acceleration = Metres(25);
+        E.Unit.TurnRatePerSecond = 1400;
+        E.Unit.CollisionRadius = Fixed::FromInt(75);
+        E.Production.Cost = 750;
+        E.Production.BuildTimeTicks = SecondsToTicks(9);
+        E.Production.Category = ProductionCategory::Naval;
+        E.Production.Tier = TechTier::T2;
+        E.Production.ProducedBy = {BldAuNavalYard};
+        E.Production.Prerequisites = {BldAuNavalYard};
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = UnitAuZanzibar;
+        E.Name = "unit.au.zanzibar_corvette";
+        E.DisplayNameKey = "au.unit.zanzibar_corvette";
+        E.Kind = EntityKind::Unit;
+        E.Faction = FactionId::AfricanUnion;
+        E.Roles = EntityRole::Combat | EntityRole::Artillery;
+        E.MaxHealth = 950;
+        E.Armor = ArmorClass::Naval;
+        E.VisionRange = Metres(11);
+        E.Weapon = WpnAuBaobabMortar;
+        E.Unit.Layer = MovementLayer::Naval;
+        E.Unit.MaxSpeed = Metres(6);
+        E.Unit.Acceleration = Metres(12);
+        E.Unit.TurnRatePerSecond = 500;
+        E.Unit.TurretTurnRatePerSecond = 800;
+        E.Unit.CollisionRadius = Fixed::FromInt(135);
+        E.Production.Cost = 1800;
+        E.Production.BuildTimeTicks = SecondsToTicks(22);
+        E.Production.Category = ProductionCategory::Naval;
+        E.Production.Tier = TechTier::T3;
+        E.Production.ProducedBy = {BldAuNavalYard};
+        E.Production.Prerequisites = {BldAuRadar};
+        Db.AddEntity(E);
+    }
+
+    // --- Neutral Capturable Tech Structures -----------------------------------
+    {
+        EntityDef E;
+        E.Id = BldNeutralHospital;
+        E.Name = "building.neutral.tech_hospital";
+        E.DisplayNameKey = "neutral.building.tech_hospital";
+        E.Kind = EntityKind::Building;
+        E.Faction = FactionId::None;
+        E.Roles = EntityRole::BaseBuilding;
+        E.MaxHealth = 800;
+        E.Armor = ArmorClass::Building;
+        E.VisionRange = Metres(6);
+        E.Building.FootprintX = 2;
+        E.Building.FootprintY = 2;
+        E.Building.bIsTechBuilding = true;
+        E.Building.TechIncomePerInterval = 0;
+        E.Building.TechIncomeIntervalTicks = 0;
+        E.Production.Cost = 0;
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = BldNeutralMachineShop;
+        E.Name = "building.neutral.tech_machine_shop";
+        E.DisplayNameKey = "neutral.building.tech_machine_shop";
+        E.Kind = EntityKind::Building;
+        E.Faction = FactionId::None;
+        E.Roles = EntityRole::BaseBuilding;
+        E.MaxHealth = 800;
+        E.Armor = ArmorClass::Building;
+        E.VisionRange = Metres(6);
+        E.Building.FootprintX = 2;
+        E.Building.FootprintY = 2;
+        E.Building.bIsTechBuilding = true;
+        E.Building.TechIncomePerInterval = 0;
+        E.Building.TechIncomeIntervalTicks = 0;
+        E.Production.Cost = 0;
+        Db.AddEntity(E);
+    }
+    {
+        EntityDef E;
+        E.Id = BldNeutralObservationPost;
+        E.Name = "building.neutral.observation_post";
+        E.DisplayNameKey = "neutral.building.observation_post";
+        E.Kind = EntityKind::Building;
+        E.Faction = FactionId::None;
+        E.Roles = EntityRole::BaseBuilding;
+        E.MaxHealth = 600;
+        E.Armor = ArmorClass::Building;
+        E.VisionRange = Metres(25);
+        E.Building.FootprintX = 1;
+        E.Building.FootprintY = 1;
+        E.Building.bIsTechBuilding = true;
+        E.Building.bIsRadar = true;
+        E.Production.Cost = 0;
         Db.AddEntity(E);
     }
 
@@ -1663,6 +2870,15 @@ void BuildDefaultContent(ContentDatabase& Db)
         F.Name = "faction.cl";
         F.DisplayNameKey = "faction.cl.name";
         F.StartingUnit = UnitClMcv;
+        F.StartingCredits = 10000;
+        Db.AddFaction(F);
+    }
+    {
+        FactionDef F;
+        F.Id = FactionId::AfricanUnion;
+        F.Name = "faction.au";
+        F.DisplayNameKey = "faction.au.name";
+        F.StartingUnit = UnitAuMcv;
         F.StartingCredits = 10000;
         Db.AddFaction(F);
     }
@@ -1740,6 +2956,23 @@ void BuildDefaultContent(ContentDatabase& Db)
     AddUnitVoice(UnitClArtillery, "CH_DeltaDelayArtillery");
     AddUnitVoice(UnitClAircraft, "CH_GapInterceptor");
 
+    // African Union Units
+    AddUnitVoice(UnitAuMcv, "AU_SaharaDeployer");
+    AddUnitVoice(UnitAuHarvester, "AU_SavannaHarvester");
+    AddUnitVoice(UnitAuAskari, "AU_AskariRifleman");
+    AddUnitVoice(UnitAuSamum, "AU_SamumRocketeer");
+    AddUnitVoice(UnitAuJackal, "AU_JackalSonicTrooper");
+    AddUnitVoice(UnitAuMamba, "AU_MambaMBT");
+    AddUnitVoice(UnitAuBaobab, "AU_BaobabArtillery");
+    AddUnitVoice(UnitAuEagle, "AU_EagleInterceptor");
+    AddUnitVoice(UnitAuCheetah, "AU_CheetahIFV");
+    AddUnitVoice(UnitAuElephant, "AU_ElephantSuperheavy");
+    AddUnitVoice(UnitAuSirocco, "AU_SiroccoGunship");
+    AddUnitVoice(UnitAuFennec, "AU_FennecPatrolCraft");
+    AddUnitVoice(UnitAuZanzibar, "AU_ZanzibarCorvette");
+    AddUnitVoice(UnitAuAminaCommando, "AU_AminaCommando");
+    AddUnitVoice(MakeContentId("unit.au.combat_engineer"), "AU_CombatEngineer");
+
     // Tactical roster
     AddUnitVoice(UnitSovGromTrooper, "SU_GromTrooper");
     AddUnitVoice(UnitSovAmphTransport, "SU_RekaTransport");
@@ -1750,10 +2983,31 @@ void BuildDefaultContent(ContentDatabase& Db)
     AddUnitVoice(UnitAllWardenCommando, "AL_WardenCommando");
     AddUnitVoice(UnitEcSwarmInfector, "CO_SwarmInfector");
     AddUnitVoice(UnitEcBaihuCommando, "CO_BaihuCommando");
-    AddUnitVoice(UnitClRequiemCommando, "CH_RequiemCommando");
     AddUnitVoice(MakeContentId("unit.all.combat_engineer"), "AL_CombatEngineer");
     AddUnitVoice(MakeContentId("unit.ec.combat_engineer"), "CO_CombatEngineer");
     AddUnitVoice(MakeContentId("unit.cl.combat_engineer"), "CH_CombatEngineer");
+
+    // Expanded Naval & Advanced Unit Voices
+    AddUnitVoice(UnitSovStingray, "SU_SkatTeslaBoat");
+    AddUnitVoice(UnitSovDreadnought, "SU_VaryagCruiser");
+    AddUnitVoice(UnitSovTerrorDrone, "SU_ShershenDrone");
+    AddUnitVoice(UnitSovTwinblade, "SU_KorshunGunship");
+
+    AddUnitVoice(UnitAllHydrofoil, "AL_HydrofoilGuard");
+    AddUnitVoice(UnitAllAssaultDestroyer, "AL_AtlantDestroyer");
+    AddUnitVoice(UnitAllAircraftCarrier, "AL_CitadelCarrier");
+    AddUnitVoice(UnitAllCryoCopter, "AL_FrostCopter");
+    AddUnitVoice(UnitAllMirageTank, "AL_MirageTank");
+
+    AddUnitVoice(UnitEcNaginataCruiser, "CO_NaginataCruiser");
+    AddUnitVoice(UnitEcSeaWing, "CO_SeaWingInterceptor");
+    AddUnitVoice(UnitEcTsunamiTank, "CO_TsunamiTank");
+    AddUnitVoice(UnitEcShogunBattleship, "CO_ShogunBattleship");
+    AddUnitVoice(UnitEcKingOni, "CO_KingOniMech");
+
+    AddUnitVoice(UnitClChronoDestroyer, "CH_PhaseDestroyer");
+    AddUnitVoice(UnitClTemporalSub, "CH_StasisSub");
+    AddUnitVoice(UnitClVortexTank, "CH_VortexTank");
 }
 
 

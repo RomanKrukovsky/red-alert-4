@@ -91,11 +91,18 @@ enum class ProductionCategory : uint8_t
 enum class FactionId : uint8_t
 {
     None = 0,
-    Soviet,
-    Alliance,
+    EurasianPact,
+    AtlanticAlliance,
     EasternCoalition,
-    ChronoLegion,
+    PacificPact,
+    AfricanFederation,
     Count,
+
+    // --- Legacy compatibility aliases (migration layer) ---
+    Soviet = EurasianPact,
+    Alliance = AtlanticAlliance,
+    ChronoLegion = PacificPact,
+    AfricanUnion = AfricanFederation,
 };
 
 enum class VeterancyRank : uint8_t
@@ -449,11 +456,15 @@ struct VeterancyDef
 enum class FactionResourceType : uint8_t
 {
     None = 0,
-    Mobilization,       // Soviet
-    Intelligence,       // Alliance
+    Mobilization,       // Eurasian Pact
+    Intelligence,       // Atlantic Alliance
     Synchronization,    // Eastern Coalition
-    TemporalStability, // ChronoLegion
-    Count
+    AutonomousNetwork,  // Pacific Pact
+    SolarSurge,         // African Federation
+    Count,
+
+    // --- Legacy aliases ---
+    TemporalStability = AutonomousNetwork
 };
 
 struct FactionResourceDef
