@@ -208,22 +208,6 @@ public:
         // Terrain and shroud, drawn underneath the markers. Without this the panel was a
         // blank grid: a player could see where their units were but nothing about the
         // ground they were standing on, and no record of what they had explored.
-        // Camera-relative rotation: rotate world positions by -CameraYaw so
-        // up-on-radar always equals up-on-screen, regardless of camera rotation.
-        const float CamYaw = RadarOwner->GetCameraYaw();
-        const float RotAngle = FMath::DegreesToRadians(-(CamYaw - 90.0f));
-        const float CosA = FMath::Cos(RotAngle);
-        const float SinA = FMath::Sin(RotAngle);
-        const float HalfMapX = MapSize.X * 0.5f;
-        const float HalfMapY = MapSize.Y * 0.5f;
-        auto RotateToWorld = [&](FVector2D WorldPos) -> FVector2D
-        {
-            const float Rx = WorldPos.X - HalfMapX;
-            const float Ry = WorldPos.Y - HalfMapY;
-            return FVector2D(Rx * CosA - Ry * SinA + HalfMapX,
-                             Rx * SinA + Ry * CosA + HalfMapY);
-        };
-
         const FIntPoint Cells = RadarOwner->GetBackgroundCellCounts();
         const TArray<uint8>& Terrain = RadarOwner->GetBackgroundTerrain();
         const TArray<uint8>& Shroud = RadarOwner->GetBackgroundShroud();
@@ -254,12 +238,8 @@ public:
                         Colour.A = 1.0f;
                     }
 
-                    // Camera-relative: rotate the cell's world position before mapping.
-                    const float CellWorldX = (float(CellX) + 0.5f) / float(Cells.X) * MapSize.X;
-                    const float CellWorldY = (float(CellY) + 0.5f) / float(Cells.Y) * MapSize.Y;
-                    const FVector2D RotCell = RotateToWorld(FVector2D(CellWorldX, CellWorldY));
-                    const float NormCX = FMath::Clamp(float(RotCell.X / MapSize.X), 0.0f, 1.0f);
-                    const float NormCY = FMath::Clamp(float(RotCell.Y / MapSize.Y), 0.0f, 1.0f);
+                    const float NormCX = FMath::Clamp(float(CellX) / float(Cells.X), 0.0f, 1.0f);
+                    const float NormCY = FMath::Clamp(float(CellY) / float(Cells.Y), 0.0f, 1.0f);
                     const FVector2D CellPos(
                         MapOffset.X + NormCX * MapExtent.X,
                         MapOffset.Y + (1.0f - NormCY) * MapExtent.Y);
@@ -299,9 +279,8 @@ public:
         const int32 LocalPlayer = RadarOwner->GetLocalPlayer();
         for (const FRA4RadarMarker& Marker : RadarOwner->GetMarkers())
         {
-            const FVector2D Rotated = RotateToWorld(Marker.WorldPosition);
-            const float NormalizedX = FMath::Clamp(float(Rotated.X / MapSize.X), 0.0f, 1.0f);
-            const float NormalizedY = FMath::Clamp(float(Rotated.Y / MapSize.Y), 0.0f, 1.0f);
+            const float NormalizedX = FMath::Clamp(float(Marker.WorldPosition.X / MapSize.X), 0.0f, 1.0f);
+            const float NormalizedY = FMath::Clamp(float(Marker.WorldPosition.Y / MapSize.Y), 0.0f, 1.0f);
             const FVector2D Centre(MapOffset.X + NormalizedX * MapExtent.X,
                                    MapOffset.Y + (1.0f - NormalizedY) * MapExtent.Y);
 
@@ -363,9 +342,8 @@ public:
             {
                 continue;
             }
-            const FVector2D RotPing = RotateToWorld(Ping.WorldPosition);
-            const float NormalizedX = FMath::Clamp(float(RotPing.X / MapSize.X), 0.0f, 1.0f);
-            const float NormalizedY = FMath::Clamp(float(RotPing.Y / MapSize.Y), 0.0f, 1.0f);
+            const float NormalizedX = FMath::Clamp(float(Ping.WorldPosition.X / MapSize.X), 0.0f, 1.0f);
+            const float NormalizedY = FMath::Clamp(float(Ping.WorldPosition.Y / MapSize.Y), 0.0f, 1.0f);
             const FVector2D Centre(MapOffset.X + NormalizedX * MapExtent.X,
                                    MapOffset.Y + (1.0f - NormalizedY) * MapExtent.Y);
 
