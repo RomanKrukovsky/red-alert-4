@@ -1496,6 +1496,33 @@ void ARA4PlayerController::HandleClick(bool bLeftButton, const FVector2D& EndScr
             break;
         }
 
+        // Regular building placement (not MCV): place directly, construct on-site
+        if (bPlacementArmed && PlacementContent.IsValid() && PendingMcvDeployEntity.IsValid() == false)
+        {
+            const TileCoord TargetTile = World->GetMap().WorldToTile(EndGround);
+
+            RA4::Command Cmd;
+            Cmd.Type = RA4::CommandType::PlaceBuildingDirect;
+            Cmd.Issuer = Selection.GetLocalPlayer();
+            Cmd.Content = PlacementContent;
+            Cmd.Tile = TargetTile;
+            if (auto* SimSub = GetWorld()->GetSubsystem<URA4SimWorldSubsystem>())
+            {
+                SimSub->EnqueueCommand(Cmd);
+            }
+
+            bAttackMoveArmed = false;
+            bPlacementArmed = false;
+            PlacementContent = ContentId();
+
+            static USoundBase* PlaceSound = LoadObject<USoundBase>(nullptr, TEXT("/Engine/VREditor/Sounds/UI/VR_Teleport_Mode_01.VR_Teleport_Mode_01"));
+            if (PlaceSound)
+            {
+                UGameplayStatics::PlaySound2D(this, PlaceSound, 1.0f, 1.1f);
+            }
+            break;
+        }
+
         const OrderContext Context = MakeOrderContext(EndGround);
         const std::vector<Command> Orders = ResolveOrder(*World, Selection, Context);
         SubmitOrders(Orders);
@@ -2035,8 +2062,21 @@ void ARA4PlayerController::HandleBuildCardClicked(int64 ContentIdValue)
     }
 
     const EntityDef* Def = World->GetContent()->FindEntity(Content);
+    if (Def == nullptr)
+    {
+        return;
+    }
+
+    // Buildings: RA2-style -- place first, construct on-site. No yard queue.
+    if (Def->Kind == EntityKind::Building)
+    {
+        BeginPlacement(ContentIdValue);
+        return;
+    }
+
+    // Units: queue production as before
     const bool bShiftHeld = IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift);
-    const int32 CountToQueue = (bShiftHeld && Def != nullptr && Def->Kind == EntityKind::Unit) ? 10 : 1;
+    const int32 CountToQueue = bShiftHeld ? 10 : 1;
 
     std::vector<Command> Orders;
     Orders.reserve(CountToQueue);

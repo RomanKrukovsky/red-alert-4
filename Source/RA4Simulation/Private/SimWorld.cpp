@@ -1759,6 +1759,32 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
             break;
         }
 
+        case CommandType::PlaceBuildingDirect:
+        {
+            const EntityDef* Item = Content ? Content->FindEntity(Cmd.Content) : nullptr;
+            if (Item == nullptr || Item->Kind != EntityKind::Building)
+            {
+                return Reject(CommandReject::UnknownContent);
+            }
+            if (!HasPrerequisites(Cmd.Issuer, *Item))
+            {
+                return Reject(CommandReject::TechRequirementsUnmet);
+            }
+            if (!IsPlacementValid(Cmd.Content, Cmd.Issuer, Cmd.Tile))
+            {
+                return Reject(CommandReject::InvalidPlacement);
+            }
+            // Deduct the full cost immediately
+            const int32_t Cost = Item->Production.Cost;
+            if (Players[Cmd.Issuer].Credits < Cost)
+            {
+                return Reject(CommandReject::InsufficientCredits);
+            }
+            Players[Cmd.Issuer].Credits -= Cost;
+            SpawnBuilding(Cmd.Content, Cmd.Issuer, Cmd.Tile, /*bInstantComplete*/ false);
+            break;
+        }
+
         case CommandType::CoopPing:
         {
             SimEvent Ev;

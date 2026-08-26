@@ -72,6 +72,9 @@ enum class CommandType : uint8_t
     // protocol.
     FireSuperweapon = 54,
 
+    // RA2-style building placement: place first, construct on-site
+    PlaceBuildingDirect = 55,
+
     Max = 55,
 };
 
