@@ -124,6 +124,10 @@
 		{
 			"Name": "ToolsetRegistry",
 			"Enabled": true
+		},
+		{
+			"Name": "Niagara",
+			"Enabled": true
 		}
 	],
 	"TargetPlatforms": [

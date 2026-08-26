@@ -26,6 +26,10 @@
 #include "Engine/Texture2D.h"
 #include "UnrealClient.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundCue.h"
 // The fog camera path needs these two by name. They were reaching this file
 // through the unity blob, so it compiled while nothing here had changed and
 // stopped compiling the moment it did: UBT picks the adaptive non-unity working
@@ -877,6 +881,24 @@ static void DrawExplosionEffect(UWorld* World, const FVector& Center, float Radi
     }
 }
 
+static void SpawnNiagaraVFX(UWorld* World, const TCHAR* AssetPath, const FVector& Location)
+{
+    if (World == nullptr || AssetPath == nullptr) return;
+    if (UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, AssetPath))
+    {
+        UNiagaraFunctionLibrary::SpawnSystemAtLocation(World, System, Location, FRotator::ZeroRotator, FVector(1.0f), true, true, ENCPoolMethod::AutoRelease);
+    }
+}
+
+static void SpawnSFX(UWorld* World, const TCHAR* AssetPath, const FVector& Location)
+{
+    if (World == nullptr || AssetPath == nullptr) return;
+    if (USoundCue* Cue = LoadObject<USoundCue>(nullptr, AssetPath))
+    {
+        UGameplayStatics::PlaySoundAtLocation(World, Cue, Location);
+    }
+}
+
 void URA4SimWorldSubsystem::SpawnVehicleWreckage(UWorld* World, const FVector& Location, const std::string& EntityName)
 {
     if (World == nullptr)
@@ -1155,6 +1177,10 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
                     {
                         DrawTankCannonTracer(UnrealWorld, Start, End);
                     }
+                    // Niagara muzzle/impact (debug fallback remains if asset missing)
+                    SpawnNiagaraVFX(UnrealWorld, TEXT("/Game/RA4/VFX/NS_MuzzleFlash.NS_MuzzleFlash"), Start);
+                    SpawnNiagaraVFX(UnrealWorld, TEXT("/Game/RA4/VFX/NS_Impact.NS_Impact"), End);
+                    SpawnSFX(UnrealWorld, TEXT("/Game/RA4/Audio/SFX/SFX_WeaponFire.SFX_WeaponFire"), Start);
                 }
                 else
                 {
@@ -1169,6 +1195,8 @@ void URA4SimWorldSubsystem::ProcessPresentationEvents()
                 FVector ImpactPoint = RA4Coords::ToUnreal(Event.Location);
                 ImpactPoint.Z = SampleGroundHeight(ImpactPoint.X, ImpactPoint.Y) + 15.0f;
                 DrawExplosionEffect(UnrealWorld, ImpactPoint, 45.0f);
+                SpawnNiagaraVFX(UnrealWorld, TEXT("/Game/RA4/VFX/NS_Explosion.NS_Explosion"), ImpactPoint);
+                SpawnSFX(UnrealWorld, TEXT("/Game/RA4/Audio/SFX/SFX_Explosion.SFX_Explosion"), ImpactPoint);
 
                 // Armor Ricochet and Debris Sparks
                 for (int32 s = 0; s < 5; ++s)
