@@ -60,7 +60,7 @@ FVector2D SRA4Minimap::WorldToMap(
     const double SafeWorldY = FMath::Max(InWorldSize.Y, 1.0);
     return FVector2D(
         FMath::Clamp(WorldPoint.X / SafeWorldX, 0.0, 1.0) * FMath::Max(MapSize.X, 0.0),
-        FMath::Clamp(WorldPoint.Y / SafeWorldY, 0.0, 1.0) * FMath::Max(MapSize.Y, 0.0));
+        (1.0 - FMath::Clamp(WorldPoint.Y / SafeWorldY, 0.0, 1.0)) * FMath::Max(MapSize.Y, 0.0));
 }
 
 FVector2D SRA4Minimap::MapToWorld(
@@ -72,7 +72,7 @@ FVector2D SRA4Minimap::MapToWorld(
     const double SafeMapY = FMath::Max(MapSize.Y, 1.0);
     return FVector2D(
         FMath::Clamp(MapPoint.X / SafeMapX, 0.0, 1.0) * FMath::Max(InWorldSize.X, 0.0),
-        FMath::Clamp(MapPoint.Y / SafeMapY, 0.0, 1.0) * FMath::Max(InWorldSize.Y, 0.0));
+        (1.0 - FMath::Clamp(MapPoint.Y / SafeMapY, 0.0, 1.0)) * FMath::Max(InWorldSize.Y, 0.0));
 }
 
 FVector2D SRA4Minimap::ComputeDesiredSize(float LayoutScaleMultiplier) const

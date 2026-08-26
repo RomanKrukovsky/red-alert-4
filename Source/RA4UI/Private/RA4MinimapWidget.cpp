@@ -139,8 +139,9 @@ void URA4MinimapWidget::SetBackground(
                 {
                     for (int32 X = 0; X < Width; ++X)
                     {
-                        const int32 Cell = Y * Width + X;
-                        const uint8 ShroudByte = Shroud[Cell];
+                        // Dest Y=0 is top (north), source Cell Y=0 is south -> flip
+                        const int32 SrcCell = (Height - 1 - Y) * Width + X;
+                        const uint8 ShroudByte = Shroud[SrcCell];
                         float Brightness = 1.0f;
                         if (ShroudByte == uint8(ERA4MinimapShroud::NeverSeen))
                         {
@@ -150,7 +151,7 @@ void URA4MinimapWidget::SetBackground(
                         {
                             Brightness = 0.45f;
                         }
-                        const FLinearColor C = TerrainColour(Terrain[Cell]) * Brightness;
+                        const FLinearColor C = TerrainColour(Terrain[SrcCell]) * Brightness;
                         uint8* Px = Pixels + (static_cast<int64>(Y) * Width + X) * 4;
                         Px[0] = uint8(FMath::Clamp(C.B, 0.0f, 1.0f) * 255.0f);
                         Px[1] = uint8(FMath::Clamp(C.G, 0.0f, 1.0f) * 255.0f);

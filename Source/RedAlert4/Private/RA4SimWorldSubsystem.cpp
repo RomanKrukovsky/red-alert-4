@@ -1431,6 +1431,7 @@ void URA4SimWorldSubsystem::UpdateFogVisibilityTexture()
     }
 
     // Upload. Mip 0 only; the texture is tiny and NeverStream.
+    // FogTexelScratch is south-first (Y=0 south), texture row 0 is top (north) -> flip Y.
     if (FTexturePlatformData* PlatformData = FogVisibilityTexture->GetPlatformData())
     {
         if (PlatformData->Mips.Num() > 0)
@@ -1438,7 +1439,14 @@ void URA4SimWorldSubsystem::UpdateFogVisibilityTexture()
             FTexture2DMipMap& Mip = PlatformData->Mips[0];
             if (void* Dest = Mip.BulkData.Lock(LOCK_READ_WRITE))
             {
-                FMemory::Memcpy(Dest, FogTexelScratch.data(), FogTexelScratch.size());
+                uint8* DstBytes = static_cast<uint8*>(Dest);
+                for (int32 Row = 0; Row < Height; ++Row)
+                {
+                    const int32 SrcRow = Height - 1 - Row;
+                    FMemory::Memcpy(DstBytes + Row * Width,
+                                    FogTexelScratch.data() + SrcRow * Width,
+                                    Width);
+                }
             }
             Mip.BulkData.Unlock();
             FogVisibilityTexture->UpdateResource();

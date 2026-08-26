@@ -240,10 +240,10 @@ public:
                     }
 
                     const float NormCX = FMath::Clamp(float(CellX) / float(Cells.X), 0.0f, 1.0f);
-                    const float NormCY = FMath::Clamp(float(CellY) / float(Cells.Y), 0.0f, 1.0f);
+                    // South cell (CellY=0) sits at bottom: top = MapOffset + (1 - 1/Cells)*Extent
                     const FVector2D CellPos(
                         MapOffset.X + NormCX * MapExtent.X,
-                        MapOffset.Y + (1.0f - NormCY) * MapExtent.Y);
+                        MapOffset.Y + (1.0f - float(CellY + 1) / float(Cells.Y)) * MapExtent.Y);
                     FSlateDrawElement::MakeBox(
                         OutDrawElements, LayerId + 2,
                         AllottedGeometry.ToPaintGeometry(CellSize, FSlateLayoutTransform(CellPos)),
