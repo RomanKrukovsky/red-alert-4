@@ -124,6 +124,8 @@ struct SelectionState
     std::string PrimaryDisplayNameKey;
     int32_t PrimaryHealthCurrent = 0;
     int32_t PrimaryHealthMax = 0;
+    uint8_t PrimaryVeterancyRank = 0;
+    int32_t PrimaryKillsValue = 0;
     bool bPrimaryIsOwned = false;
 
     // ADR-0013. Present for an owned building so the detail card can show the power
@@ -138,6 +140,14 @@ struct SelectionState
     bool bPrimaryIsRepairing = false;
     // A damaged, complete, owned building is the only thing repair can be started on.
     bool bPrimaryCanRepair = false;
+
+    // --- Secondary Ability / Special Mode ---
+    bool bPrimaryHasAbility = false;
+    bool bPrimaryAbilityActive = false;
+    int32_t PrimaryAbilityCooldownTicks = 0;
+    int32_t PrimaryAbilityTotalCooldownTicks = 0;
+    int32_t PrimaryAbilityDurationTicks = 0;
+    std::string PrimaryAbilityNameKey;
 
     std::vector<SelectionGroup> Groups;
 

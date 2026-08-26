@@ -164,13 +164,14 @@ std::vector<Command> ResolveOrder(const SimWorld& World, const SelectionModel& S
             continue;
         }
 
-        // Force attack wins over everything: ctrl-clicking an ally or bare ground
+        // Force attack wins over everything: ctrl-clicking or command-clicking an ally, own unit, building or bare ground
         // means the player deliberately wants fire there.
-        if (Context.bForceAttack && bTargetValid && IsArmed(World, Id))
+        if (Context.bForceAttack && IsArmed(World, Id))
         {
             Command C = MakeOrder(CommandType::Attack, Context.Issuer, Id, Context.bQueueOrder);
-            C.Target = Context.HoveredEntity;
+            C.Target = bTargetValid ? Context.HoveredEntity : EntityId::Invalid();
             C.Location = Context.WorldLocation;
+            C.Param = 1; // Explicit Force Attack flag
             Out.push_back(C);
             continue;
         }

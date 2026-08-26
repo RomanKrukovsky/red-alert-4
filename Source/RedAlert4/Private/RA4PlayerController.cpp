@@ -92,10 +92,12 @@ void ARA4PlayerController::BeginPlay()
         if (Sidebar != nullptr)
         {
             Sidebar->OnBuildCardClicked.AddUObject(this, &ARA4PlayerController::HandleBuildCardClicked);
+            Sidebar->OnBuildCardRightClicked.AddUObject(this, &ARA4PlayerController::HandleBuildCardRightClicked);
             Sidebar->OnRadarClicked.AddUObject(this, &ARA4PlayerController::HandleRadarClicked);
             Sidebar->OnRadarOrdered.AddUObject(this, &ARA4PlayerController::HandleRadarOrdered);
             Sidebar->OnInteractionModeChanged.AddUObject(this, &ARA4PlayerController::HandleInteractionModeChanged);
             Sidebar->OnSuperweaponClicked.AddUObject(this, &ARA4PlayerController::ToggleSuperweaponMode);
+            Sidebar->OnAbilityClicked.AddUObject(this, &ARA4PlayerController::TriggerSelectedSecondaryAbility);
             // ADR-0013 step 3: the HUD occupies the whole viewport and places its
             // own panels. Its root canvas is SelfHitTestInvisible, so the empty
             // space between panels still passes clicks to the world. Reserving a
@@ -333,24 +335,30 @@ void ARA4PlayerController::SetupInputComponent()
     }
 
     // Direct tactical hotkeys:
+    // 'F' -> Activate secondary unit ability / toggle stance / deploy
+    InputComponent->BindKey(EKeys::F, IE_Pressed, this, &ARA4PlayerController::TriggerSelectedSecondaryAbility);
+    // 'A' -> Attack-Move mode
+    InputComponent->BindKey(EKeys::A, IE_Pressed, this, &ARA4PlayerController::OnAttackMovePressed);
     // 'H' -> Snap/focus camera on Home Base / MCV / Construction Yard
     InputComponent->BindKey(EKeys::H, IE_Pressed, this, &ARA4PlayerController::JumpToHomeBase);
     // 'J' -> Toggle First-Person / 3rd-Person Direct Control on selected unit
     InputComponent->BindKey(EKeys::J, IE_Pressed, this, &ARA4PlayerController::ToggleDirectControl);
     // 'D' -> Deploy selected MCV (or player's MCV) into Construction Yard
     InputComponent->BindKey(EKeys::D, IE_Pressed, this, &ARA4PlayerController::DeploySelectedMcv);
-    // 'K' -> Toggle Repair Mode (wrench)
-    InputComponent->BindKey(EKeys::K, IE_Pressed, this, &ARA4PlayerController::ToggleRepairMode);
-    // 'L' -> Toggle Sell Mode (refund)
+    // 'Z' & 'L' -> Toggle Sell Mode (refund)
+    InputComponent->BindKey(EKeys::Z, IE_Pressed, this, &ARA4PlayerController::ToggleSellMode);
     InputComponent->BindKey(EKeys::L, IE_Pressed, this, &ARA4PlayerController::ToggleSellMode);
+    // 'X' & 'K' -> Toggle Repair Mode (wrench)
+    InputComponent->BindKey(EKeys::X, IE_Pressed, this, &ARA4PlayerController::ToggleRepairMode);
+    InputComponent->BindKey(EKeys::K, IE_Pressed, this, &ARA4PlayerController::ToggleRepairMode);
+    // 'C' -> Scatter selected units in radial directions
+    InputComponent->BindKey(EKeys::C, IE_Pressed, this, &ARA4PlayerController::ScatterSelectedUnits);
     // 'U' -> Toggle Superweapon Targeting Mode
     InputComponent->BindKey(EKeys::U, IE_Pressed, this, &ARA4PlayerController::ToggleSuperweaponMode);
     // 'S' -> Stop selected units
     InputComponent->BindKey(EKeys::S, IE_Pressed, this, &ARA4PlayerController::StopSelectedUnits);
-    // 'G' -> Guard / Attack-Move mode
+    // 'G' -> Guard / Patrol mode
     InputComponent->BindKey(EKeys::G, IE_Pressed, this, &ARA4PlayerController::ToggleGuardMode);
-    // 'X' -> Scatter selected units in radial directions
-    InputComponent->BindKey(EKeys::X, IE_Pressed, this, &ARA4PlayerController::ScatterSelectedUnits);
     // 'T' -> Chrono-Shift / Tactical Teleport mode
     InputComponent->BindKey(EKeys::T, IE_Pressed, this, &ARA4PlayerController::ToggleChronoShiftMode);
     // SpaceBar -> Snap/focus camera on latest alert/event location (EVA Jump to Alert)
@@ -1123,7 +1131,8 @@ OrderContext ARA4PlayerController::MakeOrderContext(const Vec2& GroundPosition) 
     Context.Tile = TileCoord(int32(GroundPosition.X.ToIntFloor() / RA4::kTileSizeUnits),
                              int32(GroundPosition.Y.ToIntFloor() / RA4::kTileSizeUnits));
     Context.bQueueOrder = IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift);
-    Context.bForceAttack = IsInputKeyDown(EKeys::LeftControl) || IsInputKeyDown(EKeys::RightControl);
+    Context.bForceAttack = IsInputKeyDown(EKeys::LeftControl) || IsInputKeyDown(EKeys::RightControl) ||
+                           IsInputKeyDown(EKeys::LeftCommand) || IsInputKeyDown(EKeys::RightCommand);
     Context.bForceMove = IsInputKeyDown(EKeys::LeftAlt) || IsInputKeyDown(EKeys::RightAlt);
     Context.bAttackMoveMode = bAttackMoveArmed;
     Context.bPlacementMode = bPlacementArmed;
@@ -1440,7 +1449,8 @@ void ARA4PlayerController::HandleClick(bool bLeftButton, const FVector2D& EndScr
     }
 
     const bool bShift = IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift);
-    const bool bCtrl = IsInputKeyDown(EKeys::LeftControl) || IsInputKeyDown(EKeys::RightControl);
+    const bool bCtrl = IsInputKeyDown(EKeys::LeftControl) || IsInputKeyDown(EKeys::RightControl) ||
+                       IsInputKeyDown(EKeys::LeftCommand) || IsInputKeyDown(EKeys::RightCommand);
     const bool bAlt = IsInputKeyDown(EKeys::LeftAlt) || IsInputKeyDown(EKeys::RightAlt);
 
     const ClickFacts Facts = MakeClickFacts(*World, Selection, FindHoveredEntity(EndGround), bWasDrag, bShift,
@@ -1496,24 +1506,81 @@ void ARA4PlayerController::HandleClick(bool bLeftButton, const FVector2D& EndScr
             break;
         }
 
-        // Regular building placement (not MCV): place directly, construct on-site
+        // Regular building placement (not MCV): place directly, construct on-site (supports wall lines up to 10 tiles)
         if (bPlacementArmed && PlacementContent.IsValid() && PendingMcvDeployEntity.IsValid() == false)
         {
-            const TileCoord TargetTile = World->GetMap().WorldToTile(EndGround);
+            const EntityDef* Def = World->GetContent()->FindEntity(PlacementContent);
+            const bool bIsWall = (Def != nullptr && (Def->Name.find("wall") != std::string::npos || (Def->Building.FootprintX == 1 && Def->Building.FootprintY == 1 && Def->Production.Category == ProductionCategory::Defense)));
 
-            RA4::Command Cmd;
-            Cmd.Type = RA4::CommandType::PlaceBuildingDirect;
-            Cmd.Issuer = Selection.GetLocalPlayer();
-            Cmd.Content = PlacementContent;
-            Cmd.Tile = TargetTile;
-            if (auto* SimSub = GetWorld()->GetSubsystem<URA4SimWorldSubsystem>())
+            if (bIsWall && bWasDrag)
             {
-                SimSub->EnqueueCommand(Cmd);
-            }
+                const TileCoord StartTile = World->GetMap().WorldToTile(MarqueeStartGround);
+                const TileCoord EndTile = World->GetMap().WorldToTile(EndGround);
 
-            bAttackMoveArmed = false;
-            bPlacementArmed = false;
-            PlacementContent = ContentId();
+                int32 DX = EndTile.X - StartTile.X;
+                int32 DY = EndTile.Y - StartTile.Y;
+                int32 Steps = FMath::Clamp(FMath::Max(FMath::Abs(DX), FMath::Abs(DY)), 0, 9);
+
+                bool bFirstFromQueue = true;
+                for (int32 I = 0; I <= Steps; ++I)
+                {
+                    float Alpha = Steps > 0 ? float(I) / float(Steps) : 0.0f;
+                    int32 TX = FMath::RoundToInt(float(StartTile.X) + float(DX) * Alpha);
+                    int32 TY = FMath::RoundToInt(float(StartTile.Y) + float(DY) * Alpha);
+                    TileCoord WallTile(TX, TY);
+
+                    if (World->IsPlacementValid(PlacementContent, Selection.GetLocalPlayer(), WallTile))
+                    {
+                        RA4::Command Cmd;
+                        Cmd.Type = bFirstFromQueue ? RA4::CommandType::PlaceBuilding : RA4::CommandType::PlaceBuildingDirect;
+                        Cmd.Issuer = Selection.GetLocalPlayer();
+                        Cmd.Content = PlacementContent;
+                        Cmd.Tile = WallTile;
+                        if (auto* SimSub = GetWorld()->GetSubsystem<URA4SimWorldSubsystem>())
+                        {
+                            SimSub->EnqueueCommand(Cmd);
+                        }
+                        bFirstFromQueue = false;
+                    }
+                }
+                bAttackMoveArmed = false;
+                bPlacementArmed = false;
+                PlacementContent = ContentId();
+            }
+            else
+            {
+                const TileCoord TargetTile = World->GetMap().WorldToTile(EndGround);
+
+                bool bInQueue = false;
+                if (const URA4UIDataProviderSubsystem* Provider = GetWorld()->GetSubsystem<URA4UIDataProviderSubsystem>())
+                {
+                    for (const FRA4ProductionEntry& Entry : Provider->GetProductionQueue())
+                    {
+                        if (Entry.bAwaitingPlacement && Entry.ContentId == int64(PlacementContent.Value))
+                        {
+                            bInQueue = true;
+                            break;
+                        }
+                    }
+                }
+
+                RA4::Command Cmd;
+                Cmd.Type = bInQueue ? RA4::CommandType::PlaceBuilding : RA4::CommandType::PlaceBuildingDirect;
+                Cmd.Issuer = Selection.GetLocalPlayer();
+                Cmd.Content = PlacementContent;
+                Cmd.Tile = TargetTile;
+                if (auto* SimSub = GetWorld()->GetSubsystem<URA4SimWorldSubsystem>())
+                {
+                    SimSub->EnqueueCommand(Cmd);
+                }
+
+                if (!bIsWall)
+                {
+                    bAttackMoveArmed = false;
+                    bPlacementArmed = false;
+                    PlacementContent = ContentId();
+                }
+            }
 
             static USoundBase* PlaceSound = LoadObject<USoundBase>(nullptr, TEXT("/Engine/VREditor/Sounds/UI/VR_Teleport_Mode_01.VR_Teleport_Mode_01"));
             if (PlaceSound)
@@ -2067,16 +2134,8 @@ void ARA4PlayerController::HandleBuildCardClicked(int64 ContentIdValue)
         return;
     }
 
-    // Buildings: RA2-style -- place first, construct on-site. No yard queue.
-    if (Def->Kind == EntityKind::Building)
-    {
-        BeginPlacement(ContentIdValue);
-        return;
-    }
-
-    // Units: queue production as before
     const bool bShiftHeld = IsInputKeyDown(EKeys::LeftShift) || IsInputKeyDown(EKeys::RightShift);
-    const int32 CountToQueue = bShiftHeld ? 10 : 1;
+    const int32 CountToQueue = (Def->Kind == EntityKind::Building) ? 1 : (bShiftHeld ? 10 : 1);
 
     std::vector<Command> Orders;
     Orders.reserve(CountToQueue);
@@ -2089,6 +2148,29 @@ void ARA4PlayerController::HandleBuildCardClicked(int64 ContentIdValue)
         Orders.push_back(C);
     }
     SubmitOrders(Orders);
+}
+
+void ARA4PlayerController::HandleBuildCardRightClicked(int64 ContentIdValue)
+{
+    const ContentId Content = ContentId(uint32(ContentIdValue));
+    if (!Content.IsValid())
+    {
+        return;
+    }
+
+    if (bPlacementArmed && PlacementContent == Content)
+    {
+        bPlacementArmed = false;
+        PlacementContent = ContentId();
+        return;
+    }
+
+    Command C;
+    C.Type = CommandType::CancelProduction;
+    C.Issuer = Selection.GetLocalPlayer();
+    C.Content = Content;
+    C.Slot = 0;
+    SubmitOrders({C});
 }
 
 void ARA4PlayerController::CycleSelectedPowerPriority()
@@ -2918,6 +3000,113 @@ void ARA4PlayerController::DeploySelectedMcv()
             }
         }
     }
+}
+
+void ARA4PlayerController::TriggerSelectedSecondaryAbility()
+{
+    if (bDirectControlActive) return;
+    const URA4SimWorldSubsystem* Subsystem = GetSimSubsystem();
+    const SimWorld* World = Subsystem != nullptr ? Subsystem->GetSimWorld() : nullptr;
+    if (World == nullptr)
+    {
+        return;
+    }
+
+    const uint8 LocalPlayer = Selection.GetLocalPlayer();
+    const std::vector<EntityId>& Sel = Selection.Get();
+
+    // Check if selection contains MCV or deployable builder first
+    bool bHasMcvInSelection = false;
+    for (const EntityId& Id : Sel)
+    {
+        const EntityCore* Core = World->GetCore(Id);
+        if (Core != nullptr && Core->Owner == LocalPlayer)
+        {
+            const EntityDef* Def = World->GetContent()->FindEntity(Core->Def);
+            if (Def != nullptr && (Def->Unit.bIsBuilder || Def->Unit.DeploysInto.IsValid() ||
+                                   (Core->Kind == EntityKind::Building && Def->Name.find("construction_yard") != std::string::npos)))
+            {
+                bHasMcvInSelection = true;
+                break;
+            }
+        }
+    }
+
+    if (bHasMcvInSelection)
+    {
+        DeploySelectedMcv();
+        return;
+    }
+
+    std::vector<Command> Commands;
+    for (const EntityId& Id : Sel)
+    {
+        const EntityCore* Core = World->GetCore(Id);
+        if (Core == nullptr || Core->Owner != LocalPlayer || Core->Kind != EntityKind::Unit)
+        {
+            continue;
+        }
+        Command C;
+        C.Type = CommandType::ToggleSecondaryAbility;
+        C.Issuer = LocalPlayer;
+        C.Primary = Id;
+        Commands.push_back(C);
+    }
+
+    if (!Commands.empty())
+    {
+        SubmitOrders(Commands);
+
+        if (URA4AudioSubsystem* Audio = GetWorld()->GetSubsystem<URA4AudioSubsystem>())
+        {
+            if (const EntityDef* Def = World->GetContent()->FindEntity(World->GetCore(Commands[0].Primary)->Def))
+            {
+                Audio->PlayUnitVoice(UTF8_TO_TCHAR(Def->Name.c_str()), ERA4VoiceEvent::Ability);
+            }
+        }
+        UE_LOG(LogTemp, Display, TEXT("RA4: Triggered secondary ability for %d units"), (int32)Commands.size());
+    }
+}
+
+void ARA4PlayerController::IssueCoopPing(FVector2D SimLocation, uint8 PingType)
+{
+    if (bDirectControlActive) return;
+
+    URA4SimWorldSubsystem* MutableSim = GetWorld() ? GetWorld()->GetSubsystem<URA4SimWorldSubsystem>() : nullptr;
+    if (MutableSim == nullptr)
+    {
+        return;
+    }
+
+    Vec2 GroundLocation;
+    if (SimLocation.IsNearlyZero())
+    {
+        if (!GetCursorGroundPosition(GroundLocation))
+        {
+            return;
+        }
+    }
+    else
+    {
+        GroundLocation = Vec2(Fixed::FromInt(int64_t(SimLocation.X)), Fixed::FromInt(int64_t(SimLocation.Y)));
+    }
+
+    Command Cmd;
+    Cmd.Type = CommandType::CoopPing;
+    Cmd.Issuer = Selection.GetLocalPlayer();
+    Cmd.Location = GroundLocation;
+    Cmd.Param = PingType; // 0=Attack, 1=Defend, 2=Scout, 3=Hold
+
+    MutableSim->EnqueueCommand(Cmd);
+
+    // Audio cue
+    if (URA4AudioSubsystem* Audio = GetWorld()->GetSubsystem<URA4AudioSubsystem>())
+    {
+        Audio->PlayEVA(Selection.GetLocalPlayer(), ERA4EVAEvent::BaseUnderAttack, true);
+    }
+
+    UE_LOG(LogTemp, Display, TEXT("RA4: Co-op Ping issued at (%.0f, %.0f), Type=%d"),
+           GroundLocation.X.ToDoubleUnsafe(), GroundLocation.Y.ToDoubleUnsafe(), (int32)PingType);
 }
 
 void ARA4PlayerController::ToggleRepairMode()

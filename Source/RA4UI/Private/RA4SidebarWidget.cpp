@@ -69,8 +69,9 @@ void UpdateRadialProgressTexture(UTexture2D* Tex, float ProgressFraction)
 
     const float Center = (float(kRadialTexSize) - 1.0f) * 0.5f;
     const float FracClamped = FMath::Clamp(ProgressFraction, 0.0f, 1.0f);
-    const uint32 GreenFill = FColor(38, 225, 82, 110).ToPackedARGB();
-    const uint32 LeadLine  = FColor(160, 255, 195, 235).ToPackedARGB();
+    const uint32 GreenFill = FColor(35, 215, 80, 150).DWColor();
+    const uint32 LeadLine  = FColor(190, 255, 220, 250).DWColor();
+    const uint32 DarkBg    = FColor(0, 0, 0, 95).DWColor();
 
     for (int32 Y = 0; Y < kRadialTexSize; ++Y)
     {
@@ -88,12 +89,12 @@ void UpdateRadialProgressTexture(UTexture2D* Tex, float ProgressFraction)
 
             if (Angle <= FracClamped && FracClamped > 0.001f)
             {
-                const bool bIsLead = (Angle >= FracClamped - 0.045f);
+                const bool bIsLead = (Angle >= FracClamped - 0.04f);
                 Pixels[Y * kRadialTexSize + X] = bIsLead ? LeadLine : GreenFill;
             }
             else
             {
-                Pixels[Y * kRadialTexSize + X] = 0;
+                Pixels[Y * kRadialTexSize + X] = DarkBg;
             }
         }
     }
@@ -775,7 +776,7 @@ void URA4RadarWidget::HandleSlateClick(const FVector2D& NormalizedPosition)
     }
 
     OnRadarClicked.Broadcast(FVector2D(
-        (1.0f - NormalizedPosition.X) * MapSize.X,
+        NormalizedPosition.X * MapSize.X,
         (1.0f - NormalizedPosition.Y) * MapSize.Y));
 }
 
@@ -790,7 +791,7 @@ void URA4RadarWidget::HandleSlateOrder(const FVector2D& NormalizedPosition)
     // Same mapping as the camera click; only the delegate differs, so an order cannot land
     // somewhere other than where the camera would have gone for the same pixel.
     OnRadarOrdered.Broadcast(FVector2D(
-        (1.0f - NormalizedPosition.X) * MapSize.X,
+        NormalizedPosition.X * MapSize.X,
         (1.0f - NormalizedPosition.Y) * MapSize.Y));
 }
 
@@ -1112,6 +1113,33 @@ TSharedRef<SWidget> URA4SidebarWidget::RebuildWidget()
             Slot->SetPadding(FMargin(0.0f, 4.0f, 0.0f, 0.0f));
         }
 
+        // Secondary Ability button in selection card
+        AbilityButton = WidgetTree->ConstructWidget<URA4IndexedButton>(
+            URA4IndexedButton::StaticClass(), TEXT("AbilityBtn"));
+        AbilityButton->SetIndex(0);
+        AbilityButton->BindForwarding();
+        AbilityButton->OnIndexedClicked.AddUObject(this, &URA4SidebarWidget::HandleAbilityClicked);
+        StyleButton(AbilityButton, FLinearColor(0.12f, 0.28f, 0.38f, 1.0f));
+
+        UVerticalBox* AbilityStack = WidgetTree->ConstructWidget<UVerticalBox>(
+            UVerticalBox::StaticClass(), TEXT("AbilityStack"));
+
+        AbilityButtonText = MakeLabel(WidgetTree, TEXT("AbilityBtnText"), FLinearColor(0.9f, 0.95f, 1.0f), 10, true);
+        AbilityButtonText->SetText(NSLOCTEXT("RA4", "Sidebar_Ability", "[F] СПОСОБНОСТЬ"));
+        AbilityButtonText->SetJustification(ETextJustify::Center);
+        AbilityStack->AddChildToVerticalBox(AbilityButtonText);
+
+        AbilityCooldownBar = MakeThinBar(WidgetTree, TEXT("AbilityCdBar"), FLinearColor(0.3f, 0.8f, 1.0f), 3.0f);
+        AbilityStack->AddChildToVerticalBox(AbilityCooldownBar);
+
+        AbilityButton->AddChild(AbilityStack);
+        AbilityButton->SetVisibility(ESlateVisibility::Collapsed);
+
+        if (UVerticalBoxSlot* Slot = Stack->AddChildToVerticalBox(AbilityButton))
+        {
+            Slot->SetPadding(FMargin(0.0f, 4.0f, 0.0f, 0.0f));
+        }
+
         Frame->AddChild(Stack);
         AddRow(Frame, 4.0f);
     }
@@ -1345,6 +1373,25 @@ void URA4SidebarWidget::NativeDestruct()
     Super::NativeDestruct();
 }
 
+FReply URA4SidebarWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+    if (InMouseEvent.GetEffectingButton() == EKeys::RightMouseButton)
+    {
+        for (int32 CardIdx = 0; CardIdx < CardButtons.Num(); ++CardIdx)
+        {
+            if (CardButtons[CardIdx] && CardButtons[CardIdx]->IsHovered())
+            {
+                if (CardContentIds.IsValidIndex(CardIdx))
+                {
+                    OnBuildCardRightClicked.Broadcast(CardContentIds[CardIdx]);
+                    return FReply::Handled();
+                }
+            }
+        }
+    }
+    return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+}
+
 void URA4SidebarWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
     Super::NativeTick(MyGeometry, InDeltaTime);
@@ -1401,6 +1448,8 @@ void URA4SidebarWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTim
             CardHoverTargets[Index]->SetRenderTransform(Transform);
         }
     }
+
+    RefreshQueue();
 }
 
 void URA4SidebarWidget::RefreshSelection()
@@ -1448,6 +1497,10 @@ void URA4SidebarWidget::RefreshSelection()
         {
             SelectionGroupBox->ClearChildren();
             SelectionGroupBox->SetVisibility(ESlateVisibility::Collapsed);
+        }
+        if (AbilityButton != nullptr)
+        {
+            AbilityButton->SetVisibility(ESlateVisibility::Collapsed);
         }
         return;
     }
@@ -1617,6 +1670,64 @@ void URA4SidebarWidget::RefreshSelection()
             SelectionDetailsText->SetColorAndOpacity(FSlateColor(kTextDim));
         }
     }
+
+    if (AbilityButton != nullptr)
+    {
+        if (bOwned && Provider->HasSelectionAbility())
+        {
+            AbilityButton->SetVisibility(ESlateVisibility::Visible);
+            const bool bActive = Provider->IsSelectionAbilityActive();
+            const float CdRatio = Provider->GetSelectionAbilityCooldownRatio();
+
+            if (AbilityButtonText != nullptr)
+            {
+                FText AbilityName = Provider->GetSelectionAbilityName();
+                if (bActive)
+                {
+                    AbilityButtonText->SetText(FText::Format(
+                        NSLOCTEXT("RA4", "Sidebar_AbilityActiveFmt", "[F] {0} (АКТИВНО)"), AbilityName));
+                }
+                else if (CdRatio > 0.0f)
+                {
+                    AbilityButtonText->SetText(FText::Format(
+                        NSLOCTEXT("RA4", "Sidebar_AbilityCdFmt", "[F] {0} (ЗАРЯДКА)"), AbilityName));
+                }
+                else
+                {
+                    AbilityButtonText->SetText(FText::Format(
+                        NSLOCTEXT("RA4", "Sidebar_AbilityReadyFmt", "[F] {0}"), AbilityName));
+                }
+            }
+
+            if (AbilityCooldownBar != nullptr)
+            {
+                AbilityCooldownBar->SetPercent(CdRatio);
+                AbilityCooldownBar->SetVisibility(CdRatio > 0.0f ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+            }
+
+            if (bActive)
+            {
+                StyleButton(AbilityButton, FLinearColor(0.18f, 0.55f, 0.75f, 1.0f));
+            }
+            else if (CdRatio > 0.0f)
+            {
+                StyleButton(AbilityButton, FLinearColor(0.18f, 0.20f, 0.22f, 0.8f));
+            }
+            else
+            {
+                StyleButton(AbilityButton, FLinearColor(0.10f, 0.32f, 0.44f, 1.0f));
+            }
+        }
+        else
+        {
+            AbilityButton->SetVisibility(ESlateVisibility::Collapsed);
+        }
+    }
+}
+
+void URA4SidebarWidget::HandleAbilityClicked(int32 Index)
+{
+    OnAbilityClicked.Broadcast();
 }
 
 URA4UIDataProviderSubsystem* URA4SidebarWidget::GetProvider() const

@@ -143,8 +143,10 @@ private:
  * the sidebar reports intent and does not talk to the simulation itself.
  */
 DECLARE_MULTICAST_DELEGATE_OneParam(FRA4OnBuildCardClicked, int64 /*ContentId*/);
+DECLARE_MULTICAST_DELEGATE_OneParam(FRA4OnBuildCardRightClicked, int64 /*ContentId*/);
 DECLARE_MULTICAST_DELEGATE_OneParam(FRA4OnInteractionModeChanged, uint8 /*Mode: 0=Normal, 1=Repair, 2=Sell*/);
 DECLARE_MULTICAST_DELEGATE(FRA4OnSuperweaponClicked);
+DECLARE_MULTICAST_DELEGATE(FRA4OnAbilityClicked);
 
 UCLASS()
 class RA4UI_API URA4SidebarWidget : public UUserWidget
@@ -207,13 +209,16 @@ public:
     virtual TSharedRef<SWidget> RebuildWidget() override;
     virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
+    virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 
     FRA4OnBuildCardClicked OnBuildCardClicked;
+    FRA4OnBuildCardRightClicked OnBuildCardRightClicked;
     FRA4OnRadarClicked OnRadarClicked;
     /** Forwarded from the radar panel's right button: an order, not a camera move. */
     FRA4OnRadarClicked OnRadarOrdered;
     FRA4OnInteractionModeChanged OnInteractionModeChanged;
     FRA4OnSuperweaponClicked OnSuperweaponClicked;
+    FRA4OnAbilityClicked OnAbilityClicked;
 
     /** Forwards the camera's ground footprint to the radar panel, which outlines it. */
     void SetRadarCameraView(const FVector2D& CentreWorld, const FVector2D& ExtentWorld, float CameraYawDeg = 0.0f);
@@ -332,6 +337,15 @@ private:
     TObjectPtr<URA4IndexedButton> SellButton;
 
     UPROPERTY(Transient)
+    TObjectPtr<URA4IndexedButton> AbilityButton;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UTextBlock> AbilityButtonText;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UProgressBar> AbilityCooldownBar;
+
+    UPROPERTY(Transient)
     TObjectPtr<URA4IndexedButton> SuperweaponButton;
 
     UPROPERTY(Transient)
@@ -339,6 +353,7 @@ private:
 
     uint8 CurrentInteractionMode = 0;
 
+    void HandleAbilityClicked(int32 Index);
     void HandleRepairClicked(int32 Index);
     void HandleSellClicked(int32 Index);
     void HandleSuperweaponClicked(int32 Index);

@@ -199,6 +199,8 @@ void HudSnapshotBuilder::BuildSelection(const SimWorld& World, const std::vector
         {
             Out.PrimaryHealthCurrent = Health->Current;
             Out.PrimaryHealthMax = Health->Max;
+            Out.PrimaryVeterancyRank = uint8_t(Health->Rank);
+            Out.PrimaryKillsValue = Health->KillsValue;
         }
 
         // ADR-0013 building controls. Only meaningful for a building the local player
@@ -221,6 +223,35 @@ void HudSnapshotBuilder::BuildSelection(const SimWorld& World, const std::vector
             Out.bPrimaryCanRepair = Out.bPrimaryIsOwned &&
                                     Building->State == ConstructionState::Complete &&
                                     Health != nullptr && Health->Current < Health->Max;
+        }
+
+        // Secondary Ability / Special Mode extraction
+        if (Core != nullptr)
+        {
+            const EntityDef* Def = World.GetContent()->FindEntity(Core->Def);
+            if (Def != nullptr && Def->Kind == EntityKind::Unit)
+            {
+                const CombatComp* Combat = World.GetCombat(Out.Primary);
+                if (Def->Unit.bHasSecondaryAbility)
+                {
+                    Out.bPrimaryHasAbility = true;
+                    if (Combat != nullptr)
+                    {
+                        Out.bPrimaryAbilityActive = Combat->bSecondaryModeActive;
+                        Out.PrimaryAbilityCooldownTicks = Combat->SecondaryAbilityCooldownTicks;
+                        Out.PrimaryAbilityTotalCooldownTicks = Def->Unit.AbilityCooldownTicks;
+                        Out.PrimaryAbilityDurationTicks = Combat->SecondaryAbilityDurationTicks;
+                    }
+                }
+                else if (Def->Unit.bIsBuilder || Def->Unit.DeploysInto.IsValid())
+                {
+                    Out.bPrimaryHasAbility = true;
+                    Out.bPrimaryAbilityActive = false;
+                    Out.PrimaryAbilityCooldownTicks = 0;
+                    Out.PrimaryAbilityTotalCooldownTicks = 0;
+                    Out.PrimaryAbilityDurationTicks = 0;
+                }
+            }
         }
     }
 }
@@ -260,54 +291,48 @@ void HudSnapshotBuilder::BuildProduction(const SimWorld& World, const SelectionS
         }
     }
 
-    // The queue shown is the selected producer's, falling back to the first owned
-    // producer that has anything queued -- so the panel is not blank just because
-    // the player deselected their factory.
+    // The queue shown includes all active queues from owned buildings (including DefenseQueue)
     EntityId QueueSource = Selection.ProductionSource;
-    if (!QueueSource.IsValid())
+    if (!QueueSource.IsValid() && !CompletedBuildings.empty())
     {
-        for (const EntityId& Id : CompletedBuildings)
-        {
-            const BuildingComp* Building = World.GetBuilding(Id);
-            if (Building != nullptr && !Building->Queue.empty())
-            {
-                QueueSource = Id;
-                break;
-            }
-        }
+        QueueSource = CompletedBuildings.front();
     }
     Out.Producer = QueueSource;
 
-    if (QueueSource.IsValid())
+    for (const EntityId& Id : CompletedBuildings)
     {
-        if (const BuildingComp* Building = World.GetBuilding(QueueSource))
+        if (const BuildingComp* Building = World.GetBuilding(Id))
         {
-            for (size_t Slot = 0; Slot < Building->Queue.size(); ++Slot)
+            auto ExportQueue = [&](const std::vector<ProductionItem>& QueueList)
             {
-                const ProductionItem& Item = Building->Queue[Slot];
-                const int32_t Total = std::max(1, Item.TotalTicks) * kProductionProgressScale;
-                const int32_t Clamped = std::min(Item.ProgressTicks, Total);
-
-                QueueEntry Entry;
-                Entry.Content = Item.Content;
-                Entry.SlotIndex = int32_t(Slot);
-                Entry.bPaused = Item.bPaused;
-                Entry.PaymentState = Item.State;
-                Entry.PaidCredits = Item.PaidCredits;
-                Entry.TotalCost = Item.TotalCost;
-                Entry.bStarvedForCredits = Item.State == FlowPaymentState::Starved;
-                Entry.ProgressPercent = int32_t((int64_t(Clamped) * 100) / Total);
-                Entry.RemainingTicks = (Total - Clamped) / kProductionProgressScale;
-
-                if (const EntityDef* Def = Content->FindEntity(Item.Content))
+                for (size_t Slot = 0; Slot < QueueList.size(); ++Slot)
                 {
-                    Entry.DisplayNameKey = Def->DisplayNameKey;
-                    // A finished structure sits in the queue until the player picks a
-                    // spot. The card must say "place me", not "still building".
-                    Entry.bAwaitingPlacement = Def->Kind == EntityKind::Building && Clamped >= Total;
+                    const ProductionItem& Item = QueueList[Slot];
+                    const int32_t Total = std::max(1, Item.TotalTicks) * kProductionProgressScale;
+                    const int32_t Clamped = std::min(Item.ProgressTicks, Total);
+
+                    QueueEntry Entry;
+                    Entry.Content = Item.Content;
+                    Entry.SlotIndex = int32_t(Slot);
+                    Entry.bPaused = Item.bPaused;
+                    Entry.PaymentState = Item.State;
+                    Entry.PaidCredits = Item.PaidCredits;
+                    Entry.TotalCost = Item.TotalCost;
+                    Entry.bStarvedForCredits = Item.State == FlowPaymentState::Starved;
+                    Entry.ProgressPercent = int32_t((int64_t(Clamped) * 100) / Total);
+                    Entry.RemainingTicks = (Total - Clamped) / kProductionProgressScale;
+
+                    if (const EntityDef* Def = Content->FindEntity(Item.Content))
+                    {
+                        Entry.DisplayNameKey = Def->DisplayNameKey;
+                        Entry.bAwaitingPlacement = Def->Kind == EntityKind::Building && Clamped >= Total;
+                    }
+                    Out.Queue.push_back(Entry);
                 }
-                Out.Queue.push_back(Entry);
-            }
+            };
+
+            ExportQueue(Building->Queue);
+            ExportQueue(Building->DefenseQueue);
         }
     }
 

@@ -547,6 +547,25 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
     bSelectionRepairing = Snapshot.Selection.bPrimaryIsRepairing;
     bSelectionCanRepair = Snapshot.Selection.bPrimaryCanRepair;
 
+    // Secondary Ability / Special Mode
+    bSelectionHasAbility = Snapshot.Selection.bPrimaryHasAbility;
+    bSelectionAbilityActive = Snapshot.Selection.bPrimaryAbilityActive;
+    SelectionAbilityCooldownRatio = Snapshot.Selection.PrimaryAbilityTotalCooldownTicks > 0
+        ? float(Snapshot.Selection.PrimaryAbilityCooldownTicks) / float(Snapshot.Selection.PrimaryAbilityTotalCooldownTicks)
+        : 0.0f;
+    if (!Snapshot.Selection.PrimaryAbilityNameKey.empty())
+    {
+        SelectionAbilityName = KeyToText(Snapshot.Selection.PrimaryAbilityNameKey);
+    }
+    else
+    {
+        SelectionAbilityName = NSLOCTEXT("RA4", "Sidebar_DefaultAbility", "СПОСОБНОСТЬ [F]");
+    }
+
+    // Veterancy
+    SelectionVeterancyRank = int32(Snapshot.Selection.PrimaryVeterancyRank);
+    SelectionKillsValue = Snapshot.Selection.PrimaryKillsValue;
+
     // What a selection widget actually displays. Compared before broadcasting, because
     // the delegate is what rebuilds the group rows: a widget that clears and reconstructs
     // its children twenty times a second while the selection has not moved is pure waste,
@@ -786,5 +805,20 @@ void URA4UIDataProviderSubsystem::ApplySnapshot(const RA4::Presentation::HudSnap
         bReportedMatchEnd = true;
         const bool bWon = WinningPlayer == int32(Snapshot.LocalPlayer);
         OnMatchEnded.Broadcast(bWon, WinningPlayer);
+    }
+}
+
+FText URA4UIDataProviderSubsystem::GetSelectionVeterancyText() const
+{
+    switch (SelectionVeterancyRank)
+    {
+    case 1:
+        return NSLOCTEXT("RA4", "Rank_Veteran", "★ ВЕТЕРАН");
+    case 2:
+        return NSLOCTEXT("RA4", "Rank_Elite", "★★ ЭЛИТА");
+    case 3:
+        return NSLOCTEXT("RA4", "Rank_Heroic", "★★★ ГЕРОЙ");
+    default:
+        return FText::GetEmpty();
     }
 }

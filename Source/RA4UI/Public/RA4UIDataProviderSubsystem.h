@@ -130,6 +130,28 @@ public:
     UFUNCTION(BlueprintPure, Category = "RA4|UI")
     bool CanSelectionBeRepaired() const { return bSelectionCanRepair; }
 
+    // --- Secondary Ability / Special Mode ---
+    UFUNCTION(BlueprintPure, Category = "RA4|UI")
+    bool HasSelectionAbility() const { return bSelectionHasAbility; }
+
+    UFUNCTION(BlueprintPure, Category = "RA4|UI")
+    bool IsSelectionAbilityActive() const { return bSelectionAbilityActive; }
+
+    UFUNCTION(BlueprintPure, Category = "RA4|UI")
+    float GetSelectionAbilityCooldownRatio() const { return SelectionAbilityCooldownRatio; }
+
+    UFUNCTION(BlueprintPure, Category = "RA4|UI")
+    FText GetSelectionAbilityName() const { return SelectionAbilityName; }
+
+    UFUNCTION(BlueprintPure, Category = "RA4|UI")
+    int32 GetSelectionVeterancyRank() const { return SelectionVeterancyRank; }
+
+    UFUNCTION(BlueprintPure, Category = "RA4|UI")
+    int32 GetSelectionKillsValue() const { return SelectionKillsValue; }
+
+    UFUNCTION(BlueprintPure, Category = "RA4|UI")
+    FText GetSelectionVeterancyText() const;
+
     UFUNCTION(BlueprintPure, Category = "RA4|UI")
     ERA4MatchPhase GetMatchPhase() const { return MatchPhase; }
 
@@ -260,6 +282,17 @@ private:
     bool bSelectionPowerOffline = false;
     bool bSelectionRepairing = false;
     bool bSelectionCanRepair = false;
+
+    // Secondary Ability / Special Mode
+    bool bSelectionHasAbility = false;
+    bool bSelectionAbilityActive = false;
+    float SelectionAbilityCooldownRatio = 0.0f;
+    FText SelectionAbilityName;
+
+    // Veterancy
+    int32 SelectionVeterancyRank = 0;
+    int32 SelectionKillsValue = 0;
+
     ERA4MatchPhase MatchPhase = ERA4MatchPhase::NotStarted;
     int32 MatchElapsedSeconds = 0;
     int32 WinningPlayer = -1;

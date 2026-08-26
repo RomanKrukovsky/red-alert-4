@@ -138,9 +138,22 @@ public:
 
     void HandleInteractionModeChanged(uint8 Mode);
 
+    UFUNCTION(BlueprintCallable, Category = "RA4|Commands")
+    void TriggerSelectedSecondaryAbility();
+
+    UFUNCTION(BlueprintCallable, Category = "RA4|Commands")
+    void IssueCoopPing(FVector2D SimLocation, uint8 PingType = 0);
+
+    UFUNCTION(BlueprintCallable, Category = "RA4|Commands")
     void StopSelectedUnits();
+
+    UFUNCTION(BlueprintCallable, Category = "RA4|Commands")
     void ToggleGuardMode();
+
+    UFUNCTION(BlueprintCallable, Category = "RA4|Commands")
     void ScatterSelectedUnits();
+
+    UFUNCTION(BlueprintCallable, Category = "RA4|Commands")
     void ToggleChronoShiftMode();
 
     // --- Cheat Console -------------------------------------------------------
@@ -294,6 +307,7 @@ private:
     FTimerHandle HudCaptureTimer;
 
     void HandleBuildCardClicked(int64 ContentIdValue);
+    void HandleBuildCardRightClicked(int64 ContentIdValue);
     void HandleRadarClicked(FVector2D WorldPosition);
     /** Right-click on the minimap: orders the current selection to that world position. */
     void HandleRadarOrdered(FVector2D WorldPosition);
