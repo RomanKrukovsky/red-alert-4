@@ -501,25 +501,36 @@ void ARA4EntityActor::Tick(float DeltaTime)
     }
 
     // Phase 2: Infantry Locomotion Animation
-    if (SkeletalMeshComponent && SkeletalMeshComponent->IsVisible())
+    // Null-check the skeletal mesh: PlayAnimation crashes inside
+    // GetMaterialInheritanceChain when the mesh is null or the animation's
+    // skeleton doesn't match the mesh's skeleton.
+    if (SkeletalMeshComponent && SkeletalMeshComponent->IsVisible() &&
+        SkeletalMeshComponent->GetSkeletalMeshAsset() != nullptr)
     {
         bool bIsMoving = Speed > 20.0f;
-        
+
         static UAnimSequence* DefaultIdleAnim = LoadObject<UAnimSequence>(nullptr, TEXT("/Game/ThirdParty/QuantumCharacter/Demo/Animations/A_MM_Idle.A_MM_Idle"));
         static UAnimSequence* DefaultRunAnim = LoadObject<UAnimSequence>(nullptr, TEXT("/Game/ThirdParty/QuantumCharacter/Demo/Animations/A_MM_Run_Fwd.A_MM_Run_Fwd"));
-        
+
         UAnimSequence* IdleAnim = CachedIdleAnim.Get() != nullptr ? CachedIdleAnim.Get() : DefaultIdleAnim;
         UAnimSequence* RunAnim = CachedRunAnim.Get() != nullptr ? CachedRunAnim.Get() : DefaultRunAnim;
         UAnimSequence* TargetAnim = bIsMoving ? RunAnim : IdleAnim;
 
-        if (TargetAnim && SkeletalMeshComponent->GetAnimationMode() != EAnimationMode::AnimationSingleNode)
+        if (TargetAnim != nullptr)
         {
-            SkeletalMeshComponent->SetAnimationMode(EAnimationMode::AnimationSingleNode);
-        }
-        
-        if (TargetAnim && SkeletalMeshComponent->GetSingleNodeInstance() && SkeletalMeshComponent->AnimationData.AnimToPlay != TargetAnim)
-        {
-            SkeletalMeshComponent->PlayAnimation(TargetAnim, true);
+            if (SkeletalMeshComponent->GetAnimationMode() != EAnimationMode::AnimationSingleNode)
+            {
+                SkeletalMeshComponent->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+            }
+
+            // Only call PlayAnimation when the animation actually changes.
+            // Calling it every tick with the same asset crashes inside
+            // UMaterialInstance::GetMaterialInheritanceChain.
+            if (SkeletalMeshComponent->GetSingleNodeInstance() &&
+                SkeletalMeshComponent->AnimationData.AnimToPlay != TargetAnim)
+            {
+                SkeletalMeshComponent->PlayAnimation(TargetAnim, true);
+            }
         }
     }
 }

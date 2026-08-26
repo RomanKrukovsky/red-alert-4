@@ -1262,12 +1262,8 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
             // Prerequisite buildings must be complete.
             for (const ContentId& Prereq : U->Prerequisites)
             {
-<<<<<<< Updated upstream
                 const EntityDef* PD = Content->FindEntity(Prereq);
                 if (PD == nullptr || !HasPrerequisites(Cmd.Issuer, *PD))
-=======
-                if (!HasPrerequisites(Cmd.Issuer, *Content->FindEntity(Prereq)))
->>>>>>> Stashed changes
                 {
                     return Reject(CommandReject::TechRequirementsUnmet);
                 }
@@ -1281,35 +1277,24 @@ CommandResult SimWorld::ApplyCommand(const Command& Cmd)
             {
                 return Reject(CommandReject::NoProducer);
             }
-<<<<<<< Updated upstream
             // Already researched or already queued?
-=======
-            // Already researched?
->>>>>>> Stashed changes
             const PlayerState& P = Players[Cmd.Issuer];
             for (const ContentId& Done : P.ResearchedUpgrades)
             {
                 if (Done == Cmd.Content) { return Reject(CommandReject::TechRequirementsUnmet); }
             }
             BuildingComp& B = Buildings[Cmd.Primary.Index];
-<<<<<<< Updated upstream
             for (const ProductionItem& Queued : B.Queue)
             {
                 if (Queued.Content == Cmd.Content) { return Reject(CommandReject::QueueFull); }
             }
-=======
->>>>>>> Stashed changes
             ProductionItem Item;
             Item.Content = Cmd.Content;
             Item.TotalCost = U->Cost;
             Item.TotalTicks = U->BuildTimeTicks;
             Item.State = FlowPaymentState::Queued;
             Item.Priority = 0;
-<<<<<<< Updated upstream
             if (int32_t(B.Queue.size()) >= kMaxProductionQueueLength)
-=======
-            if (B.Queue.size() >= kProductionQueueCap)
->>>>>>> Stashed changes
             {
                 return Reject(CommandReject::QueueFull);
             }
